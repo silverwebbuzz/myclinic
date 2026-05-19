@@ -84,12 +84,15 @@ final class TenantMiddleware implements MiddlewareInterface
             }
         }
 
-        $slug = $this->resolveSlug($request);
-        if ($slug === null) {
-            return Response::json(['error' => 'Clinic not found'], 404);
+        $clinic = $this->resolveFromAuth($request);
+        if ($clinic === null) {
+            $slug = $this->resolveSlug($request);
+            if ($slug === null) {
+                return Response::json(['error' => 'Clinic not found'], 404);
+            }
+            $clinic = $this->loadClinic($slug);
         }
 
-        $clinic = $this->loadClinic($slug);
         if ($clinic === null || !(int) ($clinic['is_active'] ?? 0)) {
             return Response::json(['error' => 'Clinic not found'], 404);
         }
@@ -97,6 +100,23 @@ final class TenantMiddleware implements MiddlewareInterface
         RequestContext::setClinic($clinic);
 
         return $next();
+    }
+
+    private function resolveFromAuth(Request $request): ?array
+    {
+        $token = $_COOKIE['mc_token'] ?? null;
+        if ($token === null) {
+            return null;
+        }
+        $payload = JwtService::decode($token);
+        if (empty($payload['clinic_id'])) {
+            return null;
+        }
+        $clinic = QueryBuilder::table('tenants')
+            ->where('id', '=', (int) $payload['clinic_id'])
+            ->first();
+
+        return $clinic ?: null;
     }
 
     private function isExemptPath(string $uri): bool
