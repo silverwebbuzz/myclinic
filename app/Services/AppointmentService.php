@@ -197,6 +197,35 @@ final class AppointmentService
     }
 
     /** @return list<array<string, mixed>> */
+    /**
+     * Fetch all appointments scheduled on a specific date (any status).
+     * @return list<array<string, mixed>>
+     */
+    public static function forDate(int $clinicId, string $date, ?int $doctorId = null): array
+    {
+        if (!Database::ping()) {
+            return [];
+        }
+
+        $sql = 'SELECT a.*, p.name AS patient_name, p.uhid, p.phone AS patient_phone,
+                       u.name AS doctor_name
+                FROM appointments a
+                INNER JOIN patients p ON p.id = a.patient_id
+                INNER JOIN users u ON u.id = a.doctor_id
+                WHERE a.clinic_id = ? AND DATE(a.scheduled_at) = ?';
+        $params = [$clinicId, $date];
+        if ($doctorId !== null) {
+            $sql .= ' AND a.doctor_id = ?';
+            $params[] = $doctorId;
+        }
+        $sql .= ' ORDER BY a.scheduled_at ASC, a.id ASC';
+
+        $stmt = Database::connection()->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll() ?: [];
+    }
+
     public static function todayQueue(int $clinicId, ?int $doctorId = null): array
     {
         if (!Database::ping()) {

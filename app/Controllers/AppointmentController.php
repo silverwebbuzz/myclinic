@@ -24,13 +24,49 @@ final class AppointmentController
 
         $clinicId = (int) RequestContext::clinicId();
         $doctors = AppointmentService::doctorsForClinic($clinicId);
-        $doctorId = isset($request->query['doctor_id']) ? (int) $request->query['doctor_id'] : null;
+        $doctorId = !empty($request->query['doctor_id']) ? (int) $request->query['doctor_id'] : null;
+
+        $dateRaw = $request->query['date'] ?? date('Y-m-d');
+        $ts = strtotime((string) $dateRaw);
+        $date = $ts ? date('Y-m-d', $ts) : date('Y-m-d');
+
+        $statusFilter = $request->query['status'] ?? 'all';
+        $appointments = AppointmentService::forDate($clinicId, $date, $doctorId);
+
+        $counts = [
+            'all' => count($appointments),
+            'scheduled' => 0,
+            'confirmed' => 0,
+            'in_progress' => 0,
+            'completed' => 0,
+            'no_show' => 0,
+            'cancelled' => 0,
+        ];
+        foreach ($appointments as $a) {
+            $s = (string) ($a['status'] ?? 'scheduled');
+            if (isset($counts[$s])) {
+                $counts[$s]++;
+            }
+        }
+
+        if ($statusFilter !== 'all') {
+            $appointments = array_values(array_filter(
+                $appointments,
+                static fn (array $a) => ($a['status'] ?? '') === $statusFilter,
+            ));
+        }
 
         $clinic = RequestContext::clinic();
 
         return Response::html(Layout::page('appointments/index', [
             'doctors' => $doctors,
             'doctorId' => $doctorId,
+            'date' => $date,
+            'prevDate' => date('Y-m-d', strtotime($date . ' -1 day')),
+            'nextDate' => date('Y-m-d', strtotime($date . ' +1 day')),
+            'appointments' => $appointments,
+            'counts' => $counts,
+            'statusFilter' => $statusFilter,
             'clinicSlug' => $clinic['slug'] ?? 'demo',
         ], 'Appointments'));
     }
