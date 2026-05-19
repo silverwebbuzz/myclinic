@@ -7,3 +7,7 @@
 .phpunit.result.cache
 .idea/
 .DS_Store
+
+# Internal/private notes — anything prefixed with "internal-" or "private-"
+document/internal-*
+document/private-*

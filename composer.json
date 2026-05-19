@@ -29,6 +29,7 @@
     "scripts": {
         "migrate": "php database/migrate.php",
         "seed": "php database/seed.php",
+        "demo": "php database/seeds/demo_data.php",
         "test": "phpunit"
     }
 }
