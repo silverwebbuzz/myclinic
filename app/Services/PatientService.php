@@ -104,9 +104,10 @@ final class PatientService
 
         $whereSql = implode(' AND ', $where);
         $pdo = Database::connection();
+        $params['clinic_id_lv'] = $clinicId;
 
         $countSql = "SELECT COUNT(*) AS c FROM patients p
-            LEFT JOIN (SELECT patient_id, MAX(visited_at) AS last_visit FROM visits WHERE clinic_id = :clinic_id GROUP BY patient_id) lv
+            LEFT JOIN (SELECT patient_id, MAX(visited_at) AS last_visit FROM visits WHERE clinic_id = :clinic_id_lv GROUP BY patient_id) lv
             ON lv.patient_id = p.id
             WHERE {$whereSql}";
         $countStmt = $pdo->prepare($countSql);
@@ -114,7 +115,7 @@ final class PatientService
         $total = (int) ($countStmt->fetch()['c'] ?? 0);
 
         $sql = "SELECT p.*, lv.last_visit FROM patients p
-            LEFT JOIN (SELECT patient_id, MAX(visited_at) AS last_visit FROM visits WHERE clinic_id = :clinic_id GROUP BY patient_id) lv
+            LEFT JOIN (SELECT patient_id, MAX(visited_at) AS last_visit FROM visits WHERE clinic_id = :clinic_id_lv GROUP BY patient_id) lv
             ON lv.patient_id = p.id
             WHERE {$whereSql}
             ORDER BY {$orderCol} {$orderDir}
