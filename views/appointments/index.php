@@ -37,8 +37,18 @@ function appointmentCalendar(initialDoctor) {
         init() {
             const el = document.getElementById('calendar');
             this.calendar = new FullCalendar.Calendar(el, {
-                initialView: 'dayGridMonth',
-                headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' },
+                initialView: 'timeGridWeek',
+                headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridDay,timeGridWeek,dayGridMonth,listWeek' },
+                slotMinTime: '08:00:00',
+                slotMaxTime: '21:00:00',
+                slotDuration: '00:30:00',
+                allDaySlot: false,
+                nowIndicator: true,
+                height: 720,
+                dayMaxEvents: 3,
+                eventDisplay: 'block',
+                eventTimeFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short' },
+                businessHours: { daysOfWeek: [1, 2, 3, 4, 5, 6], startTime: '09:00', endTime: '19:00' },
                 events: (info, success, failure) => {
                     const params = new URLSearchParams({
                         start: info.startStr,

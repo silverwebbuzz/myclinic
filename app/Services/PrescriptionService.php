@@ -4,11 +4,87 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Core\Database;
 use App\Core\QueryBuilder;
 use App\Support\SpecialtyAdapter;
 
 final class PrescriptionService
 {
+    public const PER_PAGE = 30;
+
+    /**
+     * @param array<string, mixed> $filters
+     * @return array{rows: list<array<string, mixed>>, total: int, page: int, per_page: int}
+     */
+    public static function listForClinic(int $clinicId, array $filters = [], int $page = 1): array
+    {
+        if (!Database::ping()) {
+            return ['rows' => [], 'total' => 0, 'page' => $page, 'per_page' => self::PER_PAGE];
+        }
+        $page = max(1, $page);
+        $perPage = self::PER_PAGE;
+        $offset = ($page - 1) * $perPage;
+        $params = ['clinic_id' => $clinicId];
+        $where = ['rx.clinic_id = :clinic_id'];
+
+        $q = trim((string) ($filters['q'] ?? ''));
+        if ($q !== '') {
+            $where[] = '(p.name LIKE :q OR p.uhid LIKE :q OR d.name LIKE :q OR r.name LIKE :q)';
+            $params['q'] = '%' . $q . '%';
+        }
+        if (!empty($filters['mode'])) {
+            $where[] = 'rx.mode = :mode';
+            $params['mode'] = $filters['mode'];
+        }
+        if (!empty($filters['patient_id'])) {
+            $where[] = 'rx.patient_id = :pid';
+            $params['pid'] = (int) $filters['patient_id'];
+        }
+        if (!empty($filters['from'])) {
+            $where[] = 'v.visited_at >= :from';
+            $params['from'] = $filters['from'] . ' 00:00:00';
+        }
+        if (!empty($filters['to'])) {
+            $where[] = 'v.visited_at <= :to';
+            $params['to'] = $filters['to'] . ' 23:59:59';
+        }
+
+        $whereSql = implode(' AND ', $where);
+        $pdo = Database::connection();
+
+        $countStmt = $pdo->prepare(
+            "SELECT COUNT(*) AS c FROM prescriptions rx
+             JOIN patients p ON p.id = rx.patient_id
+             JOIN visits v ON v.id = rx.visit_id
+             LEFT JOIN drugs d ON d.id = rx.drug_id
+             LEFT JOIN remedies r ON r.id = rx.remedy_id
+             WHERE {$whereSql}",
+        );
+        $countStmt->execute($params);
+        $total = (int) ($countStmt->fetch()['c'] ?? 0);
+
+        $stmt = $pdo->prepare(
+            "SELECT rx.*, p.name AS patient_name, p.uhid, v.visited_at,
+                    d.name AS drug_name, r.name AS remedy_name
+             FROM prescriptions rx
+             JOIN patients p ON p.id = rx.patient_id
+             JOIN visits v ON v.id = rx.visit_id
+             LEFT JOIN drugs d ON d.id = rx.drug_id
+             LEFT JOIN remedies r ON r.id = rx.remedy_id
+             WHERE {$whereSql}
+             ORDER BY v.visited_at DESC, rx.id DESC
+             LIMIT {$perPage} OFFSET {$offset}",
+        );
+        $stmt->execute($params);
+
+        return [
+            'rows' => $stmt->fetchAll() ?: [],
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $perPage,
+        ];
+    }
+
     /** @return list<array<string, mixed>> */
     public static function forVisit(int $clinicId, int $visitId): array
     {

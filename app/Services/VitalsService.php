@@ -11,6 +11,73 @@ use App\Support\SpecialtyAdapter;
 
 final class VitalsService
 {
+    public const PER_PAGE = 30;
+
+    /**
+     * @param array<string, mixed> $filters
+     * @return array{rows: list<array<string, mixed>>, total: int, page: int, per_page: int}
+     */
+    public static function listForClinic(int $clinicId, array $filters = [], int $page = 1): array
+    {
+        if (!Database::ping()) {
+            return ['rows' => [], 'total' => 0, 'page' => $page, 'per_page' => self::PER_PAGE];
+        }
+        $page = max(1, $page);
+        $perPage = self::PER_PAGE;
+        $offset = ($page - 1) * $perPage;
+        $params = ['clinic_id' => $clinicId];
+        $where = ['v.clinic_id = :clinic_id'];
+
+        $q = trim((string) ($filters['q'] ?? ''));
+        if ($q !== '') {
+            $where[] = '(p.name LIKE :q OR p.uhid LIKE :q)';
+            $params['q'] = '%' . $q . '%';
+        }
+        if (!empty($filters['patient_id'])) {
+            $where[] = 'v.patient_id = :pid';
+            $params['pid'] = (int) $filters['patient_id'];
+        }
+        if (!empty($filters['from'])) {
+            $where[] = 'v.recorded_at >= :from';
+            $params['from'] = $filters['from'] . ' 00:00:00';
+        }
+        if (!empty($filters['to'])) {
+            $where[] = 'v.recorded_at <= :to';
+            $params['to'] = $filters['to'] . ' 23:59:59';
+        }
+        if (!empty($filters['abnormal'])) {
+            $where[] = '(v.bp_systolic >= 140 OR v.bp_diastolic >= 90 OR v.spo2 < 94 OR v.temperature >= 38)';
+        }
+
+        $whereSql = implode(' AND ', $where);
+        $pdo = Database::connection();
+
+        $countStmt = $pdo->prepare(
+            "SELECT COUNT(*) AS c FROM vitals v
+             JOIN patients p ON p.id = v.patient_id
+             WHERE {$whereSql}",
+        );
+        $countStmt->execute($params);
+        $total = (int) ($countStmt->fetch()['c'] ?? 0);
+
+        $stmt = $pdo->prepare(
+            "SELECT v.*, p.name AS patient_name, p.uhid
+             FROM vitals v
+             JOIN patients p ON p.id = v.patient_id
+             WHERE {$whereSql}
+             ORDER BY v.recorded_at DESC
+             LIMIT {$perPage} OFFSET {$offset}",
+        );
+        $stmt->execute($params);
+
+        return [
+            'rows' => $stmt->fetchAll() ?: [],
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $perPage,
+        ];
+    }
+
     /** @param array<string, mixed> $data */
     public static function saveForVisit(int $clinicId, int $visitId, int $patientId, array $data): array
     {

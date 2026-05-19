@@ -16,7 +16,9 @@ use App\Controllers\HealthController;
 use App\Controllers\OnboardingController;
 use App\Controllers\PatientController;
 use App\Controllers\PortalController;
+use App\Controllers\PrescriptionController;
 use App\Controllers\QrController;
+use App\Controllers\RadiologyController;
 use App\Controllers\SettingsController;
 use App\Controllers\VisitController;
 use App\Controllers\AnalyticsController;
@@ -30,6 +32,7 @@ use App\Controllers\DirectoryController;
 use App\Controllers\DocsController;
 use App\Controllers\ImpersonateController;
 use App\Controllers\SuperAdminController;
+use App\Controllers\VitalsController;
 use App\Controllers\WebhookController;
 use App\Core\GroupedRouteRegistrar;
 use App\Core\RouteRegistrar;
@@ -65,9 +68,11 @@ return static function (RouteRegistrar $router): void {
         $app->get('/dashboard', [DashboardController::class, 'index']);
         $app->post('/dashboard/checklist/dismiss', [DashboardController::class, 'dismissChecklist']);
 
-        $app->get('/prescriptions', static fn () => \App\Http\Response::redirect('/visits'));
-        $app->get('/vitals', static fn () => \App\Http\Response::redirect('/visits'));
+        $app->get('/prescriptions', [PrescriptionController::class, 'index']);
+        $app->get('/vitals', [VitalsController::class, 'index']);
         $app->get('/invoices', static fn () => \App\Http\Response::redirect('/billing'));
+        $app->get('/radiology', [RadiologyController::class, 'index']);
+        $app->get('/radiology/{id}', [RadiologyController::class, 'show']);
 
         $app->get('/settings/leaves', static fn () => \App\Http\Response::redirect('/settings?tab=leaves'));
         $app->get('/settings', [ClinicSettingsController::class, 'index']);

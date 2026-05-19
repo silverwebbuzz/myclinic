@@ -104,9 +104,23 @@
         return {
             sidebarOpen: false,
             toast: { show: false, message: '', type: 'success' },
+            modalOpen: false,
+            modalTitle: '',
+            modalBody: '',
+            modalConfirm: null,
             showToast(message, type = 'success') {
                 this.toast = { show: true, message, type };
                 setTimeout(() => { this.toast.show = false; }, 4000);
+            },
+            showModal(title, body, onConfirm = null) {
+                this.modalTitle = title;
+                this.modalBody = body;
+                this.modalConfirm = onConfirm;
+                this.modalOpen = true;
+            },
+            closeModal() {
+                this.modalOpen = false;
+                this.modalConfirm = null;
             }
         };
     }
