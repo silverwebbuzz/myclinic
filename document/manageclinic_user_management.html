@@ -1,0 +1,608 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans,sans-serif);background:transparent;color:var(--color-text-primary);font-size:13px;line-height:1.6}
+.nav{display:flex;gap:4px;padding:0 0 14px;flex-wrap:wrap;border-bottom:.5px solid var(--color-border-tertiary);margin-bottom:20px}
+.nb{font-size:12px;font-weight:500;padding:5px 13px;border:.5px solid var(--color-border-tertiary);border-radius:20px;background:transparent;color:var(--color-text-secondary);cursor:pointer;transition:all .15s}
+.nb:hover{background:var(--color-background-secondary);color:var(--color-text-primary)}
+.nb.on{background:var(--color-text-primary);color:var(--color-background-primary);border-color:var(--color-text-primary)}
+.sec{display:none}.sec.on{display:block}
+
+.stitle{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-secondary);margin-bottom:10px;padding-bottom:6px;border-bottom:.5px solid var(--color-border-tertiary)}
+.note{background:var(--color-background-secondary);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--color-text-secondary);line-height:1.6}
+.note strong{color:var(--color-text-primary)}
+.note.green{border-left:3px solid #0F9B6E;border-radius:0 8px 8px 0}
+
+.card{border:.5px solid var(--color-border-tertiary);border-radius:10px;overflow:hidden;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{padding:7px 12px;text-align:left;font-size:10px;font-weight:500;color:var(--color-text-secondary);background:var(--color-background-secondary);border-bottom:.5px solid var(--color-border-tertiary);text-transform:uppercase;letter-spacing:.04em}
+td{padding:8px 12px;border-bottom:.5px solid var(--color-border-tertiary);vertical-align:top;line-height:1.5}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--color-background-secondary)}
+
+.b{display:inline-flex;align-items:center;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500;white-space:nowrap}
+.b-free{background:#EAF3DE;color:#3B6D11}
+.b-core{background:#E6F1FB;color:#185FA5}
+.b-add{background:#EEEDFE;color:#534AB7}
+.b-warn{background:#FAEEDA;color:#854F0B}
+.b-new{background:#E1F5EE;color:#0F6E56}
+
+.sql-box{background:var(--color-background-secondary);border:.5px solid var(--color-border-tertiary);border-radius:9px;overflow:hidden;margin-bottom:12px}
+.sql-hd{padding:7px 12px;border-bottom:.5px solid var(--color-border-tertiary);font-size:10px;font-weight:500;font-family:var(--font-mono,monospace);color:var(--color-text-secondary);display:flex;align-items:center;justify-content:space-between}
+.copy-b{font-size:10px;padding:2px 8px;border-radius:5px;border:.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-secondary);cursor:pointer}
+.copy-b.done{background:#EAF3DE;color:#3B6D11;border-color:#C0DD97}
+.sql-bd{padding:11px 12px;overflow-x:auto}
+pre{font-family:var(--font-mono,monospace);font-size:11px;line-height:1.7;white-space:pre;color:var(--color-text-primary)}
+.kw{color:#185FA5;font-weight:500}.cm{color:var(--color-text-secondary)}.str{color:#0F6E56}.num{color:#993C1D}
+
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:16px}
+.sc{background:var(--color-background-secondary);border-radius:8px;padding:11px 13px}
+.sl{font-size:10px;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.sv{font-size:18px;font-weight:500}
+.sv-sm{font-size:12px;font-weight:500}
+
+.flow-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.flow-box{padding:5px 10px;border-radius:7px;font-size:11px;font-weight:500;border:.5px solid var(--color-border-tertiary)}
+.flow-arr{color:var(--color-text-secondary);font-size:13px}
+
+.role-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:14px}
+.role-card{border:.5px solid var(--color-border-tertiary);border-radius:9px;padding:12px}
+.role-name{font-size:13px;font-weight:500;margin-bottom:6px}
+.role-perm{font-size:11px;color:var(--color-text-secondary);line-height:1.6}
+.perm-yes{color:#3B6D11}
+.perm-no{color:#A32D2D;text-decoration:line-through;opacity:.5}
+
+.seat-bar{height:6px;border-radius:3px;background:#E5E5EA;margin-top:6px;overflow:hidden}
+.seat-fill{height:100%;border-radius:3px;background:#0F9B6E}
+
+.mockup{border:.5px solid var(--color-border-tertiary);border-radius:10px;overflow:hidden;margin-bottom:14px}
+.mock-head{padding:10px 14px;background:var(--color-background-secondary);border-bottom:.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between}
+.mock-title{font-size:13px;font-weight:500}
+.mock-action{font-size:11px;padding:4px 12px;border-radius:6px;background:#0F9B6E;color:#fff;cursor:pointer}
+.mock-table{width:100%;border-collapse:collapse;font-size:12px}
+.mock-table th{padding:7px 14px;text-align:left;font-size:10px;font-weight:500;color:var(--color-text-secondary);background:var(--color-background-secondary);border-bottom:.5px solid var(--color-border-tertiary);text-transform:uppercase}
+.mock-table td{padding:8px 14px;border-bottom:.5px solid var(--color-border-tertiary)}
+.mock-table tr:last-child td{border-bottom:none}
+.status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+.role-badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500}
+</style>
+
+<div class="nav">
+  <button class="nb on" onclick="s('seats')">Seat Model</button>
+  <button class="nb" onclick="s('roles')">Role Permissions</button>
+  <button class="nb" onclick="s('schema')">Schema Changes</button>
+  <button class="nb" onclick="s('sql')">SQL (Copy-ready)</button>
+  <button class="nb" onclick="s('flow')">Invite Flow</button>
+  <button class="nb" onclick="s('ui')">UI Mockup</button>
+</div>
+
+<!-- ═══ SEAT MODEL ═══ -->
+<div id="seats" class="sec on">
+
+  <div class="note green"><strong>Key rule:</strong> The clinic owner/admin (the person who signed up) is always free and never counts as a seat. Every additional user — doctor, nurse, receptionist, lab tech — counts as 1 seat. Patient portal users never count as seats.</div>
+
+  <div class="stitle">Seat limits by plan</div>
+  <div class="card">
+    <table>
+      <tr><th>Plan</th><th>Included seats</th><th>Who counts as a seat</th><th>Extra seats</th><th>Example clinic</th></tr>
+      <tr>
+        <td><strong>Free</strong></td>
+        <td><strong style="color:#3B6D11">2 seats</strong></td>
+        <td>Any non-owner staff (doctors, nurses, receptionists, lab techs)</td>
+        <td style="color:#A32D2D">Not allowed</td>
+        <td>Solo doctor (0 extra) + 1 receptionist = 1 seat used of 2</td>
+      </tr>
+      <tr>
+        <td><strong>Clinic $29</strong></td>
+        <td><strong style="color:#185FA5">3 seats</strong></td>
+        <td>Any non-owner staff</td>
+        <td>$5/seat/mo</td>
+        <td>1 partner doctor + 1 nurse + 1 receptionist = 3 seats = included</td>
+      </tr>
+      <tr>
+        <td><strong>Practice $79</strong></td>
+        <td><strong style="color:#534AB7">8 seats</strong></td>
+        <td>Any non-owner staff</td>
+        <td>$4/seat/mo</td>
+        <td>4 doctors + 2 nurses + 1 receptionist + 1 lab tech = 8 seats = included</td>
+      </tr>
+      <tr>
+        <td><strong>Enterprise $199</strong></td>
+        <td><strong style="color:#0F6E56">Unlimited</strong></td>
+        <td>Any non-owner staff</td>
+        <td>—</td>
+        <td>Hospital with 20 doctors, 15 nurses, 5 receptionists, 3 lab techs = fine</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="stitle">How seat enforcement works</div>
+  <div class="card">
+    <table>
+      <tr><th>Action</th><th>System behaviour</th></tr>
+      <tr><td>Admin adds new staff user</td><td>SeatCheck::canAdd($clinic) → COUNT active non-owner users WHERE clinic_id = ? → if count ≥ limit → block with upgrade prompt. If count &lt; limit → allow invite.</td></tr>
+      <tr><td>Admin tries to exceed free limit</td><td>Show modal: "You've used 2/2 free seats. Upgrade to Clinic plan to add more staff, or purchase extra seats ($5/seat/mo)."</td></tr>
+      <tr><td>Extra seat purchased</td><td>Stripe SubscriptionItem for 'extra_seat' module × quantity. Webhook → tenants.extra_seats_purchased incremented. SeatCheck reads: limit = plan_seats + extra_seats_purchased.</td></tr>
+      <tr><td>Plan downgrade</td><td>If active users > new plan's seat limit → show warning before downgrade. Admin must deactivate excess users first. No data deleted — users just set is_active=0.</td></tr>
+      <tr><td>User deactivated</td><td>Frees up 1 seat. users.is_active=0. They lose login access. All their past data (visits, Rx written) stays intact — audit integrity maintained.</td></tr>
+    </table>
+  </div>
+
+  <div class="stitle">Live seat usage indicator (shown in admin dashboard)</div>
+  <div style="border:.5px solid var(--color-border-tertiary);border-radius:10px;padding:16px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:13px;font-weight:500">Team members</div>
+      <div style="font-size:12px;color:var(--color-text-secondary)">3 / 8 seats used <span style="background:#EAF3DE;color:#3B6D11;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:6px">Practice plan</span></div>
+    </div>
+    <div class="seat-bar"><div class="seat-fill" style="width:37.5%"></div></div>
+    <div style="font-size:11px;color:var(--color-text-secondary);margin-top:6px">5 seats remaining · Add up to 5 more staff at no extra cost</div>
+  </div>
+
+</div>
+
+<!-- ═══ ROLES ═══ -->
+<div id="roles" class="sec">
+
+  <div class="stitle">What each role can do — permission matrix</div>
+
+  <div class="role-grid">
+    <div class="role-card">
+      <div class="role-name">👑 Admin (Owner)</div>
+      <div class="role-perm">
+        <div class="perm-yes">✓ Everything</div>
+        <div class="perm-yes">✓ Add/remove staff</div>
+        <div class="perm-yes">✓ Billing & plan</div>
+        <div class="perm-yes">✓ Module marketplace</div>
+        <div class="perm-yes">✓ Clinic settings</div>
+        <div class="perm-yes">✓ Analytics & reports</div>
+        <div class="perm-yes">✓ All patient data</div>
+        <div style="margin-top:6px;font-size:10px;color:var(--color-text-secondary)">Free · Does not count as seat</div>
+      </div>
+    </div>
+
+    <div class="role-card">
+      <div class="role-name">🩺 Doctor</div>
+      <div class="role-perm">
+        <div class="perm-yes">✓ View own patients</div>
+        <div class="perm-yes">✓ Clinical visits / EMR</div>
+        <div class="perm-yes">✓ Write prescriptions</div>
+        <div class="perm-yes">✓ Order lab / radiology</div>
+        <div class="perm-yes">✓ View vitals + charts</div>
+        <div class="perm-yes">✓ Sign discharge summary</div>
+        <div class="perm-no">✗ Billing</div>
+        <div class="perm-no">✗ Staff management</div>
+        <div class="perm-no">✗ Delete records</div>
+        <div style="margin-top:6px;font-size:10px;color:var(--color-text-secondary)">Counts as 1 seat</div>
+      </div>
+    </div>
+
+    <div class="role-card">
+      <div class="role-name">🏥 Receptionist</div>
+      <div class="role-perm">
+        <div class="perm-yes">✓ Register patients</div>
+        <div class="perm-yes">✓ Book appointments</div>
+        <div class="perm-yes">✓ Manage today's queue</div>
+        <div class="perm-yes">✓ Generate invoices</div>
+        <div class="perm-yes">✓ Record payments</div>
+        <div class="perm-yes">✓ Basic patient lookup</div>
+        <div class="perm-yes">✓ CRM leads</div>
+        <div class="perm-no">✗ Clinical notes</div>
+        <div class="perm-no">✗ Prescriptions</div>
+        <div class="perm-no">✗ Staff management</div>
+        <div style="margin-top:6px;font-size:10px;color:var(--color-text-secondary)">Counts as 1 seat</div>
+      </div>
+    </div>
+
+    <div class="role-card">
+      <div class="role-name">💉 Nurse / Assistant</div>
+      <div class="role-perm">
+        <div class="perm-yes">✓ Enter vitals</div>
+        <div class="perm-yes">✓ View patient profile</div>
+        <div class="perm-yes">✓ Queue management</div>
+        <div class="perm-yes">✓ Collect consent forms</div>
+        <div class="perm-yes">✓ Upload lab reports</div>
+        <div class="perm-no">✗ Prescriptions</div>
+        <div class="perm-no">✗ Clinical diagnosis</div>
+        <div class="perm-no">✗ Billing</div>
+        <div class="perm-no">✗ Delete records</div>
+        <div style="margin-top:6px;font-size:10px;color:var(--color-text-secondary)">Counts as 1 seat</div>
+      </div>
+    </div>
+
+    <div class="role-card">
+      <div class="role-name">🔬 Lab Tech</div>
+      <div class="role-perm">
+        <div class="perm-yes">✓ View lab orders</div>
+        <div class="perm-yes">✓ Enter test results</div>
+        <div class="perm-yes">✓ Print barcode labels</div>
+        <div class="perm-yes">✓ Upload report PDFs</div>
+        <div class="perm-yes">✓ Mark sample collected</div>
+        <div class="perm-no">✗ Patient medical history</div>
+        <div class="perm-no">✗ Prescriptions</div>
+        <div class="perm-no">✗ Billing</div>
+        <div class="perm-no">✗ Appointments</div>
+        <div style="margin-top:6px;font-size:10px;color:var(--color-text-secondary)">Counts as 1 seat</div>
+      </div>
+    </div>
+
+    <div class="role-card">
+      <div class="role-name">👤 Patient (Portal)</div>
+      <div class="role-perm">
+        <div class="perm-yes">✓ View own visits</div>
+        <div class="perm-yes">✓ Download own Rx</div>
+        <div class="perm-yes">✓ View own invoices</div>
+        <div class="perm-yes">✓ Book appointment</div>
+        <div class="perm-yes">✓ View lab reports</div>
+        <div class="perm-no">✗ See other patients</div>
+        <div class="perm-no">✗ Any clinical action</div>
+        <div style="margin-top:6px;font-size:10px;color:var(--color-text-secondary)">Never counts as seat</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stitle">Custom permission overrides (admin can fine-tune)</div>
+  <div class="note">Beyond the role defaults, admin can toggle specific permissions per staff member — stored in <code>users.custom_permissions JSON</code>. Example: give the receptionist access to view (but not edit) clinical notes. Or restrict a doctor to only their own patients (useful for multi-doctor clinics where doctors should not see each other's patients). The permission check: <code>RbacService::can($user, 'patients.view_others')</code> → checks role default → then checks custom_permissions override.</div>
+
+  <div class="card">
+    <table>
+      <tr><th>Permission key</th><th>Default: Admin</th><th>Default: Doctor</th><th>Default: Receptionist</th><th>Default: Nurse</th><th>Default: Lab Tech</th></tr>
+      <tr><td><code>patients.view_all</code></td><td>✅</td><td>✅ (own only)</td><td>✅</td><td>✅</td><td>❌</td></tr>
+      <tr><td><code>patients.create</code></td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td></tr>
+      <tr><td><code>patients.delete</code></td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td></tr>
+      <tr><td><code>visits.create</code></td><td>✅</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
+      <tr><td><code>visits.view</code></td><td>✅</td><td>✅</td><td>❌</td><td>✅</td><td>❌</td></tr>
+      <tr><td><code>prescriptions.write</code></td><td>✅</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
+      <tr><td><code>billing.create</code></td><td>✅</td><td>❌</td><td>✅</td><td>❌</td><td>❌</td></tr>
+      <tr><td><code>billing.refund</code></td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td></tr>
+      <tr><td><code>lab.enter_results</code></td><td>✅</td><td>❌</td><td>❌</td><td>✅</td><td>✅</td></tr>
+      <tr><td><code>staff.manage</code></td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td></tr>
+      <tr><td><code>analytics.view</code></td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td></tr>
+      <tr><td><code>settings.edit</code></td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ SCHEMA CHANGES ═══ -->
+<div id="schema" class="sec">
+
+  <div class="note green"><strong>Only 3 small changes to the existing schema.</strong> No table restructuring. The core users table stays exactly as designed. We add 2 columns to tenants, 1 column to users, and 1 new table (staff_invitations).</div>
+
+  <div class="stitle">Change 1 — Add 2 columns to tenants table</div>
+  <div class="card">
+    <table>
+      <tr><th>Column</th><th>Type</th><th>Purpose</th></tr>
+      <tr><td><code>seat_limit</code></td><td>TINYINT UNSIGNED DEFAULT 2</td><td>Total seats allowed. Set by plan: free=2, clinic=3, practice=8, enterprise=999. Updated by subscription webhook.</td></tr>
+      <tr><td><code>extra_seats_purchased</code></td><td>TINYINT UNSIGNED DEFAULT 0</td><td>Additional seats bought à la carte (+$5/seat/mo Clinic, +$4/seat/mo Practice). Added to seat_limit for final capacity.</td></tr>
+    </table>
+  </div>
+
+  <div class="stitle">Change 2 — Add 2 columns to users table</div>
+  <div class="card">
+    <table>
+      <tr><th>Column</th><th>Type</th><th>Purpose</th></tr>
+      <tr><td><code>is_owner</code></td><td>TINYINT(1) DEFAULT 0</td><td>1 = the clinic owner (who signed up). Never counts as a seat. Cannot be deleted or demoted. Only 1 per clinic.</td></tr>
+      <tr><td><code>custom_permissions</code></td><td>JSON NULL</td><td>Override specific permission keys for this user. {"patients.view_all": false, "billing.create": true}. NULL = use role defaults.</td></tr>
+    </table>
+  </div>
+
+  <div class="stitle">New table — staff_invitations</div>
+  <div class="note">When admin adds a new staff member, they enter name + email + role. System creates an invitation record + sends email with a unique token link. Staff clicks link → sets their password → account activated. This is cleaner than admin setting passwords on behalf of staff.</div>
+  <div class="card">
+    <table>
+      <tr><th>Column</th><th>Type</th><th>Notes</th></tr>
+      <tr><td><code>id</code></td><td>BIGINT UNSIGNED PK</td><td></td></tr>
+      <tr><td><code>clinic_id</code></td><td>BIGINT UNSIGNED FK→tenants</td><td>Which clinic invited this person</td></tr>
+      <tr><td><code>invited_by</code></td><td>BIGINT UNSIGNED FK→users</td><td>The admin who sent the invite</td></tr>
+      <tr><td><code>name</code></td><td>VARCHAR(100)</td><td>Pre-filled for the invitee</td></tr>
+      <tr><td><code>email</code></td><td>VARCHAR(150)</td><td>Where invitation email is sent</td></tr>
+      <tr><td><code>role</code></td><td>ENUM(doctor,nurse,receptionist,labtech)</td><td>Role pre-assigned by admin</td></tr>
+      <tr><td><code>token_hash</code></td><td>VARCHAR(64)</td><td>bcrypt hash of the invite token in the email link</td></tr>
+      <tr><td><code>expires_at</code></td><td>TIMESTAMP</td><td>72-hour expiry. Admin can resend.</td></tr>
+      <tr><td><code>accepted_at</code></td><td>TIMESTAMP NULL</td><td>Set when staff clicks link + sets password</td></tr>
+      <tr><td><code>created_user_id</code></td><td>BIGINT UNSIGNED NULL FK→users</td><td>Set after acceptance → points to the new users row</td></tr>
+      <tr><td><code>status</code></td><td>ENUM(pending, accepted, expired, revoked)</td><td></td></tr>
+      <tr><td><code>created_at</code></td><td>TIMESTAMP</td><td></td></tr>
+    </table>
+  </div>
+
+  <div class="stitle">Seat check logic (PHP — add to SeatService)</div>
+  <div class="note">
+    <strong>Effective seat limit</strong> = <code>tenants.seat_limit + tenants.extra_seats_purchased</code><br>
+    <strong>Current usage</strong> = <code>COUNT(*) FROM users WHERE clinic_id=? AND is_owner=0 AND is_active=1</code><br>
+    <strong>Can add</strong> = current usage &lt; effective seat limit<br>
+    <strong>Also counts pending invitations</strong> = invitations WHERE clinic_id=? AND status='pending' (seat is "reserved" once invite sent)
+  </div>
+</div>
+
+<!-- ═══ SQL ═══ -->
+<div id="sql" class="sec">
+
+  <div class="sql-box">
+    <div class="sql-hd"><span>-- ALTER tenants: add seat columns</span><button class="copy-b" onclick="cp(this)">Copy</button></div>
+    <div class="sql-bd"><pre><span class="kw">ALTER TABLE</span> tenants
+  <span class="kw">ADD COLUMN</span> seat_limit             <span class="kw">TINYINT UNSIGNED NOT NULL DEFAULT</span> <span class="num">2</span>
+    <span class="kw">COMMENT</span> <span class="str">'Set by plan: free=2, clinic=3, practice=8, enterprise=999'</span>
+    <span class="kw">AFTER</span> is_active,
+  <span class="kw">ADD COLUMN</span> extra_seats_purchased  <span class="kw">TINYINT UNSIGNED NOT NULL DEFAULT</span> <span class="num">0</span>
+    <span class="kw">COMMENT</span> <span class="str">'Additional seats bought a la carte'</span>
+    <span class="kw">AFTER</span> seat_limit;
+
+<span class="cm">-- Update seat_limit when plan changes (in webhook handler):</span>
+<span class="cm">-- free=2, clinic=3, practice=8, enterprise=999</span>
+<span class="cm">-- UPDATE tenants SET seat_limit = CASE plan</span>
+<span class="cm">--   WHEN 'free'       THEN 2</span>
+<span class="cm">--   WHEN 'clinic'     THEN 3</span>
+<span class="cm">--   WHEN 'practice'   THEN 8</span>
+<span class="cm">--   WHEN 'enterprise' THEN 999</span>
+<span class="cm">-- END WHERE id = :clinic_id;</span></pre></div>
+  </div>
+
+  <div class="sql-box">
+    <div class="sql-hd"><span>-- ALTER users: add is_owner + custom_permissions</span><button class="copy-b" onclick="cp(this)">Copy</button></div>
+    <div class="sql-bd"><pre><span class="kw">ALTER TABLE</span> users
+  <span class="kw">ADD COLUMN</span> is_owner           <span class="kw">TINYINT</span>(<span class="num">1</span>) <span class="kw">NOT NULL DEFAULT</span> <span class="num">0</span>
+    <span class="kw">COMMENT</span> <span class="str">'1 = clinic owner/signup user. Never counts as seat. 1 per clinic.'</span>
+    <span class="kw">AFTER</span> role,
+  <span class="kw">ADD COLUMN</span> custom_permissions  <span class="kw">JSON NULL</span>
+    <span class="kw">COMMENT</span> <span class="str">'Override specific permission keys. NULL = use role defaults.'</span>
+    <span class="kw">AFTER</span> is_owner,
+  <span class="kw">ADD KEY</span> idx_owner (clinic_id, is_owner);
+
+<span class="cm">-- When creating the signup user, set is_owner=1:</span>
+<span class="cm">-- INSERT INTO users (..., is_owner, role) VALUES (..., 1, 'admin')</span></pre></div>
+  </div>
+
+  <div class="sql-box">
+    <div class="sql-hd"><span>-- NEW TABLE: staff_invitations</span><button class="copy-b" onclick="cp(this)">Copy</button></div>
+    <div class="sql-bd"><pre><span class="kw">CREATE TABLE</span> staff_invitations (
+  id              <span class="kw">BIGINT UNSIGNED NOT NULL AUTO_INCREMENT</span>,
+  clinic_id       <span class="kw">BIGINT UNSIGNED NOT NULL</span>,
+  invited_by      <span class="kw">BIGINT UNSIGNED NOT NULL</span>,
+  name            <span class="kw">VARCHAR</span>(<span class="num">100</span>) <span class="kw">NOT NULL</span>,
+  email           <span class="kw">VARCHAR</span>(<span class="num">150</span>) <span class="kw">NOT NULL</span>,
+  role            <span class="kw">ENUM</span>(<span class="str">'doctor'</span>,<span class="str">'nurse'</span>,<span class="str">'receptionist'</span>,<span class="str">'labtech'</span>) <span class="kw">NOT NULL</span>,
+  token_hash      <span class="kw">VARCHAR</span>(<span class="num">64</span>) <span class="kw">NOT NULL</span>,  <span class="cm">-- hash of the token in the email link</span>
+  expires_at      <span class="kw">TIMESTAMP NOT NULL</span>,    <span class="cm">-- 72 hours from created_at</span>
+  accepted_at     <span class="kw">TIMESTAMP NULL</span>,
+  created_user_id <span class="kw">BIGINT UNSIGNED NULL</span>,  <span class="cm">-- set after acceptance</span>
+  status          <span class="kw">ENUM</span>(<span class="str">'pending'</span>,<span class="str">'accepted'</span>,<span class="str">'expired'</span>,<span class="str">'revoked'</span>) <span class="kw">DEFAULT</span> <span class="str">'pending'</span>,
+  created_at      <span class="kw">TIMESTAMP DEFAULT CURRENT_TIMESTAMP</span>,
+  <span class="kw">PRIMARY KEY</span> (id),
+  <span class="kw">KEY</span> idx_clinic_invites (clinic_id, status),
+  <span class="kw">KEY</span> idx_email (email, status),
+  <span class="kw">FOREIGN KEY</span> (clinic_id)       <span class="kw">REFERENCES</span> tenants(id) <span class="kw">ON DELETE CASCADE</span>,
+  <span class="kw">FOREIGN KEY</span> (invited_by)      <span class="kw">REFERENCES</span> users(id),
+  <span class="kw">FOREIGN KEY</span> (created_user_id) <span class="kw">REFERENCES</span> users(id) <span class="kw">ON DELETE SET NULL</span>
+) <span class="kw">ENGINE</span>=InnoDB;
+</pre></div>
+  </div>
+
+  <div class="sql-box">
+    <div class="sql-hd"><span>-- SeatService PHP logic (add to /app/Services/SeatService.php)</span><button class="copy-b" onclick="cp(this)">Copy</button></div>
+    <div class="sql-bd"><pre><span class="cm">// SeatService.php</span>
+<span class="kw">class</span> SeatService {
+
+  <span class="kw">public function</span> canAddStaff(<span class="kw">int</span> $clinicId): bool {
+    $limit   = <span class="kw">$this</span>->getEffectiveLimit($clinicId);
+    $used    = <span class="kw">$this</span>->getSeatUsage($clinicId);
+    <span class="kw">return</span> $used < $limit;
+  }
+
+  <span class="kw">public function</span> getEffectiveLimit(<span class="kw">int</span> $clinicId): <span class="kw">int</span> {
+    $tenant = QB::table(<span class="str">'tenants'</span>)->find($clinicId);
+    <span class="kw">return</span> $tenant->seat_limit + $tenant->extra_seats_purchased;
+  }
+
+  <span class="kw">public function</span> getSeatUsage(<span class="kw">int</span> $clinicId): <span class="kw">int</span> {
+    <span class="cm">// Active non-owner staff + pending invitations (seat reserved)</span>
+    $activeStaff = QB::table(<span class="str">'users'</span>)
+      ->forClinic($clinicId)
+      ->where(<span class="str">'is_owner'</span>, <span class="num">0</span>)
+      ->where(<span class="str">'is_active'</span>, <span class="num">1</span>)
+      ->count();
+
+    $pendingInvites = QB::table(<span class="str">'staff_invitations'</span>)
+      ->forClinic($clinicId)
+      ->where(<span class="str">'status'</span>, <span class="str">'pending'</span>)
+      ->where(<span class="str">'expires_at'</span>, <span class="str">'>'</span>, now())
+      ->count();
+
+    <span class="kw">return</span> $activeStaff + $pendingInvites;
+  }
+
+  <span class="kw">public function</span> sendInvite(<span class="kw">int</span> $clinicId, <span class="kw">int</span> $invitedBy,
+                              <span class="kw">string</span> $name, <span class="kw">string</span> $email,
+                              <span class="kw">string</span> $role): array {
+    <span class="kw">if</span> (!<span class="kw">$this</span>->canAddStaff($clinicId)) {
+      <span class="kw">throw new</span> SeatLimitException(<span class="str">'Seat limit reached. Upgrade plan or purchase extra seats.'</span>);
+    }
+
+    $token     = bin2hex(random_bytes(<span class="num">32</span>));  <span class="cm">// 64-char token</span>
+    $tokenHash = hash(<span class="str">'sha256'</span>, $token);
+
+    QB::table(<span class="str">'staff_invitations'</span>)->insert([
+      <span class="str">'clinic_id'</span>  => $clinicId,
+      <span class="str">'invited_by'</span> => $invitedBy,
+      <span class="str">'name'</span>       => $name,
+      <span class="str">'email'</span>      => $email,
+      <span class="str">'role'</span>       => $role,
+      <span class="str">'token_hash'</span> => $tokenHash,
+      <span class="str">'expires_at'</span> => date(<span class="str">'Y-m-d H:i:s'</span>, time() + <span class="num">72</span> * <span class="num">3600</span>),
+      <span class="str">'status'</span>     => <span class="str">'pending'</span>,
+    ]);
+
+    <span class="cm">// Send email via Mailgun</span>
+    MailService::send($email, <span class="str">'staff_invite'</span>, [
+      <span class="str">'name'</span>       => $name,
+      <span class="str">'role'</span>       => ucfirst($role),
+      <span class="str">'clinic'</span>     => $clinicId,
+      <span class="str">'invite_url'</span> => <span class="str">"https://app.manageclinic.com/accept-invite/{$token}"</span>,
+    ]);
+
+    <span class="kw">return</span> [<span class="str">'success'</span> => <span class="kw">true</span>, <span class="str">'seats_remaining'</span> => <span class="kw">$this</span>->getEffectiveLimit($clinicId) - <span class="kw">$this</span>->getSeatUsage($clinicId) - <span class="num">1</span>];
+  }
+
+  <span class="kw">public function</span> acceptInvite(<span class="kw">string</span> $token, <span class="kw">string</span> $password): User {
+    $tokenHash = hash(<span class="str">'sha256'</span>, $token);
+    $invite    = QB::table(<span class="str">'staff_invitations'</span>)
+      ->where(<span class="str">'token_hash'</span>, $tokenHash)
+      ->where(<span class="str">'status'</span>, <span class="str">'pending'</span>)
+      ->where(<span class="str">'expires_at'</span>, <span class="str">'>'</span>, now())
+      ->first();
+
+    <span class="kw">if</span> (!$invite) <span class="kw">throw new</span> InvalidTokenException(<span class="str">'Invalid or expired invite link.'</span>);
+
+    <span class="cm">// Create the user account</span>
+    $userId = QB::table(<span class="str">'users'</span>)->insert([
+      <span class="str">'clinic_id'</span>     => $invite->clinic_id,
+      <span class="str">'name'</span>          => $invite->name,
+      <span class="str">'email'</span>         => $invite->email,
+      <span class="str">'role'</span>          => $invite->role,
+      <span class="str">'is_owner'</span>      => <span class="num">0</span>,
+      <span class="str">'password_hash'</span> => password_hash($password, <span class="kw">PASSWORD_BCRYPT</span>),
+      <span class="str">'is_active'</span>     => <span class="num">1</span>,
+    ]);
+
+    <span class="cm">// Update invitation record</span>
+    QB::table(<span class="str">'staff_invitations'</span>)->where(<span class="str">'id'</span>, $invite->id)->update([
+      <span class="str">'status'</span>          => <span class="str">'accepted'</span>,
+      <span class="str">'accepted_at'</span>     => now(),
+      <span class="str">'created_user_id'</span> => $userId,
+    ]);
+
+    <span class="kw">return</span> QB::table(<span class="str">'users'</span>)->find($userId);
+  }
+}
+</pre></div>
+  </div>
+</div>
+
+<!-- ═══ FLOW ═══ -->
+<div id="flow" class="sec">
+
+  <div class="stitle">Invite flow — admin adds a new doctor</div>
+  <div class="flow-row"><div class="flow-box" style="background:#E1F5EE;color:#0F6E56;border-color:#5DCAA5">Admin → Settings → Team</div><div class="flow-arr">→</div><div class="flow-box">Clicks "Add Staff"</div><div class="flow-arr">→</div><div class="flow-box">SeatService::canAddStaff() checks</div></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 14px">
+    <div style="border:.5px solid #C0DD97;border-radius:8px;padding:12px;background:#F6FBF0">
+      <div style="font-size:12px;font-weight:500;color:#3B6D11;margin-bottom:6px">✓ Seat available</div>
+      <div style="font-size:11px;color:var(--color-text-secondary);line-height:1.6">Admin enters: Name, Email, Role (doctor) → clicks "Send Invite" → staff_invitations row inserted → Email sent via Mailgun with 72h link</div>
+    </div>
+    <div style="border:.5px solid #F09595;border-radius:8px;padding:12px;background:#FEF5F5">
+      <div style="font-size:12px;font-weight:500;color:#A32D2D;margin-bottom:6px">✗ Seat limit reached</div>
+      <div style="font-size:11px;color:var(--color-text-secondary);line-height:1.6">Modal shown: "You've used 3/3 seats on the Clinic plan. Upgrade to Practice (8 seats) or add an extra seat for $5/mo"</div>
+    </div>
+  </div>
+
+  <div class="flow-row"><div class="flow-box" style="background:#FAEEDA;color:#854F0B;border-color:#EF9F27">Dr. Patel receives email</div><div class="flow-arr">→</div><div class="flow-box">Clicks "Accept Invitation"</div><div class="flow-arr">→</div><div class="flow-box">Opens /accept-invite/{token}</div><div class="flow-arr">→</div><div class="flow-box">Sets own password</div></div>
+  <div class="flow-row"><div class="flow-box">SeatService::acceptInvite()</div><div class="flow-arr">→</div><div class="flow-box" style="background:#E1F5EE;color:#0F6E56;border-color:#5DCAA5">users row created (is_owner=0, role='doctor')</div><div class="flow-arr">→</div><div class="flow-box">invitation status=accepted</div><div class="flow-arr">→</div><div class="flow-box">Dr. Patel logs in</div></div>
+  <div class="flow-row"><div class="flow-box" style="background:#E1F5EE;color:#0F6E56;border-color:#5DCAA5">Sees only: Patients (own) · Appointments · EMR · Vitals · Prescriptions</div><div class="flow-arr">→</div><div class="flow-box">Cannot see: Billing · Staff · Settings · Analytics</div></div>
+
+  <div class="stitle" style="margin-top:16px">Admin management actions</div>
+  <div class="card"><table>
+    <tr><th>Action</th><th>What happens</th></tr>
+    <tr><td>Resend expired invite</td><td>New token generated → new email sent → old invitation marked 'expired' → new invitation row inserted</td></tr>
+    <tr><td>Revoke pending invite</td><td>invitation.status = 'revoked' → seat freed immediately (no longer counts toward usage)</td></tr>
+    <tr><td>Deactivate a staff member</td><td>users.is_active = 0 → they cannot log in → seat freed → all their historical data (visits written, Rx, notes) preserved</td></tr>
+    <tr><td>Change a staff member's role</td><td>UPDATE users SET role = 'nurse' WHERE id = ? AND clinic_id = ? → RBAC permissions update immediately on next request</td></tr>
+    <tr><td>Change custom permissions</td><td>UPDATE users SET custom_permissions = '{"billing.create": true}' → takes effect on next page load (Redis session invalidated)</td></tr>
+    <tr><td>Transfer ownership</td><td>Set current owner is_owner=0 → set new user is_owner=1 → only 1 owner allowed per clinic (CHECK constraint or application-level guard)</td></tr>
+  </table></div>
+</div>
+
+<!-- ═══ UI MOCKUP ═══ -->
+<div id="ui" class="sec">
+  <div class="stitle">Team management screen — what admin sees</div>
+  <div class="mockup">
+    <div class="mock-head">
+      <div>
+        <div class="mock-title">Team members</div>
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-top:2px">3 of 8 seats used · Practice plan · 5 seats remaining</div>
+        <div class="seat-bar" style="width:200px;margin-top:6px"><div class="seat-fill" style="width:37.5%"></div></div>
+      </div>
+      <div class="mock-action">+ Add staff member</div>
+    </div>
+    <table class="mock-table">
+      <tr>
+        <th>Name</th><th>Role</th><th>Email</th><th>Status</th><th>Last active</th><th>Actions</th>
+      </tr>
+      <tr>
+        <td><strong>Dr. Mitesh Prajapati</strong> <span style="font-size:10px;color:#854F0B;background:#FAEEDA;padding:1px 5px;border-radius:4px;margin-left:4px">Owner</span></td>
+        <td><span class="role-badge" style="background:#FAEEDA;color:#854F0B">Admin</span></td>
+        <td>dr.mitesh@drfeelgoods.in</td>
+        <td><span class="status-dot" style="background:#30D158"></span>Active</td>
+        <td>Today 14:32</td>
+        <td style="color:var(--color-text-secondary);font-size:11px">Owner — cannot be removed</td>
+      </tr>
+      <tr>
+        <td><strong>Dr. Priya Shah</strong></td>
+        <td><span class="role-badge" style="background:#E6F1FB;color:#185FA5">Doctor</span></td>
+        <td>priya.shah@gmail.com</td>
+        <td><span class="status-dot" style="background:#30D158"></span>Active</td>
+        <td>Today 11:15</td>
+        <td style="font-size:11px"><span style="color:#185FA5;cursor:pointer">Edit</span> · <span style="color:#A32D2D;cursor:pointer">Deactivate</span></td>
+      </tr>
+      <tr>
+        <td><strong>Meena Patel</strong></td>
+        <td><span class="role-badge" style="background:#EEEDFE;color:#534AB7">Receptionist</span></td>
+        <td>meena.patel@gmail.com</td>
+        <td><span class="status-dot" style="background:#30D158"></span>Active</td>
+        <td>Today 09:00</td>
+        <td style="font-size:11px"><span style="color:#185FA5;cursor:pointer">Edit</span> · <span style="color:#A32D2D;cursor:pointer">Deactivate</span></td>
+      </tr>
+      <tr>
+        <td><strong>Rahul Kumar</strong></td>
+        <td><span class="role-badge" style="background:#EAF3DE;color:#3B6D11">Lab Tech</span></td>
+        <td>rahul.kumar@gmail.com</td>
+        <td><span class="status-dot" style="background:#FF9F0A"></span><span style="color:#854F0B">Invite pending</span></td>
+        <td>Never logged in</td>
+        <td style="font-size:11px"><span style="color:#185FA5;cursor:pointer">Resend</span> · <span style="color:#A32D2D;cursor:pointer">Revoke</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="stitle">Add staff modal — what admin fills in</div>
+  <div style="border:.5px solid var(--color-border-tertiary);border-radius:10px;padding:16px;max-width:400px">
+    <div style="font-size:13px;font-weight:500;margin-bottom:14px">Invite a team member</div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:11px;font-weight:500;margin-bottom:4px;color:var(--color-text-secondary)">FULL NAME</div>
+      <div style="border:.5px solid var(--color-border-tertiary);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--color-text-secondary)">e.g. Dr. Priya Shah</div>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:11px;font-weight:500;margin-bottom:4px;color:var(--color-text-secondary)">EMAIL ADDRESS</div>
+      <div style="border:.5px solid var(--color-border-tertiary);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--color-text-secondary)">e.g. priya@gmail.com</div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:500;margin-bottom:4px;color:var(--color-text-secondary)">ROLE</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <div style="border:.5px solid #378ADD;background:#E6F1FB;color:#185FA5;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:500">Doctor</div>
+        <div style="border:.5px solid var(--color-border-tertiary);padding:5px 10px;border-radius:6px;font-size:12px;color:var(--color-text-secondary)">Nurse</div>
+        <div style="border:.5px solid var(--color-border-tertiary);padding:5px 10px;border-radius:6px;font-size:12px;color:var(--color-text-secondary)">Receptionist</div>
+        <div style="border:.5px solid var(--color-border-tertiary);padding:5px 10px;border-radius:6px;font-size:12px;color:var(--color-text-secondary)">Lab Tech</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:12px;background:var(--color-background-secondary);padding:8px 10px;border-radius:6px">
+      They'll receive an email with a link to set their password and join your clinic. Link expires in 72 hours.
+    </div>
+    <div style="display:flex;gap:8px">
+      <div style="flex:1;text-align:center;padding:8px;border-radius:6px;border:.5px solid var(--color-border-tertiary);font-size:12px;cursor:pointer">Cancel</div>
+      <div style="flex:2;text-align:center;padding:8px;border-radius:6px;background:#0F9B6E;color:#fff;font-size:12px;font-weight:500;cursor:pointer">Send invitation</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function s(id){
+  document.querySelectorAll('.sec').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.nb').forEach(x=>x.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  event.target.classList.add('on');
+}
+function cp(btn){
+  const pre=btn.closest('.sql-box').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(()=>{
+    btn.textContent='Copied!';btn.classList.add('done');
+    setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('done');},2000);
+  });
+}
+</script>

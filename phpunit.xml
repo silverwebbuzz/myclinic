@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="tests/bootstrap.php" colors="true">
+    <testsuites>
+        <testsuite name="ManageClinic">
+            <directory>tests</directory>
+            <exclude>tests/Support</exclude>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory suffix=".php">app/Services</directory>
+            <directory suffix=".php">app/Gates</directory>
+        </include>
+    </source>
+</phpunit>
