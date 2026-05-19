@@ -38,6 +38,9 @@ final class DoctorScheduleService
                     if ($start === null || $end === null) {
                         continue;
                     }
+                    $extendedEnd = !empty($session['extended_end'])
+                        ? (string) $session['extended_end'] . ':00'
+                        : null;
 
                     $existing = QueryBuilder::table('doctor_schedules')
                         ->forClinic($clinicId)
@@ -52,6 +55,7 @@ final class DoctorScheduleService
                             ->where('id', '=', $existing['id'])
                             ->update([
                                 'end_time' => $end . ':00',
+                                'extended_end_time' => $extendedEnd,
                                 'slot_duration' => $slotDuration,
                                 'is_active' => 1,
                             ]);
@@ -62,6 +66,7 @@ final class DoctorScheduleService
                             'day_of_week' => $dayOfWeek,
                             'start_time' => $start . ':00',
                             'end_time' => $end . ':00',
+                            'extended_end_time' => $extendedEnd,
                             'slot_duration' => $slotDuration,
                             'max_patients' => 30,
                             'is_active' => 1,

@@ -19,7 +19,7 @@ final class TenantMiddleware implements MiddlewareInterface
             return $next();
         }
 
-        if (preg_match('#^/book/([a-z0-9-]+)(?:/slots)?$#', $request->uri, $m)) {
+        if (preg_match('#^/book/([a-z0-9-]+)(?:/(?:slots|lookup))?$#', $request->uri, $m)) {
             $clinic = $this->loadClinic($m[1]);
             if ($clinic !== null && (int) ($clinic['is_active'] ?? 0)) {
                 RequestContext::setClinic($clinic);

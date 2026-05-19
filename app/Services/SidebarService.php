@@ -24,7 +24,15 @@ final class SidebarService
         foreach ($config as $group) {
             $items = [];
             foreach ($group['items'] as $moduleId => $item) {
-                if (!isset($active[$moduleId])) {
+                $anyOf = $item['any_of'] ?? [$moduleId];
+                $visible = false;
+                foreach ($anyOf as $m) {
+                    if (isset($active[$m])) {
+                        $visible = true;
+                        break;
+                    }
+                }
+                if (!$visible) {
                     continue;
                 }
                 $items[] = [

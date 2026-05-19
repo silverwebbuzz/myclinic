@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-use App\Core\RequestContext;
 use App\Http\Request;
 use App\Http\Response;
 use App\Services\CsrfService;
@@ -22,18 +21,30 @@ final class BookController
 
         $clinicId = (int) $clinic['id'];
         $doctors = PublicBookingService::doctors($clinicId);
-        $doctorId = (int) ($request->query['doctor_id'] ?? ($doctors[0]['id'] ?? 0));
-        $date = $request->query['date'] ?? date('Y-m-d', strtotime('+1 day'));
-        $slots = $doctorId > 0 ? PublicBookingService::slots($clinicId, $doctorId, $date) : [];
+        $windowDays = PublicBookingService::bookingWindowDays($clinicId);
+
+        // Build the 7-day week strip starting today.
+        $days = [];
+        for ($i = 0; $i < 7; $i++) {
+            $ts = strtotime('+' . $i . ' day');
+            $days[] = [
+                'date' => date('Y-m-d', $ts),
+                'weekday' => strtoupper(date('D', $ts)),
+                'day' => (int) date('d', $ts),
+                'month' => date('M', $ts),
+                'is_today' => $i === 0,
+                'within_window' => $i <= $windowDays,
+            ];
+        }
 
         return Response::html(View::render('book/index', [
             'clinic' => $clinic,
             'doctors' => $doctors,
-            'doctorId' => $doctorId,
-            'date' => $date,
-            'slots' => $slots,
+            'doctorId' => $doctors[0]['id'] ?? 0,
             'slug' => $slug,
-            'booked' => $request->query['booked'] ?? null,
+            'days' => $days,
+            'windowDays' => $windowDays,
+            'confirmation' => null,
             'csrf' => CsrfService::token(),
         ]));
     }
@@ -46,11 +57,36 @@ final class BookController
         }
 
         try {
-            PublicBookingService::book((int) $clinic['id'], $request->post);
+            $result = PublicBookingService::book((int) $clinic['id'], $request->post);
 
-            return Response::redirect('/book/' . $slug . '?booked=1');
+            return Response::html(View::render('book/index', [
+                'clinic' => $clinic,
+                'doctors' => PublicBookingService::doctors((int) $clinic['id']),
+                'doctorId' => (int) ($request->post['doctor_id'] ?? 0),
+                'slug' => $slug,
+                'days' => [],
+                'windowDays' => PublicBookingService::bookingWindowDays((int) $clinic['id']),
+                'confirmation' => [
+                    'patient_name' => $result['patient']['name'] ?? '',
+                    'date' => date('D, j M Y', strtotime((string) $result['appointment']['scheduled_at'])),
+                    'time' => date('g:i A', strtotime((string) $result['appointment']['scheduled_at'])),
+                    'token' => $result['appointment']['token_number'] ?? null,
+                    'appointment_id' => $result['appointment']['id'] ?? null,
+                ],
+                'csrf' => CsrfService::token(),
+            ]));
         } catch (\Throwable $e) {
-            return Response::html($e->getMessage(), 422);
+            return Response::html(View::render('book/index', [
+                'clinic' => $clinic,
+                'doctors' => PublicBookingService::doctors((int) $clinic['id']),
+                'doctorId' => (int) ($request->post['doctor_id'] ?? 0),
+                'slug' => $slug,
+                'days' => [],
+                'windowDays' => PublicBookingService::bookingWindowDays((int) $clinic['id']),
+                'confirmation' => null,
+                'error' => $e->getMessage(),
+                'csrf' => CsrfService::token(),
+            ]), 422);
         }
     }
 
@@ -67,5 +103,16 @@ final class BookController
         return Response::json([
             'slots' => PublicBookingService::slots((int) $clinic['id'], $doctorId, $date),
         ]);
+    }
+
+    public function lookupApi(Request $request, string $slug): Response
+    {
+        $clinic = PublicBookingService::clinicBySlug($slug);
+        if ($clinic === null) {
+            return Response::json(['error' => 'Not found'], 404);
+        }
+
+        $phone = (string) ($request->query['phone'] ?? '');
+        return Response::json(PublicBookingService::findByPhonePublic((int) $clinic['id'], $phone));
     }
 }

@@ -57,17 +57,29 @@ final class ClinicSettingsService
     /** @param array<string, mixed> $post */
     public static function saveHours(int $clinicId, array $post): void
     {
-        $workingHours = WorkingHoursParser::fromPost($post);
+        // Prefer grouped form (new UI). Fall back to per-day if those keys are present.
+        $isGrouped = array_key_exists('weekday_morning_enabled', $post)
+            || array_key_exists('weekday_evening_enabled', $post)
+            || array_key_exists('sunday_open', $post);
+        $workingHours = $isGrouped
+            ? WorkingHoursParser::fromGroupedPost($post)
+            : WorkingHoursParser::fromPost($post);
+
         self::ensureSpecialtyConfigRow($clinicId);
-        $config = OnboardingService::specialtyConfig($clinicId) ?? [];
-        $options = $config['specialty_options'] ?? null;
-        if (is_string($options)) {
-            $options = json_decode($options, true) ?: [];
+
+        $slotDuration = (int) ($post['slot_duration_min'] ?? 15);
+        if (!in_array($slotDuration, [15, 30], true)) {
+            $slotDuration = 15;
         }
-        $slotDuration = (int) (is_array($options) ? ($options['slot_duration'] ?? 15) : 15);
+        $bookingWindow = (int) ($post['booking_window_days'] ?? 30);
+        if (!in_array($bookingWindow, [7, 15, 30, 60, 90], true)) {
+            $bookingWindow = 30;
+        }
 
         QueryBuilder::table('specialty_configs')->where('clinic_id', '=', $clinicId)->update([
             'working_hours' => json_encode($workingHours),
+            'slot_duration_min' => $slotDuration,
+            'booking_window_days' => $bookingWindow,
         ]);
 
         try {

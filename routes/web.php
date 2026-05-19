@@ -69,8 +69,8 @@ return static function (RouteRegistrar $router): void {
         $app->post('/dashboard/checklist/dismiss', [DashboardController::class, 'dismissChecklist']);
 
         $app->get('/prescriptions', [PrescriptionController::class, 'index']);
+        $app->get('/prescriptions/{visitId}/pdf', [PrescriptionController::class, 'downloadPdf']);
         $app->get('/vitals', [VitalsController::class, 'index']);
-        $app->get('/invoices', static fn () => \App\Http\Response::redirect('/billing'));
         $app->get('/radiology', [RadiologyController::class, 'index']);
         $app->get('/radiology/{id}', [RadiologyController::class, 'show']);
 
@@ -232,6 +232,7 @@ return static function (RouteRegistrar $router): void {
 
     $router->group(['middleware' => ['tenant', 'rate']], static function (GroupedRouteRegistrar $publicApi): void {
         $publicApi->get('/book/{slug}/slots', [BookController::class, 'slotsApi']);
+        $publicApi->get('/book/{slug}/lookup', [BookController::class, 'lookupApi']);
     });
 
     $router->group(['middleware' => ['tenant', 'rate']], static function (GroupedRouteRegistrar $publicQueue): void {

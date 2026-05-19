@@ -10,9 +10,11 @@ use App\Support\SpecialtyAdapter;
 
 final class PrescriptionService
 {
-    public const PER_PAGE = 30;
+    public const PER_PAGE = 20;
 
     /**
+     * Returns prescriptions grouped by visit, paginated by visit count (not line count).
+     *
      * @param array<string, mixed> $filters
      * @return array{rows: list<array<string, mixed>>, total: int, page: int, per_page: int}
      */
@@ -56,8 +58,10 @@ final class PrescriptionService
         $whereSql = implode(' AND ', $where);
         $pdo = Database::connection();
 
+        // Total = distinct visits that have at least one matching rx line.
         $countStmt = $pdo->prepare(
-            "SELECT COUNT(*) AS c FROM prescriptions rx
+            "SELECT COUNT(DISTINCT rx.visit_id) AS c
+             FROM prescriptions rx
              JOIN patients p ON p.id = rx.patient_id
              JOIN visits v ON v.id = rx.visit_id
              LEFT JOIN drugs d ON d.id = rx.drug_id
@@ -67,22 +71,55 @@ final class PrescriptionService
         $countStmt->execute($params);
         $total = (int) ($countStmt->fetch()['c'] ?? 0);
 
-        $stmt = $pdo->prepare(
-            "SELECT rx.*, p.name AS patient_name, p.uhid, v.visited_at,
-                    d.name AS drug_name, r.name AS remedy_name
+        // Page-window of visits, with summary fields.
+        $visitsStmt = $pdo->prepare(
+            "SELECT v.id AS visit_id, v.visited_at, v.patient_id, v.doctor_id,
+                    p.name AS patient_name, p.uhid, p.phone AS patient_phone,
+                    u.name AS doctor_name,
+                    COUNT(rx.id) AS line_count
              FROM prescriptions rx
              JOIN patients p ON p.id = rx.patient_id
              JOIN visits v ON v.id = rx.visit_id
+             JOIN users u ON u.id = v.doctor_id
              LEFT JOIN drugs d ON d.id = rx.drug_id
              LEFT JOIN remedies r ON r.id = rx.remedy_id
              WHERE {$whereSql}
-             ORDER BY v.visited_at DESC, rx.id DESC
+             GROUP BY v.id, v.visited_at, v.patient_id, v.doctor_id, p.name, p.uhid, p.phone, u.name
+             ORDER BY v.visited_at DESC, v.id DESC
              LIMIT {$perPage} OFFSET {$offset}",
         );
-        $stmt->execute($params);
+        $visitsStmt->execute($params);
+        $visits = $visitsStmt->fetchAll() ?: [];
+
+        if ($visits === []) {
+            return ['rows' => [], 'total' => $total, 'page' => $page, 'per_page' => $perPage];
+        }
+
+        $visitIds = array_map(static fn (array $r) => (int) $r['visit_id'], $visits);
+        $placeholders = implode(',', array_fill(0, count($visitIds), '?'));
+        $linesStmt = $pdo->prepare(
+            "SELECT rx.*, d.name AS drug_name, r.name AS remedy_name
+             FROM prescriptions rx
+             LEFT JOIN drugs d ON d.id = rx.drug_id
+             LEFT JOIN remedies r ON r.id = rx.remedy_id
+             WHERE rx.clinic_id = ? AND rx.visit_id IN ({$placeholders})
+             ORDER BY rx.visit_id DESC, rx.sort_order ASC, rx.id ASC",
+        );
+        $linesStmt->execute(array_merge([$clinicId], $visitIds));
+        $lines = $linesStmt->fetchAll() ?: [];
+
+        $linesByVisit = [];
+        foreach ($lines as $line) {
+            $linesByVisit[(int) $line['visit_id']][] = $line;
+        }
+
+        foreach ($visits as &$v) {
+            $v['lines'] = $linesByVisit[(int) $v['visit_id']] ?? [];
+        }
+        unset($v);
 
         return [
-            'rows' => $stmt->fetchAll() ?: [],
+            'rows' => $visits,
             'total' => $total,
             'page' => $page,
             'per_page' => $perPage,

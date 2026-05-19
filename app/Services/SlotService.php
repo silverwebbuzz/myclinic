@@ -10,10 +10,14 @@ final class SlotService
 {
     private const CACHE_TTL = 300;
 
-    /** @return list<array{time: string, datetime: string, available: bool}> */
-    public static function available(int $clinicId, int $doctorId, string $date): array
+    /**
+     * @param bool $includeExtended Set true ONLY in staff/admin contexts (walk-in form).
+     *                              Public booking must pass false (default).
+     * @return list<array{time: string, datetime: string, available: bool, extended?: bool}>
+     */
+    public static function available(int $clinicId, int $doctorId, string $date, bool $includeExtended = false): array
     {
-        $cacheKey = "slots:{$clinicId}:{$doctorId}:{$date}";
+        $cacheKey = "slots:{$clinicId}:{$doctorId}:{$date}" . ($includeExtended ? ':ext' : '');
         $cached = RedisClient::get($cacheKey);
         if ($cached !== null) {
             $decoded = json_decode($cached, true);
@@ -21,7 +25,7 @@ final class SlotService
             return is_array($decoded) ? $decoded : [];
         }
 
-        $slots = self::compute($clinicId, $doctorId, $date);
+        $slots = self::compute($clinicId, $doctorId, $date, $includeExtended);
         RedisClient::setex($cacheKey, self::CACHE_TTL, json_encode($slots));
 
         return $slots;
@@ -37,8 +41,8 @@ final class SlotService
         self::invalidate($clinicId, $doctorId, date('Y-m-d', strtotime($scheduledAt)));
     }
 
-    /** @return list<array{time: string, datetime: string, available: bool}> */
-    private static function compute(int $clinicId, int $doctorId, string $date): array
+    /** @return list<array{time: string, datetime: string, available: bool, extended?: bool}> */
+    private static function compute(int $clinicId, int $doctorId, string $date, bool $includeExtended = false): array
     {
         if (!Database::ping()) {
             return [];
@@ -70,9 +74,16 @@ final class SlotService
         foreach ($schedules as $sched) {
             $duration = (int) ($sched['slot_duration'] ?? 15);
             $start = strtotime($date . ' ' . substr((string) $sched['start_time'], 0, 5));
-            $end = strtotime($date . ' ' . substr((string) $sched['end_time'], 0, 5));
+            $normalEnd = strtotime($date . ' ' . substr((string) $sched['end_time'], 0, 5));
+            $hardEnd = $normalEnd;
+            if ($includeExtended && !empty($sched['extended_end_time'])) {
+                $extTs = strtotime($date . ' ' . substr((string) $sched['extended_end_time'], 0, 5));
+                if ($extTs > $normalEnd) {
+                    $hardEnd = $extTs;
+                }
+            }
 
-            for ($t = $start; $t + ($duration * 60) <= $end; $t += $duration * 60) {
+            for ($t = $start; $t + ($duration * 60) <= $hardEnd; $t += $duration * 60) {
                 $time = date('H:i', $t);
                 $datetime = date('Y-m-d H:i:s', $t);
 
@@ -85,6 +96,7 @@ final class SlotService
                     'time' => $time,
                     'datetime' => $datetime,
                     'available' => $available,
+                    'extended' => $t >= $normalEnd,
                 ];
             }
         }

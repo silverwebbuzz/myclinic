@@ -86,10 +86,16 @@ final class AppointmentController
             'is_followup' => !empty($request->query['followup']),
         ];
 
+        $patientHint = null;
+        if (!empty($prefill['patient_id'])) {
+            $patientHint = \App\Services\PatientService::find($clinicId, (int) $prefill['patient_id']);
+        }
+
         return Response::html(Layout::page('appointments/form', [
             'appointment' => null,
             'doctors' => AppointmentService::doctorsForClinic($clinicId),
             'prefill' => $prefill,
+            'patientHint' => $patientHint,
             'error' => null,
             'hasTelemedicine' => ModuleGate::check('telemedicine'),
         ], 'Book appointment'));
@@ -102,8 +108,21 @@ final class AppointmentController
         }
 
         $clinicId = (int) RequestContext::clinicId();
+
         try {
-            $appointment = AppointmentService::create($clinicId, $this->dataFromRequest($request));
+            $patientId = $this->resolvePatientId($clinicId, $request);
+            if ($patientId === 0) {
+                throw new \RuntimeException('Please select an existing patient or enter a new patient name and phone.');
+            }
+
+            $data = $this->dataFromRequest($request);
+            $data['patient_id'] = $patientId;
+
+            if ((int) $data['doctor_id'] < 1) {
+                throw new \RuntimeException('Please select a doctor.');
+            }
+
+            $appointment = AppointmentService::create($clinicId, $data);
             AuditService::log($request, 'INSERT', 'appointments', (int) $appointment['id']);
 
             return Response::redirect('/appointments/' . $appointment['id'] . '/slip?booked=1');
@@ -116,6 +135,38 @@ final class AppointmentController
                 'hasTelemedicine' => ModuleGate::check('telemedicine'),
             ], 'Book appointment'), 422);
         }
+    }
+
+    /**
+     * Resolves which patient the appointment belongs to.
+     * Priority: explicit patient_id > inline new-patient (new_name + new_phone) > 0.
+     * Inline create when name+phone provided and no existing record matches the phone.
+     */
+    private function resolvePatientId(int $clinicId, Request $request): int
+    {
+        $explicitId = (int) ($request->post['patient_id'] ?? 0);
+        if ($explicitId > 0) {
+            return $explicitId;
+        }
+
+        $newName = trim((string) ($request->post['new_patient_name'] ?? ''));
+        $newPhone = trim((string) ($request->post['new_patient_phone'] ?? ''));
+        if ($newName === '' || $newPhone === '') {
+            return 0;
+        }
+
+        $existing = \App\Services\PatientService::findByPhone($clinicId, $newPhone);
+        if ($existing !== null) {
+            return (int) $existing['id'];
+        }
+
+        $patient = \App\Services\PatientService::create($clinicId, [
+            'name' => $newName,
+            'phone' => $newPhone,
+            'source' => 'walk_in',
+        ]);
+
+        return (int) ($patient['id'] ?? 0);
     }
 
     public function edit(Request $request, string $id): Response
@@ -217,7 +268,7 @@ final class AppointmentController
         }
 
         return Response::json([
-            'slots' => SlotService::available($clinicId, $doctorId, $date),
+            'slots' => SlotService::available($clinicId, $doctorId, $date, true),
             'refreshed_at' => date('c'),
         ]);
     }
