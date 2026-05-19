@@ -1,13 +1,16 @@
 <?php
 $days = ['mon' => 'Monday', 'tue' => 'Tuesday', 'wed' => 'Wednesday', 'thu' => 'Thursday', 'fri' => 'Friday', 'sat' => 'Saturday', 'sun' => 'Sunday'];
-$workingHours = $workingHours ?? [];
+$workingHours = is_array($workingHours ?? null) ? $workingHours : [];
 ?>
 <div class="space-y-3">
     <?php foreach ($days as $key => $label):
-        $day = $workingHours[$key] ?? ['enabled' => false, 'sessions' => []];
-        $sessions = $day['sessions'] ?? [];
-        $morning = $sessions[0] ?? [];
-        $evening = $sessions[1] ?? [];
+        $day = $workingHours[$key] ?? null;
+        if (!is_array($day)) {
+            $day = ['enabled' => !empty($day), 'sessions' => []];
+        }
+        $sessions = is_array($day['sessions'] ?? null) ? $day['sessions'] : [];
+        $morning = is_array($sessions[0] ?? null) ? $sessions[0] : [];
+        $evening = is_array($sessions[1] ?? null) ? $sessions[1] : [];
     ?>
     <div class="rounded-lg border border-slate-200 p-3">
         <label class="flex items-center gap-2 text-sm font-medium">

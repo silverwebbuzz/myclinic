@@ -61,8 +61,10 @@ final class PatientService
 
         $q = trim((string) ($filters['q'] ?? ''));
         if ($q !== '') {
-            $where[] = '(p.name LIKE :q OR p.phone LIKE :q OR p.uhid LIKE :q)';
-            $params['q'] = '%' . $q . '%';
+            $where[] = '(p.name LIKE :q_name OR p.phone LIKE :q_phone OR p.uhid LIKE :q_uhid)';
+            $params['q_name'] = '%' . $q . '%';
+            $params['q_phone'] = '%' . $q . '%';
+            $params['q_uhid'] = '%' . $q . '%';
         }
         if (!empty($filters['gender'])) {
             $where[] = 'p.gender = :gender';

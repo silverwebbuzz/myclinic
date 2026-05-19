@@ -30,8 +30,10 @@ final class VitalsService
 
         $q = trim((string) ($filters['q'] ?? ''));
         if ($q !== '') {
-            $where[] = '(p.name LIKE :q OR p.uhid LIKE :q)';
-            $params['q'] = '%' . $q . '%';
+            $where[] = '(p.name LIKE :q1 OR p.uhid LIKE :q2)';
+            $like = '%' . $q . '%';
+            $params['q1'] = $like;
+            $params['q2'] = $like;
         }
         if (!empty($filters['patient_id'])) {
             $where[] = 'v.patient_id = :pid';

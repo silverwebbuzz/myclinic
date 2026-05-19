@@ -27,8 +27,11 @@ final class RadiologyService
 
         $q = trim((string) ($filters['q'] ?? ''));
         if ($q !== '') {
-            $where[] = '(p.name LIKE :q OR p.uhid LIKE :q OR r.body_part LIKE :q)';
-            $params['q'] = '%' . $q . '%';
+            $where[] = '(p.name LIKE :q1 OR p.uhid LIKE :q2 OR r.body_part LIKE :q3)';
+            $like = '%' . $q . '%';
+            $params['q1'] = $like;
+            $params['q2'] = $like;
+            $params['q3'] = $like;
         }
         if (!empty($filters['modality'])) {
             $where[] = 'r.modality = :modality';

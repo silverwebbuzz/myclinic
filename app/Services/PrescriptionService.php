@@ -29,8 +29,12 @@ final class PrescriptionService
 
         $q = trim((string) ($filters['q'] ?? ''));
         if ($q !== '') {
-            $where[] = '(p.name LIKE :q OR p.uhid LIKE :q OR d.name LIKE :q OR r.name LIKE :q)';
-            $params['q'] = '%' . $q . '%';
+            $where[] = '(p.name LIKE :q1 OR p.uhid LIKE :q2 OR d.name LIKE :q3 OR r.name LIKE :q4)';
+            $like = '%' . $q . '%';
+            $params['q1'] = $like;
+            $params['q2'] = $like;
+            $params['q3'] = $like;
+            $params['q4'] = $like;
         }
         if (!empty($filters['mode'])) {
             $where[] = 'rx.mode = :mode';

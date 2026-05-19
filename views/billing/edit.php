@@ -19,8 +19,18 @@ $due = (float) $invoice['total'] - (float) ($invoice['advance_paid'] ?? 0);
                 <p class="mt-1 text-xs text-emerald-700">Advance balance: ₹<?= number_format((float) $patient['advance_balance'], 2) ?></p>
                 <?php endif; ?>
             </div>
-            <p class="text-2xl font-bold">₹<span id="live-total"><?= number_format((float) $invoice['total'], 2) ?></span></p>
+            <div class="text-right">
+                <p class="text-2xl font-bold">₹<span id="live-total"><?= number_format((float) $invoice['total'], 2) ?></span></p>
+                <a href="/billing/<?= (int) $invoice['id'] ?>/pdf"
+                   class="mt-2 inline-block rounded-lg border px-3 py-1.5 text-xs hover:bg-slate-50">
+                    📄 Download PDF
+                </a>
+            </div>
         </div>
+
+        <?php if (!empty($_GET['error'])): ?>
+        <p class="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800"><?= htmlspecialchars($_GET['error']) ?></p>
+        <?php endif; ?>
 
         <form method="post" action="/billing/<?= (int) $invoice['id'] ?>" class="mt-6 space-y-4" id="invoice-form">
             <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">

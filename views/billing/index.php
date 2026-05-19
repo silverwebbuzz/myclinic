@@ -41,7 +41,12 @@
                     <td class="px-4 py-3"><?= number_format((float) $inv['total'], 2) ?> <?= htmlspecialchars($inv['currency'] ?? '') ?></td>
                     <td class="px-4 py-3 capitalize"><?= htmlspecialchars($inv['status'] ?? '') ?></td>
                     <td class="px-4 py-3 text-xs"><?= htmlspecialchars(substr($inv['created_at'] ?? '', 0, 10)) ?></td>
-                    <td class="px-4 py-3 text-right"><a href="/billing/<?= (int) $inv['id'] ?>" class="text-emerald-600 hover:underline">Open</a></td>
+                    <td class="px-4 py-3 text-right">
+                        <div class="flex justify-end gap-2">
+                            <a href="/billing/<?= (int) $inv['id'] ?>" class="text-emerald-600 hover:underline">Open</a>
+                            <a href="/billing/<?= (int) $inv['id'] ?>/pdf" class="text-slate-500 hover:underline" title="Download PDF">📄</a>
+                        </div>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
                 <?php endif; ?>

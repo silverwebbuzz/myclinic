@@ -143,6 +143,7 @@ return static function (RouteRegistrar $router): void {
         $app->get('/billing/export/excel', [BillingController::class, 'exportExcel']);
         $app->get('/billing/export/tally', [BillingController::class, 'exportTally']);
         $app->get('/billing/{id}', [BillingController::class, 'show']);
+        $app->get('/billing/{id}/pdf', [BillingController::class, 'downloadPdf']);
         $app->post('/billing/{id}', [BillingController::class, 'update']);
         $app->post('/billing/{id}/pay-cash', [BillingController::class, 'payCash']);
 

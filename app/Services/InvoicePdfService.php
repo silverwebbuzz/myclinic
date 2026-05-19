@@ -49,9 +49,19 @@ final class InvoicePdfService
             . '</div>';
 
         if (class_exists(Mpdf::class)) {
-            $mpdf = new Mpdf(['format' => 'A4']);
-            $mpdf->WriteHTML($html);
-            $mpdf->Output($path, Destination::FILE);
+            $uid = function_exists('posix_getuid') ? posix_getuid() : getmyuid();
+            $tmpDir = sys_get_temp_dir() . '/mpdf-' . $uid;
+            if (!is_dir($tmpDir) && !@mkdir($tmpDir, 0755, true) && !is_dir($tmpDir)) {
+                $tmpDir = sys_get_temp_dir();
+            }
+            try {
+                $mpdf = new Mpdf(['format' => 'A4', 'tempDir' => $tmpDir]);
+                $mpdf->WriteHTML($html);
+                $mpdf->Output($path, Destination::FILE);
+            } catch (\Throwable $e) {
+                error_log('[InvoicePdfService] mpdf failed: ' . $e->getMessage());
+                file_put_contents($path, strip_tags($html));
+            }
         } else {
             file_put_contents($path, strip_tags($html));
         }
