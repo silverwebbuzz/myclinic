@@ -39,7 +39,20 @@ final class PatientController
             'last_visit' => $request->query['last_visit'] ?? '',
         ];
 
-        $result = PatientService::search($clinicId, $filters, $page, $sort, $dir);
+        try {
+            $result = PatientService::search($clinicId, $filters, $page, $sort, $dir);
+        } catch (\Throwable $e) {
+            error_log('[patients/index] ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+            return Response::html(
+                '<pre style="padding:20px;font:13px monospace;color:#b00;white-space:pre-wrap;">'
+                . 'Patients page failed:' . "\n\n"
+                . htmlspecialchars($e->getMessage()) . "\n\n"
+                . 'at ' . htmlspecialchars($e->getFile()) . ':' . $e->getLine() . "\n\n"
+                . htmlspecialchars($e->getTraceAsString())
+                . '</pre>',
+                500
+            );
+        }
 
         return Response::html(Layout::page('patients/index', [
             'patients' => $result['rows'],
@@ -98,32 +111,45 @@ final class PatientController
         }
 
         $clinicId = (int) RequestContext::clinicId();
-        $patient = PatientService::find($clinicId, (int) $id);
-        if ($patient === null) {
-            return Response::html('Patient not found', 404);
+
+        try {
+            $patient = PatientService::find($clinicId, (int) $id);
+            if ($patient === null) {
+                return Response::html('Patient not found', 404);
+            }
+
+            $tab = $request->query['tab'] ?? 'overview';
+
+            return Response::html(Layout::page('patients/show', [
+                'patient' => $patient,
+                'tab' => $tab,
+                'allergies' => PatientService::decodeTags($patient['allergies'] ?? null),
+                'chronic' => PatientService::decodeTags($patient['chronic_conditions'] ?? null),
+                'specialtyData' => json_decode($patient['specialty_data'] ?? '{}', true) ?: [],
+                'visits' => PatientService::visits($clinicId, (int) $id),
+                'vitals' => PatientService::vitals($clinicId, (int) $id),
+                'prescriptions' => PatientService::prescriptions($clinicId, (int) $id),
+                'invoices' => PatientService::invoices($clinicId, (int) $id),
+                'documents' => PatientService::documents($clinicId, (int) $id),
+                'hasLab' => ModuleGate::check('lab'),
+                'hasRadiology' => ModuleGate::check('radiology'),
+                'hasVitals' => ModuleGate::check('vitals'),
+                'hasPhotos' => ModuleGate::check('before_after'),
+                'photos' => ModuleGate::check('before_after') ? \App\Services\PatientPhotoService::forPatient($clinicId, (int) $id) : [],
+                'created' => $request->query['created'] ?? null,
+            ], $patient['name']));
+        } catch (\Throwable $e) {
+            error_log('[patients/show id=' . $id . '] ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+            return Response::html(
+                '<pre style="padding:20px;font:13px monospace;color:#b00;white-space:pre-wrap;">'
+                . 'Patient detail page failed:' . "\n\n"
+                . htmlspecialchars($e->getMessage()) . "\n\n"
+                . 'at ' . htmlspecialchars($e->getFile()) . ':' . $e->getLine() . "\n\n"
+                . htmlspecialchars($e->getTraceAsString())
+                . '</pre>',
+                500
+            );
         }
-
-        $tab = $request->query['tab'] ?? 'overview';
-        $clinic = RequestContext::clinic();
-
-        return Response::html(Layout::page('patients/show', [
-            'patient' => $patient,
-            'tab' => $tab,
-            'allergies' => PatientService::decodeTags($patient['allergies'] ?? null),
-            'chronic' => PatientService::decodeTags($patient['chronic_conditions'] ?? null),
-            'specialtyData' => json_decode($patient['specialty_data'] ?? '{}', true) ?: [],
-            'visits' => PatientService::visits($clinicId, (int) $id),
-            'vitals' => PatientService::vitals($clinicId, (int) $id),
-            'prescriptions' => PatientService::prescriptions($clinicId, (int) $id),
-            'invoices' => PatientService::invoices($clinicId, (int) $id),
-            'documents' => PatientService::documents($clinicId, (int) $id),
-            'hasLab' => ModuleGate::check('lab'),
-            'hasRadiology' => ModuleGate::check('radiology'),
-            'hasVitals' => ModuleGate::check('vitals'),
-            'hasPhotos' => ModuleGate::check('before_after'),
-            'photos' => ModuleGate::check('before_after') ? \App\Services\PatientPhotoService::forPatient($clinicId, (int) $id) : [],
-            'created' => $request->query['created'] ?? null,
-        ], $patient['name']));
     }
 
     public function edit(Request $request, string $id): Response

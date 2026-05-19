@@ -84,15 +84,25 @@ final class TenantMiddleware implements MiddlewareInterface
             }
         }
 
-        $clinic = $this->resolveFromAuth($request);
-        if ($clinic === null) {
-            $slug = $this->resolveSlug($request);
-            if ($slug === null) {
-                return Response::json(['error' => 'Clinic not found'], 404);
+        $authClinic = $this->resolveFromAuth($request);
+        if ($authClinic !== null) {
+            if (!(int) ($authClinic['is_active'] ?? 0)) {
+                return Response::json([
+                    'error' => 'Your clinic account is inactive. Contact support.',
+                    'clinic_id' => $authClinic['id'] ?? null,
+                ], 403);
             }
-            $clinic = $this->loadClinic($slug);
+            RequestContext::setClinic($authClinic);
+
+            return $next();
         }
 
+        $slug = $this->resolveSlug($request);
+        if ($slug === null) {
+            return Response::json(['error' => 'Clinic not found'], 404);
+        }
+
+        $clinic = $this->loadClinic($slug);
         if ($clinic === null || !(int) ($clinic['is_active'] ?? 0)) {
             return Response::json(['error' => 'Clinic not found'], 404);
         }
