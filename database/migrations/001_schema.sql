@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS manageclinic CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE manageclinic;
+-- Note: database creation and selection is handled by the deployment process.
+-- The connecting user is expected to already be scoped to the target database.
 
 -- 01 tenants
 CREATE TABLE tenants (
