@@ -17,6 +17,19 @@ final class SlotService
      */
     public static function available(int $clinicId, int $doctorId, string $date, bool $includeExtended = false): array
     {
+        // Today's slot list changes minute-by-minute (past slots drop off), so skip Redis cache for today.
+        $tz = self::clinicTimezone($clinicId);
+        try {
+            $todayLocal = (new \DateTime('now', new \DateTimeZone($tz)))->format('Y-m-d');
+        } catch (\Throwable $e) {
+            $todayLocal = date('Y-m-d');
+        }
+        $isToday = $date === $todayLocal;
+
+        if ($isToday) {
+            return self::compute($clinicId, $doctorId, $date, $includeExtended);
+        }
+
         $cacheKey = "slots:{$clinicId}:{$doctorId}:{$date}" . ($includeExtended ? ':ext' : '');
         $cached = RedisClient::get($cacheKey);
         if ($cached !== null) {
@@ -70,6 +83,18 @@ final class SlotService
 
         $booked = self::bookedTimes($clinicId, $doctorId, $date);
 
+        // Clinic-local "now" for hiding past slots on today.
+        $tz = self::clinicTimezone($clinicId);
+        try {
+            $nowLocal = new \DateTime('now', new \DateTimeZone($tz));
+            $todayLocal = $nowLocal->format('Y-m-d');
+            $nowTs = $nowLocal->getTimestamp();
+        } catch (\Throwable $e) {
+            $nowTs = time();
+            $todayLocal = date('Y-m-d');
+        }
+        $isToday = $date === $todayLocal;
+
         $slots = [];
         foreach ($schedules as $sched) {
             $duration = (int) ($sched['slot_duration'] ?? 15);
@@ -88,6 +113,11 @@ final class SlotService
                 $datetime = date('Y-m-d H:i:s', $t);
 
                 if (self::isBlockedByLeave($time, $leaveBlocks)) {
+                    continue;
+                }
+
+                // Skip slots that have already started on today.
+                if ($isToday && $t <= $nowTs) {
                     continue;
                 }
 
@@ -134,6 +164,13 @@ final class SlotService
         }
 
         return false;
+    }
+
+    private static function clinicTimezone(int $clinicId): string
+    {
+        $row = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first();
+        $tz = $row['timezone'] ?? 'Asia/Kolkata';
+        return is_string($tz) && $tz !== '' ? $tz : 'Asia/Kolkata';
     }
 
     /** @return array<string, true> */

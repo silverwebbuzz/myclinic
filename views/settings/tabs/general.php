@@ -1,3 +1,43 @@
+<?php
+$slug = (string) ($clinic['slug'] ?? '');
+$customDomain = trim((string) ($clinic['custom_domain'] ?? ''));
+$scheme = (($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https') ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'] ?? 'app.manageclinic.com';
+$bookingUrl = $customDomain !== ''
+    ? $scheme . '://' . $customDomain . '/book/' . rawurlencode($slug)
+    : $scheme . '://' . $host . '/book/' . rawurlencode($slug);
+?>
+<div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-5" x-data="{ copied: false }">
+    <div class="flex items-start gap-3">
+        <span class="text-2xl">🔗</span>
+        <div class="min-w-0 flex-1">
+            <h3 class="font-semibold text-emerald-900">Public booking link</h3>
+            <p class="mt-1 text-xs text-emerald-800">
+                Share this URL with patients. They can book appointments without logging in.
+            </p>
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+                <input type="text" readonly value="<?= htmlspecialchars($bookingUrl) ?>"
+                       x-ref="urlField"
+                       class="min-w-0 flex-1 rounded-lg border border-emerald-300 bg-white px-3 py-2 font-mono text-xs"
+                       onclick="this.select()">
+                <button type="button"
+                        @click="navigator.clipboard.writeText($refs.urlField.value); copied = true; setTimeout(() => copied = false, 2000)"
+                        class="whitespace-nowrap rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700">
+                    <span x-show="!copied">📋 Copy</span>
+                    <span x-show="copied">✓ Copied</span>
+                </button>
+                <a href="<?= htmlspecialchars($bookingUrl) ?>" target="_blank"
+                   class="whitespace-nowrap rounded-lg border border-emerald-300 bg-white px-3 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
+                    ↗ Open
+                </a>
+            </div>
+            <p class="mt-2 text-xs text-emerald-700">
+                Tip: paste this on your website, WhatsApp bio, business card, or signage.
+            </p>
+        </div>
+    </div>
+</div>
+
 <form method="post" action="/settings/general" enctype="multipart/form-data" class="space-y-6 rounded-xl border bg-white p-6">
     <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
     <h2 class="text-lg font-semibold">General</h2>
