@@ -16,8 +16,9 @@ $port = $_ENV['DB_PORT'] ?? '3306';
 $user = $_ENV['DB_USERNAME'] ?? 'root';
 $pass = $_ENV['DB_PASSWORD'] ?? '';
 
+$dbname = $_ENV['DB_DATABASE'] ?? 'manageclinic';
 $pdo = new PDO(
-    "mysql:host={$host};port={$port};charset=utf8mb4",
+    "mysql:host={$host};port={$port};dbname={$dbname};charset=utf8mb4",
     $user,
     $pass,
     [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION],
@@ -33,6 +34,9 @@ foreach ($files as $file) {
     $sql = file_get_contents($file);
     foreach (array_filter(array_map('trim', explode(';', $sql))) as $statement) {
         if ($statement === '' || str_starts_with($statement, '--')) {
+            continue;
+        }
+        if (preg_match('/^(CREATE\s+DATABASE|USE\s+)/i', $statement)) {
             continue;
         }
         try {
