@@ -65,6 +65,10 @@ return static function (RouteRegistrar $router): void {
         $app->get('/dashboard', [DashboardController::class, 'index']);
         $app->post('/dashboard/checklist/dismiss', [DashboardController::class, 'dismissChecklist']);
 
+        $app->get('/prescriptions', static fn () => \App\Http\Response::redirect('/visits'));
+        $app->get('/vitals', static fn () => \App\Http\Response::redirect('/visits'));
+        $app->get('/invoices', static fn () => \App\Http\Response::redirect('/billing'));
+
         $app->get('/settings/leaves', static fn () => \App\Http\Response::redirect('/settings?tab=leaves'));
         $app->get('/settings', [ClinicSettingsController::class, 'index']);
         $app->post('/settings/general', [ClinicSettingsController::class, 'saveGeneral']);
@@ -140,6 +144,7 @@ return static function (RouteRegistrar $router): void {
         $app->get('/appointments', [AppointmentController::class, 'index']);
         $app->get('/appointments/new', [AppointmentController::class, 'create']);
         $app->post('/appointments/new', [AppointmentController::class, 'store']);
+        $app->get('/appointments/{id}', [AppointmentController::class, 'edit']);
         $app->get('/appointments/{id}/edit', [AppointmentController::class, 'edit']);
         $app->post('/appointments/{id}', [AppointmentController::class, 'update']);
         $app->post('/appointments/{id}/cancel', [AppointmentController::class, 'cancel']);

@@ -2,8 +2,9 @@
 $isEdit = $appointment !== null;
 $action = $isEdit ? '/appointments/' . (int) $appointment['id'] : '/appointments/new';
 $scheduledAt = $isEdit ? ($appointment['scheduled_at'] ?? '') : '';
-$dateVal = $isEdit ? date('Y-m-d', strtotime($scheduledAt)) : ($prefill['date'] ?? date('Y-m-d'));
-$timeVal = $isEdit ? date('H:i', strtotime($scheduledAt)) : '';
+$scheduledTs = $scheduledAt !== '' ? strtotime($scheduledAt) : false;
+$dateVal = ($isEdit && $scheduledTs) ? date('Y-m-d', $scheduledTs) : ($prefill['date'] ?? date('Y-m-d'));
+$timeVal = ($isEdit && $scheduledTs) ? date('H:i', $scheduledTs) : '';
 $patientId = $isEdit ? (int) $appointment['patient_id'] : (int) ($prefill['patient_id'] ?? 0);
 $patientLabel = $isEdit ? ($appointment['patient_name'] . ' · ' . $appointment['uhid']) : '';
 $doctorId = $isEdit ? (int) $appointment['doctor_id'] : (int) ($prefill['doctor_id'] ?? 0);

@@ -112,9 +112,6 @@ final class AppointmentController
         $clinicId = (int) RequestContext::clinicId();
         try {
             $data = $this->dataFromRequest($request);
-            if (!empty($request->post['scheduled_at']) && !empty($request->post['scheduled_time'])) {
-                $data['scheduled_at'] = $request->post['scheduled_date'] . ' ' . $request->post['scheduled_time'] . ':00';
-            }
             AppointmentService::update($clinicId, (int) $id, $data);
             AuditService::log($request, 'UPDATE', 'appointments', (int) $id);
 

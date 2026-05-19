@@ -12,8 +12,18 @@ final class DrugService
     public static function search(string $q, int $limit = 15): array
     {
         $q = trim($q);
-        if ($q === '' || !Database::ping()) {
+        if (!Database::ping()) {
             return [];
+        }
+        if ($q === '') {
+            $pdo = Database::connection();
+            $stmt = $pdo->prepare(
+                'SELECT id, name, generic_name, strength, form, interactions, contraindications
+                 FROM drugs WHERE is_active = 1 ORDER BY name LIMIT :lim',
+            );
+            $stmt->bindValue('lim', $limit, \PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll() ?: [];
         }
 
         $pdo = Database::connection();

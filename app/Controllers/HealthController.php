@@ -15,7 +15,11 @@ final class HealthController
     {
         $dbOk = Database::ping();
         $redisOk = RedisClient::ping();
-        $storageOk = is_writable(dirname(__DIR__, 2) . '/storage');
+        $storageDir = dirname(__DIR__, 2) . '/storage';
+        if (!is_dir($storageDir)) {
+            @mkdir($storageDir, 0755, true);
+        }
+        $storageOk = is_dir($storageDir) && is_writable($storageDir);
         $r2Configured = !empty($_ENV['R2_BUCKET']) && !empty($_ENV['R2_ACCESS_KEY']);
 
         $checks = [
