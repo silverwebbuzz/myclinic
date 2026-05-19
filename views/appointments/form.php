@@ -17,6 +17,7 @@ $type = $isEdit ? ($appointment['type'] ?? 'prebooked') : ($prefill['type'] ?? '
     'date' => $dateVal,
     'selectedTime' => $timeVal,
     'isEdit' => $isEdit,
+    'apptType' => $type,
 ]) ?>)">
     <h2 class="text-lg font-semibold"><?= $isEdit ? 'Edit appointment' : 'Book appointment' ?></h2>
 
@@ -65,26 +66,9 @@ $type = $isEdit ? ($appointment['type'] ?? 'prebooked') : ($prefill['type'] ?? '
                    class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
         </label>
 
-        <div class="text-sm">
-            <span class="text-slate-600">Time slot</span>
-            <input type="hidden" name="scheduled_time" x-model="selectedTime">
-            <p class="mt-1 text-xs text-slate-500">Refreshes every 60s</p>
-            <div class="mt-2 flex flex-wrap gap-2">
-                <template x-for="slot in slots" :key="slot.datetime">
-                    <button type="button"
-                            :disabled="!slot.available"
-                            @click="selectedTime = slot.time"
-                            :class="selectedTime === slot.time ? 'bg-emerald-600 text-white' : (slot.available ? 'border hover:bg-slate-50' : 'border bg-slate-100 text-slate-400 cursor-not-allowed')"
-                            class="rounded-lg px-3 py-1.5 text-xs font-medium"
-                            x-text="slot.time"></button>
-                </template>
-                <p x-show="slots.length === 0 && doctorId" class="text-xs text-slate-500">No slots for this day.</p>
-            </div>
-        </div>
-
         <label class="block text-sm">
             <span class="text-slate-600">Type</span>
-            <select name="type" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+            <select name="type" x-model="apptType" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
                 <?php foreach (['prebooked' => 'Pre-booked', 'walkin' => 'Walk-in', 'online' => 'Online (telemedicine)', 'followup' => 'Follow-up'] as $v => $l): ?>
                 <option value="<?= $v ?>" <?= $type === $v ? 'selected' : '' ?>><?= $l ?></option>
                 <?php endforeach; ?>
@@ -93,6 +77,43 @@ $type = $isEdit ? ($appointment['type'] ?? 'prebooked') : ($prefill['type'] ?? '
             <p class="mt-1 text-xs text-slate-500">Online appointments receive a Google Meet link (stub) via WhatsApp and email when booked or confirmed.</p>
             <?php endif; ?>
         </label>
+
+        <div class="text-sm">
+            <span class="text-slate-600">Time</span>
+            <input type="hidden" name="scheduled_time" :value="selectedTime">
+
+            <template x-if="apptType === 'walkin'">
+                <div class="mt-1">
+                    <input type="time" x-model="selectedTime" required
+                           class="w-full max-w-[200px] rounded-lg border px-3 py-2 text-sm">
+                    <p class="mt-1 text-xs text-slate-500">Walk-in defaults to now. Adjust if needed.</p>
+                </div>
+            </template>
+
+            <template x-if="apptType !== 'walkin'">
+                <div class="mt-1">
+                    <p class="text-xs text-slate-500">Refreshes every 60s</p>
+                    <div class="mt-2 flex flex-wrap gap-2" x-show="slots.length > 0">
+                        <template x-for="slot in slots" :key="slot.datetime">
+                            <button type="button"
+                                    :disabled="!slot.available"
+                                    @click="selectedTime = slot.time"
+                                    :class="selectedTime === slot.time ? 'bg-emerald-600 text-white' : (slot.available ? 'border hover:bg-slate-50' : 'border bg-slate-100 text-slate-400 cursor-not-allowed')"
+                                    class="rounded-lg px-3 py-1.5 text-xs font-medium"
+                                    x-text="slot.time"></button>
+                        </template>
+                    </div>
+                    <div x-show="slots.length === 0 && doctorId" class="mt-2 rounded-lg bg-amber-50 p-3">
+                        <p class="text-xs text-amber-900">
+                            No working hours set for this doctor on the selected day. Set a schedule in
+                            <a href="/scheduling" class="underline">Scheduling</a>, or pick a time manually below.
+                        </p>
+                        <input type="time" x-model="selectedTime"
+                               class="mt-2 w-full max-w-[200px] rounded-lg border px-3 py-2 text-sm">
+                    </div>
+                </div>
+            </template>
+        </div>
 
         <label class="block text-sm">
             <span class="text-slate-600">Chief complaint</span>
@@ -132,9 +153,20 @@ function bookAppointment(cfg) {
         doctorId: cfg.doctorId ? String(cfg.doctorId) : '',
         date: cfg.date || '',
         selectedTime: cfg.selectedTime || '',
+        apptType: cfg.apptType || 'prebooked',
         slots: [],
         slotTimer: null,
         init() {
+            if (this.apptType === 'walkin' && !this.selectedTime) {
+                const now = new Date();
+                this.selectedTime = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+            }
+            this.$watch('apptType', (val) => {
+                if (val === 'walkin' && !this.selectedTime) {
+                    const now = new Date();
+                    this.selectedTime = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+                }
+            });
             if (this.doctorId && this.date) this.loadSlots();
             this.slotTimer = setInterval(() => this.loadSlots(), 60000);
         },

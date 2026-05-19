@@ -239,14 +239,22 @@ final class AppointmentController
     /** @return array<string, mixed> */
     private function dataFromRequest(Request $request): array
     {
-        $date = $request->post['scheduled_date'] ?? date('Y-m-d');
-        $time = $request->post['scheduled_time'] ?? '09:00';
+        $type = $request->post['type'] ?? 'prebooked';
+        $date = trim((string) ($request->post['scheduled_date'] ?? ''));
+        $time = trim((string) ($request->post['scheduled_time'] ?? ''));
+
+        if ($date === '' || strtotime($date) === false) {
+            $date = date('Y-m-d');
+        }
+        if ($time === '' || !preg_match('/^\d{1,2}:\d{2}$/', $time)) {
+            $time = $type === 'walkin' ? date('H:i') : '09:00';
+        }
 
         return [
             'patient_id' => (int) ($request->post['patient_id'] ?? 0),
             'doctor_id' => (int) ($request->post['doctor_id'] ?? 0),
             'scheduled_at' => $date . ' ' . $time . ':00',
-            'type' => $request->post['type'] ?? 'prebooked',
+            'type' => $type,
             'chief_complaint' => $request->post['chief_complaint'] ?? '',
             'notes' => $request->post['notes'] ?? '',
             'is_followup' => !empty($request->post['is_followup']),

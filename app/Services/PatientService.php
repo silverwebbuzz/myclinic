@@ -218,7 +218,11 @@ final class PatientService
         $patient = QueryBuilder::table('patients')->where('id', '=', $patientId)->first();
         $clinic = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first();
         if ($patient !== null && $clinic !== null) {
-            QrCardService::generateForPatient($patient, $clinic);
+            try {
+                QrCardService::generateForPatient($patient, $clinic);
+            } catch (\Throwable $e) {
+                error_log('[QrCardService] regen failed for patient ' . $patientId . ': ' . $e->getMessage());
+            }
         }
 
         return $patient ?? [];

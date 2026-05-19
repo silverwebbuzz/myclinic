@@ -10,6 +10,12 @@ if (!empty($hasPhotos)) {
     <?php if (!empty($created)): ?>
     <div class="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Patient registered successfully.</div>
     <?php endif; ?>
+    <?php if (!empty($_GET['qr']) && $_GET['qr'] === 'regenerated'): ?>
+    <div class="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">QR token regenerated.</div>
+    <?php endif; ?>
+    <?php if (!empty($_GET['error'])): ?>
+    <div class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800"><?= htmlspecialchars((string) $_GET['error']) ?></div>
+    <?php endif; ?>
 
     <div class="flex flex-wrap items-start justify-between gap-4 rounded-xl border bg-white p-6">
         <div class="flex gap-4">

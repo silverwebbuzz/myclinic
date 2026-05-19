@@ -176,10 +176,16 @@ final class PatientController
         }
 
         $clinicId = (int) RequestContext::clinicId();
-        PatientService::regenerateQrToken($clinicId, (int) $id);
-        AuditService::log($request, 'UPDATE', 'patients', (int) $id);
+        try {
+            PatientService::regenerateQrToken($clinicId, (int) $id);
+            AuditService::log($request, 'UPDATE', 'patients', (int) $id);
 
-        return Response::redirect('/patients/' . $id . '?tab=overview&qr=regenerated');
+            return Response::redirect('/patients/' . $id . '?tab=overview&qr=regenerated');
+        } catch (\Throwable $e) {
+            error_log('[patients/regenerateQr id=' . $id . '] ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+
+            return Response::redirect('/patients/' . $id . '?tab=overview&error=' . urlencode('Could not regenerate QR: ' . $e->getMessage()));
+        }
     }
 
     public function qrCard(Request $request, string $id): Response

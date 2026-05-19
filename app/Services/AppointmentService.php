@@ -52,20 +52,28 @@ final class AppointmentService
         $scheduledAt = (string) $data['scheduled_at'];
         $type = (string) ($data['type'] ?? 'prebooked');
 
-        $slots = SlotService::available($clinicId, $doctorId, date('Y-m-d', strtotime($scheduledAt)));
-        $slotOk = false;
-        foreach ($slots as $slot) {
-            if ($slot['datetime'] === $scheduledAt && $slot['available']) {
-                $slotOk = true;
-                break;
-            }
+        $scheduledTs = strtotime($scheduledAt);
+        if ($scheduledTs === false) {
+            throw new \RuntimeException('Invalid appointment date or time.');
         }
-        if (!$slotOk) {
-            throw new \RuntimeException('Selected slot is no longer available.');
+        $scheduledDate = date('Y-m-d', $scheduledTs);
+
+        if ($type !== 'walkin') {
+            $slots = SlotService::available($clinicId, $doctorId, $scheduledDate);
+            $slotOk = false;
+            foreach ($slots as $slot) {
+                if ($slot['datetime'] === $scheduledAt && $slot['available']) {
+                    $slotOk = true;
+                    break;
+                }
+            }
+            if (!$slotOk) {
+                throw new \RuntimeException('Selected slot is no longer available.');
+            }
         }
 
         $tokenNumber = null;
-        if ($type === 'walkin' && date('Y-m-d', strtotime($scheduledAt)) === date('Y-m-d')) {
+        if ($type === 'walkin' && $scheduledDate === date('Y-m-d')) {
             $tokenNumber = self::nextTokenNumber($clinicId);
         }
 

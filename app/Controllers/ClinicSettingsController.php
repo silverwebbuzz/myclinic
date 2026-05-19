@@ -138,7 +138,12 @@ final class ClinicSettingsController
             return Response::redirect('/login');
         }
 
-        ClinicSettingsService::saveHours($clinicId, $request->post);
+        try {
+            ClinicSettingsService::saveHours($clinicId, $request->post);
+        } catch (\Throwable $e) {
+            error_log('[saveHours] ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+            return Response::redirect('/settings?tab=hours&error=' . urlencode('Could not save: ' . $e->getMessage()));
+        }
 
         return Response::redirect('/settings?tab=hours&message=saved');
     }

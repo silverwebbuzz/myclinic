@@ -41,6 +41,7 @@ final class ClinicSettingsService
 
         QueryBuilder::table('tenants')->where('id', '=', $clinicId)->update($tenantUpdate);
 
+        self::ensureSpecialtyConfigRow($clinicId);
         QueryBuilder::table('specialty_configs')->where('clinic_id', '=', $clinicId)->update([
             'uhid_prefix' => $uhidPrefix,
             'invoice_prefix' => strtoupper(substr($post['invoice_prefix'] ?? 'INV', 0, 10)),
@@ -57,6 +58,7 @@ final class ClinicSettingsService
     public static function saveHours(int $clinicId, array $post): void
     {
         $workingHours = WorkingHoursParser::fromPost($post);
+        self::ensureSpecialtyConfigRow($clinicId);
         $config = OnboardingService::specialtyConfig($clinicId) ?? [];
         $options = $config['specialty_options'] ?? null;
         if (is_string($options)) {
@@ -68,9 +70,39 @@ final class ClinicSettingsService
             'working_hours' => json_encode($workingHours),
         ]);
 
-        $doctorIds = DoctorScheduleService::doctorIdsForClinic($clinicId);
-        DoctorScheduleService::syncFromWorkingHours($clinicId, $workingHours, $doctorIds, $slotDuration);
+        try {
+            $doctorIds = DoctorScheduleService::doctorIdsForClinic($clinicId);
+            DoctorScheduleService::syncFromWorkingHours($clinicId, $workingHours, $doctorIds, $slotDuration);
+        } catch (\Throwable $e) {
+            error_log('[saveHours] doctor schedule sync failed: ' . $e->getMessage());
+        }
         OnboardingService::refreshClinicContext($clinicId);
+    }
+
+    private static function ensureSpecialtyConfigRow(int $clinicId): void
+    {
+        $existing = QueryBuilder::table('specialty_configs')
+            ->where('clinic_id', '=', $clinicId)
+            ->first();
+        if ($existing !== null) {
+            return;
+        }
+        $clinic = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first();
+        $specialty = $clinic['specialty'] ?? 'gp';
+        $specConfig = require dirname(__DIR__, 2) . '/config/specialties.php';
+        QueryBuilder::table('specialty_configs')->insert([
+            'clinic_id' => $clinicId,
+            'specialty' => $specialty,
+            'prescription_mode' => $specConfig[$specialty]['prescription_mode'] ?? 'allopathic',
+            'specialty_options' => json_encode([]),
+            'working_hours' => json_encode(OnboardingService::defaultWorkingHours()),
+            'uhid_prefix' => 'MC',
+            'invoice_prefix' => 'INV',
+            'consultation_fee' => 0,
+            'invoice_tax_label' => 'Tax',
+            'invoice_tax_percent' => 0,
+            'notification_prefs' => json_encode([]),
+        ]);
     }
 
     /** @param array<string, mixed> $post */
