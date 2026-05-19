@@ -73,7 +73,7 @@ $CLINICS = [
     ],
     [
         'slug' => 'metrohealth', 'name' => 'MetroHealth Group',
-        'plan' => 'enterprise', 'specialty' => 'other', 'seat_limit' => 999,
+        'plan' => 'enterprise', 'specialty' => 'other', 'seat_limit' => 250,
         'doctors' => [
             ['name' => 'Dr. Rajesh Gupta', 'spec' => 'Orthopaedics', 'fee' => 1200, 'incentive' => 18.0],
             ['name' => 'Dr. Meera Joshi', 'spec' => 'Gynaecology', 'fee' => 1000, 'incentive' => 15.0],
