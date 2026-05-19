@@ -100,14 +100,19 @@ if ($WIPE) {
         if (!$tid) {
             continue;
         }
+        // Child rows in tables without clinic_id — delete via parent FK first.
+        $pdo->exec("DELETE lr FROM lab_results lr JOIN lab_orders lo ON lo.id=lr.lab_order_id WHERE lo.clinic_id={$tid}");
+        $pdo->exec("DELETE ii FROM invoice_items ii JOIN invoices i ON i.id=ii.invoice_id WHERE i.clinic_id={$tid}");
+        $pdo->exec("DELETE dl FROM doctor_locations dl JOIN doctor_profiles dp ON dp.id=dl.doctor_id WHERE dp.clinic_id={$tid}");
+
         $tables = [
             'doctor_incentives', 'expenses', 'crm_leads', 'staff_leaves', 'staff_attendance',
             'diet_plans', 'patient_photos', 'discharge_summaries', 'consent_forms',
-            'lab_results', 'lab_orders', 'lab_tests_catalog', 'pharmacy_inventory',
-            'payments', 'invoice_items', 'invoices', 'prescriptions', 'vitals', 'visits',
+            'lab_orders', 'lab_tests_catalog', 'pharmacy_inventory',
+            'payments', 'invoices', 'prescriptions', 'vitals', 'visits',
             'appointments', 'doctor_leaves', 'doctor_schedules', 'waiting_list',
             'patient_allergies', 'notifications', 'analytics_snapshots', 'events',
-            'audit_log', 'api_keys', 'doctor_locations', 'doctor_profiles',
+            'audit_log', 'api_keys', 'doctor_profiles',
             'patients', 'staff_invitations', 'users', 'clinic_modules', 'specialty_configs',
             'saas_invoices',
         ];
