@@ -669,7 +669,7 @@ foreach ($CLINICS as $C) {
 
     if ($hasDiet) {
         $dietIns = $pdo->prepare(
-            'INSERT INTO diet_plans (clinic_id, patient_id, prescribed_by, condition, plan_json, veg_type, status, shared_at, created_at)
+            'INSERT INTO diet_plans (clinic_id, patient_id, prescribed_by, `condition`, plan_json, veg_type, status, shared_at, created_at)
              VALUES (?, ?, ?, ?, ?, "veg", "shared", ?, ?)'
         );
         foreach (array_slice($patientIds, 0, 10) as $pid) {

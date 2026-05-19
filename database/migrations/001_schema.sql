@@ -884,7 +884,7 @@ CREATE TABLE diet_plans (
   patient_id      BIGINT UNSIGNED NOT NULL,
   visit_id        BIGINT UNSIGNED NULL,
   prescribed_by   BIGINT UNSIGNED NOT NULL,
-  condition       VARCHAR(80) NULL,
+  `condition`     VARCHAR(80) NULL,
   plan_json       JSON NOT NULL,
   antidotes_shown TEXT NULL,
   veg_type        ENUM('veg','nonveg','vegan','eggetarian'),
