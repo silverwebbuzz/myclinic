@@ -57,22 +57,46 @@ $qs = static function (array $extra) use ($date, $doctorId, $statusFilter): stri
     <p class="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">Appointment cancelled.</p>
     <?php endif; ?>
 
-    <div class="flex flex-wrap gap-3 rounded-xl border bg-white p-3">
+    <?php
+    $selectedDoctorName = null;
+    if ($doctorId !== null) {
+        foreach ($doctors as $doc) {
+            if ((int) $doc['id'] === (int) $doctorId) {
+                $selectedDoctorName = (string) $doc['name'];
+                break;
+            }
+        }
+    }
+    ?>
+    <div class="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-3">
         <form method="get" class="contents">
             <input type="hidden" name="date" value="<?= htmlspecialchars($date) ?>">
             <input type="hidden" name="status" value="<?= htmlspecialchars($statusFilter) ?>">
-            <select name="doctor_id" onchange="this.form.submit()" class="rounded-lg border px-3 py-2 text-sm">
-                <option value="">All doctors</option>
-                <?php foreach ($doctors as $doc): ?>
-                <option value="<?= (int) $doc['id'] ?>" <?= $doctorId === (int) $doc['id'] ? 'selected' : '' ?>>
-                    <?= htmlspecialchars($doc['name']) ?>
-                </option>
-                <?php endforeach; ?>
-            </select>
+            <label class="flex items-center gap-2 text-sm">
+                <span class="font-medium text-slate-600">👨‍⚕️ Doctor:</span>
+                <select name="doctor_id" onchange="this.form.submit()"
+                        class="rounded-lg border px-3 py-2 text-sm <?= $doctorId !== null ? 'border-emerald-400 bg-emerald-50 font-medium text-emerald-800' : '' ?>">
+                    <option value="">All doctors (<?= count($doctors) ?>)</option>
+                    <?php foreach ($doctors as $doc): ?>
+                    <option value="<?= (int) $doc['id'] ?>" <?= $doctorId === (int) $doc['id'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($doc['name']) ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
         </form>
-        <a href="/queue" class="rounded-lg border px-3 py-2 text-sm hover:bg-slate-50">Today's queue</a>
-        <a href="/queue/display?clinic=<?= urlencode($clinicSlug ?? '') ?>" target="_blank"
-           class="rounded-lg border px-3 py-2 text-sm hover:bg-slate-50">Display screen</a>
+        <?php if ($selectedDoctorName !== null): ?>
+            <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800">
+                Filtered: <?= htmlspecialchars($selectedDoctorName) ?>
+                <a href="?<?= htmlspecialchars($qs(['doctor_id' => null])) ?>"
+                   class="ml-1 rounded-full hover:bg-emerald-200 px-1" title="Clear doctor filter">✕</a>
+            </span>
+        <?php endif; ?>
+        <div class="ml-auto flex gap-2">
+            <a href="/queue" class="rounded-lg border px-3 py-2 text-sm hover:bg-slate-50">Today's queue</a>
+            <a href="/queue/display?clinic=<?= urlencode($clinicSlug ?? '') ?>" target="_blank"
+               class="rounded-lg border px-3 py-2 text-sm hover:bg-slate-50">Display screen</a>
+        </div>
     </div>
 
     <?php
