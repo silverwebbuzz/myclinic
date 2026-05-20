@@ -29,6 +29,7 @@ $bodyClass = $bodyClass ?? '';
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="/assets/css/styles.css" />
+    <?php if (!empty($extraHead)) echo $extraHead; ?>
 
     <!-- Lightweight interactivity (mobile menu, reveal-on-scroll) -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -45,6 +46,7 @@ $bodyClass = $bodyClass ?? '';
             <a href="/#specialties" class="nav-link <?= nav_active('specialties') ?>">Specialties</a>
             <a href="/pricing" class="nav-link <?= nav_active('pricing') ?>">Pricing</a>
             <a href="/security" class="nav-link <?= nav_active('security') ?>">Security</a>
+            <a href="/find-a-doctor" class="nav-link <?= nav_active('find') ?>">Find a doctor</a>
         </nav>
 
         <div class="nav-cta">

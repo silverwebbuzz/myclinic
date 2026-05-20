@@ -66,6 +66,7 @@ $clinicCount = ecp_active_clinic_count();
                     <li><a href="/security">Security</a></li>
                     <li><a href="/customer-stories">Customer stories</a></li>
                     <li><a href="/security#compliance">HIPAA / GDPR</a></li>
+                    <li><a href="/find-a-doctor">Find a doctor</a></li>
                     <li><a href="/book-a-demo">Book a demo</a></li>
                 </ul>
             </div>

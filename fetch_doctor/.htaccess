@@ -1,0 +1,15 @@
+# =====================================================================
+# fetch_doctor/.htaccess
+# Allows index.php and insert_db.php; blocks everything else
+# (raw JSON, .env, migration.sql).
+# =====================================================================
+
+# Block direct access to dotfiles, SQL, and JSON dumps.
+<FilesMatch "(^\.|\.sql$|\.json$|\.example$|\.htaccess$)">
+    Require all denied
+</FilesMatch>
+
+# Block the json/ subfolder entirely from the web.
+RedirectMatch 403 ^/fetch_doctor/json/.*$
+
+Options -Indexes

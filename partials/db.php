@@ -155,3 +155,128 @@ function ecp_save_demo_request(array $data): bool
         return false;
     }
 }
+
+/**
+ * Returns directory doctors (from the scraped/claimed table) shaped for the
+ * Find Doctor page Alpine component. Returns null if the table is missing or
+ * empty — caller should fall back to the static seed file.
+ *
+ * @return list<array<string,mixed>>|null
+ */
+function ecp_directory_doctors(?string $countryCode = null): ?array
+{
+    $db = ecp_db();
+    if (!$db) return null;
+    try {
+        $sql = "SELECT id, place_id, name, specialty, country, city, state, area,
+                       address, lat, lng, phone, website, gmaps_url, rating, reviews,
+                       price_level, opening_hours, photo_reference,
+                       consultation_fee, consultation_fee_currency, doctor_name,
+                       quality_score, dropped_reason,
+                       status, is_claimed, is_active
+                FROM directory_doctors
+                WHERE is_active = 1 AND status = 'OPERATIONAL'";
+        $params = [];
+        if ($countryCode !== null && $countryCode !== '') {
+            $sql .= ' AND country = :c';
+            $params['c'] = strtoupper($countryCode);
+        }
+        // Rank: claimed clinics first, then by quality_score (computed at import),
+        // then by raw reviews/rating as tie-breakers.
+        $sql .= ' ORDER BY is_claimed DESC, quality_score DESC, reviews DESC, rating DESC LIMIT 500';
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if (!$rows) return null;
+
+        // Shape rows for the Alpine component (matches structure of
+        // partials/find-doctor-data.php → doctors[]).
+        $out = [];
+        foreach ($rows as $r) {
+            $name = (string) ($r['name'] ?? '');
+            $parts = preg_split('/\s+/', trim($name)) ?: [''];
+            $first = $parts[0] ?? '';
+            $last = $parts[count($parts) - 1] ?? '';
+            $fi = $first !== '' ? mb_substr($first, 0, 1) : 'D';
+            $li = $last !== '' && $last !== $first ? mb_substr($last, 0, 1) : '';
+
+            $hours = null;
+            if (!empty($r['opening_hours'])) {
+                $decoded = json_decode((string) $r['opening_hours'], true);
+                if (is_array($decoded)) $hours = $decoded;
+            }
+
+            // Fee: prefer self-submitted consultation_fee; fall back to null.
+            // Google's price_level is too coarse for healthcare so we ignore it.
+            $fee = isset($r['consultation_fee']) && $r['consultation_fee'] !== null
+                ? (float) $r['consultation_fee']
+                : 0;
+            $currency = $r['consultation_fee_currency']
+                ?? ((($r['country'] ?? 'IN') === 'IN') ? '₹' : '$');
+
+            $out[] = [
+                'id' => (int) $r['id'],
+                'name' => $name,
+                'firstInitial' => $fi,
+                'lastInitial' => $li,
+                'qual' => '',                      // not from Google; filled when claimed
+                'years' => 0,
+                'spec' => $r['specialty'] ?? 'gp',
+                'specLabel' => ucfirst((string) ($r['specialty'] ?? 'general practice')),
+                'verified' => (bool) $r['is_claimed'],
+                'video' => false,
+                'gender' => '',
+                'rating' => isset($r['rating']) ? (float) $r['rating'] : 0,
+                'reviews' => (int) ($r['reviews'] ?? 0),
+                'langs' => ['English'],
+                'hospital' => '',
+                'area' => $r['area'] ?? '',
+                'city' => $r['city'] ?? '',
+                'state' => $r['state'] ?? '',
+                'country' => $r['country'] ?? 'IN',
+                'countryName' => $r['country'] ?? '',
+                'currency' => $currency,
+                'fee' => $fee,
+                'next' => ['when' => 'later', 'label' => 'Contact clinic', 'sub' => ''],
+                'phone' => $r['phone'] ?? null,
+                'website' => $r['website'] ?? null,
+                'gmaps_url' => $r['gmaps_url'] ?? null,
+                'address' => $r['address'] ?? null,
+                'opening_hours' => $hours,
+                'photo_url' => ecp_doctor_photo_url($r['photo_reference'] ?? null, 400),
+                'is_claimed' => (bool) $r['is_claimed'],
+                'quality_score' => isset($r['quality_score']) ? (int) $r['quality_score'] : null,
+            ];
+        }
+        return $out;
+    } catch (Throwable $e) {
+        error_log('[ecp_directory_doctors] ' . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Builds a Google Places photo URL at request time using the photo_reference
+ * stored in the DB. Per Google's TOS we can store the reference, but NOT the
+ * photo bytes — they must be fetched live, with attribution displayed.
+ *
+ * Returns null when:
+ *   - photo_reference is empty
+ *   - GOOGLE_MAPS_API_KEY env var is not set
+ *
+ * NOTE: this URL exposes the API key to the browser. For production you should
+ * proxy through a server-side endpoint (e.g. /photo-proxy.php?ref=...) so the
+ * key never reaches the client. For now we ship the simple form.
+ */
+function ecp_doctor_photo_url(?string $photoRef, int $maxWidth = 400): ?string
+{
+    if ($photoRef === null || $photoRef === '') return null;
+    $key = getenv('GOOGLE_MAPS_API_KEY') ?: ($_ENV['GOOGLE_MAPS_API_KEY'] ?? '');
+    if ($key === '') return null;
+    return 'https://maps.googleapis.com/maps/api/place/photo?'
+        . http_build_query([
+            'maxwidth' => $maxWidth,
+            'photoreference' => $photoRef,
+            'key' => $key,
+        ]);
+}
