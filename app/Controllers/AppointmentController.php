@@ -127,13 +127,31 @@ final class AppointmentController
 
             return Response::redirect('/appointments/' . $appointment['id'] . '/slip?booked=1');
         } catch (\Throwable $e) {
-            return Response::html(Layout::page('appointments/form', [
-                'appointment' => null,
-                'doctors' => AppointmentService::doctorsForClinic($clinicId),
-                'prefill' => $request->post,
-                'error' => $e->getMessage(),
-                'hasTelemedicine' => ModuleGate::check('telemedicine'),
-            ], 'Book appointment'), 422);
+            error_log('[appointments/store] ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+            try {
+                return Response::html(Layout::page('appointments/form', [
+                    'appointment' => null,
+                    'doctors' => AppointmentService::doctorsForClinic($clinicId),
+                    'prefill' => $request->post,
+                    'patientHint' => null,
+                    'error' => $e->getMessage(),
+                    'hasTelemedicine' => ModuleGate::check('telemedicine'),
+                ], 'Book appointment'), 422);
+            } catch (\Throwable $renderError) {
+                // The error re-render itself crashed — fall back to a plain debug page so we can see what's wrong.
+                return Response::html(
+                    '<pre style="padding:20px;font:13px monospace;color:#b00;white-space:pre-wrap;background:#fff5f5;">'
+                    . '<strong>Booking failed:</strong>' . "\n\n"
+                    . htmlspecialchars($e->getMessage()) . "\n\n"
+                    . 'at ' . htmlspecialchars($e->getFile()) . ':' . $e->getLine() . "\n\n"
+                    . htmlspecialchars($e->getTraceAsString())
+                    . "\n\n----\n<strong>Re-render also failed:</strong>\n"
+                    . htmlspecialchars($renderError->getMessage()) . "\n"
+                    . 'at ' . htmlspecialchars($renderError->getFile()) . ':' . $renderError->getLine()
+                    . '</pre>',
+                    500
+                );
+            }
         }
     }
 
