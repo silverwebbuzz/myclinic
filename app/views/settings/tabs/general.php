@@ -2,7 +2,7 @@
 $slug = (string) ($clinic['slug'] ?? '');
 $customDomain = trim((string) ($clinic['custom_domain'] ?? ''));
 $scheme = (($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https') ? 'https' : 'http';
-$host = $_SERVER['HTTP_HOST'] ?? 'app.manageclinic.com';
+$host = $_SERVER['HTTP_HOST'] ?? 'app.eclinicpro.com';
 $bookingUrl = $customDomain !== ''
     ? $scheme . '://' . $customDomain . '/book/' . rawurlencode($slug)
     : $scheme . '://' . $host . '/book/' . rawurlencode($slug);

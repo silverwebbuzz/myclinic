@@ -31,7 +31,7 @@ ob_start();
             <div class="mt-1 flex items-center gap-1 text-sm text-slate-500">
                 <input name="slug" type="text" required x-model="slug" pattern="[a-z0-9-]+"
                        class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
-                <span>.app.manageclinic.com</span>
+                <span>.app.eclinicpro.com</span>
             </div>
             <p class="mt-1 text-xs" :class="slugStatus === 'available' ? 'text-emerald-600' : 'text-slate-400'" x-text="slugMessage"></p>
         </div>

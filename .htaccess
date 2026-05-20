@@ -1,0 +1,68 @@
+# =====================================================================
+# eclinicpro.com — marketing site (static HTML/CSS/JSX)
+# Place this file in the document root of eclinicpro.com.
+# =====================================================================
+
+# Disable directory listings.
+Options -Indexes
+DirectoryIndex index.php index.html
+
+# -------- HTTPS redirect (cPanel + Cloudflare friendly) --------
+RewriteEngine On
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+
+# -------- Strip www. (use only the apex) --------
+RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
+
+# -------- Clean URLs --------
+# /pricing -> pricing.php (internal rewrite, browser still sees /pricing)
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^([^.]+)$ $1.php [L]
+
+# Fallback: any leftover .html files (during transition)
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^([^.]+)$ $1.html [L]
+
+# Redirect explicit *.php to clean URL (so links stay canonical)
+RewriteCond %{THE_REQUEST} \s/+(.+?)\.(php|html)[\s?] [NC]
+RewriteRule ^ /%1 [R=301,L]
+
+# -------- Block direct access to /partials/ --------
+RewriteRule ^partials/ - [F,L]
+
+# -------- Block access to backup / hidden files --------
+<FilesMatch "(^\.|~$|\.bak$|\.swp$|\.orig$)">
+    Require all denied
+</FilesMatch>
+
+# -------- Cache static assets aggressively --------
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 7 days"
+    ExpiresByType application/javascript "access plus 7 days"
+    ExpiresByType image/png "access plus 30 days"
+    ExpiresByType image/jpeg "access plus 30 days"
+    ExpiresByType image/svg+xml "access plus 30 days"
+    ExpiresByType image/webp "access plus 30 days"
+    ExpiresByType font/woff2 "access plus 30 days"
+</IfModule>
+
+# -------- Gzip compression --------
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
+</IfModule>
+
+# -------- Security headers --------
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# -------- Custom 404 --------
+ErrorDocument 404 /index.html

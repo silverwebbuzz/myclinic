@@ -149,7 +149,7 @@ final class TenantMiddleware implements MiddlewareInterface
     private function resolveSlug(Request $request): ?string
     {
         $host = strtolower($request->host());
-        $baseDomain = $_ENV['APP_BASE_DOMAIN'] ?? 'app.manageclinic.com';
+        $baseDomain = $_ENV['APP_BASE_DOMAIN'] ?? 'app.eclinicpro.com';
 
         if (str_ends_with($host, '.' . $baseDomain)) {
             $slug = substr($host, 0, -strlen('.' . $baseDomain));

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($title ?? 'ManageClinic') ?></title>
+    <title><?= htmlspecialchars($title ?? 'eClinicPro') ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -173,7 +173,7 @@
             if (!$hidePoweredBy):
             ?>
             <footer class="border-t px-4 py-3 text-center text-xs text-slate-400">
-                Powered by <a href="https://manageclinic.com" class="hover:text-slate-600">ManageClinic</a>
+                Powered by <a href="https://eclinicpro.com" class="hover:text-slate-600">eClinicPro</a>
             </footer>
             <?php endif; ?>
         </div>

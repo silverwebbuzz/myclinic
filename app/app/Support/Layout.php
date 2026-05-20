@@ -18,8 +18,8 @@ final class Layout
         $data['csrf'] = CsrfService::token();
 
         $data['content'] = View::render($view, $data);
-        $data['pageTitle'] = $pageTitle ?? 'ManageClinic';
-        $data['title'] = ($pageTitle ? $pageTitle . ' — ' : '') . ($clinic['name'] ?? 'ManageClinic');
+        $data['pageTitle'] = $pageTitle ?? 'eClinicPro';
+        $data['title'] = ($pageTitle ? $pageTitle . ' — ' : '') . ($clinic['name'] ?? 'eClinicPro');
         $data['clinic'] = $clinic;
         $data['user'] = $user;
         $data['csrf'] = CsrfService::token();

@@ -21,7 +21,7 @@ final class ChurnOutreachService
             MailService::send((string) $email, 'churn_outreach', [
                 'clinic_name' => $clinic['name'] ?? 'your clinic',
                 'reason' => $clinic['churn_risk_reason'] ?? 'We noticed lower activity',
-                'support_url' => ($_ENV['APP_URL'] ?? 'https://app.manageclinic.com') . '/login',
+                'support_url' => ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com') . '/login',
             ], (int) $clinic['id']);
 
             $sent++;
