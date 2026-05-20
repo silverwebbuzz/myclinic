@@ -52,12 +52,12 @@ $clinicCount = ecp_active_clinic_count();
             <div class="foot-col">
                 <h5>Specialties</h5>
                 <ul>
-                    <li><a href="/for-gps">General practice</a></li>
-                    <li><a href="/for-dentists">Dentistry</a></li>
-                    <li><a href="/for-homeopaths">Homeopathy</a></li>
-                    <li><a href="/for-dermatologists">Dermatology</a></li>
-                    <li><a href="/for-pediatricians">Pediatrics</a></li>
-                    <li><a href="/for-physiotherapists">Physiotherapy</a></li>
+                    <li><a href="/gps">General practice</a></li>
+                    <li><a href="/dentists">Dentistry</a></li>
+                    <li><a href="/homeopaths">Homeopathy</a></li>
+                    <li><a href="/dermatologists">Dermatology</a></li>
+                    <li><a href="/pediatricians">Pediatrics</a></li>
+                    <li><a href="/physiotherapists">Physiotherapy</a></li>
                 </ul>
             </div>
             <div class="foot-col">

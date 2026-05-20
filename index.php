@@ -329,7 +329,7 @@ $current = $specialties[0];
                     <?php endforeach; ?>
                 </div>
                 <div style="margin-top: 28px;">
-                    <a href="/for-<?= e($current[2]) ?>" class="btn btn-dark">Explore <?= e(strtolower($current[1])) ?> setup →</a>
+                    <a href="/<?= e($current[2]) ?>" class="btn btn-dark">Explore <?= e(strtolower($current[1])) ?> setup →</a>
                 </div>
             </div>
             <div class="reveal">
