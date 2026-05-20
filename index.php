@@ -4,6 +4,7 @@
 // =====================================================================
 
 require_once __DIR__ . '/partials/helpers.php';
+require_once __DIR__ . '/partials/specialty-mocks.php';
 
 $pageTitle = 'eClinicPro — The clinic OS doctors love';
 $metaDesc = 'Pick your modules. Pay for what you use. One beautifully simple clinic system for GPs, dentists, homeopaths, and every specialty in between.';
@@ -332,18 +333,8 @@ $current = $specialties[0];
                     <a href="/<?= e($current[2]) ?>" class="btn btn-dark">Explore <?= e(strtolower($current[1])) ?> setup →</a>
                 </div>
             </div>
-            <div class="reveal">
-                <!-- Simplified specialty mock — a placeholder card. Detailed mocks per specialty live on the per-specialty pages. -->
-                <div style="background: #fff; border: 0.5px solid var(--line); border-radius: 14px; padding: 28px; min-height: 360px;">
-                    <div style="font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 18px;"><?= e($current[1]) ?> · Live demo</div>
-                    <div style="font-size: 18px; font-weight: 500; margin-bottom: 24px;"><?= e($current[3]) ?></div>
-                    <?php foreach ($current[5] as $f): ?>
-                    <div style="display: flex; gap: 12px; padding: 12px 0; border-bottom: 0.5px solid var(--line); align-items: center;">
-                        <span style="width: 28px; height: 28px; border-radius: 8px; background: var(--teal-50); color: var(--teal-800); display: grid; place-items: center; font-weight: 600;">✓</span>
-                        <span style="font-size: 14px; color: var(--ink-2);"><?= e($f) ?></span>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
+            <div class="reveal" style="display: flex; justify-content: center;">
+                <?php render_spec_mock($current[0]); ?>
             </div>
         </div>
     </div>
@@ -351,41 +342,197 @@ $current = $specialties[0];
 
 <!-- ============ FEATURE DEEP DIVES ============ -->
 <div id="features">
-    <?php
-    $featureDives = [
-        ['#fff', false, 'QR patient card', 'Scan. Load. See everything.',
-         'Every patient gets a printable card with a unique encrypted QR. Tap it with any phone or webcam and the full chart loads in under 200 milliseconds — vitals, allergies, last visit, the works.',
-         'Learn how QR cards work', '📱'],
-        ['var(--bg-2)', true, 'Rx via WhatsApp', 'Prescriptions, delivered before they leave the chair.',
-         'Every signed digital Rx gets a PDF copy and a WhatsApp message sent automatically — to your patient, to the partner pharmacy if you want, and to the family member they share with. No more lost paper, no more 11pm photo requests.',
-         'See the full prescription workflow', '💬'],
-        ['#fff', false, 'Vitals trends', 'See the full picture, visit by visit.',
-         'BP, blood sugar, weight, oxygen — every reading flows into a clean trend chart you can review during a 30-second walk into the room. The chart knows your target band. Your patient sees the same view on their app.',
-         'Explore vitals & chart modules', '📈'],
-    ];
-    foreach ($featureDives as [$bg, $reverse, $eyebrow, $h, $body, $link, $mockIcon]):
-    ?>
-    <section style="background: <?= $bg ?>; padding: 120px 0;">
-        <div class="wrap">
-            <div class="feature-row<?= $reverse ? ' reverse' : '' ?>">
-                <div class="feature-text reveal">
-                    <span class="eyebrow"><?= e($eyebrow) ?></span>
-                    <h3><?= e($h) ?></h3>
-                    <p class="lede"><?= e($body) ?></p>
-                    <a href="/features" class="btn-link"><?= e($link) ?> →</a>
+
+<!-- 1. QR PATIENT CARD -->
+<section style="background: #fff; padding: 120px 0;">
+    <div class="wrap">
+        <div class="feature-row">
+            <div class="feature-text reveal">
+                <span class="eyebrow">QR patient card</span>
+                <h3>Scan. Load. See everything.</h3>
+                <p class="lede">Every patient gets a printable card with a unique encrypted QR. Tap it with any phone or webcam and the full chart loads in under 200 milliseconds — vitals, allergies, last visit, the works.</p>
+                <a href="/features" class="btn-link">Learn how QR cards work →</a>
+            </div>
+            <div class="reveal">
+                <!-- QRMock ported from feature-mocks.jsx -->
+                <div class="feature-mock" style="aspect-ratio: 4/3; position: relative; background: linear-gradient(135deg, #F8F9FB 0%, #E8F1FC 100%); display: flex; align-items: center; justify-content: center; border-radius: 14px; overflow: hidden;">
+                    <div style="background: #fff; border-radius: 16px; padding: 24px; width: 240px; box-shadow: 0 10px 40px rgba(0,0,0,0.08); transform: rotate(-3deg);">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+                            <div>
+                                <div style="font-size: 9px; color: var(--mute); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Patient ID</div>
+                                <div style="font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--ink); margin-top: 2px;">MC-AAR-8841</div>
+                            </div>
+                            <div style="font-size: 11px; font-weight: 600; color: var(--teal-600);">e<span style="color: var(--ink);">ClinicPro</span></div>
+                        </div>
+                        <!-- QR grid -->
+                        <div style="width: 100%; aspect-ratio: 1; background: #fff; display: grid; grid-template-columns: repeat(11, 1fr); gap: 1px;">
+                            <?php
+                            for ($i = 0; $i < 121; $i++) {
+                                $r = intdiv($i, 11); $c = $i % 11;
+                                $isCorner = ($r < 3 && $c < 3) || ($r < 3 && $c > 7) || ($r > 7 && $c < 3);
+                                $on = ((($i * 7 + intdiv($i, 11) * 3) % 5) < 2) || ($i < 11 && ($i % 4) !== 1) || ($i > 109);
+                                $bg = ($isCorner || $on) ? '#0A0A0A' : 'transparent';
+                                echo '<div style="background:' . $bg . ';"></div>';
+                            }
+                            ?>
+                        </div>
+                        <div style="font-size: 13px; font-weight: 500; margin-top: 14px;">Aarav Sharma</div>
+                        <div style="font-size: 10.5px; color: var(--mute);">DOB 1986 · A+ · Allergies: Penicillin</div>
+                    </div>
+
+                    <!-- Scan beam -->
+                    <div style="position: absolute; right: 40px; top: 50%; transform: translateY(-50%); width: 110px; height: 200px; border: 2px solid var(--teal-600); border-radius: 14px; padding: 12px;">
+                        <div style="width: 100%; height: 2px; background: var(--teal-400); box-shadow: 0 0 12px var(--teal-400); margin-top: 90px;"></div>
+                        <div style="position: absolute; top: -10px; left: -1px; right: -1px; height: 8px; display: flex; justify-content: space-between;">
+                            <span style="width: 14px; height: 14px; border-top: 2px solid var(--teal-600); border-left: 2px solid var(--teal-600); border-radius: 4px 0 0 0;"></span>
+                            <span style="width: 14px; height: 14px; border-top: 2px solid var(--teal-600); border-right: 2px solid var(--teal-600); border-radius: 0 4px 0 0;"></span>
+                        </div>
+                    </div>
+
+                    <!-- Status pill -->
+                    <div style="position: absolute; bottom: 20px; left: 24px; background: #fff; border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.06);">
+                        <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--teal-400);"></span>
+                        <span style="font-size: 11px; font-weight: 500;">Loaded in 184ms</span>
+                    </div>
                 </div>
-                <div class="reveal">
-                    <div style="background: #fff; border: 0.5px solid var(--line); border-radius: 14px; padding: 36px; min-height: 320px; display: grid; place-items: center; text-align: center;">
-                        <div>
-                            <div style="font-size: 72px; margin-bottom: 12px;"><?= $mockIcon ?></div>
-                            <div style="font-size: 12px; color: var(--mute); text-transform: uppercase; letter-spacing: 0.08em;"><?= e($eyebrow) ?></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 2. WHATSAPP RX -->
+<section style="background: var(--bg-2); padding: 120px 0;">
+    <div class="wrap">
+        <div class="feature-row reverse">
+            <div class="feature-text reveal">
+                <span class="eyebrow">Rx via WhatsApp</span>
+                <h3>Prescriptions, delivered before they leave the chair.</h3>
+                <p class="lede">Every signed digital Rx gets a PDF copy and a WhatsApp message sent automatically — to your patient, to the partner pharmacy if you want, and to the family member they share with. No more lost paper, no more 11pm photo requests.</p>
+                <a href="/features" class="btn-link">See the full prescription workflow →</a>
+            </div>
+            <div class="reveal">
+                <!-- WhatsAppMock ported from feature-mocks.jsx -->
+                <div class="feature-mock" style="aspect-ratio: 4/3; position: relative; background: #E5DDD5; background-image: radial-gradient(circle, rgba(0,0,0,0.04) 1px, transparent 1px); background-size: 10px 10px; padding: 28px; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; border-radius: 14px; overflow: hidden;">
+                    <!-- Incoming (clinic) -->
+                    <div style="align-self: flex-start; max-width: 75%; background: #fff; border-radius: 12px 12px 12px 2px; padding: 8px 12px; box-shadow: 0 1px 1px rgba(0,0,0,0.06);">
+                        <div style="font-size: 11px; font-weight: 600; color: var(--teal-700); margin-bottom: 2px;">Sunrise Clinic</div>
+                        <div style="font-size: 13px; color: var(--ink-2); line-height: 1.4;">Hi Riya — your prescription from today is ready.</div>
+                        <div style="font-size: 10px; color: var(--mute); text-align: right; margin-top: 2px;">9:47</div>
+                    </div>
+                    <!-- Attachment -->
+                    <div style="align-self: flex-start; max-width: 75%; background: #fff; border-radius: 12px 12px 12px 2px; padding: 8px; box-shadow: 0 1px 1px rgba(0,0,0,0.06);">
+                        <div style="background: var(--bg-2); border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 36px; height: 44px; background: #fff; border: 0.5px solid var(--line); border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <div style="font-size: 8px; font-weight: 700; color: var(--red, #c00);">PDF</div>
+                            </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-size: 12px; font-weight: 500; color: var(--ink);">Rx_Mehta_18May.pdf</div>
+                                <div style="font-size: 10px; color: var(--mute); margin-top: 1px;">2 medicines · Dr. A. Sharma</div>
+                            </div>
+                        </div>
+                        <div style="font-size: 10px; color: var(--mute); text-align: right; margin-top: 4px;">9:47</div>
+                    </div>
+                    <!-- Reply -->
+                    <div style="align-self: flex-end; max-width: 70%; background: #DCF8C6; border-radius: 12px 12px 2px 12px; padding: 8px 12px;">
+                        <div style="font-size: 13px; color: var(--ink-2);">Got it! Thank you doctor 🙏</div>
+                        <div style="font-size: 10px; color: var(--mute); text-align: right; margin-top: 2px;">9:48 ✓✓</div>
+                    </div>
+                    <!-- Delivered toast -->
+                    <div style="position: absolute; top: 24px; right: 24px; background: #fff; border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
+                        <span style="width: 18px; height: 18px; border-radius: 50%; background: var(--teal-50); color: var(--teal-700); display: grid; place-items: center; font-size: 11px; font-weight: 700;">✓</span>
+                        <span style="font-size: 11px; font-weight: 500;">Delivered automatically</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 3. VITALS TRENDS -->
+<section style="background: #fff; padding: 120px 0;">
+    <div class="wrap">
+        <div class="feature-row">
+            <div class="feature-text reveal">
+                <span class="eyebrow">Vitals trends</span>
+                <h3>See the full picture, visit by visit.</h3>
+                <p class="lede">BP, blood sugar, weight, oxygen — every reading flows into a clean trend chart you can review during a 30-second walk into the room. The chart knows your target band. Your patient sees the same view on their app.</p>
+                <a href="/features" class="btn-link">Explore vitals & chart modules →</a>
+            </div>
+            <div class="reveal">
+                <!-- VitalsMock ported from feature-mocks.jsx -->
+                <?php
+                $bpSys = [148, 142, 138, 140, 136, 134, 132];
+                $bpDia = [92, 90, 86, 88, 84, 82, 80];
+                $months = ['Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
+                $pathFrom = function (array $vals, int $min, int $max): array {
+                    $w = 360; $h = 100;
+                    $pts = [];
+                    $n = count($vals);
+                    foreach ($vals as $i => $v) {
+                        $x = ($i / ($n - 1)) * $w;
+                        $y = $h - (($v - $min) / ($max - $min)) * $h;
+                        $pts[] = [$x, $y];
+                    }
+                    $d = '';
+                    foreach ($pts as $i => $p) {
+                        $d .= ($i === 0 ? 'M' : 'L') . round($p[0], 1) . ' ' . round($p[1], 1) . ' ';
+                    }
+                    return ['d' => trim($d), 'pts' => $pts];
+                };
+                $sys = $pathFrom($bpSys, 120, 160);
+                $dia = $pathFrom($bpDia, 70, 100);
+                ?>
+                <div class="feature-mock" style="aspect-ratio: 4/3; background: #fff; border: 0.5px solid var(--line); border-radius: 14px; overflow: hidden;">
+                    <div class="ui-bar" style="display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: var(--bg-2); border-bottom: 0.5px solid var(--line);">
+                        <span class="dot r" style="width: 10px; height: 10px; border-radius: 50%; background: #FF5F57;"></span>
+                        <span class="dot y" style="width: 10px; height: 10px; border-radius: 50%; background: #FEBC2E;"></span>
+                        <span class="dot g" style="width: 10px; height: 10px; border-radius: 50%; background: #28C840;"></span>
+                        <span class="url" style="margin-left: 14px; font-size: 11px; color: var(--mute); font-family: 'JetBrains Mono', monospace;">eclinicpro.app/p/aaravsharma/vitals</span>
+                    </div>
+                    <div style="padding: 24px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 18px;">
+                            <div>
+                                <div style="font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500;">Blood pressure · 7 visits</div>
+                                <div style="font-size: 26px; font-weight: 300; letter-spacing: -0.6px; margin-top: 4px;">132<span style="color: var(--mute); font-size: 18px;">/80</span> <span style="font-size: 12px; font-weight: 500; color: #1B8B3D; margin-left: 4px;">↓ improving</span></div>
+                            </div>
+                            <div style="display: flex; gap: 6px;">
+                                <span style="font-size: 11px; padding: 4px 10px; border-radius: 8px; background: var(--ink); color: #fff; font-weight: 500;">6 mo</span>
+                                <span style="font-size: 11px; padding: 4px 10px; border-radius: 8px; color: var(--mute);">1 yr</span>
+                                <span style="font-size: 11px; padding: 4px 10px; border-radius: 8px; color: var(--mute);">All</span>
+                            </div>
+                        </div>
+
+                        <!-- SVG chart -->
+                        <svg viewBox="0 0 360 110" style="width: 100%; height: 130px; overflow: visible;">
+                            <?php foreach ([0, 25, 50, 75, 100] as $y): ?>
+                            <line x1="0" x2="360" y1="<?= $y ?>" y2="<?= $y ?>" stroke="rgba(0,0,0,0.05)" stroke-dasharray="2 3"/>
+                            <?php endforeach; ?>
+                            <rect x="0" y="30" width="360" height="40" fill="rgba(15,155,110,0.05)"/>
+                            <path d="<?= e($sys['d']) ?>" fill="none" stroke="var(--teal-600)" stroke-width="2.2" stroke-linecap="round"/>
+                            <?php foreach ($sys['pts'] as $p): ?>
+                            <circle cx="<?= round($p[0], 1) ?>" cy="<?= round($p[1], 1) ?>" r="3" fill="var(--teal-600)"/>
+                            <?php endforeach; ?>
+                            <path d="<?= e($dia['d']) ?>" fill="none" stroke="#3B82F6" stroke-width="2.2" stroke-linecap="round"/>
+                            <?php foreach ($dia['pts'] as $p): ?>
+                            <circle cx="<?= round($p[0], 1) ?>" cy="<?= round($p[1], 1) ?>" r="3" fill="#3B82F6"/>
+                            <?php endforeach; ?>
+                        </svg>
+                        <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--mute); font-family: 'JetBrains Mono', monospace; margin-top: 4px;">
+                            <?php foreach ($months as $m): ?><span><?= e($m) ?></span><?php endforeach; ?>
+                        </div>
+
+                        <div style="display: flex; gap: 18px; margin-top: 14px; font-size: 11px; color: var(--mute);">
+                            <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--teal-600);"></span>Systolic</span>
+                            <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #3B82F6;"></span>Diastolic</span>
+                            <span style="display: inline-flex; align-items: center; gap: 6px; margin-left: auto;"><span style="width: 12px; height: 8px; border-radius: 2px; background: rgba(15,155,110,0.15);"></span>Target 120/80–130/85</span>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </section>
-    <?php endforeach; ?>
+    </div>
+</section>
+
 </div>
 
 <!-- ============ PRICING ============ -->

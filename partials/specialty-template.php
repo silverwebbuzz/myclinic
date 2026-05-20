@@ -4,12 +4,14 @@
 // Each thin wrapper (gps.php, dentists.php, etc.) sets $spec then requires this.
 // =====================================================================
 require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/specialty-mocks.php';
 
 if (!isset($spec) || !is_array($spec)) {
     http_response_code(500);
     echo 'specialty-template.php: missing $spec';
     return;
 }
+$specKey = $specKey ?? 'gp';
 
 $pageTitle = $spec['label'] . ' — eClinicPro';
 $metaDesc = $spec['heroBlurb'];
@@ -18,29 +20,37 @@ $activePage = 'specialties';
 require __DIR__ . '/header.php';
 ?>
 
-<!-- ============ HERO ============ -->
-<section style="padding: 140px 0 60px; text-align: center; position: relative; overflow: hidden;">
-    <div style="position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%, rgba(15,155,110,0.06) 0%, transparent 60%); pointer-events: none;"></div>
-    <div class="wrap" style="position: relative; max-width: 820px;">
-        <div style="font-size: 56px; margin-bottom: 16px;"><?= $spec['icon'] ?></div>
-        <span class="eyebrow" style="display: block; margin-bottom: 16px;">For <?= e($spec['label']) ?></span>
-        <h1 class="h-display" style="font-size: clamp(38px, 5vw, 56px); letter-spacing: -1.2px;">
-            <?= e($spec['headline'][0]) ?><span class="grad"><?= e($spec['headline'][1]) ?></span><?= e($spec['headline'][2]) ?>
-        </h1>
-        <p class="lede" style="font-size: 18px; margin-top: 22px; max-width: 640px; margin-left: auto; margin-right: auto;">
-            <?= e($spec['heroBlurb']) ?>
-        </p>
-        <div style="display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; margin-top: 24px;">
-            <?php foreach ($spec['heroProof'] as $p): ?>
-            <span style="font-size: 13px; color: var(--mute); font-weight: 500;">
-                <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--teal-500); margin-right: 8px; vertical-align: middle;"></span>
-                <?= e($p) ?>
-            </span>
-            <?php endforeach; ?>
-        </div>
-        <div class="hero-ctas" style="margin-top: 32px; justify-content: center;">
-            <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg">Start free</a>
-            <a href="/book-a-demo" class="btn btn-ghost-dark btn-lg">See a tailored demo →</a>
+<!-- ============ HERO with phone mock ============ -->
+<section style="padding: 140px 0 80px; position: relative; overflow: hidden;">
+    <div style="position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 20%, rgba(15,155,110,0.08) 0%, transparent 55%); pointer-events: none;"></div>
+    <div class="wrap" style="position: relative;">
+        <div class="spec-hero-grid" style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 60px; align-items: center;">
+            <div>
+                <div style="font-size: 48px; margin-bottom: 12px;"><?= $spec['icon'] ?></div>
+                <span class="eyebrow">For <?= e($spec['label']) ?></span>
+                <h1 class="h-display" style="font-size: clamp(36px, 4.8vw, 52px); letter-spacing: -1.2px; margin-top: 14px;">
+                    <?= e($spec['headline'][0]) ?><span class="grad"><?= e($spec['headline'][1]) ?></span><?= e($spec['headline'][2]) ?>
+                </h1>
+                <p class="lede" style="font-size: 17px; margin-top: 20px;">
+                    <?= e($spec['heroBlurb']) ?>
+                </p>
+                <div style="display: flex; gap: 18px; flex-wrap: wrap; margin-top: 20px;">
+                    <?php foreach ($spec['heroProof'] as $p): ?>
+                    <span style="font-size: 13px; color: var(--mute); font-weight: 500;">
+                        <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--teal-500); margin-right: 8px; vertical-align: middle;"></span>
+                        <?= e($p) ?>
+                    </span>
+                    <?php endforeach; ?>
+                </div>
+                <div class="hero-ctas" style="margin-top: 28px;">
+                    <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg">Start free</a>
+                    <a href="/book-a-demo" class="btn btn-ghost-dark btn-lg">See a tailored demo →</a>
+                </div>
+            </div>
+
+            <div class="reveal" style="display: flex; justify-content: center;">
+                <?php render_spec_mock($specKey); ?>
+            </div>
         </div>
     </div>
 </section>
@@ -201,6 +211,9 @@ $otherSpecs = array_filter($allSpecs, fn ($s) => $s['slug'] !== $spec['slug']);
 </section>
 
 <style>
+@media (max-width: 900px) {
+    .spec-hero-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+}
 @media (max-width: 800px) {
     .feat-grid, .tgrid { grid-template-columns: 1fr !important; }
     .specialty-grid { grid-template-columns: repeat(2, 1fr) !important; }
