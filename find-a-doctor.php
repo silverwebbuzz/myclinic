@@ -19,7 +19,9 @@ if ($dbDoctors !== null && count($dbDoctors) > 0) {
 }
 
 // Extra page-specific CSS — append after header.php's <link>.
-$extraHead = '<link rel="stylesheet" href="/assets/css/find-doctor.css">';
+// Cache-bust whenever the CSS file changes on disk.
+$cssBust = @filemtime(__DIR__ . '/assets/css/find-doctor.css') ?: time();
+$extraHead = '<link rel="stylesheet" href="/assets/css/find-doctor.css?v=' . $cssBust . '">';
 
 // Inject extra head into the global header by setting a flag header.php reads.
 // (header.php uses $extraHead if present.)
@@ -29,6 +31,10 @@ require __DIR__ . '/partials/header.php';
 
 <style>
 [x-cloak] { display: none !important; }
+/* Belt-and-suspenders: hide the panel by default via raw CSS so it never
+   flashes as un-styled HTML if Alpine is slow to load. */
+.fd-spec-panel { display: none; }
+.fd-spec-panel.is-open { display: grid; }
 </style>
 
 <div x-data="findDoctor()" x-init="init()" x-cloak>
@@ -134,8 +140,8 @@ require __DIR__ . '/partials/header.php';
             </button>
         </div>
 
-        <!-- Full 4-group panel (toggled) -->
-        <div class="fd-spec-panel" x-show="specPanelOpen" x-transition x-cloak>
+        <!-- Full 5-group panel (toggled) -->
+        <div class="fd-spec-panel" :class="specPanelOpen ? 'is-open' : ''">
             <template x-for="g in specialty_groups" :key="g.label">
                 <div class="fd-spec-group">
                     <h4 x-text="g.label"></h4>
