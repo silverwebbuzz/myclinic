@@ -214,6 +214,55 @@
 .fd-spec:hover { border-color: var(--teal-400); color: var(--teal-700); }
 .fd-spec.active { background: var(--ink); color: #fff; border-color: var(--ink); }
 
+/* full-specialty panel — expands when user clicks "+ All specialties" */
+.fd-spec-panel {
+  max-width: 1120px;
+  margin: 16px auto 0;
+  background: #fff;
+  border: 0.5px solid var(--line);
+  border-radius: 14px;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);   /* 5 specialty groups */
+  gap: 24px;
+}
+.fd-spec-group h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.2px;
+  margin: 0 0 12px;
+}
+.fd-spec-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fd-spec-link {
+  background: none;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-2);
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.fd-spec-link:hover { background: var(--bg-2); color: var(--teal-700); }
+.fd-spec-link.is-active { background: var(--teal-50); color: var(--teal-800); font-weight: 600; }
+
+@media (max-width: 1100px) {
+  .fd-spec-panel { grid-template-columns: repeat(3, 1fr); gap: 22px; padding: 20px; }
+}
+@media (max-width: 800px) {
+  .fd-spec-panel { grid-template-columns: repeat(2, 1fr); gap: 18px; }
+}
+@media (max-width: 520px) {
+  .fd-spec-panel { grid-template-columns: 1fr; gap: 14px; }
+}
+
 /* results section */
 .fd-main { background: var(--bg-3); padding: 28px 0 90px; min-height: 60vh; }
 .fd-main .wrap-wide { max-width: 1200px; margin: 0 auto; padding: 0 24px; }

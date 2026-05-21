@@ -1,11 +1,13 @@
 <?php
 // =====================================================================
 // find-doctor-data.php — seed data for the public Find a Doctor page.
-// Returns: countries, specialties, doctors, locations.
+// Returns: countries, specialties (flat for filter logic),
+//          specialty_groups (4-group layout for chip rendering),
+//          locations, doctors.
 // Replace this file later with a DB-backed source if needed.
 // =====================================================================
 
-return [
+$DATA = [
     'countries' => [
         ['code' => 'IN', 'name' => 'India',          'flag' => '🇮🇳', 'currency' => '₹',   'feeRange' => [200, 2000], 'langs' => ['English', 'Hindi', 'Marathi', 'Tamil', 'Telugu', 'Kannada', 'Bengali']],
         ['code' => 'US', 'name' => 'United States',  'flag' => '🇺🇸', 'currency' => '$',   'feeRange' => [80, 500],   'langs' => ['English', 'Spanish']],
@@ -16,16 +18,77 @@ return [
         ['code' => 'SG', 'name' => 'Singapore',      'flag' => '🇸🇬', 'currency' => 'S$',  'feeRange' => [80, 380],   'langs' => ['English', 'Mandarin', 'Malay', 'Tamil']],
     ],
 
-    'specialties' => [
-        ['id' => 'gp',     'label' => 'General practice', 'icon' => '🩺'],
-        ['id' => 'dental', 'label' => 'Dental',           'icon' => '🦷'],
-        ['id' => 'homeo',  'label' => 'Homeopathy',       'icon' => '🌿'],
-        ['id' => 'derma',  'label' => 'Dermatology',      'icon' => '✨'],
-        ['id' => 'peds',   'label' => 'Pediatrics',       'icon' => '👶'],
-        ['id' => 'physio', 'label' => 'Physiotherapy',    'icon' => '🤸'],
-        ['id' => 'cardio', 'label' => 'Cardiology',       'icon' => '❤️'],
-        ['id' => 'gyno',   'label' => 'Gynaecology',      'icon' => '👩‍⚕️'],
+    // Grouped specialty layout — keys are kept stable (used as `spec` in DB).
+    // The flat 'specialties' array below is derived from this for the Alpine
+    // filter logic; the 'specialty_groups' is what the UI renders.
+    'specialty_groups' => [
+        [
+            'label' => 'General Physicians & Specialists',
+            'items' => [
+                ['id' => 'gp',           'label' => 'General Physician',  'icon' => '🩺'],
+                ['id' => 'eye',          'label' => 'Ophthalmologist',    'icon' => '👁️'],
+                ['id' => 'derma',        'label' => 'Dermatologist',      'icon' => '✨'],
+                ['id' => 'cardio',       'label' => 'Cardiologist',       'icon' => '❤️'],
+                ['id' => 'psychiatrist', 'label' => 'Psychiatrist',       'icon' => '🧠'],
+                ['id' => 'gastro',       'label' => 'Gastroenterologist', 'icon' => '🩻'],
+                ['id' => 'ent',          'label' => 'ENT',                'icon' => '👂'],
+                ['id' => 'gyno',         'label' => 'Gynecologist',       'icon' => '👩‍⚕️'],
+                ['id' => 'neuro',        'label' => 'Neurologist',        'icon' => '🧬'],
+                ['id' => 'urologist',    'label' => 'Urologist',          'icon' => '🩺'],
+                ['id' => 'peds',         'label' => 'Pediatrician',       'icon' => '👶'],
+                ['id' => 'ortho',        'label' => 'Orthopedic',         'icon' => '🦴'],
+                ['id' => 'oncology',     'label' => 'Oncologist',         'icon' => '🎗️'],
+                ['id' => 'pulmonology',  'label' => 'Pulmonologist',      'icon' => '🫁'],
+                ['id' => 'nephrology',   'label' => 'Nephrologist',       'icon' => '🩸'],
+            ],
+        ],
+        [
+            'label' => 'Surgeons & Critical Care',
+            'items' => [
+                ['id' => 'neurosurgery',  'label' => 'Neurosurgeon',       'icon' => '🧠'],
+                ['id' => 'spine',         'label' => 'Spine Surgeon',     'icon' => '🦴'],
+                ['id' => 'gi_surgery',    'label' => 'GI / Laparoscopic',  'icon' => '🔬'],
+                ['id' => 'radiology',     'label' => 'Radiologist',        'icon' => '📷'],
+                ['id' => 'critical_care', 'label' => 'Critical Care',      'icon' => '🚨'],
+            ],
+        ],
+        [
+            'label' => 'Dentists',
+            'items' => [
+                ['id' => 'dental',             'label' => 'Dentist',          'icon' => '🦷'],
+                ['id' => 'prosthodontist',     'label' => 'Prosthodontist',   'icon' => '🦷'],
+                ['id' => 'orthodontist',       'label' => 'Orthodontist',     'icon' => '🦷'],
+                ['id' => 'pediatric_dentist',  'label' => 'Pediatric',        'icon' => '🦷'],
+                ['id' => 'endodontist',        'label' => 'Endodontist',      'icon' => '🦷'],
+                ['id' => 'implantologist',     'label' => 'Implantologist',   'icon' => '🦷'],
+            ],
+        ],
+        [
+            'label' => 'Alternative Medicine Practitioners',
+            'items' => [
+                ['id' => 'ayurveda',    'label' => 'Ayurveda',           'icon' => '🌿'],
+                ['id' => 'homeo',       'label' => 'Homoeopath',         'icon' => '🌿'],
+                ['id' => 'siddha',      'label' => 'Siddha',             'icon' => '🌿'],
+                ['id' => 'unani',       'label' => 'Unani',              'icon' => '🌿'],
+                ['id' => 'naturopathy', 'label' => 'Yoga & Naturopathy', 'icon' => '🧘'],
+            ],
+        ],
+        [
+            'label' => 'Therapists & Nutritionists',
+            'items' => [
+                ['id' => 'acupuncturist', 'label' => 'Acupuncturist',         'icon' => '📍'],
+                ['id' => 'physio',        'label' => 'Physiotherapist',       'icon' => '🤸'],
+                ['id' => 'psychologist',  'label' => 'Psychologist',          'icon' => '🧠'],
+                ['id' => 'audiologist',   'label' => 'Audiologist',           'icon' => '👂'],
+                ['id' => 'speech',        'label' => 'Speech',                'icon' => '🗣️'],
+                ['id' => 'dietitian',     'label' => 'Dietitian/Nutritionist','icon' => '🥗'],
+            ],
+        ],
     ],
+
+    // Flat list — auto-built below from specialty_groups for filter logic
+    // (don't edit; derived).
+    'specialties' => [],
 
     'locations' => [
         // India
@@ -100,3 +163,13 @@ return [
         ['id' => 30, 'name' => 'Dr. Rahul Krishnan','firstInitial' => 'R', 'lastInitial' => 'K', 'qual' => 'MBBS, MD (Cardio)',  'years' => 20, 'spec' => 'cardio', 'specLabel' => 'Cardiology', 'verified' => true, 'video' => false, 'gender' => 'M', 'rating' => 4.9, 'reviews' => 340, 'langs' => ['English', 'Tamil', 'Hindi'], 'hospital' => 'Heart Health Singapore', 'area' => 'Novena', 'city' => 'Singapore', 'state' => 'Singapore', 'country' => 'SG', 'countryName' => 'Singapore', 'currency' => 'S$', 'fee' => 220, 'next' => ['when' => 'later', 'label' => 'In 3 days', 'sub' => '']],
     ],
 ];
+
+// Derive the flat 'specialties' list from the grouped layout. Keep this last
+// so any group edits above auto-propagate without touching the filter logic.
+foreach ($DATA['specialty_groups'] as $g) {
+    foreach ($g['items'] as $item) {
+        $DATA['specialties'][] = $item;
+    }
+}
+
+return $DATA;

@@ -222,7 +222,7 @@ function ecp_directory_doctors(?string $countryCode = null): ?array
                 'qual' => '',                      // not from Google; filled when claimed
                 'years' => 0,
                 'spec' => $r['specialty'] ?? 'gp',
-                'specLabel' => ucfirst((string) ($r['specialty'] ?? 'general practice')),
+                'specLabel' => ecp_specialty_label($r['specialty'] ?? null),
                 'verified' => (bool) $r['is_claimed'],
                 'video' => false,
                 'gender' => '',
@@ -279,4 +279,26 @@ function ecp_doctor_photo_url(?string $photoRef, int $maxWidth = 400): ?string
             'photoreference' => $photoRef,
             'key' => $key,
         ]);
+}
+
+/**
+ * Map a specialty slug ('eye', 'prosthodontist', 'homeo', ...) to its
+ * display label ('Ophthalmologist', etc.), loading the seed file once.
+ * Falls back to a title-cased slug for unknown values.
+ */
+function ecp_specialty_label(?string $slug): string
+{
+    static $map = null;
+    if ($map === null) {
+        $map = [];
+        $dataPath = __DIR__ . '/find-doctor-data.php';
+        if (is_file($dataPath)) {
+            $seed = require $dataPath;
+            foreach ((array) ($seed['specialties'] ?? []) as $s) {
+                if (isset($s['id'], $s['label'])) $map[$s['id']] = $s['label'];
+            }
+        }
+    }
+    if (!$slug) return 'General Physician';
+    return $map[$slug] ?? ucwords(str_replace('_', ' ', $slug));
 }

@@ -102,19 +102,54 @@ $STATES = [
     ],
 ];
 
+// Specialty queries — grouped here as comments for clarity. Each line gets
+// its own pass through the 9-area sub-grid. Sub-specialties (prosthodontist,
+// siddha, etc.) get focused queries so the resulting JSON is properly tagged.
 $QUERIES = [
-    ['q' => 'doctor',              'spec' => 'gp'],
-    ['q' => 'dentist',             'spec' => 'dental'],
-    ['q' => 'pediatrician',        'spec' => 'peds'],
-    ['q' => 'dermatologist',       'spec' => 'derma'],
-    ['q' => 'gynecologist',        'spec' => 'gyno'],
-    ['q' => 'cardiologist',        'spec' => 'cardio'],
-    ['q' => 'orthopedic',          'spec' => 'ortho'],
-    ['q' => 'physiotherapist',     'spec' => 'physio'],
-    ['q' => 'homeopathy clinic',   'spec' => 'homeo'],
-    ['q' => 'ENT specialist',      'spec' => 'ent'],
-    ['q' => 'eye doctor',          'spec' => 'eye'],
-    ['q' => 'neurologist',         'spec' => 'neuro'],
+    // ----- General Physicians & Specialists -----
+    ['q' => 'general physician',     'spec' => 'gp'],
+    ['q' => 'ophthalmologist',       'spec' => 'eye'],
+    ['q' => 'dermatologist',         'spec' => 'derma'],
+    ['q' => 'cardiologist',          'spec' => 'cardio'],
+    ['q' => 'psychiatrist',          'spec' => 'psychiatrist'],
+    ['q' => 'gastroenterologist',    'spec' => 'gastro'],
+    ['q' => 'ENT specialist',        'spec' => 'ent'],
+    ['q' => 'gynecologist',          'spec' => 'gyno'],
+    ['q' => 'neurologist',           'spec' => 'neuro'],
+    ['q' => 'urologist',             'spec' => 'urologist'],
+    ['q' => 'pediatrician',          'spec' => 'peds'],
+    ['q' => 'orthopedic',            'spec' => 'ortho'],
+    ['q' => 'oncologist cancer',     'spec' => 'oncology'],
+    ['q' => 'pulmonologist',         'spec' => 'pulmonology'],
+    ['q' => 'nephrologist',          'spec' => 'nephrology'],
+    ['q' => 'neurosurgeon',          'spec' => 'neurosurgery'],
+    ['q' => 'spine surgeon',         'spec' => 'spine'],
+    ['q' => 'gastrointestinal surgeon laparoscopic', 'spec' => 'gi_surgery'],
+    ['q' => 'radiologist diagnostic center', 'spec' => 'radiology'],
+    ['q' => 'critical care icu',     'spec' => 'critical_care'],
+
+    // ----- Dentists (general + sub-specialties) -----
+    ['q' => 'dentist',               'spec' => 'dental'],
+    ['q' => 'prosthodontist',        'spec' => 'prosthodontist'],
+    ['q' => 'orthodontist',          'spec' => 'orthodontist'],
+    ['q' => 'pediatric dentist',     'spec' => 'pediatric_dentist'],
+    ['q' => 'endodontist',           'spec' => 'endodontist'],
+    ['q' => 'dental implant clinic', 'spec' => 'implantologist'],
+
+    // ----- Alternative Medicine -----
+    ['q' => 'ayurveda clinic',       'spec' => 'ayurveda'],
+    ['q' => 'homeopathy clinic',     'spec' => 'homeo'],
+    ['q' => 'siddha clinic',         'spec' => 'siddha'],
+    ['q' => 'unani clinic',          'spec' => 'unani'],
+    ['q' => 'naturopathy clinic',    'spec' => 'naturopathy'],
+
+    // ----- Therapists & Nutritionists -----
+    ['q' => 'acupuncturist',         'spec' => 'acupuncturist'],
+    ['q' => 'physiotherapist',       'spec' => 'physio'],
+    ['q' => 'psychologist',          'spec' => 'psychologist'],
+    ['q' => 'audiologist',           'spec' => 'audiologist'],
+    ['q' => 'speech therapist',      'spec' => 'speech'],
+    ['q' => 'dietitian nutritionist','spec' => 'dietitian'],
 ];
 
 $JSON_DIR = __DIR__ . '/json';

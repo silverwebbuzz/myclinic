@@ -117,16 +117,39 @@ require __DIR__ . '/partials/header.php';
             <button type="button" class="btn-search" aria-label="Search">→</button>
         </div>
 
-        <!-- Specialty chips -->
-        <div class="fd-specs">
+        <!-- Specialty selector: collapsed quick row + expandable 4-group panel -->
+        <div class="fd-specs" style="display:flex;align-items:center;gap:8px;">
             <button type="button" class="fd-spec" :class="spec === 'all' ? 'active' : ''" @click="spec = 'all'">
                 All specialties
             </button>
-            <template x-for="s in specialties" :key="s.id">
+            <!-- Show top ~6 most common as quick chips -->
+            <template x-for="s in specialties.slice(0, 6)" :key="s.id">
                 <button type="button" class="fd-spec" :class="spec === s.id ? 'active' : ''" @click="spec = s.id">
                     <span class="ic" x-text="s.icon"></span>
                     <span x-text="s.label"></span>
                 </button>
+            </template>
+            <button type="button" class="fd-spec" :class="specPanelOpen ? 'active' : ''" @click="specPanelOpen = !specPanelOpen">
+                <span x-text="specPanelOpen ? '✕ Close' : '+ All specialties'"></span>
+            </button>
+        </div>
+
+        <!-- Full 4-group panel (toggled) -->
+        <div class="fd-spec-panel" x-show="specPanelOpen" x-transition x-cloak>
+            <template x-for="g in specialty_groups" :key="g.label">
+                <div class="fd-spec-group">
+                    <h4 x-text="g.label"></h4>
+                    <div class="fd-spec-list">
+                        <template x-for="s in g.items" :key="s.id">
+                            <button type="button"
+                                class="fd-spec-link"
+                                :class="spec === s.id ? 'is-active' : ''"
+                                @click="spec = s.id; specPanelOpen = false">
+                                <span x-text="s.label"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
             </template>
         </div>
     </div>
@@ -418,6 +441,7 @@ function findDoctor() {
         // ----- data -----
         countries: window.FD_DATA.countries,
         specialties: window.FD_DATA.specialties,
+        specialty_groups: window.FD_DATA.specialty_groups || [],
         locations: window.FD_DATA.locations,
         doctors: window.FD_DATA.doctors,
 
@@ -429,6 +453,7 @@ function findDoctor() {
         locValue: null,
         acOpen: false,
         spec: 'all',
+        specPanelOpen: false,
         avail: 'any', availOpen: false,
         video: false,
         gender: 'any', genderOpen: false,
