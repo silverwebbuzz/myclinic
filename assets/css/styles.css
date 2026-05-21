@@ -994,20 +994,175 @@ footer.foot {
   .screen-block .meta { grid-template-columns: 1fr; }
   .screen-block .bullets { grid-template-columns: 1fr; }
 }
+/* =====================================================================
+   MOBILE — burger menu visible on small screens, hidden on desktop
+   ===================================================================== */
+.nav-burger {
+  display: none;
+  background: transparent;
+  border: 0;
+  padding: 8px;
+  margin-left: 4px;
+  cursor: pointer;
+  color: var(--ink);
+  border-radius: 8px;
+}
+.nav-burger:hover { background: var(--bg-2); }
+
+/* =====================================================================
+   ≤ 900px — tablet
+   ===================================================================== */
 @media (max-width: 900px) {
   section { padding: 64px 0; }
-  .nav-links { display: none; }
-  .stats { grid-template-columns: repeat(2, 1fr); }
+
+  /* ---- container ---- */
+  .wrap, .wrap-wide { padding: 0 20px; }
+
+  /* ---- nav: hide inline links, show burger ---- */
+  .nav-inner { padding: 0 20px; gap: 12px; }
+  .nav-burger { display: inline-flex; align-items: center; justify-content: center; }
+  .nav-signin { display: none; }                    /* keep CTA + burger only */
+  .nav .btn { padding: 6px 12px; font-size: 12.5px; }
+
+  /* slide-down mobile menu — replaces the inline desktop nav */
+  .nav-links {
+    display: none;                                  /* hidden by default */
+    flex: none;
+    position: fixed;
+    top: 56px; left: 0; right: 0;
+    flex-direction: column;
+    background: #fff;
+    border-bottom: 0.5px solid var(--line);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+    padding: 16px 20px;
+    gap: 4px;
+    z-index: 50;
+    max-height: calc(100vh - 56px);
+    overflow-y: auto;
+  }
+  .nav-links.is-open { display: flex; }
+  .nav-link {
+    padding: 12px 4px;
+    font-size: 15px;
+    border-bottom: 0.5px solid rgba(0,0,0,0.04);
+  }
+  .nav-link:last-child { border-bottom: 0; }
+
+  /* ---- typography caps ---- */
+  .h-display { font-size: clamp(32px, 8vw, 44px); letter-spacing: -0.8px; line-height: 1.1; }
+  .h-section { font-size: clamp(26px, 6vw, 36px); letter-spacing: -0.6px; line-height: 1.15; }
+
+  /* ---- hero ---- */
+  .hero { padding: 96px 0 64px; min-height: 0; }
+  .hero-inner { padding: 0 20px; }
+  .hero h1 { font-size: clamp(34px, 8.5vw, 48px); letter-spacing: -0.8px; margin: 14px 0 18px; }
+  .hero .lede { font-size: 16px; margin-bottom: 24px; }
+  .hero-ctas { gap: 10px; margin-bottom: 28px; }
+  .hero-ctas .btn-lg { padding: 12px 18px; font-size: 14px; }
+  .hero-trust { font-size: 12px; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+  /* hero embedded dashboard preview — collapse the 220px sidebar so the main
+     panel doesn't shrink to nothing on phones */
+  .hero-preview { overflow: hidden; }
+  .hero-preview > div { grid-template-columns: 1fr !important; min-height: 0 !important; }
+  .hero-preview > div > div:first-child { display: none; }  /* hide the fake sidebar on mobile */
+
+  /* ---- section grids ---- */
+  .stats { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .stat-num { font-size: 36px; }
   .modules-grid { grid-template-columns: repeat(2, 1fr); }
   .pricing-grid { grid-template-columns: 1fr; }
   .tgrid { grid-template-columns: 1fr; }
-  .psgrid { grid-template-columns: 1fr; gap: 32px; }
+  .psgrid { grid-template-columns: 1fr; gap: 24px; }
   .psgrid .divider { display: none; }
-  .spec-showcase, .feature-row, .feature-row.reverse { grid-template-columns: 1fr; gap: 40px; }
+  .spec-showcase, .feature-row, .feature-row.reverse { grid-template-columns: 1fr; gap: 32px; }
   .feature-row.reverse .feature-text { order: unset; }
-  .foot-grid { grid-template-columns: 1fr 1fr; }
-  .stat-num { font-size: 40px; }
   .feat-grid { grid-template-columns: 1fr; }
   .feat-cat-head { grid-template-columns: 1fr; gap: 14px; }
   .sec-grid { grid-template-columns: 1fr; }
+  .spec-tabs { gap: 6px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
+  .spec-tabs::-webkit-scrollbar { display: none; }
+  .spec-tab { white-space: nowrap; flex-shrink: 0; }
+
+  /* ---- comparison table (pricing) — let it scroll horizontally ---- */
+  .cmp-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .cmp-table { min-width: 720px; }
+
+  /* ---- footer ---- */
+  .foot-grid { grid-template-columns: 1fr 1fr; gap: 28px; padding: 48px 0 32px; }
+  .foot-bottom { flex-direction: column; gap: 12px; text-align: center; padding: 16px 0; }
+
+  /* ---- CTA block ---- */
+  .cta-block h2 { font-size: clamp(28px, 7vw, 38px); }
+  .cta-block .lede { font-size: 16px; }
+
+  /* ---- buttons ---- */
+  .btn-lg { padding: 13px 22px; font-size: 14px; }
 }
+
+/* =====================================================================
+   ≤ 600px — phone
+   ===================================================================== */
+@media (max-width: 600px) {
+  section { padding: 52px 0; }
+  .wrap, .wrap-wide { padding: 0 16px; }
+
+  /* ---- typography ---- */
+  .h-display { font-size: clamp(28px, 9vw, 36px); }
+  .h-section { font-size: clamp(22px, 7vw, 30px); }
+  .lede { font-size: 15px; }
+
+  /* ---- nav ---- */
+  .nav-inner { padding: 0 16px; height: 56px; gap: 8px; }
+  .logo { font-size: 16px; }
+
+  /* ---- hero ---- */
+  .hero { padding: 80px 0 48px; }
+  .hero-inner { padding: 0 16px; }
+  .hero h1 { font-size: clamp(28px, 9vw, 38px); letter-spacing: -0.5px; }
+  .hero-ctas { flex-direction: column; align-items: stretch; gap: 8px; }
+  .hero-ctas .btn { width: 100%; }
+
+  /* ---- single-column grids on phones ---- */
+  .stats { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .stat-num { font-size: 30px; }
+  .modules-grid { grid-template-columns: 1fr; }
+  .foot-grid { grid-template-columns: 1fr; gap: 24px; }
+
+  /* ---- pricing card padding ---- */
+  .price-card { padding: 22px 20px; }
+
+  /* ---- forms (book-a-demo, etc.) get cramped on phones ---- */
+  input[type="text"], input[type="email"], input[type="tel"],
+  input[type="search"], input[type="date"], input[type="time"],
+  select, textarea {
+    font-size: 16px;     /* prevents iOS Safari auto-zoom */
+  }
+}
+
+/* =====================================================================
+   FIND-A-DOCTOR — mobile-specific overrides for the doctor card
+   (the file's own @media at the bottom handles most of this, but phones
+    need tighter padding + bigger touch targets)
+   ===================================================================== */
+@media (max-width: 600px) {
+  .fd-search { padding: 4px; }
+  .fd-sfield { padding: 10px 12px; }
+  .fd-sfield input { font-size: 16px; }   /* no iOS zoom */
+  .fd-country { font-size: 12px; padding: 5px 5px 5px 12px; }
+  .fd-country .label { font-size: 12px; }
+  .fd-specs { padding: 4px 16px 12px; }
+  .fd-spec { padding: 7px 12px; font-size: 12.5px; }
+  .fd-card { padding: 16px; }
+  .fd-name { font-size: 16px; }
+  .fd-meta { font-size: 12.5px; }
+  .fd-btn { padding: 11px 14px; font-size: 13.5px; }   /* bigger tap target */
+  .fd-pager { gap: 4px; }
+  .fd-pg { min-width: 32px; height: 32px; font-size: 12.5px; }
+}
+
+/* =====================================================================
+   Generic safety net: no element should overflow the viewport
+   ===================================================================== */
+html, body { overflow-x: hidden; max-width: 100%; }
+img, video, table { max-width: 100%; }
