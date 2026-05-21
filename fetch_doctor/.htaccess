@@ -9,7 +9,8 @@
     Require all denied
 </FilesMatch>
 
-# Block the json/ subfolder entirely from the web.
+# Block the json/ and jobs/ subfolders entirely from the web.
 RedirectMatch 403 ^/fetch_doctor/json/.*$
+RedirectMatch 403 ^/fetch_doctor/jobs/.*$
 
 Options -Indexes
