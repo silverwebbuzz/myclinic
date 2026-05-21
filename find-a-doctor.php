@@ -292,44 +292,93 @@ require __DIR__ . '/partials/header.php';
                                 <span class="fd-verified">✓ Verified</span>
                             </template>
                         </div>
-                        <div class="fd-qual" x-text="d.qual + ' · ' + d.years + ' yrs exp'"></div>
+                        <template x-if="d.qual && d.years > 0">
+                            <div class="fd-qual" x-text="d.qual + ' · ' + d.years + ' yrs exp'"></div>
+                        </template>
+                        <template x-if="!d.qual && d.years > 0">
+                            <div class="fd-qual" x-text="d.years + ' yrs exp'"></div>
+                        </template>
+                        <template x-if="d.qual && !d.years">
+                            <div class="fd-qual" x-text="d.qual"></div>
+                        </template>
                         <div class="fd-spec-row">
                             <span class="fd-pill" x-text="d.specLabel"></span>
                             <template x-if="d.video">
                                 <span class="fd-pill video">🎥 Video</span>
                             </template>
-                            <span class="fd-rating">
-                                <span class="star">★</span>
-                                <span style="font-weight: 600; color: var(--ink);" x-text="d.rating.toFixed(1)"></span>
-                                <span class="rv" x-text="'(' + d.reviews + ')'"></span>
-                            </span>
+                            <template x-if="d.rating > 0">
+                                <span class="fd-rating">
+                                    <span class="star">★</span>
+                                    <span style="font-weight: 600; color: var(--ink);" x-text="d.rating.toFixed(1)"></span>
+                                    <span class="rv" x-text="'(' + d.reviews + ')'"></span>
+                                </span>
+                            </template>
                         </div>
-                        <div class="fd-langs" x-text="'Speaks ' + d.langs.join(' · ')"></div>
+                        <template x-if="d.langs && d.langs.length > 0 && d.langs[0]">
+                            <div class="fd-langs" x-text="'Speaks ' + d.langs.join(' · ')"></div>
+                        </template>
                     </div>
 
                     <div class="fd-meta">
-                        <div class="fd-meta-row">
-                            <span class="mi">🏥</span>
-                            <span class="wrap" x-text="d.hospital"></span>
-                        </div>
+                        <!-- Address: use the full Google-formatted address if available, else fall back to area/city/state -->
                         <div class="fd-meta-row">
                             <span class="mi">📍</span>
-                            <span class="wrap" x-text="d.area + ', ' + d.city + ', ' + d.state"></span>
+                            <template x-if="d.address">
+                                <span class="wrap" x-text="d.address"></span>
+                            </template>
+                            <template x-if="!d.address">
+                                <span class="wrap" x-text="[d.area, d.city, d.state].filter(Boolean).join(', ')"></span>
+                            </template>
                         </div>
-                        <div class="fd-price" style="text-align: left;">
-                            Consultation fee
-                            <strong x-text="formatFee(d.currency, d.fee)"></strong>
-                        </div>
+                        <!-- Phone (clickable on mobile) -->
+                        <template x-if="d.phone">
+                            <div class="fd-meta-row">
+                                <span class="mi">📞</span>
+                                <a :href="'tel:' + d.phone" style="color: var(--ink-2); text-decoration: none;" x-text="d.phone"></a>
+                            </div>
+                        </template>
+                        <!-- Today's hours (extract from the 7-day list) -->
+                        <template x-if="todayHours(d)">
+                            <div class="fd-meta-row">
+                                <span class="mi">🕒</span>
+                                <span class="wrap" x-text="todayHours(d)"></span>
+                            </div>
+                        </template>
+                        <!-- Fee — only show if it's actually set -->
+                        <template x-if="d.fee > 0">
+                            <div class="fd-price" style="text-align: left;">
+                                Consultation fee
+                                <strong x-text="formatFee(d.currency, d.fee)"></strong>
+                            </div>
+                        </template>
                     </div>
 
                     <div class="fd-book">
+                        <!-- Photo: tiny thumbnail above the buttons when present -->
+                        <template x-if="d.photo_url">
+                            <img :src="d.photo_url" alt="" loading="lazy"
+                                 style="width: 100%; max-width: 200px; height: 110px; object-fit: cover; border-radius: 10px; margin-bottom: 8px;">
+                        </template>
                         <span class="fd-slot" :class="slotClass(d.next.when)">
                             <span class="dot"></span>
                             <span x-text="d.next.label + (d.next.sub ? ' · ' + d.next.sub : '')"></span>
                         </span>
                         <div class="fd-actions">
-                            <button type="button" class="fd-btn">View profile</button>
-                            <a :href="'<?= e(ecp_portal_url('/register')) ?>'" class="fd-btn primary">Book</a>
+                            <template x-if="d.gmaps_url">
+                                <a :href="d.gmaps_url" target="_blank" rel="noopener" class="fd-btn">View on map</a>
+                            </template>
+                            <template x-if="!d.gmaps_url && d.website">
+                                <a :href="d.website" target="_blank" rel="noopener" class="fd-btn">Website</a>
+                            </template>
+                            <template x-if="!d.gmaps_url && !d.website">
+                                <button type="button" class="fd-btn">View profile</button>
+                            </template>
+                            <template x-if="d.phone">
+                                <a :href="'tel:' + d.phone" class="fd-btn primary">📞 Call</a>
+                            </template>
+                            <template x-if="!d.phone">
+                                <a :href="'<?= e(ecp_portal_url('/register')) ?>'" class="fd-btn primary">Book</a>
+                            </template>
                         </div>
                     </div>
                 </div>
@@ -530,6 +579,23 @@ function findDoctor() {
         formatFee(cur, fee) {
             if (cur === '₹' || cur === '$' || cur === '£') return cur + fee;
             return cur + ' ' + fee;
+        },
+
+        /**
+         * Pulls today's opening hours out of Google's 7-line weekday_text array.
+         * The lines look like: "Monday: 9:00 AM – 1:00 PM, 4:00 PM – 8:00 PM"
+         * Returns "Today: <hours>" or null if we can't match.
+         */
+        todayHours(d) {
+            if (!d.opening_hours || !Array.isArray(d.opening_hours)) return null;
+            const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+            for (const line of d.opening_hours) {
+                if (line.startsWith(today + ':')) {
+                    const hours = line.substring(today.length + 1).trim();
+                    return 'Today: ' + hours;
+                }
+            }
+            return null;
         },
 
         sortLabel() {

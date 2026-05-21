@@ -166,11 +166,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cities'])) {
             $skipStats = ['closed_text' => 0, 'bad_types' => 0, 'closed_detail' => 0, 'no_address' => 0, 'city_mismatch' => 0, 'details_failed' => 0];
             $flaggedCount = 0;
 
-            foreach ($QUERIES as $qrow) {
-                echo "  🔍 {$qrow['q']}\n";
-                $places = fetch_text_search($apiKey, $qrow['q'], $city['lat'], $city['lng'], $city['radius'], $totalReq);
+            // Generate 9 sub-area centers covering the city so we get past the
+            // Google 60-results-per-query cap (huge for dense cities).
+            $subAreas = generate_sub_areas($city['lat'], $city['lng'], $city['radius']);
 
-                foreach ($places as $place) {
+            foreach ($QUERIES as $qrow) {
+                echo "  🔍 {$qrow['q']} (scanning " . count($subAreas) . " sub-areas)\n";
+                $placesForQuery = [];
+
+                foreach ($subAreas as $area) {
+                    $pageResults = fetch_text_search($apiKey, $qrow['q'], $area['lat'], $area['lng'], $area['radius'], $totalReq);
+                    foreach ($pageResults as $row) {
+                        $pid = $row['place_id'] ?? null;
+                        // Dedup across sub-areas (same clinic appears in overlapping grids).
+                        if ($pid && !isset($placesForQuery[$pid])) {
+                            $placesForQuery[$pid] = $row;
+                        }
+                    }
+                    usleep(150_000);  // 150ms between sub-area calls
+                }
+                echo "     → " . count($placesForQuery) . " unique places after dedup\n";
+
+                foreach ($placesForQuery as $place) {
                     $pid = $place['place_id'] ?? null;
                     if (!$pid || isset($seenPlaceIds[$pid])) continue;
                     $seenPlaceIds[$pid] = true;
@@ -207,7 +224,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cities'])) {
 
                     $cityDoctors[] = $row;
                 }
-                usleep(200_000); // 200ms between queries to avoid throttling
+                usleep(200_000); // 200ms between query types
             }
 
             // Summary line of filter activity for this city
@@ -255,7 +272,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cities'])) {
 // FETCHER FUNCTIONS
 // =====================================================================
 function fetch_text_search(string $apiKey, string $query, float $lat, float $lng, int $radius, int &$reqCount): array {
-    $params = [
+    $baseParams = [
         'query'    => $query,
         'location' => sprintf('%f,%f', $lat, $lng),
         'radius'   => (string) $radius,
@@ -263,13 +280,24 @@ function fetch_text_search(string $apiKey, string $query, float $lat, float $lng
     ];
     $all = [];
     $pageToken = null;
-    for ($i = 0; $i < 3; $i++) {
+    for ($page = 0; $page < 3; $page++) {
         if ($pageToken !== null) {
-            sleep(2);                       // token isn't valid for 2s
+            // Google's docs: "there is a short delay between when a next_page_token is issued, and when it
+            // will become valid". 2s is sometimes too short — leads to INVALID_REQUEST silently dropping
+            // pages 2 and 3. Wait longer + retry once with extra delay.
+            sleep(3);
             $params = ['pagetoken' => $pageToken, 'key' => $apiKey];
+        } else {
+            $params = $baseParams;
         }
         $url = 'https://maps.googleapis.com/maps/api/place/textsearch/json?' . http_build_query($params);
         $data = http_get_json($url, $reqCount);
+
+        // If the token wasn't ready, the call returns INVALID_REQUEST. Retry once with a longer wait.
+        if ($pageToken !== null && ($data === null || ($data['status'] ?? '') === 'INVALID_REQUEST')) {
+            sleep(3);
+            $data = http_get_json($url, $reqCount);
+        }
         if (!$data) break;
 
         foreach ((array) ($data['results'] ?? []) as $row) $all[] = $row;
@@ -277,6 +305,35 @@ function fetch_text_search(string $apiKey, string $query, float $lat, float $lng
         if (!$pageToken) break;
     }
     return $all;
+}
+
+/**
+ * Generates a 3x3 grid of sub-area centers around the city center.
+ * Google Text Search caps results at 60 per query, so a single city-wide
+ * search misses thousands of clinics in dense areas like Ahmedabad/Mumbai.
+ * Searching each sub-grid separately (then deduping by place_id) gives us
+ * up to 9 × 60 = 540 results per query type per city.
+ *
+ * @return list<array{lat:float, lng:float, radius:int}>
+ */
+function generate_sub_areas(float $lat, float $lng, int $cityRadius): array {
+    // 1° latitude ≈ 111 km. Offset by ~half the radius in km, north/south/east/west.
+    $offsetKm = $cityRadius / 2000.0;   // radius is meters; /2 gives center-to-center spacing then /1000 = km
+    $latStep = $offsetKm / 111.0;
+    $lngStep = $offsetKm / (111.0 * cos(deg2rad($lat)));
+    $subRadius = (int) round($cityRadius / 2);  // each sub-area covers half the diameter
+
+    $areas = [];
+    foreach ([-1, 0, 1] as $dLat) {
+        foreach ([-1, 0, 1] as $dLng) {
+            $areas[] = [
+                'lat'    => $lat + ($latStep * $dLat),
+                'lng'    => $lng + ($lngStep * $dLng),
+                'radius' => $subRadius,
+            ];
+        }
+    }
+    return $areas;  // 9 areas (center + 8 around)
 }
 
 function fetch_place_details(string $apiKey, string $placeId, int &$reqCount): ?array {
