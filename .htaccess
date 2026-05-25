@@ -28,7 +28,12 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}.html -f
 RewriteRule ^([^.]+)$ $1.html [L]
 
-# Redirect explicit *.php to clean URL (so links stay canonical)
+# Redirect explicit *.php to clean URL (so links stay canonical).
+# Skip non-GET requests — a 301 drops the request body, which breaks AJAX
+# POSTs (login, save doctor, etc.). Also skip /api/ entirely so JSON
+# endpoints stay reachable with either spelling.
+RewriteCond %{REQUEST_METHOD} =GET
+RewriteCond %{REQUEST_URI} !^/api/
 RewriteCond %{THE_REQUEST} \s/+(.+?)\.(php|html)[\s?] [NC]
 RewriteRule ^ /%1 [R=301,L]
 

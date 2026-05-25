@@ -74,7 +74,7 @@ $ecpPatientJson = $ecpPatient
         },
         async signOut() {
           try {
-            await fetch('/api/patient_auth.php?action=logout', { method: 'POST', credentials: 'same-origin' });
+            await fetch('/api/patient_auth?action=logout', { method: 'POST', credentials: 'same-origin' });
           } catch (e) {}
           try { localStorage.removeItem('ecp_patient'); } catch (e) {}
           this.patient = null;

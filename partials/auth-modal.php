@@ -318,14 +318,14 @@ function ecpAuthModal() {
         close:   ()           => this.close(),
         logout:  async ()     => {
           try {
-            await fetch('/api/patient_auth.php?action=logout', { method: 'POST', credentials: 'same-origin' });
+            await fetch('/api/patient_auth?action=logout', { method: 'POST', credentials: 'same-origin' });
           } catch (e) {}
           try { window.dispatchEvent(new StorageEvent('storage', { key: 'ecp_patient' })); } catch (e) {}
           location.reload();
         },
         me: async () => {
           try {
-            const r = await fetch('/api/patient_auth.php?action=me', { credentials: 'same-origin' });
+            const r = await fetch('/api/patient_auth?action=me', { credentials: 'same-origin' });
             const j = await r.json();
             return j.patient || null;
           } catch (e) { return null; }
@@ -379,7 +379,7 @@ function ecpAuthModal() {
       if (this.phoneDigits.length < 10) return;
       this.busy = true; this.errorMsg = ''; this.devCode = null;
       try {
-        const r = await fetch('/api/patient_auth.php?action=send_otp', {
+        const r = await fetch('/api/patient_auth?action=send_otp', {
           method: 'POST', credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone: '+91' + this.phoneDigits }),
@@ -428,7 +428,7 @@ function ecpAuthModal() {
       if (this.code.length !== 6) return;
       this.busy = true; this.errorMsg = '';
       try {
-        const r = await fetch('/api/patient_auth.php?action=verify_otp', {
+        const r = await fetch('/api/patient_auth?action=verify_otp', {
           method: 'POST', credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

@@ -509,7 +509,7 @@ function findDoctor() {
 
         async loadFavsFromServer() {
             try {
-                const r = await fetch('/api/wishlist.php', { credentials: 'same-origin' });
+                const r = await fetch('/api/wishlist', { credentials: 'same-origin' });
                 if (r.status === 401) { this.favs = []; return; }
                 const j = await r.json();
                 if (j.ok) this.favs = (j.items || []).map(d => d.id);
@@ -690,7 +690,7 @@ function findDoctor() {
                 // Optimistic remove
                 this.favs = this.favs.filter(x => x !== id);
                 try {
-                    await fetch('/api/wishlist.php?action=remove', {
+                    await fetch('/api/wishlist?action=remove', {
                         method: 'POST', credentials: 'same-origin',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ doctor_id: id }),
@@ -708,7 +708,7 @@ function findDoctor() {
             }
             this.favs = [...this.favs, id];   // optimistic
             try {
-                const r = await fetch('/api/wishlist.php?action=add', {
+                const r = await fetch('/api/wishlist?action=add', {
                     method: 'POST', credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ doctor_id: id }),

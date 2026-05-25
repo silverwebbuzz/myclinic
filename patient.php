@@ -2,7 +2,7 @@
 // =====================================================================
 // patient.php — patient panel.
 // Reads the logged-in identity server-side (from the ecp_pid cookie).
-// Wishlist is fetched from /api/wishlist.php after page load so we keep
+// Wishlist is fetched from /api/wishlist after page load so we keep
 // the initial HTML cacheable and small.
 // =====================================================================
 require_once __DIR__ . '/partials/helpers.php';
@@ -424,7 +424,7 @@ function patientPanel(isLoggedIn) {
     async loadWishlist() {
       this.loading = true;
       try {
-        const r = await fetch('/api/wishlist.php', { credentials: 'same-origin' });
+        const r = await fetch('/api/wishlist', { credentials: 'same-origin' });
         const j = await r.json();
         this.wishlist = j.ok ? (j.items || []) : [];
       } catch (e) {
@@ -439,7 +439,7 @@ function patientPanel(isLoggedIn) {
       const prev = this.wishlist;
       this.wishlist = this.wishlist.filter(d => d.id !== id);
       try {
-        await fetch('/api/wishlist.php?action=remove', {
+        await fetch('/api/wishlist?action=remove', {
           method: 'POST', credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ doctor_id: id }),
@@ -452,7 +452,7 @@ function patientPanel(isLoggedIn) {
 
     async signOut() {
       try {
-        await fetch('/api/patient_auth.php?action=logout', {
+        await fetch('/api/patient_auth?action=logout', {
           method: 'POST', credentials: 'same-origin',
         });
       } catch (e) {}
