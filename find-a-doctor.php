@@ -415,7 +415,8 @@ require __DIR__ . '/partials/header.php';
                                 <a :href="'tel:' + d.phone" class="fd-btn primary">📞 Call</a>
                             </template>
                             <template x-if="!d.phone">
-                                <a :href="'<?= e(ecp_portal_url('/register')) ?>'" class="fd-btn primary">Book</a>
+                                <button type="button" class="fd-btn primary"
+                                        @click="bookDoctor(d)">Book</button>
                             </template>
                         </div>
                     </div>
@@ -490,18 +491,29 @@ function findDoctor() {
         ],
 
         init() {
-            // Restore country preference + favorites from localStorage.
+            // Restore country preference from localStorage (no auth required).
             const savedC = localStorage.getItem('fd:country');
             if (savedC && this.countries.find(c => c.code === savedC)) {
                 this.country = savedC;
             }
-            try { this.favs = JSON.parse(localStorage.getItem('fd:favs') || '[]'); } catch { this.favs = []; }
             this.$watch('country', v => { localStorage.setItem('fd:country', v); this.page = 1; });
-            this.$watch('favs', v => localStorage.setItem('fd:favs', JSON.stringify(v)));
             // Reset to page 1 whenever filters change
             ['q','loc','locValue','spec','avail','video','gender','minRating','lang','sort'].forEach(k => {
                 this.$watch(k, () => this.page = 1);
             });
+
+            // If logged in, fetch the real saved-doctor IDs from the server
+            // so the heart icons show pre-saved state correctly on first paint.
+            this.loadFavsFromServer();
+        },
+
+        async loadFavsFromServer() {
+            try {
+                const r = await fetch('/api/wishlist.php', { credentials: 'same-origin' });
+                if (r.status === 401) { this.favs = []; return; }
+                const j = await r.json();
+                if (j.ok) this.favs = (j.items || []).map(d => d.id);
+            } catch (e) { /* stay with empty favs */ }
         },
 
         currentCountry() {
@@ -664,27 +676,65 @@ function findDoctor() {
         },
 
         toggleFav(id) {
+            // Always gate through ecpAuth.require so logged-out users see
+            // the modal first. After login the callback fires and we perform
+            // the actual add/remove against the API.
+            const auth = window.ecpAuth;
+            if (!auth) return;                  // modal not loaded yet
+            auth.require('save_doctor', () => this._persistFav(id));
+        },
+
+        async _persistFav(id) {
             const wasOn = this.favs.includes(id);
             if (wasOn) {
+                // Optimistic remove
                 this.favs = this.favs.filter(x => x !== id);
-            } else {
-                if (this.favs.length >= 5) {
-                    alert('Your shortlist is full (5 max). Remove one from the patient panel first.');
-                    return;
+                try {
+                    await fetch('/api/wishlist.php?action=remove', {
+                        method: 'POST', credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ doctor_id: id }),
+                    });
+                } catch (e) {
+                    this.favs = [...this.favs, id];   // rollback
                 }
-                this.favs = [...this.favs, id];
+                return;
             }
-            // Persist the full doctor objects so the patient panel can render
-            // them without re-querying the DB.
-            const saved = this.doctors
-                .filter(d => this.favs.includes(d.id))
-                .map(d => ({
-                    id: d.id, name: d.name, doctorName: d.doctorName,
-                    firstInitial: d.firstInitial, lastInitial: d.lastInitial,
-                    specLabel: d.specLabel, area: d.area, city: d.city,
-                    phone: d.phone, gmaps_url: d.gmaps_url,
-                }));
-            localStorage.setItem('ecp_wishlist', JSON.stringify(saved));
+
+            // Adding
+            if (this.favs.length >= 5) {
+                alert('Your shortlist is full (5 max). Remove one from your patient panel first.');
+                return;
+            }
+            this.favs = [...this.favs, id];   // optimistic
+            try {
+                const r = await fetch('/api/wishlist.php?action=add', {
+                    method: 'POST', credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ doctor_id: id }),
+                });
+                const j = await r.json();
+                if (!j.ok) {
+                    this.favs = this.favs.filter(x => x !== id);
+                    if (j.error === 'limit_reached') {
+                        alert('Your shortlist is full (5 max).');
+                    }
+                }
+            } catch (e) {
+                this.favs = this.favs.filter(x => x !== id);   // rollback
+            }
+        },
+
+        bookDoctor(d) {
+            const auth = window.ecpAuth;
+            if (!auth) return;
+            auth.require('book', () => {
+                // After login we'll route to the booking flow. For now, send
+                // the user to the patient panel so they at least land
+                // somewhere meaningful. Replace with a real booking page later.
+                alert("Booking flow is coming soon. Dr " + (d.doctorName || d.name) + " saved to your shortlist?");
+                this._persistFav(d.id);
+            });
         },
     };
 }

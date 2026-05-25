@@ -11,11 +11,25 @@
 // =====================================================================
 
 require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/patient_auth.php';   // gives us ecp_patient_current()
 
 $pageTitle = $pageTitle ?? 'eClinicPro — The clinic OS doctors love';
 $metaDesc = $metaDesc ?? 'eClinicPro is the global clinic operating system. Pick your modules. Pay for what you use. Beautiful, fast, and made for every specialty.';
 $activePage = $activePage ?? '';
 $bodyClass = $bodyClass ?? '';
+
+// Resolve the logged-in patient once, server-side. Passed to the header
+// markup AND echoed into a tiny JSON blob the client can read on first paint
+// without waiting for an API roundtrip.
+$ecpPatient = ecp_patient_current();
+$ecpPatientJson = $ecpPatient
+    ? json_encode([
+        'id'         => (int) $ecpPatient['id'],
+        'name'       => $ecpPatient['name'],
+        'first_name' => $ecpPatient['first_name'] ?? null,
+        'handle'     => $ecpPatient['phone'],
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+    : 'null';
 ?><!doctype html>
 <html lang="en">
 <head>
@@ -38,9 +52,12 @@ $bodyClass = $bodyClass ?? '';
 <body class="<?= e($bodyClass) ?>"
       x-data="{
         mobileNav: false,
-        patient: null,
+        patient: <?= $ecpPatientJson ?>,
         patientMenuOpen: false,
         loadPatient() {
+          // Only sync from localStorage when the server didn't already give
+          // us a session (used by legacy localStorage testers).
+          if (this.patient) return;
           try {
             const raw = localStorage.getItem('ecp_patient');
             this.patient = raw ? JSON.parse(raw) : null;
@@ -48,19 +65,21 @@ $bodyClass = $bodyClass ?? '';
         },
         patientFirstName() {
           if (!this.patient) return '';
-          const n = this.patient.name || this.patient.handle || '';
+          const n = this.patient.first_name || this.patient.name || this.patient.handle || '';
           return n.split(/\s+/)[0] || 'Patient';
         },
         patientInitial() {
           const n = this.patientFirstName();
           return n ? n.charAt(0).toUpperCase() : 'P';
         },
-        signOut() {
-          localStorage.removeItem('ecp_patient');
+        async signOut() {
+          try {
+            await fetch('/api/patient_auth.php?action=logout', { method: 'POST', credentials: 'same-origin' });
+          } catch (e) {}
+          try { localStorage.removeItem('ecp_patient'); } catch (e) {}
           this.patient = null;
           this.patientMenuOpen = false;
-          // If we're already on the patient page, reload so it shows logged-out view.
-          if (location.pathname.startsWith('/patient')) location.reload();
+          location.reload();
         }
       }"
       x-init="loadPatient(); window.addEventListener('storage', loadPatient);">
@@ -79,8 +98,12 @@ $bodyClass = $bodyClass ?? '';
         </nav>
 
         <div class="nav-cta">
-            <!-- Logged out: plain Patient panel link -->
-            <a href="/patient" class="nav-signin" x-show="!patient">Patient panel</a>
+            <!-- Logged out: opens the shared login modal. -->
+            <button type="button" class="nav-signin" x-show="!patient"
+                    @click="window.ecpAuth && window.ecpAuth.open('default')"
+                    style="background: none; border: 0; cursor: pointer; padding: 0; font: inherit;">
+                Sign in
+            </button>
 
             <!-- Logged in: greeting + avatar dropdown -->
             <div class="nav-user" x-show="patient" @click.outside="patientMenuOpen = false">
@@ -108,3 +131,5 @@ $bodyClass = $bodyClass ?? '';
         </div>
     </div>
 </header>
+
+<?php require __DIR__ . '/auth-modal.php'; ?>

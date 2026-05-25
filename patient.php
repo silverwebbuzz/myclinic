@@ -1,75 +1,56 @@
 <?php
 // =====================================================================
-// patient.php — patient panel stub
-// Login / register (name + phone OR email), wishlist of up to 5 doctors.
-// Persistence is browser-only (localStorage) for now — DB-backed auth and
-// OTP verification land in a follow-up.
+// patient.php — patient panel.
+// Reads the logged-in identity server-side (from the ecp_pid cookie).
+// Wishlist is fetched from /api/wishlist.php after page load so we keep
+// the initial HTML cacheable and small.
 // =====================================================================
 require_once __DIR__ . '/partials/helpers.php';
+require_once __DIR__ . '/partials/patient_auth.php';
 
 $pageTitle  = 'Patient panel — eClinicPro';
 $metaDesc   = 'Save your shortlist of doctors and book faster next time.';
 $activePage = '';
 
+$me = ecp_patient_current();   // null when logged out
+
 require __DIR__ . '/partials/header.php';
 ?>
 
-<div x-data="patientPanel()" x-init="init()" x-cloak class="patient-page">
+<div x-data="patientPanel(<?= $me ? '1' : '0' ?>)" x-init="init()" x-cloak class="patient-page">
 
-  <!-- LOGGED-OUT VIEW -->
-  <section class="pt-hero" x-show="!user">
+<?php if (!$me): ?>
+  <!-- LOGGED-OUT VIEW: simple CTA that opens the shared auth modal -->
+  <section class="pt-hero">
     <div class="wrap">
       <div class="pt-card">
         <div class="pt-card-head">
           <h1>Patient panel</h1>
-          <p class="lede">Save up to <strong>5 doctors</strong> to your shortlist. Sign up with just your phone or email — no password needed.</p>
+          <p class="lede">Save up to <strong>5 doctors</strong> to your shortlist and access your prescriptions in one place.</p>
         </div>
-
-        <!-- Tabs -->
-        <div class="pt-tabs" role="tablist">
-          <button type="button" :class="tab === 'login' ? 'is-active' : ''" @click="tab = 'login'">Sign in</button>
-          <button type="button" :class="tab === 'register' ? 'is-active' : ''" @click="tab = 'register'">Create account</button>
-        </div>
-
-        <!-- Sign in -->
-        <form class="pt-form" x-show="tab === 'login'" @submit.prevent="signIn()">
-          <label>
-            <span class="lbl">Phone or email</span>
-            <input type="text" x-model="form.handle" required placeholder="e.g. 9824012345 or you@example.com">
-          </label>
-          <p class="pt-hint">We'll send you a one-time code (coming soon — for now any handle works).</p>
-          <button type="submit" class="btn btn-primary">Continue</button>
-        </form>
-
-        <!-- Register -->
-        <form class="pt-form" x-show="tab === 'register'" @submit.prevent="register()">
-          <label>
-            <span class="lbl">Your name</span>
-            <input type="text" x-model="form.name" required placeholder="Riya Mehta">
-          </label>
-          <label>
-            <span class="lbl">Phone <em>or</em> email — one is enough</span>
-            <input type="text" x-model="form.handle" required placeholder="9824012345 or you@example.com">
-          </label>
-          <p class="pt-hint">By creating an account you agree to our terms. Verification by OTP is coming soon.</p>
-          <button type="submit" class="btn btn-primary">Create account</button>
-        </form>
+        <button type="button" class="btn btn-primary pt-cta-signin"
+                @click="window.ecpAuth.open('default')">
+          Sign in with mobile number
+        </button>
+        <p class="pt-hint" style="text-align:center; margin-top:14px;">
+          One-time code via SMS. No password to remember.
+        </p>
       </div>
     </div>
   </section>
-
+<?php else: ?>
   <!-- LOGGED-IN VIEW -->
-  <section class="pt-main" x-show="user">
+  <section class="pt-main">
     <div class="wrap">
 
       <!-- Hero / profile strip -->
       <div class="pt-hero-strip">
         <div class="pt-hero-id">
-          <div class="pt-bigavatar" x-text="initials()"></div>
+          <div class="pt-bigavatar"><?= e(ecp_patient_initials($me)) ?></div>
           <div>
             <div class="pt-greet">Welcome back</div>
-            <h1 x-text="user && user.name ? user.name : 'Patient'"></h1>
-            <div class="pt-handle" x-text="user && user.handle ? user.handle : ''"></div>
+            <h1><?= e($me['name'] ?: 'Patient') ?></h1>
+            <div class="pt-handle"><?= e($me['phone']) ?></div>
           </div>
         </div>
         <div class="pt-hero-actions">
@@ -152,6 +133,7 @@ require __DIR__ . '/partials/header.php';
       </div>
     </div>
   </section>
+<?php endif; ?>
 </div>
 
 <style>
@@ -182,6 +164,12 @@ require __DIR__ . '/partials/header.php';
 }
 .pt-card-head .lede { color: var(--ink-2); font-size: 14.5px; margin-bottom: 22px; line-height: 1.5; }
 .pt-card-head .lede strong { color: var(--ink); font-weight: 600; }
+.pt-cta-signin {
+  width: 100%;
+  padding: 14px 18px;
+  font-size: 15px; font-weight: 600;
+  border-radius: 12px;
+}
 
 .pt-tabs { display: flex; border-bottom: 1px solid var(--line); margin-bottom: 22px; }
 .pt-tabs button {
@@ -422,75 +410,55 @@ require __DIR__ . '/partials/header.php';
 </style>
 
 <script>
-function patientPanel() {
+function patientPanel(isLoggedIn) {
   return {
-    tab: 'login',
-    user: null,
+    loggedIn: !!isLoggedIn,
     wishlist: [],
-    form: { name: '', handle: '' },
+    loading: false,
 
-    init() {
+    async init() {
+      if (!this.loggedIn) return;
+      await this.loadWishlist();
+    },
+
+    async loadWishlist() {
+      this.loading = true;
       try {
-        const u = localStorage.getItem('ecp_patient');
-        if (u) this.user = JSON.parse(u);
-        const w = localStorage.getItem('ecp_wishlist');
-        if (w) this.wishlist = JSON.parse(w) || [];
-      } catch (e) { /* corrupt storage — ignore */ }
+        const r = await fetch('/api/wishlist.php', { credentials: 'same-origin' });
+        const j = await r.json();
+        this.wishlist = j.ok ? (j.items || []) : [];
+      } catch (e) {
+        this.wishlist = [];
+      } finally {
+        this.loading = false;
+      }
     },
 
-    initials() {
-      if (!this.user) return 'P';
-      const n = (this.user.name || this.user.handle || '').trim();
-      if (!n) return 'P';
-      const parts = n.split(/\s+/);
-      const first = (parts[0] || '').charAt(0).toUpperCase();
-      const last = parts.length > 1 ? (parts[parts.length - 1] || '').charAt(0).toUpperCase() : '';
-      return (first + last) || 'P';
-    },
-
-    // Trigger the header's storage listener so the avatar updates without a reload.
-    notifyHeader() {
-      try { window.dispatchEvent(new StorageEvent('storage', { key: 'ecp_patient' })); } catch (e) {}
-    },
-
-    register() {
-      const handle = (this.form.handle || '').trim();
-      const name = (this.form.name || '').trim();
-      if (!name || !handle) return;
-      this.user = { name, handle, joinedAt: Date.now() };
-      localStorage.setItem('ecp_patient', JSON.stringify(this.user));
-      this.notifyHeader();
-      this.form = { name: '', handle: '' };
-    },
-
-    signIn() {
-      const handle = (this.form.handle || '').trim();
-      if (!handle) return;
-      // Try to load an existing profile by handle (matches register output);
-      // otherwise create a thin one so the user can start saving doctors.
-      let existing = null;
-      try {
-        const saved = localStorage.getItem('ecp_patient');
-        if (saved) {
-          const u = JSON.parse(saved);
-          if (u && u.handle === handle) existing = u;
-        }
-      } catch (e) {}
-      this.user = existing || { name: handle.split('@')[0] || 'Patient', handle, joinedAt: Date.now() };
-      localStorage.setItem('ecp_patient', JSON.stringify(this.user));
-      this.notifyHeader();
-      this.form = { name: '', handle: '' };
-    },
-
-    signOut() {
-      this.user = null;
-      localStorage.removeItem('ecp_patient');
-      this.notifyHeader();
-    },
-
-    removeFromWishlist(id) {
+    async removeFromWishlist(id) {
+      // Optimistic: drop locally first, then call API.
+      const prev = this.wishlist;
       this.wishlist = this.wishlist.filter(d => d.id !== id);
-      localStorage.setItem('ecp_wishlist', JSON.stringify(this.wishlist));
+      try {
+        await fetch('/api/wishlist.php?action=remove', {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ doctor_id: id }),
+        });
+      } catch (e) {
+        // Rollback on network failure.
+        this.wishlist = prev;
+      }
+    },
+
+    async signOut() {
+      try {
+        await fetch('/api/patient_auth.php?action=logout', {
+          method: 'POST', credentials: 'same-origin',
+        });
+      } catch (e) {}
+      try { localStorage.removeItem('ecp_patient'); } catch (e) {}
+      try { window.dispatchEvent(new StorageEvent('storage', { key: 'ecp_patient' })); } catch (e) {}
+      location.reload();
     },
   };
 }
