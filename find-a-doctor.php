@@ -18,6 +18,13 @@ if ($dbDoctors !== null && count($dbDoctors) > 0) {
     $data['doctors'] = $dbDoctors;
 }
 
+// Replace seed locations with distinct areas/cities/states from the DB so the
+// autocomplete only suggests places that actually have results.
+$dbLocations = ecp_directory_locations();
+if ($dbLocations !== null && count($dbLocations) > 0) {
+    $data['locations'] = $dbLocations;
+}
+
 // Real total (unaffected by the LIMIT) for hero copy.
 $totalDoctors = ecp_directory_doctor_count();
 if ($totalDoctors === 0) $totalDoctors = count($data['doctors']);
@@ -342,18 +349,14 @@ require __DIR__ . '/partials/header.php';
                                 </span>
                             </template>
                         </div>
-                        <template x-if="d.langs && d.langs.length > 0 && d.langs[0]">
-                            <div class="fd-langs" x-text="'Speaks ' + d.langs.join(' · ')"></div>
-                        </template>
-
                         <div class="fd-meta">
                             <div class="fd-meta-row">
                                 <span class="mi">📍</span>
                                 <template x-if="d.address">
-                                    <span class="wrap" x-text="d.address"></span>
+                                    <span class="fd-wrap" x-text="d.address"></span>
                                 </template>
                                 <template x-if="!d.address">
-                                    <span class="wrap" x-text="[d.area, d.city, d.state].filter(Boolean).join(', ')"></span>
+                                    <span class="fd-wrap" x-text="[d.area, d.city, d.state].filter(Boolean).join(', ')"></span>
                                 </template>
                             </div>
                             <template x-if="d.phone">
@@ -363,9 +366,25 @@ require __DIR__ . '/partials/header.php';
                                 </div>
                             </template>
                             <template x-if="todayHours(d)">
-                                <div class="fd-meta-row">
+                                <div class="fd-meta-row fd-hours-row">
                                     <span class="mi">🕒</span>
-                                    <span class="wrap" x-text="todayHours(d)"></span>
+                                    <div class="fd-hours">
+                                        <button type="button" class="fd-hours-toggle"
+                                                @click="hoursOpen[d.id] = !hoursOpen[d.id]"
+                                                :aria-expanded="!!hoursOpen[d.id]">
+                                            <span x-text="todayHours(d)"></span>
+                                            <template x-if="d.opening_hours && d.opening_hours.length > 1">
+                                                <span class="caret" :class="hoursOpen[d.id] ? 'open' : ''">▾</span>
+                                            </template>
+                                        </button>
+                                        <template x-if="hoursOpen[d.id] && d.opening_hours">
+                                            <ul class="fd-hours-list">
+                                                <template x-for="line in d.opening_hours" :key="line">
+                                                    <li x-text="line"></li>
+                                                </template>
+                                            </ul>
+                                        </template>
+                                    </div>
                                 </div>
                             </template>
                         </div>
@@ -459,6 +478,7 @@ function findDoctor() {
         pageSize: 10, psOpen: false,
         page: 1,
         favs: [],
+        hoursOpen: {},
 
         sortOptions: [
             ['relevance','Best match'],
@@ -519,7 +539,10 @@ function findDoctor() {
             let list = this.doctors.filter(d => {
                 if (d.country !== this.country) return false;
                 if (term) {
-                    const hay = (d.name + ' ' + d.hospital + ' ' + d.specLabel).toLowerCase();
+                    const hay = [
+                        d.name, d.doctorName, d.clinicName, d.hospital,
+                        d.specLabel, d.area, d.city
+                    ].filter(Boolean).join(' ').toLowerCase();
                     if (!hay.includes(term)) return false;
                 }
                 if (this.locValue) {
@@ -641,11 +664,27 @@ function findDoctor() {
         },
 
         toggleFav(id) {
-            if (this.favs.includes(id)) {
+            const wasOn = this.favs.includes(id);
+            if (wasOn) {
                 this.favs = this.favs.filter(x => x !== id);
             } else {
+                if (this.favs.length >= 5) {
+                    alert('Your shortlist is full (5 max). Remove one from the patient panel first.');
+                    return;
+                }
                 this.favs = [...this.favs, id];
             }
+            // Persist the full doctor objects so the patient panel can render
+            // them without re-querying the DB.
+            const saved = this.doctors
+                .filter(d => this.favs.includes(d.id))
+                .map(d => ({
+                    id: d.id, name: d.name, doctorName: d.doctorName,
+                    firstInitial: d.firstInitial, lastInitial: d.lastInitial,
+                    specLabel: d.specLabel, area: d.area, city: d.city,
+                    phone: d.phone, gmaps_url: d.gmaps_url,
+                }));
+            localStorage.setItem('ecp_wishlist', JSON.stringify(saved));
         },
     };
 }

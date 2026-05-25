@@ -322,6 +322,88 @@ function ecp_doctor_photo_url(?string $photoRef, int $maxWidth = 400): ?string
 }
 
 /**
+ * Distinct areas / cities / states from directory_doctors, shaped for the
+ * Find a Doctor autocomplete. Returns null if the DB isn't available.
+ * Country flag is hardcoded per country code for now.
+ */
+function ecp_directory_locations(): ?array
+{
+    $db = ecp_db();
+    if (!$db) return null;
+
+    $flags = ['IN' => '🇮🇳', 'US' => '🇺🇸', 'GB' => '🇬🇧', 'AE' => '🇦🇪', 'CA' => '🇨🇦', 'AU' => '🇦🇺', 'SG' => '🇸🇬'];
+    $out = [];
+    $seen = [];
+
+    try {
+        // Areas (most specific)
+        $stmt = $db->query("SELECT DISTINCT area, city, state, country
+                            FROM directory_doctors
+                            WHERE is_active = 1 AND area IS NOT NULL AND area <> ''
+                            ORDER BY area
+                            LIMIT 1500");
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $key = strtolower('a|' . $r['area'] . '|' . $r['city']);
+            if (isset($seen[$key])) continue;
+            $seen[$key] = true;
+            $out[] = [
+                'type'  => 'AREA',
+                'label' => $r['area'],
+                'sub'   => trim(($r['city'] ?? '') . ($r['state'] ? ', ' . $r['state'] : '')),
+                'flag'  => $flags[$r['country']] ?? '🌐',
+                'value' => ['area' => $r['area'], 'city' => $r['city'], 'state' => $r['state'], 'country' => $r['country']],
+                'country' => $r['country'],
+            ];
+        }
+
+        // Cities
+        $stmt = $db->query("SELECT DISTINCT city, state, country
+                            FROM directory_doctors
+                            WHERE is_active = 1 AND city IS NOT NULL AND city <> ''
+                            ORDER BY city
+                            LIMIT 500");
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $key = strtolower('c|' . $r['city']);
+            if (isset($seen[$key])) continue;
+            $seen[$key] = true;
+            $out[] = [
+                'type'  => 'CITY',
+                'label' => $r['city'],
+                'sub'   => $r['state'] ?? '',
+                'flag'  => $flags[$r['country']] ?? '🌐',
+                'value' => ['city' => $r['city'], 'state' => $r['state'], 'country' => $r['country']],
+                'country' => $r['country'],
+            ];
+        }
+
+        // States
+        $stmt = $db->query("SELECT DISTINCT state, country
+                            FROM directory_doctors
+                            WHERE is_active = 1 AND state IS NOT NULL AND state <> ''
+                            ORDER BY state
+                            LIMIT 200");
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $key = strtolower('s|' . $r['state']);
+            if (isset($seen[$key])) continue;
+            $seen[$key] = true;
+            $out[] = [
+                'type'  => 'STATE',
+                'label' => $r['state'],
+                'sub'   => '',
+                'flag'  => $flags[$r['country']] ?? '🌐',
+                'value' => ['state' => $r['state'], 'country' => $r['country']],
+                'country' => $r['country'],
+            ];
+        }
+    } catch (Throwable $e) {
+        error_log('[ecp_directory_locations] ' . $e->getMessage());
+        return null;
+    }
+
+    return $out;
+}
+
+/**
  * Map a specialty slug ('eye', 'prosthodontist', 'homeo', ...) to its
  * display label ('Ophthalmologist', etc.), loading the seed file once.
  * Falls back to a title-cased slug for unknown values.

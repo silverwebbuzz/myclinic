@@ -51,8 +51,8 @@ $bodyClass = $bodyClass ?? '';
         </nav>
 
         <div class="nav-cta">
-            <a href="<?= e(ecp_portal_url('/login')) ?>" class="nav-signin">Sign in</a>
-            <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary">Start free</a>
+            <a href="/patient" class="nav-signin">Patient panel</a>
+            <a href="<?= e(ecp_portal_url('/login')) ?>" class="btn btn-primary">Doctor panel</a>
             <button type="button" @click="mobileNav = !mobileNav"
                     class="nav-burger" aria-label="Menu">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

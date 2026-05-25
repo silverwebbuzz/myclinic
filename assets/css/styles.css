@@ -1468,10 +1468,35 @@ footer.foot {
   color: var(--ink-2);
   text-decoration: none;
   min-width: 0;
+  max-width: 100%;
   white-space: normal;
   word-break: break-word;
   line-height: 1.5;
 }
+.fd-meta-row > .fd-wrap { white-space: normal; }
+
+.fd-hours { min-width: 0; }
+.fd-hours-toggle {
+  background: none; border: 0; padding: 0;
+  font: inherit; font-size: 13px;
+  color: var(--ink-2); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  text-align: left; line-height: 1.5;
+}
+.fd-hours-toggle:hover { color: var(--teal-700); }
+.fd-hours-toggle .caret {
+  font-size: 10px; color: var(--mute);
+  transition: transform .15s;
+}
+.fd-hours-toggle .caret.open { transform: rotate(180deg); }
+.fd-hours-list {
+  margin: 6px 0 0; padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  color: var(--mute);
+  line-height: 1.6;
+}
+.fd-hours-list li { padding: 1px 0; }
 
 .fd-book {
   display: flex; flex-direction: column;
