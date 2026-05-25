@@ -353,52 +353,43 @@ require __DIR__ . '/partials/header.php';
                         <template x-if="d.langs && d.langs.length > 0 && d.langs[0]">
                             <div class="fd-langs" x-text="'Speaks ' + d.langs.join(' · ')"></div>
                         </template>
-                    </div>
 
-                    <div class="fd-meta">
-                        <!-- Address: use the full Google-formatted address if available, else fall back to area/city/state -->
-                        <div class="fd-meta-row">
-                            <span class="mi">📍</span>
-                            <template x-if="d.address">
-                                <span class="wrap" x-text="d.address"></span>
+                        <div class="fd-meta">
+                            <div class="fd-meta-row">
+                                <span class="mi">📍</span>
+                                <template x-if="d.address">
+                                    <span class="wrap" x-text="d.address"></span>
+                                </template>
+                                <template x-if="!d.address">
+                                    <span class="wrap" x-text="[d.area, d.city, d.state].filter(Boolean).join(', ')"></span>
+                                </template>
+                            </div>
+                            <template x-if="d.phone">
+                                <div class="fd-meta-row">
+                                    <span class="mi">📞</span>
+                                    <a :href="'tel:' + d.phone" x-text="d.phone"></a>
+                                </div>
                             </template>
-                            <template x-if="!d.address">
-                                <span class="wrap" x-text="[d.area, d.city, d.state].filter(Boolean).join(', ')"></span>
+                            <template x-if="todayHours(d)">
+                                <div class="fd-meta-row">
+                                    <span class="mi">🕒</span>
+                                    <span class="wrap" x-text="todayHours(d)"></span>
+                                </div>
                             </template>
                         </div>
-                        <!-- Phone (clickable on mobile) -->
-                        <template x-if="d.phone">
-                            <div class="fd-meta-row">
-                                <span class="mi">📞</span>
-                                <a :href="'tel:' + d.phone" style="color: var(--ink-2); text-decoration: none;" x-text="d.phone"></a>
-                            </div>
-                        </template>
-                        <!-- Today's hours (extract from the 7-day list) -->
-                        <template x-if="todayHours(d)">
-                            <div class="fd-meta-row">
-                                <span class="mi">🕒</span>
-                                <span class="wrap" x-text="todayHours(d)"></span>
-                            </div>
-                        </template>
-                        <!-- Fee — only show if it's actually set -->
-                        <template x-if="d.fee > 0">
-                            <div class="fd-price" style="text-align: left;">
-                                Consultation fee
-                                <strong x-text="formatFee(d.currency, d.fee)"></strong>
-                            </div>
-                        </template>
                     </div>
 
                     <div class="fd-book">
-                        <!-- Photo: tiny thumbnail above the buttons when present -->
-                        <template x-if="d.photo_url">
-                            <img :src="d.photo_url" alt="" loading="lazy"
-                                 style="width: 100%; max-width: 200px; height: 110px; object-fit: cover; border-radius: 10px; margin-bottom: 8px;">
-                        </template>
                         <span class="fd-slot" :class="slotClass(d.next.when)">
                             <span class="dot"></span>
                             <span x-text="d.next.label + (d.next.sub ? ' · ' + d.next.sub : '')"></span>
                         </span>
+                        <template x-if="d.fee > 0">
+                            <div class="fd-price">
+                                Consultation
+                                <strong x-text="formatFee(d.currency, d.fee)"></strong>
+                            </div>
+                        </template>
                         <div class="fd-actions">
                             <template x-if="d.gmaps_url">
                                 <a :href="d.gmaps_url" target="_blank" rel="noopener" class="fd-btn">View on map</a>
