@@ -56,40 +56,13 @@ $ecpPatientJson = $ecpPatient
     <!-- Lightweight interactivity (mobile menu, reveal-on-scroll) -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
+<!-- Hand the initial session blob to JS via a separate JSON script tag
+     so we don't have to embed PHP inside an Alpine x-data attribute. -->
+<script>window.ECP_PATIENT = <?= $ecpPatientJson ?>;</script>
+
 <body class="<?= e($bodyClass) ?>"
-      x-data="{
-        mobileNav: false,
-        patient: <?= $ecpPatientJson ?>,
-        patientMenuOpen: false,
-        loadPatient() {
-          // Only sync from localStorage when the server didn't already give
-          // us a session (used by legacy localStorage testers).
-          if (this.patient) return;
-          try {
-            const raw = localStorage.getItem('ecp_patient');
-            this.patient = raw ? JSON.parse(raw) : null;
-          } catch (e) { this.patient = null; }
-        },
-        patientFirstName() {
-          if (!this.patient) return '';
-          const n = this.patient.first_name || this.patient.name || this.patient.handle || '';
-          return n.split(/\s+/)[0] || 'Patient';
-        },
-        patientInitial() {
-          const n = this.patientFirstName();
-          return n ? n.charAt(0).toUpperCase() : 'P';
-        },
-        async signOut() {
-          try {
-            await fetch('/api/patient_auth?action=logout', { method: 'POST', credentials: 'same-origin' });
-          } catch (e) {}
-          try { localStorage.removeItem('ecp_patient'); } catch (e) {}
-          this.patient = null;
-          this.patientMenuOpen = false;
-          location.reload();
-        }
-      }"
-      x-init="loadPatient(); window.addEventListener('storage', loadPatient);">
+      x-data="ecpHeader()"
+      x-init="loadPatient(); window.addEventListener('storage', loadPatient)">
 
 <header class="nav">
     <div class="nav-inner">
@@ -138,5 +111,53 @@ $ecpPatientJson = $ecpPatient
         </div>
     </div>
 </header>
+
+<script>
+// Header / nav state. Defined as a real function so we don't have to
+// stuff JS (with comments, awaits, and braces) into an HTML attribute,
+// which breaks parsing in some browsers + makes Alpine angry.
+function ecpHeader() {
+  return {
+    mobileNav: false,
+    patient: window.ECP_PATIENT || null,
+    patientMenuOpen: false,
+
+    loadPatient() {
+      // Server already gave us a session blob? Trust it.
+      if (this.patient) return;
+      try {
+        const raw = localStorage.getItem('ecp_patient');
+        this.patient = raw ? JSON.parse(raw) : null;
+      } catch (e) {
+        this.patient = null;
+      }
+    },
+
+    patientFirstName() {
+      if (!this.patient) return '';
+      const n = this.patient.first_name || this.patient.name || this.patient.handle || '';
+      return n.split(/\s+/)[0] || 'Patient';
+    },
+
+    patientInitial() {
+      const n = this.patientFirstName();
+      return n ? n.charAt(0).toUpperCase() : 'P';
+    },
+
+    async signOut() {
+      try {
+        await fetch('/api/patient_auth?action=logout', {
+          method: 'POST',
+          credentials: 'same-origin',
+        });
+      } catch (e) { /* ignore */ }
+      try { localStorage.removeItem('ecp_patient'); } catch (e) {}
+      this.patient = null;
+      this.patientMenuOpen = false;
+      location.reload();
+    },
+  };
+}
+</script>
 
 <?php require __DIR__ . '/auth-modal.php'; ?>
