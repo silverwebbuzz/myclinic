@@ -29,6 +29,20 @@
       <p class="auth-sub" x-text="subline()"></p>
     </div>
 
+    <!-- Sign in / Create account tabs (visible only on STEP 1) -->
+    <div class="auth-tabs" role="tablist" x-show="step === 'phone'">
+      <button type="button" role="tab"
+              :class="intent === 'signin' ? 'is-active' : ''"
+              @click="intent = 'signin'; errorMsg = ''">
+        Sign in
+      </button>
+      <button type="button" role="tab"
+              :class="intent === 'signup' ? 'is-active' : ''"
+              @click="intent = 'signup'; errorMsg = ''">
+        Create account
+      </button>
+    </div>
+
     <!-- STEP 1: phone -->
     <form class="auth-form" x-show="step === 'phone'" @submit.prevent="sendOtp()">
       <label>
@@ -41,10 +55,10 @@
                  :disabled="busy" placeholder="98XXXXXXXX" required>
         </div>
       </label>
-      <p class="auth-hint">We'll send a 6-digit code via SMS. No password to remember.</p>
-      <p class="auth-error" x-show="errorMsg" x-text="errorMsg"></p>
+      <p class="auth-hint" x-text="step1Hint()"></p>
+      <p class="auth-error" x-show="errorMsg" x-html="errorMsg"></p>
       <button type="submit" class="auth-btn primary" :disabled="busy || phoneDigits.length < 10">
-        <span x-show="!busy">Send code</span>
+        <span x-show="!busy" x-text="intent === 'signup' ? 'Create my account' : 'Send code'"></span>
         <span x-show="busy">Sending…</span>
       </button>
       <p class="auth-tos">
@@ -52,16 +66,28 @@
       </p>
     </form>
 
-    <!-- STEP 2: code (+ optional name on first signup) -->
+    <!-- STEP 2: code (+ name for new signups) -->
     <form class="auth-form" x-show="step === 'code'" @submit.prevent="verifyOtp()">
       <div class="auth-back" @click="step = 'phone'; errorMsg = ''">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         <span>Change number</span>
       </div>
 
-      <div class="auth-sent-to">
-        Code sent to <strong x-text="'+91 ' + phoneDigits"></strong>
-      </div>
+      <!-- Returning user → friendly greeting -->
+      <template x-if="phoneExists && nameHint">
+        <div class="auth-welcome">
+          Welcome back, <strong x-text="nameHint"></strong> 👋
+          <span>Enter the code we just sent to <strong x-text="'+91 ' + phoneDigits"></strong>.</span>
+        </div>
+      </template>
+
+      <!-- New signup → confirmation -->
+      <template x-if="!phoneExists">
+        <div class="auth-welcome new">
+          Setting up your new account
+          <span>We sent a verification code to <strong x-text="'+91 ' + phoneDigits"></strong>.</span>
+        </div>
+      </template>
 
       <template x-if="devCode">
         <div class="auth-devcode">
@@ -78,17 +104,20 @@
                :disabled="busy" placeholder="••••••" required>
       </label>
 
-      <!-- Name field: optional, only used when the phone is new -->
-      <label>
-        <span class="lbl">Your name <em>(only needed if it's your first time)</em></span>
-        <input type="text" x-model="name" :disabled="busy"
-               placeholder="e.g. Riya Mehta" maxlength="120">
-      </label>
+      <!-- Name field: ONLY shown for new accounts -->
+      <template x-if="!phoneExists">
+        <label>
+          <span class="lbl">Your full name</span>
+          <input type="text" x-model="name" :disabled="busy"
+                 placeholder="e.g. Riya Mehta" maxlength="120" required>
+        </label>
+      </template>
 
-      <p class="auth-error" x-show="errorMsg" x-text="errorMsg"></p>
+      <p class="auth-error" x-show="errorMsg" x-html="errorMsg"></p>
 
-      <button type="submit" class="auth-btn primary" :disabled="busy || code.length !== 6">
-        <span x-show="!busy">Verify &amp; continue</span>
+      <button type="submit" class="auth-btn primary"
+              :disabled="busy || code.length !== 6 || (!phoneExists && !name.trim())">
+        <span x-show="!busy" x-text="phoneExists ? 'Sign in' : 'Create account'"></span>
         <span x-show="busy">Verifying…</span>
       </button>
 
@@ -265,6 +294,64 @@
 }
 .auth-sent-to strong { color: var(--ink); font-weight: 600; }
 
+/* Sign in / Create account tabs */
+.auth-tabs {
+  display: flex;
+  background: var(--bg-2);
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 18px;
+}
+.auth-tabs button {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  padding: 10px 12px;
+  border-radius: 9px;
+  font: inherit; font-size: 13.5px; font-weight: 600;
+  color: var(--mute);
+  cursor: pointer;
+  transition: all .15s;
+}
+.auth-tabs button:hover { color: var(--ink); }
+.auth-tabs button.is-active {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+}
+
+/* Step-2 greeting card */
+.auth-welcome {
+  background: var(--teal-50);
+  color: var(--teal-800);
+  border: 1px solid rgba(15,155,110,0.15);
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-size: 14.5px;
+  font-weight: 600;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.auth-welcome strong { font-weight: 700; }
+.auth-welcome span {
+  font-size: 13px; font-weight: 400;
+  color: var(--ink-2);
+}
+.auth-welcome.new {
+  background: #f0f4ff;
+  color: #1e3a8a;
+  border-color: rgba(30,58,138,0.15);
+}
+.auth-welcome.new span { color: var(--ink-2); }
+
+/* Inline link inside an error message */
+.auth-error a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .auth-devcode {
   font-size: 13px;
   background: #fff7e0;
@@ -297,11 +384,13 @@
 function ecpAuthModal() {
   return {
     open: false,
-    step: 'phone',       // 'phone' | 'code'
+    step: 'phone',           // 'phone' | 'code'
+    intent: 'signin',        // 'signin' | 'signup' — user's tab choice
     phoneDigits: '',
     code: '',
     name: '',
-    askName: false,
+    phoneExists: false,      // set by server response after sendOtp
+    nameHint: null,          // first name of returning user (for greeting)
     devCode: null,
     busy: false,
     errorMsg: '',
@@ -343,12 +432,14 @@ function ecpAuthModal() {
 
     openModal(reason) {
       this._reason = reason || 'default';
+      this.intent = 'signin';   // default to sign in; user can flip
       this.step = 'phone';
       this.errorMsg = '';
       this.devCode = null;
       this.code = '';
       this.name = '';
-      this.askName = false;
+      this.phoneExists = false;
+      this.nameHint = null;
       this.open = true;
       document.body.style.overflow = 'hidden';
     },
@@ -361,18 +452,35 @@ function ecpAuthModal() {
     },
 
     headline() {
+      // On step 2 we always say "Verify your number" — the welcome card
+      // covers the rest of the context.
+      if (this.step === 'code') return 'Verify your number';
+      // Step 1 — depends on intent + reason
+      if (this.intent === 'signup') {
+        return this._reason === 'save_doctor' ? 'Create account to save'
+             : this._reason === 'book'        ? 'Create account to book'
+             :                                  'Create your account';
+      }
       return {
-        save_doctor: 'Save this doctor',
-        book:        'Book an appointment',
+        save_doctor: 'Sign in to save this doctor',
+        book:        'Sign in to book',
         default:     'Sign in to continue',
       }[this._reason] || 'Sign in to continue';
     },
     subline() {
-      return {
-        save_doctor: 'Sign in to add doctors to your shortlist — synced across your devices.',
-        book:        'Sign in so we can send your appointment confirmation.',
-        default:     'Use your mobile number. No password needed.',
-      }[this._reason] || 'Use your mobile number. No password needed.';
+      if (this.step === 'code') {
+        return this.phoneExists
+          ? "Almost there — enter the code we texted you."
+          : "Last step before your account is ready.";
+      }
+      return this.intent === 'signup'
+        ? "New to eClinicPro? Enter your mobile number — we'll text you a code."
+        : "Enter your mobile number — we'll text you a code. No password needed.";
+    },
+    step1Hint() {
+      return this.intent === 'signup'
+        ? "We'll create your account once you confirm the code."
+        : "We'll send a 6-digit code via SMS. No password to remember.";
     },
 
     async sendOtp() {
@@ -382,24 +490,37 @@ function ecpAuthModal() {
         const r = await fetch('/api/patient_auth?action=send_otp', {
           method: 'POST', credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: '+91' + this.phoneDigits }),
+          body: JSON.stringify({
+            phone:  '+91' + this.phoneDigits,
+            intent: this.intent,
+          }),
         });
         const text = await r.text();
         let j;
         try { j = JSON.parse(text); }
         catch (e) {
-          // Server returned HTML (PHP error page, 404, etc.) — show the raw
-          // first line so we can debug instead of "Something went wrong".
           this.errorMsg = 'Server returned an unexpected response (HTTP ' + r.status + '). ' +
                           (text.slice(0, 160) || 'Empty body');
           console.error('[ecpAuth] non-JSON response:', text);
           return;
         }
         if (!j.ok) {
-          this.errorMsg = this.errorText(j.error, j.retry_after) + (j.hint ? ' — ' + j.hint : '');
+          // Smart messages: if user picked the wrong tab, offer to flip it.
+          if (j.error === 'account_not_found') {
+            this.errorMsg = "We don't see an account with this number. " +
+              '<a onclick="document.querySelector(\'#ecp-auth-modal\').__x.$data.flipTo(\'signup\')">Create one instead?</a>';
+          } else if (j.error === 'account_exists') {
+            this.errorMsg = 'This number is already registered. ' +
+              '<a onclick="document.querySelector(\'#ecp-auth-modal\').__x.$data.flipTo(\'signin\')">Sign in instead?</a>';
+          } else {
+            this.errorMsg = this.errorText(j.error, j.retry_after) + (j.hint ? ' — ' + j.hint : '');
+          }
           return;
         }
-        if (j.dev_code) this.devCode = j.dev_code;
+        // Capture whether this is a returning user, so step 2 can greet them.
+        this.phoneExists = !!j.exists;
+        this.nameHint    = j.name_hint || null;
+        if (j.dev_code)  this.devCode = j.dev_code;
         this.step = 'code';
         this.startResendCountdown(30);
         this.$nextTick(() => this.$refs.codeInput && this.$refs.codeInput.focus());
@@ -408,6 +529,12 @@ function ecpAuthModal() {
       } finally {
         this.busy = false;
       }
+    },
+
+    // Called from the inline link in the error messages above.
+    flipTo(newIntent) {
+      this.intent = newIntent;
+      this.errorMsg = '';
     },
 
     async resendOtp() {

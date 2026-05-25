@@ -65,9 +65,37 @@ switch ($action) {
     case 'send_otp': {
         if ($method !== 'POST') ecp_api_out(405, ['ok' => false, 'error' => 'method_not_allowed']);
 
-        $in    = ecp_api_input();
-        $phone = (string) ($in['phone'] ?? '');
+        $in     = ecp_api_input();
+        $phone  = (string) ($in['phone'] ?? '');
+        // intent: 'signin' | 'signup' | '' (legacy — no check). Tells us
+        // whether to reject if the phone is unexpectedly known/unknown.
+        $intent = (string) ($in['intent'] ?? '');
         if ($phone === '') ecp_api_out(400, ['ok' => false, 'error' => 'phone_required']);
+
+        // Look up identity BEFORE sending so we can reject mismatched intent.
+        $normalized = ecp_normalize_phone($phone);
+        $exists = false;
+        $existingName = null;
+        if ($normalized !== '') {
+            $db = ecp_db();
+            if ($db) {
+                $stmt = $db->prepare(
+                    'SELECT id, name, first_name FROM patient_identities WHERE phone = :p LIMIT 1'
+                );
+                $stmt->execute(['p' => $normalized]);
+                if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $exists = true;
+                    $existingName = $row['first_name'] ?: explode(' ', (string) $row['name'])[0];
+                }
+            }
+        }
+
+        if ($intent === 'signin' && !$exists) {
+            ecp_api_out(404, ['ok' => false, 'error' => 'account_not_found']);
+        }
+        if ($intent === 'signup' && $exists) {
+            ecp_api_out(409, ['ok' => false, 'error' => 'account_exists']);
+        }
 
         $res = ecp_patient_send_otp($phone);
 
@@ -89,6 +117,8 @@ switch ($action) {
             'ok'       => true,
             'phone'    => $res['phone'],
             'mode'     => $res['mode'],
+            'exists'   => $exists,         // tells the modal whether to ask for name
+            'name_hint' => $existingName,  // first name to greet returning users
             // dev_code is null in live mode. The modal shows it when present
             // so testers don't need to tail a log file.
             'dev_code' => $res['dev_code'],
