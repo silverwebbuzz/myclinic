@@ -18,6 +18,10 @@ if ($dbDoctors !== null && count($dbDoctors) > 0) {
     $data['doctors'] = $dbDoctors;
 }
 
+// Real total (unaffected by the LIMIT) for hero copy.
+$totalDoctors = ecp_directory_doctor_count();
+if ($totalDoctors === 0) $totalDoctors = count($data['doctors']);
+
 // Extra page-specific CSS — append after header.php's <link>.
 // Cache-bust whenever the CSS file changes on disk.
 $cssBust = @filemtime(__DIR__ . '/assets/css/find-doctor.css') ?: time();
@@ -42,7 +46,7 @@ require __DIR__ . '/partials/header.php';
 <section class="fd-hero">
     <div class="wrap-wide">
         <h1>Find a doctor you can <span class="grad">actually trust.</span></h1>
-        <p class="lede">Search <?= ecp_num(count($data['doctors'])) ?>+ verified clinicians across India, the US, UK and more — see real availability, fees and ratings before you book.</p>
+        <p class="lede">Search <?= ecp_num($totalDoctors) ?>+ verified clinicians across India, the US, UK and more — see real availability, fees and ratings before you book.</p>
 
         <!-- Country pill -->
         <div class="fd-country-row" style="position: relative;">
@@ -321,6 +325,9 @@ require __DIR__ . '/partials/header.php';
                                 <span class="fd-verified">✓ Verified</span>
                             </template>
                         </div>
+                        <template x-if="d.hospital">
+                            <div class="fd-qual" x-text="d.hospital"></div>
+                        </template>
                         <template x-if="d.qual && d.years > 0">
                             <div class="fd-qual" x-text="d.qual + ' · ' + d.years + ' yrs exp'"></div>
                         </template>

@@ -177,17 +177,34 @@ function slugify(string $s): string {
     return trim($s, '-');
 }
 
+/**
+ * Adaptive grid: bigger cities get a denser scan.
+ *  - radius ≤ 10 km  → 3x3   (smaller towns: Rajkot, Surat, Vadodara)
+ *  - radius ≤ 12 km  → 5x5   (mid-size: Pune, Bangalore, Chennai)
+ *  - radius >  12 km → 7x7   (mega-metros: Mumbai, Delhi, Ahmedabad)
+ *
+ * Each sub-area covers ~30% of the city radius so neighbors overlap.
+ * Each sub-area gets its OWN 60-result Google cap, so dense neighborhoods
+ * like Gota in Ahmedabad get a dedicated scan rather than being absorbed
+ * into a single overcapped city-wide query.
+ */
 function generate_sub_areas(float $lat, float $lng, int $cityRadius): array {
-    $offsetKm = $cityRadius / 2000.0;
-    $latStep = $offsetKm / 111.0;
-    $lngStep = $offsetKm / (111.0 * cos(deg2rad($lat)));
-    $subRadius = (int) round($cityRadius / 2);
+    if     ($cityRadius >  12000) $n = 7;   // 49 sub-areas
+    elseif ($cityRadius >  10000) $n = 5;   // 25 sub-areas
+    else                          $n = 3;   //  9 sub-areas
+
+    $half = (int) (($n - 1) / 2);             // 1, 2, or 3
+    $offsetKm = ($cityRadius / 1000.0);       // total span in km
+    $latStep = $offsetKm / 111.0 / $n;        // single step in degrees
+    $lngStep = $offsetKm / (111.0 * cos(deg2rad($lat))) / $n;
+    $subRadius = (int) round($cityRadius * 0.30);
+
     $areas = [];
-    foreach ([-1, 0, 1] as $dLat) {
-        foreach ([-1, 0, 1] as $dLng) {
+    for ($dy = -$half; $dy <= $half; $dy++) {
+        for ($dx = -$half; $dx <= $half; $dx++) {
             $areas[] = [
-                'lat'    => $lat + ($latStep * $dLat),
-                'lng'    => $lng + ($lngStep * $dLng),
+                'lat'    => $lat + ($latStep * $dy),
+                'lng'    => $lng + ($lngStep * $dx),
                 'radius' => $subRadius,
             ];
         }
@@ -202,6 +219,8 @@ function places_type_acceptable(array $types): bool {
     if (array_intersect($types, $reject)) return false;
     return true;
 }
+
+require_once __DIR__ . '/_helpers.php';
 
 function format_doctor(array $place, array $details, array $city, string $spec): array {
     $loc = $details['geometry']['location'] ?? [];
@@ -218,14 +237,19 @@ function format_doctor(array $place, array $details, array $city, string $spec):
     if (isset($details['photos'][0]['photo_reference'])) {
         $photoRef = (string) $details['photos'][0]['photo_reference'];
     }
+    $rawName = (string) ($details['name'] ?? $place['name'] ?? '');
+    $address = $details['formatted_address'] ?? null;
+
     return [
         'place_id'        => $place['place_id'] ?? null,
-        'name'            => (string) ($details['name'] ?? $place['name'] ?? ''),
+        'name'            => $rawName,                                  // full Google listing (e.g. "Dr. Mitesh Prajapati (Dr. Feelgood's) - Homeopathic Doctors")
+        'doctor_name'     => extract_doctor_name($rawName),             // parsed personal name or null
         'specialty'       => $spec,
         'city'            => $city['name'],
         'state'           => $city['state'],
         'country'         => 'IN',
-        'address'         => $details['formatted_address'] ?? null,
+        'address'         => $address,
+        'area'            => $address ? extract_area($address, $city['name']) : null,
         'lat'             => isset($loc['lat']) ? (float) $loc['lat'] : null,
         'lng'             => isset($loc['lng']) ? (float) $loc['lng'] : null,
         'phone'           => $details['formatted_phone_number'] ?? null,
@@ -251,7 +275,7 @@ function quality_check(array $row, array $city): string {
     if (empty($row['address'])) return 'SKIP:no_address';
     $addr = strtolower((string) $row['address']);
     if (!str_contains($addr, strtolower($city['name']))) return 'SKIP:city_mismatch';
-    if ((int) ($row['reviews'] ?? 0) < 3) return 'low_reviews';
+    if ((int) ($row['reviews'] ?? 0) < 1) return 'low_reviews';
     if (empty($row['opening_hours'])) return 'no_hours';
     if (!empty($row['last_review_at'])) {
         $age = time() - strtotime((string) $row['last_review_at']);
@@ -619,6 +643,118 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cities'])) {
     }
 }
 
+// ----- POST: name-by-name lookup -----
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['names'])) {
+    if ($apiKey === '') {
+        $err = 'GOOGLE_MAPS_API_KEY missing in fetch_doctor/.env';
+    } else {
+        @set_time_limit(120);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo "fetch_doctor — name lookup\n" . str_repeat('=', 60) . "\n\n";
+
+        $defaultCity = trim((string) ($_POST['names_city'] ?? 'Ahmedabad'));
+        $city = find_city($STATES, $defaultCity) ?? find_city($STATES, 'Ahmedabad') ?? ['name' => $defaultCity, 'state' => '', 'lat' => 23.0225, 'lng' => 72.5714];
+
+        $rawNames = preg_split('/\r?\n/', (string) $_POST['names']);
+        $names = array_filter(array_map('trim', $rawNames));
+
+        $jsonDir = __DIR__ . '/json';
+        $path = $jsonDir . '/_named-lookups.json';
+        $existing = [];
+        $existingIds = [];
+        if (is_file($path)) {
+            $raw = json_decode((string) file_get_contents($path), true);
+            if (isset($raw['doctors']) && is_array($raw['doctors'])) {
+                $existing = $raw['doctors'];
+                foreach ($existing as $d) {
+                    if (!empty($d['place_id'])) $existingIds[$d['place_id']] = true;
+                }
+            }
+        }
+
+        $reqCount = 0;
+        $newRows  = [];
+
+        foreach ($names as $rawName) {
+            $query = $rawName;
+            if (stripos($query, $city['name']) === false) $query .= ' ' . $city['name'];
+            echo "🔍 {$query}\n";
+
+            $places = fetch_text_search($apiKey, $query, $city['lat'], $city['lng'], 30000, $reqCount);
+            if (empty($places)) {
+                echo "   ⨯ no result\n";
+                continue;
+            }
+
+            // Take only the top result for a name lookup.
+            $place = $places[0];
+            $pid = $place['place_id'] ?? null;
+            if (!$pid) { echo "   ⨯ no place_id\n"; continue; }
+            if (isset($existingIds[$pid])) { echo "   = already in file\n"; continue; }
+
+            $biz = $place['business_status'] ?? 'OPERATIONAL';
+            if (str_starts_with((string) $biz, 'CLOSED_')) { echo "   ⨯ closed\n"; continue; }
+
+            $details = fetch_place_details($apiKey, $pid, $reqCount);
+            if (!$details) { echo "   ⨯ details failed\n"; continue; }
+
+            // Guess specialty from the input or types
+            $spec = 'gp';
+            $hint = strtolower($rawName . ' ' . implode(' ', (array) ($details['types'] ?? [])));
+            $map = [
+                'dentist' => 'dental', 'dental' => 'dental',
+                'homeo' => 'homeo', 'bhms' => 'homeo',
+                'pediatric' => 'peds', 'paediatric' => 'peds',
+                'dermatolog' => 'derma', 'skin' => 'derma',
+                'gyne' => 'gyno', 'obstet' => 'gyno',
+                'cardio' => 'cardio',  'heart' => 'cardio',
+                'ortho' => 'ortho',
+                'physio' => 'physio',
+                'ent ' => 'ent', 'ear nose' => 'ent',
+                'eye' => 'eye', 'ophthal' => 'eye',
+                'neuro' => 'neuro',
+                'urolog' => 'urologist',
+                'ayurved' => 'ayurveda',
+                'psychiatr' => 'psychiatrist',
+                'psycholog' => 'psychologist',
+                'nephrolog' => 'nephrology',
+                'oncolog' => 'oncology',
+                'pulmono' => 'pulmonology',
+            ];
+            foreach ($map as $needle => $code) {
+                if (str_contains($hint, $needle)) { $spec = $code; break; }
+            }
+
+            $row = format_doctor($place, $details, $city, $spec);
+            // Manually-added doctors skip the quality_check city filter so they
+            // always survive (we trust the operator to know who they're adding).
+            $newRows[] = $row;
+            $existingIds[$pid] = true;
+            echo "   ✓ {$row['name']} ({$spec}, {$row['reviews']} reviews)\n";
+            usleep(150_000);
+        }
+
+        if (!empty($newRows)) {
+            $merged = dedupe_by_place_id(array_merge($existing, $newRows));
+            file_put_contents($path, json_encode([
+                'city'       => '(named lookups)',
+                'state'      => '',
+                'country'    => 'IN',
+                'count'      => count($merged),
+                'updated_at' => date('Y-m-d H:i:s'),
+                'doctors'    => $merged,
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        }
+
+        $cost = round(($reqCount / 1000) * 24, 2);
+        echo "\n" . str_repeat('=', 60) . "\n";
+        echo "Added: " . count($newRows) . " · API requests: {$reqCount} · est. cost: \${$cost}\n";
+        echo "\nFile: json/_named-lookups.json (will be picked up by insert_db.php)\n";
+        echo "Next: open insert_db.php and import _named-lookups.json\n";
+        exit;
+    }
+}
+
 // ----- View: progress UI -----
 if ($jobId !== null) {
     $job = job_load($jobId);
@@ -725,9 +861,33 @@ h1{font-size:24px;font-weight:600;margin:0 0 8px}
 <button type="submit" class="submit">▶ Start fetch &nbsp;·&nbsp; <span id="count">0</span> selected</button>
 
 <div class="note">
-    Each city has <strong><?= count($QUERIES) ?> specialty queries × 9 sub-areas = ~<?= count($QUERIES) * 9 ?> chunks</strong>. Each chunk takes 5-15 seconds and runs as its own AJAX call — no PHP timeouts. Budget ~$5-$10 per city in API costs.
+    Each city = <strong><?= count($QUERIES) ?> queries × 25 sub-areas = ~<?= count($QUERIES) * 25 ?> chunks</strong>. Each chunk runs as its own AJAX call (no PHP timeouts). Per-city cost: ~$15-$30 for big metros, ~$5-$10 for smaller cities.
 </div>
 </form>
+
+<!-- ===================== NAME-BY-NAME LOOKUP ===================== -->
+<details class="state" style="margin-top: 28px;">
+    <summary style="cursor: pointer; font-weight: 600; font-size: 15px;">
+        🎯 Add specific doctors by name <small style="color:var(--mute);font-weight:400;">— for known doctors the area scan missed</small>
+    </summary>
+    <form method="post" style="margin-top: 14px;">
+        <p style="font-size: 12.5px; color: var(--mute); margin: 0 0 12px;">
+            Paste one doctor or clinic name per line. Each name is searched via Google Places and added to <code>json/_named-lookups.json</code>. Costs ~$0.024 per name. Useful for filling gaps left by the area scan.
+        </p>
+        <label style="display:block;font-size:12px;font-weight:500;color:var(--ink);margin-bottom:4px;">Default city <small style="color:var(--mute);font-weight:400;">(used if the name doesn't already include one)</small></label>
+        <input type="text" name="names_city" value="Ahmedabad" style="width: 240px; padding:7px 10px; border:1px solid var(--line); border-radius:6px; font-size:13px; margin-bottom:10px;">
+
+        <label style="display:block;font-size:12px;font-weight:500;color:var(--ink);margin-bottom:4px;">Doctor / clinic names (one per line)</label>
+        <textarea name="names" rows="6" style="width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-size:13px; font-family:inherit;"
+placeholder="Dr Mitesh Prajapati Gota
+Dr Jayesh Patel Gota
+Dr. Feelgood's Clinic Ahmedabad"></textarea>
+
+        <button type="submit" style="margin-top:10px; padding:10px 16px; background:var(--ink); color:#fff; border:0; border-radius:8px; font-size:13.5px; font-weight:500; cursor:pointer;">
+            🔍 Fetch these names
+        </button>
+    </form>
+</details>
 
 </div><script>
 function toggleAll(on){document.querySelectorAll('input[name="cities[]"]').forEach(i=>i.checked=on);updateCount()}

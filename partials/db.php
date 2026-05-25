@@ -157,6 +157,30 @@ function ecp_save_demo_request(array $data): bool
 }
 
 /**
+ * Returns the total count of active directory doctors (optionally per country),
+ * unaffected by the LIMIT on ecp_directory_doctors(). Used by hero copy
+ * ("Search 2,789 verified clinicians…") so the displayed number is honest.
+ */
+function ecp_directory_doctor_count(?string $countryCode = null): int
+{
+    $db = ecp_db();
+    if (!$db) return 0;
+    try {
+        $sql = "SELECT COUNT(*) FROM directory_doctors WHERE is_active = 1 AND status = 'OPERATIONAL'";
+        $params = [];
+        if ($countryCode !== null && $countryCode !== '') {
+            $sql .= ' AND country = :c';
+            $params['c'] = strtoupper($countryCode);
+        }
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        return (int) $stmt->fetchColumn();
+    } catch (Throwable $e) {
+        return 0;
+    }
+}
+
+/**
  * Returns directory doctors (from the scraped/claimed table) shaped for the
  * Find Doctor page Alpine component. Returns null if the table is missing or
  * empty — caller should fall back to the static seed file.
@@ -183,7 +207,9 @@ function ecp_directory_doctors(?string $countryCode = null): ?array
         }
         // Rank: claimed clinics first, then by quality_score (computed at import),
         // then by raw reviews/rating as tie-breakers.
-        $sql .= ' ORDER BY is_claimed DESC, quality_score DESC, reviews DESC, rating DESC LIMIT 500';
+        // Cap at 10k so the JSON payload sent to the browser stays under ~5MB.
+        // Beyond that we should switch to AJAX-paginated search.
+        $sql .= ' ORDER BY is_claimed DESC, quality_score DESC, reviews DESC, rating DESC LIMIT 10000';
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -193,8 +219,15 @@ function ecp_directory_doctors(?string $countryCode = null): ?array
         // partials/find-doctor-data.php → doctors[]).
         $out = [];
         foreach ($rows as $r) {
-            $name = (string) ($r['name'] ?? '');
-            $parts = preg_split('/\s+/', trim($name)) ?: [''];
+            $clinicName = (string) ($r['name'] ?? '');
+            $doctorName = trim((string) ($r['doctor_name'] ?? ''));
+            // Prefer parsed doctor name for the headline; fall back to the
+            // listing/clinic name when we couldn't extract a person from it.
+            $displayName = $doctorName !== '' ? $doctorName : $clinicName;
+
+            // Build initials off the display name (sans "Dr." prefix).
+            $forInitials = preg_replace('/^Dr\.?\s+/i', '', $displayName) ?? $displayName;
+            $parts = preg_split('/\s+/', trim($forInitials)) ?: [''];
             $first = $parts[0] ?? '';
             $last = $parts[count($parts) - 1] ?? '';
             $fi = $first !== '' ? mb_substr($first, 0, 1) : 'D';
@@ -214,9 +247,16 @@ function ecp_directory_doctors(?string $countryCode = null): ?array
             $currency = $r['consultation_fee_currency']
                 ?? ((($r['country'] ?? 'IN') === 'IN') ? '₹' : '$');
 
+            // If we extracted a real doctor name, the listing name is the
+            // clinic/hospital. Otherwise the listing IS the clinic and we have
+            // no person to show separately.
+            $hospital = $doctorName !== '' && $clinicName !== $doctorName ? $clinicName : '';
+
             $out[] = [
                 'id' => (int) $r['id'],
-                'name' => $name,
+                'name' => $displayName,
+                'clinicName' => $clinicName,
+                'doctorName' => $doctorName,
                 'firstInitial' => $fi,
                 'lastInitial' => $li,
                 'qual' => '',                      // not from Google; filled when claimed
@@ -229,7 +269,7 @@ function ecp_directory_doctors(?string $countryCode = null): ?array
                 'rating' => isset($r['rating']) ? (float) $r['rating'] : 0,
                 'reviews' => (int) ($r['reviews'] ?? 0),
                 'langs' => ['English'],
-                'hospital' => '',
+                'hospital' => $hospital,
                 'area' => $r['area'] ?? '',
                 'city' => $r['city'] ?? '',
                 'state' => $r['state'] ?? '',

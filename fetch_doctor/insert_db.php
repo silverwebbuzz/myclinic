@@ -11,6 +11,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/_helpers.php';
+
 // ---------- DB connection (reads portal /app/.env automatically) ----------
 function db(): ?PDO {
     static $pdo = null;
@@ -85,19 +87,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['files'])) {
     }
 
     $sql = "INSERT INTO directory_doctors
-        (place_id, source, name, specialty, country, city, state, area, address, lat, lng, plus_code,
+        (place_id, source, name, doctor_name, specialty, country, city, state, area, address, lat, lng, plus_code,
          phone, intl_phone, website, gmaps_url, status, rating, reviews, price_level, last_review_at,
          types, opening_hours, photo_reference, quality_score, is_active, dropped_reason,
          fetched_at, refreshed_at)
         VALUES
-        (:place_id, 'google', :name, :specialty, :country, :city, :state, :area, :address, :lat, :lng, :plus_code,
+        (:place_id, 'google', :name, :doctor_name, :specialty, :country, :city, :state, :area, :address, :lat, :lng, :plus_code,
          :phone, :intl_phone, :website, :gmaps_url, :status, :rating, :reviews, :price_level, :last_review_at,
          :types, :opening_hours, :photo_reference, :quality_score, :is_active, :dropped_reason,
          :fetched_at, NOW())
         ON DUPLICATE KEY UPDATE
             name = VALUES(name),
+            -- Don't overwrite doctor_name with NULL if a previous import parsed
+            -- it successfully. COALESCE keeps the existing value when the new
+            -- row's doctor_name is empty.
+            doctor_name = COALESCE(VALUES(doctor_name), doctor_name),
             specialty = VALUES(specialty),
             state = VALUES(state),
+            area = COALESCE(VALUES(area), area),
             address = VALUES(address),
             lat = VALUES(lat), lng = VALUES(lng), plus_code = VALUES(plus_code),
             phone = VALUES(phone), intl_phone = VALUES(intl_phone),
@@ -123,11 +130,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['files'])) {
         $rating  = (float) ($d['rating'] ?? 0);
         $score   = min($reviews, 100) + (int) round($rating * 20);
 
-        // Penalize flagged rows.
+        // Penalize flagged rows (light penalties — still keep them visible).
         $reason = $d['dropped_reason'] ?? null;
-        if ($reason === 'low_reviews')    $score -= 40;
-        if ($reason === 'no_hours')       $score -= 20;
-        if ($reason === 'stale_reviews')  $score -= 30;
+        if ($reason === 'low_reviews')    $score -= 10;
+        if ($reason === 'no_hours')       $score -= 15;
+        if ($reason === 'stale_reviews')  $score -= 25;
 
         // Staleness — months since most recent review.
         if (!empty($d['last_review_at'])) {
@@ -168,9 +175,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['files'])) {
                 $status = $d['status'] ?? 'OPERATIONAL';
                 $isActive = ($status === 'OPERATIONAL') ? 1 : 0;
 
+                // Parse area + doctor_name lazily for older JSON files that
+                // don't already have these fields. New JSON has them pre-filled.
+                if (empty($d['doctor_name'])) {
+                    $d['doctor_name'] = extract_doctor_name((string) ($d['name'] ?? ''));
+                }
+                if (empty($d['area']) && !empty($d['address']) && !empty($d['city'])) {
+                    $d['area'] = extract_area((string) $d['address'], (string) $d['city']);
+                }
+
                 $stmt->execute([
                     ':place_id'        => $pid,
                     ':name'            => (string) ($d['name'] ?? ''),
+                    ':doctor_name'     => $d['doctor_name'] ?? null,
                     ':specialty'       => $d['specialty'] ?? null,
                     ':country'         => $d['country']   ?? 'IN',
                     ':city'            => $d['city']      ?? '',
