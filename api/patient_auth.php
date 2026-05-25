@@ -14,11 +14,30 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../partials/patient_auth.php';
+// Make absolutely sure PHP doesn't print warnings/notices into our JSON body.
+// Errors still go to the server log via error_log() (so we can debug),
+// but the client only ever sees clean JSON.
+ini_set('display_errors', '0');
+error_reporting(E_ALL);
 
+// Header MUST be sent before any output, even an accidental BOM.
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
+
+require_once __DIR__ . '/../partials/patient_auth.php';
+
+// Turn any uncaught exception into a clean 500 JSON response.
+set_exception_handler(function (Throwable $e) {
+    error_log('[api/patient_auth] uncaught: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+    http_response_code(500);
+    echo json_encode([
+        'ok'    => false,
+        'error' => 'server_error',
+        'hint'  => $e->getMessage(),  // safe to expose in dev; remove for prod if you prefer
+    ]);
+    exit;
+});
 
 /** Quick helper: emit JSON and stop. */
 function ecp_api_out(int $status, array $payload): void {

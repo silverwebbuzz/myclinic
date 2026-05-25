@@ -13,10 +13,20 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../partials/patient_auth.php';
+ini_set('display_errors', '0');
+error_reporting(E_ALL);
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
+
+require_once __DIR__ . '/../partials/patient_auth.php';
+
+set_exception_handler(function (Throwable $e) {
+    error_log('[api/wishlist] uncaught: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+    http_response_code(500);
+    echo json_encode(['ok' => false, 'error' => 'server_error', 'hint' => $e->getMessage()]);
+    exit;
+});
 
 function ecp_wl_out(int $status, array $payload): void {
     http_response_code($status);

@@ -78,14 +78,12 @@
                :disabled="busy" placeholder="••••••" required>
       </label>
 
-      <!-- Optional name for brand-new signups -->
-      <template x-if="askName">
-        <label>
-          <span class="lbl">Your name <em>(first sign-in only)</em></span>
-          <input type="text" x-model="name" :disabled="busy"
-                 placeholder="e.g. Riya Mehta" maxlength="120">
-        </label>
-      </template>
+      <!-- Name field: optional, only used when the phone is new -->
+      <label>
+        <span class="lbl">Your name <em>(only needed if it's your first time)</em></span>
+        <input type="text" x-model="name" :disabled="busy"
+               placeholder="e.g. Riya Mehta" maxlength="120">
+      </label>
 
       <p class="auth-error" x-show="errorMsg" x-text="errorMsg"></p>
 
@@ -386,9 +384,19 @@ function ecpAuthModal() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone: '+91' + this.phoneDigits }),
         });
-        const j = await r.json();
+        const text = await r.text();
+        let j;
+        try { j = JSON.parse(text); }
+        catch (e) {
+          // Server returned HTML (PHP error page, 404, etc.) — show the raw
+          // first line so we can debug instead of "Something went wrong".
+          this.errorMsg = 'Server returned an unexpected response (HTTP ' + r.status + '). ' +
+                          (text.slice(0, 160) || 'Empty body');
+          console.error('[ecpAuth] non-JSON response:', text);
+          return;
+        }
         if (!j.ok) {
-          this.errorMsg = this.errorText(j.error, j.retry_after);
+          this.errorMsg = this.errorText(j.error, j.retry_after) + (j.hint ? ' — ' + j.hint : '');
           return;
         }
         if (j.dev_code) this.devCode = j.dev_code;
@@ -396,7 +404,7 @@ function ecpAuthModal() {
         this.startResendCountdown(30);
         this.$nextTick(() => this.$refs.codeInput && this.$refs.codeInput.focus());
       } catch (e) {
-        this.errorMsg = "Couldn't reach server. Check your connection.";
+        this.errorMsg = "Couldn't reach server: " + (e.message || e);
       } finally {
         this.busy = false;
       }
@@ -429,13 +437,17 @@ function ecpAuthModal() {
             name:  this.name || undefined,
           }),
         });
-        const j = await r.json();
+        const text = await r.text();
+        let j;
+        try { j = JSON.parse(text); }
+        catch (e) {
+          this.errorMsg = 'Server returned an unexpected response (HTTP ' + r.status + '). ' +
+                          (text.slice(0, 160) || 'Empty body');
+          console.error('[ecpAuth] non-JSON response:', text);
+          return;
+        }
         if (!j.ok) {
-          // If brand-new signup needs a name, prompt for it next round.
-          if (j.error === 'invalid_code' && this.askName === false) {
-            // (no auto-show; just show generic message)
-          }
-          this.errorMsg = this.errorText(j.error);
+          this.errorMsg = this.errorText(j.error) + (j.hint ? ' — ' + j.hint : '');
           return;
         }
 
