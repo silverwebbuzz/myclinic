@@ -22,14 +22,6 @@ if ($dbDoctors !== null && count($dbDoctors) > 0) {
 $totalDoctors = ecp_directory_doctor_count();
 if ($totalDoctors === 0) $totalDoctors = count($data['doctors']);
 
-// Extra page-specific CSS — append after header.php's <link>.
-// Cache-bust whenever the CSS file changes on disk.
-$cssBust = @filemtime(__DIR__ . '/assets/css/find-doctor.css') ?: time();
-$extraHead = '<link rel="stylesheet" href="/assets/css/find-doctor.css?v=' . $cssBust . '">';
-
-// Inject extra head into the global header by setting a flag header.php reads.
-// (header.php uses $extraHead if present.)
-
 require __DIR__ . '/partials/header.php';
 ?>
 
