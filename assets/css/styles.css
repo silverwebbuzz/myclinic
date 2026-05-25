@@ -1528,6 +1528,14 @@ footer.foot {
 .fd-meta-row > .fd-wrap { white-space: normal; }
 
 .fd-hours { min-width: 0; }
+.fd-distance {
+  display: inline;
+  color: var(--teal-700);
+  font-weight: 600;
+  font-size: 12.5px;
+  margin-left: 2px;
+}
+
 .fd-hours-toggle {
   background: none; border: 0; padding: 0;
   font: inherit; font-size: 13px;

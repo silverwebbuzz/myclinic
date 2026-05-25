@@ -254,6 +254,40 @@ require __DIR__ . '/partials/header.php';
                 </div>
             </div>
 
+            <!-- Distance — requires browser location permission -->
+            <div style="position: relative;">
+                <button type="button" class="fd-chip" :class="maxDistanceKm > 0 ? 'has-val' : ''"
+                        @click="distanceOpen = !distanceOpen">
+                    <span x-show="!userLoc">📍 Distance</span>
+                    <span x-show="userLoc && maxDistanceKm === 0">📍 Any distance</span>
+                    <span x-show="userLoc && maxDistanceKm > 0" x-text="'📍 Within ' + maxDistanceKm + ' km'"></span>
+                    <span class="caret"></span>
+                </button>
+                <div class="fd-pop" x-show="distanceOpen" @click.outside="distanceOpen = false" x-transition.opacity>
+                    <template x-if="!userLoc">
+                        <div class="row" @click="requestLocation(); distanceOpen = false">
+                            <span class="ck">📌</span>
+                            <span>Use my location</span>
+                        </div>
+                    </template>
+                    <template x-if="userLoc">
+                        <template x-for="opt in [[0,'Any distance'],[5,'Within 5 km'],[10,'Within 10 km'],[25,'Within 25 km'],[50,'Within 50 km'],[100,'Within 100 km']]" :key="opt[0]">
+                            <div class="row" :class="maxDistanceKm === opt[0] ? 'on' : ''" @click="maxDistanceKm = opt[0]; distanceOpen = false">
+                                <span class="ck" x-text="maxDistanceKm === opt[0] ? '✓' : ''"></span>
+                                <span x-text="opt[1]"></span>
+                            </div>
+                        </template>
+                    </template>
+                    <template x-if="userLoc">
+                        <div class="row" style="border-top: 1px solid var(--line); color: var(--mute); font-size: 12px;"
+                             @click="clearLocation(); distanceOpen = false">
+                            <span class="ck">✕</span>
+                            <span>Clear my location</span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
             <!-- Language -->
             <div style="position: relative;">
                 <button type="button" class="fd-chip" :class="lang !== 'any' ? 'has-val' : ''" @click="langOpen = !langOpen">
@@ -352,12 +386,17 @@ require __DIR__ . '/partials/header.php';
                         <div class="fd-meta">
                             <div class="fd-meta-row">
                                 <span class="mi">📍</span>
-                                <template x-if="d.address">
-                                    <span class="fd-wrap" x-text="d.address"></span>
-                                </template>
-                                <template x-if="!d.address">
-                                    <span class="fd-wrap" x-text="[d.area, d.city, d.state].filter(Boolean).join(', ')"></span>
-                                </template>
+                                <span class="fd-wrap">
+                                    <template x-if="d.address">
+                                        <span x-text="d.address"></span>
+                                    </template>
+                                    <template x-if="!d.address">
+                                        <span x-text="[d.area, d.city, d.state].filter(Boolean).join(', ')"></span>
+                                    </template>
+                                    <template x-if="distanceFor(d) !== null">
+                                        <span class="fd-distance" x-text="' · ' + formatDistance(distanceFor(d))"></span>
+                                    </template>
+                                </span>
                             </div>
                             <template x-if="d.phone">
                                 <div class="fd-meta-row">
@@ -480,9 +519,14 @@ function findDoctor() {
         page: 1,
         favs: [],
         hoursOpen: {},
+        // Distance / geolocation
+        userLoc: null,                    // {lat, lng} when permission granted
+        maxDistanceKm: 0,                 // 0 = no filter
+        distanceOpen: false,
 
         sortOptions: [
             ['relevance','Best match'],
+            ['distance','Nearest first'],
             ['available','Soonest available'],
             ['rating','Highest rated'],
             ['fee_asc','Fee — low to high'],
@@ -498,13 +542,70 @@ function findDoctor() {
             }
             this.$watch('country', v => { localStorage.setItem('fd:country', v); this.page = 1; });
             // Reset to page 1 whenever filters change
-            ['q','loc','locValue','spec','avail','video','gender','minRating','lang','sort'].forEach(k => {
+            ['q','loc','locValue','spec','avail','video','gender','minRating','lang','sort','maxDistanceKm','userLoc'].forEach(k => {
                 this.$watch(k, () => this.page = 1);
             });
+
+            // Restore saved location (set when the user previously accepted the
+            // permission prompt). Stored as JSON {lat,lng,at}. Expire after 7 days.
+            try {
+                const raw = localStorage.getItem('fd:loc');
+                if (raw) {
+                    const v = JSON.parse(raw);
+                    if (v && v.lat && v.lng && (Date.now() - (v.at || 0)) < 7 * 86400 * 1000) {
+                        this.userLoc = { lat: v.lat, lng: v.lng };
+                    }
+                }
+                const savedDist = localStorage.getItem('fd:maxDistKm');
+                if (savedDist) this.maxDistanceKm = parseInt(savedDist, 10) || 0;
+            } catch (e) {}
+            this.$watch('userLoc', v => {
+                if (v) localStorage.setItem('fd:loc', JSON.stringify({ ...v, at: Date.now() }));
+                else   localStorage.removeItem('fd:loc');
+            });
+            this.$watch('maxDistanceKm', v => localStorage.setItem('fd:maxDistKm', String(v)));
 
             // If logged in, fetch the real saved-doctor IDs from the server
             // so the heart icons show pre-saved state correctly on first paint.
             this.loadFavsFromServer();
+        },
+
+        // ---- Geolocation ----
+        requestLocation() {
+            if (!navigator.geolocation) {
+                alert("Your browser doesn't support location. Try entering an area name instead.");
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                pos => { this.userLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude }; },
+                err => {
+                    const msg = err.code === 1
+                        ? 'Location permission denied. You can enable it in browser settings.'
+                        : "Couldn't read your location. Try again.";
+                    alert(msg);
+                },
+                { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60 * 1000 }
+            );
+        },
+        clearLocation() { this.userLoc = null; this.maxDistanceKm = 0; },
+
+        // Haversine distance in km. Returns null when either point is missing.
+        distanceFor(d) {
+            if (!this.userLoc || !d.lat || !d.lng) return null;
+            const toRad = x => x * Math.PI / 180;
+            const R = 6371;  // km
+            const dLat = toRad(d.lat - this.userLoc.lat);
+            const dLng = toRad(d.lng - this.userLoc.lng);
+            const a = Math.sin(dLat / 2) ** 2 +
+                      Math.cos(toRad(this.userLoc.lat)) * Math.cos(toRad(d.lat)) *
+                      Math.sin(dLng / 2) ** 2;
+            return 2 * R * Math.asin(Math.sqrt(a));
+        },
+        formatDistance(km) {
+            if (km === null || km === undefined) return '';
+            if (km < 1)  return Math.round(km * 1000) + ' m away';
+            if (km < 10) return km.toFixed(1) + ' km away';
+            return Math.round(km) + ' km away';
         },
 
         async loadFavsFromServer() {
@@ -577,10 +678,27 @@ function findDoctor() {
                 if (this.gender !== 'any' && d.gender !== this.gender) return false;
                 if (this.minRating > 0 && d.rating < this.minRating) return false;
                 if (this.lang !== 'any' && !d.langs.includes(this.lang)) return false;
+
+                // Distance filter — only applies when we have both the user's
+                // location AND the doctor's lat/lng. Doctors without coords
+                // are kept (we can't prove they're far).
+                if (this.maxDistanceKm > 0 && this.userLoc && d.lat && d.lng) {
+                    const km = this.distanceFor(d);
+                    if (km !== null && km > this.maxDistanceKm) return false;
+                }
                 return true;
             });
 
             list.sort((a, b) => {
+                if (this.sort === 'distance') {
+                    const da = this.distanceFor(a);
+                    const db = this.distanceFor(b);
+                    // Doctors with no coords go to the end.
+                    if (da === null && db === null) return b.rating - a.rating;
+                    if (da === null) return 1;
+                    if (db === null) return -1;
+                    return da - db;
+                }
                 if (this.sort === 'rating')   return b.rating - a.rating;
                 if (this.sort === 'fee_asc')  return a.fee - b.fee;
                 if (this.sort === 'fee_desc') return b.fee - a.fee;
@@ -664,7 +782,8 @@ function findDoctor() {
                  + (this.video ? 1 : 0)
                  + (this.gender !== 'any' ? 1 : 0)
                  + (this.minRating > 0 ? 1 : 0)
-                 + (this.lang !== 'any' ? 1 : 0);
+                 + (this.lang !== 'any' ? 1 : 0)
+                 + (this.maxDistanceKm > 0 ? 1 : 0);
         },
 
         clearFilters() {
@@ -673,6 +792,7 @@ function findDoctor() {
             this.gender = 'any';
             this.minRating = 0;
             this.lang = 'any';
+            this.maxDistanceKm = 0;
         },
 
         toggleFav(id) {

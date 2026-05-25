@@ -100,6 +100,42 @@ $STATES = [
         ['name' => 'Amritsar',  'lat' => 31.6340, 'lng' => 74.8723, 'radius' => 10000],
         ['name' => 'Chandigarh','lat' => 30.7333, 'lng' => 76.7794, 'radius' => 10000],
     ],
+    // Additional state capitals + tier-2 metros — round out the "top 50"
+    // coverage so a patient in central / eastern / NE India finds something.
+    'Madhya Pradesh' => [
+        ['name' => 'Indore', 'lat' => 22.7196, 'lng' => 75.8577, 'radius' => 12000],
+        ['name' => 'Bhopal', 'lat' => 23.2599, 'lng' => 77.4126, 'radius' => 12000],
+    ],
+    'Chhattisgarh' => [
+        ['name' => 'Raipur', 'lat' => 21.2514, 'lng' => 81.6296, 'radius' => 10000],
+    ],
+    'Odisha' => [
+        ['name' => 'Bhubaneswar', 'lat' => 20.2961, 'lng' => 85.8245, 'radius' => 10000],
+        ['name' => 'Cuttack',     'lat' => 20.4625, 'lng' => 85.8828, 'radius' => 10000],
+    ],
+    'Bihar' => [
+        ['name' => 'Patna', 'lat' => 25.5941, 'lng' => 85.1376, 'radius' => 12000],
+    ],
+    'Jharkhand' => [
+        ['name' => 'Ranchi', 'lat' => 23.3441, 'lng' => 85.3096, 'radius' => 10000],
+    ],
+    'Assam' => [
+        ['name' => 'Guwahati', 'lat' => 26.1445, 'lng' => 91.7362, 'radius' => 10000],
+    ],
+    'Andhra Pradesh' => [
+        ['name' => 'Visakhapatnam', 'lat' => 17.6868, 'lng' => 83.2185, 'radius' => 12000],
+        ['name' => 'Vijayawada',    'lat' => 16.5062, 'lng' => 80.6480, 'radius' => 10000],
+    ],
+    'Goa' => [
+        ['name' => 'Panaji', 'lat' => 15.4909, 'lng' => 73.8278, 'radius' => 8000],
+    ],
+    'Uttarakhand' => [
+        ['name' => 'Dehradun', 'lat' => 30.3165, 'lng' => 78.0322, 'radius' => 10000],
+    ],
+    'Jammu & Kashmir' => [
+        ['name' => 'Jammu',   'lat' => 32.7266, 'lng' => 74.8570, 'radius' => 10000],
+        ['name' => 'Srinagar','lat' => 34.0837, 'lng' => 74.7973, 'radius' => 10000],
+    ],
 ];
 
 // Specialty queries — grouped here as comments for clarity. Each line gets
@@ -399,23 +435,28 @@ function job_save(array $job): void {
 function job_create(array $cities, array $queries): string {
     $id = bin2hex(random_bytes(6));
     $tasks = [];
+    // Start with ONE city-wide probe per (city, query) pair. If a probe
+    // saturates Google's 60-result cap, the worker enqueues the sub-area
+    // grid tasks dynamically. Saves ~40% of API calls for small specialties.
     foreach ($cities as $city) {
-        $subAreas = generate_sub_areas($city['lat'], $city['lng'], $city['radius']);
         foreach ($queries as $qIdx => $qrow) {
-            foreach ($subAreas as $aIdx => $area) {
-                $tasks[] = [
-                    'city'    => $city['name'],
-                    'state'   => $city['state'],
-                    'q'       => $qrow['q'],
-                    'spec'    => $qrow['spec'],
-                    'area'    => $area,
-                    'qIdx'    => $qIdx,
-                    'aIdx'    => $aIdx,
-                    'qCount'  => count($queries),
-                    'aCount'  => count($subAreas),
-                    'cityRef' => $city,
-                ];
-            }
+            $tasks[] = [
+                'kind'    => 'probe',
+                'city'    => $city['name'],
+                'state'   => $city['state'],
+                'q'       => $qrow['q'],
+                'spec'    => $qrow['spec'],
+                'area'    => [
+                    'lat'    => $city['lat'],
+                    'lng'    => $city['lng'],
+                    'radius' => $city['radius'],
+                ],
+                'qIdx'    => $qIdx,
+                'aIdx'    => 0,
+                'qCount'  => count($queries),
+                'aCount'  => 1,           // probe is 1-of-1 until grid expands
+                'cityRef' => $city,
+            ];
         }
     }
     $job = [
@@ -537,9 +578,47 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
     $job['cursor']++;
     $job['updated_at'] = date('Y-m-d H:i:s');
 
+    // ---- Adaptive grid expansion ----
+    // If this was the city-wide probe AND we hit Google's 60-result ceiling,
+    // the area definitely has more doctors hidden behind the cap. Expand
+    // the search into the sub-area grid for THIS (city, query) pair only.
+    $kind = $task['kind'] ?? 'grid';
+    $hitCap = count($places) >= 60;   // 3 pages × 20 = Google's hard cap
+    if ($kind === 'probe' && $hitCap) {
+        $subAreas = generate_sub_areas($city['lat'], $city['lng'], $city['radius']);
+        $newTasks = [];
+        foreach ($subAreas as $aIdx => $area) {
+            $newTasks[] = [
+                'kind'    => 'grid',
+                'city'    => $city['name'],
+                'state'   => $city['state'],
+                'q'       => $q,
+                'spec'    => $spec,
+                'area'    => $area,
+                'qIdx'    => $task['qIdx'],
+                'aIdx'    => $aIdx,
+                'qCount'  => $task['qCount'],
+                'aCount'  => count($subAreas),
+                'cityRef' => $city,
+            ];
+        }
+        // Splice the new tasks right after the current cursor so they run next
+        // (keeps logs grouped by (city, specialty) instead of jumping around).
+        array_splice($job['tasks'], $job['cursor'], 0, $newTasks);
+        $job['total'] += count($newTasks);
+        job_append_log($job, sprintf(
+            '%s · %s · probe hit cap (60) → expanding into %d sub-areas',
+            $city['name'], $q, count($subAreas)
+        ));
+    }
+
+    $areaLabel = $kind === 'probe'
+        ? sprintf('probe (city-wide, r=%.1fkm)', $area['radius'] / 1000)
+        : sprintf('area %d/%d', $task['aIdx'] + 1, $task['aCount']);
     job_append_log($job, sprintf(
-        '%s · %s · area %d/%d → +%d doctors (%d req)',
-        $city['name'], $q, $task['aIdx'] + 1, $task['aCount'], $found, $reqs
+        '%s · %s · %s → +%d doctors (%d req%s)',
+        $city['name'], $q, $areaLabel, $found, $reqs,
+        ($kind === 'probe' && !$hitCap) ? ', complete' : ''
     ));
 
     if ($job['cursor'] >= $job['total']) $job['status'] = 'done';
@@ -617,6 +696,7 @@ function _job_snapshot(array $job): array {
             'qCount'=> $currentTask['qCount'],
             'aIdx'  => $currentTask['aIdx'] + 1,
             'aCount'=> $currentTask['aCount'],
+            'kind'  => $currentTask['kind'] ?? 'grid',
         ] : null,
         'updated_at' => $job['updated_at'],
         'cities'     => $job['cities'],
@@ -966,7 +1046,8 @@ h1{font-size:22px;font-weight:600;margin:0 0 4px}
             <div class="current">
                 Now: <strong x-text="s.current.city"></strong> ·
                 <strong x-text="s.current.q"></strong>
-                <span>(query <span x-text="s.current.qIdx"></span>/<span x-text="s.current.qCount"></span>,
+                <span x-show="s.current.kind === 'probe'">(city-wide probe, query <span x-text="s.current.qIdx"></span>/<span x-text="s.current.qCount"></span>)</span>
+                <span x-show="s.current.kind !== 'probe'">(query <span x-text="s.current.qIdx"></span>/<span x-text="s.current.qCount"></span>,
                 area <span x-text="s.current.aIdx"></span>/<span x-text="s.current.aCount"></span>)</span>
             </div>
         </template>
