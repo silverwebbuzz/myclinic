@@ -484,9 +484,10 @@ function ecpAuthModal() {
         case 'expired':           return 'Code expired. Tap Resend.';
         case 'too_many_attempts': return 'Too many attempts. Request a new code.';
         case 'no_code_issued':    return 'No active code. Tap Resend.';
-        case 'db_unavailable':    return 'Service temporarily unavailable. Please try again in a moment.';
+        case 'db_unavailable':    return 'Database is unreachable. Check /app/.env credentials.';
         case 'sms_not_configured': return 'SMS isn\'t configured yet. Contact support.';
         case 'sms_send_failed':   return 'We couldn\'t send the SMS. Try again or use a different number.';
+        case 'server_error':      return 'Server error.';
         default:                  return 'Something went wrong. Please try again.';
       }
     },

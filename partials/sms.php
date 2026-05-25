@@ -61,7 +61,9 @@ function ecp_sms_send_otp(string $phone, string $code): array {
     }
 
     if ($mode === 'dev') {
-        ecp_sms_log_dev($phone, $code);
+        // Dev mode: don't try to write a log file (it depends on storage/
+        // being writable, which fails on shared hosting). Just return the
+        // code so the modal shows it inline.
         return ['ok' => true, 'mode' => 'dev', 'message_id' => 'dev_' . bin2hex(random_bytes(4)),
                 'dev_code' => $code, 'error' => null];
     }
