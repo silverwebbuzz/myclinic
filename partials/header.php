@@ -161,3 +161,4 @@ function ecpHeader() {
 </script>
 
 <?php require __DIR__ . '/auth-modal.php'; ?>
+<?php require __DIR__ . '/doctor-claim-modal.php'; ?>

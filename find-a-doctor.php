@@ -458,9 +458,37 @@ require __DIR__ . '/partials/header.php';
                                         @click="bookDoctor(d)">Book</button>
                             </template>
                         </div>
+
+                        <!-- Claim link — only on unclaimed listings -->
+                        <template x-if="!d.is_claimed">
+                            <button type="button" class="fd-claim-link"
+                                    @click="claimListing(d)">
+                                Is this your clinic? <strong>Claim it</strong>
+                            </button>
+                        </template>
+                        <template x-if="d.is_claimed">
+                            <div class="fd-claim-link verified">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                Verified by doctor
+                            </div>
+                        </template>
                     </div>
                 </div>
             </template>
+        </div>
+
+        <!-- "Not listed?" CTA — shown at the bottom of the results -->
+        <div class="fd-listme" x-show="pageItems().length > 0">
+            <div class="fd-listme-inner">
+                <div>
+                    <h3>Are you a doctor not listed here?</h3>
+                    <p>Add your clinic in a minute — we'll review and get back to you.</p>
+                </div>
+                <button type="button" class="fd-listme-btn"
+                        @click="window.ecpClaim && window.ecpClaim.open('new_listing')">
+                    List my clinic
+                </button>
+            </div>
         </div>
 
         <!-- Pagination -->
@@ -843,6 +871,19 @@ function findDoctor() {
             } catch (e) {
                 this.favs = this.favs.filter(x => x !== id);   // rollback
             }
+        },
+
+        claimListing(d) {
+            if (!window.ecpClaim) return;
+            window.ecpClaim.open('claim', {
+                id:         d.id,
+                name:       d.clinicName || d.name,
+                doctorName: d.doctorName || '',
+                area:       d.area  || '',
+                city:       d.city  || '',
+                spec:       d.spec  || '',
+                clinicName: d.clinicName || d.name,
+            });
         },
 
         bookDoctor(d) {

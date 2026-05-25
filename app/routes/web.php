@@ -56,6 +56,11 @@ return static function (RouteRegistrar $router): void {
         $auth->post('/reset-password/{token}', [AuthController::class, 'resetPassword']);
         $auth->get('/accept-invite/{token}', [AcceptInviteController::class, 'show']);
         $auth->post('/accept-invite/{token}', [AcceptInviteController::class, 'accept']);
+
+        // Passwordless OTP login for doctors approved via the claim queue.
+        $auth->get('/doctor/login',          [\App\Controllers\DoctorOtpLoginController::class, 'show']);
+        $auth->post('/doctor/login/send',    [\App\Controllers\DoctorOtpLoginController::class, 'sendOtp']);
+        $auth->post('/doctor/login/verify',  [\App\Controllers\DoctorOtpLoginController::class, 'verifyOtp']);
     });
 
     $router->get('/api/check-slug', [AuthController::class, 'checkSlug']);
@@ -304,6 +309,13 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/reviews/approve', [SuperAdminController::class, 'approveReview']);
         $admin->post('/reviews/reject', [SuperAdminController::class, 'rejectReview']);
         $admin->post('/churn/run', [SuperAdminController::class, 'runChurn']);
+
+        // Doctor claim + new-listing review queue
+        $admin->get('/claims', [\App\Controllers\DoctorClaimController::class, 'index']);
+        $admin->get('/claims/{id}', [\App\Controllers\DoctorClaimController::class, 'show']);
+        $admin->post('/claims/approve', [\App\Controllers\DoctorClaimController::class, 'approve']);
+        $admin->post('/claims/reject', [\App\Controllers\DoctorClaimController::class, 'reject']);
+        $admin->post('/claims/duplicate', [\App\Controllers\DoctorClaimController::class, 'markDuplicate']);
     });
 
     $router->group([

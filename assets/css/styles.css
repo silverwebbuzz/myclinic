@@ -1528,6 +1528,60 @@ footer.foot {
 .fd-meta-row > .fd-wrap { white-space: normal; }
 
 .fd-hours { min-width: 0; }
+/* Claim-this-listing link on every fd-card */
+.fd-claim-link {
+  background: none; border: 0; padding: 8px 0 0;
+  font: inherit; font-size: 12px;
+  color: var(--mute);
+  cursor: pointer; text-align: left;
+  display: inline-flex; align-items: center; gap: 5px;
+  transition: color .15s;
+  width: 100%;
+}
+.fd-claim-link:hover { color: var(--teal-700); }
+.fd-claim-link strong { color: var(--teal-700); font-weight: 600; }
+.fd-claim-link.verified { color: var(--teal-700); cursor: default; font-weight: 600; }
+.fd-claim-link.verified:hover { color: var(--teal-700); }
+
+/* "Not listed?" CTA at the bottom of results */
+.fd-listme {
+  margin-top: 28px;
+  padding: 0 0 16px;
+}
+.fd-listme-inner {
+  background: linear-gradient(135deg, var(--teal-50) 0%, #fff 100%);
+  border: 1px dashed rgba(15,155,110,0.3);
+  border-radius: 16px;
+  padding: 24px 28px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.fd-listme h3 {
+  font-size: 17px; font-weight: 600;
+  color: var(--ink); margin: 0 0 4px;
+  letter-spacing: -0.3px;
+}
+.fd-listme p {
+  font-size: 14px; color: var(--ink-2); margin: 0;
+}
+.fd-listme-btn {
+  background: var(--teal-600); color: #fff;
+  border: 0; padding: 11px 22px;
+  border-radius: 10px;
+  font: inherit; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+  flex-shrink: 0;
+}
+.fd-listme-btn:hover {
+  background: var(--teal-700);
+  box-shadow: 0 4px 14px rgba(15,155,110,0.3);
+}
+@media (max-width: 600px) {
+  .fd-listme-inner { padding: 20px; }
+  .fd-listme-btn { width: 100%; }
+}
+
 .fd-distance {
   display: inline;
   color: var(--teal-700);
