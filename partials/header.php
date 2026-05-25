@@ -22,6 +22,13 @@ $bodyClass = $bodyClass ?? '';
 // markup AND echoed into a tiny JSON blob the client can read on first paint
 // without waiting for an API roundtrip.
 $ecpPatient = ecp_patient_current();
+
+// If the visitor is logged in, never let CloudFlare / browser caches serve
+// this HTML to anyone else. Each user gets a per-request render.
+if ($ecpPatient) {
+    header('Cache-Control: private, no-store, max-age=0');
+    header('Vary: Cookie');
+}
 $ecpPatientJson = $ecpPatient
     ? json_encode([
         'id'         => (int) $ecpPatient['id'],

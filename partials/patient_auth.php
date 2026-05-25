@@ -214,24 +214,53 @@ function ecp_patient_session_start(int $identityId): string {
 }
 
 function ecp_patient_set_cookie(string $token): void {
+    // Detect HTTPS — CloudFlare/proxies terminate SSL so $_SERVER['HTTPS']
+    // is often empty even on https://. Check the proxy header too.
     $secure = ($_SERVER['HTTPS'] ?? '') === 'on'
-           || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
-    setcookie(ECP_PAT_COOKIE, $token, [
-        'expires'  => time() + ECP_PAT_SESSION_DAYS * 86400,
-        'path'     => '/',
-        'secure'   => $secure,
-        'httponly' => true,
-        'samesite' => 'Lax',
-    ]);
+           || (strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+           || (($_SERVER['SERVER_PORT'] ?? '') == '443');
+
+    $expires = time() + ECP_PAT_SESSION_DAYS * 86400;
+
+    if (headers_sent($file, $line)) {
+        error_log("[ecp_patient_set_cookie] headers already sent at $file:$line — cookie NOT set");
+        return;
+    }
+
+    // Use the array form on PHP 7.3+ (supports SameSite). Fall back to the
+    // legacy 6-arg form on older PHP, which doesn't support SameSite but
+    // at least sets the cookie.
+    $ok = false;
+    if (PHP_VERSION_ID >= 70300) {
+        $ok = setcookie(ECP_PAT_COOKIE, $token, [
+            'expires'  => $expires,
+            'path'     => '/',
+            'secure'   => $secure,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
+    } else {
+        // 6-arg legacy form: name, value, expires, path, domain, secure, httponly
+        $ok = setcookie(ECP_PAT_COOKIE, $token, $expires, '/; SameSite=Lax', '', $secure, true);
+    }
+
+    if (!$ok) {
+        error_log('[ecp_patient_set_cookie] setcookie() returned false');
+    }
 }
 
 function ecp_patient_clear_cookie(): void {
-    setcookie(ECP_PAT_COOKIE, '', [
-        'expires'  => time() - 3600,
-        'path'     => '/',
-        'httponly' => true,
-        'samesite' => 'Lax',
-    ]);
+    if (headers_sent()) return;
+    if (PHP_VERSION_ID >= 70300) {
+        setcookie(ECP_PAT_COOKIE, '', [
+            'expires'  => time() - 3600,
+            'path'     => '/',
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
+    } else {
+        setcookie(ECP_PAT_COOKIE, '', time() - 3600, '/; SameSite=Lax', '', false, true);
+    }
 }
 
 /**
