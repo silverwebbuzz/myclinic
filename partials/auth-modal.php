@@ -451,21 +451,28 @@ function ecpAuthModal() {
           return;
         }
 
-        // Success — sync the legacy localStorage so the header reads immediately.
+        // Success. Stash a minimal copy in localStorage so any other
+        // open tabs pick up the new session via the 'storage' event.
         try {
           localStorage.setItem('ecp_patient', JSON.stringify({
-            id:     j.patient.id,
-            name:   j.patient.name || j.patient.first_name || 'Patient',
-            handle: j.patient.phone,
+            id:         j.patient.id,
+            name:       j.patient.name || j.patient.first_name || 'Patient',
+            first_name: j.patient.first_name || null,
+            handle:     j.patient.phone,
           }));
-          window.dispatchEvent(new StorageEvent('storage', { key: 'ecp_patient' }));
         } catch (e) {}
 
+        // If the caller wanted us to do something after login (save a
+        // doctor, start a booking), do it BEFORE reloading.
         const cb = this._afterLogin;
-        this.close();
-        if (cb) cb(j.patient);
-        // If we're on the patient panel, refresh so server-side data renders.
-        if (location.pathname.startsWith('/patient')) location.reload();
+        if (cb) {
+          try { await cb(j.patient); } catch (e) { console.error(e); }
+        }
+
+        // Reload so the server-rendered header pill, patient page, etc.
+        // reflect the new session immediately. Costs one round-trip but
+        // removes a whole class of "why isn't the UI updating?" bugs.
+        location.reload();
       } catch (e) {
         this.errorMsg = "Couldn't reach server. Check your connection.";
       } finally {
