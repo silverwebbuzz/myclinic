@@ -4,7 +4,11 @@
 # =====================================================================
 
 # Disable directory listings.
-Options -Indexes
+# -MultiViews is critical: with it on, Apache resolves /find-a-doctor
+# directly to find-a-doctor.php and never lets a rewrite rule see paths
+# like /find-a-doctor/mumbai. We rely on RewriteRule for routing, not
+# content negotiation.
+Options -Indexes -MultiViews
 DirectoryIndex index.php index.html
 
 # -------- HTTPS redirect (cPanel + Cloudflare friendly) --------
@@ -22,15 +26,19 @@ RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
 RewriteRule ^L/([a-f0-9]{16})/?$ L.php?t=$1 [L,QSA]
 
 # -------- SEO city / specialty-in-city pages --------
-# These all serve find-a-doctor.php with a "seo" query param.
-# The PHP side handles redirects, 404s, and meta-tag injection.
-#
 # Examples:
 #   /find-a-doctor/mumbai
 #   /find-a-doctor/dermatologist-in-mumbai
-#   /find-a-doctor/mumbai/dermatologist        (301'd by PHP to canonical)
-RewriteRule ^find-a-doctor/([a-z0-9][a-z0-9\-]*)/?$           find-a-doctor.php?seo=$1 [L,QSA]
-RewriteRule ^find-a-doctor/([a-z0-9][a-z0-9\-]*)/([a-z0-9][a-z0-9\-]*)/?$ find-a-doctor.php?seo=$1/$2 [L,QSA]
+#   /find-a-doctor/mumbai/dermatologist        (PHP 301's to canonical form)
+#
+# The [NC] flag accepts /Mumbai too; PHP redirects to lowercase canonical.
+# The "%{REQUEST_FILENAME} !-f" guards against routing real files away.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^find-a-doctor/([A-Za-z0-9][A-Za-z0-9\-]*)/?$            find-a-doctor.php?seo=$1 [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^find-a-doctor/([A-Za-z0-9][A-Za-z0-9\-]*)/([A-Za-z0-9][A-Za-z0-9\-]*)/?$ find-a-doctor.php?seo=$1/$2 [L,QSA,NC]
 
 # Sitemap — auto-generated PHP, served as XML
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
