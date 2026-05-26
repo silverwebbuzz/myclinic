@@ -1643,8 +1643,14 @@ footer.foot {
 .fd-city-switch-btn .fd-city-state {
   color: var(--mute); font-weight: 500;
 }
-.fd-city-switch-btn svg { color: var(--mute); transition: transform .15s; }
-.fd-city-switch-btn svg.rot { transform: rotate(180deg); }
+.fd-city-caret {
+  display: inline-block;
+  color: var(--mute);
+  font-size: 11px;
+  margin-left: 2px;
+  transition: transform .15s;
+}
+.fd-city-caret.rot { transform: rotate(180deg); }
 
 .fd-city-menu {
   position: absolute;

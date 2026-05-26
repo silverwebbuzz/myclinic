@@ -239,7 +239,7 @@ $cityUrl = static function (string $citySlug) use ($currentSpecSlug): string {
             <button type="button" class="fd-city-switch-btn" @click="open = !open" :aria-expanded="open">
                 📍 <span><?= e($currentCity) ?></span>
                 <?php if ($currentState): ?><span class="fd-city-state">· <?= e($currentState) ?></span><?php endif; ?>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" :class="open ? 'rot' : ''"><polyline points="6 9 12 15 18 9"/></svg>
+                <span class="fd-city-caret" :class="open ? 'rot' : ''">▾</span>
             </button>
             <div class="fd-city-menu" x-show="open" x-transition.opacity x-cloak>
                 <div class="fd-city-menu-head">
