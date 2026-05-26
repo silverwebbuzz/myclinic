@@ -82,6 +82,36 @@ function ecp_active_clinic_count(int $floor = 2847): int
 }
 
 /**
+ * Top N cities by directory listing count, for the footer mega-city links.
+ * Cached per request. Returns [['city' => 'Mumbai', 'n' => 432], ...].
+ */
+function ecp_footer_top_cities(int $limit = 30): array
+{
+    static $cache = null;
+    if ($cache !== null) return array_slice($cache, 0, $limit);
+
+    $db = ecp_db();
+    if (!$db) return [];
+    try {
+        $stmt = $db->prepare(
+            "SELECT city, COUNT(*) AS n
+             FROM directory_doctors
+             WHERE is_active = 1 AND status = 'OPERATIONAL'
+               AND city IS NOT NULL AND city <> ''
+             GROUP BY city
+             HAVING n >= 5
+             ORDER BY n DESC
+             LIMIT 50"
+        );
+        $stmt->execute();
+        $cache = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        return array_slice($cache, 0, $limit);
+    } catch (Throwable $e) {
+        return $cache = [];
+    }
+}
+
+/**
  * Country count (for "in N countries" copy).
  */
 function ecp_country_count(int $floor = 47): int

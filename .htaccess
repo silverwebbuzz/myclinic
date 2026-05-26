@@ -21,6 +21,20 @@ RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
 # Short URL goes into outbound SMS — keep it as short and clean as possible.
 RewriteRule ^L/([a-f0-9]{16})/?$ L.php?t=$1 [L,QSA]
 
+# -------- SEO city / specialty-in-city pages --------
+# These all serve find-a-doctor.php with a "seo" query param.
+# The PHP side handles redirects, 404s, and meta-tag injection.
+#
+# Examples:
+#   /find-a-doctor/mumbai
+#   /find-a-doctor/dermatologist-in-mumbai
+#   /find-a-doctor/mumbai/dermatologist        (301'd by PHP to canonical)
+RewriteRule ^find-a-doctor/([a-z0-9][a-z0-9\-]*)/?$           find-a-doctor.php?seo=$1 [L,QSA]
+RewriteRule ^find-a-doctor/([a-z0-9][a-z0-9\-]*)/([a-z0-9][a-z0-9\-]*)/?$ find-a-doctor.php?seo=$1/$2 [L,QSA]
+
+# Sitemap — auto-generated PHP, served as XML
+RewriteRule ^sitemap\.xml$ sitemap.php [L]
+
 # -------- Clean URLs --------
 # /pricing -> pricing.php (internal rewrite, browser still sees /pricing)
 RewriteCond %{REQUEST_FILENAME} !-d

@@ -8,6 +8,8 @@
 // =====================================================================
 
 require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/seo_slugs.php';
 $hideFinalCta = $hideFinalCta ?? false;
 $clinicCount = ecp_active_clinic_count();
 ?>
@@ -28,6 +30,25 @@ $clinicCount = ecp_active_clinic_count();
                 Schedule a 15-min demo →
             </a>
         </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- Mega-city links — major SEO juice for /find-a-doctor/{city} pages. -->
+<?php
+// Top 30 cities by doctor count (cached for 6 hours to avoid querying on every page).
+$footerCities = ecp_footer_top_cities(30);
+?>
+<?php if (!empty($footerCities)): ?>
+<section class="foot-cities">
+    <div class="wrap">
+        <h4>Doctors near you</h4>
+        <ul>
+            <?php foreach ($footerCities as $c): ?>
+            <li><a href="/find-a-doctor/<?= e(ecp_slug_for_city($c['city'])) ?>"><?= e($c['city']) ?></a></li>
+            <?php endforeach; ?>
+            <li><a href="/find-a-doctor" class="foot-cities-more">All cities →</a></li>
+        </ul>
     </div>
 </section>
 <?php endif; ?>

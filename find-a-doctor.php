@@ -13,40 +13,171 @@
 // =====================================================================
 require_once __DIR__ . '/partials/helpers.php';
 require_once __DIR__ . '/partials/search_doctors_query.php';
+require_once __DIR__ . '/partials/seo_slugs.php';
 
-$pageTitle = 'Find a Doctor — eClinicPro';
-$metaDesc  = 'Search verified clinicians across India — see availability, fees and ratings before you book.';
+$pageTitle  = 'Find a Doctor — eClinicPro';
+$metaDesc   = 'Search verified clinicians across India — see availability, fees and ratings before you book.';
 $activePage = 'find';
+$seoMeta    = null;   // populated when an SEO slug matches
+
+// ---- SEO URL resolution (handles /find-a-doctor/{city} etc.) ----
+$seoPath = (string) ($_GET['seo'] ?? '');
+if ($seoPath !== '') {
+    $resolved = ecp_resolve_seo_path($seoPath);
+
+    // Non-canonical form → 301 to the canonical URL.
+    if (!empty($resolved['redirect'])) {
+        header('Location: ' . $resolved['redirect'], true, 301);
+        exit;
+    }
+    // Empty or unknown city/specialty → 404 with noindex (don't waste crawl budget).
+    if (!empty($resolved['notfound'])) {
+        http_response_code(404);
+        header('X-Robots-Tag: noindex, nofollow');
+        $pageTitle = 'Page not found — eClinicPro';
+        $metaDesc  = 'The page you were looking for could not be found.';
+        require __DIR__ . '/partials/header.php';
+        echo '<main style="padding:120px 24px; text-align:center; max-width:520px; margin:0 auto;">';
+        echo '<div style="font-size:48px;">🩺</div>';
+        echo '<h1 style="font-size:24px; font-weight:600; margin:16px 0 8px;">No doctors here yet</h1>';
+        echo '<p style="color:#666; line-height:1.55;">We don\'t have enough listings for this combination right now. ';
+        echo '<a href="/find-a-doctor" style="color:#0F9B6E; font-weight:600;">Browse all doctors</a> instead.</p>';
+        echo '</main>';
+        require __DIR__ . '/partials/footer.php';
+        exit;
+    }
+    $seoMeta = $resolved['match'] ?? null;
+}
 
 // Seed data only used for UI chrome (countries list, specialty taxonomy).
 // Doctors + locations now come from the live DB via the search API.
 $seed = require __DIR__ . '/partials/find-doctor-data.php';
 
 // ---- Parse search filters from the URL (for shareable links / SEO) ----
+// SEO URLs override regular query params so /find-a-doctor/mumbai always
+// shows Mumbai doctors regardless of leftover ?city=Chennai in the URL.
 $initialFilters = [
     'q'          => $_GET['q']        ?? '',
     'country'    => $_GET['country']  ?? 'IN',
     'state'      => $_GET['state']    ?? '',
-    'city'       => $_GET['city']     ?? '',
+    'city'       => $seoMeta['filter_city'] ?? ($_GET['city'] ?? ''),
     'area'       => $_GET['area']     ?? '',
-    'spec'       => $_GET['spec']     ?? 'all',  // 'all' means no filter
+    'spec'       => $seoMeta['filter_spec'] ?? ($_GET['spec'] ?? 'all'),
     'min_rating' => (float) ($_GET['min_rating'] ?? 0),
     'sort'       => $_GET['sort']     ?? 'relevance',
     'page'       => 1,
     'per_page'   => 20,
 ];
 
-// ---- SSR: load just the first page of results matching those filters ----
+// Custom title / description for SEO pages.
+if ($seoMeta) {
+    $pageTitle = $seoMeta['title'];
+    $metaDesc  = strip_tags($seoMeta['intro']);
+}
+
+// ---- SSR: load the first page now (we need item count for schema) ----
 $searchInput = $initialFilters;
 if ($searchInput['spec'] === 'all') $searchInput['spec'] = '';
 $searchResult = ecp_search_doctors($searchInput);
-$firstPage    = $searchResult['items']        ?? [];
-$totalMatches = $searchResult['total']        ?? count($firstPage);
-$hasMore      = $searchResult['has_more']     ?? false;
-
-// Real DB total (unaffected by filters) — for the hero "X+ doctors" copy.
+$firstPage    = $searchResult['items']    ?? [];
+$totalMatches = $searchResult['total']    ?? count($firstPage);
+$hasMore      = $searchResult['has_more'] ?? false;
 $totalDoctors = ecp_directory_doctor_count();
 if ($totalDoctors === 0) $totalDoctors = $totalMatches;
+
+// ---- Build $extraHead with canonical + JSON-LD schema (SEO pages only) ----
+if ($seoMeta) {
+    $canonical = 'https://eclinicpro.com' . $seoMeta['canonical'];
+
+    // 1. BreadcrumbList
+    $crumbs = [
+        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Home', 'item' => 'https://eclinicpro.com/'],
+        ['@type' => 'ListItem', 'position' => 2, 'name' => 'Doctors', 'item' => 'https://eclinicpro.com/find-a-doctor'],
+    ];
+    if (!empty($seoMeta['specialty'])) {
+        $crumbs[] = ['@type' => 'ListItem', 'position' => 3,
+                     'name' => $seoMeta['specialty']['plural'],
+                     'item' => $canonical];
+    } else {
+        $crumbs[] = ['@type' => 'ListItem', 'position' => 3,
+                     'name' => $seoMeta['city']['city'],
+                     'item' => $canonical];
+    }
+
+    // 2. ItemList of the top doctors on this page (helps Google understand the list)
+    $items = [];
+    foreach (array_slice($firstPage, 0, 10) as $i => $d) {
+        $items[] = [
+            '@type'    => 'ListItem',
+            'position' => $i + 1,
+            'item'     => [
+                '@type'   => 'Physician',
+                'name'    => $d['doctorName'] ?: $d['name'],
+                'address' => [
+                    '@type'           => 'PostalAddress',
+                    'addressLocality' => $d['city'] ?? '',
+                    'addressRegion'   => $d['state'] ?? '',
+                    'addressCountry'  => 'IN',
+                ],
+                'medicalSpecialty' => $d['specLabel'] ?? '',
+                'aggregateRating'  => ($d['rating'] ?? 0) > 0 ? [
+                    '@type'       => 'AggregateRating',
+                    'ratingValue' => $d['rating'],
+                    'reviewCount' => $d['reviews'] ?? 0,
+                ] : null,
+            ],
+        ];
+    }
+    // strip null fields
+    foreach ($items as &$it) {
+        $it['item'] = array_filter($it['item'], fn ($v) => $v !== null && $v !== '');
+    }
+    unset($it);
+
+    // 3. FAQ — generic, always useful, ranks for "common questions" snippets.
+    $cityName  = $seoMeta['city']['city'];
+    $specLabel = $seoMeta['specialty']['plural'] ?? 'doctors';
+    $specLower = strtolower($specLabel);
+    $faq = [
+        [
+            'q' => "How do I book an appointment with a {$specLower[0] === 'd' ? rtrim($specLower, 's') : rtrim($specLabel, 's')} in {$cityName}?",
+            'a' => "Browse the verified " . strtolower($specLabel) . " in {$cityName} on this page, click Book, pick a slot, and confirm. The clinic will call you within 24 hours to verify.",
+        ],
+        [
+            'q' => "Is online booking on eClinicPro free?",
+            'a' => "Yes. Patients pay only at the clinic — eClinicPro never charges you to book an appointment.",
+        ],
+        [
+            'q' => "How are doctors verified on eClinicPro?",
+            'a' => "We verify clinic listings via phone OTP and registration documents. Doctors marked with a green ✓ badge have personally claimed their profile.",
+        ],
+    ];
+    $faqEntities = [];
+    foreach ($faq as $item) {
+        $faqEntities[] = [
+            '@type' => 'Question',
+            'name'  => $item['q'],
+            'acceptedAnswer' => ['@type' => 'Answer', 'text' => $item['a']],
+        ];
+    }
+
+    $jsonLd = [
+        ['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => $crumbs],
+        ['@context' => 'https://schema.org', '@type' => 'ItemList', 'itemListElement' => $items, 'numberOfItems' => $seoMeta['doctor_count']],
+        ['@context' => 'https://schema.org', '@type' => 'FAQPage', 'mainEntity' => $faqEntities],
+    ];
+
+    $extraHead  = '<link rel="canonical" href="' . htmlspecialchars($canonical, ENT_QUOTES) . '">' . "\n    ";
+    $extraHead .= '<meta property="og:title" content="' . htmlspecialchars($pageTitle, ENT_QUOTES) . '">' . "\n    ";
+    $extraHead .= '<meta property="og:description" content="' . htmlspecialchars($metaDesc, ENT_QUOTES) . '">' . "\n    ";
+    $extraHead .= '<meta property="og:url" content="' . htmlspecialchars($canonical, ENT_QUOTES) . '">' . "\n    ";
+    $extraHead .= '<meta property="og:type" content="website">' . "\n    ";
+    foreach ($jsonLd as $ld) {
+        $extraHead .= '<script type="application/ld+json">'
+                    . json_encode($ld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
+                    . '</script>' . "\n    ";
+    }
+}
 
 require __DIR__ . '/partials/header.php';
 ?>
@@ -63,8 +194,32 @@ require __DIR__ . '/partials/header.php';
 
 <section class="fd-hero">
     <div class="wrap-wide">
-        <h1>Find a doctor you can <span class="grad">actually trust.</span></h1>
-        <p class="lede">Search <?= ecp_num($totalDoctors) ?>+ verified clinicians across India, the US, UK and more — see real availability, fees and ratings before you book.</p>
+        <?php if ($seoMeta): ?>
+            <!-- Breadcrumbs (visible — JSON-LD version in <head>) -->
+            <nav class="fd-crumbs" aria-label="Breadcrumb">
+                <a href="/">Home</a>
+                <span>›</span>
+                <a href="/find-a-doctor">Doctors</a>
+                <span>›</span>
+                <?php if (!empty($seoMeta['specialty'])): ?>
+                    <a href="/find-a-doctor/<?= e(ecp_slug_for_city($seoMeta['city']['city'])) ?>"><?= e($seoMeta['city']['city']) ?></a>
+                    <span>›</span>
+                    <span class="current"><?= e($seoMeta['specialty']['plural']) ?></span>
+                <?php else: ?>
+                    <span class="current"><?= e($seoMeta['city']['city']) ?></span>
+                <?php endif; ?>
+            </nav>
+
+            <h1><?= e($seoMeta['h1']) ?></h1>
+            <p class="lede"><?= e($seoMeta['intro']) ?></p>
+            <p class="fd-hero-meta">
+                <strong><?= ecp_num($seoMeta['doctor_count']) ?></strong> verified doctors ·
+                Real reviews · Transparent fees · Book in 30 seconds
+            </p>
+        <?php else: ?>
+            <h1>Find a doctor you can <span class="grad">actually trust.</span></h1>
+            <p class="lede">Search <?= ecp_num($totalDoctors) ?>+ verified clinicians across India, the US, UK and more — see real availability, fees and ratings before you book.</p>
+        <?php endif; ?>
 
         <!-- Country pill -->
         <div class="fd-country-row" style="position: relative;">
@@ -544,6 +699,71 @@ require __DIR__ . '/partials/header.php';
             <strong x-text="((page - 1) * pageSize) + 1"></strong>–<strong x-text="Math.min(page * pageSize, filteredResults().length)"></strong>
             of <strong x-text="filteredResults().length.toLocaleString()"></strong>
         </div>
+
+        <?php if ($seoMeta): ?>
+            <?php
+            // Build "Also browse" suggestions for SEO internal linking.
+            $alsoCities = ecp_seo_also_cities($seoMeta);
+            $alsoSpecs  = ecp_seo_also_specialties($seoMeta);
+            ?>
+            <?php if (!empty($alsoSpecs) || !empty($alsoCities)): ?>
+            <section class="fd-also-browse">
+                <h2>Browse more</h2>
+
+                <?php if (!empty($alsoSpecs)): ?>
+                <h3>Other specialties in <?= e($seoMeta['city']['city']) ?></h3>
+                <ul>
+                    <?php foreach ($alsoSpecs as $s): ?>
+                    <li><a href="<?= e($s['url']) ?>"><?= e($s['label']) ?></a></li>
+                    <?php endforeach; ?>
+                </ul>
+                <?php endif; ?>
+
+                <?php if (!empty($alsoCities)): ?>
+                <h3>
+                    <?php if (!empty($seoMeta['specialty'])): ?>
+                        <?= e($seoMeta['specialty']['plural']) ?> in other cities
+                    <?php else: ?>
+                        Doctors in other cities
+                    <?php endif; ?>
+                </h3>
+                <ul>
+                    <?php foreach ($alsoCities as $c): ?>
+                    <li><a href="<?= e($c['url']) ?>"><?= e($c['city']) ?></a></li>
+                    <?php endforeach; ?>
+                </ul>
+                <?php endif; ?>
+            </section>
+            <?php endif; ?>
+
+            <!-- FAQ — drives "Featured snippet" SEO ranking -->
+            <section class="fd-faq">
+                <h2>Frequently asked</h2>
+                <?php
+                $cityName  = $seoMeta['city']['city'];
+                $specLabel = $seoMeta['specialty']['plural'] ?? 'doctors';
+                $singular  = $seoMeta['specialty']['label']  ?? 'doctor';
+                ?>
+                <details>
+                    <summary>How do I book an appointment with a <?= e(strtolower($singular)) ?> in <?= e($cityName) ?>?</summary>
+                    <p>Browse the verified <?= e(strtolower($specLabel)) ?> in <?= e($cityName) ?> on this page, click <strong>Book</strong>, pick a slot, and confirm. The clinic will call you within 24 hours to verify your appointment.</p>
+                </details>
+                <details>
+                    <summary>Is online booking free on eClinicPro?</summary>
+                    <p>Yes — you pay only at the clinic. eClinicPro never charges patients to book an appointment.</p>
+                </details>
+                <details>
+                    <summary>How are doctors verified on eClinicPro?</summary>
+                    <p>We verify clinic listings via phone OTP and registration documents. Doctors marked with the green ✓ <strong>Verified by doctor</strong> badge have personally claimed and confirmed their profile.</p>
+                </details>
+                <?php if (!empty($seoMeta['specialty'])): ?>
+                <details>
+                    <summary>How much does a <?= e(strtolower($singular)) ?> consultation cost in <?= e($cityName) ?>?</summary>
+                    <p>Consultation fees vary by clinic and experience. Most <?= e(strtolower($specLabel)) ?> in <?= e($cityName) ?> charge between ₹300 and ₹2,000 per visit. Check each doctor's profile for exact fees before booking.</p>
+                </details>
+                <?php endif; ?>
+            </section>
+        <?php endif; ?>
 
     </div>
 </section>

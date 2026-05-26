@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+
+# Server-side stuff, never indexed
+Disallow: /api/
+Disallow: /partials/
+Disallow: /storage/
+Disallow: /fetch_doctor/
+Disallow: /L/
+
+# Patient-private areas
+Disallow: /patient
+
+# Tell crawlers where the sitemap lives
+Sitemap: https://eclinicpro.com/sitemap.xml
