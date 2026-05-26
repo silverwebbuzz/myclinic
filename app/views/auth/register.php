@@ -26,15 +26,9 @@ ob_start();
                    class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
         </div>
 
-        <div>
-            <label class="block text-xs font-medium text-slate-600">Clinic URL</label>
-            <div class="mt-1 flex items-center gap-1 text-sm text-slate-500">
-                <input name="slug" type="text" required x-model="slug" pattern="[a-z0-9-]+"
-                       class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
-                <span>.app.eclinicpro.com</span>
-            </div>
-            <p class="mt-1 text-xs" :class="slugStatus === 'available' ? 'text-emerald-600' : 'text-slate-400'" x-text="slugMessage"></p>
-        </div>
+        <!-- Slug is auto-generated from the clinic name, hidden from the user.
+             Backend uniqueness handler resolves collisions by appending a number. -->
+        <input name="slug" type="hidden" x-model="slug">
 
         <div>
             <label class="block text-xs font-medium text-slate-600">Email</label>
@@ -72,21 +66,14 @@ ob_start();
 function registerForm() {
     return {
         slug: <?= json_encode($old['slug'] ?? '') ?>,
-        slugStatus: '',
-        slugMessage: '',
         strength: 0,
         suggestSlug(name) {
-            this.slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
-            this.checkSlug();
-        },
-        checkSlug() {
-            if (!this.slug) return;
-            fetch('/api/check-slug?slug=' + encodeURIComponent(this.slug))
-                .then(r => r.json())
-                .then(d => {
-                    this.slugStatus = d.available ? 'available' : 'taken';
-                    this.slugMessage = d.available ? 'Available' : 'Already taken';
-                });
+            // Slug is auto-derived from clinic name. Backend will resolve any
+            // collisions by appending a number.
+            this.slug = name.toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-|-$/g, '')
+                .slice(0, 60);
         },
         checkStrength(pw) {
             let s = 0;

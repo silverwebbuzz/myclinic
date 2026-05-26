@@ -53,6 +53,17 @@ final class AuthController
             }
         }
 
+        // Slug is auto-derived from the clinic name (hidden field in the form).
+        // If the client didn't send one, derive it now. Then resolve collisions
+        // by appending -2, -3, ... so the user never sees "already taken".
+        if ($slug === '' && $clinicName !== '') {
+            $slug = preg_replace('/[^a-z0-9]+/', '-', strtolower($clinicName)) ?: '';
+            $slug = trim($slug, '-');
+            $slug = substr($slug, 0, 56);   // leave room for "-NN" suffix
+            if (strlen($slug) < 3) $slug = 'clinic-' . substr((string) time(), -5);
+        }
+        $slug = $this->resolveUniqueSlug($slug);
+
         $error = $this->validateRegistration($clinicName, $slug, $email, $password, $confirm, $google !== null);
         if ($error !== null) {
             return Response::html($this->view('auth/register', [
@@ -322,6 +333,27 @@ final class AuthController
         return View::render($name, $data);
     }
 
+    /**
+     * Take a base slug and return an available one. If "sunrise-dental" is
+     * taken, returns "sunrise-dental-2", "sunrise-dental-3", etc.
+     * Stops after 99 attempts (then appends a timestamp fragment).
+     */
+    private function resolveUniqueSlug(string $base): string
+    {
+        $base = trim($base, '-');
+        if ($base === '') return 'clinic-' . substr((string) time(), -5);
+
+        if (AuthService::slugAvailable($base)) return $base;
+
+        for ($i = 2; $i <= 99; $i++) {
+            $candidate = $base . '-' . $i;
+            if (strlen($candidate) > 60) $candidate = substr($base, 0, 60 - strlen('-' . $i)) . '-' . $i;
+            if (AuthService::slugAvailable($candidate)) return $candidate;
+        }
+        // Extremely unlikely fallback.
+        return substr($base, 0, 50) . '-' . substr((string) time(), -5);
+    }
+
     private function validateRegistration(
         string $clinicName,
         string $slug,
@@ -334,10 +366,14 @@ final class AuthController
             return 'Clinic name is required.';
         }
         if (!preg_match('/^[a-z0-9-]{3,60}$/', $slug)) {
-            return 'Slug must be 3–60 characters: lowercase letters, numbers, hyphens only.';
+            // The slug is auto-generated server-side from clinic name now,
+            // so reaching here means the clinic name was unusable.
+            return 'Clinic name needs at least 3 letters or numbers.';
         }
+        // Collision check is no longer "fail" — we resolve it in resolveUniqueSlug().
+        // Defensive double-check kept in case the slug came in pre-resolved.
         if (!AuthService::slugAvailable($slug)) {
-            return 'This clinic URL is already taken.';
+            return 'Could not assign a clinic URL. Please try a different clinic name.';
         }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return 'Valid email is required.';
