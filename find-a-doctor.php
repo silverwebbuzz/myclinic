@@ -194,34 +194,60 @@ require __DIR__ . '/partials/header.php';
 
 <div x-data="findDoctor()" x-init="init()" x-cloak>
 
+<?php if ($seoMeta): ?>
+<!-- ============ SEO HERO (slim, focused, no clutter) ============ -->
+<section class="fd-seo-hero">
+    <div class="wrap-wide">
+        <nav class="fd-crumbs" aria-label="Breadcrumb">
+            <a href="/">Home</a>
+            <span>›</span>
+            <a href="/find-a-doctor">Doctors</a>
+            <span>›</span>
+            <?php if (!empty($seoMeta['specialty'])): ?>
+                <a href="/find-a-doctor/<?= e(ecp_slug_for_city($seoMeta['city']['city'])) ?>"><?= e($seoMeta['city']['city']) ?></a>
+                <span>›</span>
+                <span class="current"><?= e($seoMeta['specialty']['plural']) ?></span>
+            <?php else: ?>
+                <span class="current"><?= e($seoMeta['city']['city']) ?></span>
+            <?php endif; ?>
+        </nav>
+
+        <h1 class="fd-seo-h1"><?= e($seoMeta['h1']) ?></h1>
+        <p class="fd-seo-lede"><?= e($seoMeta['intro']) ?></p>
+
+        <!-- Trust tiles — replaces the messy inline strip -->
+        <div class="fd-seo-tiles">
+            <div class="fd-seo-tile">
+                <div class="fd-seo-tile-num"><?= ecp_num($seoMeta['doctor_count']) ?></div>
+                <div class="fd-seo-tile-lbl">Verified doctors</div>
+            </div>
+            <div class="fd-seo-tile">
+                <div class="fd-seo-tile-num">⭐ 4.7</div>
+                <div class="fd-seo-tile-lbl">Average rating</div>
+            </div>
+            <div class="fd-seo-tile">
+                <div class="fd-seo-tile-num">30s</div>
+                <div class="fd-seo-tile-lbl">Avg. booking time</div>
+            </div>
+            <div class="fd-seo-tile">
+                <div class="fd-seo-tile-num">₹0</div>
+                <div class="fd-seo-tile-lbl">Booking fee</div>
+            </div>
+        </div>
+
+        <!-- Compact search — just doctor name, city is locked -->
+        <div class="fd-seo-search">
+            <span class="ico">🔍</span>
+            <input type="text" x-model="q"
+                   placeholder="Search <?= e($seoMeta['specialty']['plural'] ?? 'doctors') ?> in <?= e($seoMeta['city']['city']) ?> by name…">
+        </div>
+    </div>
+</section>
+<?php else: ?>
 <section class="fd-hero">
     <div class="wrap-wide">
-        <?php if ($seoMeta): ?>
-            <!-- Breadcrumbs (visible — JSON-LD version in <head>) -->
-            <nav class="fd-crumbs" aria-label="Breadcrumb">
-                <a href="/">Home</a>
-                <span>›</span>
-                <a href="/find-a-doctor">Doctors</a>
-                <span>›</span>
-                <?php if (!empty($seoMeta['specialty'])): ?>
-                    <a href="/find-a-doctor/<?= e(ecp_slug_for_city($seoMeta['city']['city'])) ?>"><?= e($seoMeta['city']['city']) ?></a>
-                    <span>›</span>
-                    <span class="current"><?= e($seoMeta['specialty']['plural']) ?></span>
-                <?php else: ?>
-                    <span class="current"><?= e($seoMeta['city']['city']) ?></span>
-                <?php endif; ?>
-            </nav>
-
-            <h1><?= e($seoMeta['h1']) ?></h1>
-            <p class="lede"><?= e($seoMeta['intro']) ?></p>
-            <p class="fd-hero-meta">
-                <strong><?= ecp_num($seoMeta['doctor_count']) ?></strong> verified doctors ·
-                Real reviews · Transparent fees · Book in 30 seconds
-            </p>
-        <?php else: ?>
-            <h1>Find a doctor you can <span class="grad">actually trust.</span></h1>
-            <p class="lede">Search <?= ecp_num($totalDoctors) ?>+ verified clinicians across India, the US, UK and more — see real availability, fees and ratings before you book.</p>
-        <?php endif; ?>
+        <h1>Find a doctor you can <span class="grad">actually trust.</span></h1>
+        <p class="lede">Search <?= ecp_num($totalDoctors) ?>+ verified clinicians across India, the US, UK and more — see real availability, fees and ratings before you book.</p>
 
         <!-- Country pill -->
         <div class="fd-country-row" style="position: relative;">
@@ -339,6 +365,7 @@ require __DIR__ . '/partials/header.php';
         </div>
     </div>
 </section>
+<?php endif; ?>
 
 <section class="fd-main">
     <div class="wrap-wide">
@@ -348,13 +375,23 @@ require __DIR__ . '/partials/header.php';
             <div class="fd-count">
                 <strong x-text="filteredResults().length.toLocaleString()"></strong>
                 <span x-text="filteredResults().length === 1 ? 'doctor' : 'doctors'"></span>
-                in <span x-text="currentCountry().name"></span>
-                <template x-if="spec !== 'all'">
-                    <span> · <strong x-text="specialties.find(s => s.id === spec)?.label || ''"></strong></span>
-                </template>
-                <template x-if="q">
-                    <span> · matching "<strong x-text="q"></strong>"</span>
-                </template>
+                <?php if ($seoMeta): ?>
+                    <?php if (!empty($seoMeta['specialty'])): ?>
+                        · <strong><?= e($seoMeta['specialty']['plural']) ?></strong>
+                    <?php endif; ?>
+                    in <strong><?= e($seoMeta['city']['city']) ?></strong>
+                    <template x-if="q">
+                        <span> · matching "<strong x-text="q"></strong>"</span>
+                    </template>
+                <?php else: ?>
+                    in <span x-text="currentCountry().name"></span>
+                    <template x-if="spec !== 'all'">
+                        <span> · <strong x-text="specialties.find(s => s.id === spec)?.label || ''"></strong></span>
+                    </template>
+                    <template x-if="q">
+                        <span> · matching "<strong x-text="q"></strong>"</span>
+                    </template>
+                <?php endif; ?>
             </div>
 
             <div class="fd-bar-actions" style="position: relative;">
