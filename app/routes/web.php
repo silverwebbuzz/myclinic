@@ -316,6 +316,12 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/claims/approve', [\App\Controllers\DoctorClaimController::class, 'approve']);
         $admin->post('/claims/reject', [\App\Controllers\DoctorClaimController::class, 'reject']);
         $admin->post('/claims/duplicate', [\App\Controllers\DoctorClaimController::class, 'markDuplicate']);
+
+        // Lead analytics (doctor acquisition funnel)
+        $admin->get('/leads', [\App\Controllers\LeadAdminController::class, 'index']);
+        $admin->get('/lead-settings', [\App\Controllers\LeadSettingsController::class, 'index']);
+        $admin->post('/lead-settings', [\App\Controllers\LeadSettingsController::class, 'save']);
+        $admin->post('/lead-settings/doctor-quota', [\App\Controllers\LeadSettingsController::class, 'saveDoctorQuota']);
     });
 
     $router->group([

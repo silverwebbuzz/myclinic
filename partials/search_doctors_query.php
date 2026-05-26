@@ -108,8 +108,12 @@ function ecp_search_doctors(array $filters): array {
                    dd.phone, dd.website, dd.gmaps_url, dd.rating, dd.reviews,
                    dd.opening_hours, dd.photo_reference,
                    dd.consultation_fee, dd.consultation_fee_currency,
-                   dd.is_claimed, dd.quality_score";
+                   dd.is_claimed, dd.quality_score,
+                   t.slug AS clinic_slug";
     if ($selectDistance !== null) $selectCols .= ",\n                   " . $selectDistance;
+
+    // LEFT JOIN tenants so claimed listings carry their portal slug.
+    $fromSql = "directory_doctors dd LEFT JOIN tenants t ON t.id = dd.claimed_tenant_id";
 
     $whereSql  = implode(' AND ', $where);
     $havingSql = '';
@@ -118,7 +122,7 @@ function ecp_search_doctors(array $filters): array {
         $params['max_km'] = $maxKm;
     }
 
-    $sql = "SELECT $selectCols FROM directory_doctors dd
+    $sql = "SELECT $selectCols FROM $fromSql
             WHERE $whereSql $havingSql
             ORDER BY $order LIMIT :lim OFFSET :off";
 
@@ -134,6 +138,7 @@ function ecp_search_doctors(array $filters): array {
     $total = null;
     if ($page === 1) {
         $countSql = "SELECT COUNT(*) FROM directory_doctors dd WHERE $whereSql";
+        // COUNT() doesn't need the tenant JOIN since no clauses reference it.
         $cnt = $db->prepare($countSql);
         foreach ($params as $k => $v) {
             if (in_array($k, ['lim', 'off', 'max_km', 'ulat', 'ulng', 'qrel'], true)) continue;
@@ -187,6 +192,7 @@ function ecp_shape_directory_row(array $r): array {
         'specLabel'    => ecp_specialty_label($r['specialty'] ?? null),
         'verified'     => (bool) $r['is_claimed'],
         'is_claimed'   => (bool) $r['is_claimed'],
+        'slug'         => $r['clinic_slug'] ?? null,
         'rating'       => isset($r['rating']) ? (float) $r['rating'] : 0,
         'reviews'      => (int) ($r['reviews'] ?? 0),
         'area'         => $r['area']  ?? '',

@@ -484,12 +484,12 @@ require __DIR__ . '/partials/header.php';
                             <template x-if="!d.gmaps_url && !d.website">
                                 <button type="button" class="fd-btn">View profile</button>
                             </template>
+                            <!-- Book is always available; Call only when we have a number. -->
+                            <button type="button" class="fd-btn primary"
+                                    @click="bookDoctor(d)">📅 Book</button>
                             <template x-if="d.phone">
-                                <a :href="'tel:' + d.phone" class="fd-btn primary">📞 Call</a>
-                            </template>
-                            <template x-if="!d.phone">
-                                <button type="button" class="fd-btn primary"
-                                        @click="bookDoctor(d)">Book</button>
+                                <a :href="'tel:' + d.phone" class="fd-btn"
+                                   @click="trackCall(d)">📞 Call</a>
                             </template>
                         </div>
 
@@ -1005,15 +1005,29 @@ function findDoctor() {
         },
 
         bookDoctor(d) {
+            // Claimed clinic → send to the real portal booking page.
+            if (d.is_claimed && d.slug) {
+                window.open('https://app.eclinicpro.com/book/' + d.slug, '_blank');
+                return;
+            }
+            // Unclaimed → patient must be logged in; lead is recorded + clinic notified.
             const auth = window.ecpAuth;
             if (!auth) return;
             auth.require('book', () => {
-                // After login we'll route to the booking flow. For now, send
-                // the user to the patient panel so they at least land
-                // somewhere meaningful. Replace with a real booking page later.
-                alert("Booking flow is coming soon. Dr " + (d.doctorName || d.name) + " saved to your shortlist?");
-                this._persistFav(d.id);
+                if (window.ecpBook) window.ecpBook.open(d);
             });
+        },
+
+        // Fire-and-forget call-click analytics (no UI change, no await).
+        trackCall(d) {
+            try {
+                fetch('/api/lead?action=track', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ doctor_id: d.id, type: 'call' }),
+                });
+            } catch (e) { /* ignore */ }
         },
     };
 }

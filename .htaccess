@@ -17,6 +17,10 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
 RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
 
+# -------- Lead landing URLs (/L/{token}) --------
+# Short URL goes into outbound SMS — keep it as short and clean as possible.
+RewriteRule ^L/([a-f0-9]{16})/?$ L.php?t=$1 [L,QSA]
+
 # -------- Clean URLs --------
 # /pricing -> pricing.php (internal rewrite, browser still sees /pricing)
 RewriteCond %{REQUEST_FILENAME} !-d
