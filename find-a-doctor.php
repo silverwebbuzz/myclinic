@@ -783,6 +783,12 @@ window.FD_DATA = {
     initialTotal:     <?= (int) $totalMatches ?>,
     initialHasMore:   <?= $hasMore ? 'true' : 'false' ?>,
     initialFilters:   <?= json_encode($initialFilters, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>,
+    // True when the page was served from a clean SEO URL like
+    // /find-a-doctor/dermatologist-in-mumbai. In that case Alpine must NOT
+    // rewrite the URL with ?city=...&spec=... query params — Google sees
+    // both as separate URLs and splits the ranking signal.
+    isSeoPage:        <?= $seoMeta ? 'true' : 'false' ?>,
+    canonicalPath:    <?= json_encode($seoMeta['canonical'] ?? '/find-a-doctor', JSON_UNESCAPED_SLASHES) ?>,
 };
 
 function findDoctor() {
@@ -1027,6 +1033,23 @@ function findDoctor() {
         // ---- URL state ----
         syncUrl() {
             if (this._suppressUrlSync) return;
+
+            // SEO pages have their own clean canonical URL (e.g.
+            // /find-a-doctor/dermatologist-in-mumbai). DON'T pollute it with
+            // ?city=...&spec=... query strings — Google would treat the
+            // result as a separate URL and dilute our ranking signal.
+            //
+            // The only allowed param on an SEO page is ?page=N for pagination,
+            // because that's a distinct piece of content worth its own URL.
+            if (window.FD_DATA && window.FD_DATA.isSeoPage) {
+                if (this.page > 1) {
+                    history.replaceState(null, '', window.FD_DATA.canonicalPath + '?page=' + this.page);
+                } else {
+                    history.replaceState(null, '', window.FD_DATA.canonicalPath);
+                }
+                return;
+            }
+
             const params = this.buildFilterParams();
             if (this.page > 1) params.set('page', String(this.page));
             const qs = params.toString();
@@ -1035,6 +1058,20 @@ function findDoctor() {
         },
 
         loadFromUrl() {
+            // On SEO pages the filter set is fixed by the URL path itself
+            // (e.g. /find-a-doctor/dermatologist-in-mumbai → city/spec are
+            // locked). Don't read query params — that'd let a stray
+            // ?city=Chennai override the path-derived filter and confuse Google.
+            if (window.FD_DATA && window.FD_DATA.isSeoPage) {
+                const u = new URLSearchParams(location.search);
+                const p = Math.max(1, parseInt(u.get('page') || '1', 10));
+                if (p !== this.page) {
+                    this.page = p;
+                    this.fetchPage(p, true);
+                }
+                return;
+            }
+
             this._suppressUrlSync = true;
             const u = new URLSearchParams(location.search);
             this.q         = u.get('q')          || '';
