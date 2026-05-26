@@ -1,33 +1,52 @@
 <?php
 // =====================================================================
 // find-a-doctor.php — public doctor directory (search + filters)
+//
+// Architecture (rewritten 2026 to handle 100k+ rows):
+//   - The first page of results is rendered SERVER-SIDE from URL query
+//     params. Visitor sees real doctors immediately (good SEO + 80 KB HTML).
+//   - All subsequent filter changes / pagination fetch /api/search_doctors
+//     and replace the list client-side.
+//   - The autocomplete fetches /api/locations as the user types.
+//   - We ship a tiny bootstrap blob (specialties + first page only) instead
+//     of the entire directory.
 // =====================================================================
 require_once __DIR__ . '/partials/helpers.php';
+require_once __DIR__ . '/partials/search_doctors_query.php';
 
 $pageTitle = 'Find a Doctor — eClinicPro';
-$metaDesc  = 'Search verified clinicians across India, the US, UK and more — see availability, fees and ratings before you book.';
+$metaDesc  = 'Search verified clinicians across India — see availability, fees and ratings before you book.';
 $activePage = 'find';
 
-$data = require __DIR__ . '/partials/find-doctor-data.php';
+// Seed data only used for UI chrome (countries list, specialty taxonomy).
+// Doctors + locations now come from the live DB via the search API.
+$seed = require __DIR__ . '/partials/find-doctor-data.php';
 
-// If the directory_doctors table has rows, replace the seed doctors with them.
-// Countries / specialties / locations stay from the seed so the UI chrome works
-// even with a small or specialty-skewed DB.
-$dbDoctors = ecp_directory_doctors();
-if ($dbDoctors !== null && count($dbDoctors) > 0) {
-    $data['doctors'] = $dbDoctors;
-}
+// ---- Parse search filters from the URL (for shareable links / SEO) ----
+$initialFilters = [
+    'q'          => $_GET['q']        ?? '',
+    'country'    => $_GET['country']  ?? 'IN',
+    'state'      => $_GET['state']    ?? '',
+    'city'       => $_GET['city']     ?? '',
+    'area'       => $_GET['area']     ?? '',
+    'spec'       => $_GET['spec']     ?? 'all',  // 'all' means no filter
+    'min_rating' => (float) ($_GET['min_rating'] ?? 0),
+    'sort'       => $_GET['sort']     ?? 'relevance',
+    'page'       => 1,
+    'per_page'   => 20,
+];
 
-// Replace seed locations with distinct areas/cities/states from the DB so the
-// autocomplete only suggests places that actually have results.
-$dbLocations = ecp_directory_locations();
-if ($dbLocations !== null && count($dbLocations) > 0) {
-    $data['locations'] = $dbLocations;
-}
+// ---- SSR: load just the first page of results matching those filters ----
+$searchInput = $initialFilters;
+if ($searchInput['spec'] === 'all') $searchInput['spec'] = '';
+$searchResult = ecp_search_doctors($searchInput);
+$firstPage    = $searchResult['items']        ?? [];
+$totalMatches = $searchResult['total']        ?? count($firstPage);
+$hasMore      = $searchResult['has_more']     ?? false;
 
-// Real total (unaffected by the LIMIT) for hero copy.
+// Real DB total (unaffected by filters) — for the hero "X+ doctors" copy.
 $totalDoctors = ecp_directory_doctor_count();
-if ($totalDoctors === 0) $totalDoctors = count($data['doctors']);
+if ($totalDoctors === 0) $totalDoctors = $totalMatches;
 
 require __DIR__ . '/partials/header.php';
 ?>
@@ -86,7 +105,7 @@ require __DIR__ . '/partials/header.php';
                     <div class="lbl">Area, city, state or country</div>
                     <input type="text" x-model="loc"
                            @input="acOpen = true"
-                           @focus="acOpen = true"
+                           @focus="acOpen = true; fetchLocations()"
                            placeholder="Type a place — Bandra, Mumbai, Maharashtra…">
                 </div>
 
@@ -330,15 +349,30 @@ require __DIR__ . '/partials/header.php';
             </button>
         </div>
 
+        <!-- Loading shimmer — shown while a fetch is in flight -->
+        <div class="fd-grid" x-show="loading && pageItems().length === 0" x-cloak>
+            <template x-for="i in 5" :key="i">
+                <div class="fd-card fd-card-skeleton">
+                    <div class="fd-avatar fd-skel-avatar"></div>
+                    <div class="fd-identity">
+                        <div class="fd-skel-line fd-skel-w60"></div>
+                        <div class="fd-skel-line fd-skel-w40"></div>
+                        <div class="fd-skel-line fd-skel-w30"></div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
         <!-- Empty state -->
-        <div class="fd-empty" x-show="pageItems().length === 0">
+        <div class="fd-empty" x-show="!loading && pageItems().length === 0">
             <div class="glyph">🩺</div>
             <h3>No doctors match your filters</h3>
             <p>Try widening your search — clear a few filters or pick a different area.</p>
         </div>
 
         <!-- Results grid -->
-        <div class="fd-grid" x-show="pageItems().length > 0">
+        <div class="fd-grid" x-show="pageItems().length > 0"
+             :class="loading ? 'fd-grid-loading' : ''">
             <template x-for="d in pageItems()" :key="d.id">
                 <div class="fd-card">
                     <div class="fd-avatar" :class="'g' + (1 + (d.id % 6))"
@@ -517,65 +551,91 @@ require __DIR__ . '/partials/header.php';
 </div>
 
 <script>
-window.FD_DATA = <?= json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+// Bootstrap payload — kept tiny. Only the UI taxonomy + the first
+// server-rendered page of doctors. Everything else loads on demand.
+window.FD_DATA = {
+    countries:        <?= json_encode($seed['countries'],        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>,
+    specialties:      <?= json_encode($seed['specialties'],      JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>,
+    specialty_groups: <?= json_encode($seed['specialty_groups'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>,
+    firstPage:        <?= json_encode($firstPage, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>,
+    initialTotal:     <?= (int) $totalMatches ?>,
+    initialHasMore:   <?= $hasMore ? 'true' : 'false' ?>,
+    initialFilters:   <?= json_encode($initialFilters, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>,
+};
 
 function findDoctor() {
     return {
-        // ----- data -----
+        // ----- taxonomy (small, ships in HTML) -----
         countries: window.FD_DATA.countries,
         specialties: window.FD_DATA.specialties,
         specialty_groups: window.FD_DATA.specialty_groups || [],
-        locations: window.FD_DATA.locations,
-        doctors: window.FD_DATA.doctors,
 
-        // ----- state -----
-        country: 'IN',
-        countryOpen: false,
-        q: '',
-        loc: '',
-        locValue: null,
-        acOpen: false,
-        spec: 'all',
+        // ----- live results (replaced on every fetch) -----
+        doctors: window.FD_DATA.firstPage,
+        totalResults: window.FD_DATA.initialTotal,
+        hasMore: window.FD_DATA.initialHasMore,
+        loading: false,
+
+        // ----- location autocomplete (fetched as user types) -----
+        locOptions: [],
+        locLoading: false,
+
+        // ----- filter state (hydrated from URL via PHP) -----
+        country:       window.FD_DATA.initialFilters.country || 'IN',
+        countryOpen:   false,
+        q:             window.FD_DATA.initialFilters.q || '',
+        loc:           '',
+        locValue:      (window.FD_DATA.initialFilters.city || window.FD_DATA.initialFilters.area || window.FD_DATA.initialFilters.state)
+                         ? { country:  window.FD_DATA.initialFilters.country || 'IN',
+                             state:    window.FD_DATA.initialFilters.state || null,
+                             city:     window.FD_DATA.initialFilters.city  || null,
+                             area:     window.FD_DATA.initialFilters.area  || null }
+                         : null,
+        acOpen:        false,
+        spec:          window.FD_DATA.initialFilters.spec || 'all',
         specPanelOpen: false,
-        avail: 'any', availOpen: false,
+        avail: 'any', availOpen: false,                    // client-only (no API equivalent yet)
         video: false,
-        gender: 'any', genderOpen: false,
-        minRating: 0, ratingOpen: false,
-        lang: 'any', langOpen: false,
-        sort: 'relevance', sortOpen: false,
-        pageSize: 10, psOpen: false,
+        gender: 'any', genderOpen: false,                  // client-only
+        minRating:    Number(window.FD_DATA.initialFilters.min_rating || 0),
+        ratingOpen:   false,
+        lang: 'any',  langOpen: false,                     // client-only
+        sort:         window.FD_DATA.initialFilters.sort || 'relevance',
+        sortOpen:     false,
+        pageSize: 20, psOpen: false,
         page: 1,
         favs: [],
         hoursOpen: {},
-        // Distance / geolocation
-        userLoc: null,                    // {lat, lng} when permission granted
-        maxDistanceKm: 0,                 // 0 = no filter
+        // Geolocation
+        userLoc: null,
+        maxDistanceKm: 0,
         distanceOpen: false,
+
+        // Debounce timers
+        _qDebounce:   null,
+        _locDebounce: null,
+        _suppressUrlSync: false,
 
         sortOptions: [
             ['relevance','Best match'],
             ['distance','Nearest first'],
-            ['available','Soonest available'],
             ['rating','Highest rated'],
             ['fee_asc','Fee — low to high'],
             ['fee_desc','Fee — high to low'],
-            ['exp','Most experienced'],
+            ['claimed','Verified clinics first'],
         ],
 
         init() {
-            // Restore country preference from localStorage (no auth required).
-            const savedC = localStorage.getItem('fd:country');
-            if (savedC && this.countries.find(c => c.code === savedC)) {
-                this.country = savedC;
+            // Restore country preference (only if URL didn't set one).
+            if (!('country' in (new URLSearchParams(location.search).keys()))) {
+                const savedC = localStorage.getItem('fd:country');
+                if (savedC && this.countries.find(c => c.code === savedC)) {
+                    this.country = savedC;
+                }
             }
-            this.$watch('country', v => { localStorage.setItem('fd:country', v); this.page = 1; });
-            // Reset to page 1 whenever filters change
-            ['q','loc','locValue','spec','avail','video','gender','minRating','lang','sort','maxDistanceKm','userLoc'].forEach(k => {
-                this.$watch(k, () => this.page = 1);
-            });
+            this.$watch('country', v => { localStorage.setItem('fd:country', v); });
 
-            // Restore saved location (set when the user previously accepted the
-            // permission prompt). Stored as JSON {lat,lng,at}. Expire after 7 days.
+            // Restore saved location (geolocation permission already granted).
             try {
                 const raw = localStorage.getItem('fd:loc');
                 if (raw) {
@@ -590,12 +650,39 @@ function findDoctor() {
             this.$watch('userLoc', v => {
                 if (v) localStorage.setItem('fd:loc', JSON.stringify({ ...v, at: Date.now() }));
                 else   localStorage.removeItem('fd:loc');
+                this.refresh();
             });
-            this.$watch('maxDistanceKm', v => localStorage.setItem('fd:maxDistKm', String(v)));
+            this.$watch('maxDistanceKm', v => {
+                localStorage.setItem('fd:maxDistKm', String(v));
+                this.refresh();
+            });
 
-            // If logged in, fetch the real saved-doctor IDs from the server
-            // so the heart icons show pre-saved state correctly on first paint.
+            // Re-fetch whenever any server-side filter changes.
+            // Country / spec / sort / location-value / rating / search all reset to page 1.
+            this.$watch('country',   () => this.refresh());
+            this.$watch('spec',      () => this.refresh());
+            this.$watch('sort',      () => this.refresh());
+            this.$watch('minRating', () => this.refresh());
+            this.$watch('locValue',  () => this.refresh());
+            // Search box: debounce so we don't fire a request per keystroke.
+            this.$watch('q', () => {
+                clearTimeout(this._qDebounce);
+                this._qDebounce = setTimeout(() => this.refresh(), 300);
+            });
+            // Location autocomplete: fetch suggestions as the user types.
+            this.$watch('loc', () => {
+                clearTimeout(this._locDebounce);
+                this._locDebounce = setTimeout(() => this.fetchLocations(), 200);
+            });
+
+            // Pull wishlist state from the server for the heart icons.
             this.loadFavsFromServer();
+
+            // Sync filters into the URL so the page is shareable.
+            this.syncUrl();
+
+            // Browser back/forward → re-read URL and refresh.
+            window.addEventListener('popstate', () => this.loadFromUrl());
         },
 
         // ---- Geolocation ----
@@ -617,11 +704,13 @@ function findDoctor() {
         },
         clearLocation() { this.userLoc = null; this.maxDistanceKm = 0; },
 
-        // Haversine distance in km. Returns null when either point is missing.
+        // Distance now comes from the server (d.distance_km). Helpers stay
+        // for any UI code that still references them.
         distanceFor(d) {
-            if (!this.userLoc || !d.lat || !d.lng) return null;
+            if (typeof d.distance_km === 'number') return d.distance_km;
+            if (!this.userLoc || !d.lat || !d.lng)  return null;
             const toRad = x => x * Math.PI / 180;
-            const R = 6371;  // km
+            const R = 6371;
             const dLat = toRad(d.lat - this.userLoc.lat);
             const dLng = toRad(d.lng - this.userLoc.lng);
             const a = Math.sin(dLat / 2) ** 2 +
@@ -642,115 +731,151 @@ function findDoctor() {
                 if (r.status === 401) { this.favs = []; return; }
                 const j = await r.json();
                 if (j.ok) this.favs = (j.items || []).map(d => d.id);
-            } catch (e) { /* stay with empty favs */ }
+            } catch (e) {}
         },
 
         currentCountry() {
             return this.countries.find(c => c.code === this.country) || this.countries[0];
         },
 
-        filteredLocations() {
-            const term = (this.loc || '').trim().toLowerCase();
-            let list = this.locations.filter(e => e.country === this.country);
-            if (term) {
-                list = this.locations.filter(e =>
-                    e.label.toLowerCase().includes(term) ||
-                    (e.sub || '').toLowerCase().includes(term)
-                );
+        // ============================================================
+        //  SERVER-SIDE SEARCH
+        // ============================================================
+
+        buildFilterParams() {
+            const p = new URLSearchParams();
+            if (this.q.trim())            p.set('q', this.q.trim());
+            if (this.country && this.country !== 'IN') p.set('country', this.country);
+            if (this.country === 'IN')    p.set('country', 'IN');
+            if (this.locValue?.state)     p.set('state', this.locValue.state);
+            if (this.locValue?.city)      p.set('city',  this.locValue.city);
+            if (this.locValue?.area)      p.set('area',  this.locValue.area);
+            if (this.spec && this.spec !== 'all') p.set('spec', this.spec);
+            if (this.minRating > 0)       p.set('min_rating', String(this.minRating));
+            if (this.sort && this.sort !== 'relevance') p.set('sort', this.sort);
+            if (this.userLoc) {
+                p.set('lat', this.userLoc.lat.toFixed(5));
+                p.set('lng', this.userLoc.lng.toFixed(5));
             }
-            // Sort: starts-with first, then country preference, then type
-            list = list.slice().sort((a, b) => {
-                const at = a.label.toLowerCase(), bt = b.label.toLowerCase();
-                const aS = at.startsWith(term) ? 0 : 1;
-                const bS = bt.startsWith(term) ? 0 : 1;
-                if (aS !== bS) return aS - bS;
-                const aC = a.country === this.country ? 0 : 1;
-                const bC = b.country === this.country ? 0 : 1;
-                if (aC !== bC) return aC - bC;
-                const order = { area: 0, city: 1, state: 2, country: 3 };
-                return order[a.type] - order[b.type];
-            });
-            return list.slice(0, 8);
+            if (this.maxDistanceKm > 0)   p.set('max_km', String(this.maxDistanceKm));
+            return p;
         },
 
-        filteredResults() {
-            const term = this.q.trim().toLowerCase();
-            const locTerm = this.loc.trim().toLowerCase();
+        // Re-fetch from the server with current filters. Called whenever a
+        // server-side filter changes. Resets to page 1.
+        async refresh() {
+            this.page = 1;
+            await this.fetchPage(1, /*replace=*/true);
+            this.syncUrl();
+        },
 
-            let list = this.doctors.filter(d => {
-                if (d.country !== this.country) return false;
-                if (term) {
-                    const hay = [
-                        d.name, d.doctorName, d.clinicName, d.hospital,
-                        d.specLabel, d.area, d.city
-                    ].filter(Boolean).join(' ').toLowerCase();
-                    if (!hay.includes(term)) return false;
+        async fetchPage(page, replace) {
+            this.loading = true;
+            const params = this.buildFilterParams();
+            params.set('page', String(page));
+            params.set('per_page', String(this.pageSize));
+
+            try {
+                const r = await fetch('/api/search_doctors?' + params.toString());
+                const j = await r.json();
+                if (j.ok) {
+                    this.doctors      = replace ? j.items : [...this.doctors, ...j.items];
+                    this.hasMore      = !!j.has_more;
+                    if (typeof j.total === 'number') this.totalResults = j.total;
+                    this.page         = j.page || page;
                 }
-                if (this.locValue) {
-                    if (this.locValue.country && d.country !== this.locValue.country) return false;
-                    if (this.locValue.state && d.state !== this.locValue.state) return false;
-                    if (this.locValue.city && d.city !== this.locValue.city) return false;
-                    if (this.locValue.area && d.area !== this.locValue.area) return false;
-                } else if (locTerm) {
-                    const hay = (d.area + ' ' + d.city + ' ' + d.state + ' ' + d.countryName).toLowerCase();
-                    if (!hay.includes(locTerm)) return false;
-                }
-                if (this.spec !== 'all' && d.spec !== this.spec) return false;
-                if (this.avail === 'today' && d.next.when !== 'today') return false;
-                if (this.avail === 'tomorrow' && !(d.next.when === 'today' || d.next.when === 'tomorrow')) return false;
-                if (this.avail === 'week' && d.next.when === 'later') {
-                    const m = /\d+/.exec(d.next.label);
-                    if (m && parseInt(m[0], 10) > 7) return false;
-                }
+            } catch (e) {
+                // Stay on whatever we had; surface a tiny toast?
+                console.error('[fd search]', e);
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        // For paginated nav — fetches the page and REPLACES the list (not infinite scroll).
+        async goPage(p) {
+            if (p < 1) return;
+            if (p > this.totalPages()) return;
+            await this.fetchPage(p, /*replace=*/true);
+            this.syncUrl();
+            const el = document.querySelector('.fd-main');
+            if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+        },
+
+        // ---- URL state ----
+        syncUrl() {
+            if (this._suppressUrlSync) return;
+            const params = this.buildFilterParams();
+            if (this.page > 1) params.set('page', String(this.page));
+            const qs = params.toString();
+            const target = qs ? location.pathname + '?' + qs : location.pathname;
+            history.replaceState(null, '', target);
+        },
+
+        loadFromUrl() {
+            this._suppressUrlSync = true;
+            const u = new URLSearchParams(location.search);
+            this.q         = u.get('q')          || '';
+            this.country   = u.get('country')    || 'IN';
+            this.spec      = u.get('spec')       || 'all';
+            this.minRating = Number(u.get('min_rating') || 0);
+            this.sort      = u.get('sort')       || 'relevance';
+            this.locValue  = (u.get('city') || u.get('area') || u.get('state'))
+                ? { country: this.country, state: u.get('state'), city: u.get('city'), area: u.get('area') }
+                : null;
+            this.page = Math.max(1, parseInt(u.get('page') || '1', 10));
+            this.fetchPage(this.page, true).finally(() => { this._suppressUrlSync = false; });
+        },
+
+        // ============================================================
+        //  LOCATION AUTOCOMPLETE
+        // ============================================================
+
+        async fetchLocations() {
+            const q = (this.loc || '').trim();
+            this.locLoading = true;
+            try {
+                const u = new URL('/api/locations', location.origin);
+                u.searchParams.set('q', q);
+                u.searchParams.set('country', this.country);
+                const r = await fetch(u.toString());
+                const j = await r.json();
+                this.locOptions = j.ok ? (j.items || []) : [];
+            } catch (e) { this.locOptions = []; }
+            finally { this.locLoading = false; }
+        },
+
+        // Template still calls filteredLocations(); just return the cached
+        // list so we don't have to rewire all the existing markup.
+        filteredLocations() { return this.locOptions; },
+
+        // Client-side filters layered on top of server results. Only used for
+        // features the API doesn't support yet (video, gender, lang, avail).
+        // These rarely match in real data, so they almost never reduce the list.
+        _applyClientFilters(list) {
+            return list.filter(d => {
                 if (this.video && !d.video) return false;
                 if (this.gender !== 'any' && d.gender !== this.gender) return false;
-                if (this.minRating > 0 && d.rating < this.minRating) return false;
-                if (this.lang !== 'any' && !d.langs.includes(this.lang)) return false;
-
-                // Distance filter — only applies when we have both the user's
-                // location AND the doctor's lat/lng. Doctors without coords
-                // are kept (we can't prove they're far).
-                if (this.maxDistanceKm > 0 && this.userLoc && d.lat && d.lng) {
-                    const km = this.distanceFor(d);
-                    if (km !== null && km > this.maxDistanceKm) return false;
+                if (this.lang   !== 'any' && (!d.langs || !d.langs.includes(this.lang))) return false;
+                if (this.avail !== 'any' && d.next) {
+                    if (this.avail === 'today' && d.next.when !== 'today') return false;
+                    if (this.avail === 'tomorrow' && !(d.next.when === 'today' || d.next.when === 'tomorrow')) return false;
                 }
                 return true;
             });
-
-            list.sort((a, b) => {
-                if (this.sort === 'distance') {
-                    const da = this.distanceFor(a);
-                    const db = this.distanceFor(b);
-                    // Doctors with no coords go to the end.
-                    if (da === null && db === null) return b.rating - a.rating;
-                    if (da === null) return 1;
-                    if (db === null) return -1;
-                    return da - db;
-                }
-                if (this.sort === 'rating')   return b.rating - a.rating;
-                if (this.sort === 'fee_asc')  return a.fee - b.fee;
-                if (this.sort === 'fee_desc') return b.fee - a.fee;
-                if (this.sort === 'exp')      return b.years - a.years;
-                if (this.sort === 'available') {
-                    const ord = w => w === 'today' ? 0 : w === 'tomorrow' ? 1 : 2;
-                    const diff = ord(a.next.when) - ord(b.next.when);
-                    if (diff) return diff;
-                    return b.rating - a.rating;
-                }
-                if (b.verified !== a.verified) return (b.verified ? 1 : 0) - (a.verified ? 1 : 0);
-                return b.rating - a.rating;
-            });
-
-            return list;
         },
+
+        // The list of doctors shown on the current page. The server already
+        // paginates; we layer a few client-only filters.
+        pageItems() { return this._applyClientFilters(this.doctors); },
+
+        // For the "X results" counter — show the server total. (Client-only
+        // filters might reduce what's visible, but the total reflects the
+        // broader set; we hide the page-info counter when zero locally.)
+        filteredResults() { return { length: this.totalResults }; },
 
         totalPages() {
-            return Math.max(1, Math.ceil(this.filteredResults().length / this.pageSize));
-        },
-
-        pageItems() {
-            const start = (this.page - 1) * this.pageSize;
-            return this.filteredResults().slice(start, start + this.pageSize);
+            return Math.max(1, Math.ceil(this.totalResults / this.pageSize));
         },
 
         pageNumbers() {
@@ -765,13 +890,6 @@ function findDoctor() {
                 }
             }
             return out;
-        },
-
-        goPage(p) {
-            if (p < 1 || p > this.totalPages()) return;
-            this.page = p;
-            const el = document.querySelector('.fd-main');
-            if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
         },
 
         slotClass(when) {

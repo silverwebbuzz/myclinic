@@ -1582,6 +1582,33 @@ footer.foot {
   .fd-listme-btn { width: 100%; }
 }
 
+/* Loading skeleton shimmer for AJAX result fetches */
+.fd-card-skeleton {
+  pointer-events: none;
+}
+.fd-card-skeleton .fd-skel-avatar,
+.fd-card-skeleton .fd-skel-line {
+  background: linear-gradient(90deg, var(--bg-2) 0%, #ececec 50%, var(--bg-2) 100%);
+  background-size: 200% 100%;
+  animation: ecpShimmer 1.2s linear infinite;
+  border-radius: 8px;
+}
+.fd-card-skeleton .fd-skel-avatar { border-radius: 50%; width: 64px; height: 64px; }
+.fd-card-skeleton .fd-skel-line {
+  height: 12px;
+  margin: 6px 0;
+}
+.fd-card-skeleton .fd-skel-w60 { width: 60%; height: 16px; }
+.fd-card-skeleton .fd-skel-w40 { width: 40%; }
+.fd-card-skeleton .fd-skel-w30 { width: 30%; }
+@keyframes ecpShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Fade old results while a new fetch is in flight (so users see *something* changing) */
+.fd-grid-loading { opacity: 0.55; transition: opacity .15s; pointer-events: none; }
+
 .fd-distance {
   display: inline;
   color: var(--teal-700);
