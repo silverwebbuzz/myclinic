@@ -38,6 +38,8 @@ final class DashboardController
             'checklist' => $checklist,
             'hasPharmacy' => $hasPharmacy,
             'currency' => $clinic['currency'] ?? 'INR',
+            'clinic' => $clinic,
+            'isDirectoryListed' => (bool) ($clinic['is_directory_listed'] ?? false),
         ], 'Dashboard'));
     }
 

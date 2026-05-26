@@ -133,19 +133,36 @@ final class DoctorClaimService
             ]);
             $userId = (int) $db->lastInsertId();
 
-            // 3) If this was a claim, flip the directory listing.
+            // 3) Directory listing.
+            //    - For 'claim' requests: link to the existing row.
+            //    - For 'new_listing' requests: create a new row so the
+            //      clinic appears on /find-a-doctor immediately.
+            $directoryId = null;
             if (!empty($req['directory_doctor_id'])) {
+                $directoryId = (int) $req['directory_doctor_id'];
                 $db->prepare(
                     'UPDATE directory_doctors
                      SET is_claimed = 1, claimed_tenant_id = :tid
                      WHERE id = :did'
                 )->execute([
                     'tid' => $tenantId,
-                    'did' => (int) $req['directory_doctor_id'],
+                    'did' => $directoryId,
                 ]);
+            } elseif ($req['type'] === 'new_listing') {
+                $directoryId = self::createDirectoryRow($db, $req, $tenantId);
             }
 
-            // 4) Mark the request approved.
+            // 4) Flip the tenant to "publicly listed". Trial signups that
+            // come through this approval flow get directory visibility;
+            // raw /register tenants stay is_directory_listed=0 until
+            // they apply through this same queue.
+            $db->prepare(
+                'UPDATE tenants
+                 SET is_directory_listed = 1, directory_doctor_id = :did
+                 WHERE id = :tid'
+            )->execute(['did' => $directoryId, 'tid' => $tenantId]);
+
+            // 5) Mark the request approved.
             $db->prepare(
                 'UPDATE doctor_claim_requests
                  SET status = "approved", reviewed_by = :rb, reviewed_at = NOW(),
@@ -166,6 +183,83 @@ final class DoctorClaimService
             error_log('[DoctorClaimService::approve] ' . $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * Submit a listing request from inside the portal (logged-in tenant).
+     * Skips phone OTP — the tenant is already authenticated. Skips
+     * directory_doctor_id — we don't know if they have a Google listing,
+     * so it's treated as a 'new_listing' the admin will manually merge
+     * if a Google match shows up later.
+     *
+     * Returns the new request id, or null on failure.
+     */
+    public static function submitFromPortal(int $tenantId, array $tenant, array $input): ?int
+    {
+        // Prevent duplicate active requests from the same tenant — if they
+        // already have one pending, just return that id instead of creating
+        // another row.
+        $db = self::pdo();
+        $existing = $db->prepare(
+            'SELECT id FROM doctor_claim_requests
+             WHERE phone = :p AND status IN ("pending", "phone_verified")
+             ORDER BY id DESC LIMIT 1'
+        );
+        $existing->execute(['p' => (string) ($tenant['phone'] ?? '')]);
+        if ($id = $existing->fetchColumn()) {
+            return (int) $id;
+        }
+
+        $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? null;
+        $ip = $ip ? substr(explode(',', (string) $ip)[0], 0, 45) : null;
+        $ua = substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255);
+
+        $stmt = $db->prepare(
+            'INSERT INTO doctor_claim_requests
+                (type, full_name, phone, phone_verified_at, email,
+                 clinic_name, city, state, specialty,
+                 reg_number, reg_council, message,
+                 status, source, ip, user_agent)
+             VALUES
+                ("new_listing", :name, :phone, NOW(), :email,
+                 :clinic, :city, :state, :spec,
+                 :reg, :council, :msg,
+                 "phone_verified", :src, :ip, :ua)'
+        );
+        $stmt->execute([
+            'name'    => trim((string) ($input['full_name']   ?? $tenant['name'] ?? 'Doctor')),
+            'phone'   => (string) ($tenant['phone'] ?? ''),
+            'email'   => $tenant['email'] ?? null,
+            'clinic'  => trim((string) ($input['clinic_name'] ?? $tenant['name'] ?? '')),
+            'city'    => trim((string) ($input['city']        ?? '')),
+            'state'   => trim((string) ($input['state']       ?? '')) ?: null,
+            'spec'    => trim((string) ($input['specialty']   ?? $tenant['specialty'] ?? 'gp')),
+            'reg'     => trim((string) ($input['reg_number']  ?? '')) ?: null,
+            'council' => trim((string) ($input['reg_council'] ?? '')) ?: null,
+            'msg'     => trim((string) ($input['message']     ?? '')) ?: null,
+            'src'     => 'portal_dashboard',
+            'ip'      => $ip,
+            'ua'      => $ua ?: null,
+        ]);
+        return (int) $db->lastInsertId();
+    }
+
+    /**
+     * Most recent request submitted by this tenant (any status). Used by
+     * the get-listed page to show "you've already submitted, status: X"
+     * instead of letting them submit twice.
+     */
+    public static function latestForTenantPhone(string $phone): ?array
+    {
+        if ($phone === '') return null;
+        $stmt = self::pdo()->prepare(
+            'SELECT * FROM doctor_claim_requests
+             WHERE phone = :p
+             ORDER BY id DESC LIMIT 1'
+        );
+        $stmt->execute(['p' => $phone]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
     }
 
     public static function reject(int $requestId, int $reviewerId, ?string $notes = null): bool
@@ -200,6 +294,102 @@ final class DoctorClaimService
     // -----------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------
+
+    /**
+     * Create a brand-new directory_doctors row from a 'new_listing'
+     * claim request. The clinic isn't on Google Maps, but the doctor
+     * submitted enough info to make a public listing.
+     *
+     * place_id is the unique key. We synthesize one with a 'self_' prefix
+     * so it never collides with a real Google place_id, and so a future
+     * Google fetch can still merge if it discovers the same clinic.
+     *
+     * @return int|null  newly-created directory_doctors.id
+     */
+    private static function createDirectoryRow(PDO $db, array $req, int $tenantId): ?int
+    {
+        $placeId = 'self_' . substr(md5($tenantId . '|' . $req['phone'] . '|' . microtime(true)), 0, 24);
+
+        // Map the submitted specialty (URL slug or DB key) to the canonical
+        // DB value. Falls back to 'gp' if we can't recognize it.
+        $specDb = self::resolveSpecialtyDbValue((string) ($req['specialty'] ?? ''));
+
+        $stmt = $db->prepare(
+            'INSERT INTO directory_doctors
+                (place_id, source, is_claimed, claimed_tenant_id,
+                 name, doctor_name, specialty, country, state, city,
+                 phone, status, is_active, fetched_at, refreshed_at)
+             VALUES
+                (:pid, "self", 1, :tid,
+                 :name, :doctor_name, :spec, "IN", :state, :city,
+                 :phone, "OPERATIONAL", 1, NOW(), NOW())'
+        );
+        $stmt->execute([
+            'pid'         => $placeId,
+            'tid'         => $tenantId,
+            'name'        => $req['clinic_name'] ?? $req['full_name'],
+            'doctor_name' => $req['full_name'],
+            'spec'        => $specDb,
+            'state'       => $req['state'] ?: null,
+            'city'        => $req['city'] ?: '',
+            'phone'       => $req['phone'],
+        ]);
+        return (int) $db->lastInsertId();
+    }
+
+    /**
+     * Convert whatever the user picked in the wizard to the canonical DB
+     * specialty value. The wizard sends DB keys directly today, but be
+     * defensive in case a URL slug ('cardiologist') sneaks in.
+     */
+    private static function resolveSpecialtyDbValue(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') return 'gp';
+
+        // Quick whitelist of all DB values currently in use.
+        static $dbValues = [
+            'gp','family_medicine','eye','derma','cosmetology','trichology',
+            'cardio','psychiatrist','gastro','hepatology','ent','gyno',
+            'fertility','neuro','urologist','andrology','sexology','peds',
+            'ortho','sports_medicine','rheumatology','pain_management',
+            'oncology','hematology','pulmonology','allergy','nephrology',
+            'diabetology','endocrinology','neurosurgery','spine','gi_surgery',
+            'general_surgery','plastic_surgery','bariatric','vascular',
+            'radiology','critical_care','dental','prosthodontist',
+            'orthodontist','pediatric_dentist','endodontist','implantologist',
+            'ayurveda','homeo','siddha','unani','naturopathy','acupuncturist',
+            'physio','psychologist','audiologist','speech','dietitian',
+        ];
+        if (in_array($value, $dbValues, true)) return $value;
+
+        // Try URL-slug → DB mapping (e.g. 'cardiologist' → 'cardio').
+        // We can't include the marketing-site seo_slugs.php here, so do a
+        // tiny inline map for the most common ones.
+        $slugToDb = [
+            'cardiologist'      => 'cardio',
+            'ophthalmologist'   => 'eye',
+            'dermatologist'     => 'derma',
+            'pediatrician'      => 'peds',
+            'orthopedic'        => 'ortho',
+            'gynecologist'      => 'gyno',
+            'neurologist'       => 'neuro',
+            'oncologist'        => 'oncology',
+            'pulmonologist'     => 'pulmonology',
+            'nephrologist'     => 'nephrology',
+            'neurosurgeon'      => 'neurosurgery',
+            'gastroenterologist'=> 'gastro',
+            'ent-specialist'    => 'ent',
+            'general-physician' => 'gp',
+            'plastic-surgeon'   => 'plastic_surgery',
+            'sexologist'        => 'sexology',
+            'diabetologist'     => 'diabetology',
+            'endocrinologist'   => 'endocrinology',
+            'dentist'           => 'dental',
+            'homeopathy'        => 'homeo',
+        ];
+        return $slugToDb[$value] ?? 'gp';
+    }
 
     private static function makeUniqueSlug(string $base, string $table, string $col): string
     {

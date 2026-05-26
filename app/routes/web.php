@@ -198,6 +198,10 @@ return static function (RouteRegistrar $router): void {
         $app->get('/onboarding/complete', [OnboardingController::class, 'complete']);
         $app->post('/onboarding/complete', [OnboardingController::class, 'complete']);
 
+        // "Get listed on eClinicPro" — in-portal application page
+        $app->get('/onboarding/get-listed',  [\App\Controllers\GetListedController::class, 'show']);
+        $app->post('/onboarding/get-listed', [\App\Controllers\GetListedController::class, 'submit']);
+
         $app->get('/patients', [PatientController::class, 'index']);
         $app->get('/patients/new', [PatientController::class, 'create']);
         $app->post('/patients/new', [PatientController::class, 'store']);

@@ -1,4 +1,42 @@
 <div x-data="dashboardPage()" x-init="startRefresh()" class="space-y-6">
+
+    <?php if (empty($isDirectoryListed)): ?>
+    <!-- ============ Get listed on /find-a-doctor banner ============
+         Shown to clinics that have a portal account but haven't been
+         approved for the public directory yet. Dismissable per-session
+         so users who aren't ready right now aren't nagged on every load. -->
+    <div x-data="{ show: localStorage.getItem('ecp_hide_dir_banner') !== '1' }"
+         x-show="show" x-cloak
+         class="rounded-xl border-2 border-dashed border-emerald-300 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/40 p-5 shadow-sm">
+        <div class="flex items-start gap-4">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <div class="min-w-0 flex-1">
+                <h3 class="text-base font-bold text-slate-900">Reach more patients — get listed on eClinicPro</h3>
+                <p class="mt-1 text-sm text-slate-600">
+                    Your clinic isn't visible to patients searching on
+                    <a href="https://eclinicpro.com/find-a-doctor" class="font-semibold text-emerald-700 hover:underline" target="_blank">eclinicpro.com/find-a-doctor</a>
+                    yet. Submit your details once, our team reviews within 1–2 business days, and patients can start finding you.
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <a href="https://eclinicpro.com/find-a-doctor"
+                       target="_blank"
+                       class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
+                        Get listed
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>
+                    </a>
+                    <button type="button"
+                            @click="show = false; localStorage.setItem('ecp_hide_dir_banner','1')"
+                            class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:border-slate-400">
+                        Maybe later
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <?php
         $tiles = [
