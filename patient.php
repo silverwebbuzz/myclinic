@@ -59,52 +59,188 @@ require __DIR__ . '/partials/header.php';
         </div>
       </div>
 
-      <!-- 2-column layout: shortlist + coming soon -->
+      <!-- 2-column layout: tabbed main + coming-soon sidebar -->
       <div class="pt-grid">
 
-        <!-- Shortlist -->
-        <div class="pt-section">
-          <div class="pt-section-head">
-            <h2>Your shortlist</h2>
-            <span class="pt-counter">
-              <span x-text="wishlist.length"></span> / 5
-            </span>
+        <div class="pt-section pt-section-tabbed">
+
+          <!-- Tab switcher -->
+          <div class="pt-tabbar" role="tablist">
+            <button type="button" role="tab"
+                    :class="tab === 'bookings' ? 'is-active' : ''"
+                    @click="tab = 'bookings'">
+              📅 My bookings
+              <span class="pt-tab-count" x-show="bookings.upcoming.length + bookings.pending.length > 0"
+                    x-text="bookings.upcoming.length + bookings.pending.length"></span>
+            </button>
+            <button type="button" role="tab"
+                    :class="tab === 'shortlist' ? 'is-active' : ''"
+                    @click="tab = 'shortlist'">
+              ❤️ Shortlist
+              <span class="pt-tab-count" x-show="wishlist.length > 0" x-text="wishlist.length + '/5'"></span>
+            </button>
           </div>
 
-          <template x-if="wishlist.length === 0">
-            <div class="pt-empty">
-              <div class="glyph">🤍</div>
-              <h3>No doctors saved yet</h3>
-              <p>Tap the heart on any doctor in Find a doctor to save them here for quick access.</p>
-              <a href="/find-a-doctor" class="btn btn-primary">Browse doctors</a>
-            </div>
-          </template>
+          <!-- ============ BOOKINGS TAB ============ -->
+          <div x-show="tab === 'bookings'" class="pt-tab-pane">
 
-          <div class="pt-list" x-show="wishlist.length > 0">
-            <template x-for="d in wishlist" :key="d.id">
-              <div class="pt-row">
-                <div class="pt-row-id">
-                  <div class="pt-avatar" x-text="(d.firstInitial || '') + (d.lastInitial || '')"></div>
-                  <div class="pt-row-text">
-                    <div class="pt-name" x-text="d.name"></div>
-                    <div class="pt-sub">
-                      <span x-text="d.specLabel"></span>
-                      <template x-if="d.area || d.city">
-                        <span x-text="' · ' + [d.area, d.city].filter(Boolean).join(', ')"></span>
-                      </template>
+            <!-- Loading -->
+            <div x-show="bookings.loading" class="pt-loading">Loading your bookings…</div>
+
+            <!-- Upcoming -->
+            <template x-if="!bookings.loading && bookings.upcoming.length > 0">
+              <div>
+                <div class="pt-section-head"><h3>Upcoming</h3></div>
+                <div class="pt-list">
+                  <template x-for="b in bookings.upcoming" :key="'apt-' + b.id">
+                    <div class="pt-booking pt-booking-confirmed">
+                      <div class="pt-booking-date">
+                        <span class="pt-date-day" x-text="formatDay(b.when_iso)"></span>
+                        <span class="pt-date-mon" x-text="formatMon(b.when_iso)"></span>
+                        <span class="pt-date-time" x-text="b.when_time"></span>
+                      </div>
+                      <div class="pt-booking-body">
+                        <div class="pt-booking-doctor" x-text="b.doctor_name || 'Doctor'"></div>
+                        <div class="pt-booking-clinic" x-text="b.clinic_name"></div>
+                        <template x-if="b.token_number">
+                          <div class="pt-booking-token">Token <strong x-text="b.token_number"></strong></div>
+                        </template>
+                        <template x-if="b.reason">
+                          <div class="pt-booking-reason" x-text="'For: ' + b.reason"></div>
+                        </template>
+                      </div>
+                      <div class="pt-booking-actions">
+                        <template x-if="b.clinic_phone">
+                          <a :href="'tel:' + b.clinic_phone" class="btn-mini primary">📞 Call</a>
+                        </template>
+                        <span class="pt-status pt-status-confirmed" x-text="prettyStatus(b.status)"></span>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <div class="pt-row-actions">
-                  <template x-if="d.phone">
-                    <a :href="'tel:' + d.phone" class="btn-mini primary">📞 Call</a>
                   </template>
-                  <button type="button" class="btn-mini" @click="removeFromWishlist(d.id)" aria-label="Remove">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
-                  </button>
                 </div>
               </div>
             </template>
+
+            <!-- Pending (lead requests to unclaimed clinics) -->
+            <template x-if="!bookings.loading && bookings.pending.length > 0">
+              <div style="margin-top: 18px;">
+                <div class="pt-section-head"><h3>Pending requests</h3></div>
+                <p class="pt-section-note">
+                  We've notified these clinics. They'll call you to confirm.
+                </p>
+                <div class="pt-list">
+                  <template x-for="b in bookings.pending" :key="'lead-' + b.id">
+                    <div class="pt-booking pt-booking-pending">
+                      <div class="pt-booking-date">
+                        <span class="pt-date-day" x-text="formatDayFromDate(b.when_iso)"></span>
+                        <span class="pt-date-mon" x-text="formatMonFromDate(b.when_iso)"></span>
+                        <span class="pt-date-time" x-text="b.when_time || ''"></span>
+                      </div>
+                      <div class="pt-booking-body">
+                        <div class="pt-booking-doctor" x-text="b.doctor_name || b.clinic_name"></div>
+                        <div class="pt-booking-clinic">
+                          <span x-text="b.clinic_name"></span>
+                          <template x-if="b.clinic_address">
+                            <span x-text="' · ' + b.clinic_address"></span>
+                          </template>
+                        </div>
+                        <template x-if="b.reason">
+                          <div class="pt-booking-reason" x-text="'For: ' + b.reason"></div>
+                        </template>
+                      </div>
+                      <div class="pt-booking-actions">
+                        <template x-if="b.clinic_phone">
+                          <a :href="'tel:' + b.clinic_phone" class="btn-mini">📞 Call</a>
+                        </template>
+                        <span class="pt-status pt-status-pending" x-text="prettyLeadStatus(b.status)"></span>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+
+            <!-- Past -->
+            <template x-if="!bookings.loading && bookings.past.length > 0">
+              <div style="margin-top: 18px;">
+                <div class="pt-section-head">
+                  <h3>Past</h3>
+                  <button type="button" class="pt-link-btn"
+                          @click="bookings.pastOpen = !bookings.pastOpen"
+                          x-text="bookings.pastOpen ? 'Hide' : 'Show ' + bookings.past.length"></button>
+                </div>
+                <div class="pt-list" x-show="bookings.pastOpen" x-cloak>
+                  <template x-for="b in bookings.past" :key="'past-' + b.id">
+                    <div class="pt-booking pt-booking-past">
+                      <div class="pt-booking-date">
+                        <span class="pt-date-day" x-text="formatDay(b.when_iso)"></span>
+                        <span class="pt-date-mon" x-text="formatMon(b.when_iso)"></span>
+                        <span class="pt-date-time" x-text="b.when_time"></span>
+                      </div>
+                      <div class="pt-booking-body">
+                        <div class="pt-booking-doctor" x-text="b.doctor_name || 'Doctor'"></div>
+                        <div class="pt-booking-clinic" x-text="b.clinic_name"></div>
+                      </div>
+                      <span class="pt-status pt-status-past" x-text="prettyStatus(b.status)"></span>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+
+            <!-- Empty state (no bookings at all) -->
+            <template x-if="!bookings.loading && bookings.upcoming.length === 0 && bookings.pending.length === 0 && bookings.past.length === 0">
+              <div class="pt-empty">
+                <div class="glyph">📅</div>
+                <h3>No bookings yet</h3>
+                <p>Find a doctor and tap Book to schedule your first appointment.</p>
+                <a href="/find-a-doctor" class="btn btn-primary">Browse doctors</a>
+              </div>
+            </template>
+          </div>
+
+          <!-- ============ SHORTLIST TAB ============ -->
+          <div x-show="tab === 'shortlist'" class="pt-tab-pane">
+            <div class="pt-section-head">
+              <h3>Your shortlist</h3>
+              <span class="pt-counter"><span x-text="wishlist.length"></span> / 5</span>
+            </div>
+
+            <template x-if="wishlist.length === 0">
+              <div class="pt-empty">
+                <div class="glyph">🤍</div>
+                <h3>No doctors saved yet</h3>
+                <p>Tap the heart on any doctor in Find a doctor to save them here for quick access.</p>
+                <a href="/find-a-doctor" class="btn btn-primary">Browse doctors</a>
+              </div>
+            </template>
+
+            <div class="pt-list" x-show="wishlist.length > 0">
+              <template x-for="d in wishlist" :key="d.id">
+                <div class="pt-row">
+                  <div class="pt-row-id">
+                    <div class="pt-avatar" x-text="(d.firstInitial || '') + (d.lastInitial || '')"></div>
+                    <div class="pt-row-text">
+                      <div class="pt-name" x-text="d.name"></div>
+                      <div class="pt-sub">
+                        <span x-text="d.specLabel"></span>
+                        <template x-if="d.area || d.city">
+                          <span x-text="' · ' + [d.area, d.city].filter(Boolean).join(', ')"></span>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="pt-row-actions">
+                    <template x-if="d.phone">
+                      <a :href="'tel:' + d.phone" class="btn-mini primary">📞 Call</a>
+                    </template>
+                    <button type="button" class="btn-mini" @click="removeFromWishlist(d.id)" aria-label="Remove">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </template>
+            </div>
           </div>
         </div>
 
@@ -113,20 +249,20 @@ require __DIR__ . '/partials/header.php';
           <h3>Coming soon</h3>
           <ul>
             <li>
-              <span class="ic">🔐</span>
-              <div><b>OTP verification</b><span>SMS &amp; email codes</span></div>
-            </li>
-            <li>
-              <span class="ic">📅</span>
-              <div><b>Appointments</b><span>Bookings &amp; history</span></div>
-            </li>
-            <li>
               <span class="ic">💊</span>
               <div><b>E-prescriptions</b><span>From any visited clinic</span></div>
             </li>
             <li>
+              <span class="ic">🧪</span>
+              <div><b>Lab reports</b><span>All your results in one place</span></div>
+            </li>
+            <li>
               <span class="ic">👨‍👩‍👧</span>
               <div><b>Family profiles</b><span>Manage kids &amp; parents</span></div>
+            </li>
+            <li>
+              <span class="ic">🩺</span>
+              <div><b>Video consult</b><span>Talk to a doctor from home</span></div>
             </li>
           </ul>
         </aside>
@@ -391,6 +527,114 @@ require __DIR__ . '/partials/header.php';
 .pt-soon li b { display: block; font-weight: 600; color: var(--ink); font-size: 13.5px; }
 .pt-soon li span { display: block; color: var(--mute); font-size: 12.5px; margin-top: 1px; }
 
+/* -------- Tabs (Bookings / Shortlist) -------- */
+.pt-section-tabbed { padding: 0; }
+.pt-tabbar {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+  padding: 6px 12px 0;
+  gap: 4px;
+}
+.pt-tabbar button {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 0;
+  padding: 12px 16px;
+  font: inherit; font-size: 14px; font-weight: 600;
+  color: var(--mute); cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color .15s, border-color .15s;
+}
+.pt-tabbar button:hover { color: var(--ink-2); }
+.pt-tabbar button.is-active {
+  color: var(--ink);
+  border-bottom-color: var(--teal-600);
+}
+.pt-tab-count {
+  font-size: 11px; font-weight: 700;
+  background: var(--bg-2); color: var(--ink-2);
+  padding: 2px 7px; border-radius: 999px;
+  min-width: 18px; text-align: center;
+}
+.pt-tabbar button.is-active .pt-tab-count {
+  background: var(--teal-50); color: var(--teal-800);
+}
+.pt-tab-pane { padding: 22px 24px 24px; }
+
+.pt-section-head h3 {
+  font-size: 14px; font-weight: 700;
+  color: var(--mute);
+  letter-spacing: 0.04em; text-transform: uppercase;
+  margin: 0;
+}
+.pt-section-note {
+  font-size: 12.5px; color: var(--mute);
+  margin: 0 0 10px;
+}
+.pt-link-btn {
+  background: none; border: 0;
+  font: inherit; font-size: 12.5px; font-weight: 600;
+  color: var(--teal-700); cursor: pointer;
+}
+.pt-link-btn:hover { text-decoration: underline; }
+
+.pt-loading {
+  text-align: center; padding: 28px 16px;
+  color: var(--mute); font-size: 13.5px;
+}
+
+/* -------- Booking rows -------- */
+.pt-booking {
+  display: flex; align-items: center; gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.pt-booking:hover {
+  border-color: var(--teal-300, #a3d9c4);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+}
+.pt-booking-confirmed { border-left: 4px solid var(--teal-600); }
+.pt-booking-pending   { border-left: 4px solid #f59e0b; }
+.pt-booking-past      { opacity: 0.85; }
+
+.pt-booking-date {
+  display: flex; flex-direction: column; align-items: center;
+  width: 64px; flex-shrink: 0;
+  text-align: center; line-height: 1;
+}
+.pt-date-day { font-size: 22px; font-weight: 700; color: var(--ink); letter-spacing: -0.5px; }
+.pt-date-mon { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mute); margin-top: 2px; }
+.pt-date-time { font-size: 11.5px; font-weight: 600; color: var(--ink-2); margin-top: 6px; white-space: nowrap; }
+
+.pt-booking-body { flex: 1; min-width: 0; }
+.pt-booking-doctor { font-size: 14.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pt-booking-clinic { font-size: 12.5px; color: var(--mute); margin-top: 2px; }
+.pt-booking-reason { font-size: 12px; color: var(--ink-2); margin-top: 4px; font-style: italic; }
+.pt-booking-token {
+  display: inline-block;
+  margin-top: 4px;
+  background: var(--teal-50); color: var(--teal-800);
+  padding: 2px 8px; border-radius: 6px;
+  font-size: 11px; font-weight: 600;
+}
+.pt-booking-token strong { font-size: 13px; }
+
+.pt-booking-actions {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+  flex-shrink: 0;
+}
+.pt-status {
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 4px 9px; border-radius: 999px;
+  white-space: nowrap;
+}
+.pt-status-confirmed { background: var(--teal-50); color: var(--teal-800); }
+.pt-status-pending   { background: #fff7e0;       color: #875c00; }
+.pt-status-past      { background: var(--bg-2);   color: var(--mute); }
+
 /* -------- Responsive -------- */
 @media (max-width: 820px) {
   .pt-grid { grid-template-columns: 1fr; }
@@ -404,8 +648,16 @@ require __DIR__ . '/partials/header.php';
   .pt-hero-actions { width: 100%; }
   .pt-hero-actions .btn-outline, .pt-hero-actions .btn-ghost { flex: 1; }
   .pt-section, .pt-soon { padding: 18px 16px; }
+  .pt-section-tabbed { padding: 0; }
+  .pt-tab-pane { padding: 16px; }
+  .pt-tabbar { padding: 4px 8px 0; }
+  .pt-tabbar button { padding: 12px 10px; font-size: 13px; }
   .pt-row { padding: 12px; }
   .pt-row-actions .btn-mini { padding: 8px 10px; }
+  .pt-booking { gap: 10px; padding: 12px; }
+  .pt-booking-date { width: 52px; }
+  .pt-date-day { font-size: 20px; }
+  .pt-booking-actions { flex-direction: row; }
 }
 </style>
 
@@ -413,12 +665,21 @@ require __DIR__ . '/partials/header.php';
 function patientPanel(isLoggedIn) {
   return {
     loggedIn: !!isLoggedIn,
+    tab: 'bookings',       // 'bookings' | 'shortlist'
     wishlist: [],
     loading: false,
+    bookings: {
+      upcoming: [],
+      pending:  [],
+      past:     [],
+      loading:  true,
+      pastOpen: false,
+    },
 
     async init() {
       if (!this.loggedIn) return;
-      await this.loadWishlist();
+      // Load both in parallel — they're independent.
+      await Promise.all([this.loadWishlist(), this.loadBookings()]);
     },
 
     async loadWishlist() {
@@ -432,6 +693,57 @@ function patientPanel(isLoggedIn) {
       } finally {
         this.loading = false;
       }
+    },
+
+    async loadBookings() {
+      this.bookings.loading = true;
+      try {
+        const r = await fetch('/api/patient_bookings', { credentials: 'same-origin' });
+        const j = await r.json();
+        if (j.ok) {
+          this.bookings.upcoming = j.upcoming      || [];
+          this.bookings.pending  = j.pending_leads || [];
+          this.bookings.past     = j.past          || [];
+        }
+      } catch (e) { /* keep empty */ }
+      finally { this.bookings.loading = false; }
+    },
+
+    // ---- date / status formatting helpers ----
+    formatDay(iso) {
+      try { return new Date(iso).getDate(); } catch (e) { return '—'; }
+    },
+    formatMon(iso) {
+      try { return new Date(iso).toLocaleDateString('en-IN', { month: 'short' }); }
+      catch (e) { return ''; }
+    },
+    // when_iso for pending leads is just a YYYY-MM-DD; parse it safely.
+    formatDayFromDate(d) {
+      if (!d) return '—';
+      if (d.length === 10) d = d + 'T00:00';
+      return this.formatDay(d);
+    },
+    formatMonFromDate(d) {
+      if (!d) return '';
+      if (d.length === 10) d = d + 'T00:00';
+      return this.formatMon(d);
+    },
+    prettyStatus(s) {
+      return ({
+        scheduled:   'Scheduled',
+        confirmed:   'Confirmed',
+        in_progress: 'In progress',
+        completed:   'Completed',
+        cancelled:   'Cancelled',
+        no_show:     'No-show',
+      })[s] || s;
+    },
+    prettyLeadStatus(s) {
+      return ({
+        awaiting_clinic: 'Awaiting clinic',
+        clinic_viewed:   'Clinic saw your request',
+        delivery_failed: 'Could not reach clinic',
+      })[s] || 'Pending';
     },
 
     async removeFromWishlist(id) {

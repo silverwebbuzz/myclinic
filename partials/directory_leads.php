@@ -280,12 +280,19 @@ function _lead_send_freeform_sms(string $phone, string $body): array {
 
     if ($mode === 'dev') {
         $dir = __DIR__ . '/../storage/logs';
-        if (!is_dir($dir)) @mkdir($dir, 0775, true);
-        @file_put_contents(
-            $dir . '/lead-sms.log',
-            sprintf("[%s] %s | %s\n", date('Y-m-d H:i:s'), $phone, $body),
-            FILE_APPEND | LOCK_EX
-        );
+        if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
+            // Folder couldn't be created — log to PHP error log instead so
+            // the lead doesn't fail just because storage/ isn't writable.
+            error_log('[lead-sms DEV] phone=' . $phone . ' body=' . $body
+                    . ' (storage/logs not writable)');
+            return ['ok' => true, 'message_id' => 'dev_nolog_' . bin2hex(random_bytes(4))];
+        }
+        $line   = sprintf("[%s] %s | %s\n", date('Y-m-d H:i:s'), $phone, $body);
+        $wrote  = @file_put_contents($dir . '/lead-sms.log', $line, FILE_APPEND | LOCK_EX);
+        if ($wrote === false) {
+            error_log('[lead-sms DEV] phone=' . $phone . ' body=' . $body
+                    . ' (could not write storage/logs/lead-sms.log)');
+        }
         return ['ok' => true, 'message_id' => 'dev_' . bin2hex(random_bytes(4))];
     }
 
