@@ -135,13 +135,15 @@ if ($seoMeta) {
     unset($it);
 
     // 3. FAQ — generic, always useful, ranks for "common questions" snippets.
-    $cityName  = $seoMeta['city']['city'];
-    $specLabel = $seoMeta['specialty']['plural'] ?? 'doctors';
-    $specLower = strtolower($specLabel);
+    $cityName    = $seoMeta['city']['city'];
+    $specLabel   = $seoMeta['specialty']['plural'] ?? 'doctors';
+    $specSing    = $seoMeta['specialty']['label']  ?? 'doctor';
+    $specLower   = strtolower($specLabel);
+    $singLower   = strtolower($specSing);
     $faq = [
         [
-            'q' => "How do I book an appointment with a {$specLower[0] === 'd' ? rtrim($specLower, 's') : rtrim($specLabel, 's')} in {$cityName}?",
-            'a' => "Browse the verified " . strtolower($specLabel) . " in {$cityName} on this page, click Book, pick a slot, and confirm. The clinic will call you within 24 hours to verify.",
+            'q' => "How do I book an appointment with a {$singLower} in {$cityName}?",
+            'a' => "Browse the verified {$specLower} in {$cityName} on this page, click Book, pick a slot, and confirm. The clinic will call you within 24 hours to verify.",
         ],
         [
             'q' => "Is online booking on eClinicPro free?",

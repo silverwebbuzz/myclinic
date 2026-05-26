@@ -34,10 +34,18 @@ $clinicCount = ecp_active_clinic_count();
 </section>
 <?php endif; ?>
 
-<!-- Mega-city links — major SEO juice for /find-a-doctor/{city} pages. -->
+<!-- Mega-city links — major SEO juice for /find-a-doctor/{city} pages.
+     Wrapped in try/catch so a DB hiccup never blows up the entire page. -->
 <?php
-// Top 30 cities by doctor count (cached for 6 hours to avoid querying on every page).
-$footerCities = ecp_footer_top_cities(30);
+$footerCities = [];
+try {
+    if (function_exists('ecp_footer_top_cities')) {
+        $footerCities = ecp_footer_top_cities(30) ?: [];
+    }
+} catch (\Throwable $e) {
+    error_log('[footer-cities] ' . $e->getMessage());
+    $footerCities = [];
+}
 ?>
 <?php if (!empty($footerCities)): ?>
 <section class="foot-cities">
@@ -45,7 +53,13 @@ $footerCities = ecp_footer_top_cities(30);
         <h4>Doctors near you</h4>
         <ul>
             <?php foreach ($footerCities as $c): ?>
-            <li><a href="/find-a-doctor/<?= e(ecp_slug_for_city($c['city'])) ?>"><?= e($c['city']) ?></a></li>
+                <?php
+                $cityName = (string) ($c['city'] ?? '');
+                if ($cityName === '') continue;
+                $slug = function_exists('ecp_slug_for_city') ? ecp_slug_for_city($cityName) : '';
+                if ($slug === '') continue;
+                ?>
+                <li><a href="/find-a-doctor/<?= e($slug) ?>"><?= e($cityName) ?></a></li>
             <?php endforeach; ?>
             <li><a href="/find-a-doctor" class="foot-cities-more">All cities →</a></li>
         </ul>
