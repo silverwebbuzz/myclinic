@@ -49,11 +49,43 @@ final class PublicBookingService
         if ($normalized === '' || strlen($normalized) < 6) {
             return ['found' => false];
         }
+
+        // 1) Existing chart at THIS clinic — strongest match.
         $patient = PatientService::findByPhone($clinicId, $normalized);
-        if ($patient === null) {
-            return ['found' => false];
+        if ($patient !== null) {
+            return [
+                'found'  => true,
+                'name'   => (string) ($patient['name'] ?? ''),
+                'source' => 'this_clinic',
+            ];
         }
-        return ['found' => true, 'name' => (string) ($patient['name'] ?? '')];
+
+        // 2) Global identity — patient signed up on eclinicpro.com/patient.
+        $identity = \App\Core\QueryBuilder::table('patient_identities')
+            ->where('phone', '=', $normalized)
+            ->first();
+        if ($identity !== null) {
+            return [
+                'found'  => true,
+                'name'   => (string) ($identity['name'] ?? ''),
+                'source' => 'eclinicpro_identity',
+            ];
+        }
+
+        // 3) Patient at another clinic — they're in the system somewhere.
+        $other = \App\Core\QueryBuilder::table('patients')
+            ->where('phone', '=', $normalized)
+            ->where('is_active', '=', 1)
+            ->first();
+        if ($other !== null) {
+            return [
+                'found'  => true,
+                'name'   => (string) ($other['name'] ?? ''),
+                'source' => 'other_clinic',
+            ];
+        }
+
+        return ['found' => false];
     }
 
     public static function isWithinBookingWindow(int $clinicId, string $date): bool

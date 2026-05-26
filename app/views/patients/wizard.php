@@ -10,13 +10,82 @@ $sp = is_array($p['specialty_data'] ?? null) ? $p['specialty_data'] : [];
     <div class="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <div class="mb-6 flex gap-2">
+    <!-- ============ STEP 0: Phone lookup (NEW patients only) ============ -->
+    <div x-show="step === 0" x-cloak class="mx-auto max-w-lg">
+        <div class="rounded-2xl border bg-white p-8 shadow-sm">
+            <div class="mb-6 text-center">
+                <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                </div>
+                <h2 class="text-lg font-semibold text-slate-900">Add new patient</h2>
+                <p class="mt-1 text-sm text-slate-500">Enter the patient's mobile number first — we'll check if they're already in our system.</p>
+            </div>
+
+            <form @submit.prevent="doPhoneLookup()" class="space-y-4">
+                <div>
+                    <label class="text-xs font-semibold uppercase tracking-wider text-slate-500">Mobile number</label>
+                    <div class="mt-1.5 flex overflow-hidden rounded-xl border-2 border-slate-200 focus-within:border-emerald-500">
+                        <span class="border-r-2 border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">+91</span>
+                        <input type="tel" inputmode="numeric" maxlength="14" required autofocus
+                               x-model="lookupPhone"
+                               @input="lookupPhone = lookupPhone.replace(/\D/g, '').slice(0, 12)"
+                               placeholder="98XXXXXXXX"
+                               class="w-full px-4 py-3 text-base focus:outline-none">
+                    </div>
+                </div>
+
+                <p x-show="lookupError" x-cloak class="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800" x-text="lookupError"></p>
+
+                <button type="submit" class="w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                        :disabled="lookupBusy || lookupPhone.length < 10">
+                    <span x-show="!lookupBusy">Continue</span>
+                    <span x-show="lookupBusy" x-cloak>Checking…</span>
+                </button>
+            </form>
+
+            <div class="mt-5 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
+                💡 <strong>Why we ask first:</strong> If this patient already has a profile on eClinicPro
+                (either with you or another clinic), we'll auto-fill the basics so you don't retype.
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ STEP 0.5: Existing chart found (at THIS clinic) ============ -->
+    <div x-show="step === 0 && existingChart" x-cloak class="mx-auto mt-4 max-w-lg">
+        <div class="rounded-2xl border-2 border-amber-300 bg-amber-50 p-6 shadow-sm">
+            <h3 class="flex items-center gap-2 text-base font-semibold text-amber-900">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Patient already exists in your records
+            </h3>
+            <p class="mt-2 text-sm text-amber-800">
+                <strong x-text="existingChart.name"></strong>
+                · UHID <span x-text="existingChart.uhid"></span>
+                already has a chart here.
+            </p>
+            <div class="mt-4 flex gap-2">
+                <a :href="'/patients/' + existingChart.id"
+                   class="flex-1 rounded-lg bg-amber-600 px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-amber-700">
+                    Open existing chart
+                </a>
+                <button type="button" @click="proceedAnyway()"
+                        class="rounded-lg border border-amber-400 bg-white px-4 py-2.5 text-sm font-medium text-amber-800 hover:bg-amber-100">
+                    Register anyway
+                </button>
+            </div>
+            <button type="button" @click="resetLookup()"
+                    class="mt-3 w-full text-center text-xs text-amber-700 hover:underline">
+                ← Search a different number
+            </button>
+        </div>
+    </div>
+
+    <div class="mb-6 flex gap-2" x-show="step >= 1">
         <template x-for="n in 3" :key="n">
             <div class="h-1 flex-1 rounded" :class="step >= n ? 'bg-emerald-600' : 'bg-slate-200'"></div>
         </template>
     </div>
 
-    <form method="post" :action="formAction" enctype="multipart/form-data" @submit="onSubmit">
+    <form method="post" :action="formAction" enctype="multipart/form-data" @submit="onSubmit" x-show="step >= 1">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
         <input type="hidden" name="force_duplicate" :value="forceDuplicate ? '1' : ''">
 
@@ -29,7 +98,14 @@ $sp = is_array($p['specialty_data'] ?? null) ? $p['specialty_data'] : [];
             </div>
             <div>
                 <label class="text-xs font-medium">Phone *</label>
-                <input name="phone" x-model="form.phone" @blur="checkPhone()" required class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                <!-- Phone is locked once Step 0 lookup is done. Receptionist can still
+                     edit it if they made a typo — that re-triggers checkPhone. -->
+                <input name="phone" x-model="form.phone" @blur="checkPhone()" required
+                       class="mt-1 w-full rounded-lg border bg-slate-50 px-3 py-2 text-sm"
+                       :readonly="step >= 1 && lookupPhone === form.phone">
+                <p class="mt-1 text-[11px] text-slate-500" x-show="prefillBanner" x-cloak>
+                    ✓ Verified · already in eClinicPro
+                </p>
             </div>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -188,7 +264,9 @@ function patientWizard(initial, editId) {
     const key = 'mc_patient_draft_' + (editId || 'new');
     const serverDup = <?= json_encode($duplicate ?? null) ?>;
     return {
-        step: 1,
+        // For NEW patients we start at step 0 (phone lookup).
+        // For edits we skip straight to step 1 (no lookup needed).
+        step: editId ? 1 : 0,
         form: { veg_type: 'veg', source: 'walk_in', ...initial },
         formAction: editId ? '/patients/' + editId : '/patients/new',
         prefillBanner: false,
@@ -197,10 +275,85 @@ function patientWizard(initial, editId) {
         duplicateModal: !!serverDup,
         duplicatePatient: serverDup,
         forceDuplicate: false,
+
+        // Step 0 (phone lookup) state
+        lookupPhone: '',
+        lookupBusy:  false,
+        lookupError: '',
+        existingChart: null,
+
         startDraftTimer() {
             const saved = localStorage.getItem(key);
             if (saved && !editId) try { Object.assign(this.form, JSON.parse(saved)); } catch(e) {}
             setInterval(() => localStorage.setItem(key, JSON.stringify(this.form)), 30000);
+        },
+
+        // ----- Phone lookup at the start of new-patient flow -----
+        async doPhoneLookup() {
+            if (this.lookupPhone.length < 10) {
+                this.lookupError = 'Please enter a valid 10-digit number.';
+                return;
+            }
+            this.lookupBusy = true;
+            this.lookupError = '';
+            this.existingChart = null;
+
+            try {
+                const q = new URLSearchParams({ phone: this.lookupPhone });
+                const r = await fetch('/api/v1/patients/check-phone?' + q, { credentials: 'same-origin' });
+                const d = await r.json();
+
+                if (d.status === 'existing_chart') {
+                    // Show "open existing chart" panel — receptionist decides.
+                    this.existingChart = d.patient;
+                    return;
+                }
+
+                if (d.status === 'identity_only' && d.prefill) {
+                    // Auto-fill form fields and show green banner.
+                    const carry = ['name','email','dob','gender','address',
+                                   'blood_group','veg_type','allergies',
+                                   'chronic_conditions'];
+                    for (const f of carry) {
+                        if (d.prefill[f]) {
+                            let v = d.prefill[f];
+                            if (Array.isArray(v)) v = v.join(', ');
+                            if (typeof v === 'string' && v.startsWith('[')) {
+                                try { const arr = JSON.parse(v); if (Array.isArray(arr)) v = arr.join(', '); }
+                                catch (e) {}
+                            }
+                            this.form[f] = v;
+                        }
+                    }
+                    this.prefillSource = d.source || 'identity';
+                    this.prefillBanner = true;
+                }
+
+                // Either way (identity_only or unknown), advance to the form
+                // with the phone already filled.
+                this.form.phone = this.lookupPhone;
+                this.step = 1;
+            } catch (e) {
+                this.lookupError = "Couldn't reach the server. Try again.";
+            } finally {
+                this.lookupBusy = false;
+            }
+        },
+
+        // User clicked "Register anyway" on the existing-chart screen.
+        proceedAnyway() {
+            this.form.phone = this.lookupPhone;
+            this.forceDuplicate = true;
+            this.existingChart = null;
+            this.step = 1;
+        },
+
+        // User clicked "Search a different number".
+        resetLookup() {
+            this.lookupPhone = '';
+            this.lookupError = '';
+            this.existingChart = null;
+            this.prefillBanner = false;
         },
         async checkPhone() {
             if (!this.form.phone) return;

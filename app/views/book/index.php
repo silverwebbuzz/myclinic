@@ -442,32 +442,46 @@ foreach ($doctors ?? [] as $d) {
 
                             <label class="block">
                                 <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Mobile number <span class="text-rose-500">*</span></span>
-                                <div class="mt-1.5 flex gap-2">
-                                    <input type="tel" name="phone" x-model="phone" required inputmode="numeric"
-                                           placeholder="10-digit mobile"
-                                           class="flex-1 rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 ring-brand">
-                                    <button type="button" @click="lookupPatient()" :disabled="!phone || phone.length < 6"
-                                            class="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40">
-                                        Find
-                                    </button>
-                                </div>
+                                <!-- Auto-lookup the moment the patient stops typing — no Find button to click. -->
+                                <input type="tel" name="phone" x-model="phone" required inputmode="numeric"
+                                       maxlength="14"
+                                       @input="phone = phone.replace(/\D/g, '').slice(0, 12); debouncedLookup()"
+                                       placeholder="10-digit mobile"
+                                       class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 ring-brand">
+                                <p class="mt-1 text-[11px] text-slate-500" x-show="phone.length > 0 && phone.length < 10" x-cloak>
+                                    Enter your 10-digit mobile to check if you're in our system.
+                                </p>
                             </label>
 
-                            <template x-if="lookupResult === 'found'">
+                            <!-- Loading shimmer while lookup is in flight -->
+                            <div x-show="lookingUp" x-cloak class="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2.5 text-sm text-slate-600">
+                                <div class="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-brand"></div>
+                                Checking your number…
+                            </div>
+
+                            <!-- Returning patient — name pre-filled, banner -->
+                            <template x-if="!lookingUp && lookupResult === 'found'">
                                 <div class="rounded-lg bg-emerald-50 px-3 py-2.5 text-sm">
-                                    <p class="font-semibold text-emerald-800">👋 Welcome back, <span x-text="foundName"></span></p>
-                                </div>
-                            </template>
-                            <template x-if="lookupResult === 'not_found'">
-                                <div class="rounded-lg bg-sky-50 px-3 py-2.5 text-sm text-sky-800">
-                                    🆕 New patient — please enter your name below.
+                                    <p class="font-semibold text-emerald-800">👋 Welcome back, <span x-text="foundName"></span>!</p>
+                                    <p class="mt-0.5 text-xs text-emerald-700">We've used your saved details. Just confirm the reason below.</p>
                                 </div>
                             </template>
 
-                            <label class="block">
-                                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Full name <span class="text-rose-500">*</span></span>
+                            <!-- Brand new patient — gentle nudge -->
+                            <template x-if="!lookingUp && lookupResult === 'not_found'">
+                                <div class="rounded-lg bg-sky-50 px-3 py-2.5 text-sm text-sky-800">
+                                    🆕 Welcome! Please enter your name below — we'll remember it for next time.
+                                </div>
+                            </template>
+
+                            <label class="block" x-show="!lookingUp && (lookupResult || phone.length >= 10)" x-cloak>
+                                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                    Full name <span class="text-rose-500">*</span>
+                                    <span x-show="lookupResult === 'found'" class="ml-1 font-normal normal-case tracking-normal text-emerald-700">(✓ from your profile)</span>
+                                </span>
                                 <input type="text" name="name" x-model="name" required
                                        placeholder="Your full name"
+                                       :class="lookupResult === 'found' ? 'bg-emerald-50/50' : ''"
                                        class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 ring-brand">
                             </label>
 
@@ -528,10 +542,21 @@ function bookingWizard() {
         phone: '',
         name: '',
         foundName: '',
-        lookupResult: null,
+        lookupResult: null,    // 'found' | 'not_found' | null (untouched)
+        lookingUp: false,
+        _lookupTimer: null,
         submitting: false,
 
         init() { this.loadSlots(); },
+
+        // Auto-trigger lookup ~400ms after the patient stops typing.
+        // (No Find button needed — the input feels reactive on its own.)
+        debouncedLookup() {
+            clearTimeout(this._lookupTimer);
+            this.lookupResult = null;
+            if (this.phone.length < 10) { this.foundName = ''; return; }
+            this._lookupTimer = setTimeout(() => this.lookupPatient(), 400);
+        },
 
         selectDate(d) {
             this.selectedDate = d;
@@ -571,7 +596,8 @@ function bookingWizard() {
         },
 
         async lookupPatient() {
-            if (!this.phone || this.phone.length < 6) return;
+            if (!this.phone || this.phone.length < 10) return;
+            this.lookingUp = true;
             try {
                 const r = await fetch('/book/<?= htmlspecialchars($slug) ?>/lookup?phone=' + encodeURIComponent(this.phone));
                 const data = await r.json();
@@ -584,6 +610,8 @@ function bookingWizard() {
                 }
             } catch (e) {
                 this.lookupResult = null;
+            } finally {
+                this.lookingUp = false;
             }
         },
 
