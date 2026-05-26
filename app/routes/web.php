@@ -40,6 +40,10 @@ use App\Core\RouteRegistrar;
 return static function (RouteRegistrar $router): void {
     $router->get('/health', [HealthController::class, 'index'], 'health');
 
+    // Public landing page on the bare app domain (app.eclinicpro.com/).
+    // If the visitor already has a session, send them straight to /dashboard.
+    $router->get('/', [\App\Controllers\LandingController::class, 'index']);
+
     $router->get('/auth/google', [AuthController::class, 'googleRedirect']);
     $router->get('/auth/google/callback', [AuthController::class, 'googleCallback']);
     $router->get('/api/refresh-token', [AuthController::class, 'refreshToken']);

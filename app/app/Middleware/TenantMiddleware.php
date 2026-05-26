@@ -99,17 +99,41 @@ final class TenantMiddleware implements MiddlewareInterface
 
         $slug = $this->resolveSlug($request);
         if ($slug === null) {
-            return Response::json(['error' => 'Clinic not found'], 404);
+            // We couldn't figure out which clinic this is. The most common
+            // cause is that the user is logged out (or their JWT expired),
+            // so resolveFromAuth() returned null AND we're on the bare
+            // app.eclinicpro.com domain with no slug subdomain.
+            //
+            // For HTML requests, redirect to /login — much better UX than
+            // a JSON 404. AJAX/JSON callers still get the 404 so they can
+            // handle it programmatically.
+            if ($this->wantsJson($request)) {
+                return Response::json(['error' => 'Clinic not found', 'code' => 'auth_required'], 401);
+            }
+            return Response::redirect('/login?next=' . urlencode($request->uri));
         }
 
         $clinic = $this->loadClinic($slug);
         if ($clinic === null || !(int) ($clinic['is_active'] ?? 0)) {
-            return Response::json(['error' => 'Clinic not found'], 404);
+            if ($this->wantsJson($request)) {
+                return Response::json(['error' => 'Clinic not found'], 404);
+            }
+            return Response::redirect('/login?next=' . urlencode($request->uri));
         }
 
         RequestContext::setClinic($clinic);
 
         return $next();
+    }
+
+    private function wantsJson(Request $request): bool
+    {
+        $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
+        $xrw    = $_SERVER['HTTP_X_REQUESTED_WITH'] ?? '';
+        return str_contains($accept, 'application/json')
+            || str_contains($accept, 'text/json')
+            || strcasecmp($xrw, 'XMLHttpRequest') === 0
+            || str_starts_with($request->uri, '/api/');
     }
 
     private function resolveFromAuth(Request $request): ?array
@@ -131,10 +155,12 @@ final class TenantMiddleware implements MiddlewareInterface
 
     private function isExemptPath(string $uri): bool
     {
-        return $uri === '/health'
+        return $uri === '/'                                // public landing page
+            || $uri === '/health'
             || str_starts_with($uri, '/admin')
             || str_starts_with($uri, '/api/v1/rest')
             || str_starts_with($uri, '/api/v1/public')
+            || str_starts_with($uri, '/doctor/login')      // doctor OTP login (no tenant ctx yet)
             || str_starts_with($uri, '/doctors')
             || str_starts_with($uri, '/docs')
             || preg_match('#^/impersonate/[a-f0-9]{64}$#', $uri) === 1
