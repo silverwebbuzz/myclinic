@@ -23,33 +23,82 @@ $DATA = [
     // filter logic; the 'specialty_groups' is what the UI renders.
     'specialty_groups' => [
         [
-            'label' => 'General Physicians & Specialists',
+            'label' => 'General Physicians',
             'items' => [
-                ['id' => 'gp',           'label' => 'General Physician',  'icon' => '🩺'],
-                ['id' => 'eye',          'label' => 'Ophthalmologist',    'icon' => '👁️'],
-                ['id' => 'derma',        'label' => 'Dermatologist',      'icon' => '✨'],
-                ['id' => 'cardio',       'label' => 'Cardiologist',       'icon' => '❤️'],
-                ['id' => 'psychiatrist', 'label' => 'Psychiatrist',       'icon' => '🧠'],
-                ['id' => 'gastro',       'label' => 'Gastroenterologist', 'icon' => '🩻'],
-                ['id' => 'ent',          'label' => 'ENT',                'icon' => '👂'],
-                ['id' => 'gyno',         'label' => 'Gynecologist',       'icon' => '👩‍⚕️'],
-                ['id' => 'neuro',        'label' => 'Neurologist',        'icon' => '🧬'],
-                ['id' => 'urologist',    'label' => 'Urologist',          'icon' => '🩺'],
-                ['id' => 'peds',         'label' => 'Pediatrician',       'icon' => '👶'],
-                ['id' => 'ortho',        'label' => 'Orthopedic',         'icon' => '🦴'],
-                ['id' => 'oncology',     'label' => 'Oncologist',         'icon' => '🎗️'],
-                ['id' => 'pulmonology',  'label' => 'Pulmonologist',      'icon' => '🫁'],
-                ['id' => 'nephrology',   'label' => 'Nephrologist',       'icon' => '🩸'],
+                ['id' => 'gp',              'label' => 'General Physician',     'icon' => '🩺'],
+                ['id' => 'family_medicine', 'label' => 'Family Medicine',       'icon' => '👨‍⚕️'],
+                ['id' => 'peds',            'label' => 'Pediatrician',          'icon' => '👶'],
+                ['id' => 'gyno',            'label' => 'Gynecologist',          'icon' => '👩‍⚕️'],
+            ],
+        ],
+        [
+            'label' => 'Skin, Hair & Eye',
+            'items' => [
+                ['id' => 'derma',          'label' => 'Dermatologist',         'icon' => '✨'],
+                ['id' => 'cosmetology',    'label' => 'Cosmetologist',         'icon' => '💎'],
+                ['id' => 'trichology',     'label' => 'Trichologist (Hair)',   'icon' => '💇'],
+                ['id' => 'eye',            'label' => 'Ophthalmologist',       'icon' => '👁️'],
+            ],
+        ],
+        [
+            'label' => 'Heart, Diabetes & Internal Medicine',
+            'items' => [
+                ['id' => 'cardio',         'label' => 'Cardiologist',          'icon' => '❤️'],
+                ['id' => 'diabetology',    'label' => 'Diabetologist',         'icon' => '💉'],
+                ['id' => 'endocrinology',  'label' => 'Endocrinologist',       'icon' => '🧪'],
+                ['id' => 'gastro',         'label' => 'Gastroenterologist',    'icon' => '🩻'],
+                ['id' => 'hepatology',     'label' => 'Hepatologist (Liver)',  'icon' => '🩸'],
+                ['id' => 'pulmonology',    'label' => 'Pulmonologist',         'icon' => '🫁'],
+                ['id' => 'nephrology',     'label' => 'Nephrologist',          'icon' => '🩸'],
+                ['id' => 'allergy',        'label' => 'Allergist',             'icon' => '🤧'],
+                ['id' => 'rheumatology',   'label' => 'Rheumatologist',        'icon' => '🦴'],
+            ],
+        ],
+        [
+            'label' => 'Brain, Mind & Nerves',
+            'items' => [
+                ['id' => 'neuro',          'label' => 'Neurologist',           'icon' => '🧬'],
+                ['id' => 'psychiatrist',   'label' => 'Psychiatrist',          'icon' => '🧠'],
+            ],
+        ],
+        [
+            'label' => 'Bones, Joints & Sports',
+            'items' => [
+                ['id' => 'ortho',          'label' => 'Orthopedic',            'icon' => '🦴'],
+                ['id' => 'sports_medicine','label' => 'Sports Medicine',       'icon' => '🏃'],
+                ['id' => 'pain_management','label' => 'Pain Management',       'icon' => '💊'],
+            ],
+        ],
+        [
+            'label' => 'Cancer & Blood',
+            'items' => [
+                ['id' => 'oncology',       'label' => 'Oncologist',            'icon' => '🎗️'],
+                ['id' => 'hematology',     'label' => 'Hematologist',          'icon' => '🩸'],
+            ],
+        ],
+        [
+            'label' => 'ENT & Reproductive Health',
+            'items' => [
+                ['id' => 'ent',            'label' => 'ENT',                   'icon' => '👂'],
+                ['id' => 'urologist',      'label' => 'Urologist',             'icon' => '🩺'],
+                ['id' => 'andrology',      'label' => 'Andrologist',           'icon' => '👨'],
+                ['id' => 'fertility',      'label' => 'Fertility / IVF',       'icon' => '🤰'],
+                // 'sexology' is omitted here intentionally (safe=false) but
+                // direct URL access still works for SEO.
             ],
         ],
         [
             'label' => 'Surgeons & Critical Care',
             'items' => [
-                ['id' => 'neurosurgery',  'label' => 'Neurosurgeon',       'icon' => '🧠'],
-                ['id' => 'spine',         'label' => 'Spine Surgeon',     'icon' => '🦴'],
-                ['id' => 'gi_surgery',    'label' => 'GI / Laparoscopic',  'icon' => '🔬'],
-                ['id' => 'radiology',     'label' => 'Radiologist',        'icon' => '📷'],
-                ['id' => 'critical_care', 'label' => 'Critical Care',      'icon' => '🚨'],
+                ['id' => 'general_surgery','label' => 'General Surgeon',       'icon' => '🔪'],
+                ['id' => 'neurosurgery',   'label' => 'Neurosurgeon',          'icon' => '🧠'],
+                ['id' => 'spine',          'label' => 'Spine Surgeon',         'icon' => '🦴'],
+                ['id' => 'gi_surgery',     'label' => 'GI / Laparoscopic',     'icon' => '🔬'],
+                ['id' => 'plastic_surgery','label' => 'Plastic Surgeon',       'icon' => '✨'],
+                ['id' => 'bariatric',      'label' => 'Bariatric Surgeon',     'icon' => '⚖️'],
+                ['id' => 'vascular',       'label' => 'Vascular Surgeon',      'icon' => '🩸'],
+                ['id' => 'radiology',      'label' => 'Radiologist',           'icon' => '📷'],
+                ['id' => 'critical_care',  'label' => 'Critical Care',         'icon' => '🚨'],
             ],
         ],
         [

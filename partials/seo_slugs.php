@@ -52,26 +52,50 @@ function ecp_slug(string $raw): string {
 function ecp_specialty_map(): array {
     return [
         // canonical url slug => [ db value, display label, plural label ]
-        'general-physician' => ['db' => 'gp',             'label' => 'General physician',  'plural' => 'General physicians'],
-        'ophthalmologist'   => ['db' => 'eye',            'label' => 'Ophthalmologist',    'plural' => 'Ophthalmologists'],
-        'dermatologist'     => ['db' => 'derma',          'label' => 'Dermatologist',      'plural' => 'Dermatologists'],
-        'cardiologist'      => ['db' => 'cardio',         'label' => 'Cardiologist',       'plural' => 'Cardiologists'],
-        'psychiatrist'      => ['db' => 'psychiatrist',   'label' => 'Psychiatrist',       'plural' => 'Psychiatrists'],
-        'gastroenterologist'=> ['db' => 'gastro',         'label' => 'Gastroenterologist', 'plural' => 'Gastroenterologists'],
-        'ent-specialist'    => ['db' => 'ent',            'label' => 'ENT specialist',     'plural' => 'ENT specialists'],
-        'gynecologist'      => ['db' => 'gyno',           'label' => 'Gynecologist',       'plural' => 'Gynecologists'],
-        'neurologist'       => ['db' => 'neuro',          'label' => 'Neurologist',        'plural' => 'Neurologists'],
-        'urologist'         => ['db' => 'urologist',      'label' => 'Urologist',          'plural' => 'Urologists'],
-        'pediatrician'      => ['db' => 'peds',           'label' => 'Pediatrician',       'plural' => 'Pediatricians'],
-        'orthopedic'        => ['db' => 'ortho',          'label' => 'Orthopedic doctor',  'plural' => 'Orthopedic doctors'],
-        'oncologist'        => ['db' => 'oncology',       'label' => 'Oncologist',         'plural' => 'Oncologists'],
-        'pulmonologist'     => ['db' => 'pulmonology',    'label' => 'Pulmonologist',      'plural' => 'Pulmonologists'],
-        'nephrologist'      => ['db' => 'nephrology',     'label' => 'Nephrologist',       'plural' => 'Nephrologists'],
-        'neurosurgeon'      => ['db' => 'neurosurgery',   'label' => 'Neurosurgeon',       'plural' => 'Neurosurgeons'],
-        'spine-surgeon'     => ['db' => 'spine',          'label' => 'Spine surgeon',      'plural' => 'Spine surgeons'],
-        'gi-surgeon'        => ['db' => 'gi_surgery',     'label' => 'GI surgeon',         'plural' => 'GI surgeons'],
-        'radiologist'       => ['db' => 'radiology',      'label' => 'Radiologist',        'plural' => 'Radiologists'],
-        'critical-care'     => ['db' => 'critical_care',  'label' => 'Critical care specialist', 'plural' => 'Critical care specialists'],
+        // Each row also has 'safe' => true|false. When false the spec is
+        // indexed by search engines (its city pages still 200 OK) but is
+        // omitted from the homepage hero, footer mega-links, and chip rows.
+        // Used for brand-sensitive specialties like sexology.
+        'general-physician' => ['db' => 'gp',             'label' => 'General physician',  'plural' => 'General physicians',  'safe' => true],
+        'family-medicine'   => ['db' => 'family_medicine','label' => 'Family medicine doctor', 'plural' => 'Family medicine doctors', 'safe' => true],
+        'ophthalmologist'   => ['db' => 'eye',            'label' => 'Ophthalmologist',    'plural' => 'Ophthalmologists',    'safe' => true],
+        'dermatologist'     => ['db' => 'derma',          'label' => 'Dermatologist',      'plural' => 'Dermatologists',      'safe' => true],
+        'cosmetologist'     => ['db' => 'cosmetology',    'label' => 'Cosmetologist',      'plural' => 'Cosmetologists',      'safe' => true],
+        'trichologist'      => ['db' => 'trichology',     'label' => 'Trichologist',       'plural' => 'Trichologists',       'safe' => true],
+        'cardiologist'      => ['db' => 'cardio',         'label' => 'Cardiologist',       'plural' => 'Cardiologists',       'safe' => true],
+        'psychiatrist'      => ['db' => 'psychiatrist',   'label' => 'Psychiatrist',       'plural' => 'Psychiatrists',       'safe' => true],
+        'gastroenterologist'=> ['db' => 'gastro',         'label' => 'Gastroenterologist', 'plural' => 'Gastroenterologists', 'safe' => true],
+        'hepatologist'      => ['db' => 'hepatology',     'label' => 'Hepatologist',       'plural' => 'Hepatologists',       'safe' => true],
+        'ent-specialist'    => ['db' => 'ent',            'label' => 'ENT specialist',     'plural' => 'ENT specialists',     'safe' => true],
+        'gynecologist'      => ['db' => 'gyno',           'label' => 'Gynecologist',       'plural' => 'Gynecologists',       'safe' => true],
+        'fertility-specialist'=>['db' => 'fertility',     'label' => 'Fertility specialist','plural' => 'Fertility specialists','safe' => true],
+        'neurologist'       => ['db' => 'neuro',          'label' => 'Neurologist',        'plural' => 'Neurologists',        'safe' => true],
+        'urologist'         => ['db' => 'urologist',      'label' => 'Urologist',          'plural' => 'Urologists',          'safe' => true],
+        'andrologist'       => ['db' => 'andrology',      'label' => 'Andrologist',        'plural' => 'Andrologists',        'safe' => true],
+        // Sexology: indexable + city-page-accessible, but hidden from
+        // marketing surfaces (homepage tiles, footer, hero chip row).
+        'sexologist'        => ['db' => 'sexology',       'label' => 'Sexologist',         'plural' => 'Sexologists',         'safe' => false],
+        'pediatrician'      => ['db' => 'peds',           'label' => 'Pediatrician',       'plural' => 'Pediatricians',       'safe' => true],
+        'orthopedic'        => ['db' => 'ortho',          'label' => 'Orthopedic doctor',  'plural' => 'Orthopedic doctors',  'safe' => true],
+        'sports-medicine'   => ['db' => 'sports_medicine','label' => 'Sports medicine doctor','plural' => 'Sports medicine doctors','safe' => true],
+        'rheumatologist'    => ['db' => 'rheumatology',   'label' => 'Rheumatologist',     'plural' => 'Rheumatologists',     'safe' => true],
+        'pain-management'   => ['db' => 'pain_management','label' => 'Pain management specialist','plural' => 'Pain management specialists','safe' => true],
+        'oncologist'        => ['db' => 'oncology',       'label' => 'Oncologist',         'plural' => 'Oncologists',         'safe' => true],
+        'hematologist'      => ['db' => 'hematology',     'label' => 'Hematologist',       'plural' => 'Hematologists',       'safe' => true],
+        'pulmonologist'     => ['db' => 'pulmonology',    'label' => 'Pulmonologist',      'plural' => 'Pulmonologists',      'safe' => true],
+        'allergist'         => ['db' => 'allergy',        'label' => 'Allergist',          'plural' => 'Allergists',          'safe' => true],
+        'nephrologist'      => ['db' => 'nephrology',     'label' => 'Nephrologist',       'plural' => 'Nephrologists',       'safe' => true],
+        'diabetologist'     => ['db' => 'diabetology',    'label' => 'Diabetologist',      'plural' => 'Diabetologists',      'safe' => true],
+        'endocrinologist'   => ['db' => 'endocrinology',  'label' => 'Endocrinologist',    'plural' => 'Endocrinologists',    'safe' => true],
+        'neurosurgeon'      => ['db' => 'neurosurgery',   'label' => 'Neurosurgeon',       'plural' => 'Neurosurgeons',       'safe' => true],
+        'spine-surgeon'     => ['db' => 'spine',          'label' => 'Spine surgeon',      'plural' => 'Spine surgeons',      'safe' => true],
+        'gi-surgeon'        => ['db' => 'gi_surgery',     'label' => 'GI surgeon',         'plural' => 'GI surgeons',         'safe' => true],
+        'general-surgeon'   => ['db' => 'general_surgery','label' => 'General surgeon',    'plural' => 'General surgeons',    'safe' => true],
+        'plastic-surgeon'   => ['db' => 'plastic_surgery','label' => 'Plastic surgeon',    'plural' => 'Plastic surgeons',    'safe' => true],
+        'bariatric-surgeon' => ['db' => 'bariatric',      'label' => 'Bariatric surgeon',  'plural' => 'Bariatric surgeons',  'safe' => true],
+        'vascular-surgeon'  => ['db' => 'vascular',       'label' => 'Vascular surgeon',   'plural' => 'Vascular surgeons',   'safe' => true],
+        'radiologist'       => ['db' => 'radiology',      'label' => 'Radiologist',        'plural' => 'Radiologists',        'safe' => true],
+        'critical-care'     => ['db' => 'critical_care',  'label' => 'Critical care specialist', 'plural' => 'Critical care specialists', 'safe' => true],
         'dentist'           => ['db' => 'dental',         'label' => 'Dentist',            'plural' => 'Dentists'],
         'prosthodontist'    => ['db' => 'prosthodontist', 'label' => 'Prosthodontist',     'plural' => 'Prosthodontists'],
         'orthodontist'      => ['db' => 'orthodontist',   'label' => 'Orthodontist',       'plural' => 'Orthodontists'],
@@ -92,11 +116,28 @@ function ecp_specialty_map(): array {
     ];
 }
 
-/** url-slug → ['db' => ..., 'label' => ..., 'plural' => ...] or null */
+/** url-slug → ['db' => ..., 'label' => ..., 'plural' => ..., 'safe' => bool] or null */
 function ecp_specialty_by_slug(string $slug): ?array {
     $slug = strtolower(trim($slug));
     $map = ecp_specialty_map();
-    return $map[$slug] ?? null;
+    if (!isset($map[$slug])) return null;
+    // Default 'safe' to true if the row predates that field.
+    return $map[$slug] + ['safe' => true];
+}
+
+/**
+ * @return array<string,array{db:string,label:string,plural:string,safe:bool}>
+ *         The catalog filtered to brand-safe specialties only.
+ *         Use this on homepage hero, footer mega-cities, and SEO hero chips.
+ *         The full map is still used for indexing + direct URL access.
+ */
+function ecp_specialty_map_safe(): array {
+    $out = [];
+    foreach (ecp_specialty_map() as $slug => $info) {
+        if (($info['safe'] ?? true) === false) continue;
+        $out[$slug] = $info + ['safe' => true];
+    }
+    return $out;
 }
 
 /** db-value → url-slug. Returns null if not in our SEO map (won't be linked). */
@@ -389,6 +430,10 @@ function ecp_seo_also_specialties(array $seoMeta): array {
             if ($sSlug === null) continue;
             $info = ecp_specialty_by_slug($sSlug);
             if ($info === null) continue;
+            // Brand-safety filter: skip specialties marked safe=false
+            // (currently just sexology). They're still indexable and
+            // reachable by direct URL — just not surfaced in chip rows.
+            if (($info['safe'] ?? true) === false) continue;
             $out[] = [
                 'label' => $info['plural'],
                 'url'   => "/find-a-doctor/{$sSlug}-in-{$citySlug}",
