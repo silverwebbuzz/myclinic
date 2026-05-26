@@ -44,6 +44,101 @@ final class PatientService
     }
 
     /**
+     * Smart phone lookup used by reception / doctor "Add patient" flows.
+     *
+     * Returns one of:
+     *   ['status' => 'existing_chart', 'patient' => array]
+     *       — the person already has a chart at this clinic.
+     *
+     *   ['status' => 'identity_only', 'identity' => array, 'prefill' => array]
+     *       — the person is on eClinicPro (signed up at /patient) or has
+     *         a chart at another clinic, but has no chart here yet. The
+     *         caller pre-fills the new-patient form from `prefill` and
+     *         creates the chart (identity_id will be set automatically by
+     *         mapPayload's resolveIdentityId helper).
+     *
+     *   ['status' => 'unknown']
+     *       — phone has never been seen anywhere. Caller shows a blank
+     *         form to enter all details.
+     *
+     * The point: a doctor never re-enters a patient's basics. Identity
+     * data flows automatically; clinic data stays clinic-private.
+     */
+    public static function findOrPreFillByPhone(int $clinicId, string $phone): array
+    {
+        $normalized = self::normalizePhone($phone);
+        if ($normalized === '') {
+            return ['status' => 'unknown'];
+        }
+
+        // 1) Existing chart at THIS clinic wins — load it as-is.
+        $chart = self::findByPhone($clinicId, $normalized);
+        if ($chart !== null) {
+            return ['status' => 'existing_chart', 'patient' => $chart];
+        }
+
+        // 2) Look for a global identity (patient signed up on /patient).
+        $identity = QueryBuilder::table('patient_identities')
+            ->where('phone', '=', $normalized)
+            ->first();
+
+        // 3) Or a chart at ANOTHER clinic (walk-in patient who never signed
+        //    up online but is known to the system). Use the freshest chart.
+        $otherChart = null;
+        if ($identity === null) {
+            $candidates = QueryBuilder::table('patients')
+                ->where('phone', '=', $normalized)
+                ->where('is_active', '=', 1)
+                ->orderBy('updated_at', 'DESC')
+                ->limit(1)
+                ->get();
+            $otherChart = $candidates[0] ?? null;
+        }
+
+        if ($identity === null && $otherChart === null) {
+            return ['status' => 'unknown'];
+        }
+
+        // Shape a "prefill" payload — only the fields the patient owns
+        // globally. Notes / surgeries / clinic-private bits stay empty.
+        $prefill = self::buildPrefill($identity, $otherChart);
+
+        return [
+            'status'   => 'identity_only',
+            'identity' => $identity ?: null,
+            'other_chart_clinic_id' => $otherChart['clinic_id'] ?? null,
+            'prefill'  => $prefill,
+        ];
+    }
+
+    /**
+     * Build a pre-fill payload for the new-patient form from an existing
+     * identity or another clinic's chart. Only carries patient-owned data.
+     */
+    private static function buildPrefill(?array $identity, ?array $otherChart): array
+    {
+        $src = $identity ?? $otherChart ?? [];
+        return [
+            'name'        => $src['name'] ?? '',
+            'phone'       => $src['phone'] ?? '',
+            'email'       => $src['email'] ?? '',
+            'dob'         => $src['dob'] ?? '',
+            'gender'      => $src['gender'] ?? '',
+            'blood_group' => $src['blood_group'] ?? '',
+            'veg_type'    => $src['veg_type'] ?? 'veg',
+            // Carry-forward of allergies/chronic only from identity, since
+            // those are patient-owned. From another clinic's chart they
+            // belong to THAT clinic and should not auto-share without consent.
+            'allergies'           => $identity['allergies'] ?? '',
+            'chronic_conditions'  => $identity['chronic_conditions'] ?? '',
+            // Address only from identity (patient-curated).
+            'address'     => $identity['address_line1'] ?? ($identity['address'] ?? ''),
+            // Source flag so UI can show the "this person is on eClinicPro" badge.
+            '_source'     => $identity ? 'identity' : 'other_clinic',
+        ];
+    }
+
+    /**
      * @param array<string, mixed> $filters
      * @return array{rows: list<array<string, mixed>>, total: int, page: int, per_page: int}
      */
@@ -324,7 +419,25 @@ final class PatientService
             'referred_by' => trim((string) ($payload['referred_by'] ?? '')) ?: null,
             'source' => in_array($payload['source'] ?? 'walk_in', ['walk_in', 'referral', 'online', 'camp', 'other'], true)
                 ? $payload['source'] : 'walk_in',
+            // Link to the global patient_identities row when possible:
+            //   1) Caller passed identity_id explicitly (booking flow does this).
+            //   2) Otherwise look up by normalized phone.
+            // Either way, the link stays NULL if no identity exists yet.
+            'identity_id' => self::resolveIdentityId($payload),
         ];
+    }
+
+    /**
+     * Resolve the patient_identities.id this new patient row should link to.
+     * Caller can pass identity_id directly; otherwise we look up by phone.
+     */
+    private static function resolveIdentityId(array $payload): ?int
+    {
+        if (!empty($payload['identity_id'])) return (int) $payload['identity_id'];
+        $phone = self::normalizePhone((string) ($payload['phone'] ?? ''));
+        if ($phone === '') return null;
+        $row = QueryBuilder::table('patient_identities')->where('phone', '=', $phone)->first();
+        return $row ? (int) $row['id'] : null;
     }
 
     /** @return array{0: string, 1: int} */

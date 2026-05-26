@@ -75,13 +75,29 @@ final class PublicBookingService
         }
 
         $phone = PatientService::normalizePhone((string) ($data['phone'] ?? ''));
+
+        // ----- Identity linking -----
+        // Look up patient_identities by the same phone. If the booker has
+        // signed up on eclinicpro.com/patient, this gives us their global
+        // identity id — we'll stamp it on the clinic chart so /patient's
+        // booking history can find this appointment.
+        $identityId = self::resolveIdentityByPhone($phone);
+
+        // Find the per-clinic chart (one patients row per clinic).
         $patient = $phone !== '' ? PatientService::findByPhone($clinicId, $phone) : null;
         if ($patient === null) {
             $patient = PatientService::create($clinicId, [
-                'name' => $data['name'] ?? 'Patient',
-                'phone' => $data['phone'] ?? '',
-                'source' => 'online',
+                'name'        => $data['name'] ?? 'Patient',
+                'phone'       => $data['phone'] ?? '',
+                'source'      => 'online',
+                'identity_id' => $identityId,    // may be null — that's fine
             ]);
+        } elseif ($identityId !== null && empty($patient['identity_id'])) {
+            // Existing clinic chart, but no identity link yet — backfill it.
+            \App\Core\QueryBuilder::table('patients')
+                ->where('id', '=', (int) $patient['id'])
+                ->update(['identity_id' => $identityId]);
+            $patient['identity_id'] = $identityId;
         }
 
         $appointment = AppointmentService::create($clinicId, [
@@ -95,5 +111,18 @@ final class PublicBookingService
         ]);
 
         return ['patient' => $patient, 'appointment' => $appointment];
+    }
+
+    /**
+     * Look up the patient_identities row that owns this phone, if any.
+     * Returns the identity id or null.
+     */
+    private static function resolveIdentityByPhone(string $normalizedPhone): ?int
+    {
+        if ($normalizedPhone === '') return null;
+        $row = \App\Core\QueryBuilder::table('patient_identities')
+            ->where('phone', '=', $normalizedPhone)
+            ->first();
+        return $row ? (int) $row['id'] : null;
     }
 }

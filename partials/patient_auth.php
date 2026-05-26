@@ -178,10 +178,47 @@ function ecp_patient_verify_otp(string $rawPhone, string $code, ?string $name = 
         }
     }
 
+    // Backfill: link any existing clinic charts (`patients` rows) that share
+    // this phone but have no identity yet. This is how a doctor's walk-in
+    // patient gets connected to their global identity the moment they
+    // sign up on /patient.
+    ecp_patient_backfill_clinic_charts((int) $identity['id'], $phone);
+
     // Start session.
     ecp_patient_session_start((int) $identity['id']);
 
     return ['ok' => true, 'identity' => $identity, 'is_new' => $isNew];
+}
+
+/**
+ * Find all clinic `patients` rows that share this phone but have no
+ * identity_id yet, and link them. Safe to re-run.
+ */
+function ecp_patient_backfill_clinic_charts(int $identityId, string $normalizedPhone): void {
+    if ($identityId <= 0 || $normalizedPhone === '') return;
+    $db = ecp_db();
+    if (!$db) return;
+
+    // The clinic side normalizes phones differently (PatientService strips +/spaces).
+    // Match on the raw digits to be safe.
+    $digits = preg_replace('/\D/', '', $normalizedPhone) ?? '';
+    // Indian numbers: try the +91-stripped 10-digit form too.
+    $ten = (strlen($digits) === 12 && str_starts_with($digits, '91')) ? substr($digits, 2) : $digits;
+
+    $stmt = $db->prepare(
+        'UPDATE patients
+         SET identity_id = :iid
+         WHERE identity_id IS NULL
+           AND (
+                REPLACE(REPLACE(REPLACE(phone, " ", ""), "-", ""), "+", "") = :d
+             OR REPLACE(REPLACE(REPLACE(phone, " ", ""), "-", ""), "+", "") = :t
+           )'
+    );
+    $stmt->execute([
+        'iid' => $identityId,
+        'd'   => $digits,
+        't'   => $ten,
+    ]);
 }
 
 // ---------------------------------------------------------------------

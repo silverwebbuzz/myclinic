@@ -266,22 +266,52 @@ final class PatientController
             return $denied;
         }
 
-        $clinicId = (int) RequestContext::clinicId();
-        $phone = $request->query['phone'] ?? '';
+        $clinicId  = (int) RequestContext::clinicId();
+        $phone     = (string) ($request->query['phone'] ?? '');
         $excludeId = (int) ($request->query['exclude_id'] ?? 0);
-        $existing = PatientService::findByPhone($clinicId, (string) $phone);
 
-        if ($existing !== null && $excludeId > 0 && (int) $existing['id'] === $excludeId) {
-            $existing = null;
+        // Smart lookup — checks this clinic first, then global identity,
+        // then other clinics. See PatientService::findOrPreFillByPhone()
+        // for the matrix of return shapes.
+        $res = PatientService::findOrPreFillByPhone($clinicId, $phone);
+
+        // If we're editing an existing patient and the chart we found IS
+        // the one being edited, treat as not-found (no duplicate warning).
+        if ($res['status'] === 'existing_chart'
+            && $excludeId > 0
+            && (int) ($res['patient']['id'] ?? 0) === $excludeId
+        ) {
+            $res = ['status' => 'unknown'];
+        }
+
+        if ($res['status'] === 'existing_chart') {
+            $p = $res['patient'];
+            return Response::json([
+                'status'  => 'existing_chart',
+                'exists'  => true,                  // backward-compat with old UI
+                'patient' => [
+                    'id'   => $p['id'],
+                    'name' => $p['name'],
+                    'uhid' => $p['uhid'],
+                ],
+            ]);
+        }
+
+        if ($res['status'] === 'identity_only') {
+            // Pre-filled new-patient form data. UI shows a banner like:
+            // "This person is registered on eClinicPro — we've pre-filled their basic info."
+            return Response::json([
+                'status'  => 'identity_only',
+                'exists'  => false,
+                'prefill' => $res['prefill'],
+                'source'  => $res['prefill']['_source'] ?? 'identity',
+            ]);
         }
 
         return Response::json([
-            'exists' => $existing !== null,
-            'patient' => $existing ? [
-                'id' => $existing['id'],
-                'name' => $existing['name'],
-                'uhid' => $existing['uhid'],
-            ] : null,
+            'status'  => 'unknown',
+            'exists'  => false,
+            'patient' => null,
         ]);
     }
 
