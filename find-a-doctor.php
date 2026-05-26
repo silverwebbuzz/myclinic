@@ -195,27 +195,70 @@ require __DIR__ . '/partials/header.php';
 <div x-data="findDoctor()" x-init="init()" x-cloak>
 
 <?php if ($seoMeta): ?>
-<!-- ============ SEO HERO (slim, focused, no clutter) ============ -->
+<?php
+// Pre-compute SEO hero state once.
+$currentCity     = $seoMeta['city']['city'];
+$currentState    = $seoMeta['city']['state'] ?? '';
+$currentCitySlug = ecp_slug_for_city($currentCity);
+$currentSpec     = $seoMeta['specialty'] ?? null;
+$currentSpecSlug = $currentSpec ? ecp_slug_for_db_specialty($currentSpec['db']) : null;
+
+$topCities = ecp_seo_top_cities(12);
+$alsoSpecs = ecp_seo_also_specialties($seoMeta);
+
+// Helper closure: given a city slug, build the URL preserving specialty.
+$cityUrl = static function (string $citySlug) use ($currentSpecSlug): string {
+    return $currentSpecSlug
+        ? "/find-a-doctor/{$currentSpecSlug}-in-{$citySlug}"
+        : "/find-a-doctor/{$citySlug}";
+};
+?>
+<!-- ============ SEO HERO (clean, focused, link-driven) ============ -->
 <section class="fd-seo-hero">
     <div class="wrap-wide">
+
         <nav class="fd-crumbs" aria-label="Breadcrumb">
             <a href="/">Home</a>
             <span>›</span>
             <a href="/find-a-doctor">Doctors</a>
             <span>›</span>
-            <?php if (!empty($seoMeta['specialty'])): ?>
-                <a href="/find-a-doctor/<?= e(ecp_slug_for_city($seoMeta['city']['city'])) ?>"><?= e($seoMeta['city']['city']) ?></a>
+            <?php if ($currentSpec): ?>
+                <a href="/find-a-doctor/<?= e($currentCitySlug) ?>"><?= e($currentCity) ?></a>
                 <span>›</span>
-                <span class="current"><?= e($seoMeta['specialty']['plural']) ?></span>
+                <span class="current"><?= e($currentSpec['plural']) ?></span>
             <?php else: ?>
-                <span class="current"><?= e($seoMeta['city']['city']) ?></span>
+                <span class="current"><?= e($currentCity) ?></span>
             <?php endif; ?>
         </nav>
 
         <h1 class="fd-seo-h1"><?= e($seoMeta['h1']) ?></h1>
         <p class="fd-seo-lede"><?= e($seoMeta['intro']) ?></p>
 
-        <!-- Trust tiles — replaces the messy inline strip -->
+        <!-- City switcher pill (under lede). Click → menu of major cities. -->
+        <div class="fd-city-switch" x-data="{ open: false }" @click.outside="open = false">
+            <button type="button" class="fd-city-switch-btn" @click="open = !open" :aria-expanded="open">
+                📍 <span><?= e($currentCity) ?></span>
+                <?php if ($currentState): ?><span class="fd-city-state">· <?= e($currentState) ?></span><?php endif; ?>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" :class="open ? 'rot' : ''"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="fd-city-menu" x-show="open" x-transition.opacity x-cloak>
+                <div class="fd-city-menu-head">
+                    <?= $currentSpec ? 'Find ' . e(strtolower($currentSpec['plural'])) . ' in another city' : 'Browse another city' ?>
+                </div>
+                <ul>
+                    <?php foreach ($topCities as $c): ?>
+                        <?php if ($c['slug'] === $currentCitySlug) continue; ?>
+                        <li><a href="<?= e($cityUrl($c['slug'])) ?>">
+                            <span class="nm"><?= e($c['city']) ?></span>
+                            <span class="ct"><?= ecp_num($c['count']) ?></span>
+                        </a></li>
+                    <?php endforeach; ?>
+                </ul>
+                <a href="/find-a-doctor" class="fd-city-menu-more">All cities →</a>
+            </div>
+        </div>
+
+        <!-- Trust tiles -->
         <div class="fd-seo-tiles">
             <div class="fd-seo-tile">
                 <div class="fd-seo-tile-num"><?= ecp_num($seoMeta['doctor_count']) ?></div>
@@ -227,7 +270,7 @@ require __DIR__ . '/partials/header.php';
             </div>
             <div class="fd-seo-tile">
                 <div class="fd-seo-tile-num">30s</div>
-                <div class="fd-seo-tile-lbl">Avg. booking time</div>
+                <div class="fd-seo-tile-lbl">Avg. booking</div>
             </div>
             <div class="fd-seo-tile">
                 <div class="fd-seo-tile-num">₹0</div>
@@ -235,12 +278,28 @@ require __DIR__ . '/partials/header.php';
             </div>
         </div>
 
-        <!-- Compact search — just doctor name, city is locked -->
+        <!-- Compact search -->
         <div class="fd-seo-search">
             <span class="ico">🔍</span>
             <input type="text" x-model="q"
-                   placeholder="Search <?= e($seoMeta['specialty']['plural'] ?? 'doctors') ?> in <?= e($seoMeta['city']['city']) ?> by name…">
+                   placeholder="Search <?= e(strtolower($currentSpec['plural'] ?? 'doctors')) ?> in <?= e($currentCity) ?> by name…">
         </div>
+
+        <!-- Specialty pills as REAL LINKS (SEO-friendly internal links) -->
+        <?php if (!empty($alsoSpecs) || $currentSpec): ?>
+        <div class="fd-seo-spec-row">
+            <a href="/find-a-doctor/<?= e($currentCitySlug) ?>"
+               class="fd-seo-spec <?= $currentSpec ? '' : 'is-active' ?>">All specialties</a>
+            <?php if ($currentSpec): ?>
+                <a class="fd-seo-spec is-active" aria-current="page">
+                    <?= e($currentSpec['plural']) ?>
+                </a>
+            <?php endif; ?>
+            <?php foreach ($alsoSpecs as $s): ?>
+                <a href="<?= e($s['url']) ?>" class="fd-seo-spec"><?= e($s['label']) ?></a>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
     </div>
 </section>
 <?php else: ?>

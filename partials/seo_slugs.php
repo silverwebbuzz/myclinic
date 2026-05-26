@@ -277,6 +277,46 @@ function _ecp_resolve_city_only(string $citySlug): array {
 }
 
 /**
+ * Top cities in absolute terms — used in the hero "Change city" pill.
+ * Always returns same list regardless of current page so user can switch
+ * to any major city. Returns at most $limit.
+ */
+function ecp_seo_top_cities(int $limit = 12): array {
+    static $cache = null;
+    if ($cache !== null) return array_slice($cache, 0, $limit);
+
+    $db = ecp_db();
+    if (!$db) return [];
+    try {
+        $stmt = $db->query(
+            "SELECT city, state, COUNT(*) AS n
+             FROM directory_doctors
+             WHERE is_active = 1 AND status = 'OPERATIONAL'
+               AND city IS NOT NULL AND city <> ''
+             GROUP BY city, state
+             HAVING n >= 5
+             ORDER BY n DESC
+             LIMIT 50"
+        );
+        $out = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $slug = ecp_slug((string) $r['city']);
+            if ($slug === '') continue;
+            $out[] = [
+                'city'  => $r['city'],
+                'state' => $r['state'] ?? '',
+                'slug'  => $slug,
+                'count' => (int) $r['n'],
+            ];
+        }
+        $cache = $out;
+        return array_slice($cache, 0, $limit);
+    } catch (Throwable $e) {
+        return $cache = [];
+    }
+}
+
+/**
  * Top cities for the "Also browse" block on an SEO page.
  * Skips the current city. Returns at most 8.
  */
