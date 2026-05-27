@@ -94,13 +94,65 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
 
         <div class="space-y-5 px-5 py-5">
 
-            <!-- ---- SYMPTOMS (always visible; Phase 3 turns this into chips) ---- -->
-            <div>
-                <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Symptoms / Chief complaint</label>
-                <textarea x-model="chief_complaint" :disabled="!editable"
-                          rows="2"
-                          placeholder="e.g. Fever 3 days, body ache, cough"
-                          class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
+            <!-- ---- SYMPTOMS — chip picker with autocomplete (Phase 3) ---- -->
+            <div x-data="symptomPicker()">
+                <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Symptoms</label>
+
+                <!-- Selected chips -->
+                <div class="mt-1.5 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2 py-1.5
+                            focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500">
+                    <template x-for="(s, idx) in symptoms" :key="idx">
+                        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800">
+                            <span x-text="s.label"></span>
+                            <button type="button" :disabled="!editable" @click="removeSymptom(idx); persistSymptoms()"
+                                    class="text-emerald-700 hover:text-rose-600 disabled:opacity-50"
+                                    title="Remove">×</button>
+                        </span>
+                    </template>
+
+                    <input type="text" x-model="query" :disabled="!editable"
+                           @input.debounce.250ms="search()"
+                           @focus="search()"
+                           @keydown.enter.prevent="addCurrentOrFirst()"
+                           @keydown.backspace="if (!query) removeSymptom(symptoms.length - 1)"
+                           placeholder="Type a symptom and press Enter"
+                           class="flex-1 min-w-[180px] border-0 bg-transparent p-0.5 text-sm focus:outline-none focus:ring-0">
+                </div>
+
+                <!-- Suggestion dropdown -->
+                <div x-show="suggestions.length && showSuggestions" x-cloak
+                     @click.outside="showSuggestions = false"
+                     class="relative">
+                    <ul class="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-lg border bg-white shadow-lg">
+                        <template x-for="(sug, i) in suggestions" :key="sug.label + i">
+                            <li>
+                                <button type="button" @click="addSymptom(sug); persistSymptoms()"
+                                        class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm hover:bg-emerald-50">
+                                    <span x-text="sug.label"></span>
+                                    <span class="text-xs uppercase tracking-wider"
+                                          :class="sug.source === 'personal' ? 'text-emerald-700' : 'text-slate-400'"
+                                          x-text="sug.source"></span>
+                                </button>
+                            </li>
+                        </template>
+                        <template x-if="query.trim().length >= 2 && !exactMatch(query)">
+                            <li class="border-t">
+                                <button type="button" @click="addCustom(query); persistSymptoms()"
+                                        class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-slate-600 hover:bg-emerald-50">
+                                    + Add <strong x-text="query"></strong> as custom
+                                </button>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+
+                <!-- Free-text complaint fallback (kept for migration parity + voice notes) -->
+                <details class="mt-2">
+                    <summary class="cursor-pointer text-xs text-slate-500 hover:text-slate-700">+ Narrative complaint (optional)</summary>
+                    <textarea x-model="chief_complaint" :disabled="!editable" rows="2"
+                              placeholder="Free-text complaint, in patient's own words"
+                              class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
+                </details>
             </div>
 
             <!-- ---- DIAGNOSIS (always visible) ---- -->
@@ -129,8 +181,8 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 </div>
             </div>
 
-            <!-- ---- PRESCRIPTION (always visible) ---- -->
-            <div>
+            <!-- ---- PRESCRIPTION ---- -->
+            <div x-data="prescriptionPanel()" x-init="loadTemplates()">
                 <div class="flex items-baseline justify-between">
                     <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Prescription</label>
                     <button type="button" :disabled="!editable" @click="cloneLastVisit()"
@@ -144,43 +196,199 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                        x-text="lastVisitNote"></p>
                 </template>
 
+                <!-- Template chips -->
+                <div x-show="templates.length || suggestions.length" class="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span class="text-xs text-slate-500">Apply:</span>
+                    <template x-for="tpl in templates.slice(0, 5)" :key="tpl.id">
+                        <button type="button" :disabled="!editable" @click="applyTemplate(tpl.id)"
+                                class="rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs hover:border-emerald-500 hover:text-emerald-700 disabled:opacity-50">
+                            <span x-text="tpl.name"></span>
+                        </button>
+                    </template>
+                    <template x-if="templates.length > 5">
+                        <details class="relative">
+                            <summary class="cursor-pointer rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs hover:border-emerald-500">More…</summary>
+                            <div class="absolute z-10 mt-1 w-56 max-h-64 overflow-y-auto rounded-lg border bg-white shadow-lg p-1">
+                                <template x-for="tpl in templates.slice(5)" :key="tpl.id">
+                                    <button type="button" :disabled="!editable" @click="applyTemplate(tpl.id)"
+                                            class="block w-full rounded px-2 py-1 text-left text-xs hover:bg-emerald-50 disabled:opacity-50">
+                                        <span x-text="tpl.name"></span>
+                                        <span class="text-slate-400" x-show="tpl.use_count > 0" x-text="' · ' + tpl.use_count + ' uses'"></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </details>
+                    </template>
+                </div>
+
+                <!-- Auto-discovered suggestions: "you often prescribe these — save as template?" -->
+                <template x-for="sug in suggestions" :key="sug.id">
+                    <div class="mt-2 flex items-center justify-between gap-2 rounded-lg border border-dashed border-amber-300 bg-amber-50/50 p-2 text-xs">
+                        <span class="text-amber-900" x-text="sug.description + ' (' + sug.name + ')'"></span>
+                        <div class="flex gap-2">
+                            <button type="button" @click="activateSuggestion(sug)" class="font-semibold text-emerald-700 hover:underline">Save as template</button>
+                            <button type="button" @click="dismissSuggestion(sug.id)" class="text-slate-500 hover:underline">Dismiss</button>
+                        </div>
+                    </div>
+                </template>
+
                 <div class="mt-2 space-y-2">
                     <template x-for="(line, idx) in prescriptions" :key="idx">
-                        <div class="grid items-center gap-2 rounded-lg border border-slate-200 p-2 sm:grid-cols-12">
-                            <input type="text" :disabled="!editable"
-                                   x-model="line.drug_name"
-                                   @input.debounce.300ms="searchDrug(idx, line.drug_name)"
-                                   placeholder="Medicine"
-                                   class="sm:col-span-4 rounded border px-2 py-1 text-sm">
-                            <select :disabled="!editable" x-model="line.frequency_preset"
-                                    class="sm:col-span-2 rounded border px-2 py-1 text-xs">
-                                <option value="">Frequency…</option>
-                                <option value="1-0-0">1-0-0</option>
-                                <option value="0-0-1">0-0-1</option>
-                                <option value="1-0-1">1-0-1</option>
-                                <option value="1-1-1">1-1-1</option>
-                                <option value="1-1-1-1">1-1-1-1</option>
-                                <option value="0-1-0">0-1-0</option>
-                                <option value="SOS">SOS</option>
-                            </select>
-                            <input type="number" min="1" max="90" :disabled="!editable"
-                                   x-model="line.duration_days"
-                                   placeholder="Days"
-                                   class="sm:col-span-2 rounded border px-2 py-1 text-xs">
-                            <select :disabled="!editable" x-model="line.food_timing"
-                                    class="sm:col-span-2 rounded border px-2 py-1 text-xs">
-                                <option value="any">Any time</option>
-                                <option value="before">Before food</option>
-                                <option value="after">After food</option>
-                                <option value="empty">Empty stomach</option>
-                                <option value="bedtime">At bedtime</option>
-                            </select>
-                            <button type="button" :disabled="!editable" @click="removeRxLine(idx)"
-                                    class="sm:col-span-1 text-xs text-rose-600 hover:underline"
-                                    title="Remove">×</button>
-                            <input type="text" :disabled="!editable" x-model="line.instructions"
-                                   placeholder="Optional instructions"
-                                   class="sm:col-span-12 rounded border border-slate-100 px-2 py-1 text-xs">
+                        <div class="rounded-lg border border-slate-200 bg-white">
+                            <!-- Main row -->
+                            <div class="grid items-center gap-2 p-2 sm:grid-cols-12">
+                                <div class="sm:col-span-4 relative">
+                                    <input type="text" :disabled="!editable"
+                                           x-model="line.drug_name"
+                                           @input.debounce.250ms="searchDrugFor(idx, line.drug_name)"
+                                           @focus="line._dropdown = true"
+                                           @click.outside="line._dropdown = false"
+                                           placeholder="Medicine"
+                                           class="w-full rounded border px-2 py-1 text-sm">
+                                    <ul x-show="line._dropdown && (line._suggestions || []).length"
+                                        class="absolute z-10 mt-1 w-full max-h-44 overflow-y-auto rounded-lg border bg-white shadow-lg">
+                                        <template x-for="d in (line._suggestions || [])" :key="d.id">
+                                            <li>
+                                                <button type="button"
+                                                        @click="pickDrugFor(idx, d)"
+                                                        class="block w-full px-2 py-1 text-left text-xs hover:bg-emerald-50">
+                                                    <span x-text="d.name"></span>
+                                                    <span class="text-slate-400" x-show="d.strength" x-text="' ' + d.strength"></span>
+                                                </button>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </div>
+
+                                <select :disabled="!editable || !!line.tapering_steps" x-model="line.frequency_preset"
+                                        class="sm:col-span-2 rounded border px-2 py-1 text-xs">
+                                    <option value="">Frequency…</option>
+                                    <option value="1-0-0">1-0-0</option>
+                                    <option value="0-0-1">0-0-1</option>
+                                    <option value="1-0-1">1-0-1</option>
+                                    <option value="1-1-1">1-1-1</option>
+                                    <option value="1-1-1-1">1-1-1-1</option>
+                                    <option value="0-1-0">0-1-0</option>
+                                    <option value="SOS">SOS</option>
+                                </select>
+                                <input type="number" min="1" max="90"
+                                       :disabled="!editable || !!line.tapering_steps"
+                                       x-model="line.duration_days"
+                                       placeholder="Days"
+                                       class="sm:col-span-2 rounded border px-2 py-1 text-xs">
+                                <select :disabled="!editable" x-model="line.food_timing"
+                                        class="sm:col-span-2 rounded border px-2 py-1 text-xs">
+                                    <option value="any">Any time</option>
+                                    <option value="before">Before food</option>
+                                    <option value="after">After food</option>
+                                    <option value="empty">Empty stomach</option>
+                                    <option value="bedtime">At bedtime</option>
+                                </select>
+                                <div class="sm:col-span-2 flex items-center justify-end gap-2 text-xs">
+                                    <button type="button" :disabled="!editable" @click="line._drawer = !line._drawer"
+                                            class="rounded border border-slate-300 px-1.5 py-0.5 text-slate-600 hover:border-emerald-500 hover:text-emerald-700 disabled:opacity-50"
+                                            title="Advanced">⋮</button>
+                                    <button type="button" :disabled="!editable" @click="removeRxLine(idx)"
+                                            class="text-rose-600 hover:underline"
+                                            title="Remove">×</button>
+                                </div>
+
+                                <!-- Tapering summary chip — replaces preset+duration when tapering active -->
+                                <template x-if="line.tapering_steps && line.tapering_steps.length">
+                                    <div class="sm:col-span-12 mt-1 rounded bg-slate-100 px-2 py-1 text-xs text-slate-700">
+                                        Tapering schedule — <span x-text="line.tapering_steps.length + ' step' + (line.tapering_steps.length === 1 ? '' : 's')"></span>,
+                                        <span x-text="taperingTotalDays(line.tapering_steps) + ' days total'"></span>
+                                    </div>
+                                </template>
+
+                                <input type="text" :disabled="!editable" x-model="line.instructions"
+                                       placeholder="Optional instructions"
+                                       class="sm:col-span-12 rounded border border-slate-100 px-2 py-1 text-xs">
+                            </div>
+
+                            <!-- [⋮] Drawer — per-row advanced options -->
+                            <div x-show="line._drawer" x-collapse class="border-t border-slate-100 bg-slate-50/60 p-3 text-xs space-y-3">
+                                <div class="grid gap-2 sm:grid-cols-3">
+                                    <label class="block">
+                                        <span class="text-slate-600">Dose unit</span>
+                                        <select :disabled="!editable" x-model="line.dose_unit"
+                                                class="mt-1 w-full rounded border px-2 py-1">
+                                            <option value="">—</option>
+                                            <option value="tablet">Tablet</option>
+                                            <option value="capsule">Capsule</option>
+                                            <option value="ml">ml</option>
+                                            <option value="drops">Drops</option>
+                                            <option value="sachet">Sachet</option>
+                                            <option value="puff">Puff</option>
+                                            <option value="unit">Unit</option>
+                                        </select>
+                                    </label>
+                                    <label class="block">
+                                        <span class="text-slate-600">Dose amount</span>
+                                        <input type="number" step="0.01" :disabled="!editable" x-model="line.dose_amount"
+                                               class="mt-1 w-full rounded border px-2 py-1">
+                                    </label>
+                                    <label class="block">
+                                        <span class="text-slate-600">Mix with</span>
+                                        <select :disabled="!editable" x-model="line.mix_with"
+                                                class="mt-1 w-full rounded border px-2 py-1">
+                                            <option value="">—</option>
+                                            <option value="water">Water</option>
+                                            <option value="milk">Milk</option>
+                                            <option value="warm water">Warm water</option>
+                                            <option value="nothing">Nothing</option>
+                                        </select>
+                                    </label>
+                                </div>
+
+                                <!-- Tapering step list -->
+                                <div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="font-semibold text-slate-700">Tapering schedule</span>
+                                        <button type="button" :disabled="!editable" @click="addTaperingStep(line)"
+                                                class="rounded bg-slate-800 px-2 py-0.5 text-xs text-white hover:bg-slate-900 disabled:opacity-50">
+                                            + Add step
+                                        </button>
+                                    </div>
+                                    <template x-if="!line.tapering_steps || !line.tapering_steps.length">
+                                        <p class="mt-1 text-slate-500">No tapering — uses Frequency + Days above.</p>
+                                    </template>
+                                    <template x-if="line.tapering_steps && line.tapering_steps.length">
+                                        <ol class="mt-2 space-y-1.5">
+                                            <template x-for="(step, sIdx) in line.tapering_steps" :key="sIdx">
+                                                <li class="flex items-center gap-2">
+                                                    <span class="w-6 text-slate-500" x-text="(sIdx + 1) + '.'"></span>
+                                                    <span class="text-slate-600">For</span>
+                                                    <input type="number" min="1" :disabled="!editable" x-model.number="step.days"
+                                                           class="w-16 rounded border px-1.5 py-0.5">
+                                                    <span class="text-slate-600">days,</span>
+                                                    <select :disabled="!editable" x-model="step.preset"
+                                                            class="rounded border px-1.5 py-0.5">
+                                                        <option value="1-0-0">1-0-0</option>
+                                                        <option value="0-0-1">0-0-1</option>
+                                                        <option value="1-0-1">1-0-1</option>
+                                                        <option value="1-1-1">1-1-1</option>
+                                                        <option value="0-1-0">0-1-0</option>
+                                                    </select>
+                                                    <select :disabled="!editable" x-model="step.food"
+                                                            class="rounded border px-1.5 py-0.5">
+                                                        <option value="any">Any</option>
+                                                        <option value="before">Before food</option>
+                                                        <option value="after">After food</option>
+                                                    </select>
+                                                    <button type="button" :disabled="!editable" @click="line.tapering_steps.splice(sIdx, 1)"
+                                                            class="ml-auto text-rose-600 hover:underline">×</button>
+                                                </li>
+                                            </template>
+                                        </ol>
+                                    </template>
+                                </div>
+
+                                <div class="text-right">
+                                    <button type="button" @click="line._drawer = false"
+                                            class="text-slate-500 hover:underline">Close</button>
+                                </div>
+                            </div>
                         </div>
                     </template>
 
@@ -426,6 +634,23 @@ function visitScreenV2(cfg) {
         },
 
         payload() {
+            // Strip UI-only flags from each rx line before serializing.
+            const cleanRx = (this.prescriptions || []).map(p => ({
+                drug_id: p.drug_id || null,
+                remedy_id: p.remedy_id || null,
+                drug_name: p.drug_name || '',
+                potency: p.potency || null,
+                dose_unit: p.dose_unit || null,
+                dose_amount: p.dose_amount || null,
+                frequency_preset: p.frequency_preset || null,
+                frequency: p.frequency || null,
+                duration_days: p.duration_days || null,
+                food_timing: p.food_timing || 'any',
+                mix_with: p.mix_with || null,
+                tapering_steps: Array.isArray(p.tapering_steps) && p.tapering_steps.length ? p.tapering_steps : null,
+                instructions: p.instructions || null,
+            }));
+
             return {
                 chief_complaint: this.chief_complaint,
                 history: this.history,
@@ -437,13 +662,14 @@ function visitScreenV2(cfg) {
                 follow_up_date: this.follow_up_date,
                 follow_up_notes: this.follow_up_notes,
                 vitals: this.vitals,
-                prescriptions: this.prescriptions,
+                prescriptions: cleanRx,
                 specialty_data: { case_taking: this.case_taking, ...this.specialty_data },
                 _form_blob: {
                     chief_complaint: this.chief_complaint,
                     diagnosis: this.diagnosis,
                     clinical_notes: this.clinical_notes,
-                    prescriptions: this.prescriptions,
+                    prescriptions: cleanRx,
+                    symptoms: this.symptoms || [],
                     ghost_revealed: this.ghostRevealed,
                 },
             };
@@ -562,6 +788,222 @@ function visitScreenV2(cfg) {
                     body: JSON.stringify({ section: section, state: isOpen ? 'expanded' : 'collapsed' }),
                 });
             } catch (e) { /* ignore */ }
+        },
+
+        taperingTotalDays(steps) {
+            if (!Array.isArray(steps)) return 0;
+            return steps.reduce((sum, s) => sum + (parseInt(s.days, 10) || 0), 0);
+        },
+    };
+}
+
+// ─────────────────────────────────────────────────────────────
+// symptomPicker() — chip-style autocomplete (3-layer search)
+// ─────────────────────────────────────────────────────────────
+function symptomPicker() {
+    return {
+        // The parent visitScreenV2 owns the canonical symptoms list; this
+        // component reads/writes via $root so reloads + autosave still see it.
+        get symptoms() { return this.$root.symptoms = this.$root.symptoms || []; },
+        set symptoms(v) { this.$root.symptoms = v; },
+        get chief_complaint() { return this.$root.chief_complaint; },
+        set chief_complaint(v) { this.$root.chief_complaint = v; },
+
+        query: '',
+        suggestions: [],
+        showSuggestions: false,
+
+        async init() {
+            // Hydrate from server (visit_symptoms table) on first mount.
+            try {
+                const r = await fetch('/api/v1/visits/' + this.$root.visitId + '/symptoms', {
+                    headers: { 'Accept': 'application/json' },
+                });
+                const data = await r.json();
+                if (Array.isArray(data.symptoms) && data.symptoms.length) {
+                    this.symptoms = data.symptoms.map(s => ({
+                        label: s.label,
+                        master_id: s.master_id || null,
+                        source: s.source || 'custom',
+                    }));
+                }
+            } catch (e) { /* visit_symptoms may not exist yet — skip */ }
+        },
+
+        async search() {
+            this.showSuggestions = true;
+            const q = (this.query || '').trim();
+            try {
+                const url = '/api/v1/symptoms/search?q=' + encodeURIComponent(q);
+                const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                const data = await r.json();
+                // Filter out anything already selected (case-insensitive label match)
+                const taken = new Set(this.symptoms.map(s => s.label.toLowerCase()));
+                this.suggestions = (data.symptoms || []).filter(s => !taken.has(s.label.toLowerCase()));
+            } catch (e) {
+                this.suggestions = [];
+            }
+        },
+
+        exactMatch(q) {
+            const norm = (q || '').trim().toLowerCase();
+            return this.suggestions.some(s => s.label.toLowerCase() === norm);
+        },
+
+        addSymptom(sug) {
+            const label = (sug.label || '').trim();
+            if (!label) return;
+            const taken = this.symptoms.some(s => s.label.toLowerCase() === label.toLowerCase());
+            if (taken) return;
+            this.symptoms.push({
+                label: label,
+                master_id: sug.master_id || null,
+                source: sug.source || 'custom',
+            });
+            this.query = '';
+            this.suggestions = [];
+            this.showSuggestions = false;
+        },
+
+        addCustom(rawLabel) {
+            const label = (rawLabel || '').trim();
+            if (!label) return;
+            this.addSymptom({ label: label, source: 'custom', master_id: null });
+        },
+
+        addCurrentOrFirst() {
+            if (this.suggestions.length > 0 && this.suggestions[0]) {
+                this.addSymptom(this.suggestions[0]);
+            } else if (this.query.trim()) {
+                this.addCustom(this.query);
+            }
+            this.persistSymptoms();
+        },
+
+        removeSymptom(idx) {
+            if (idx < 0 || idx >= this.symptoms.length) return;
+            this.symptoms.splice(idx, 1);
+        },
+
+        async persistSymptoms() {
+            if (!this.$root.editable) return;
+            try {
+                await fetch('/api/v1/visits/' + this.$root.visitId + '/symptoms', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ symptoms: this.symptoms }),
+                });
+            } catch (e) { /* autosave will retry on next save */ }
+        },
+    };
+}
+
+// ─────────────────────────────────────────────────────────────
+// prescriptionPanel() — templates + auto-discovery + drug autocomplete
+// ─────────────────────────────────────────────────────────────
+function prescriptionPanel() {
+    return {
+        templates: [],
+        suggestions: [],
+
+        async loadTemplates() {
+            try {
+                const r = await fetch('/api/v1/prescriptions/templates?scope=all', {
+                    headers: { 'Accept': 'application/json' },
+                });
+                const data = await r.json();
+                this.templates = data.templates || [];
+                this.suggestions = data.suggestions || [];
+            } catch (e) { /* skip */ }
+        },
+
+        async applyTemplate(templateId) {
+            if (!this.$root.editable) return;
+            const hasItems = (this.$root.prescriptions || []).some(p => p.drug_name);
+            if (hasItems && !confirm('Append template medicines to current prescription?')) return;
+            try {
+                const r = await fetch('/api/v1/prescriptions/templates/' + templateId + '/apply/' + this.$root.visitId, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                });
+                const data = await r.json();
+                if (data.ok) {
+                    // Reload to pick up the newly inserted prescriptions.
+                    location.reload();
+                } else {
+                    alert(data.error || 'Could not apply template.');
+                }
+            } catch (e) {
+                alert('Network error.');
+            }
+        },
+
+        async activateSuggestion(sug) {
+            const name = prompt('Save this combination as a template. Name it:', sug.name.replace(/^Suggested:\s*/, ''));
+            if (!name) return;
+            try {
+                await fetch('/api/v1/prescriptions/templates/' + sug.id + '/activate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ name: name }),
+                });
+                this.loadTemplates();
+            } catch (e) {
+                alert('Could not save template.');
+            }
+        },
+
+        async dismissSuggestion(suggestionId) {
+            try {
+                await fetch('/api/v1/prescriptions/templates/' + suggestionId + '/delete', {
+                    method: 'POST', headers: { 'Accept': 'application/json' },
+                });
+                this.suggestions = this.suggestions.filter(s => s.id !== suggestionId);
+            } catch (e) { /* skip */ }
+        },
+
+        async searchDrugFor(idx, q) {
+            const line = this.$root.prescriptions[idx];
+            if (!line) return;
+            const query = (q || '').trim();
+            if (query.length < 2) { line._suggestions = []; line._dropdown = false; return; }
+            const url = this.$root.useHomeo
+                ? '/api/v1/remedies/search?q=' + encodeURIComponent(query)
+                : '/api/v1/drugs/search?q=' + encodeURIComponent(query);
+            try {
+                const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                const data = await r.json();
+                line._suggestions = data.drugs || data.remedies || [];
+                line._dropdown = line._suggestions.length > 0;
+            } catch (e) {
+                line._suggestions = [];
+            }
+        },
+
+        pickDrugFor(idx, drug) {
+            const line = this.$root.prescriptions[idx];
+            if (!line) return;
+            if (this.$root.useHomeo) {
+                line.remedy_id = drug.id;
+                line.drug_id = null;
+            } else {
+                line.drug_id = drug.id;
+                line.remedy_id = null;
+            }
+            line.drug_name = drug.name + (drug.strength ? ' ' + drug.strength : '');
+            line._suggestions = [];
+            line._dropdown = false;
+        },
+
+        addTaperingStep(line) {
+            if (!Array.isArray(line.tapering_steps)) line.tapering_steps = [];
+            // Seed sensible defaults — last step's frequency, 3 days.
+            const last = line.tapering_steps[line.tapering_steps.length - 1];
+            line.tapering_steps.push({
+                days: 3,
+                preset: last ? last.preset : (line.frequency_preset || '1-0-1'),
+                food: last ? last.food : (line.food_timing || 'after'),
+            });
         },
     };
 }
