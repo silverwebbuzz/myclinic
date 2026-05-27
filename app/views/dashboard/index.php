@@ -1,5 +1,14 @@
 <div x-data="dashboardPage()" x-init="startRefresh()" class="space-y-6">
 
+    <?php
+    $flash = $_GET['message'] ?? null;
+    if ($flash === 'already_listed'): ?>
+    <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        ✓ Your clinic is already listed on eClinicPro.
+        <a href="https://eclinicpro.com/find-a-doctor" target="_blank" class="font-semibold underline">View public page →</a>
+    </div>
+    <?php endif; ?>
+
     <?php if (empty($isDirectoryListed)): ?>
     <!-- ============ Get listed on /find-a-doctor banner ============
          Shown to clinics that have a portal account but haven't been
@@ -20,11 +29,10 @@
                     yet. Submit your details once, our team reviews within 1–2 business days, and patients can start finding you.
                 </p>
                 <div class="mt-3 flex flex-wrap gap-2">
-                    <a href="https://eclinicpro.com/find-a-doctor"
-                       target="_blank"
+                    <a href="/onboarding/get-listed"
                        class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
-                        Get listed
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>
+                        Get listed — takes 1 minute
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                     </a>
                     <button type="button"
                             @click="show = false; localStorage.setItem('ecp_hide_dir_banner','1')"
