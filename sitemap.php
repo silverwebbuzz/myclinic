@@ -54,11 +54,14 @@ $marketing = [
     ['/patient',           0.5, 'monthly'],
 ];
 foreach ($marketing as [$path, $priority, $changefreq]) {
+    // Root must be a fully-qualified URL with trailing slash for Search Console.
+    $loc = $path === '' ? "{$base}/" : "{$base}{$path}";
+    $pr  = number_format((float) $priority, 1);
     echo "  <url>\n";
-    echo "    <loc>{$base}{$path}</loc>\n";
+    echo "    <loc>{$loc}</loc>\n";
     echo "    <lastmod>{$now}</lastmod>\n";
     echo "    <changefreq>{$changefreq}</changefreq>\n";
-    echo "    <priority>{$priority}</priority>\n";
+    echo "    <priority>{$pr}</priority>\n";
     echo "  </url>\n";
 }
 
@@ -88,7 +91,7 @@ if ($db) {
             echo "    <loc>{$url}</loc>\n";
             echo "    <lastmod>{$now}</lastmod>\n";
             echo "    <changefreq>weekly</changefreq>\n";
-            echo "    <priority>0.8</priority>\n";
+            echo "    <priority>0.8</priority>\n";  // city pages
             echo "  </url>\n";
         }
 
