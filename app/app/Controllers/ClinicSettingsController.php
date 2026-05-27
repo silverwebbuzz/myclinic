@@ -22,6 +22,7 @@ use App\Services\StaffInvitationService;
 use App\Services\WhiteLabelService;
 use App\Support\Layout;
 use App\Support\View;
+use App\Support\VisitView;
 
 final class ClinicSettingsController
 {
@@ -371,6 +372,73 @@ final class ClinicSettingsController
         $q = $result['ok'] ? 'message' : 'error';
 
         return Response::redirect('/settings?tab=notifications&' . $q . '=' . urlencode($result['message']));
+    }
+
+    /**
+     * POST /api/clinic-settings/modules/{moduleKey}
+     * Body: { state: "show" | "hide" }
+     * Phase 2 — toggle a single optional module's visibility.
+     */
+    public function toggleModule(Request $request, string $moduleKey): Response
+    {
+        $clinicId = RequestContext::clinicId();
+        if ($clinicId === null) {
+            return Response::json(['error' => 'Unauthorized'], 401);
+        }
+
+        $body = json_decode($request->rawBody ?? '{}', true);
+        $state = is_array($body) ? ($body['state'] ?? null) : null;
+        if ($state !== 'show' && $state !== 'hide') {
+            return Response::json(['error' => 'state must be show|hide'], 422);
+        }
+
+        VisitView::toggleModule($clinicId, $moduleKey, $state === 'show');
+
+        return Response::json([
+            'ok' => true,
+            'module' => $moduleKey,
+            'state' => $state,
+            'visible_modules' => VisitView::visibleModules($clinicId),
+        ]);
+    }
+
+    /**
+     * POST /api/clinic-settings/section-state
+     * Body: { section: "vitals", state: "expanded"|"collapsed" }
+     * Phase 2 — records ghost-link reveals + collapses. After 3
+     * ghost-link reveals VisitView auto-promotes the section into
+     * visible_modules.
+     */
+    public function recordSectionState(Request $request): Response
+    {
+        $clinicId = RequestContext::clinicId();
+        if ($clinicId === null) {
+            return Response::json(['error' => 'Unauthorized'], 401);
+        }
+
+        $body = json_decode($request->rawBody ?? '{}', true);
+        $section = is_array($body) ? ($body['section'] ?? null) : null;
+        $state = is_array($body) ? ($body['state'] ?? null) : null;
+
+        if (!is_string($section) || $section === '') {
+            return Response::json(['error' => 'section required'], 422);
+        }
+        if ($state !== 'expanded' && $state !== 'collapsed') {
+            return Response::json(['error' => 'state must be expanded|collapsed'], 422);
+        }
+
+        if ($state === 'expanded') {
+            VisitView::recordSectionExpand($clinicId, $section);
+        } else {
+            VisitView::recordSectionCollapse($clinicId, $section);
+        }
+
+        return Response::json([
+            'ok' => true,
+            'section' => $section,
+            'state' => $state,
+            'visible_modules' => VisitView::visibleModules($clinicId),
+        ]);
     }
 
     /** @return array<string, mixed> */

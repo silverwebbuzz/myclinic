@@ -142,6 +142,23 @@ final class VisitService
             $update['specialty_data'] = json_encode($merged);
         }
 
+        // Phase 2: stash the full client-side form blob for crash recovery.
+        // The columns may not exist yet during phased rollout — wrap so a
+        // missing column never breaks autosave.
+        if (isset($payload['_form_blob']) && is_array($payload['_form_blob'])) {
+            try {
+                QueryBuilder::table('visits')
+                    ->forClinic($clinicId)
+                    ->where('id', '=', $visitId)
+                    ->update([
+                        'auto_save_data' => json_encode($payload['_form_blob']),
+                        'last_autosave_at' => date('Y-m-d H:i:s'),
+                    ]);
+            } catch (\Throwable $e) {
+                // auto_save_data / last_autosave_at column doesn't exist yet — skip.
+            }
+        }
+
         if ($update !== []) {
             QueryBuilder::table('visits')
                 ->forClinic($clinicId)

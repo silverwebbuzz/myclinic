@@ -228,6 +228,12 @@ return static function (RouteRegistrar $router): void {
         $api->get('/queue', [QueueController::class, 'api']);
         $api->post('/visits/{id}/autosave', [VisitController::class, 'autosaveApi']);
         $api->get('/visits/{id}/tab/{tab}', [VisitController::class, 'tabApi']);
+        // Phase 2: "Same as last visit" — GET previews, POST applies.
+        $api->get('/visits/{id}/last-visit', [VisitController::class, 'cloneLastVisit']);
+        $api->post('/visits/{id}/clone-last', [VisitController::class, 'cloneLastVisit']);
+        // Phase 2: visible_modules toggle + section state memory.
+        $api->post('/clinic-settings/modules/{moduleKey}', [ClinicSettingsController::class, 'toggleModule']);
+        $api->post('/clinic-settings/section-state', [ClinicSettingsController::class, 'recordSectionState']);
         $api->get('/drugs/search', [VisitController::class, 'drugsApi']);
         $api->get('/remedies/search', [VisitController::class, 'remediesApi']);
         $api->get('/icd10/search', [VisitController::class, 'icd10Api']);

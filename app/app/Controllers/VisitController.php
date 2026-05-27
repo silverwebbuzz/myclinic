@@ -367,6 +367,90 @@ final class VisitController
         return Response::json(VitalsService::chartSeries($clinicId, (int) $patientId));
     }
 
+    /**
+     * GET  /api/visits/{visitId}/last-visit
+     *   Returns the patient's most recent completed visit (excluding the
+     *   current one) as JSON so the front-end can preview a "Same as last
+     *   visit" clone before applying.
+     *
+     * POST /api/visits/{visitId}/clone-last
+     *   Copies symptoms/diagnosis/prescriptions/notes from the patient's
+     *   last completed visit into the current draft. Doctor edits before save.
+     */
+    public function cloneLastVisit(Request $request, string $id): Response
+    {
+        if ($denied = ModuleGate::require('emr')) {
+            return $denied;
+        }
+
+        $clinicId = (int) RequestContext::clinicId();
+        $visitId = (int) $id;
+
+        $current = VisitService::find($clinicId, $visitId);
+        if ($current === null) {
+            return Response::json(['error' => 'Visit not found'], 404);
+        }
+        if (!VisitService::isEditable($current)) {
+            return Response::json(['error' => 'Visit is read-only'], 422);
+        }
+
+        // Patient's most recent completed visit (excluding this one).
+        $recent = VisitService::recentForPatient(
+            $clinicId,
+            (int) $current['patient_id'],
+            1,
+            $visitId
+        );
+        $last = $recent[0] ?? null;
+
+        if ($last === null) {
+            return Response::json(['error' => 'No previous visit to clone'], 404);
+        }
+
+        // Pull last visit's prescriptions (always — Phase 2 baseline).
+        // Symptoms will be added in Phase 3 once visit_symptoms exists.
+        $prescriptions = PrescriptionService::forVisit($clinicId, (int) $last['id']);
+
+        // GET — preview only, don't persist
+        if ($request->method !== 'POST') {
+            return Response::json([
+                'last_visit' => [
+                    'id' => (int) $last['id'],
+                    'visited_at' => $last['visited_at'] ?? null,
+                    'chief_complaint' => $last['chief_complaint'] ?? '',
+                    'diagnosis' => $last['diagnosis'] ?? '',
+                    'icd10_code' => $last['icd10_code'] ?? '',
+                    'clinical_notes' => $last['clinical_notes'] ?? '',
+                    'prescriptions' => $prescriptions,
+                ],
+            ]);
+        }
+
+        // POST — apply to the current draft visit.
+        // We build an autosave payload and reuse the existing service so the
+        // standard validation/sanitization path runs.
+        $payload = [
+            'chief_complaint' => $last['chief_complaint'] ?? null,
+            'diagnosis' => $last['diagnosis'] ?? null,
+            'icd10_code' => $last['icd10_code'] ?? null,
+            'clinical_notes' => $last['clinical_notes'] ?? null,
+            'prescriptions' => $prescriptions,
+        ];
+
+        try {
+            VisitService::autosave($clinicId, $visitId, $payload);
+            AuditService::log($request, 'UPDATE', 'visits', $visitId);
+        } catch (\Throwable $e) {
+            return Response::json(['error' => $e->getMessage()], 422);
+        }
+
+        return Response::json([
+            'ok' => true,
+            'cloned_from' => (int) $last['id'],
+            'visited_at' => $last['visited_at'] ?? null,
+        ]);
+    }
+
     private function requireModule(): ?Response
     {
         if (!ModuleGate::check('emr')) {
