@@ -1,0 +1,568 @@
+<?php
+/**
+ * visits/show_v2.php — Phase 2 single-screen visit layout.
+ *
+ * No tabs. The 4 fundamentals (Symptoms / Diagnosis / Prescription / Notes)
+ * are always visible. Optional sections (Vitals, Labs, Photos, Diet, Consent,
+ * Case form) render based on $visibleModules. Hidden sections live as
+ * ghost-link chips at the bottom — tap to reveal for this visit only.
+ *
+ * Ships behind ?new=1 until the default is flipped in VisitController::show().
+ */
+$sd = $visit['specialty_data'] ?? [];
+$case = $sd['case_taking'] ?? [];
+
+// $visibleModules comes from VisitView::visibleModules() in the controller.
+$visibleModules = $visibleModules ?? ['vitals', 'case_specialty'];
+$has = static fn (string $key) => in_array($key, $visibleModules, true);
+
+// Symptoms / Diagnosis / Prescription / Notes are always rendered.
+// case_specialty depends on specialty config AND on the partial existing.
+$casePartialPath = __DIR__ . '/partials/' . $casePartial . '.php';
+$caseAvailable = is_file($casePartialPath);
+
+$visitId = (int) $visit['id'];
+$visibleCount = count($visibleModules);
+
+// Ghost-link list: every optional section NOT in visible_modules.
+$optionalModules = ['vitals', 'labs', 'photos', 'diet', 'consent', 'case_specialty'];
+$ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !in_array($m, $visibleModules, true)));
+?>
+
+<div class="mx-auto max-w-5xl space-y-4"
+     x-data="visitScreenV2(<?= htmlspecialchars(json_encode([
+        'visitId' => $visitId,
+        'patientId' => (int) $patient['id'],
+        'editable' => $editable,
+        'chief_complaint' => $visit['chief_complaint'] ?? '',
+        'history' => $visit['history'] ?? '',
+        'examination' => $visit['examination'] ?? '',
+        'diagnosis' => $visit['diagnosis'] ?? '',
+        'icd10_code' => $visit['icd10_code'] ?? '',
+        'clinical_notes' => $visit['clinical_notes'] ?? '',
+        'condition_score' => $visit['condition_score'] ?? 5,
+        'follow_up_date' => $visit['follow_up_date'] ?? '',
+        'follow_up_notes' => $visit['follow_up_notes'] ?? '',
+        'vitals' => $vitals,
+        'prescriptions' => array_map(static fn ($r) => [
+            'drug_id' => $r['drug_id'] ?? null,
+            'remedy_id' => $r['remedy_id'] ?? null,
+            'drug_name' => $r['drug']['name'] ?? $r['remedy']['name'] ?? '',
+            'potency' => $r['potency'] ?? '',
+            'dosage' => $r['dosage'] ?? '',
+            'frequency_preset' => $r['frequency_preset'] ?? '',
+            'frequency' => $r['frequency'] ?? 'BD',
+            'duration_days' => $r['duration_days'] ?? '',
+            'food_timing' => $r['food_timing'] ?? 'any',
+            'instructions' => $r['instructions'] ?? '',
+        ], $prescriptions),
+        'specialty_data' => $sd,
+        'case_taking' => $case,
+        'useHomeo' => $useHomeo,
+        'visibleModules' => $visibleModules,
+        'ghostRevealed' => [],   // sections the doctor revealed this visit
+    ], JSON_THROW_ON_ERROR), ENT_QUOTES) ?>)"
+     x-init="initAutosave()">
+
+    <!-- ====== Patient header (sticky on scroll) ====== -->
+    <div class="sticky top-0 z-30 -mx-4 bg-slate-50/95 px-4 pb-2 pt-2 backdrop-blur md:mx-0 md:rounded-xl md:bg-transparent md:px-0">
+        <?php
+        $visitCount = is_array($recentVisits ?? null) ? count($recentVisits) + 1 : null;
+        require __DIR__ . '/../patients/_patient_header.php';
+        ?>
+    </div>
+
+    <!-- ====== TODAY'S VISIT ====== -->
+    <section class="rounded-xl border bg-white shadow-sm">
+        <div class="flex items-center justify-between border-b px-5 py-3">
+            <div class="flex items-baseline gap-3">
+                <h2 class="text-base font-semibold text-slate-900">Today's visit</h2>
+                <span class="text-xs text-slate-400">
+                    Visit #<?= (int) $visit['visit_number'] ?>
+                    · <?= htmlspecialchars(date('d M Y', strtotime((string) ($visit['visited_at'] ?? 'now')))) ?>
+                </span>
+            </div>
+            <div class="flex items-center gap-3 text-xs">
+                <span
+                    :class="saveStatus === 'saved' ? 'text-emerald-600' : (saveStatus === 'saving' ? 'text-amber-600' : 'text-slate-400')"
+                    x-text="saveLabel"></span>
+                <?php if (!$editable): ?>
+                    <span class="rounded-full bg-slate-200 px-2 py-0.5 text-xs">Read-only</span>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <div class="space-y-5 px-5 py-5">
+
+            <!-- ---- SYMPTOMS (always visible; Phase 3 turns this into chips) ---- -->
+            <div>
+                <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Symptoms / Chief complaint</label>
+                <textarea x-model="chief_complaint" :disabled="!editable"
+                          rows="2"
+                          placeholder="e.g. Fever 3 days, body ache, cough"
+                          class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
+            </div>
+
+            <!-- ---- DIAGNOSIS (always visible) ---- -->
+            <div>
+                <div class="flex items-baseline justify-between">
+                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Diagnosis</label>
+                    <span class="text-xs text-slate-400">optional</span>
+                </div>
+                <input type="text" x-model="diagnosis" :disabled="!editable"
+                       placeholder="e.g. Viral fever"
+                       class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                <div class="mt-2 flex items-center gap-2">
+                    <input type="search" x-model="icd10_code" :disabled="!editable"
+                           @input.debounce.300ms="searchIcd($event.target.value)"
+                           placeholder="ICD-10 code (optional)"
+                           class="w-40 rounded border border-slate-200 px-2 py-1 text-xs">
+                    <ul x-show="icdResults.length" class="ml-2 inline-flex max-h-32 flex-wrap gap-1">
+                        <template x-for="c in icdResults" :key="c.code">
+                            <li>
+                                <button type="button" @click="icd10_code = c.code; icdResults = []"
+                                        class="rounded bg-slate-100 px-2 py-0.5 text-xs hover:bg-emerald-50"
+                                        x-text="c.code"></button>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- ---- PRESCRIPTION (always visible) ---- -->
+            <div>
+                <div class="flex items-baseline justify-between">
+                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Prescription</label>
+                    <button type="button" :disabled="!editable" @click="cloneLastVisit()"
+                            class="text-xs font-medium text-emerald-700 hover:underline disabled:opacity-50">
+                        ↻ Same as last visit
+                    </button>
+                </div>
+
+                <template x-if="lastVisitNote">
+                    <p class="mt-1 rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-800"
+                       x-text="lastVisitNote"></p>
+                </template>
+
+                <div class="mt-2 space-y-2">
+                    <template x-for="(line, idx) in prescriptions" :key="idx">
+                        <div class="grid items-center gap-2 rounded-lg border border-slate-200 p-2 sm:grid-cols-12">
+                            <input type="text" :disabled="!editable"
+                                   x-model="line.drug_name"
+                                   @input.debounce.300ms="searchDrug(idx, line.drug_name)"
+                                   placeholder="Medicine"
+                                   class="sm:col-span-4 rounded border px-2 py-1 text-sm">
+                            <select :disabled="!editable" x-model="line.frequency_preset"
+                                    class="sm:col-span-2 rounded border px-2 py-1 text-xs">
+                                <option value="">Frequency…</option>
+                                <option value="1-0-0">1-0-0</option>
+                                <option value="0-0-1">0-0-1</option>
+                                <option value="1-0-1">1-0-1</option>
+                                <option value="1-1-1">1-1-1</option>
+                                <option value="1-1-1-1">1-1-1-1</option>
+                                <option value="0-1-0">0-1-0</option>
+                                <option value="SOS">SOS</option>
+                            </select>
+                            <input type="number" min="1" max="90" :disabled="!editable"
+                                   x-model="line.duration_days"
+                                   placeholder="Days"
+                                   class="sm:col-span-2 rounded border px-2 py-1 text-xs">
+                            <select :disabled="!editable" x-model="line.food_timing"
+                                    class="sm:col-span-2 rounded border px-2 py-1 text-xs">
+                                <option value="any">Any time</option>
+                                <option value="before">Before food</option>
+                                <option value="after">After food</option>
+                                <option value="empty">Empty stomach</option>
+                                <option value="bedtime">At bedtime</option>
+                            </select>
+                            <button type="button" :disabled="!editable" @click="removeRxLine(idx)"
+                                    class="sm:col-span-1 text-xs text-rose-600 hover:underline"
+                                    title="Remove">×</button>
+                            <input type="text" :disabled="!editable" x-model="line.instructions"
+                                   placeholder="Optional instructions"
+                                   class="sm:col-span-12 rounded border border-slate-100 px-2 py-1 text-xs">
+                        </div>
+                    </template>
+
+                    <button type="button" :disabled="!editable" @click="addRxLine()"
+                            class="text-xs font-medium text-emerald-700 hover:underline disabled:opacity-50">
+                        + Add medicine
+                    </button>
+                </div>
+            </div>
+
+            <!-- ---- NOTES (always visible) ---- -->
+            <div>
+                <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Notes &amp; next visit</label>
+                <textarea x-model="clinical_notes" :disabled="!editable" rows="2"
+                          placeholder="Observations, advice, what changed"
+                          class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
+
+                <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                    <span class="text-slate-500">Next visit:</span>
+                    <button type="button" :disabled="!editable" @click="setFollowUp(3)"
+                            class="rounded-full border border-slate-300 px-2 py-0.5 hover:bg-slate-50">+3d</button>
+                    <button type="button" :disabled="!editable" @click="setFollowUp(5)"
+                            class="rounded-full border border-slate-300 px-2 py-0.5 hover:bg-slate-50">+5d</button>
+                    <button type="button" :disabled="!editable" @click="setFollowUp(7)"
+                            class="rounded-full border border-slate-300 px-2 py-0.5 hover:bg-slate-50">+1w</button>
+                    <button type="button" :disabled="!editable" @click="setFollowUp(14)"
+                            class="rounded-full border border-slate-300 px-2 py-0.5 hover:bg-slate-50">+2w</button>
+                    <input type="date" :disabled="!editable" x-model="follow_up_date"
+                           class="rounded border border-slate-300 px-2 py-0.5 text-xs">
+                </div>
+                <textarea x-show="follow_up_date" x-model="follow_up_notes" :disabled="!editable"
+                          rows="1" placeholder="Follow-up note (optional)"
+                          class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs"></textarea>
+            </div>
+
+            <!-- ====== OPTIONAL SECTIONS — controlled by visible_modules + ghost reveals ====== -->
+
+            <?php if ($has('vitals')): ?>
+                <details class="rounded-lg border border-slate-200 bg-slate-50/50" open
+                         @toggle="recordSection('vitals', $event.target.open)">
+                    <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Vitals</summary>
+                    <div class="px-4 pb-4 pt-2">
+                        <div class="grid gap-3 sm:grid-cols-3">
+                            <?php foreach ($vitalsFields as $f): ?>
+                                <label class="text-xs">
+                                    <span class="text-slate-500"><?= htmlspecialchars($f['label']) ?><?= !empty($f['unit']) ? ' (' . htmlspecialchars($f['unit']) . ')' : '' ?></span>
+                                    <?php if (($f['type'] ?? '') === 'select'): ?>
+                                        <select :disabled="!editable" x-model="vitals.<?= htmlspecialchars($f['key']) ?>"
+                                                class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
+                                            <option value="">—</option>
+                                            <?php foreach ($f['options'] ?? [] as $opt): ?>
+                                                <option value="<?= htmlspecialchars($opt) ?>"><?= htmlspecialchars($opt) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    <?php elseif (!empty($f['extra'])): ?>
+                                        <input type="<?= $f['type'] === 'text' ? 'text' : 'number' ?>" step="any"
+                                               :disabled="!editable"
+                                               x-model="vitals.extra.<?= htmlspecialchars(substr($f['key'], 6)) ?>"
+                                               class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
+                                    <?php else: ?>
+                                        <input type="number" step="any" :disabled="!editable"
+                                               x-model="vitals.<?= htmlspecialchars($f['key']) ?>"
+                                               class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
+                                    <?php endif; ?>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                        <template x-if="vitalsWarnings.length">
+                            <div class="mt-2 space-y-1">
+                                <template x-for="w in vitalsWarnings" :key="w.message">
+                                    <p class="rounded bg-amber-50 px-2 py-1 text-xs text-amber-900" x-text="w.message"></p>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </details>
+            <?php endif; ?>
+
+            <?php if ($has('case_specialty') && $caseAvailable): ?>
+                <details class="rounded-lg border border-slate-200 bg-slate-50/50"
+                         @toggle="recordSection('case_specialty', $event.target.open)">
+                    <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Case taking</summary>
+                    <div class="px-4 pb-4 pt-2 space-y-3">
+                        <?php require $casePartialPath; ?>
+                    </div>
+                </details>
+            <?php endif; ?>
+
+            <?php if ($has('labs') && !empty($hasLab)): ?>
+                <details class="rounded-lg border border-slate-200 bg-slate-50/50"
+                         @toggle="recordSection('labs', $event.target.open)">
+                    <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Lab orders</summary>
+                    <div class="px-4 pb-4 pt-2">
+                        <?php require __DIR__ . '/partials/lab.php'; ?>
+                    </div>
+                </details>
+            <?php endif; ?>
+
+            <?php if ($has('photos') && !empty($hasPhotos)): ?>
+                <details class="rounded-lg border border-slate-200 bg-slate-50/50"
+                         @toggle="recordSection('photos', $event.target.open)">
+                    <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Photos</summary>
+                    <div class="px-4 pb-4 pt-2">
+                        <?php require __DIR__ . '/partials/photos.php'; ?>
+                    </div>
+                </details>
+            <?php endif; ?>
+
+            <?php if ($has('diet') && !empty($hasDiet)): ?>
+                <details class="rounded-lg border border-slate-200 bg-slate-50/50"
+                         @toggle="recordSection('diet', $event.target.open)">
+                    <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Diet plan</summary>
+                    <div class="px-4 pb-4 pt-2">
+                        <?php require __DIR__ . '/partials/diet.php'; ?>
+                    </div>
+                </details>
+            <?php endif; ?>
+
+            <?php if ($has('consent') && !empty($hasConsent)): ?>
+                <details class="rounded-lg border border-slate-200 bg-slate-50/50"
+                         @toggle="recordSection('consent', $event.target.open)">
+                    <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Consent</summary>
+                    <div class="px-4 pb-4 pt-2">
+                        <?php require __DIR__ . '/partials/consent.php'; ?>
+                    </div>
+                </details>
+            <?php endif; ?>
+
+            <!-- ---- Ghost-link strip: reveal hidden sections for this visit ---- -->
+            <?php if (!empty($ghostModules)): ?>
+                <div class="flex flex-wrap items-center gap-2 border-t border-dashed border-slate-200 pt-3 text-xs text-slate-500">
+                    <span>+ Add:</span>
+                    <?php foreach ($ghostModules as $g):
+                        $label = match ($g) {
+                            'vitals' => 'Vitals',
+                            'labs' => 'Labs',
+                            'photos' => 'Photos',
+                            'diet' => 'Diet plan',
+                            'consent' => 'Consent',
+                            'case_specialty' => 'Case taking',
+                            default => ucfirst($g),
+                        };
+                    ?>
+                        <button type="button" @click="revealGhost('<?= $g ?>')"
+                                class="rounded-full border border-slate-300 px-2.5 py-1 hover:border-emerald-400 hover:text-emerald-700"
+                                x-show="!ghostRevealed.includes('<?= $g ?>')">
+                            <?= htmlspecialchars($label) ?>
+                        </button>
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- Ghost sections rendered dynamically (Phase 2 keeps these
+                     minimal — Phase 3+ will move per-section UIs into Alpine
+                     components shared with the always-visible ones above). -->
+                <template x-for="g in ghostRevealed" :key="g">
+                    <div class="rounded-lg border border-emerald-200 bg-emerald-50/30 p-3 text-xs text-slate-600">
+                        <span class="font-semibold" x-text="g"></span>
+                        — this section was hidden by default for your specialty.
+                        Reveal in <a href="/settings?tab=specialty" class="text-emerald-700 underline">clinic settings</a>
+                        to always show it.
+                    </div>
+                </template>
+            <?php endif; ?>
+
+            <!-- ---- Save / Complete actions ---- -->
+            <div class="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+                <button type="button" :disabled="!editable" @click="save()"
+                        class="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-50">
+                    Save draft
+                </button>
+                <?php if ($editable): ?>
+                    <form method="post" action="/visits/<?= $visitId ?>/complete"
+                          onsubmit="return confirm('Complete this visit?')">
+                        <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+                        <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
+                            Complete visit
+                        </button>
+                    </form>
+                <?php endif; ?>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====== VISIT HISTORY ====== -->
+    <section class="rounded-xl border bg-white shadow-sm">
+        <div class="flex items-center justify-between border-b px-5 py-3">
+            <h2 class="text-base font-semibold text-slate-900">Visit history</h2>
+            <span class="text-xs text-slate-400"><?= count($recentVisits ?? []) ?> recent</span>
+        </div>
+        <ul class="divide-y text-sm">
+            <?php if (empty($recentVisits)): ?>
+                <li class="px-5 py-4 text-sm text-slate-500">First visit for this patient.</li>
+            <?php else: ?>
+                <?php foreach ($recentVisits as $rv): ?>
+                    <li class="flex items-start justify-between gap-3 px-5 py-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xs text-slate-400">
+                                <?= htmlspecialchars(date('d M Y', strtotime((string) $rv['visited_at']))) ?>
+                                · Visit #<?= (int) $rv['visit_number'] ?>
+                            </div>
+                            <?php if (!empty($rv['diagnosis'])): ?>
+                                <div class="mt-0.5 truncate text-sm text-slate-700"><?= htmlspecialchars((string) $rv['diagnosis']) ?></div>
+                            <?php elseif (!empty($rv['chief_complaint'])): ?>
+                                <div class="mt-0.5 truncate text-sm text-slate-700"><?= htmlspecialchars((string) $rv['chief_complaint']) ?></div>
+                            <?php endif; ?>
+                            <?php if (!empty($rv['follow_up_notes'])): ?>
+                                <div class="mt-0.5 truncate text-xs text-slate-500">↳ <?= htmlspecialchars((string) $rv['follow_up_notes']) ?></div>
+                            <?php endif; ?>
+                        </div>
+                        <a href="/visits/<?= (int) $rv['id'] ?>?new=1" class="text-xs text-emerald-700 hover:underline">Open</a>
+                    </li>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </ul>
+    </section>
+</div>
+
+<script>
+function visitScreenV2(cfg) {
+    // Normalize vitals.extra into an object — same handling as legacy view.
+    const vitals = cfg.vitals || {};
+    if (!vitals.extra) vitals.extra = {};
+    if (typeof vitals.extra_vitals === 'string') vitals.extra = JSON.parse(vitals.extra_vitals || '{}');
+    else if (vitals.extra_vitals) vitals.extra = vitals.extra_vitals;
+
+    return {
+        ...cfg,
+        vitals,
+        saveStatus: 'idle',
+        saveLabel: 'Auto-save on',
+        icdResults: [],
+        vitalsWarnings: [],
+        lastVisitNote: '',
+        autosaveTimer: null,
+
+        initAutosave() {
+            if (!this.editable) return;
+            this.autosaveTimer = setInterval(() => this.save(), 30000);
+            // Save when the tab loses focus too — captures last edit.
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden') this.save();
+            });
+        },
+
+        payload() {
+            return {
+                chief_complaint: this.chief_complaint,
+                history: this.history,
+                examination: this.examination,
+                diagnosis: this.diagnosis,
+                icd10_code: this.icd10_code,
+                clinical_notes: this.clinical_notes,
+                condition_score: this.condition_score,
+                follow_up_date: this.follow_up_date,
+                follow_up_notes: this.follow_up_notes,
+                vitals: this.vitals,
+                prescriptions: this.prescriptions,
+                specialty_data: { case_taking: this.case_taking, ...this.specialty_data },
+                _form_blob: {
+                    chief_complaint: this.chief_complaint,
+                    diagnosis: this.diagnosis,
+                    clinical_notes: this.clinical_notes,
+                    prescriptions: this.prescriptions,
+                    ghost_revealed: this.ghostRevealed,
+                },
+            };
+        },
+
+        async save() {
+            if (!this.editable) return;
+            this.saveStatus = 'saving';
+            this.saveLabel = 'Saving…';
+            try {
+                const r = await fetch('/api/v1/visits/' + this.visitId + '/autosave', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify(this.payload()),
+                });
+                const data = await r.json();
+                if (data.ok) {
+                    this.saveStatus = 'saved';
+                    this.saveLabel = 'Saved ' + new Date().toLocaleTimeString();
+                    this.vitalsWarnings = data.warnings || [];
+                } else throw new Error(data.error || 'Save failed');
+            } catch (e) {
+                this.saveStatus = 'error';
+                this.saveLabel = e.message;
+            }
+        },
+
+        async searchIcd(q) {
+            if (!q || q.length < 2) { this.icdResults = []; return; }
+            try {
+                const r = await fetch('/api/v1/icd10/search?q=' + encodeURIComponent(q));
+                const data = await r.json();
+                this.icdResults = data.codes || [];
+            } catch (e) {
+                this.icdResults = [];
+            }
+        },
+
+        async searchDrug(idx, q) {
+            if (!q || q.length < 2) return;
+            const url = this.useHomeo ? '/api/v1/remedies/search?q=' : '/api/v1/drugs/search?q=';
+            try {
+                const r = await fetch(url + encodeURIComponent(q));
+                const data = await r.json();
+                const list = data.remedies || data.drugs || [];
+                if (list[0]) {
+                    const item = list[0];
+                    this.prescriptions[idx].drug_id = this.useHomeo ? null : item.id;
+                    this.prescriptions[idx].remedy_id = this.useHomeo ? item.id : null;
+                    this.prescriptions[idx].drug_name = item.name;
+                }
+            } catch (e) { /* ignore */ }
+        },
+
+        addRxLine() {
+            this.prescriptions.push({
+                drug_id: null, remedy_id: null, drug_name: '',
+                potency: '', dosage: '',
+                frequency_preset: '', frequency: 'BD',
+                duration_days: '', food_timing: 'any', instructions: '',
+            });
+        },
+
+        removeRxLine(idx) {
+            this.prescriptions.splice(idx, 1);
+        },
+
+        setFollowUp(days) {
+            const d = new Date();
+            d.setDate(d.getDate() + days);
+            this.follow_up_date = d.toISOString().slice(0, 10);
+        },
+
+        async cloneLastVisit() {
+            if (!this.editable) return;
+            // Confirm overwrite if doctor already filled stuff.
+            const hasData = this.diagnosis || this.chief_complaint || (this.prescriptions || []).some(p => p.drug_name);
+            if (hasData && !confirm('Overwrite current form with last visit? Existing entries will be replaced.')) return;
+            try {
+                const r = await fetch('/api/v1/visits/' + this.visitId + '/clone-last', {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                });
+                const data = await r.json();
+                if (data.ok) {
+                    this.lastVisitNote = 'Cloned from visit on ' + (data.visited_at || 'last visit');
+                    // Reload the page so server-rendered fields reflect the merge.
+                    location.reload();
+                } else {
+                    alert(data.error || 'No previous visit found.');
+                }
+            } catch (e) {
+                alert('Network error — please try again.');
+            }
+        },
+
+        async revealGhost(section) {
+            if (this.ghostRevealed.includes(section)) return;
+            this.ghostRevealed.push(section);
+            // Tell the server — recordSectionExpand may auto-promote into visible_modules.
+            try {
+                await fetch('/api/v1/clinic-settings/section-state', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ section: section, state: 'expanded' }),
+                });
+            } catch (e) { /* ignore — UI still reveals */ }
+        },
+
+        async recordSection(section, isOpen) {
+            // Fired by <details> @toggle; tracks expand/collapse counts.
+            try {
+                await fetch('/api/v1/clinic-settings/section-state', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ section: section, state: isOpen ? 'expanded' : 'collapsed' }),
+                });
+            } catch (e) { /* ignore */ }
+        },
+    };
+}
+</script>

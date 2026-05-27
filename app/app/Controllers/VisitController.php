@@ -26,6 +26,7 @@ use App\Services\VisitService;
 use App\Support\Layout;
 use App\Support\SpecialtyAdapter;
 use App\Support\View;
+use App\Support\VisitView;
 
 final class VisitController
 {
@@ -89,15 +90,17 @@ final class VisitController
         $allergies = PatientService::decodeTags($patient['allergies'] ?? null);
 
         $user = RequestContext::user();
+        $clinic = RequestContext::clinic() ?? [];
+        $visibleModules = VisitView::visibleModules($clinicId, (string) ($clinic['specialty'] ?? ''));
 
-        return Response::html(Layout::page('visits/show', [
+        $viewData = [
             'visit' => $visit,
             'patient' => $patient,
             'canUnlock' => !empty($user['is_owner']) || ($user['role'] ?? '') === 'admin',
             'vitals' => $vitals ?? [],
             'prescriptions' => $prescriptions,
             'allergies' => $allergies,
-            'recentVisits' => VisitService::recentForPatient($clinicId, (int) $patient['id'], 3, (int) $id),
+            'recentVisits' => VisitService::recentForPatient($clinicId, (int) $patient['id'], 5, (int) $id),
             'vitalsFields' => SpecialtyAdapter::vitalsFields(),
             'casePartial' => SpecialtyAdapter::caseTakingPartial(),
             'rxMode' => SpecialtyAdapter::prescriptionMode(),
@@ -119,7 +122,18 @@ final class VisitController
             'dietPlan' => ModuleGate::check('diet') ? DietService::forVisit($clinicId, (int) $id) : null,
             'visitPhotos' => ModuleGate::check('before_after') ? PatientPhotoService::forVisit($clinicId, (int) $id) : [],
             'defaultDietWeek' => DietService::defaultWeekPlan(),
-        ], 'Consultation'));
+            'visibleModules' => $visibleModules,
+            'clinic' => $clinic,
+        ];
+
+        // Phase 2 staged rollout: ?new=1 in URL or ECP_NEW_VISIT_SCREEN=1 in env
+        // forces the new single-screen layout. Default OFF — old tab layout
+        // remains for everyone else until we flip the default.
+        $useNew = ($request->query['new'] ?? null) === '1'
+              || filter_var($_ENV['ECP_NEW_VISIT_SCREEN'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $template = $useNew ? 'visits/show_v2' : 'visits/show';
+
+        return Response::html(Layout::page($template, $viewData, 'Consultation'));
     }
 
     public function saveDiet(Request $request, string $id): Response

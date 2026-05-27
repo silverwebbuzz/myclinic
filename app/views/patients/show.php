@@ -17,37 +17,21 @@ if (!empty($hasPhotos)) {
     <div class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800"><?= htmlspecialchars((string) $_GET['error']) ?></div>
     <?php endif; ?>
 
-    <div class="flex flex-wrap items-start justify-between gap-4 rounded-xl border bg-white p-6">
-        <div class="flex gap-4">
-            <?php if ($photoUrl): ?>
-            <img src="<?= htmlspecialchars($photoUrl) ?>" alt="" class="h-16 w-16 rounded-full object-cover">
-            <?php else: ?>
-            <span class="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-xl font-bold text-emerald-700">
-                <?= htmlspecialchars(mb_substr($patient['name'], 0, 1)) ?>
-            </span>
-            <?php endif; ?>
-            <div>
-                <h2 class="text-xl font-semibold"><?= htmlspecialchars($patient['name']) ?></h2>
-                <p class="font-mono text-sm text-slate-500"><?= htmlspecialchars($patient['uhid']) ?></p>
-                <div class="mt-2 flex flex-wrap gap-2 text-xs">
-                    <?php if ($patient['gender']): ?><span class="rounded-full bg-slate-100 px-2 py-0.5"><?= htmlspecialchars($patient['gender']) ?></span><?php endif; ?>
-                    <?php if ($patient['blood_group']): ?><span class="rounded-full bg-red-50 px-2 py-0.5"><?= htmlspecialchars($patient['blood_group']) ?></span><?php endif; ?>
-                    <span class="rounded-full bg-slate-100 px-2 py-0.5"><?= htmlspecialchars($patient['veg_type'] ?? '') ?></span>
-                </div>
-            </div>
-        </div>
-        <div class="flex flex-wrap gap-2">
-            <a href="/patients/<?= (int) $patient['id'] ?>/edit" class="rounded-lg border px-3 py-2 text-sm">Edit</a>
-            <?php if ($qrCard): ?>
-            <a href="/patients/<?= (int) $patient['id'] ?>/qr-card" target="_blank" class="rounded-lg border px-3 py-2 text-sm">Print QR</a>
-            <?php endif; ?>
-            <form method="post" action="/patients/<?= (int) $patient['id'] ?>/regenerate-qr" onsubmit="return confirm('Regenerate QR? Old codes will stop working.');">
-                <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
-                <button type="submit" class="rounded-lg border px-3 py-2 text-sm text-amber-700">Regenerate QR</button>
-            </form>
-            <a href="/appointments/new?patient_id=<?= (int) $patient['id'] ?>" class="rounded-lg border px-3 py-2 text-sm">Book</a>
-            <a href="/visits/new?patient_id=<?= (int) $patient['id'] ?>" class="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white">Start visit</a>
-        </div>
+    <?php
+    // Phase 2: shared patient header partial. Action buttons stay below.
+    require __DIR__ . '/_patient_header.php';
+    ?>
+    <div class="flex flex-wrap gap-2 -mt-2">
+        <a href="/patients/<?= (int) $patient['id'] ?>/edit" class="rounded-lg border px-3 py-2 text-sm">Edit</a>
+        <?php if ($qrCard): ?>
+        <a href="/patients/<?= (int) $patient['id'] ?>/qr-card" target="_blank" class="rounded-lg border px-3 py-2 text-sm">Print QR</a>
+        <?php endif; ?>
+        <form method="post" action="/patients/<?= (int) $patient['id'] ?>/regenerate-qr" onsubmit="return confirm('Regenerate QR? Old codes will stop working.');">
+            <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+            <button type="submit" class="rounded-lg border px-3 py-2 text-sm text-amber-700">Regenerate QR</button>
+        </form>
+        <a href="/appointments/new?patient_id=<?= (int) $patient['id'] ?>" class="rounded-lg border px-3 py-2 text-sm">Book</a>
+        <a href="/visits/new?patient_id=<?= (int) $patient['id'] ?>" class="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white">Start visit</a>
     </div>
 
     <nav class="flex flex-wrap gap-1 border-b text-sm">

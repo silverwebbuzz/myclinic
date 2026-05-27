@@ -80,7 +80,7 @@ $sp = is_array($p['specialty_data'] ?? null) ? $p['specialty_data'] : [];
     </div>
 
     <div class="mb-6 flex gap-2" x-show="step >= 1">
-        <template x-for="n in 3" :key="n">
+        <template x-for="n in 2" :key="n">
             <div class="h-1 flex-1 rounded" :class="step >= n ? 'bg-emerald-600' : 'bg-slate-200'"></div>
         </template>
     </div>
@@ -186,17 +186,10 @@ $sp = is_array($p['specialty_data'] ?? null) ? $p['specialty_data'] : [];
                     <input name="insurance_id" x-model="form.insurance_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
                 </div>
             </div>
-            <div class="flex gap-2">
-                <button type="button" @click="step = 1" class="flex-1 rounded-lg border py-2.5 text-sm">Back</button>
-                <button type="button" @click="step = 3" class="flex-1 rounded-lg bg-emerald-600 py-2.5 text-sm text-white">Continue</button>
-            </div>
-        </div>
-
-        <!-- Step 3 -->
-        <div x-show="step === 3" class="space-y-4 rounded-xl border bg-white p-6">
-            <h2 class="font-semibold">Specialty — <?= htmlspecialchars($specialties[$spec]['label'] ?? $spec) ?></h2>
-            <?php require __DIR__ . '/_wizard_specialty.php'; ?>
-            <div class="grid gap-4 sm:grid-cols-2">
+            <!-- Phase 2: referral / source moved here. Step 3 (specialty fields)
+                 is removed — specialty data is now captured inline at visit
+                 time, not at patient registration. -->
+            <div class="grid gap-4 sm:grid-cols-2 border-t pt-4">
                 <div>
                     <label class="text-xs font-medium">Referred by</label>
                     <input name="referred_by" x-model="form.referred_by" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
@@ -213,7 +206,7 @@ $sp = is_array($p['specialty_data'] ?? null) ? $p['specialty_data'] : [];
                 </div>
             </div>
             <div class="flex gap-2">
-                <button type="button" @click="step = 2" class="flex-1 rounded-lg border py-2.5 text-sm">Back</button>
+                <button type="button" @click="step = 1" class="flex-1 rounded-lg border py-2.5 text-sm">Back</button>
                 <button type="submit" class="flex-1 rounded-lg bg-emerald-600 py-2.5 text-sm font-medium text-white">
                     <?= $editId ? 'Save changes' : 'Register patient' ?>
                 </button>
