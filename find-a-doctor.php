@@ -169,11 +169,9 @@ if ($seoMeta) {
         ['@context' => 'https://schema.org', '@type' => 'FAQPage', 'mainEntity' => $faqEntities],
     ];
 
-    $extraHead  = '<link rel="canonical" href="' . htmlspecialchars($canonical, ENT_QUOTES) . '">' . "\n    ";
-    $extraHead .= '<meta property="og:title" content="' . htmlspecialchars($pageTitle, ENT_QUOTES) . '">' . "\n    ";
-    $extraHead .= '<meta property="og:description" content="' . htmlspecialchars($metaDesc, ENT_QUOTES) . '">' . "\n    ";
-    $extraHead .= '<meta property="og:url" content="' . htmlspecialchars($canonical, ENT_QUOTES) . '">' . "\n    ";
-    $extraHead .= '<meta property="og:type" content="website">' . "\n    ";
+    // Hand canonical to header.php (it builds og:* and twitter:* from it).
+    $canonicalUrl = $canonical;
+    $extraHead = '';
     foreach ($jsonLd as $ld) {
         $extraHead .= '<script type="application/ld+json">'
                     . json_encode($ld, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)

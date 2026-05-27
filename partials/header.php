@@ -18,6 +18,18 @@ $metaDesc = $metaDesc ?? 'eClinicPro is the global clinic operating system. Pick
 $activePage = $activePage ?? '';
 $bodyClass = $bodyClass ?? '';
 
+// ---- Canonical URL + social meta (one place; pages can override $canonicalUrl) ----
+// Build from the current request unless a page set $canonicalUrl explicitly
+// (e.g. SEO city pages already set their own — see find-a-doctor.php).
+if (!isset($canonicalUrl)) {
+    $reqPath = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
+    // Drop trailing .php if present — Apache rewrites canonical URLs anyway.
+    $reqPath = preg_replace('/\.php$/', '', (string) $reqPath);
+    $canonicalUrl = 'https://eclinicpro.com' . $reqPath;
+}
+$ogImage = $ogImage ?? 'https://eclinicpro.com/assets/og-default.png';
+$ogType  = $ogType  ?? 'website';
+
 // Resolve the logged-in patient once, server-side. Passed to the header
 // markup AND echoed into a tiny JSON blob the client can read on first paint
 // without waiting for an API roundtrip.
@@ -43,7 +55,59 @@ $ecpPatientJson = $ecpPatient
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="<?= e($metaDesc) ?>" />
+    <meta name="theme-color" content="#0F9B6E" />
     <title><?= e($pageTitle) ?></title>
+
+    <!-- Canonical -->
+    <link rel="canonical" href="<?= e($canonicalUrl) ?>" />
+
+    <!-- Open Graph (Facebook, WhatsApp, LinkedIn previews) -->
+    <meta property="og:site_name" content="eClinicPro" />
+    <meta property="og:type"      content="<?= e($ogType) ?>" />
+    <meta property="og:title"     content="<?= e($pageTitle) ?>" />
+    <meta property="og:description" content="<?= e($metaDesc) ?>" />
+    <meta property="og:url"       content="<?= e($canonicalUrl) ?>" />
+    <meta property="og:image"     content="<?= e($ogImage) ?>" />
+    <meta property="og:locale"    content="en_IN" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card"        content="summary_large_image" />
+    <meta name="twitter:title"       content="<?= e($pageTitle) ?>" />
+    <meta name="twitter:description" content="<?= e($metaDesc) ?>" />
+    <meta name="twitter:image"       content="<?= e($ogImage) ?>" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/assets/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+
+    <!-- Site-wide Organization JSON-LD (trust signal) -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "eClinicPro",
+        "url": "https://eclinicpro.com",
+        "logo": "https://eclinicpro.com/assets/og-default.png",
+        "description": "The clinic operating system — patient records, prescriptions, appointments, billing — all in one place.",
+        "sameAs": [],
+        "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer support",
+            "email": "hello@eclinicpro.com",
+            "areaServed": "IN",
+            "availableLanguage": ["English", "Hindi"]
+        }
+    }
+    </script>
+
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YTM2L1L5RZ"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-YTM2L1L5RZ');
+    </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

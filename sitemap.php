@@ -36,13 +36,22 @@ echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
 
 // ---- Marketing pages (manual list — keep in sync with what's public) ----
 $marketing = [
-    ['', 1.0, 'weekly'],
-    ['/find-a-doctor', 0.9, 'daily'],
-    ['/features', 0.7, 'monthly'],
-    ['/pricing', 0.7, 'monthly'],
-    ['/security', 0.6, 'monthly'],
-    ['/product-tour', 0.6, 'monthly'],
-    ['/patient', 0.5, 'monthly'],
+    ['',                   1.0, 'weekly'],
+    ['/find-a-doctor',     0.9, 'daily'],
+    ['/features',          0.8, 'monthly'],
+    ['/pricing',           0.8, 'monthly'],
+    ['/product-tour',      0.7, 'monthly'],
+    ['/security',          0.6, 'monthly'],
+    ['/customer-stories',  0.7, 'monthly'],
+    ['/book-a-demo',       0.7, 'monthly'],
+    // Specialty landing pages (marketing — distinct from /find-a-doctor SEO city pages)
+    ['/gps',               0.7, 'monthly'],
+    ['/dentists',          0.7, 'monthly'],
+    ['/dermatologists',    0.7, 'monthly'],
+    ['/pediatricians',     0.7, 'monthly'],
+    ['/homeopaths',        0.7, 'monthly'],
+    ['/physiotherapists',  0.7, 'monthly'],
+    ['/patient',           0.5, 'monthly'],
 ];
 foreach ($marketing as [$path, $priority, $changefreq]) {
     echo "  <url>\n";
