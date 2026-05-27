@@ -13,6 +13,20 @@ $activePage = '';
 $clinicCount = ecp_active_clinic_count();
 $countryCount = ecp_country_count();
 
+// WebSite + SearchAction JSON-LD — lets Google show a search box for the brand
+// in the SERP (a "sitelinks searchbox") that submits to /find-a-doctor.
+$extraHead = '<script type="application/ld+json">' . json_encode([
+    '@context' => 'https://schema.org',
+    '@type'    => 'WebSite',
+    'name'     => 'eClinicPro',
+    'url'      => 'https://eclinicpro.com',
+    'potentialAction' => [
+        '@type'       => 'SearchAction',
+        'target'      => 'https://eclinicpro.com/find-a-doctor?q={search_term_string}',
+        'query-input' => 'required name=search_term_string',
+    ],
+], JSON_UNESCAPED_SLASHES) . '</script>';
+
 require __DIR__ . '/partials/header.php';
 ?>
 

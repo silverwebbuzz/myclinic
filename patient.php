@@ -11,6 +11,7 @@ require_once __DIR__ . '/partials/patient_auth.php';
 $pageTitle  = 'Patient panel — eClinicPro';
 $metaDesc   = 'Save your shortlist of doctors and book faster next time.';
 $activePage = '';
+$noindex    = true;                  // private — don't index logged-in/empty state
 
 $me = ecp_patient_current();   // null when logged out
 

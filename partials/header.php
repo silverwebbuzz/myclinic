@@ -55,6 +55,9 @@ $ecpPatientJson = $ecpPatient
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="<?= e($metaDesc) ?>" />
+    <?php if (!empty($noindex)): ?>
+    <meta name="robots" content="noindex, nofollow" />
+    <?php endif; ?>
     <meta name="theme-color" content="#0F9B6E" />
     <title><?= e($pageTitle) ?></title>
 
@@ -111,14 +114,20 @@ $ecpPatientJson = $ecpPatient
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Non-blocking font load: swap-in once downloaded, system font shown first. -->
+    <link rel="preload" as="style"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+          media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"></noscript>
 
     <?php $stylesBust = @filemtime(__DIR__ . '/../assets/css/styles.css') ?: time(); ?>
     <link rel="stylesheet" href="/assets/css/styles.css?v=<?= $stylesBust ?>" />
     <?php if (!empty($extraHead)) echo $extraHead; ?>
 
-    <!-- Lightweight interactivity (mobile menu, reveal-on-scroll) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Alpine pinned to exact version for CDN cacheability (was @3.x.x — re-fetched on every floating release) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
 </head>
 <!-- Hand the initial session blob to JS via a separate JSON script tag
      so we don't have to embed PHP inside an Alpine x-data attribute. -->

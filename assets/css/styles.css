@@ -1212,8 +1212,15 @@ footer.foot {
   .modules-grid { grid-template-columns: 1fr; }
   .foot-grid { grid-template-columns: 1fr; gap: 24px; }
 
-  /* ---- pricing card padding ---- */
+  /* ---- pricing card padding + responsive price headline ---- */
   .price-card { padding: 22px 20px; }
+  .price-amt { font-size: 34px; letter-spacing: -1px; }
+  .price-amt .currency { font-size: 18px; }
+
+  /* ---- section / chapter headings on phones ---- */
+  .spec-showcase .desc h3 { font-size: 26px; letter-spacing: -0.4px; line-height: 1.2; }
+  .feat-cat-head h2 { font-size: 24px; letter-spacing: -0.4px; line-height: 1.2; }
+  .tour-chapter > .head h2 { font-size: 24px; letter-spacing: -0.4px; line-height: 1.2; }
 
   /* ---- forms (book-a-demo, etc.) get cramped on phones ---- */
   input[type="text"], input[type="email"], input[type="tel"],

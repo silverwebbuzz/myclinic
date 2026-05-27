@@ -51,7 +51,7 @@ $marketing = [
     ['/pediatricians',     0.7, 'monthly'],
     ['/homeopaths',        0.7, 'monthly'],
     ['/physiotherapists',  0.7, 'monthly'],
-    ['/patient',           0.5, 'monthly'],
+    // NOTE: /patient is private (noindex) — excluded from sitemap.
 ];
 foreach ($marketing as [$path, $priority, $changefreq]) {
     // Root must be a fully-qualified URL with trailing slash for Search Console.
