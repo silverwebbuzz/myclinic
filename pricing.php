@@ -1,237 +1,335 @@
 <?php
 // =====================================================================
-// pricing.php — eClinicPro pricing
+// pricing.php — eClinicPro pricing (single plan, two add-ons, founding clinic)
 // =====================================================================
 require_once __DIR__ . '/partials/helpers.php';
 
 $pageTitle = 'Pricing — eClinicPro';
-$metaDesc = 'Simple pricing. Start free, forever. Add only the modules you need. Pay what your clinic actually uses — never more.';
+$metaDesc = 'One simple plan. ₹1,499/month. Everything to run your clinic. Plus optional add-ons for WhatsApp and multi-branch.';
 $activePage = 'pricing';
 
+// Pull founding clinic counter from DB if available; fall back to constants
+// when the table isn't migrated yet (don't 500 the marketing page).
+$fcCap = 100;
+$fcClaimed = 0;
+$fcOpen = true;
+try {
+    $db = ecp_db();
+    if ($db) {
+        $row = $db->query("SELECT cap, claimed, closed_at FROM founding_clinic_state WHERE id = 1")
+            ->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $fcCap = (int) $row['cap'];
+            $fcClaimed = (int) $row['claimed'];
+            $fcOpen = empty($row['closed_at']) && $fcClaimed < $fcCap;
+        }
+    }
+} catch (Throwable $e) {
+    // Table doesn't exist yet during phased rollout — silently fall back.
+}
+$fcRemaining = max(0, $fcCap - $fcClaimed);
+
 require __DIR__ . '/partials/header.php';
-
-$plans = [
-    ['Starter', 'Solo doctors', 0, 0, 'Start free', 'btn-dark', null, false, true],
-    ['Clinic', 'Single-location', 29, 278, 'Start Clinic trial', 'btn-dark', null, false, false],
-    ['Practice', 'Multi-doctor', 79, 758, 'Get Practice', 'btn-primary', 'Most chosen', true, false],
-    ['Hospital', 'Multi-location', 199, 1910, 'Talk to sales', 'btn-dark', null, false, false],
-];
-
-$compareGroups = [
-    ['Core', [
-        ['Patient records', '200 active', 'Unlimited', 'Unlimited', 'Unlimited'],
-        ['Appointments & reminders', true, true, true, true],
-        ['WhatsApp & SMS reminders', false, true, true, true],
-        ['Digital prescriptions', 'Basic', true, true, true],
-        ['QR patient cards', false, true, true, true],
-        ['Users', '1', '3', '10', 'Unlimited'],
-        ['Locations', '1', '1', '3', 'Unlimited'],
-    ]],
-    ['Clinical modules', [
-        ['Modules included', '0', '5', '12', 'All 24'],
-        ['Vitals & trend charts', false, '+$5/mo', true, true],
-        ['Lab orders', false, '+$8/mo', true, true],
-        ['Pharmacy inventory', false, '+$12/mo', true, true],
-        ['Telemedicine', false, '+$14/mo', true, true],
-        ['Specialty modules (dental, homeo, etc.)', false, '+$7–11/mo', true, true],
-    ]],
-    ['Business', [
-        ['Invoicing & payments', 'Basic', true, true, true],
-        ['Multi-currency', false, true, true, true],
-        ['Analytics & reports', false, false, true, true],
-        ['Insurance claim submission', false, false, true, true],
-        ['API & webhooks', false, false, true, true],
-    ]],
-    ['Security & support', [
-        ['HIPAA / GDPR / DPDP', true, true, true, true],
-        ['Audit logs', '30 days', '90 days', '1 year', 'Forever'],
-        ['SSO (SAML)', false, false, false, true],
-        ['Custom roles', false, false, true, true],
-        ['Support', 'Community', 'Email · 24h', 'Chat · priority', 'Dedicated CSM'],
-        ['SLA', false, false, false, '99.95%'],
-    ]],
-];
-
-$renderCell = function ($v) {
-    if ($v === true) return '<span class="cmp-tick">✓</span>';
-    if ($v === false) return '<span class="cmp-dash">—</span>';
-    return '<span style="font-size: 13px; color: var(--ink-2);">' . e((string) $v) . '</span>';
-};
 ?>
 
-<section style="padding: 140px 0 60px; text-align: center; position: relative; overflow: hidden;">
-    <div style="position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%, rgba(15,155,110,0.06) 0%, transparent 60%); pointer-events: none;"></div>
-    <div class="wrap" style="position: relative; max-width: 820px;">
-        <span class="eyebrow" style="display: block; margin-bottom: 16px;">Pricing</span>
-        <h1 class="h-display" style="font-size: clamp(40px, 5.5vw, 60px); letter-spacing: -1.3px;">Simple pricing. No surprises.</h1>
-        <p class="lede" style="font-size: 19px; margin-top: 22px; max-width: 640px; margin-left: auto; margin-right: auto;">
-            Start free, forever. Upgrade only when your clinic outgrows it — or build your own plan from the module marketplace.
+<section class="hero pricing-hero">
+    <div class="wrap">
+        <span class="eyebrow">Pricing</span>
+        <h1 class="h-display">One plan. Everything to run your clinic.</h1>
+        <p class="lede center">
+            No tiers. No upsells hidden behind a paywall. Pay one price, get the whole clinic system.
+            Try it free for 30 days — no card needed.
         </p>
-
-        <div x-data="{ yearly: false }" style="display: flex; justify-content: center; margin-top: 32px;">
-            <div class="pricing-toggle" style="display: inline-flex; background: var(--bg-2); border-radius: 999px; padding: 4px; position: relative;">
-                <button type="button" @click="yearly = false"
-                        :class="!yearly ? 'active' : ''"
-                        style="position: relative; z-index: 1; padding: 8px 22px; border-radius: 999px; font-size: 13px; font-weight: 500; border: 0; background: transparent; cursor: pointer;"
-                        :style="!yearly ? 'background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1);' : ''">
-                    Monthly
-                </button>
-                <button type="button" @click="yearly = true"
-                        :class="yearly ? 'active' : ''"
-                        style="position: relative; z-index: 1; padding: 8px 22px; border-radius: 999px; font-size: 13px; font-weight: 500; border: 0; background: transparent; cursor: pointer; display: flex; align-items: center; gap: 8px;"
-                        :style="yearly ? 'background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1);' : ''">
-                    Yearly <span class="save-pill" style="font-size: 10px; background: var(--teal-50); color: var(--teal-800); padding: 2px 6px; border-radius: 999px; font-weight: 600;">Save 20%</span>
-                </button>
-            </div>
-        </div>
     </div>
 </section>
 
-<section style="padding-top: 20px;" x-data="{ yearly: false }">
+<?php if ($fcOpen): ?>
+<section class="founding-banner">
     <div class="wrap">
-        <div class="cmp-wrap" style="overflow-x: auto;">
-            <table class="cmp-table" style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr>
-                        <th style="width: 32%; text-align: left; padding: 18px 16px; vertical-align: bottom;">
-                            <span style="font-size: 12px; color: var(--mute); font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;">Compare plans</span>
-                        </th>
-                        <?php foreach ($plans as [$name, $sub, $price, $yPrice, $cta, $ctaCls, $tag, $featured, $isStarter]):
-                            $thBg = $featured ? 'background: var(--bg-3); border-top: 3px solid var(--teal-600);' : '';
-                        ?>
-                        <th style="padding: 18px 16px; text-align: center; vertical-align: bottom; <?= $thBg ?>">
-                            <div class="cmp-plan">
-                                <div style="font-size: 18px; font-weight: 500;"><?= e($name) ?></div>
-                                <div style="font-size: 11px; color: var(--mute); margin-top: 2px;"><?= e($sub) ?></div>
-                                <div style="margin-top: 12px; font-size: 22px; font-weight: 300;">
-                                    <?php if ($price === 0): ?>
-                                        Free
-                                    <?php else: ?>
-                                        $<span x-text="yearly ? <?= (int) $yPrice ?> : <?= (int) $price ?>"></span><span style="font-size: 12px; color: var(--mute);" x-text="yearly ? '/yr' : '/mo'"></span>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </th>
-                        <?php endforeach; ?>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($compareGroups as [$group, $rows]): ?>
-                    <tr class="cmp-group">
-                        <td colspan="5" style="padding: 22px 16px 10px; font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500;"><?= e($group) ?></td>
-                    </tr>
-                    <?php foreach ($rows as $row): ?>
-                    <tr style="border-top: 0.5px solid var(--line);">
-                        <td style="padding: 12px 16px; font-weight: 500; color: var(--ink); font-size: 13.5px;"><?= e($row[0]) ?></td>
-                        <?php for ($i = 1; $i <= 4; $i++):
-                            $featuredCol = $plans[$i - 1][7];
-                            $cellBg = $featuredCol ? 'background: var(--bg-3);' : '';
-                        ?>
-                        <td style="padding: 12px 16px; text-align: center; <?= $cellBg ?>"><?= $renderCell($row[$i]) ?></td>
-                        <?php endfor; ?>
-                    </tr>
-                    <?php endforeach; ?>
-                    <?php endforeach; ?>
-                    <tr style="border-top: 0.5px solid var(--line);">
-                        <td></td>
-                        <?php foreach ($plans as [$name, $sub, $price, $yPrice, $cta, $ctaCls, $tag, $featured]):
-                            $featuredCol = $featured ? 'background: var(--bg-3);' : '';
-                        ?>
-                        <td style="padding: 24px 16px; text-align: center; <?= $featuredCol ?>">
-                            <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn <?= e($ctaCls) ?>" style="width: 100%; max-width: 200px;"><?= e($cta) ?></a>
-                        </td>
-                        <?php endforeach; ?>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <div style="text-align: center; margin-top: 40px; font-size: 13px; color: var(--mute);">
-            All prices in USD · Local currency at checkout · 30-day money-back · Cancel anytime
+        <div class="fc-card">
+            <div class="fc-badge">Founding clinic deal</div>
+            <h2 class="fc-title">
+                ₹999/month <span class="fc-strike">₹1,499</span>
+                <span class="fc-locked">locked for 24 months</span>
+            </h2>
+            <p class="fc-sub">
+                First <strong><?= $fcCap ?></strong> clinics to sign up get this rate, locked in.
+                <strong><?= $fcRemaining ?></strong> of <?= $fcCap ?> spots remaining.
+            </p>
+            <a href="https://app.eclinicpro.com/register?fc=1" class="btn btn-primary btn-lg">
+                Claim founding clinic price
+            </a>
         </div>
     </div>
 </section>
+<?php endif; ?>
 
-<!-- ============ CALCULATOR ============ -->
-<?php
-$presets = [
-    ['gp', 'Solo GP', ['Prescriptions' => 6, 'QR patient card' => 4, 'Vitals & charts' => 5, 'Billing & invoices' => 9], 24],
-    ['dental', 'Single-chair dentist', ['Prescriptions' => 6, 'Dental charting' => 9, 'Billing & invoices' => 9, 'Analytics & reports' => 9], 33],
-    ['homeo', 'Homeopath', ['Prescriptions' => 6, 'Remedy database' => 7, 'Billing & invoices' => 9], 22],
-    ['multi', 'Multi-doctor practice', ['Prescriptions' => 6, 'QR patient card' => 4, 'Vitals & charts' => 5, 'Pharmacy' => 12, 'Lab orders' => 8, 'Billing & invoices' => 9, 'Analytics' => 9, 'Telemedicine' => 14], 73],
-];
-?>
-<section style="background: #fff; padding: 100px 0;" x-data="{ active: 'gp' }">
+<section class="plan-section">
     <div class="wrap">
-        <div class="section-head reveal">
-            <span class="eyebrow">Build your own plan</span>
-            <h2 class="h-section">What would your clinic pay?</h2>
-            <p class="lede">Pick a typical clinic profile to see what a real à-la-carte plan costs — almost always less than the all-in tiers above.</p>
-        </div>
-        <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 36px;">
-            <?php foreach ($presets as [$id, $label]): ?>
-            <button type="button" @click="active = '<?= e($id) ?>'"
-                    :class="active === '<?= e($id) ?>' ? 'active' : ''"
-                    class="spec-tab"><?= e($label) ?></button>
-            <?php endforeach; ?>
-        </div>
+        <div class="plan-grid">
 
-        <?php foreach ($presets as [$id, $label, $mods, $total]): ?>
-        <div x-show="active === '<?= e($id) ?>'" x-cloak class="reveal" style="max-width: 640px; margin: 0 auto; background: var(--bg-2); border-radius: 18px; padding: 28px;">
-            <div style="font-size: 12px; color: var(--mute); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; margin-bottom: 14px;">For: <?= e($label) ?></div>
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 0.5px solid var(--line);">
-                    <span style="font-size: 14px;">Starter plan</span>
-                    <span style="font-size: 14px; font-weight: 500;">Free</span>
+            <!-- Base plan card -->
+            <div class="plan-card primary">
+                <div class="plan-head">
+                    <span class="plan-name">Standard</span>
+                    <h3 class="plan-price">
+                        <span class="currency">₹</span>1,499<span class="per">/month</span>
+                    </h3>
+                    <p class="plan-yearly">
+                        or <strong>₹14,999/year</strong> — one month free
+                    </p>
                 </div>
-                <?php foreach ($mods as $name => $price): ?>
-                <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 0.5px solid var(--line);">
-                    <span style="font-size: 14px;"><?= e($name) ?></span>
-                    <span style="font-size: 14px; font-weight: 500;">$<?= (int) $price ?>/mo</span>
+
+                <ul class="plan-features">
+                    <li>✓ Patient records, visits, prescriptions</li>
+                    <li>✓ Appointments &amp; walk-in queue</li>
+                    <li>✓ Billing &amp; invoicing (GST-ready)</li>
+                    <li>✓ Vitals, diagnosis, follow-up tracking</li>
+                    <li>✓ Specialty-aware forms (50+ specialties)</li>
+                    <li>✓ Teleconsultation built in</li>
+                    <li>✓ Public doctor profile on eclinicpro.com</li>
+                    <li>✓ Daily reports &amp; analytics</li>
+                    <li>✓ Unlimited patients, unlimited staff users</li>
+                    <li>✓ 30-day free trial — no credit card</li>
+                </ul>
+
+                <a href="https://app.eclinicpro.com/register" class="btn btn-primary btn-lg btn-block">
+                    Start 30-day free trial
+                </a>
+                <p class="plan-fineprint">No card needed. Cancel anytime during trial.</p>
+            </div>
+
+            <!-- Add-ons column -->
+            <div class="addon-column">
+                <h3 class="addon-heading">Optional add-ons</h3>
+
+                <div class="addon-card">
+                    <div class="addon-icon">💬</div>
+                    <div>
+                        <h4 class="addon-name">Patient Connect</h4>
+                        <p class="addon-desc">
+                            WhatsApp automation: appointment reminders, prescription delivery,
+                            follow-up nudges. Cuts no-show rates in half.
+                        </p>
+                        <div class="addon-price">+₹499/month</div>
+                    </div>
                 </div>
-                <?php endforeach; ?>
+
+                <div class="addon-card">
+                    <div class="addon-icon">🌿</div>
+                    <div>
+                        <h4 class="addon-name">Clinic Network</h4>
+                        <p class="addon-desc">
+                            Add an extra clinic branch under one account.
+                            Unified patient records, separate queues per branch.
+                        </p>
+                        <div class="addon-price">+₹999/month per branch</div>
+                    </div>
+                </div>
+
+                <p class="addon-tease">
+                    More add-ons launching soon: AI voice notes, advanced analytics, lab management.
+                </p>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--ink);">
-                <span style="font-size: 14px; font-weight: 500;">Total per month</span>
-                <span style="font-size: 32px; font-weight: 300; letter-spacing: -1px;">$<?= (int) $total ?><span style="font-size: 14px; color: var(--mute);">/mo</span></span>
-            </div>
-            <div style="margin-top: 20px; text-align: center;">
-                <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary">Configure this plan</a>
-            </div>
+
         </div>
-        <?php endforeach; ?>
     </div>
 </section>
 
-<!-- ============ PRICING FAQ ============ -->
-<?php
-$faqs = [
-    ['Can I change plans mid-month?', 'Yes. Upgrades take effect immediately and we prorate the difference. Downgrades take effect at the next billing cycle so you don\'t lose paid-for days.'],
-    ['What counts as an "active patient" on Starter?', 'A patient seen or contacted in the last 12 months. Inactive patients sit in your archive forever, free, and re-activate the moment you book them.'],
-    ['Do you offer a free trial of paid plans?', 'Every paid plan has a 30-day full-feature trial, no credit card needed. If you don\'t convert, your data stays accessible on the Starter free tier.'],
-    ['Is there a per-doctor fee on top?', 'No. The plan price is the plan price. User seats are included in each tier. If you outgrow seats, the next tier up usually costs less than per-seat pricing would.'],
-    ['How does multi-location billing work?', 'You\'re billed once for the whole organization. Practice includes 3 locations, Hospital is unlimited. Each location has its own dashboard but rolls up to one bill.'],
-    ['What payment methods do you accept?', 'Credit/debit card, ACH/SEPA bank transfer, UPI (India), Apple Pay, Google Pay. Enterprise plans support invoice + wire.'],
-    ['Do you discount for non-profits or rural clinics?', 'Yes — 40% off Practice/Hospital for registered non-profits, NGOs, and verified rural single-doctor clinics. Email hello@eclinicpro.com with documentation.'],
-    ['What if I just want one specific module, like dental charting?', 'Build your own plan. Start on Starter (free), then add only the modules you need à la carte from the marketplace. Many solo dentists run on $13/month total.'],
-];
-?>
-<section style="background: var(--bg-2);" x-data="{ open: 0 }">
-    <div class="wrap">
-        <div class="section-head reveal">
-            <span class="eyebrow">Pricing questions</span>
-            <h2 class="h-section">What doctors ask before they sign.</h2>
+<section class="faq-section">
+    <div class="wrap-narrow">
+        <h2 class="h-section center">Pricing FAQ</h2>
+
+        <div class="faq-item">
+            <h3>Is there really only one plan?</h3>
+            <p>
+                Yes. We removed Basic/Pro/Enterprise tiers because Indian clinics don't want to
+                guess which one they need. Everything required to run a clinic is included in
+                ₹1,499/month. Two optional add-ons cover the extras most clinics ask for.
+            </p>
         </div>
-        <div class="faq-list reveal">
-            <?php foreach ($faqs as $i => [$q, $a]): ?>
-            <div class="faq-item" :class="open === <?= $i ?> ? 'open' : ''">
-                <button type="button" class="faq-q" @click="open = open === <?= $i ?> ? -1 : <?= $i ?>">
-                    <span><?= e($q) ?></span><span class="plus"></span>
-                </button>
-                <div class="faq-a" x-show="open === <?= $i ?>" x-collapse><?= e($a) ?></div>
-            </div>
-            <?php endforeach; ?>
+
+        <div class="faq-item">
+            <h3>What happens after the 30-day trial?</h3>
+            <p>
+                You decide whether to continue. If you forget, we email you 3 days before expiry
+                and grant a one-time 15-day extension if you ask. No automatic charges; no card
+                taken upfront.
+            </p>
+        </div>
+
+        <div class="faq-item">
+            <h3>Can I add or remove add-ons anytime?</h3>
+            <p>
+                Yes. Add-ons are month-to-month. Cancel any time — no penalty, no notice period.
+            </p>
+        </div>
+
+        <div class="faq-item">
+            <h3>Do you offer annual discounts?</h3>
+            <p>
+                Yes. Pay ₹14,999/year (one month free) or ₹1,499/month. Same features.
+            </p>
+        </div>
+
+        <div class="faq-item">
+            <h3>Is GST included in the price?</h3>
+            <p>
+                GST (18%) is added at checkout for India billing. Invoices are GST-compliant.
+            </p>
+        </div>
+
+        <div class="faq-item">
+            <h3>What about countries other than India?</h3>
+            <p>
+                Right now we're optimized for Indian clinics — pricing is in INR, payments via
+                Razorpay, GST-ready invoicing. International clinics can still sign up; we're
+                rolling out multi-currency support based on customer demand.
+            </p>
+        </div>
+
+        <div class="faq-item">
+            <h3>What's the Founding Clinic deal?</h3>
+            <p>
+                The first <?= $fcCap ?> clinics to sign up lock in ₹999/month for 24 months —
+                a permanent discount as a thank-you for being early. After 24 months your
+                account converts to the standard ₹1,499/month rate.
+                <?php if ($fcOpen): ?>
+                <strong><?= $fcRemaining ?> spots left.</strong>
+                <?php else: ?>
+                Sold out.
+                <?php endif; ?>
+            </p>
         </div>
     </div>
 </section>
+
+<section class="cta-block">
+    <div class="wrap-narrow center">
+        <h2 class="h-section">Try eClinicPro for 30 days</h2>
+        <p class="lede">No credit card. Full product. Cancel anytime.</p>
+        <a href="https://app.eclinicpro.com/register" class="btn btn-primary btn-lg">
+            Start free trial
+        </a>
+    </div>
+</section>
+
+<style>
+.pricing-hero { padding-bottom: 24px; }
+.lede.center { text-align: center; max-width: 640px; margin: 0 auto 32px; }
+
+.founding-banner { padding: 24px 0 16px; }
+.fc-card {
+    background: linear-gradient(135deg, #fff8e1, #fff);
+    border: 2px solid #f59e0b;
+    border-radius: 18px;
+    padding: 28px 32px;
+    text-align: center;
+    max-width: 720px;
+    margin: 0 auto;
+    box-shadow: 0 10px 30px rgba(245, 158, 11, 0.12);
+}
+.fc-badge {
+    display: inline-block;
+    background: #f59e0b;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 999px;
+    margin-bottom: 12px;
+}
+.fc-title {
+    font-size: 32px;
+    font-weight: 300;
+    letter-spacing: -0.8px;
+    margin: 0 0 8px;
+}
+.fc-strike { text-decoration: line-through; color: var(--mute); font-size: 18px; margin-left: 8px; }
+.fc-locked { display: block; font-size: 13px; font-weight: 500; color: var(--ink-2); margin-top: 4px; }
+.fc-sub { color: var(--ink-2); margin: 8px 0 18px; }
+
+.plan-section { padding: 32px 0 64px; }
+.plan-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 32px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+@media (max-width: 900px) {
+    .plan-grid { grid-template-columns: 1fr; }
+}
+
+.plan-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 32px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+}
+.plan-card.primary { border: 2px solid var(--teal-600); }
+.plan-name {
+    display: inline-block;
+    background: var(--teal-50);
+    color: var(--teal-700);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 999px;
+}
+.plan-price {
+    font-size: 48px;
+    font-weight: 300;
+    letter-spacing: -1.2px;
+    margin: 12px 0 4px;
+}
+.plan-price .currency { font-size: 24px; vertical-align: super; opacity: 0.7; margin-right: 2px; }
+.plan-price .per { font-size: 16px; font-weight: 400; color: var(--mute); margin-left: 4px; }
+.plan-yearly { color: var(--ink-2); margin: 0 0 24px; }
+.plan-features { list-style: none; padding: 0; margin: 0 0 24px; }
+.plan-features li { padding: 6px 0; font-size: 14.5px; color: var(--ink-2); }
+.btn-block { display: block; text-align: center; width: 100%; }
+.plan-fineprint { font-size: 12px; color: var(--mute); margin: 10px 0 0; text-align: center; }
+
+.addon-column { display: flex; flex-direction: column; gap: 16px; }
+.addon-heading { font-size: 16px; font-weight: 600; margin: 0 0 4px; color: var(--ink-2); }
+.addon-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    gap: 16px;
+    transition: border-color .15s;
+}
+.addon-card:hover { border-color: var(--teal-400); }
+.addon-icon { font-size: 28px; flex-shrink: 0; }
+.addon-name { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
+.addon-desc { font-size: 13.5px; color: var(--ink-2); line-height: 1.55; margin: 0 0 8px; }
+.addon-price { font-size: 14px; font-weight: 600; color: var(--teal-700); }
+.addon-tease { font-size: 12.5px; color: var(--mute); padding: 0 4px; line-height: 1.5; }
+
+.faq-section { padding: 64px 0; background: var(--bg-2); }
+.wrap-narrow { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+.center { text-align: center; }
+.faq-item { margin: 24px 0; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
+.faq-item:last-child { border-bottom: 0; }
+.faq-item h3 { font-size: 17px; font-weight: 600; margin: 0 0 8px; color: var(--ink); }
+.faq-item p { font-size: 14.5px; color: var(--ink-2); line-height: 1.65; margin: 0; }
+
+.cta-block { padding: 80px 0; background: #fff; }
+
+@media (max-width: 600px) {
+    .fc-title { font-size: 24px; }
+    .fc-card { padding: 22px 18px; }
+    .plan-card { padding: 22px; }
+    .plan-price { font-size: 36px; }
+}
+</style>
 
 <?php require __DIR__ . '/partials/footer.php'; ?>

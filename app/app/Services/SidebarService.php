@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Core\RequestContext;
+use App\Gates\FeatureGate;
 use App\Gates\ModuleGate;
 
 final class SidebarService
@@ -24,6 +25,15 @@ final class SidebarService
         foreach ($config as $group) {
             $items = [];
             foreach ($group['items'] as $moduleId => $item) {
+                // Bucket-3 items: hidden until the feature_flag is enabled
+                // for this clinic. Once promoted to a paid add-on, drop the
+                // feature_flag key from the config and the item falls back
+                // to the standard clinic_modules check below.
+                if (!empty($item['feature_flag'])
+                    && !FeatureGate::check((string) $item['feature_flag'])) {
+                    continue;
+                }
+
                 $anyOf = $item['any_of'] ?? [$moduleId];
                 $visible = false;
                 foreach ($anyOf as $m) {

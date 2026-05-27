@@ -18,75 +18,32 @@ use App\Support\View;
 
 final class OnboardingController
 {
+    /**
+     * Was a 4-tier plan picker. After Phase 1 there is only one plan
+     * ('standard'). This endpoint now auto-applies the standard plan
+     * and advances onboarding directly to clinic-setup. Kept as a route
+     * because existing tenants and bookmarks may still hit it.
+     */
     public function planSelection(Request $request): Response
     {
-        if ($redirect = $this->guardStep(1)) {
-            return $redirect;
+        $clinicId = RequestContext::clinicId();
+        if ($clinicId !== null) {
+            // Auto-apply the standard plan, start trial. Idempotent — calling
+            // twice is safe; PlanService::applyPlanToTenant guards on its own.
+            PlanService::applyPlanToTenant($clinicId, 'standard', false);
+            OnboardingService::advanceTo($clinicId, 2);
         }
 
-        $clinic = RequestContext::clinic();
-        $plans = PlanService::all();
-        $yearly = ($request->query['cycle'] ?? 'monthly') === 'yearly';
-
-        return $this->page('onboarding/plan-selection', [
-            'csrf' => CsrfService::token(),
-            'plans' => $plans,
-            'yearly' => $yearly,
-            'clinic' => $clinic,
-            'cancelled' => $request->query['cancelled'] ?? null,
-            'simulated' => $request->query['simulated'] ?? null,
-            'step' => 1,
-        ]);
+        return Response::redirect('/onboarding/clinic-setup');
     }
 
+    /**
+     * POST endpoint preserved for any in-flight requests; same behavior
+     * as planSelection() now — no plan choice exists to make.
+     */
     public function selectPlan(Request $request): Response
     {
-        if (!$this->verifyCsrf($request)) {
-            return Response::redirect('/onboarding/plan-selection');
-        }
-
-        $clinicId = RequestContext::clinicId();
-        $planId = $request->post['plan'] ?? 'free';
-        $billingCycle = $request->post['billing_cycle'] ?? 'monthly';
-        $clinic = RequestContext::clinic();
-
-        if (!PlanService::get($planId)) {
-            return Response::redirect('/onboarding/plan-selection');
-        }
-
-        if ($planId === 'free') {
-            PlanService::applyPlanToTenant($clinicId, 'free', false);
-
-            return Response::redirect('/onboarding/clinic-setup');
-        }
-
-        $result = BillingGatewayService::startCheckout(
-            $clinicId,
-            $planId,
-            $billingCycle,
-            (string) ($clinic['country_code'] ?? 'IN'),
-        );
-
-        if ($result['type'] === 'redirect' && !empty($result['url'])) {
-            $url = $result['url'];
-            if (str_starts_with($url, '/')) {
-                return Response::redirect($url);
-            }
-
-            return Response::html(
-                '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url='
-                . htmlspecialchars($url) . '"></head><body>Redirecting to payment…</body></html>',
-            );
-        }
-
-        return $this->page('onboarding/plan-selection', [
-            'csrf' => CsrfService::token(),
-            'plans' => PlanService::all(),
-            'yearly' => $billingCycle === 'yearly',
-            'clinic' => $clinic,
-            'error' => $result['message'] ?? 'Could not start checkout',
-            'step' => 1,
-        ]);
+        return $this->planSelection($request);
     }
 
     public function billingSuccess(Request $request): Response
@@ -350,7 +307,11 @@ final class OnboardingController
         $clinic = RequestContext::clinic();
         $config = OnboardingService::specialtyConfig($clinicId) ?? [];
         $plans = PlanService::all();
-        $plan = $plans[$clinic['plan'] ?? 'free'] ?? $plans['free'];
+        // After Phase 1 there is only one plan ('standard'). The plan-picker
+        // step is removed in Phase 1 UI step 10; until then, fall back to
+        // 'standard' / first available so this page never crashes.
+        $planKey = $clinic['plan'] ?? 'standard';
+        $plan = $plans[$planKey] ?? ($plans['standard'] ?? reset($plans));
 
         $specialties = require dirname(__DIR__, 2) . '/config/specialties.php';
 
@@ -385,6 +346,9 @@ final class OnboardingController
     private function routeForStep(int $step): string
     {
         return match ($step) {
+            // Step 1 (plan selection) is auto-handled in planSelection() —
+            // it always advances to step 2 (clinic-setup). Kept in the map
+            // for any tenant still stuck on step 1 from before Phase 1.
             1 => '/onboarding/plan-selection',
             2 => '/onboarding/clinic-setup',
             3 => '/onboarding/specialty-config',

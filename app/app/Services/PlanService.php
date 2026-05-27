@@ -96,8 +96,10 @@ final class PlanService
             'onboarding_step' => 2,
         ];
 
+        // After Phase 1: 30-day trial for all new tenants (was 14).
+        // 'free' guard kept harmless — that tier no longer exists.
         if ($withTrial && $planId !== 'free') {
-            $data['trial_ends_at'] = date('Y-m-d', strtotime('+14 days'));
+            $data['trial_ends_at'] = date('Y-m-d', strtotime('+30 days'));
         }
 
         QueryBuilder::table('tenants')->where('id', '=', $clinicId)->update($data);

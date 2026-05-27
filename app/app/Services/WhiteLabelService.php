@@ -6,12 +6,21 @@ namespace App\Services;
 
 use App\Core\QueryBuilder;
 use App\Services\OnboardingService;
+use App\Support\Plan;
 
 final class WhiteLabelService
 {
+    /**
+     * Was: tier-based check ($clinic['plan'] === 'enterprise').
+     * Now: gated by the `custom_branding` feature flag OR the explicit
+     * white_label=1 flag on the tenant (admin grant for select customers).
+     */
     public static function isEnterprise(array $clinic): bool
     {
-        return ($clinic['plan'] ?? '') === 'enterprise' || (int) ($clinic['white_label'] ?? 0) === 1;
+        if ((int) ($clinic['white_label'] ?? 0) === 1) {
+            return true;
+        }
+        return Plan::hasFeatureFlag((int) ($clinic['id'] ?? 0), 'custom_branding');
     }
 
     public static function hidePoweredBy(array $clinic): bool

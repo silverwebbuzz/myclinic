@@ -14,6 +14,8 @@ if (!isset($pendingClaimCount)) {
         <nav class="flex gap-4 text-sm">
             <a href="/admin/dashboard" class="hover:underline">Dashboard</a>
             <a href="/admin/clinics" class="hover:underline">Clinics</a>
+            <a href="/admin/founding-clinics" class="hover:underline">Founding</a>
+            <a href="/admin/feature-flags" class="hover:underline">Flags</a>
             <a href="/admin/claims" class="hover:underline">Claims<?php if (!empty($pendingClaimCount)): ?> <span class="ml-1 inline-flex items-center rounded-full bg-amber-500 px-2 text-[10px] font-semibold text-white"><?= (int) $pendingClaimCount ?></span><?php endif; ?></a>
             <a href="/admin/leads" class="hover:underline">Leads</a>
             <a href="/admin/reviews" class="hover:underline">Reviews</a>

@@ -1,5 +1,8 @@
 <?php
-$plan = $plans[$clinic['plan'] ?? 'free'] ?? $plans['free'];
+// After Phase 1 there is only one plan ('standard'). Old enum values
+// kept as a defensive fallback so this view never crashes mid-migration.
+$planKey = $clinic['plan'] ?? 'standard';
+$plan = $plans[$planKey] ?? ($plans['standard'] ?? reset($plans));
 $seatLimit = (int) ($clinic['seat_limit'] ?? 2) + (int) ($clinic['extra_seats_purchased'] ?? 0);
 ?>
 <div class="space-y-6">

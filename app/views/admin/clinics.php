@@ -41,7 +41,8 @@
                             <span class="text-slate-400">—</span>
                             <?php endif; ?>
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="px-4 py-3 space-x-3">
+                            <a href="/admin/clinics/<?= (int) ($c['id'] ?? 0) ?>" class="text-slate-700 hover:underline">Manage</a>
                             <form method="post" action="/admin/impersonate" class="inline">
                                 <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf ?? '') ?>">
                                 <input type="hidden" name="clinic_id" value="<?= (int) ($c['id'] ?? 0) ?>">

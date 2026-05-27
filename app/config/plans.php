@@ -2,7 +2,31 @@
 
 declare(strict_types=1);
 
+// After Phase 1 there is only one plan: 'standard'. Legacy entries
+// (free/clinic/practice/enterprise) are kept so anything that hasn't
+// been refactored yet doesn't blow up. They are not surfaced anywhere
+// in the UI — see /pricing for the new model.
+
 return [
+    'standard' => [
+        'name' => 'Standard',
+        'tagline' => 'Everything to run your clinic',
+        'monthly_usd' => 1499,
+        'yearly_usd' => 14999,
+        'seat_limit' => 999,        // unlimited in practice
+        'patient_limit' => null,
+        'featured' => true,
+        'trial_days' => 30,
+        'modules' => 'all_paid',    // resolved to every core module
+        'highlights' => [
+            'Patient records, visits, prescriptions',
+            'Appointments + walk-in queue',
+            'Billing & GST invoicing',
+            'Teleconsultation built in',
+            'Unlimited patients & users',
+        ],
+        'limits' => [],
+    ],
     'free' => [
         'name' => 'Free',
         'tagline' => 'Solo practice starter',

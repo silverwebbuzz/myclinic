@@ -46,10 +46,15 @@ final class ChurnRiskService
                 }
             }
 
-            if (($tenant['plan'] ?? 'free') !== 'free' && empty($tenant['stripe_customer_id']) && empty($tenant['razorpay_customer_id'])) {
+            // Was: ($tenant['plan'] ?? 'free') !== 'free'  — tier check
+            // Now: tenant has paid (plan_expires_at set) but has no gateway customer id.
+            // stripe_customer_id is kept here until Phase 4 drops the column; treat as legacy.
+            if (!empty($tenant['plan_expires_at'])
+                && empty($tenant['razorpay_customer_id'])
+                && empty($tenant['stripe_customer_id'])) {
                 if ($level === 'none') {
                     $level = 'low';
-                    $reason = 'Paid plan without billing customer id';
+                    $reason = 'Paid clinic without billing customer id';
                 }
             }
 
