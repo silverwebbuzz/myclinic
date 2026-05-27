@@ -421,9 +421,9 @@ final class VisitController
             return Response::json(['error' => 'No previous visit to clone'], 404);
         }
 
-        // Pull last visit's prescriptions (always — Phase 2 baseline).
-        // Symptoms will be added in Phase 3 once visit_symptoms exists.
+        // Pull last visit's prescriptions + symptoms (Phase 3).
         $prescriptions = PrescriptionService::forVisit($clinicId, (int) $last['id']);
+        $symptoms = self::fetchVisitSymptoms($clinicId, (int) $last['id']);
 
         // GET — preview only, don't persist
         if ($request->method !== 'POST') {
@@ -436,13 +436,12 @@ final class VisitController
                     'icd10_code' => $last['icd10_code'] ?? '',
                     'clinical_notes' => $last['clinical_notes'] ?? '',
                     'prescriptions' => $prescriptions,
+                    'symptoms' => $symptoms,
                 ],
             ]);
         }
 
         // POST — apply to the current draft visit.
-        // We build an autosave payload and reuse the existing service so the
-        // standard validation/sanitization path runs.
         $payload = [
             'chief_complaint' => $last['chief_complaint'] ?? null,
             'diagnosis' => $last['diagnosis'] ?? null,
@@ -453,6 +452,10 @@ final class VisitController
 
         try {
             VisitService::autosave($clinicId, $visitId, $payload);
+            // Replicate symptoms separately — they live in visit_symptoms,
+            // not in the autosave payload. Wrapped in try so a missing
+            // table (pre-Phase-3 migration) never breaks the clone.
+            self::cloneSymptomsBetween($clinicId, (int) $last['id'], $visitId);
             AuditService::log($request, 'UPDATE', 'visits', $visitId);
         } catch (\Throwable $e) {
             return Response::json(['error' => $e->getMessage()], 422);
@@ -462,7 +465,49 @@ final class VisitController
             'ok' => true,
             'cloned_from' => (int) $last['id'],
             'visited_at' => $last['visited_at'] ?? null,
+            'symptom_count' => count($symptoms),
+            'prescription_count' => count($prescriptions),
         ]);
+    }
+
+    /** @return list<array<string, mixed>> */
+    private static function fetchVisitSymptoms(int $clinicId, int $visitId): array
+    {
+        try {
+            $stmt = \App\Core\Database::connection()->prepare(
+                'SELECT id, master_id, label, source, severity, duration, sort_order
+                   FROM visit_symptoms
+                  WHERE visit_id = :v AND clinic_id = :c
+                  ORDER BY sort_order ASC, id ASC'
+            );
+            $stmt->execute([':v' => $visitId, ':c' => $clinicId]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            // visit_symptoms table doesn't exist yet (pre-Phase-3 migration).
+            return [];
+        }
+    }
+
+    private static function cloneSymptomsBetween(int $clinicId, int $sourceVisitId, int $targetVisitId): void
+    {
+        try {
+            $pdo = \App\Core\Database::connection();
+            $pdo->prepare('DELETE FROM visit_symptoms WHERE visit_id = :v')
+                ->execute([':v' => $targetVisitId]);
+            $pdo->prepare(
+                'INSERT INTO visit_symptoms
+                    (visit_id, clinic_id, master_id, label, source, severity, duration, sort_order, created_at)
+                 SELECT :tv, clinic_id, master_id, label, source, severity, duration, sort_order, NOW()
+                   FROM visit_symptoms
+                  WHERE visit_id = :sv AND clinic_id = :c'
+            )->execute([
+                ':tv' => $targetVisitId,
+                ':sv' => $sourceVisitId,
+                ':c' => $clinicId,
+            ]);
+        } catch (\Throwable $e) {
+            // Best-effort — old visits or pre-Phase-3 DB. Don't fail the clone.
+        }
     }
 
     private function requireModule(): ?Response

@@ -17,9 +17,13 @@ final class DrugService
         }
         if ($q === '') {
             $pdo = Database::connection();
+            // Phase 3: rank by usage_count when available. Old rows have 0 →
+            // alphabetical order kicks in as the tiebreaker.
             $stmt = $pdo->prepare(
                 'SELECT id, name, generic_name, strength, form, interactions, contraindications
-                 FROM drugs WHERE is_active = 1 ORDER BY name LIMIT :lim',
+                 FROM drugs WHERE is_active = 1
+                 ORDER BY usage_count DESC, name ASC
+                 LIMIT :lim',
             );
             $stmt->bindValue('lim', $limit, \PDO::PARAM_INT);
             $stmt->execute();
@@ -27,27 +31,48 @@ final class DrugService
         }
 
         $pdo = Database::connection();
+        // Phase 3: prefix LIKE first (fast on idx_drugs_usage), fall back to
+        // fulltext if needed. Prefix is what doctors expect for autocomplete.
+        $prefix = $q . '%';
         $stmt = $pdo->prepare(
             'SELECT id, name, generic_name, strength, form, interactions, contraindications
              FROM drugs
-             WHERE is_active = 1
-             AND MATCH(name, generic_name) AGAINST(:q IN BOOLEAN MODE)
+             WHERE is_active = 1 AND (name LIKE :p OR generic_name LIKE :p)
+             ORDER BY usage_count DESC, name ASC
              LIMIT :lim',
         );
-        $term = '+' . implode('* +', array_filter(explode(' ', $q))) . '*';
-        $stmt->bindValue('q', $term);
-        $stmt->bindValue('lim', $limit, \PDO::PARAM_INT);
+        $stmt->bindValue(':p', $prefix);
+        $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
         $stmt->execute();
-
         $rows = $stmt->fetchAll() ?: [];
         if ($rows !== []) {
             return $rows;
         }
 
+        // Fulltext fallback for multi-word / substring matches.
+        $stmt = $pdo->prepare(
+            'SELECT id, name, generic_name, strength, form, interactions, contraindications
+             FROM drugs
+             WHERE is_active = 1
+             AND MATCH(name, generic_name) AGAINST(:q IN BOOLEAN MODE)
+             ORDER BY usage_count DESC
+             LIMIT :lim',
+        );
+        $term = '+' . implode('* +', array_filter(explode(' ', $q))) . '*';
+        $stmt->bindValue(':q', $term);
+        $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll() ?: [];
+        if ($rows !== []) {
+            return $rows;
+        }
+
+        // Final fallback: contains LIKE.
         $like = '%' . $q . '%';
         $fallback = $pdo->prepare(
             'SELECT id, name, generic_name, strength, form, interactions, contraindications
-             FROM drugs WHERE is_active = 1 AND (name LIKE ? OR generic_name LIKE ?) LIMIT ?',
+             FROM drugs WHERE is_active = 1 AND (name LIKE ? OR generic_name LIKE ?)
+             ORDER BY usage_count DESC, name ASC LIMIT ?',
         );
         $fallback->execute([$like, $like, $limit]);
 

@@ -157,11 +157,15 @@ final class PrescriptionService
 
         $mode = SpecialtyAdapter::usesHomeopathicRx() ? 'homeopathic' : 'allopathic';
         $order = 0;
+        $drugIdsUsed = [];
+        $remedyIdsUsed = [];
+
         foreach ($lines as $line) {
             if (empty($line['drug_id']) && empty($line['remedy_id']) && empty($line['dosage'])) {
                 continue;
             }
-            QueryBuilder::table('prescriptions')->insert([
+
+            $row = [
                 'clinic_id' => $clinicId,
                 'visit_id' => $visitId,
                 'patient_id' => $patientId,
@@ -175,7 +179,64 @@ final class PrescriptionService
                 'duration_days' => !empty($line['duration_days']) ? (int) $line['duration_days'] : null,
                 'instructions' => $line['instructions'] ?? null,
                 'sort_order' => $order++,
-            ]);
+            ];
+
+            // Phase 2/3 columns — wrapped because they don't exist until
+            // phase2_migrations.sql Block 2 has been run.
+            $optional = [
+                'frequency_preset' => $line['frequency_preset'] ?? null,
+                'tapering_steps' => isset($line['tapering_steps']) && is_array($line['tapering_steps']) && $line['tapering_steps'] !== []
+                                    ? json_encode($line['tapering_steps']) : null,
+                'dose_unit' => $line['dose_unit'] ?? null,
+                'dose_amount' => isset($line['dose_amount']) && $line['dose_amount'] !== '' ? (float) $line['dose_amount'] : null,
+                'food_timing' => in_array($line['food_timing'] ?? 'any', ['before','after','with','empty','bedtime','any'], true)
+                                  ? ($line['food_timing'] ?? 'any') : 'any',
+                'mix_with' => $line['mix_with'] ?? null,
+            ];
+
+            try {
+                QueryBuilder::table('prescriptions')->insert(array_merge($row, $optional));
+            } catch (\Throwable $e) {
+                // Pre-Phase-2 schema — retry with only the legacy columns.
+                QueryBuilder::table('prescriptions')->insert($row);
+            }
+
+            if (!empty($line['drug_id'])) $drugIdsUsed[] = (int) $line['drug_id'];
+            if (!empty($line['remedy_id'])) $remedyIdsUsed[] = (int) $line['remedy_id'];
+        }
+
+        // Phase 3: bump usage_count for ranked autocomplete. Wrapped so a
+        // missing column never breaks the visit save.
+        self::bumpUsageCounts($drugIdsUsed, $remedyIdsUsed);
+    }
+
+    /**
+     * Bump drugs.usage_count and remedies.usage_count for every id used
+     * in this save. Best-effort — silent if columns don't exist.
+     *
+     * @param list<int> $drugIds
+     * @param list<int> $remedyIds
+     */
+    private static function bumpUsageCounts(array $drugIds, array $remedyIds): void
+    {
+        try {
+            $pdo = \App\Core\Database::connection();
+            if ($drugIds !== []) {
+                $placeholders = implode(',', array_fill(0, count($drugIds), '?'));
+                $stmt = $pdo->prepare(
+                    "UPDATE drugs SET usage_count = usage_count + 1 WHERE id IN ($placeholders)"
+                );
+                $stmt->execute($drugIds);
+            }
+            if ($remedyIds !== []) {
+                $placeholders = implode(',', array_fill(0, count($remedyIds), '?'));
+                $stmt = $pdo->prepare(
+                    "UPDATE remedies SET usage_count = usage_count + 1 WHERE id IN ($placeholders)"
+                );
+                $stmt->execute($remedyIds);
+            }
+        } catch (\Throwable $e) {
+            // usage_count column doesn't exist yet — skip.
         }
     }
 

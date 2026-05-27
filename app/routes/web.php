@@ -32,6 +32,7 @@ use App\Controllers\DirectoryController;
 use App\Controllers\DocsController;
 use App\Controllers\ImpersonateController;
 use App\Controllers\SuperAdminController;
+use App\Controllers\SymptomsController;
 use App\Controllers\VitalsController;
 use App\Controllers\WebhookController;
 use App\Core\GroupedRouteRegistrar;
@@ -234,6 +235,20 @@ return static function (RouteRegistrar $router): void {
         // Phase 2: visible_modules toggle + section state memory.
         $api->post('/clinic-settings/modules/{moduleKey}', [ClinicSettingsController::class, 'toggleModule']);
         $api->post('/clinic-settings/section-state', [ClinicSettingsController::class, 'recordSectionState']);
+
+        // Phase 3: Symptoms autocomplete + visit symptoms CRUD
+        $api->get('/symptoms/search', [SymptomsController::class, 'searchApi']);
+        $api->get('/visits/{id}/symptoms', [SymptomsController::class, 'listForVisit']);
+        $api->post('/visits/{id}/symptoms', [SymptomsController::class, 'saveForVisit']);
+
+        // Phase 3: Prescription templates + drug/remedy autocomplete (canonical homes)
+        $api->get('/prescriptions/templates', [PrescriptionController::class, 'templatesIndex']);
+        $api->get('/prescriptions/templates/{id}', [PrescriptionController::class, 'templateShow']);
+        $api->post('/prescriptions/templates', [PrescriptionController::class, 'templateCreate']);
+        $api->post('/prescriptions/templates/{id}/apply/{visitId}', [PrescriptionController::class, 'templateApply']);
+        $api->post('/prescriptions/templates/{id}/activate', [PrescriptionController::class, 'templateActivate']);
+        $api->post('/prescriptions/templates/{id}/delete', [PrescriptionController::class, 'templateDelete']);
+
         $api->get('/drugs/search', [VisitController::class, 'drugsApi']);
         $api->get('/remedies/search', [VisitController::class, 'remediesApi']);
         $api->get('/icd10/search', [VisitController::class, 'icd10Api']);
@@ -337,6 +352,11 @@ return static function (RouteRegistrar $router): void {
         // Phase 1: founding clinic state + roster
         $admin->get('/founding-clinics', [SuperAdminController::class, 'foundingClinics']);
         $admin->post('/founding-clinics', [SuperAdminController::class, 'updateFoundingState']);
+
+        // Phase 3: symptom promotions queue
+        $admin->get('/symptom-promotions', [SymptomsController::class, 'promotionsIndex']);
+        $admin->post('/symptom-promotions/promote', [SymptomsController::class, 'promote']);
+        $admin->post('/symptom-promotions/ignore', [SymptomsController::class, 'ignore']);
 
         // Doctor claim + new-listing review queue
         $admin->get('/claims', [\App\Controllers\DoctorClaimController::class, 'index']);

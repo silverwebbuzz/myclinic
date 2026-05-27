@@ -13,32 +13,66 @@ final class RemedyService
     public static function search(string $q, int $limit = 15): array
     {
         $q = trim($q);
-        if ($q === '' || !Database::ping()) {
+        if (!Database::ping()) {
             return [];
         }
 
         $pdo = Database::connection();
+
+        // Phase 3: empty query → top-N by usage_count.
+        if ($q === '') {
+            $stmt = $pdo->prepare(
+                'SELECT id, name, abbreviation, antidotes, dietary_restrictions
+                 FROM remedies WHERE is_active = 1
+                 ORDER BY usage_count DESC, name ASC
+                 LIMIT :lim',
+            );
+            $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll() ?: [];
+        }
+
+        // Prefix match — fast and what doctors actually expect.
+        $prefix = $q . '%';
         $stmt = $pdo->prepare(
             'SELECT id, name, abbreviation, antidotes, dietary_restrictions
              FROM remedies
-             WHERE is_active = 1
-             AND MATCH(name, abbreviation, key_indications) AGAINST(:q IN BOOLEAN MODE)
+             WHERE is_active = 1 AND (name LIKE :p OR abbreviation LIKE :p)
+             ORDER BY usage_count DESC, name ASC
              LIMIT :lim',
         );
-        $term = '+' . implode('* +', array_filter(explode(' ', $q))) . '*';
-        $stmt->bindValue('q', $term);
-        $stmt->bindValue('lim', $limit, \PDO::PARAM_INT);
+        $stmt->bindValue(':p', $prefix);
+        $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
         $stmt->execute();
-
         $rows = $stmt->fetchAll() ?: [];
         if ($rows !== []) {
             return $rows;
         }
 
+        // Fulltext fallback for substring matches against key_indications.
+        $stmt = $pdo->prepare(
+            'SELECT id, name, abbreviation, antidotes, dietary_restrictions
+             FROM remedies
+             WHERE is_active = 1
+             AND MATCH(name, abbreviation, key_indications) AGAINST(:q IN BOOLEAN MODE)
+             ORDER BY usage_count DESC
+             LIMIT :lim',
+        );
+        $term = '+' . implode('* +', array_filter(explode(' ', $q))) . '*';
+        $stmt->bindValue(':q', $term);
+        $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll() ?: [];
+        if ($rows !== []) {
+            return $rows;
+        }
+
+        // Final fallback: contains LIKE.
         $like = '%' . $q . '%';
         $fallback = $pdo->prepare(
             'SELECT id, name, abbreviation, antidotes, dietary_restrictions
-             FROM remedies WHERE is_active = 1 AND (name LIKE ? OR abbreviation LIKE ?) LIMIT ?',
+             FROM remedies WHERE is_active = 1 AND (name LIKE ? OR abbreviation LIKE ?)
+             ORDER BY usage_count DESC, name ASC LIMIT ?',
         );
         $fallback->execute([$like, $like, $limit]);
 
