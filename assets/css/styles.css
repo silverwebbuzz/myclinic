@@ -2119,24 +2119,62 @@ footer.foot {
   .fd-spec-panel { grid-template-columns: repeat(2, 1fr); gap: 18px; }
 }
 @media (max-width: 600px) {
-  .fd-search { grid-template-columns: 1fr; padding: 4px; }
-  .fd-sfield { padding: 10px 12px; }
-  .fd-sfield input { font-size: 16px; }
-  .fd-sfield + .fd-sfield { border-left: none; border-top: 0.5px solid var(--line); }
-  .fd-search .btn-search { width: 100%; height: 44px; border-radius: 14px; margin-top: 4px; }
-  .fd-country { font-size: 12px; padding: 5px 5px 5px 12px; }
+  /* Hero (non-SEO search hero) — was 110px top + 34px h1, way too big */
+  .fd-hero { padding: 72px 0 20px; }
+  .fd-hero .wrap-wide { padding: 0 16px; }
+  .fd-hero h1 { font-size: 26px; letter-spacing: -0.5px; margin-bottom: 10px; }
+  .fd-hero .lede { font-size: 14.5px; margin-bottom: 20px; line-height: 1.45; }
+  .fd-country { font-size: 12px; padding: 5px 5px 5px 12px; margin-bottom: 14px; }
   .fd-country .label { font-size: 12px; }
-  .fd-specs { padding: 4px 16px 12px; }
-  .fd-spec { padding: 7px 12px; font-size: 12.5px; }
-  .fd-spec-panel { grid-template-columns: 1fr; gap: 14px; }
-  .fd-card { padding: 16px; }
-  .fd-name { font-size: 16px; }
-  .fd-identity { padding-right: 30px; }
+
+  /* Search bar stacks */
+  .fd-search { grid-template-columns: 1fr; padding: 4px; margin: 0 4px; border-radius: 16px; }
+  .fd-sfield { padding: 10px 12px; }
+  .fd-sfield input { font-size: 16px; }   /* 16px prevents iOS zoom on focus */
+  .fd-sfield + .fd-sfield { border-left: none; border-top: 0.5px solid var(--line); }
+  .fd-search .btn-search { width: 100%; height: 44px; border-radius: 12px; margin-top: 4px; }
+
+  /* Specialty pills row */
+  .fd-specs { padding: 4px 12px 12px; }
+  .fd-spec { padding: 6px 11px; font-size: 12px; }
+  .fd-spec-panel { grid-template-columns: 1fr; gap: 14px; padding: 16px; }
+
+  /* SEO hero — tighten h1 + lede + tiles */
+  .fd-seo-hero { padding: 40px 0 28px; }
+  .fd-seo-hero .wrap-wide { padding: 0 16px; }
+  .fd-seo-h1 { font-size: 24px; letter-spacing: -0.4px; line-height: 1.15; margin: 10px 0 10px; }
+  .fd-seo-lede { font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
+  .fd-seo-tiles { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 20px; }
+  .fd-seo-tile { padding: 12px 8px; border-radius: 12px; }
+  .fd-seo-tile-num { font-size: 16px; }
+  .fd-seo-tile-lbl { font-size: 10px; }
+  .fd-seo-search { margin: 0 4px; padding: 4px 14px 4px 16px; }
+  .fd-seo-search input { font-size: 14px; padding: 12px 0; }
+  .fd-seo-spec-row { gap: 5px; margin-top: 18px; }
+  .fd-seo-spec { padding: 5px 10px; font-size: 12px; }
+  .fd-crumbs { font-size: 11.5px; gap: 4px; margin-bottom: 10px; }
+
+  /* City switcher */
+  .fd-city-switch-btn { font-size: 12.5px; padding: 7px 12px 7px 14px; }
+
+  /* Cards */
+  .fd-card { padding: 14px; gap: 12px; }
+  .fd-name { font-size: 15.5px; }
+  .fd-identity { padding-right: 28px; }
   .fd-meta { font-size: 12.5px; }
   .fd-book { flex-direction: column; align-items: stretch; }
   .fd-actions { width: 100%; flex-direction: row; }
   .fd-actions .fd-btn { flex: 1; height: 44px; font-size: 13.5px; }
   .fd-price, .fd-slot { align-self: flex-start; }
+
+  /* Toolbar / filter chips */
+  .fd-main { padding: 18px 0 60px; }
+  .fd-main .wrap-wide { padding: 0 12px; }
+  .fd-bar { gap: 10px; }
+  .fd-count { font-size: 13px; }
+  .fd-chip { font-size: 12.5px; padding: 6px 10px; }
+
+  /* Pagination */
   .fd-pager { gap: 4px; }
   .fd-pg { min-width: 32px; height: 32px; font-size: 12.5px; }
 }
