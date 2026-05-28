@@ -95,17 +95,20 @@ final class SymptomsController
         }
 
         // A category → its symptoms, specialty-relevant ones first.
+        // NOTE: native prepares (ATTR_EMULATE_PREPARES=false) forbid reusing a
+        // named placeholder, so :sp appears once — passed via bindValue twice
+        // would also fail. We inject the specialty match with two distinct binds.
         $stmt = $pdo->prepare(
             "SELECT id, label,
-                    CASE WHEN :sp <> '' AND JSON_VALID(specialties)
-                              AND JSON_CONTAINS(LOWER(specialties), JSON_QUOTE(LOWER(:sp)))
+                    CASE WHEN :sp1 <> '' AND JSON_VALID(specialties)
+                              AND JSON_CONTAINS(LOWER(specialties), JSON_QUOTE(LOWER(:sp2)))
                          THEN 1 ELSE 0 END AS specialty_match
                FROM symptoms_master
               WHERE is_active = 1 AND category = :cat
               ORDER BY specialty_match DESC, global_usage_count DESC, label ASC
               LIMIT 60"
         );
-        $stmt->execute([':sp' => $specialty, ':cat' => $cat]);
+        $stmt->execute([':sp1' => $specialty, ':sp2' => $specialty, ':cat' => $cat]);
 
         $symptoms = [];
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
