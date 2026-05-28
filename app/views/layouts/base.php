@@ -146,7 +146,39 @@
                     <button type="button" @click="sidebarOpen = !sidebarOpen" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden" aria-label="Menu">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                     </button>
-                    <h1 class="text-base font-semibold text-slate-900"><?= htmlspecialchars($pageTitle ?? 'Dashboard') ?></h1>
+                    <h1 class="hidden text-base font-semibold text-slate-900 sm:block"><?= htmlspecialchars($pageTitle ?? 'Dashboard') ?></h1>
+                </div>
+
+                <!-- Global patient search — jump to any patient from anywhere -->
+                <div x-data="patientQuickSearch()" @keydown.escape="close()" @click.outside="close()"
+                     class="relative mx-3 max-w-md flex-1">
+                    <div class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 focus-within:border-emerald-400 focus-within:bg-white">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" x-model="q" @input.debounce.250ms="run()" @focus="run()"
+                               @keydown.enter.prevent="openFirst()"
+                               placeholder="Search patient by name or phone…"
+                               class="w-full border-0 bg-transparent p-0 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-0">
+                        <span x-show="loading" x-cloak class="text-xs text-slate-400">…</span>
+                    </div>
+                    <div x-show="open && (results.length || (q.trim().length >= 2 && !loading))" x-cloak
+                         class="absolute left-0 right-0 z-40 mt-1 max-h-80 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                        <template x-for="p in results" :key="p.id">
+                            <a :href="'/patients/' + p.id" target="_blank" rel="noopener"
+                               class="flex items-center justify-between gap-3 border-b border-slate-50 px-3 py-2 hover:bg-emerald-50">
+                                <span class="min-w-0">
+                                    <span class="block truncate text-sm font-medium text-slate-800" x-text="p.name"></span>
+                                    <span class="block truncate text-xs text-slate-500">
+                                        <span x-text="p.uhid || ''"></span>
+                                        <span x-show="p.phone" x-text="' · ' + p.phone"></span>
+                                        <span x-show="p.gender" x-text="' · ' + p.gender"></span>
+                                    </span>
+                                </span>
+                                <span class="shrink-0 text-xs text-emerald-600">Open ↗</span>
+                            </a>
+                        </template>
+                        <div x-show="!loading && results.length === 0 && q.trim().length >= 2"
+                             class="px-3 py-3 text-center text-xs text-slate-400">No patient found for "<span x-text="q.trim()"></span>"</div>
+                    </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <button type="button" class="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100" title="Notifications">
@@ -194,6 +226,38 @@
     <?php require dirname(__DIR__) . '/components/modal.php'; ?>
 
     <script>
+    // Global patient quick-search (header). Jumps to any patient by name/phone;
+    // opens the profile in a new tab so the doctor keeps their current screen.
+    function patientQuickSearch() {
+        return {
+            q: '',
+            results: [],
+            loading: false,
+            open: false,
+            async run() {
+                const q = (this.q || '').trim();
+                if (q.length < 2) { this.results = []; this.open = q.length > 0; return; }
+                this.open = true;
+                this.loading = true;
+                try {
+                    const r = await fetch('/api/v1/patients/search?q=' + encodeURIComponent(q), {
+                        credentials: 'same-origin', headers: { 'Accept': 'application/json' },
+                    });
+                    const data = await r.json();
+                    this.results = (data.rows || []).slice(0, 8);
+                } catch (e) { this.results = []; }
+                this.loading = false;
+            },
+            openFirst() {
+                if (this.results.length > 0) {
+                    window.open('/patients/' + this.results[0].id, '_blank', 'noopener');
+                    this.close();
+                }
+            },
+            close() { this.open = false; },
+        };
+    }
+
     function appShell() {
         return {
             sidebarOpen: false,
