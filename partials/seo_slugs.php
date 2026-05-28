@@ -49,7 +49,47 @@ function ecp_slug(string $raw): string {
  * match what the fetcher used ("derma"). Keep this in sync with
  * partials/find-doctor-data.php.
  */
+/**
+ * Canonical specialty map: url-slug => ['db', 'label', 'plural', 'safe'].
+ *
+ * Single source of truth is the specialty_master table (admin-managed), so the
+ * homepage, find-a-doctor, and sitemap all show identical names. Falls back to
+ * the hardcoded list below if the table is missing (pre-migration). Cached per
+ * request.
+ */
 function ecp_specialty_map(): array {
+    static $cache = null;
+    if ($cache !== null) return $cache;
+
+    $db = function_exists('ecp_db') ? ecp_db() : null;
+    if ($db) {
+        try {
+            $rows = $db->query(
+                "SELECT url_slug, slug, label, plural_label, seo_safe
+                   FROM specialty_master
+                  WHERE is_active = 1 AND url_slug IS NOT NULL AND url_slug <> ''
+                  ORDER BY sort_order ASC, label ASC"
+            )->fetchAll(PDO::FETCH_ASSOC);
+            if ($rows) {
+                $map = [];
+                foreach ($rows as $r) {
+                    $map[$r['url_slug']] = [
+                        'db'     => $r['slug'],
+                        'label'  => $r['label'],
+                        'plural' => $r['plural_label'] ?: ($r['label'] . 's'),
+                        'safe'   => (bool) $r['seo_safe'],
+                    ];
+                }
+                return $cache = $map;
+            }
+        } catch (Throwable $e) { /* table missing → fall back below */ }
+    }
+
+    return $cache = ecp_specialty_map_fallback();
+}
+
+/** Hardcoded fallback if specialty_master is unavailable. */
+function ecp_specialty_map_fallback(): array {
     return [
         // canonical url slug => [ db value, display label, plural label ]
         // Each row also has 'safe' => true|false. When false the spec is

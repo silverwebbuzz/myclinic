@@ -213,8 +213,43 @@ $DATA = [
     ],
 ];
 
+// Single source of truth: rebuild specialty_groups from specialty_master so
+// the names match the homepage + sitemap exactly. Falls back to the hardcoded
+// groups above if the table is unavailable. (id = db slug, used by filter JS.)
+if (function_exists('ecp_db') && ($GLOBALS['__fd_db'] = ecp_db())) {
+    try {
+        $rows = $GLOBALS['__fd_db']->query(
+            "SELECT slug, label, icon, category, seo_safe
+               FROM specialty_master
+              WHERE is_active = 1
+              ORDER BY sort_order ASC, label ASC"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        if ($rows) {
+            $byCat = [];
+            foreach ($rows as $r) {
+                // Mirror the directory's 'safe' rule: omit brand-sensitive
+                // specialties (e.g. sexology) from the chip UI; direct URL still works.
+                if ((int) $r['seo_safe'] === 0) continue;
+                $byCat[$r['category']][] = [
+                    'id'    => $r['slug'],
+                    'label' => $r['label'],
+                    'icon'  => $r['icon'] ?: '🩺',
+                ];
+            }
+            if ($byCat) {
+                $groups = [];
+                foreach ($byCat as $cat => $items) {
+                    $groups[] = ['label' => $cat, 'items' => $items];
+                }
+                $DATA['specialty_groups'] = $groups;
+            }
+        }
+    } catch (Throwable $e) { /* keep hardcoded groups */ }
+}
+
 // Derive the flat 'specialties' list from the grouped layout. Keep this last
 // so any group edits above auto-propagate without touching the filter logic.
+$DATA['specialties'] = [];
 foreach ($DATA['specialty_groups'] as $g) {
     foreach ($g['items'] as $item) {
         $DATA['specialties'][] = $item;
