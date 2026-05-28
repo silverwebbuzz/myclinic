@@ -44,54 +44,203 @@ final class NotificationProcessor
         $channel = $row['channel'] ?? 'whatsapp';
         $template = $row['template'] ?? '';
 
+        $to = (string) ($row['to_number'] ?? '');
+        $audience = str_starts_with($template, 'doctor_') || $template === 'quota_warning' ? 'doctor' : 'patient';
+
         try {
             if ($channel === 'whatsapp') {
-                if (!self::hasModule($clinicId, 'whatsapp')) {
-                    self::markFailed($id, 'whatsapp module inactive');
+                // MessagingPolicy decides the actual channel: applies rules
+                // (trial vs paid, on/off per event), per-event frequency caps,
+                // quota (with WhatsApp→SMS downgrade), and quiet hours.
+                $decision = MessagingPolicy::resolve($clinicId, $audience, $template, 'whatsapp');
+                $channel = $decision['channel'];
 
+                if ($channel === null) {
+                    self::markSkipped($id, $decision['reason']);
                     return false;
                 }
-                $result = WhatsAppService::send((string) ($row['to_number'] ?? ''), $template, $payload);
+
+                if ($channel === 'push') {
+                    // App push handled elsewhere; mark sent so queue advances.
+                    MessagingPolicy::record($clinicId, $id, $audience, $template, 'push');
+                    self::markSent($id, $row, null, 'push');
+                    return true;
+                }
+
+                if ($channel === 'sms') {
+                    // Policy downgraded WhatsApp→SMS (quota/cache). Send as SMS.
+                    return self::sendSmsFallback($id, $row, $to, $template, $payload, $decision['reason'], $audience);
+                }
+
+                // 3-state cache: known NOT on WhatsApp → straight to SMS.
+                if (self::knownNoWhatsApp($to)) {
+                    return self::sendSmsFallback($id, $row, $to, $template, $payload, 'cached: not on WhatsApp', $audience);
+                }
+
+                $result = WhatsAppService::send($to, $template, $payload);
                 if (!$result['ok']) {
-                    self::markFailed($id, $result['message']);
-
-                    return false;
+                    return self::sendSmsFallback($id, $row, $to, $template, $payload, $result['message'], $audience);
                 }
-            } elseif ($channel === 'sms') {
-                if (!self::hasModule($clinicId, 'sms_email')) {
-                    self::markFailed($id, 'sms module inactive');
 
-                    return false;
-                }
-                $body = NotificationTemplateService::render($template, $payload);
-                $result = TwilioSmsService::send((string) ($row['to_number'] ?? ''), $body);
-                if (!$result['ok']) {
-                    self::markFailed($id, $result['message']);
-
-                    return false;
-                }
-            } elseif ($channel === 'email') {
-                MailService::send(
-                    (string) ($row['to_email'] ?? ''),
-                    $template,
-                    $payload,
-                    $clinicId,
-                );
+                MessagingPolicy::record($clinicId, $id, $audience, $template, 'whatsapp');
+                QueryBuilder::table('notifications')
+                    ->where('id', '=', $id)
+                    ->update([
+                        'status' => 'sent',
+                        'sent_at' => date('Y-m-d H:i:s'),
+                        'provider_message_id' => $result['wamid'] ?? null,
+                        'delivery_status' => 'sent',
+                        'attempts' => (int) ($row['attempts'] ?? 0) + 1,
+                    ]);
+                return true;
             }
 
-            QueryBuilder::table('notifications')
-                ->where('id', '=', $id)
-                ->update([
-                    'status' => 'sent',
-                    'sent_at' => date('Y-m-d H:i:s'),
-                    'attempts' => (int) ($row['attempts'] ?? 0) + 1,
-                ]);
+            if ($channel === 'sms') {
+                // Direct SMS rows (incl. fallback_of rows) still respect quota,
+                // EXCEPT platform-origin (clinic_id 0) which bypasses.
+                if ($clinicId > 0 && empty($row['fallback_of'])) {
+                    $decision = MessagingPolicy::resolve($clinicId, $audience, $template, 'sms');
+                    if ($decision['channel'] === null) {
+                        self::markSkipped($id, $decision['reason']);
+                        return false;
+                    }
+                }
+                $body = WaTemplateService::renderPlain($template, $payload);
+                $result = SmsService::send($to, $body);
+                if (!$result['ok']) {
+                    self::markFailed($id, $result['message']);
+                    return false;
+                }
+                MessagingPolicy::record($clinicId, $id, $audience, $template, 'sms');
+                QueryBuilder::table('notifications')
+                    ->where('id', '=', $id)
+                    ->update([
+                        'status' => 'sent',
+                        'sent_at' => date('Y-m-d H:i:s'),
+                        'provider_message_id' => $result['provider_id'] ?? null,
+                        'delivery_status' => 'sent',
+                        'attempts' => (int) ($row['attempts'] ?? 0) + 1,
+                    ]);
+                return true;
+            }
 
-            return true;
+            if ($channel === 'email') {
+                MailService::send((string) ($row['to_email'] ?? ''), $template, $payload, $clinicId);
+                QueryBuilder::table('notifications')
+                    ->where('id', '=', $id)
+                    ->update([
+                        'status' => 'sent',
+                        'sent_at' => date('Y-m-d H:i:s'),
+                        'attempts' => (int) ($row['attempts'] ?? 0) + 1,
+                    ]);
+                return true;
+            }
+
+            self::markFailed($id, 'unknown channel: ' . $channel);
+            return false;
         } catch (\Throwable $e) {
             self::markFailed($id, $e->getMessage());
 
             return false;
+        }
+    }
+
+    /**
+     * Enqueue an SMS fallback for a failed WhatsApp row (and mark the WA row
+     * failed). The SMS row is linked via fallback_of and never re-falls-back.
+     * @param array<string,mixed> $row @param array<string,mixed> $payload
+     */
+    private static function sendSmsFallback(int $waId, array $row, string $to, string $template, array $payload, string $reason, string $audience = 'patient'): bool
+    {
+        $clinicId = (int) $row['clinic_id'];
+
+        // Mark the original WhatsApp row failed with the reason.
+        QueryBuilder::table('notifications')
+            ->where('id', '=', $waId)
+            ->update([
+                'status' => 'failed',
+                'delivery_status' => 'failed',
+                'error_log' => $reason,
+                'attempts' => (int) ($row['attempts'] ?? 0) + 1,
+            ]);
+
+        // Insert a fresh SMS row referencing the failed WA row.
+        $newId = QueryBuilder::table('notifications')->insert([
+            'clinic_id' => $clinicId,
+            'patient_id' => $row['patient_id'] ?? null,
+            'patient_identity_id' => $row['patient_identity_id'] ?? null,
+            'channel' => 'sms',
+            'template' => $template,
+            'to_number' => $to,
+            'payload' => json_encode($payload),
+            'status' => 'queued',
+            'fallback_of' => $waId,
+            'scheduled_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        // Send it now (best-effort; if it fails the queue retry catches it).
+        $body = WaTemplateService::renderPlain($template, $payload);
+        $result = SmsService::send($to, $body);
+        if ($result['ok']) {
+            MessagingPolicy::record($clinicId, (int) $newId, $audience, $template, 'sms');
+        }
+        QueryBuilder::table('notifications')
+            ->where('id', '=', (int) $newId)
+            ->update($result['ok']
+                ? ['status' => 'sent', 'sent_at' => date('Y-m-d H:i:s'), 'delivery_status' => 'sent', 'attempts' => 1]
+                : ['status' => 'failed', 'error_log' => $result['message'], 'attempts' => 1]);
+
+        return $result['ok'];
+    }
+
+    /** Policy decided not to send (rule off / cap / quota / quiet hours). */
+    private static function markSkipped(int $id, string $reason): void
+    {
+        QueryBuilder::table('notifications')
+            ->where('id', '=', $id)
+            ->update([
+                'status' => 'failed',          // 'failed' enum reused; error_log says skipped
+                'delivery_status' => 'skipped',
+                'error_log' => 'skipped: ' . $reason,
+                'attempts' => 1,
+            ]);
+    }
+
+    /** Mark a row sent on a non-SMS/WA channel (e.g. push). */
+    private static function markSent(int $id, array $row, ?string $providerId, string $deliveryStatus): void
+    {
+        QueryBuilder::table('notifications')
+            ->where('id', '=', $id)
+            ->update([
+                'status' => 'sent',
+                'sent_at' => date('Y-m-d H:i:s'),
+                'provider_message_id' => $providerId,
+                'delivery_status' => $deliveryStatus,
+                'attempts' => (int) ($row['attempts'] ?? 0) + 1,
+            ]);
+    }
+
+    /** Is this number cached as NOT a WhatsApp user, checked within 90 days? */
+    private static function knownNoWhatsApp(string $toNumber): bool
+    {
+        $digits = preg_replace('/\D/', '', $toNumber) ?? '';
+        if ($digits === '') {
+            return false;
+        }
+        try {
+            $pdo = Database::connection();
+            // last-10-digit match (handles +91 prefix variance).
+            $stmt = $pdo->prepare(
+                "SELECT 1 FROM patient_identities
+                  WHERE whatsapp_status = 'no'
+                    AND whatsapp_checked_at >= NOW() - INTERVAL 90 DAY
+                    AND RIGHT(REPLACE(REPLACE(phone,'+',''),' ',''), 10) = RIGHT(:p, 10)
+                  LIMIT 1"
+            );
+            $stmt->execute([':p' => $digits]);
+            return (bool) $stmt->fetchColumn();
+        } catch (\Throwable $e) {
+            return false; // columns missing pre-migration → don't skip WhatsApp
         }
     }
 
@@ -167,16 +316,5 @@ final class NotificationProcessor
         }
 
         return $count;
-    }
-
-    private static function hasModule(int $clinicId, string $moduleId): bool
-    {
-        $row = QueryBuilder::table('clinic_modules')
-            ->forClinic($clinicId)
-            ->where('module_id', '=', $moduleId)
-            ->where('is_active', '=', 1)
-            ->first();
-
-        return $row !== null;
     }
 }

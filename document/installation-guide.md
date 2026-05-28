@@ -321,6 +321,19 @@ Add these via **cPanel → Cron Jobs** (or `crontab -e`). Replace `/home/USER/my
 | `0 3 1 * *` | `/usr/local/bin/php /home/USER/myclinic/workers/doctor_incentives.php` | 1st of each month at 3 AM — calculates doctor incentive payouts (% or flat) from previous month's billing. |
 | `30 2 * * *` | `/usr/local/bin/php /home/USER/myclinic/workers/directory_sync.php` | Nightly 2:30 AM rebuild of public `/doctors` SEO directory cache. |
 | `0 3 * * *` | `/bin/bash /home/USER/myclinic/workers/backup.sh` | Daily 3 AM `mysqldump` gzip → `storage/backups/`, keeps 14 days. **Critical** — without this, a corrupt write or accidental delete is unrecoverable. |
+| `*/15 * * * *` | `/usr/local/bin/php /home/USER/myclinic/workers/lead_nudges.php` | Every 15 min — directory booking lead touchpoints: soft nudge (~2 h after booking if unconfirmed) + appointment reminder (~2 h before). WhatsApp-first, SMS fallback. |
+| `0 * * * *` | `/usr/local/bin/php /home/USER/myclinic/workers/lead_expire.php` | Hourly — marks directory leads whose slot has passed without confirmation as no-response. |
+| `0 9 * * *` | `/usr/local/bin/php /home/USER/myclinic/workers/followup_reminders.php` | Daily 9 AM — queues WhatsApp follow-up reminders (only for clinics with the Patient Connect add-on). |
+| `0 3 * * *` | `/usr/local/bin/php /home/USER/myclinic/workers/followup_mark_missed.php` | Daily 3 AM — marks follow-ups overdue by >30 days as missed (drops them off the overdue widget). |
+| `0 4 * * 1` | `/usr/local/bin/php /home/USER/myclinic/workers/template_discovery.php` | Weekly (Mon 4 AM) — auto-discovers prescription templates from repeated drug combinations, surfaces "save as template" suggestions to doctors. |
+
+> **Note on the WhatsApp/SMS send loop:** the existing `notification_worker.php`
+> (every 5 min, top of this table) already drains the unified `notifications`
+> queue — it sends every WhatsApp/SMS message including the new lead/follow-up/
+> messaging events, applies `MessagingPolicy` (rules + quota + quiet hours), and
+> performs the WhatsApp→SMS fallback. **No separate "messaging" cron is needed.**
+> The same jobs are also exposed as manual "Run now" admin POST routes
+> (`/admin/cron/leads-nudges`, etc.) for testing from the dashboard.
 
 ### Why these specific times?
 
@@ -337,7 +350,8 @@ Add these via **cPanel → Cron Jobs** (or `crontab -e`). Replace `/home/USER/my
 - [ ] `https://myclinic.silverwebbuzz.com/health` returns 200 with all green
 - [ ] `php database/migrate.php` ran clean
 - [ ] `.env` is `chmod 640` and outside `public/`
-- [ ] All 9 cron jobs added
+- [ ] All 14 cron jobs added (9 original + 5 lead/follow-up/template workers)
+- [ ] WhatsApp/SMS: run `document/seeds/whatsapp_migrations.sql`, then set creds + enable in `/admin/messaging`, then approve templates in Meta
 - [ ] SSL active (padlock in browser)
 - [ ] Test register → onboarding → dashboard flow
 - [ ] Super admin login works at `/admin/login`

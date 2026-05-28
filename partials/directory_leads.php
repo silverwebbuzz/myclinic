@@ -132,9 +132,54 @@ function ecp_lead_create(int $doctorId, ?array $patientIdentity, string $type, a
     ]);
     $leadId = (int) $db->lastInsertId();
 
-    // Dispatch SMS inline. If suppressed, the row's sms_status reflects why.
+    // ---- WhatsApp-first notifications (queued; processor sends + SMS-falls-back) ----
+    // Only for a real booking to an unclaimed doctor. Wrapped so a missing
+    // notify.php / unmigrated DB never breaks the booking itself.
+    if ($type === 'book_submitted') {
+        try {
+            require_once __DIR__ . '/notify.php';
+
+            $identityId = $identityId ? (int) $identityId : null;
+            $clinicPhone = $doctor['phone'] ?? '';
+            $patientName = $patientIdentity['name'] ?? 'there';
+            $patientPhone = $patientIdentity['phone'] ?? '';
+            $clinicName = $doctor['name'] ?? 'the clinic';
+            $slot = ($extra['preferred_date'] ?? null)
+                ? date('d M Y', strtotime((string) $extra['preferred_date']))
+                  . (!empty($extra['preferred_time']) ? ', ' . date('g:i A', strtotime('2000-01-01 ' . $extra['preferred_time'])) : '')
+                : 'your requested time';
+            $confirmLink = 'https://eclinicpro.com/L/' . $token;
+
+            // 1) Patient — "request sent, you can also call directly".
+            if ($patientPhone !== '') {
+                ecp_enqueue_notification($identityId, $patientPhone, 'patient_request_sent', [
+                    'patient_name' => $patientName,
+                    'doctor_name'  => $clinicName,
+                    'datetime'     => $slot,
+                    'clinic_phone' => $clinicPhone,
+                ]);
+            }
+
+            // 2) Doctor — "new lead" with the L/{token} confirm link.
+            if (!empty($clinicPhone) && empty($doctor['is_claimed'])) {
+                ecp_enqueue_notification(null, (string) $clinicPhone, 'doctor_new_lead', [
+                    'patient_name' => $patientName,
+                    'datetime'     => $slot,
+                    'reason'       => $extra['reason'] ?? 'consultation',
+                    'link'         => $confirmLink,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // notify bridge unavailable / unmigrated — fall through to legacy SMS.
+        }
+    }
+
+    // Legacy direct SMS to doctor — kept as a backstop only when messaging is
+    // NOT yet enabled (so we don't double-send once WhatsApp is live). The
+    // processor-driven path above supersedes this once platform_settings
+    // messaging_enabled = 1.
     $smsResult = ['status' => $smsStatus];
-    if ($smsStatus === 'pending') {
+    if ($smsStatus === 'pending' && !ecp_messaging_enabled()) {
         $smsResult = ecp_lead_dispatch_sms($leadId);
     }
 
@@ -144,6 +189,21 @@ function ecp_lead_create(int $doctorId, ?array $patientIdentity, string $type, a
         'view_token' => $token,
         'sms_status' => $smsResult['status'] ?? $smsStatus,
     ];
+}
+
+/** Is the unified messaging pipeline enabled? (platform_settings.messaging_enabled) */
+function ecp_messaging_enabled(): bool {
+    static $cached = null;
+    if ($cached !== null) return $cached;
+    $db = ecp_db();
+    if (!$db) return $cached = false;
+    try {
+        $v = $db->query("SELECT setting_value FROM platform_settings WHERE setting_key = 'messaging_enabled' LIMIT 1")
+            ->fetchColumn();
+        return $cached = ($v === '1');
+    } catch (\Throwable $e) {
+        return $cached = false;  // table missing → use legacy SMS path
+    }
 }
 
 // ---------------------------------------------------------------------

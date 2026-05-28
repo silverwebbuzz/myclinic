@@ -13,6 +13,7 @@
 
 require_once __DIR__ . '/partials/helpers.php';
 require_once __DIR__ . '/partials/directory_leads.php';
+require_once __DIR__ . '/partials/notify.php';
 
 // Token comes from the URL — .htaccess rewrites /L/abc123 to /L.php?t=abc123
 $token  = (string) ($_GET['t'] ?? '');
@@ -24,6 +25,17 @@ if ($action === 'pause' && $lead) {
     ecp_lead_pause_doctor((int) $lead['doctor_id'], 'doctor_landing_pause');
     $pausedJustNow = true;
 }
+
+// Confirm action — doctor tapped "Confirm appointment". Marks the lead
+// confirmed (idempotent) and queues a WhatsApp/SMS confirmation to the patient.
+if ($action === 'confirm' && $lead && empty($lead['confirmed_at'])) {
+    $confirmed = ecp_lead_confirm((int) $lead['id']);
+    if ($confirmed) {
+        $confirmedJustNow = true;
+        $lead['confirmed_at'] = date('Y-m-d H:i:s');  // reflect in this render
+    }
+}
+$alreadyConfirmed = !empty($lead['confirmed_at']);
 
 if (!$lead) {
     http_response_code(404);
@@ -90,6 +102,16 @@ $createdNice = date('M j, g:i A', strtotime((string) $lead['created_at']));
         </div>
         <?php endif; ?>
 
+        <?php if (!empty($confirmedJustNow)): ?>
+        <div class="L-confirmed-banner">
+            ✓ Appointment confirmed. We've let the patient know — they'll see you at the requested time.
+        </div>
+        <?php elseif ($alreadyConfirmed): ?>
+        <div class="L-confirmed-banner">
+            ✓ This appointment is already confirmed.
+        </div>
+        <?php endif; ?>
+
         <!-- Lead detail card -->
         <section class="L-card">
             <div class="L-banner">
@@ -140,6 +162,12 @@ $createdNice = date('M j, g:i A', strtotime((string) $lead['created_at']));
                     </div>
                     <?php endif; ?>
                 </div>
+
+                <?php if (!$alreadyConfirmed): ?>
+                <a href="/L?action=confirm&t=<?= htmlspecialchars($token) ?>" class="L-cta-confirm">
+                    ✓ Confirm appointment
+                </a>
+                <?php endif; ?>
 
                 <?php if (!empty($lead['patient_phone'])): ?>
                 <a href="tel:<?= htmlspecialchars((string) $lead['patient_phone']) ?>" class="L-cta-call">
@@ -224,8 +252,11 @@ $createdNice = date('M j, g:i A', strtotime((string) $lead['created_at']));
 .L-phone:hover { text-decoration: underline; }
 .L-muted { color: var(--mute); font-weight: 500; }
 
-.L-cta-call { display: block; width: 100%; padding: 14px; background: var(--teal-600); color: #fff; text-decoration: none; text-align: center; border-radius: 12px; font-weight: 700; font-size: 16px; transition: all .15s; }
-.L-cta-call:hover { background: var(--teal-700); box-shadow: 0 6px 16px rgba(15,155,110,0.3); }
+.L-cta-confirm { display: block; width: 100%; padding: 14px; background: var(--teal-600); color: #fff; text-decoration: none; text-align: center; border-radius: 12px; font-weight: 700; font-size: 16px; transition: all .15s; margin-bottom: 10px; }
+.L-cta-confirm:hover { background: var(--teal-700); box-shadow: 0 6px 16px rgba(15,155,110,0.3); }
+.L-cta-call { display: block; width: 100%; padding: 14px; background: #fff; color: var(--teal-700); border: 1.5px solid var(--teal-400); text-decoration: none; text-align: center; border-radius: 12px; font-weight: 700; font-size: 16px; transition: all .15s; }
+.L-cta-call:hover { background: var(--teal-50); }
+.L-confirmed-banner { background: #e6f7ef; border: 1px solid #8fd9b6; color: #0a6b45; padding: 12px 16px; border-radius: 12px; font-size: 13.5px; font-weight: 600; }
 
 .L-stats { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 20px 22px; }
 .L-stats-title { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mute); margin-bottom: 12px; }

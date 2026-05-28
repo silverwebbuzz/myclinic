@@ -36,6 +36,7 @@ use App\Controllers\SymptomsController;
 use App\Controllers\FollowUpController;
 use App\Controllers\DietTemplateController;
 use App\Controllers\HelpController;
+use App\Controllers\MessagingAdminController;
 use App\Controllers\VitalsController;
 use App\Controllers\WebhookController;
 use App\Core\GroupedRouteRegistrar;
@@ -76,6 +77,9 @@ return static function (RouteRegistrar $router): void {
     $router->post('/webhooks/stripe', [WebhookController::class, 'stripe']);
     $router->post('/webhooks/razorpay', [WebhookController::class, 'razorpay']);
     $router->post('/webhooks/photo-published', [WebhookController::class, 'photoPublished']);
+    // Meta WhatsApp: GET = verify handshake, POST = delivery/inbound events.
+    $router->get('/webhooks/whatsapp', [WebhookController::class, 'whatsapp']);
+    $router->post('/webhooks/whatsapp', [WebhookController::class, 'whatsapp']);
 
     $router->group(['middleware' => ['refresh', 'tenant', 'auth', 'csrf', 'rate']], static function (GroupedRouteRegistrar $app): void {
         $app->get('/dashboard', [DashboardController::class, 'index']);
@@ -383,6 +387,17 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/cron/template-discovery', [SuperAdminController::class, 'runTemplateDiscovery']);
         $admin->post('/cron/followup-reminders', [SuperAdminController::class, 'runFollowUpReminders']);
         $admin->post('/cron/followup-mark-missed', [SuperAdminController::class, 'runFollowUpMarkMissed']);
+
+        // WhatsApp/SMS messaging control centre
+        $admin->get('/messaging', [MessagingAdminController::class, 'index']);
+        $admin->post('/messaging/connection', [MessagingAdminController::class, 'saveConnection']);
+        $admin->post('/messaging/template/{id}', [MessagingAdminController::class, 'saveTemplate']);
+        $admin->post('/messaging/rule/{id}', [MessagingAdminController::class, 'saveRule']);
+        $admin->post('/messaging/test', [MessagingAdminController::class, 'sendTest']);
+        // Messaging crons
+        $admin->post('/cron/notifications-process', [MessagingAdminController::class, 'runProcess']);
+        $admin->post('/cron/leads-nudges', [MessagingAdminController::class, 'runLeadNudges']);
+        $admin->post('/cron/leads-expire', [MessagingAdminController::class, 'runLeadExpire']);
 
         // Doctor claim + new-listing review queue
         $admin->get('/claims', [\App\Controllers\DoctorClaimController::class, 'index']);

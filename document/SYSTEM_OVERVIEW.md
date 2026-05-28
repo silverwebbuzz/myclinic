@@ -157,36 +157,83 @@ operational subset. Sections render only for the clinic's `visible_modules`.
 
 ---
 
-## 10. Admin (super-admin) area `/admin`
+## 10. WhatsApp / SMS messaging
+
+WhatsApp-first with SMS fallback, platform-owned Meta number, Meta Cloud API
+direct. One unified `notifications` queue for BOTH the marketing site and the
+portal. Webhook-driven (no double-send).
+
+**Flow (non-joined doctor booking):**
+1. Patient books on `/find-a-doctor` → `directory_leads` row + `view_token`.
+2. Patient gets "request sent, you can also call directly" (WhatsApp→SMS).
+3. Doctor gets a lead alert with the `/L/{token}` link → **Confirm** + **Call**
+   buttons (no reschedule — they just call if the slot's wrong).
+4. Doctor taps Confirm → patient gets a confirmation. Bonus, never a gate —
+   the patient always has the clinic number from step 2.
+5. If unconfirmed: soft nudge (~2 h) + reminder (~2 h before). Both capped, time-aware.
+
+**Cost control (the important part):**
+- `messaging_rules` — per (audience × event × trial/paid): channel
+  (whatsapp/sms/push/off) + per-day/week/month caps. Edit at `/admin/messaging`.
+- `messaging_quota` — one common monthly allowance per clinic (seeded
+  **300 WhatsApp + 300 SMS** ≈ ₹90/clinic/mo, editable). On exhaustion:
+  **downgrade WhatsApp→SMS, then stop + one-time "top up" alert** to the doctor.
+- `messaging_usage_log` — per-message tally → enforcement + admin spend view.
+- Quiet hours (9 PM–7 AM), optional global monthly cap.
+- Clinic-origin WhatsApp gated on the **Patient Connect** add-on; marketing
+  funnel (clinic_id 0) bypasses quota.
+
+**WhatsApp-capable cache (3-state):** `unknown`/`yes`/`no` on
+`patient_identities` + `directory_doctors`, learned for free from delivery
+webhooks (no probe API calls), re-checked after 90 days.
+
+**Credentials & templates:** all in DB (`platform_settings`, `wa_templates`),
+editable at `/admin/messaging` — no redeploy. Templates ship as `draft`; mark
+`approved` after Meta approves. Until then the system sends plain text / SMS.
+
+**Code:** `App\Support\MessagingSettings`, `App\Services\MessagingPolicy`
+(the cost-control brain), `WhatsAppService`, `SmsService`, `WaTemplateService`,
+`NotificationProcessor`, `WhatsAppWebhookService`, `LeadFlowService`,
+`MessagingAdminController`; marketing bridge `partials/notify.php`; doctor page `L.php`.
+
+**Webhook:** `/webhooks/whatsapp` (GET verify + POST events).
+**OTP stays SMS-direct** (latency); WhatsApp OTP deferred.
+
+---
+
+## 11. Admin (super-admin) area `/admin`
 
 - **Clinics** + per-clinic detail: trial extension, founding toggle, add-on
   management, feature-flag status.
 - **Founding clinics** — roster + cap control + "expiring soon" filter.
 - **Feature flags** — toggle Bucket-3 features per scope / beta tenant list.
 - **Symptom promotions** — promote/ignore custom symptom candidates.
-- **Cron triggers** (POST, call from system cron):
-  - `/admin/cron/template-discovery` — weekly
-  - `/admin/cron/followup-reminders` — daily 09:00 IST
-  - `/admin/cron/followup-mark-missed` — daily 03:00 IST
-  - `/admin/churn/run` — existing churn job
+- **Messaging** (`/admin/messaging`) — Connection (creds + test send),
+  Templates, Rules grid + quota, delivery Log.
+- **Cron triggers** (manual "Run now" POST routes; the scheduled jobs run as
+  worker scripts — see installation-guide §8):
+  - `/admin/cron/template-discovery`, `/admin/cron/followup-reminders`,
+    `/admin/cron/followup-mark-missed`, `/admin/cron/leads-nudges`,
+    `/admin/cron/leads-expire`, `/admin/churn/run`
 
 ---
 
-## 11. Database & install
+## 12. Database & install
 
 - **Live schema**: `document/silverwebbuzz_in_myclinic(3).sql` (current dump).
 - **Fresh install**: `app/database/install.sql` — complete schema including the
-  Phase 1–4 section appended at the end. Then run the two seed files in
+  Phase 1–4 section appended at the end. Then run the seed/migration files in
   `document/seeds/`.
-- **Reference seeds** (run after install.sql):
+- **Reference seeds / migrations** (run after install.sql):
   - `document/seeds/phase3_symptoms_seed.sql` — ~290 master symptoms
   - `document/seeds/phase4_diet_seed.sql` — 12 system diet templates
+  - `document/seeds/whatsapp_migrations.sql` — messaging tables + columns (10 blocks)
 - Install steps + cron setup: `document/installation-guide.md`.
 - Test credentials: `document/internal-tester-credentials.md`.
 
 ---
 
-## 12. Key code map
+## 13. Key code map
 
 | Area | Location |
 |---|---|
@@ -197,6 +244,9 @@ operational subset. Sections render only for the clinic's `visible_modules`.
 | Prescriptions | `PrescriptionController.php`, `PrescriptionService.php`, `App\Support\TemplateDiscovery` |
 | Follow-ups | `App\Services\FollowUpService`, `FollowUpController.php` |
 | Diet | `DietTemplateController.php`, `DietService.php` |
+| Messaging engine | `App\Support\MessagingSettings`, `App\Services\MessagingPolicy`, `WhatsAppService`, `SmsService`, `WaTemplateService`, `NotificationProcessor`, `WhatsAppWebhookService`, `LeadFlowService` |
+| Messaging admin / bridge | `MessagingAdminController.php`, `partials/notify.php`, `L.php` |
 | Specialty defaults | `app/config/specialty_defaults.php` |
 | Routes | `app/routes/web.php` |
+| Cron workers | `app/workers/*.php` (incl. `lead_nudges`, `lead_expire`, `followup_reminders`, `followup_mark_missed`, `template_discovery`) |
 | Fresh-install schema | `app/database/install.sql` |
