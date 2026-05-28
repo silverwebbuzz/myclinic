@@ -124,6 +124,7 @@ final class VisitController
             'defaultDietWeek' => DietService::defaultWeekPlan(),
             'visibleModules' => $visibleModules,
             'clinic' => $clinic,
+            'charges' => self::existingCharges($clinicId, (int) $id),
         ];
 
         // Single-screen consultation layout (the only visit screen).
@@ -365,6 +366,56 @@ final class VisitController
         ]);
     }
 
+    /**
+     * POST /api/v1/visits/{id}/charges — save the visit's charge line items.
+     * Find-or-creates the visit's draft invoice and replaces its items, then
+     * recalculates the total. Returns the new total.
+     * Body: { items: [{ description, amount, qty? }, ...] }
+     */
+    public function saveCharges(Request $request, string $id): Response
+    {
+        if ($denied = ModuleGate::require('emr')) {
+            return $denied;
+        }
+
+        $clinicId = (int) RequestContext::clinicId();
+        $visitId = (int) $id;
+        $payload = json_decode($request->rawBody ?? '{}', true);
+        $rows = is_array($payload['items'] ?? null) ? $payload['items'] : [];
+
+        // Map the simple {description, amount} rows to invoice_items shape.
+        $items = [];
+        foreach ($rows as $r) {
+            $desc = trim((string) ($r['description'] ?? ''));
+            $amount = (float) ($r['amount'] ?? 0);
+            if ($desc === '' && $amount <= 0) {
+                continue;
+            }
+            $items[] = [
+                'description' => $desc !== '' ? $desc : 'Charge',
+                'item_type' => $r['item_type'] ?? 'other',
+                'qty' => max(1, (int) ($r['qty'] ?? 1)),
+                'unit_price' => $amount,
+                'discount' => 0,
+            ];
+        }
+
+        try {
+            $invoiceId = \App\Services\InvoiceService::createDraftFromVisit($clinicId, ['visit_id' => $visitId]);
+            if ($invoiceId < 1) {
+                return Response::json(['error' => 'Could not create invoice'], 422);
+            }
+            $invoice = \App\Services\InvoiceService::update($clinicId, $invoiceId, ['items' => $items]);
+            return Response::json([
+                'ok' => true,
+                'invoice_id' => $invoiceId,
+                'total' => (float) ($invoice['total'] ?? 0),
+            ]);
+        } catch (\Throwable $e) {
+            return Response::json(['error' => $e->getMessage()], 422);
+        }
+    }
+
     public function tabApi(Request $request, string $id, string $tab): Response
     {
         if ($denied = ModuleGate::require('emr')) {
@@ -520,6 +571,31 @@ final class VisitController
     }
 
     /** @return list<array<string, mixed>> */
+    /**
+     * Existing charge line items for the visit's draft invoice, as simple
+     * {description, amount} rows for the charges UI. Empty if none yet.
+     * @return list<array{description:string, amount:float}>
+     */
+    private static function existingCharges(int $clinicId, int $visitId): array
+    {
+        try {
+            $stmt = \App\Core\Database::connection()->prepare(
+                'SELECT ii.description, ii.unit_price AS amount
+                   FROM invoice_items ii
+                   JOIN invoices i ON i.id = ii.invoice_id
+                  WHERE i.clinic_id = :c AND i.visit_id = :v AND i.status = "draft"
+                  ORDER BY ii.id ASC'
+            );
+            $stmt->execute([':c' => $clinicId, ':v' => $visitId]);
+            return array_map(static fn ($r) => [
+                'description' => (string) $r['description'],
+                'amount' => (float) $r['amount'],
+            ], $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: []);
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
     private static function fetchVisitSymptoms(int $clinicId, int $visitId): array
     {
         try {

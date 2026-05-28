@@ -66,6 +66,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         'visibleModules' => $visibleModules,
         'ghostRevealed' => [],   // sections the doctor revealed this visit
         'symptoms' => $visitSymptoms ?? [],   // hydrated by symptomPicker on mount
+        'charges' => $charges ?? [],   // existing invoice line items {description, amount}
     ], JSON_THROW_ON_ERROR), ENT_QUOTES) ?>)"
      x-init="initAutosave()">
 
@@ -485,6 +486,34 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                           class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs"></textarea>
             </div>
 
+            <!-- ---- CHARGES (line items → visit invoice) ---- -->
+            <div>
+                <div class="flex items-baseline justify-between">
+                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Charges</label>
+                    <span class="text-xs text-slate-500">Total: <span class="font-semibold text-slate-800" x-text="'₹' + chargesTotal()"></span></span>
+                </div>
+                <div class="mt-2 space-y-2">
+                    <template x-for="(c, idx) in charges" :key="idx">
+                        <div class="flex items-center gap-2">
+                            <input type="text" :disabled="!editable" x-model="c.description" @change="markDirty()"
+                                   placeholder="e.g. Consultation, Procedure, Medicines"
+                                   class="flex-1 rounded border border-slate-300 px-2 py-1.5 text-sm">
+                            <div class="flex items-center rounded border border-slate-300">
+                                <span class="px-2 text-sm text-slate-400">₹</span>
+                                <input type="number" min="0" step="1" :disabled="!editable" x-model.number="c.amount" @change="markDirty()"
+                                       placeholder="0" class="w-24 border-0 px-1 py-1.5 text-sm focus:outline-none focus:ring-0">
+                            </div>
+                            <button type="button" :disabled="!editable" @click="removeCharge(idx)" class="text-rose-600 hover:underline disabled:opacity-50" title="Remove">×</button>
+                        </div>
+                    </template>
+                </div>
+                <div class="mt-2 flex items-center gap-3">
+                    <button type="button" :disabled="!editable" @click="addCharge()" class="text-xs font-medium text-emerald-700 hover:underline disabled:opacity-50">+ Add charge</button>
+                    <button type="button" :disabled="!editable" @click="saveCharges()" class="text-xs font-medium text-emerald-700 hover:underline disabled:opacity-50">Save charges</button>
+                    <span class="text-xs" :class="chargesStatus === 'saved' ? 'text-emerald-600' : 'text-slate-400'" x-text="chargesLabel"></span>
+                </div>
+            </div>
+
             <!-- ====== OPTIONAL SECTIONS — collapsed by default for a fast form ====== -->
 
             <!-- ---- DIAGNOSIS + ICD-10 (collapsible; most visits skip it) ---- -->
@@ -679,55 +708,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
             <span class="text-xs text-slate-400"><?= count($recentVisits ?? []) ?> recent</span>
         </div>
 
-        <!-- Read-only peek panel: shows a past visit's data without leaving the
-             current visit. Nothing here is editable — pure view. -->
-        <div x-show="peek" x-cloak class="border-b bg-slate-50/60 px-5 py-4 text-sm">
-            <div class="mb-2 flex items-center justify-between">
-                <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Viewing visit <span x-text="peek ? ('#' + peek.visit_number) : ''"></span>
-                    <span class="ml-1 rounded bg-slate-200 px-1.5 py-0.5 text-[10px] text-slate-600">read-only</span>
-                </span>
-                <button type="button" @click="peek = null" class="text-xs text-slate-500 hover:text-slate-800">✕ Close</button>
-            </div>
-            <div class="text-xs text-slate-400" x-text="peek ? formatPeekDate(peek.visited_at) : ''"></div>
-
-            <template x-if="peek && peek.symptoms && peek.symptoms.length">
-                <div class="mt-3">
-                    <div class="text-[11px] font-semibold uppercase text-slate-400">Symptoms</div>
-                    <div class="mt-1 flex flex-wrap gap-1">
-                        <template x-for="s in peek.symptoms" :key="s">
-                            <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800" x-text="s"></span>
-                        </template>
-                    </div>
-                </div>
-            </template>
-            <template x-if="peek && peek.diagnosis">
-                <div class="mt-3"><div class="text-[11px] font-semibold uppercase text-slate-400">Diagnosis</div><div class="mt-0.5 text-slate-700" x-text="peek.diagnosis"></div></div>
-            </template>
-            <template x-if="peek && peek.prescriptions && peek.prescriptions.length">
-                <div class="mt-3">
-                    <div class="text-[11px] font-semibold uppercase text-slate-400">Medicines</div>
-                    <ul class="mt-1 space-y-1">
-                        <template x-for="(m, i) in peek.prescriptions" :key="i">
-                            <li class="text-slate-700">
-                                <span class="font-medium" x-text="m.name"></span>
-                                <span class="text-xs text-slate-400" x-show="m.detail" x-text="' — ' + m.detail"></span>
-                            </li>
-                        </template>
-                    </ul>
-                </div>
-            </template>
-            <template x-if="peek && peek.clinical_notes">
-                <div class="mt-3"><div class="text-[11px] font-semibold uppercase text-slate-400">Notes</div><div class="mt-0.5 whitespace-pre-line text-slate-700" x-text="peek.clinical_notes"></div></div>
-            </template>
-            <template x-if="peek && !peek.symptoms?.length && !peek.diagnosis && !peek.prescriptions?.length && !peek.clinical_notes">
-                <p class="mt-3 text-slate-400">No clinical details recorded for this visit.</p>
-            </template>
-
-            <a :href="peek ? ('/visits/' + peek.id) : '#'" class="mt-4 inline-block text-xs font-medium text-emerald-700 hover:underline">Open full visit to edit →</a>
-        </div>
-
-        <div class="max-h-[70vh] overflow-y-auto" x-show="!peek">
+        <div class="max-h-[70vh] overflow-y-auto">
         <ul class="divide-y text-sm">
             <?php if (empty($recentVisits)): ?>
                 <li class="px-5 py-6 text-center text-sm text-slate-500">No prior visits.</li>
@@ -772,9 +753,50 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                 <?php if ($inv): ?>
                                     <a href="/billing/<?= (int) $inv['id'] ?>" class="text-emerald-700 hover:underline">Invoice</a>
                                 <?php endif; ?>
-                                <button type="button" @click="loadPeek(<?= (int) $rv['id'] ?>)" class="font-medium text-emerald-700 hover:underline">View</button>
+                                <button type="button" @click="togglePeek(<?= (int) $rv['id'] ?>)" class="font-medium text-emerald-700 hover:underline">
+                                    <span x-text="peekId === <?= (int) $rv['id'] ?> ? '▲ Hide' : '▼ View'"></span>
+                                </button>
                                 <a href="/visits/<?= (int) $rv['id'] ?>" class="text-slate-500 hover:text-slate-800 hover:underline">Open</a>
                             </span>
+                        </div>
+
+                        <!-- Accordion detail: expands inline, read-only -->
+                        <div x-show="peekId === <?= (int) $rv['id'] ?>" x-collapse x-cloak class="mt-3 rounded-lg border border-slate-200 bg-slate-50/70 p-3 text-sm">
+                            <template x-if="peekId === <?= (int) $rv['id'] ?> && peek">
+                                <div>
+                                    <template x-if="peek.symptoms && peek.symptoms.length">
+                                        <div class="mb-2">
+                                            <div class="text-[11px] font-semibold uppercase text-slate-400">Symptoms</div>
+                                            <div class="mt-1 flex flex-wrap gap-1">
+                                                <template x-for="s in peek.symptoms" :key="s">
+                                                    <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800" x-text="s"></span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template x-if="peek.diagnosis">
+                                        <div class="mb-2"><div class="text-[11px] font-semibold uppercase text-slate-400">Diagnosis</div><div class="mt-0.5 text-slate-700" x-text="peek.diagnosis"></div></div>
+                                    </template>
+                                    <template x-if="peek.prescriptions && peek.prescriptions.length">
+                                        <div class="mb-2">
+                                            <div class="text-[11px] font-semibold uppercase text-slate-400">Medicines</div>
+                                            <ul class="mt-1 space-y-1">
+                                                <template x-for="(m, i) in peek.prescriptions" :key="i">
+                                                    <li class="text-slate-700"><span class="font-medium" x-text="m.name"></span><span class="text-xs text-slate-400" x-show="m.detail" x-text="' — ' + m.detail"></span></li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </template>
+                                    <template x-if="peek.clinical_notes">
+                                        <div class="mb-2"><div class="text-[11px] font-semibold uppercase text-slate-400">Notes</div><div class="mt-0.5 whitespace-pre-line text-slate-700" x-text="peek.clinical_notes"></div></div>
+                                    </template>
+                                    <template x-if="!peek.symptoms?.length && !peek.diagnosis && !peek.prescriptions?.length && !peek.clinical_notes">
+                                        <p class="text-slate-400">No clinical details recorded.</p>
+                                    </template>
+                                    <a :href="'/visits/' + peek.id" class="mt-2 inline-block text-xs font-medium text-emerald-700 hover:underline">Open full visit to edit →</a>
+                                </div>
+                            </template>
+                            <p x-show="peekLoading" class="text-xs text-slate-400">Loading…</p>
                         </div>
                     </li>
                 <?php endforeach; ?>
@@ -805,21 +827,56 @@ function visitScreenV2(cfg) {
         lastVisitNote: '',
         autosaveTimer: null,
         dirty: false,   // becomes true only when the doctor actually edits
-        peek: null,     // read-only summary of a past visit (history "View")
+        peek: null,         // loaded summary of the currently-expanded past visit
+        peekId: null,       // which history row is expanded (accordion)
+        peekLoading: false,
+        chargesStatus: 'idle',
+        chargesLabel: '',
 
         // Call on any user edit so autosave knows there's something to save.
         markDirty() { this.dirty = true; },
 
-        // Load a past visit's data into the read-only peek panel. Pure view —
-        // never edits, never autosaves the old visit.
-        async loadPeek(id) {
-            this.peek = { id: id, visit_number: '', visited_at: null, symptoms: [], prescriptions: [] };
+        // ---- Charges (visit invoice line items) ----
+        addCharge() { this.dirty = true; this.charges.push({ description: '', amount: null }); },
+        removeCharge(idx) { this.dirty = true; this.charges.splice(idx, 1); },
+        chargesTotal() {
+            return (this.charges || []).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
+        },
+        async saveCharges() {
+            if (!this.editable) return;
+            this.chargesStatus = 'saving';
+            this.chargesLabel = 'Saving…';
+            try {
+                const r = await fetch('/api/v1/visits/' + this.visitId + '/charges', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ items: this.charges }),
+                });
+                const data = await r.json();
+                if (data.ok) {
+                    this.chargesStatus = 'saved';
+                    this.chargesLabel = 'Saved · ₹' + (data.total || 0);
+                } else throw new Error(data.error || 'Save failed');
+            } catch (e) {
+                this.chargesStatus = 'error';
+                this.chargesLabel = e.message;
+            }
+        },
+
+        // Accordion: expand a past visit inline (read-only). Click again = close.
+        async togglePeek(id) {
+            if (this.peekId === id) { this.peekId = null; return; }
+            this.peekId = id;
+            this.peek = null;
+            this.peekLoading = true;
             try {
                 const r = await fetch('/api/v1/visits/' + id + '/summary', {
                     credentials: 'same-origin', headers: { 'Accept': 'application/json' },
                 });
-                if (r.ok) this.peek = await r.json();
-            } catch (e) { /* keep the stub; user can Open full visit */ }
+                if (r.ok && this.peekId === id) this.peek = await r.json();
+            } catch (e) { /* user can Open full visit */ }
+            this.peekLoading = false;
         },
 
         formatPeekDate(d) {
