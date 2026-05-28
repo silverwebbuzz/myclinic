@@ -57,6 +57,97 @@ final class SymptomsController
     }
 
     /**
+     * GET /api/v1/symptoms/by-category
+     *   ?cat=gi  → symptoms in that category (specialty-ranked)
+     *   (no cat) → list of categories with counts, for the browse pills
+     */
+    public function byCategory(Request $request): Response
+    {
+        if ($denied = ModuleGate::require('emr')) {
+            return $denied;
+        }
+
+        $clinic = RequestContext::clinic() ?? [];
+        $specialty = (string) ($clinic['specialty'] ?? '');
+        $cat = trim((string) ($request->query['cat'] ?? ''));
+        $pdo = Database::connection();
+
+        // No category → return the category index (label + count).
+        if ($cat === '') {
+            $rows = $pdo->query(
+                "SELECT category, COUNT(*) AS n
+                   FROM symptoms_master
+                  WHERE is_active = 1 AND category IS NOT NULL AND category <> ''
+                  GROUP BY category
+                  ORDER BY category"
+            )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            $cats = [];
+            foreach ($rows as $r) {
+                $key = (string) $r['category'];
+                $cats[] = [
+                    'key'   => $key,
+                    'label' => self::CATEGORY_LABELS[$key] ?? ucfirst($key),
+                    'count' => (int) $r['n'],
+                ];
+            }
+            return Response::json(['categories' => $cats]);
+        }
+
+        // A category → its symptoms, specialty-relevant ones first.
+        $stmt = $pdo->prepare(
+            "SELECT id, label,
+                    CASE WHEN :sp <> '' AND JSON_VALID(specialties)
+                              AND JSON_CONTAINS(LOWER(specialties), JSON_QUOTE(LOWER(:sp)))
+                         THEN 1 ELSE 0 END AS specialty_match
+               FROM symptoms_master
+              WHERE is_active = 1 AND category = :cat
+              ORDER BY specialty_match DESC, global_usage_count DESC, label ASC
+              LIMIT 60"
+        );
+        $stmt->execute([':sp' => $specialty, ':cat' => $cat]);
+
+        $symptoms = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $symptoms[] = [
+                'label'     => (string) $r['label'],
+                'master_id' => (int) $r['id'],
+                'source'    => 'master',
+            ];
+        }
+
+        return Response::json([
+            'category' => $cat,
+            'label'    => self::CATEGORY_LABELS[$cat] ?? ucfirst($cat),
+            'symptoms' => $symptoms,
+        ]);
+    }
+
+    /** Human labels for the symptom category keys (Review-of-Systems style). */
+    private const CATEGORY_LABELS = [
+        'constitutional' => 'Constitutional',
+        'neuro'          => 'Neurological',
+        'eye'            => 'Eyes',
+        'ent'            => 'ENT',
+        'respiratory'    => 'Respiratory',
+        'cardio'         => 'Cardiovascular',
+        'gi'             => 'Gastrointestinal',
+        'gu'             => 'Genitourinary',
+        'gyn'            => 'Gynecological',
+        'ortho'          => 'Musculoskeletal',
+        'derma'          => 'Skin',
+        'endo'           => 'Endocrine',
+        'dental'         => 'Dental',
+        'psych'          => 'Psychological',
+        'peds'           => 'Pediatric',
+        'allergy'        => 'Allergy/Immune',
+        'rehab'          => 'Rehab',
+        'red-flag'       => 'Red flags',
+        'nutrition'      => 'Nutrition',
+        'preventive'     => 'Preventive',
+    ];
+
+    /**
      * POST /api/v1/visits/{id}/symptoms
      * Body: { symptoms: [{ label, severity?, duration?, master_id? }, ...] }
      *

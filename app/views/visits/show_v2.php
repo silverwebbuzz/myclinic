@@ -153,6 +153,40 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                     </ul>
                 </div>
 
+                <!-- Browse by system (Review-of-Systems quick picker) -->
+                <button type="button" :disabled="!editable" @click="toggleBrowse()"
+                        class="mt-2 text-xs font-medium text-emerald-700 hover:underline disabled:opacity-50">
+                    <span x-text="browseOpen ? '− Hide systems' : '+ Browse by system'"></span>
+                </button>
+                <div x-show="browseOpen" x-cloak x-collapse class="mt-2 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+                    <!-- Category pills -->
+                    <div class="flex flex-wrap gap-1.5">
+                        <template x-for="c in categories" :key="c.key">
+                            <button type="button" @click="openCategory(c.key)"
+                                    class="rounded-full border px-2.5 py-1 text-xs transition"
+                                    :class="activeCat === c.key ? 'border-emerald-500 bg-emerald-600 text-white' : 'border-slate-300 bg-white text-slate-700 hover:border-emerald-400'">
+                                <span x-text="c.label"></span>
+                                <span class="opacity-60" x-text="'· ' + c.count"></span>
+                            </button>
+                        </template>
+                    </div>
+                    <!-- Symptom pills for the open category -->
+                    <div x-show="activeCat" class="mt-3 border-t border-slate-200 pt-3">
+                        <p x-show="catLoading" class="text-xs text-slate-400">Loading…</p>
+                        <div class="flex flex-wrap gap-1.5">
+                            <template x-for="s in catSymptoms" :key="s.master_id">
+                                <button type="button" :disabled="!editable" @click="toggleSymptom(s)"
+                                        class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition disabled:opacity-50"
+                                        :class="isSelected(s.label) ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-slate-300 bg-white text-slate-700 hover:border-emerald-400'">
+                                    <span x-text="isSelected(s.label) ? '✓' : '+'"></span>
+                                    <span x-text="s.label"></span>
+                                </button>
+                            </template>
+                            <p x-show="!catLoading && catSymptoms.length === 0" class="text-xs text-slate-400">No symptoms in this system.</p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Free-text complaint fallback (kept for migration parity + voice notes) -->
                 <details class="mt-2">
                     <summary class="cursor-pointer text-xs text-slate-500 hover:text-slate-700">+ Narrative complaint (optional)</summary>
@@ -919,9 +953,61 @@ function symptomPicker() {
         suggestions: [],
         showSuggestions: false,
 
+        // Browse-by-system (Review-of-Systems style category picker)
+        browseOpen: false,
+        categories: [],
+        activeCat: null,
+        catSymptoms: [],
+        catLoading: false,
+
         init() {
             // Symptoms are server-rendered into $root.symptoms (no flash).
             // Nothing to fetch on mount — saves an API round-trip.
+        },
+
+        async toggleBrowse() {
+            this.browseOpen = !this.browseOpen;
+            if (this.browseOpen && this.categories.length === 0) {
+                try {
+                    const r = await fetch('/api/v1/symptoms/by-category', {
+                        credentials: 'same-origin', headers: { 'Accept': 'application/json' },
+                    });
+                    const data = await r.json();
+                    this.categories = data.categories || [];
+                } catch (e) { this.categories = []; }
+            }
+        },
+
+        async openCategory(key) {
+            if (this.activeCat === key) { this.activeCat = null; this.catSymptoms = []; return; }
+            this.activeCat = key;
+            this.catLoading = true;
+            this.catSymptoms = [];
+            try {
+                const r = await fetch('/api/v1/symptoms/by-category?cat=' + encodeURIComponent(key), {
+                    credentials: 'same-origin', headers: { 'Accept': 'application/json' },
+                });
+                const data = await r.json();
+                this.catSymptoms = data.symptoms || [];
+            } catch (e) { this.catSymptoms = []; }
+            this.catLoading = false;
+        },
+
+        isSelected(label) {
+            const l = (label || '').toLowerCase();
+            return this.symptoms.some(s => s.label.toLowerCase() === l);
+        },
+
+        // Quick-toggle a pill: add if absent, remove if present.
+        toggleSymptom(sug) {
+            const label = (sug.label || '').trim();
+            if (!label) return;
+            const i = this.symptoms.findIndex(s => s.label.toLowerCase() === label.toLowerCase());
+            if (i >= 0) { this.symptoms.splice(i, 1); }
+            else {
+                this.symptoms.push({ label: label, master_id: sug.master_id || null, source: sug.source || 'master' });
+            }
+            this.persistSymptoms();
         },
 
         async search() {
@@ -984,6 +1070,7 @@ function symptomPicker() {
             try {
                 await fetch('/api/v1/visits/' + this.$root.visitId + '/symptoms', {
                     method: 'POST',
+                    credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify({ symptoms: this.symptoms }),
                 });

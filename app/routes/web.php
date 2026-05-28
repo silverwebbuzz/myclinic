@@ -250,6 +250,7 @@ return static function (RouteRegistrar $router): void {
 
         // Phase 3: Symptoms autocomplete + visit symptoms CRUD
         $api->get('/symptoms/search', [SymptomsController::class, 'searchApi']);
+        $api->get('/symptoms/by-category', [SymptomsController::class, 'byCategory']);
         $api->get('/visits/{id}/symptoms', [SymptomsController::class, 'listForVisit']);
         $api->post('/visits/{id}/symptoms', [SymptomsController::class, 'saveForVisit']);
 
