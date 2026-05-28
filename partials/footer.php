@@ -19,12 +19,12 @@ $clinicCount = ecp_active_clinic_count();
     <div class="wrap reveal">
         <h2>Ready to run your clinic beautifully?</h2>
         <p class="lede">
-            Join <?= ecp_num($clinicCount) ?> clinics worldwide. Start free in 2 minutes.<br>
+            Join <?= ecp_num($clinicCount) ?> clinics across India. Start free in 2 minutes.<br>
             No credit card. No phone-tag with sales. Just a clean clinic.
         </p>
         <div class="hero-ctas">
             <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg">
-                Start free — no card needed
+                Start 30-day free trial
             </a>
             <a href="/book-a-demo" class="btn btn-ghost-dark btn-lg">
                 Schedule a 15-min demo →
@@ -72,16 +72,16 @@ try {
         <div class="foot-grid">
             <div class="foot-brand">
                 <span class="logo">e<em>ClinicPro</em></span>
-                <p>The clinic operating system, for every specialty, in every country. Made with care for clinicians worldwide.</p>
+                <p>Book a verified doctor, or run your whole clinic — one simple system. Made in India, for Indian clinics. 🌿</p>
             </div>
             <div class="foot-col">
                 <h5>Product</h5>
                 <ul>
-                    <li><a href="/features">Features</a></li>
+                    <li><a href="/find-a-doctor">Find a doctor</a></li>
+                    <li><a href="/features">For doctors</a></li>
                     <li><a href="/product-tour">Product tour</a></li>
-                    <li><a href="/#modules">Modules</a></li>
                     <li><a href="/pricing">Pricing</a></li>
-                    <li><a href="#">Changelog</a></li>
+                    <li><a href="/#specialties">Specialties</a></li>
                 </ul>
             </div>
             <div class="foot-col">
@@ -116,7 +116,7 @@ try {
             </div>
         </div>
         <div class="foot-bottom">
-            <div>© <?= date('Y') ?> eClinicPro, Inc. · Made with care for clinics worldwide 🌿</div>
+            <div>© <?= date('Y') ?> eClinicPro · Made with care for clinics across India 🌿</div>
             <div class="links">
                 <a href="#">Privacy</a>
                 <a href="#">Terms</a>
