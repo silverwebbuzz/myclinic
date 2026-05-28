@@ -240,6 +240,7 @@ return static function (RouteRegistrar $router): void {
         $api->get('/appointments/calendar', [AppointmentController::class, 'calendarApi']);
         $api->get('/queue', [QueueController::class, 'api']);
         $api->post('/visits/{id}/autosave', [VisitController::class, 'autosaveApi']);
+        $api->get('/visits/{id}/summary', [VisitController::class, 'summaryApi']);
         $api->get('/visits/{id}/tab/{tab}', [VisitController::class, 'tabApi']);
         // Phase 2: "Same as last visit" — GET previews, POST applies.
         $api->get('/visits/{id}/last-visit', [VisitController::class, 'cloneLastVisit']);

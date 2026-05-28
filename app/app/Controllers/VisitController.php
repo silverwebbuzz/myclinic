@@ -315,6 +315,56 @@ final class VisitController
         }
     }
 
+    /**
+     * GET /api/v1/visits/{id}/summary — read-only summary of a past visit
+     * (symptoms, diagnosis, prescriptions, notes). Used by the "peek" panel
+     * in the current-visit screen. Never modifies anything.
+     */
+    public function summaryApi(Request $request, string $id): Response
+    {
+        if ($denied = ModuleGate::require('emr')) {
+            return $denied;
+        }
+
+        $clinicId = (int) RequestContext::clinicId();
+        $visit = VisitService::find($clinicId, (int) $id);
+        if ($visit === null) {
+            return Response::json(['error' => 'Not found'], 404);
+        }
+
+        $symptoms = array_map(
+            static fn ($s) => (string) ($s['label'] ?? ''),
+            self::fetchVisitSymptoms($clinicId, (int) $id)
+        );
+
+        $rx = array_map(static function ($p) {
+            $name = $p['drug']['name'] ?? $p['remedy']['name'] ?? $p['drug_name'] ?? '';
+            $parts = array_filter([
+                $p['frequency_preset'] ?? $p['frequency'] ?? null,
+                ($p['duration_days'] ?? null) ? $p['duration_days'] . ' days' : null,
+                $p['food_timing'] ?? null,
+            ]);
+            return [
+                'name' => $name,
+                'detail' => implode(' · ', $parts),
+                'instructions' => $p['instructions'] ?? '',
+            ];
+        }, PrescriptionService::forVisit($clinicId, (int) $id));
+
+        return Response::json([
+            'id' => (int) $visit['id'],
+            'visit_number' => (int) ($visit['visit_number'] ?? 0),
+            'visited_at' => $visit['visited_at'] ?? null,
+            'status' => $visit['status'] ?? '',
+            'symptoms' => array_values(array_filter($symptoms)),
+            'chief_complaint' => $visit['chief_complaint'] ?? '',
+            'diagnosis' => $visit['diagnosis'] ?? '',
+            'clinical_notes' => $visit['clinical_notes'] ?? '',
+            'follow_up_notes' => $visit['follow_up_notes'] ?? '',
+            'prescriptions' => $rx,
+        ]);
+    }
+
     public function tabApi(Request $request, string $id, string $tab): Response
     {
         if ($denied = ModuleGate::require('emr')) {

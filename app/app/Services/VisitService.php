@@ -130,6 +130,14 @@ final class VisitService
                 $update[$field] = $payload[$field] === '' ? null : $payload[$field];
             }
         }
+        // Editable visit date/time — for late catch-up entry. Only accept a
+        // parseable datetime; ignore blanks so a normal save never clears it.
+        if (!empty($payload['visited_at'])) {
+            $ts = strtotime((string) $payload['visited_at']);
+            if ($ts !== false) {
+                $update['visited_at'] = date('Y-m-d H:i:s', $ts);
+            }
+        }
         if (array_key_exists('condition_score', $payload)) {
             $update['condition_score'] = $payload['condition_score'] === '' ? null : (int) $payload['condition_score'];
         }
@@ -219,44 +227,54 @@ final class VisitService
         $clinic = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first();
         $prescriptions = PrescriptionService::forVisit($clinicId, $visitId);
 
+        // PDF generation + Rx WhatsApp delivery are OPTIONAL side-effects.
+        // The visit is already marked completed above, so a failure here
+        // (PDF lib, file perms, messaging config) must NOT 500 the request.
         $rxPath = null;
         if ($prescriptions !== [] && $patient !== null && $clinic !== null) {
-            $visit['diagnosis'] = $visit['diagnosis'] ?? '';
-            $rxPath = RxPdfService::generate($visit, $patient, $clinic, $prescriptions);
-            QueryBuilder::table('visits')
-                ->forClinic($clinicId)
-                ->where('id', '=', $visitId)
-                ->update(['rx_pdf_path' => $rxPath]);
+            try {
+                $visit['diagnosis'] = $visit['diagnosis'] ?? '';
+                $rxPath = RxPdfService::generate($visit, $patient, $clinic, $prescriptions);
+                QueryBuilder::table('visits')
+                    ->forClinic($clinicId)
+                    ->where('id', '=', $visitId)
+                    ->update(['rx_pdf_path' => $rxPath]);
 
-            $config = OnboardingService::specialtyConfig($clinicId) ?? [];
-            $prefs = $config['notification_prefs'] ?? null;
-            if (is_string($prefs)) {
-                $prefs = json_decode($prefs, true);
-            }
-            if (is_array($prefs) && ($prefs['rx_delivery'] ?? true)) {
-                NotificationService::queueWhatsApp(
-                    $clinicId,
-                    (int) $patient['id'],
-                    (string) $patient['phone'],
-                    'rx_delivery',
-                    [
-                        'patient_name' => $patient['name'],
-                        'clinic_name' => $clinic['name'],
-                        'rx_url' => $rxPath,
-                    ],
-                    date('Y-m-d H:i:s', time() + 120),
-                );
+                $config = OnboardingService::specialtyConfig($clinicId) ?? [];
+                $prefs = $config['notification_prefs'] ?? null;
+                if (is_string($prefs)) {
+                    $prefs = json_decode($prefs, true);
+                }
+                if (is_array($prefs) && ($prefs['rx_delivery'] ?? true)) {
+                    NotificationService::queueWhatsApp(
+                        $clinicId,
+                        (int) $patient['id'],
+                        (string) $patient['phone'],
+                        'rx_delivery',
+                        [
+                            'patient_name' => $patient['name'],
+                            'clinic_name' => $clinic['name'],
+                            'rx_url' => $rxPath,
+                        ],
+                        date('Y-m-d H:i:s', time() + 120),
+                    );
+                }
+            } catch (\Throwable $e) {
+                error_log('[visit.complete] PDF/notify failed for visit ' . $visitId . ': ' . $e->getMessage());
             }
         }
 
-        EventBus::fire('visit.completed', [
-            'visit_id' => $visitId,
-            'patient_id' => (int) $visit['patient_id'],
-            'appointment_id' => $visit['appointment_id'] ?? null,
-            'clinic_id' => $clinicId,
-        ], 'visits', $visitId);
-
-        DashboardService::invalidateStats($clinicId);
+        try {
+            EventBus::fire('visit.completed', [
+                'visit_id' => $visitId,
+                'patient_id' => (int) $visit['patient_id'],
+                'appointment_id' => $visit['appointment_id'] ?? null,
+                'clinic_id' => $clinicId,
+            ], 'visits', $visitId);
+            DashboardService::invalidateStats($clinicId);
+        } catch (\Throwable $e) {
+            error_log('[visit.complete] post-complete hook failed for visit ' . $visitId . ': ' . $e->getMessage());
+        }
 
         return self::findDetailed($clinicId, $visitId) ?? [];
     }

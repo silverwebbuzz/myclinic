@@ -45,6 +45,8 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         'follow_up_reason' => $pendingFollowUp['reason'] ?? '',
         'voiceLang' => $voiceLang ?? 'en-IN',
         'follow_up_notes' => $visit['follow_up_notes'] ?? '',
+        // datetime-local wants "YYYY-MM-DDTHH:MM"
+        'visited_at' => !empty($visit['visited_at']) ? date('Y-m-d\TH:i', strtotime((string) $visit['visited_at'])) : '',
         'vitals' => $vitals,
         'prescriptions' => array_map(static fn ($r) => [
             'drug_id' => $r['drug_id'] ?? null,
@@ -81,12 +83,22 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
 
     <!-- ====== TODAY'S VISIT ====== -->
     <section class="rounded-xl border bg-white shadow-sm">
-        <div class="flex items-center justify-between border-b px-5 py-3">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b px-5 py-3" x-data="{ editDate: false }">
             <div class="flex items-baseline gap-3">
                 <h2 class="text-base font-semibold text-slate-900">Today's visit</h2>
-                <span class="text-xs text-slate-400">
-                    Visit #<?= (int) $visit['visit_number'] ?>
-                    · <?= htmlspecialchars(date('d M Y', strtotime((string) ($visit['visited_at'] ?? 'now')))) ?>
+                <span class="flex items-center gap-2 text-xs text-slate-400">
+                    Visit #<?= (int) $visit['visit_number'] ?> ·
+                    <!-- Editable visit date/time (for late catch-up entry) -->
+                    <template x-if="!editDate">
+                        <button type="button" :disabled="!editable" @click="editDate = true"
+                                class="text-slate-500 hover:text-emerald-700 disabled:cursor-default disabled:hover:text-slate-500"
+                                x-text="visited_at ? new Date(visited_at).toLocaleString() : 'Set date'"></button>
+                    </template>
+                    <template x-if="editDate">
+                        <input type="datetime-local" x-model="visited_at" :disabled="!editable"
+                               @change="markDirty()" @blur="editDate = false"
+                               class="rounded border border-slate-300 px-2 py-0.5 text-xs">
+                    </template>
                 </span>
             </div>
             <div class="flex items-center gap-3 text-xs">
@@ -95,6 +107,10 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                     x-text="saveLabel"></span>
                 <?php if (!$editable): ?>
                     <span class="rounded-full bg-slate-200 px-2 py-0.5 text-xs">Read-only</span>
+                    <form method="post" action="/visits/<?= $visitId ?>/unlock" class="inline">
+                        <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+                        <button type="submit" class="rounded-full border border-emerald-300 px-2.5 py-0.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50">Edit this visit</button>
+                    </form>
                 <?php endif; ?>
             </div>
         </div>
@@ -662,7 +678,56 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
             <h2 class="text-base font-semibold text-slate-900">Visit history</h2>
             <span class="text-xs text-slate-400"><?= count($recentVisits ?? []) ?> recent</span>
         </div>
-        <div class="max-h-[70vh] overflow-y-auto">
+
+        <!-- Read-only peek panel: shows a past visit's data without leaving the
+             current visit. Nothing here is editable — pure view. -->
+        <div x-show="peek" x-cloak class="border-b bg-slate-50/60 px-5 py-4 text-sm">
+            <div class="mb-2 flex items-center justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Viewing visit <span x-text="peek ? ('#' + peek.visit_number) : ''"></span>
+                    <span class="ml-1 rounded bg-slate-200 px-1.5 py-0.5 text-[10px] text-slate-600">read-only</span>
+                </span>
+                <button type="button" @click="peek = null" class="text-xs text-slate-500 hover:text-slate-800">✕ Close</button>
+            </div>
+            <div class="text-xs text-slate-400" x-text="peek ? formatPeekDate(peek.visited_at) : ''"></div>
+
+            <template x-if="peek && peek.symptoms && peek.symptoms.length">
+                <div class="mt-3">
+                    <div class="text-[11px] font-semibold uppercase text-slate-400">Symptoms</div>
+                    <div class="mt-1 flex flex-wrap gap-1">
+                        <template x-for="s in peek.symptoms" :key="s">
+                            <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800" x-text="s"></span>
+                        </template>
+                    </div>
+                </div>
+            </template>
+            <template x-if="peek && peek.diagnosis">
+                <div class="mt-3"><div class="text-[11px] font-semibold uppercase text-slate-400">Diagnosis</div><div class="mt-0.5 text-slate-700" x-text="peek.diagnosis"></div></div>
+            </template>
+            <template x-if="peek && peek.prescriptions && peek.prescriptions.length">
+                <div class="mt-3">
+                    <div class="text-[11px] font-semibold uppercase text-slate-400">Medicines</div>
+                    <ul class="mt-1 space-y-1">
+                        <template x-for="(m, i) in peek.prescriptions" :key="i">
+                            <li class="text-slate-700">
+                                <span class="font-medium" x-text="m.name"></span>
+                                <span class="text-xs text-slate-400" x-show="m.detail" x-text="' — ' + m.detail"></span>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+            </template>
+            <template x-if="peek && peek.clinical_notes">
+                <div class="mt-3"><div class="text-[11px] font-semibold uppercase text-slate-400">Notes</div><div class="mt-0.5 whitespace-pre-line text-slate-700" x-text="peek.clinical_notes"></div></div>
+            </template>
+            <template x-if="peek && !peek.symptoms?.length && !peek.diagnosis && !peek.prescriptions?.length && !peek.clinical_notes">
+                <p class="mt-3 text-slate-400">No clinical details recorded for this visit.</p>
+            </template>
+
+            <a :href="peek ? ('/visits/' + peek.id) : '#'" class="mt-4 inline-block text-xs font-medium text-emerald-700 hover:underline">Open full visit to edit →</a>
+        </div>
+
+        <div class="max-h-[70vh] overflow-y-auto" x-show="!peek">
         <ul class="divide-y text-sm">
             <?php if (empty($recentVisits)): ?>
                 <li class="px-5 py-6 text-center text-sm text-slate-500">No prior visits.</li>
@@ -707,6 +772,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                 <?php if ($inv): ?>
                                     <a href="/billing/<?= (int) $inv['id'] ?>" class="text-emerald-700 hover:underline">Invoice</a>
                                 <?php endif; ?>
+                                <button type="button" @click="loadPeek(<?= (int) $rv['id'] ?>)" class="font-medium text-emerald-700 hover:underline">View</button>
                                 <a href="/visits/<?= (int) $rv['id'] ?>" class="text-slate-500 hover:text-slate-800 hover:underline">Open</a>
                             </span>
                         </div>
@@ -738,13 +804,42 @@ function visitScreenV2(cfg) {
         vitalsWarnings: [],
         lastVisitNote: '',
         autosaveTimer: null,
+        dirty: false,   // becomes true only when the doctor actually edits
+        peek: null,     // read-only summary of a past visit (history "View")
+
+        // Call on any user edit so autosave knows there's something to save.
+        markDirty() { this.dirty = true; },
+
+        // Load a past visit's data into the read-only peek panel. Pure view —
+        // never edits, never autosaves the old visit.
+        async loadPeek(id) {
+            this.peek = { id: id, visit_number: '', visited_at: null, symptoms: [], prescriptions: [] };
+            try {
+                const r = await fetch('/api/v1/visits/' + id + '/summary', {
+                    credentials: 'same-origin', headers: { 'Accept': 'application/json' },
+                });
+                if (r.ok) this.peek = await r.json();
+            } catch (e) { /* keep the stub; user can Open full visit */ }
+        },
+
+        formatPeekDate(d) {
+            if (!d) return '';
+            try { return new Date(d.replace(' ', 'T')).toLocaleString(); } catch (e) { return d; }
+        },
 
         initAutosave() {
             if (!this.editable) return;
             this.autosaveTimer = setInterval(() => this.save(), 30000);
-            // Save when the tab loses focus too — captures last edit.
+            // Save when the tab loses focus too — captures last edit. Guarded by
+            // `dirty` so merely viewing a visit never re-saves it.
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'hidden') this.save();
+            });
+            // Mark dirty on any input/change within the visit form.
+            this.$nextTick(() => {
+                const root = this.$root || document;
+                root.addEventListener && root.addEventListener('input', () => this.markDirty());
+                root.addEventListener && root.addEventListener('change', () => this.markDirty());
             });
         },
 
@@ -811,6 +906,7 @@ function visitScreenV2(cfg) {
                 follow_up_date: this.follow_up_date,
                 follow_up_reason: this.follow_up_reason,
                 follow_up_notes: this.follow_up_notes,
+                visited_at: this.visited_at,
                 vitals: this.vitals,
                 prescriptions: cleanRx,
                 specialty_data: { case_taking: this.case_taking, ...this.specialty_data },
@@ -826,7 +922,9 @@ function visitScreenV2(cfg) {
         },
 
         async save() {
-            if (!this.editable) return;
+            // Never autosave a read-only visit, and never re-save one the
+            // doctor only viewed (no edits) — prevents touching old visits.
+            if (!this.editable || !this.dirty) return;
             this.saveStatus = 'saving';
             this.saveLabel = 'Saving…';
             try {
@@ -876,6 +974,7 @@ function visitScreenV2(cfg) {
         },
 
         addRxLine() {
+            this.dirty = true;
             this.prescriptions.push({
                 drug_id: null, remedy_id: null, drug_name: '',
                 potency: '', dosage: '',
@@ -885,6 +984,7 @@ function visitScreenV2(cfg) {
         },
 
         removeRxLine(idx) {
+            this.dirty = true;
             this.prescriptions.splice(idx, 1);
         },
 
