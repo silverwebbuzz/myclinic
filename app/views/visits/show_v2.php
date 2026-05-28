@@ -127,10 +127,20 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 </div>
 
                 <!-- Suggestion dropdown -->
-                <div x-show="suggestions.length && showSuggestions" x-cloak
+                <div x-show="(suggestions.length || catMatches.length) && showSuggestions" x-cloak
                      @click.outside="showSuggestions = false"
                      class="relative">
                     <ul class="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-lg border bg-white shadow-lg">
+                        <!-- Matching systems (open the browse pills) -->
+                        <template x-for="c in catMatches" :key="'sys-' + c.key">
+                            <li>
+                                <button type="button" @click="pickSystem(c)"
+                                        class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm hover:bg-emerald-50">
+                                    <span><span class="mr-1">📂</span><span x-text="c.label"></span></span>
+                                    <span class="text-xs uppercase tracking-wider text-emerald-700" x-text="'system · ' + c.count"></span>
+                                </button>
+                            </li>
+                        </template>
                         <template x-for="(sug, i) in suggestions" :key="sug.label + i">
                             <li>
                                 <button type="button" @click="addSymptom(sug); persistSymptoms()"
@@ -956,6 +966,7 @@ function symptomPicker() {
         // Browse-by-system (Review-of-Systems style category picker)
         browseOpen: false,
         categories: [],
+        catMatches: [],     // systems matching the current type-search query
         activeCat: null,
         catSymptoms: [],
         catLoading: false,
@@ -965,16 +976,22 @@ function symptomPicker() {
             // Nothing to fetch on mount — saves an API round-trip.
         },
 
+        // Load the category index once (shared by browse + type-search).
+        async loadCategories() {
+            if (this.categories.length) return;
+            try {
+                const r = await fetch('/api/v1/symptoms/by-category', {
+                    credentials: 'same-origin', headers: { 'Accept': 'application/json' },
+                });
+                const data = await r.json();
+                this.categories = data.categories || [];
+            } catch (e) { this.categories = []; }
+        },
+
         async toggleBrowse() {
             this.browseOpen = !this.browseOpen;
-            if (this.browseOpen && this.categories.length === 0) {
-                try {
-                    const r = await fetch('/api/v1/symptoms/by-category', {
-                        credentials: 'same-origin', headers: { 'Accept': 'application/json' },
-                    });
-                    const data = await r.json();
-                    this.categories = data.categories || [];
-                } catch (e) { this.categories = []; }
+            if (this.browseOpen) {
+                await this.loadCategories();
             }
         },
 
@@ -1010,9 +1027,32 @@ function symptomPicker() {
             this.persistSymptoms();
         },
 
+        // Short aliases so "gi", "cvs", "msk" etc. surface the right system.
+        catAliases: {
+            gi: 'gi', git: 'gi', cvs: 'cardio', cardiac: 'cardio', heart: 'cardio',
+            resp: 'respiratory', lungs: 'respiratory', msk: 'ortho', bones: 'ortho',
+            ent: 'ent', neuro: 'neuro', brain: 'neuro', skin: 'derma', derm: 'derma',
+            gu: 'gu', urinary: 'gu', gyn: 'gyn', endo: 'endo', thyroid: 'endo',
+            psych: 'psych', mental: 'psych', allergy: 'allergy', peds: 'peds', kids: 'peds',
+        },
+
         async search() {
             this.showSuggestions = true;
             const q = (this.query || '').trim();
+            const ql = q.toLowerCase();
+
+            // Match systems by label, key, or alias → show as "… · system" rows.
+            this.catMatches = [];
+            if (ql.length >= 2) {
+                await this.loadCategories();
+                const aliasKey = this.catAliases[ql] || null;
+                this.catMatches = this.categories.filter(c =>
+                    c.label.toLowerCase().includes(ql)
+                    || c.key.toLowerCase().includes(ql)
+                    || (aliasKey && c.key === aliasKey)
+                ).slice(0, 3);
+            }
+
             try {
                 const url = '/api/v1/symptoms/search?q=' + encodeURIComponent(q);
                 const r = await fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
@@ -1023,6 +1063,17 @@ function symptomPicker() {
             } catch (e) {
                 this.suggestions = [];
             }
+        },
+
+        // Clicking a "… · system" row in the dropdown opens browse + that category.
+        async pickSystem(cat) {
+            this.query = '';
+            this.suggestions = [];
+            this.catMatches = [];
+            this.showSuggestions = false;
+            this.browseOpen = true;
+            await this.loadCategories();
+            await this.openCategory(cat.key);
         },
 
         exactMatch(q) {
