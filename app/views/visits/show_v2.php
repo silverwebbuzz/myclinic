@@ -158,32 +158,6 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 </details>
             </div>
 
-            <!-- ---- DIAGNOSIS (always visible) ---- -->
-            <div>
-                <div class="flex items-baseline justify-between">
-                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Diagnosis</label>
-                    <span class="text-xs text-slate-400">optional</span>
-                </div>
-                <input type="text" x-model="diagnosis" :disabled="!editable"
-                       placeholder="e.g. Viral fever"
-                       class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
-                <div class="mt-2 flex items-center gap-2">
-                    <input type="search" x-model="icd10_code" :disabled="!editable"
-                           @input.debounce.300ms="searchIcd($event.target.value)"
-                           placeholder="ICD-10 code (optional)"
-                           class="w-40 rounded border border-slate-200 px-2 py-1 text-xs">
-                    <ul x-show="icdResults.length" class="ml-2 inline-flex max-h-32 flex-wrap gap-1">
-                        <template x-for="c in icdResults" :key="c.code">
-                            <li>
-                                <button type="button" @click="icd10_code = c.code; icdResults = []"
-                                        class="rounded bg-slate-100 px-2 py-0.5 text-xs hover:bg-emerald-50"
-                                        x-text="c.code"></button>
-                            </li>
-                        </template>
-                    </ul>
-                </div>
-            </div>
-
             <!-- ---- PRESCRIPTION ---- -->
             <div x-data="prescriptionPanel()" x-init="loadTemplates()">
                 <div class="flex items-baseline justify-between">
@@ -446,10 +420,37 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                           class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs"></textarea>
             </div>
 
-            <!-- ====== OPTIONAL SECTIONS — controlled by visible_modules + ghost reveals ====== -->
+            <!-- ====== OPTIONAL SECTIONS — collapsed by default for a fast form ====== -->
+
+            <!-- ---- DIAGNOSIS + ICD-10 (collapsible; most visits skip it) ---- -->
+            <details class="rounded-lg border border-slate-200 bg-slate-50/50">
+                <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">
+                    Diagnosis <span class="font-normal text-slate-400">— optional</span>
+                </summary>
+                <div class="px-4 pb-4 pt-2">
+                    <input type="text" x-model="diagnosis" :disabled="!editable"
+                           placeholder="e.g. Viral fever"
+                           class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                    <div class="mt-2 flex items-center gap-2">
+                        <input type="search" x-model="icd10_code" :disabled="!editable"
+                               @input.debounce.300ms="searchIcd($event.target.value)"
+                               placeholder="ICD-10 code (optional)"
+                               class="w-40 rounded border border-slate-200 px-2 py-1 text-xs">
+                        <ul x-show="icdResults.length" class="ml-2 inline-flex max-h-32 flex-wrap gap-1">
+                            <template x-for="c in icdResults" :key="c.code">
+                                <li>
+                                    <button type="button" @click="icd10_code = c.code; icdResults = []"
+                                            class="rounded bg-slate-100 px-2 py-0.5 text-xs hover:bg-emerald-50"
+                                            x-text="c.code"></button>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+                </div>
+            </details>
 
             <?php if ($has('vitals')): ?>
-                <details class="rounded-lg border border-slate-200 bg-slate-50/50" open
+                <details class="rounded-lg border border-slate-200 bg-slate-50/50"
                          @toggle="recordSection('vitals', $event.target.open)">
                     <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Vitals</summary>
                     <div class="px-4 pb-4 pt-2">
@@ -602,25 +603,51 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         </div>
         <ul class="divide-y text-sm">
             <?php if (empty($recentVisits)): ?>
-                <li class="px-5 py-4 text-sm text-slate-500">First visit for this patient.</li>
+                <li class="px-5 py-6 text-center text-sm text-slate-500">No prior visits.</li>
             <?php else: ?>
-                <?php foreach ($recentVisits as $rv): ?>
-                    <li class="flex items-start justify-between gap-3 px-5 py-3">
-                        <div class="min-w-0 flex-1">
-                            <div class="text-xs text-slate-400">
-                                <?= htmlspecialchars(date('d M Y', strtotime((string) $rv['visited_at']))) ?>
-                                · Visit #<?= (int) $rv['visit_number'] ?>
-                            </div>
-                            <?php if (!empty($rv['diagnosis'])): ?>
-                                <div class="mt-0.5 truncate text-sm text-slate-700"><?= htmlspecialchars((string) $rv['diagnosis']) ?></div>
-                            <?php elseif (!empty($rv['chief_complaint'])): ?>
-                                <div class="mt-0.5 truncate text-sm text-slate-700"><?= htmlspecialchars((string) $rv['chief_complaint']) ?></div>
-                            <?php endif; ?>
-                            <?php if (!empty($rv['follow_up_notes'])): ?>
-                                <div class="mt-0.5 truncate text-xs text-slate-500">↳ <?= htmlspecialchars((string) $rv['follow_up_notes']) ?></div>
-                            <?php endif; ?>
+                <?php foreach ($recentVisits as $rv):
+                    $inv = $rv['invoice'] ?? null;
+                    $meds = trim((string) ($rv['medicines_summary'] ?? ''));
+                    $isPaid = $inv && in_array($inv['status'] ?? '', ['paid', 'partial'], true);
+                ?>
+                    <li class="group px-5 py-3 hover:bg-slate-50">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                                📅 <?= htmlspecialchars(date('d M Y', strtotime((string) $rv['visited_at']))) ?>
+                            </span>
+                            <span class="text-[11px] text-slate-400">#<?= (int) $rv['visit_number'] ?></span>
                         </div>
-                        <a href="/visits/<?= (int) $rv['id'] ?>?new=1" class="text-xs text-emerald-700 hover:underline">Open</a>
+
+                        <?php if ($meds !== ''): ?>
+                            <div class="mt-1 line-clamp-2 text-sm font-medium text-slate-800"><?= htmlspecialchars($meds) ?></div>
+                        <?php elseif (!empty($rv['diagnosis'])): ?>
+                            <div class="mt-1 line-clamp-2 text-sm text-slate-700"><?= htmlspecialchars((string) $rv['diagnosis']) ?></div>
+                        <?php elseif (!empty($rv['chief_complaint'])): ?>
+                            <div class="mt-1 line-clamp-2 text-sm text-slate-700"><?= htmlspecialchars((string) $rv['chief_complaint']) ?></div>
+                        <?php endif; ?>
+
+                        <?php if (!empty($rv['follow_up_notes'])): ?>
+                            <div class="mt-1 inline-block rounded bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-800">↳ <?= htmlspecialchars((string) $rv['follow_up_notes']) ?></div>
+                        <?php endif; ?>
+
+                        <div class="mt-1.5 flex items-center justify-between gap-2">
+                            <?php if ($inv): ?>
+                                <span class="inline-flex items-center gap-1.5 text-xs">
+                                    <span class="font-semibold text-slate-700">₹<?= number_format((float) $inv['total'], 0) ?></span>
+                                    <span class="rounded px-1.5 py-0.5 text-[10px] font-medium <?= $isPaid ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500' ?>">
+                                        <?= $isPaid ? '✓ Paid' : 'Unpaid' ?>
+                                    </span>
+                                </span>
+                            <?php else: ?>
+                                <span></span>
+                            <?php endif; ?>
+                            <span class="flex gap-3 text-[11px]">
+                                <?php if ($inv): ?>
+                                    <a href="/billing/<?= (int) $inv['id'] ?>" class="text-emerald-700 hover:underline">Invoice</a>
+                                <?php endif; ?>
+                                <a href="/visits/<?= (int) $rv['id'] ?>" class="text-slate-500 hover:text-slate-800 hover:underline">Open</a>
+                            </span>
+                        </div>
                     </li>
                 <?php endforeach; ?>
             <?php endif; ?>

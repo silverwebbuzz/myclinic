@@ -315,7 +315,88 @@ final class VisitService
             $rows = array_filter($rows, static fn ($r) => (int) $r['id'] !== $excludeVisitId);
         }
 
-        return array_slice(array_map([self::class, 'hydrate'], array_values($rows)), 0, $limit);
+        $visits = array_slice(array_map([self::class, 'hydrate'], array_values($rows)), 0, $limit);
+
+        return self::attachHistoryMeta($clinicId, $visits);
+    }
+
+    /**
+     * Batch-attach a medicines summary + linked invoice to each visit row,
+     * for the visit-history list. Two queries total (no N+1).
+     * @param list<array<string,mixed>> $visits
+     * @return list<array<string,mixed>>
+     */
+    private static function attachHistoryMeta(int $clinicId, array $visits): array
+    {
+        if ($visits === [] || !Database::ping()) {
+            return $visits;
+        }
+
+        $ids = array_values(array_unique(array_map(static fn ($v) => (int) $v['id'], $visits)));
+        if ($ids === []) {
+            return $visits;
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $pdo = Database::connection();
+
+        // Medicine names per visit (drug or remedy), ordered by sort_order.
+        $meds = [];
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT p.visit_id, COALESCE(d.name, r.name) AS name
+                   FROM prescriptions p
+                   LEFT JOIN drugs d ON d.id = p.drug_id
+                   LEFT JOIN remedies r ON r.id = p.remedy_id
+                  WHERE p.clinic_id = ? AND p.visit_id IN ($placeholders)
+                  ORDER BY p.visit_id, p.sort_order, p.id"
+            );
+            $stmt->execute([$clinicId, ...$ids]);
+            foreach ($stmt->fetchAll() ?: [] as $row) {
+                $name = trim((string) ($row['name'] ?? ''));
+                if ($name === '') {
+                    continue;
+                }
+                $meds[(int) $row['visit_id']][] = $name;
+            }
+        } catch (\Throwable $e) { /* table/columns missing → no summary */ }
+
+        // Latest invoice per visit (total + status), if billing is in use.
+        $invoices = [];
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT i.visit_id, i.id, i.total, i.status
+                   FROM invoices i
+                  WHERE i.clinic_id = ? AND i.visit_id IN ($placeholders)
+                  ORDER BY i.visit_id, i.id DESC"
+            );
+            $stmt->execute([$clinicId, ...$ids]);
+            foreach ($stmt->fetchAll() ?: [] as $row) {
+                $vid = (int) $row['visit_id'];
+                if (isset($invoices[$vid])) {
+                    continue; // keep the newest (first seen due to ORDER BY id DESC)
+                }
+                $invoices[$vid] = [
+                    'id' => (int) $row['id'],
+                    'total' => (float) $row['total'],
+                    'status' => (string) $row['status'],
+                ];
+            }
+        } catch (\Throwable $e) { /* no invoices table → no amount */ }
+
+        foreach ($visits as &$v) {
+            $vid = (int) $v['id'];
+            $names = $meds[$vid] ?? [];
+            $shown = array_slice($names, 0, 3);
+            $summary = implode(', ', $shown);
+            if (count($names) > 3) {
+                $summary .= ' +' . (count($names) - 3);
+            }
+            $v['medicines_summary'] = $summary;
+            $v['invoice'] = $invoices[$vid] ?? null;
+        }
+        unset($v);
+
+        return $visits;
     }
 
     /** @return list<array<string, mixed>> */

@@ -126,11 +126,10 @@ final class VisitController
             'clinic' => $clinic,
         ];
 
-        // Phase 2 staged rollout: ?new=1 in URL or ECP_NEW_VISIT_SCREEN=1 in env
-        // forces the new single-screen layout. Default OFF — old tab layout
-        // remains for everyone else until we flip the default.
-        $useNew = ($request->query['new'] ?? null) === '1'
-              || filter_var($_ENV['ECP_NEW_VISIT_SCREEN'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        // Single-screen layout is now the default for everyone. The legacy
+        // tabbed layout stays reachable via ?old=1 for one release as an
+        // escape hatch, then show.php can be deleted.
+        $useNew = ($request->query['old'] ?? null) !== '1';
 
         // Phase 3/4 data only the new screen needs — skip the extra queries
         // for the legacy tab view.
