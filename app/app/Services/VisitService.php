@@ -303,10 +303,13 @@ final class VisitService
     /** @return list<array<string, mixed>> */
     public static function recentForPatient(int $clinicId, int $patientId, int $limit = 3, ?int $excludeVisitId = null): array
     {
+        // Show all prior visits (in-progress, completed, cancelled) — NOT just
+        // completed. Doctors review past consultations regardless of status;
+        // only blank 'draft' shells are excluded.
         $query = QueryBuilder::table('visits')
             ->forClinic($clinicId)
             ->where('patient_id', '=', $patientId)
-            ->where('status', '=', 'completed')
+            ->where('status', '!=', 'draft')
             ->orderBy('visited_at', 'DESC')
             ->limit($limit + 1);
 

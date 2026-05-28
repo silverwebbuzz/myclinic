@@ -65,7 +65,6 @@ if (!empty($hasPhotos)) {
                 if ($st === 'cancelled') $cancelledCount++;
             }
             $latestVitals = !empty($vitals) ? end($vitals) : null;  // vitals are ASC → last = newest
-            $recentVisits = array_slice($visits, 0, 5);
             $vegLabels = ['veg' => 'Vegetarian', 'nonveg' => 'Non-veg', 'vegan' => 'Vegan', 'eggetarian' => 'Eggetarian'];
             ?>
 
@@ -169,29 +168,6 @@ if (!empty($hasPhotos)) {
                     </ul>
                     <?php else: ?>
                     <p class="mt-3 text-sm text-slate-400">No documents uploaded.</p>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Recent Visits -->
-                <div class="rounded-xl border border-slate-200 p-5">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-sm font-semibold text-slate-900">Recent visits</h3>
-                        <a href="/visits/new?patient_id=<?= (int) $patient['id'] ?>" class="text-xs font-medium text-emerald-600 hover:underline">+ New visit</a>
-                    </div>
-                    <?php if (!empty($recentVisits)): ?>
-                    <ul class="mt-3 divide-y text-sm">
-                        <?php foreach ($recentVisits as $v): ?>
-                        <li class="flex items-center justify-between gap-2 py-2.5">
-                            <span class="min-w-0">
-                                <span class="block truncate font-medium text-slate-800"><?= htmlspecialchars($v['diagnosis'] ?? $v['chief_complaint'] ?? 'Consultation') ?></span>
-                                <span class="block text-xs text-slate-400"><?= htmlspecialchars(date('d M Y', strtotime((string) ($v['visited_at'] ?? 'now')))) ?></span>
-                            </span>
-                            <a href="/visits/<?= (int) $v['id'] ?>" class="shrink-0 text-xs text-emerald-600 hover:underline">Open</a>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                    <?php else: ?>
-                    <p class="mt-3 text-sm text-slate-400">No visits yet. <a href="/visits/new?patient_id=<?= (int) $patient['id'] ?>" class="text-emerald-600 hover:underline">Start one →</a></p>
                     <?php endif; ?>
                 </div>
 
