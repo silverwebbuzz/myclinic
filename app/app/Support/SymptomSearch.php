@@ -209,12 +209,14 @@ final class SymptomSearch
         // Boost specialty-matching rows to the top; tiebreak by global usage.
         // We do the specialty match as JSON_CONTAINS so an empty specialties
         // array still matches with rank=0.
+        // Native prepares (ATTR_EMULATE_PREPARES=false) forbid reusing a named
+        // placeholder, so the specialty value is bound twice as :sp1 / :sp2.
         $sql = "SELECT id, label, specialties,
                        global_usage_count,
                        CASE
-                         WHEN :sp = '' THEN 0
+                         WHEN :sp1 = '' THEN 0
                          WHEN JSON_VALID(specialties)
-                              AND JSON_CONTAINS(LOWER(specialties), JSON_QUOTE(LOWER(:sp))) THEN 1
+                              AND JSON_CONTAINS(LOWER(specialties), JSON_QUOTE(LOWER(:sp2))) THEN 1
                          ELSE 0
                        END AS specialty_match
                   FROM symptoms_master
@@ -223,7 +225,8 @@ final class SymptomSearch
                  LIMIT :n";
 
         $stmt = Database::connection()->prepare($sql);
-        $stmt->bindValue(':sp', $specialty, PDO::PARAM_STR);
+        $stmt->bindValue(':sp1', $specialty, PDO::PARAM_STR);
+        $stmt->bindValue(':sp2', $specialty, PDO::PARAM_STR);
         $stmt->bindValue(':q', $needle, PDO::PARAM_STR);
         $stmt->bindValue(':n', $limit, PDO::PARAM_INT);
         $stmt->execute();
@@ -246,9 +249,9 @@ final class SymptomSearch
     {
         $sql = "SELECT id, label, specialties, global_usage_count,
                        CASE
-                         WHEN :sp = '' THEN 0
+                         WHEN :sp1 = '' THEN 0
                          WHEN JSON_VALID(specialties)
-                              AND JSON_CONTAINS(LOWER(specialties), JSON_QUOTE(LOWER(:sp))) THEN 1
+                              AND JSON_CONTAINS(LOWER(specialties), JSON_QUOTE(LOWER(:sp2))) THEN 1
                          ELSE 0
                        END AS specialty_match
                   FROM symptoms_master
@@ -259,7 +262,8 @@ final class SymptomSearch
                  LIMIT :n";
 
         $stmt = Database::connection()->prepare($sql);
-        $stmt->bindValue(':sp', $specialty, PDO::PARAM_STR);
+        $stmt->bindValue(':sp1', $specialty, PDO::PARAM_STR);
+        $stmt->bindValue(':sp2', $specialty, PDO::PARAM_STR);
         $stmt->bindValue(':q', $contains, PDO::PARAM_STR);
         $stmt->bindValue(':n', $limit, PDO::PARAM_INT);
         $stmt->execute();
