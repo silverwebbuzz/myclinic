@@ -81,6 +81,35 @@
         </div>
 
         <div class="space-y-6">
+            <?php if (!empty($followUps['overdue_count']) || !empty($followUps['due_week'])): ?>
+            <!-- ============ Follow-ups widget (Phase 4) ============ -->
+            <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-sm font-semibold">Follow-ups</h2>
+                    <a href="/follow-ups" class="text-xs text-emerald-700 hover:underline">View all</a>
+                </div>
+                <?php if (!empty($followUps['overdue_count'])): ?>
+                <p class="mt-2 text-xs font-medium text-rose-700">
+                    ⚠ <?= (int) $followUps['overdue_count'] ?> overdue
+                </p>
+                <ul class="mt-1 space-y-1 text-xs text-slate-700">
+                    <?php foreach ($followUps['overdue'] as $f): ?>
+                    <li class="flex items-center justify-between gap-2">
+                        <a href="/visits/new?patient_id=<?= (int) $f['patient_id'] ?>" class="truncate hover:underline">
+                            <?= htmlspecialchars($f['patient_name']) ?>
+                        </a>
+                        <span class="shrink-0 text-rose-600"><?= (int) $f['days_overdue'] ?>d</span>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+                <?php endif; ?>
+                <div class="mt-2 flex gap-4 border-t pt-2 text-xs text-slate-500">
+                    <span>📅 <?= (int) ($followUps['due_week'] ?? 0) ?> due this week</span>
+                    <span>✓ <?= (int) ($followUps['done_month'] ?? 0) ?> done this month</span>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <?php if (!empty($hasPharmacy)): ?>
             <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
                 <h2 class="text-sm font-semibold text-amber-900">Low stock</h2>

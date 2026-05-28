@@ -174,6 +174,24 @@ final class VisitService
             PrescriptionService::syncForVisit($clinicId, $visitId, (int) $visit['patient_id'], $payload['prescriptions']);
         }
 
+        // Phase 4: sync the canonical follow_ups row from the follow-up date
+        // captured in the visit form. Wrapped — follow_ups may not exist yet.
+        if (array_key_exists('follow_up_date', $payload)) {
+            try {
+                \App\Services\FollowUpService::upsertForVisit(
+                    $clinicId,
+                    (int) $visit['patient_id'],
+                    $visitId,
+                    (int) ($visit['doctor_id'] ?? 0) ?: null,
+                    (string) ($payload['follow_up_date'] ?? ''),
+                    $payload['follow_up_reason'] ?? null,
+                    $payload['follow_up_notes'] ?? null
+                );
+            } catch (\Throwable $e) {
+                // follow_ups table doesn't exist yet (pre-Phase-4 migration).
+            }
+        }
+
         return self::find($clinicId, $visitId) ?? [];
     }
 

@@ -63,8 +63,7 @@ final class ChecklistService
     /** @param array<string, mixed> $clinic @param array<string, mixed>|null $config */
     private static function hasPaymentMethod(array $clinic, ?array $config): bool
     {
-        return !empty($clinic['stripe_customer_id'])
-            || !empty($clinic['razorpay_customer_id'])
+        return !empty($clinic['razorpay_customer_id'])
             || !empty($config['razorpay_key']);
     }
 

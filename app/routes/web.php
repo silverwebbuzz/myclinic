@@ -33,6 +33,9 @@ use App\Controllers\DocsController;
 use App\Controllers\ImpersonateController;
 use App\Controllers\SuperAdminController;
 use App\Controllers\SymptomsController;
+use App\Controllers\FollowUpController;
+use App\Controllers\DietTemplateController;
+use App\Controllers\HelpController;
 use App\Controllers\VitalsController;
 use App\Controllers\WebhookController;
 use App\Core\GroupedRouteRegistrar;
@@ -83,6 +86,10 @@ return static function (RouteRegistrar $router): void {
         $app->get('/vitals', [VitalsController::class, 'index']);
         $app->get('/radiology', [RadiologyController::class, 'index']);
         $app->get('/radiology/{id}', [RadiologyController::class, 'show']);
+
+        // Phase 4: follow-ups page + help page
+        $app->get('/follow-ups', [FollowUpController::class, 'index']);
+        $app->get('/help', [HelpController::class, 'index']);
 
         $app->get('/settings/leaves', static fn () => \App\Http\Response::redirect('/settings?tab=leaves'));
         $app->get('/settings', [ClinicSettingsController::class, 'index']);
@@ -249,6 +256,20 @@ return static function (RouteRegistrar $router): void {
         $api->post('/prescriptions/templates/{id}/activate', [PrescriptionController::class, 'templateActivate']);
         $api->post('/prescriptions/templates/{id}/delete', [PrescriptionController::class, 'templateDelete']);
 
+        // Phase 4: follow-ups
+        $api->post('/visits/{id}/follow-up', [FollowUpController::class, 'saveForVisit']);
+        $api->get('/follow-ups/dashboard', [FollowUpController::class, 'dashboardApi']);
+        $api->post('/follow-ups/{id}/complete', [FollowUpController::class, 'complete']);
+        $api->post('/follow-ups/{id}/reschedule', [FollowUpController::class, 'reschedule']);
+        $api->post('/follow-ups/{id}/cancel', [FollowUpController::class, 'cancel']);
+
+        // Phase 4: diet templates
+        $api->get('/diet-templates', [DietTemplateController::class, 'index']);
+        $api->get('/diet-templates/{id}', [DietTemplateController::class, 'show']);
+        $api->post('/diet-templates', [DietTemplateController::class, 'create']);
+        $api->post('/visits/{visitId}/apply-diet/{id}', [DietTemplateController::class, 'applyToVisit']);
+        $api->post('/diet-templates/{id}/delete', [DietTemplateController::class, 'delete']);
+
         $api->get('/drugs/search', [VisitController::class, 'drugsApi']);
         $api->get('/remedies/search', [VisitController::class, 'remediesApi']);
         $api->get('/icd10/search', [VisitController::class, 'icd10Api']);
@@ -357,6 +378,11 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/symptom-promotions', [SymptomsController::class, 'promotionsIndex']);
         $admin->post('/symptom-promotions/promote', [SymptomsController::class, 'promote']);
         $admin->post('/symptom-promotions/ignore', [SymptomsController::class, 'ignore']);
+
+        // Phase 3/4: cron triggers (call from system cron via authenticated POST)
+        $admin->post('/cron/template-discovery', [SuperAdminController::class, 'runTemplateDiscovery']);
+        $admin->post('/cron/followup-reminders', [SuperAdminController::class, 'runFollowUpReminders']);
+        $admin->post('/cron/followup-mark-missed', [SuperAdminController::class, 'runFollowUpMarkMissed']);
 
         // Doctor claim + new-listing review queue
         $admin->get('/claims', [\App\Controllers\DoctorClaimController::class, 'index']);

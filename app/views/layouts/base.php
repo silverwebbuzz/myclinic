@@ -122,9 +122,17 @@
                 <?php endforeach; ?>
 
                 <p class="mb-1 mt-5 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Account</p>
+                <a href="/follow-ups"
+                   class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/follow-ups') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
+                    <span class="text-base">🔔</span><span>Follow-ups</span>
+                </a>
                 <a href="/settings"
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/settings') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
                     <span class="text-base">⚙️</span><span>Settings</span>
+                </a>
+                <a href="/help"
+                   class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/help') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
+                    <span class="text-base">❓</span><span>Help &amp; Guide</span>
                 </a>
             </nav>
         </aside>

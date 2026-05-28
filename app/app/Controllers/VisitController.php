@@ -124,6 +124,13 @@ final class VisitController
             'defaultDietWeek' => DietService::defaultWeekPlan(),
             'visibleModules' => $visibleModules,
             'clinic' => $clinic,
+            // Phase 3: server-render the visit's symptoms so chips appear on
+            // first paint (no flash). Best-effort — empty before Phase 3 SQL.
+            'visitSymptoms' => self::fetchVisitSymptoms($clinicId, (int) $id),
+            // Phase 4: follow-up reasons dropdown + pending follow-up + voice lang.
+            'followUpReasons' => self::fetchFollowUpReasons($clinicId),
+            'pendingFollowUp' => self::fetchPendingFollowUp($clinicId, (int) ($visit['patient_id'] ?? 0)),
+            'voiceLang' => self::fetchVoiceLang($clinicId),
         ];
 
         // Phase 2 staged rollout: ?new=1 in URL or ECP_NEW_VISIT_SCREEN=1 in env
@@ -485,6 +492,40 @@ final class VisitController
         } catch (\Throwable $e) {
             // visit_symptoms table doesn't exist yet (pre-Phase-3 migration).
             return [];
+        }
+    }
+
+    /** @return list<array{reason_key: string, label: string}> */
+    private static function fetchFollowUpReasons(int $clinicId): array
+    {
+        try {
+            return \App\Services\FollowUpService::reasons($clinicId);
+        } catch (\Throwable $e) {
+            return []; // follow_up_reasons table doesn't exist yet.
+        }
+    }
+
+    private static function fetchPendingFollowUp(int $clinicId, int $patientId): ?array
+    {
+        if ($patientId < 1) return null;
+        try {
+            return \App\Services\FollowUpService::pendingForPatient($clinicId, $patientId);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private static function fetchVoiceLang(int $clinicId): string
+    {
+        try {
+            $stmt = \App\Core\Database::connection()->prepare(
+                'SELECT voice_lang FROM clinic_settings WHERE clinic_id = :c LIMIT 1'
+            );
+            $stmt->execute([':c' => $clinicId]);
+            $lang = $stmt->fetchColumn();
+            return $lang ?: 'en-IN';
+        } catch (\Throwable $e) {
+            return 'en-IN';
         }
     }
 

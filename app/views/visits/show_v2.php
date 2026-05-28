@@ -42,6 +42,8 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         'clinical_notes' => $visit['clinical_notes'] ?? '',
         'condition_score' => $visit['condition_score'] ?? 5,
         'follow_up_date' => $visit['follow_up_date'] ?? '',
+        'follow_up_reason' => $pendingFollowUp['reason'] ?? '',
+        'voiceLang' => $voiceLang ?? 'en-IN',
         'follow_up_notes' => $visit['follow_up_notes'] ?? '',
         'vitals' => $vitals,
         'prescriptions' => array_map(static fn ($r) => [
@@ -61,6 +63,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         'useHomeo' => $useHomeo,
         'visibleModules' => $visibleModules,
         'ghostRevealed' => [],   // sections the doctor revealed this visit
+        'symptoms' => $visitSymptoms ?? [],   // hydrated by symptomPicker on mount
     ], JSON_THROW_ON_ERROR), ENT_QUOTES) ?>)"
      x-init="initAutosave()">
 
@@ -401,7 +404,14 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
 
             <!-- ---- NOTES (always visible) ---- -->
             <div>
-                <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Notes &amp; next visit</label>
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Notes &amp; next visit</label>
+                    <button type="button" :disabled="!editable" x-show="voiceSupported"
+                            @click="dictateInto('clinical_notes')"
+                            :class="listening === 'clinical_notes' ? 'text-rose-600 animate-pulse' : 'text-slate-500'"
+                            class="text-xs hover:text-emerald-700 disabled:opacity-50"
+                            title="Dictate notes">🎙 <span x-text="listening === 'clinical_notes' ? 'Listening…' : 'Voice'"></span></button>
+                </div>
                 <textarea x-model="clinical_notes" :disabled="!editable" rows="2"
                           placeholder="Observations, advice, what changed"
                           class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
@@ -418,6 +428,18 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                             class="rounded-full border border-slate-300 px-2 py-0.5 hover:bg-slate-50">+2w</button>
                     <input type="date" :disabled="!editable" x-model="follow_up_date"
                            class="rounded border border-slate-300 px-2 py-0.5 text-xs">
+                </div>
+
+                <!-- Follow-up reason (only when a date is set) -->
+                <div x-show="follow_up_date" class="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                    <span class="text-slate-500">Reason:</span>
+                    <select x-model="follow_up_reason" :disabled="!editable"
+                            class="rounded border border-slate-300 px-2 py-0.5 text-xs">
+                        <option value="">—</option>
+                        <?php foreach (($followUpReasons ?? []) as $r): ?>
+                        <option value="<?= htmlspecialchars($r['reason_key']) ?>"><?= htmlspecialchars($r['label']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 <textarea x-show="follow_up_date" x-model="follow_up_notes" :disabled="!editable"
                           rows="1" placeholder="Follow-up note (optional)"
@@ -633,6 +655,40 @@ function visitScreenV2(cfg) {
             });
         },
 
+        // ---- Voice dictation (Web Speech API, browser-native) ----
+        listening: null,            // which field is currently being dictated
+        _recognition: null,
+        get voiceSupported() {
+            return typeof window !== 'undefined' &&
+                ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
+        },
+
+        dictateInto(field) {
+            if (!this.voiceSupported || !this.editable) return;
+            // Toggle off if already listening for this field.
+            if (this.listening === field && this._recognition) {
+                this._recognition.stop();
+                return;
+            }
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const rec = new SR();
+            rec.lang = this.voiceLang || 'en-IN';
+            rec.interimResults = false;
+            rec.continuous = false;
+            this._recognition = rec;
+            this.listening = field;
+
+            rec.onresult = (e) => {
+                const text = Array.from(e.results).map(r => r[0].transcript).join(' ').trim();
+                if (!text) return;
+                const existing = (this[field] || '').trim();
+                this[field] = existing ? (existing + ' ' + text) : text;
+            };
+            rec.onerror = () => { this.listening = null; };
+            rec.onend = () => { this.listening = null; this._recognition = null; this.save(); };
+            try { rec.start(); } catch (e) { this.listening = null; }
+        },
+
         payload() {
             // Strip UI-only flags from each rx line before serializing.
             const cleanRx = (this.prescriptions || []).map(p => ({
@@ -660,6 +716,7 @@ function visitScreenV2(cfg) {
                 clinical_notes: this.clinical_notes,
                 condition_score: this.condition_score,
                 follow_up_date: this.follow_up_date,
+                follow_up_reason: this.follow_up_reason,
                 follow_up_notes: this.follow_up_notes,
                 vitals: this.vitals,
                 prescriptions: cleanRx,
@@ -813,21 +870,9 @@ function symptomPicker() {
         suggestions: [],
         showSuggestions: false,
 
-        async init() {
-            // Hydrate from server (visit_symptoms table) on first mount.
-            try {
-                const r = await fetch('/api/v1/visits/' + this.$root.visitId + '/symptoms', {
-                    headers: { 'Accept': 'application/json' },
-                });
-                const data = await r.json();
-                if (Array.isArray(data.symptoms) && data.symptoms.length) {
-                    this.symptoms = data.symptoms.map(s => ({
-                        label: s.label,
-                        master_id: s.master_id || null,
-                        source: s.source || 'custom',
-                    }));
-                }
-            } catch (e) { /* visit_symptoms may not exist yet — skip */ }
+        init() {
+            // Symptoms are server-rendered into $root.symptoms (no flash).
+            // Nothing to fetch on mount — saves an API round-trip.
         },
 
         async search() {

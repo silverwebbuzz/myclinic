@@ -10,16 +10,14 @@ use App\Services\BillingGatewayService;
 
 final class WebhookController
 {
+    /**
+     * Stripe webhook — DECOMMISSIONED (Phase 4). eClinicPro is India-only,
+     * Razorpay-only. Returns 410 Gone for one release cycle so any lingering
+     * Stripe webhook config fails loudly, then this method is deleted.
+     */
     public function stripe(Request $request): Response
     {
-        $payload = $request->rawBody ?? '';
-        $signature = $request->header('Stripe-Signature');
-
-        if (!BillingGatewayService::handleStripeWebhook($payload, $signature)) {
-            return Response::json(['error' => 'Invalid signature'], 400);
-        }
-
-        return Response::json(['received' => true]);
+        return Response::json(['error' => 'Stripe is no longer supported'], 410);
     }
 
     public function razorpay(Request $request): Response

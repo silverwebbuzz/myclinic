@@ -7,7 +7,8 @@ namespace App\Services;
 use App\Core\QueryBuilder;
 
 /**
- * Stripe / Razorpay checkout — uses live APIs when keys exist, simulates in local dev.
+ * Razorpay checkout — uses live API when keys exist, simulates in local dev.
+ * Phase 4: Stripe removed entirely (India-only product).
  */
 final class BillingGatewayService
 {
@@ -19,65 +20,9 @@ final class BillingGatewayService
             return ['type' => 'error', 'message' => 'Invalid plan'];
         }
 
-        if (PlanService::usesRazorpay($countryCode)) {
-            return self::razorpayCheckout($clinicId, $planId, $billingCycle);
-        }
-
-        return self::stripeCheckout($clinicId, $planId, $billingCycle);
-    }
-
-    /** @return array{type: string, url?: string, message?: string} */
-    private static function stripeCheckout(int $clinicId, string $planId, string $billingCycle): array
-    {
-        $secret = $_ENV['STRIPE_SECRET_KEY'] ?? '';
-        if ($secret === '' || str_starts_with($secret, 'sk_test_xxx')) {
-            return self::simulatePaidPlan($clinicId, $planId, 'stripe');
-        }
-
-        $plan = PlanService::get($planId);
-        $amount = $billingCycle === 'yearly'
-            ? (int) (($plan['yearly_usd'] ?? 0) * 100)
-            : (int) (($plan['monthly_usd'] ?? 0) * 100);
-
-        $appUrl = rtrim($_ENV['APP_URL'] ?? 'http://localhost:8080', '/');
-
-        $payload = [
-            'mode' => 'subscription',
-            'success_url' => $appUrl . '/onboarding/billing/success?session_id={CHECKOUT_SESSION_ID}&plan=' . $planId,
-            'cancel_url' => $appUrl . '/onboarding/plan-selection?cancelled=1',
-            'metadata' => ['clinic_id' => (string) $clinicId, 'plan' => $planId],
-            'subscription_data' => [
-                'trial_period_days' => $plan['trial_days'] ?? 14,
-                'metadata' => ['clinic_id' => (string) $clinicId, 'plan' => $planId],
-            ],
-            'line_items' => [[
-                'price_data' => [
-                    'currency' => 'usd',
-                    'product_data' => ['name' => 'ManageClinic ' . $plan['name'] . ' Plan'],
-                    'unit_amount' => $amount,
-                    'recurring' => ['interval' => $billingCycle === 'yearly' ? 'year' : 'month'],
-                ],
-                'quantity' => 1,
-            ]],
-        ];
-
-        $ch = curl_init('https://api.stripe.com/v1/checkout/sessions');
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_USERPWD => $secret . ':',
-            CURLOPT_POSTFIELDS => http_build_query(self::flattenStripeParams($payload)),
-            CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
-        ]);
-        $response = curl_exec($ch);
-        curl_close($ch);
-
-        $data = json_decode((string) $response, true);
-        if (!empty($data['url'])) {
-            return ['type' => 'redirect', 'url' => $data['url']];
-        }
-
-        return ['type' => 'error', 'message' => $data['error']['message'] ?? 'Stripe checkout failed'];
+        // Razorpay is the only gateway. India-first; other countries simulate
+        // until multi-currency lands (deferred — see phase1 doc).
+        return self::razorpayCheckout($clinicId, $planId, $billingCycle);
     }
 
     /** @return array{type: string, url?: string, message?: string} */
@@ -126,82 +71,13 @@ final class BillingGatewayService
     {
         PlanService::applyPlanToTenant($clinicId, $planId, true);
         QueryBuilder::table('tenants')->where('id', '=', $clinicId)->update([
-            'stripe_customer_id' => $gateway === 'stripe' ? 'sim_stripe_' . $clinicId : null,
-            'razorpay_customer_id' => $gateway === 'razorpay' ? 'sim_razorpay_' . $clinicId : null,
+            'razorpay_customer_id' => 'sim_razorpay_' . $clinicId,
         ]);
 
         return [
             'type' => 'redirect',
             'url' => '/onboarding/clinic-setup?simulated=1',
         ];
-    }
-
-    /** @param array<string, mixed> $params @return array<string, mixed> */
-    private static function flattenStripeParams(array $params, string $prefix = ''): array
-    {
-        $result = [];
-        foreach ($params as $key => $value) {
-            $fullKey = $prefix === '' ? (string) $key : $prefix . '[' . $key . ']';
-            if (is_array($value)) {
-                $result = array_merge($result, self::flattenStripeParams($value, $fullKey));
-            } else {
-                $result[$fullKey] = $value;
-            }
-        }
-
-        return $result;
-    }
-
-    public static function handleStripeWebhook(string $payload, ?string $signature): bool
-    {
-        $secret = $_ENV['STRIPE_WEBHOOK_SECRET'] ?? '';
-        if ($secret !== '' && $signature !== null) {
-            $parts = [];
-            foreach (explode(',', $signature) as $part) {
-                [$k, $v] = array_map('trim', explode('=', $part, 2) + [null, null]);
-                if ($k === 't') {
-                    $parts['t'] = $v;
-                }
-                if ($k === 'v1') {
-                    $parts['v1'] = $v;
-                }
-            }
-            $signed = hash_hmac('sha256', ($parts['t'] ?? '') . '.' . $payload, $secret);
-            if (!hash_equals($signed, $parts['v1'] ?? '')) {
-                return false;
-            }
-        }
-
-        $event = json_decode($payload, true);
-        if (!is_array($event)) {
-            return false;
-        }
-
-        $type = $event['type'] ?? '';
-        if (in_array($type, ['checkout.session.completed', 'customer.subscription.created', 'invoice.paid'], true)) {
-            $meta = $event['data']['object']['metadata'] ?? [];
-            $clinicId = (int) ($meta['clinic_id'] ?? 0);
-            $plan = (string) ($meta['plan'] ?? 'clinic');
-            if ($clinicId > 0) {
-                PlanService::applyPlanToTenant($clinicId, $plan, false);
-            }
-        }
-
-        if ($type === 'customer.subscription.updated' || $type === 'invoice.paid') {
-            $object = $event['data']['object'] ?? [];
-            $items = $object['items']['data'] ?? $object['lines']['data'] ?? [];
-            foreach ($items as $item) {
-                $meta = $item['metadata'] ?? $object['metadata'] ?? [];
-                if (($meta['type'] ?? '') === 'extra_seat') {
-                    $clinicId = (int) ($meta['clinic_id'] ?? 0);
-                    if ($clinicId > 0) {
-                        SeatService::addExtraSeat($clinicId, (int) ($meta['quantity'] ?? 1));
-                    }
-                }
-            }
-        }
-
-        return true;
     }
 
     public static function handleRazorpayWebhook(string $payload, ?string $signature): bool

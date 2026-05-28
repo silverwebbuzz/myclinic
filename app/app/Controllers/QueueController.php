@@ -26,10 +26,21 @@ final class QueueController
         $doctorId = !empty($request->query['doctor_id']) ? (int) $request->query['doctor_id'] : null;
         $queue = AppointmentService::todayQueue($clinicId, $doctorId);
 
+        // Phase 4: flag patients in the queue who have a pending follow-up
+        // due within 7 days. Best-effort — empty before Phase 4 SQL.
+        $followUpFlags = [];
+        try {
+            $patientIds = array_filter(array_map(static fn ($r) => (int) ($r['patient_id'] ?? 0), $queue));
+            $followUpFlags = \App\Services\FollowUpService::pendingForPatients($clinicId, $patientIds);
+        } catch (\Throwable $e) {
+            // follow_ups table doesn't exist yet.
+        }
+
         return Response::html(Layout::page('queue/index', [
             'queue' => $queue,
             'doctors' => AppointmentService::doctorsForClinic($clinicId),
             'doctorId' => $doctorId,
+            'followUpFlags' => $followUpFlags,
         ], 'Today\'s queue'));
     }
 

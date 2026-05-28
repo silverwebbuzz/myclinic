@@ -86,10 +86,10 @@ final class DirectoryService
         ];
     }
 
-    /** Stripe featured listing stub */
+    /** Featured listing stub (payment via Razorpay when wired). */
     public static function purchaseFeatured(int $profileId): bool
     {
-        $log = dirname(__DIR__, 2) . '/storage/logs/stripe_directory.log';
+        $log = dirname(__DIR__, 2) . '/storage/logs/featured_directory.log';
         $line = date('c') . " featured_listing profile_id={$profileId} status=stub\n";
         @file_put_contents($log, $line, FILE_APPEND);
 

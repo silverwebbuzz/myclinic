@@ -11,6 +11,15 @@
             <?= htmlspecialchars($row['patient_name'] ?? '') ?>
         </p>
         <p class="text-xs text-slate-500"><?= htmlspecialchars($row['uhid'] ?? '') ?> · <?= htmlspecialchars($row['doctor_name'] ?? '') ?></p>
+        <?php
+        $fu = ($followUpFlags ?? [])[(int) ($row['patient_id'] ?? 0)] ?? null;
+        if ($fu): ?>
+        <p class="mt-0.5 text-xs <?= !empty($fu['overdue']) ? 'text-rose-700' : 'text-amber-700' ?>">
+            ⏰ Follow-up
+            <?= !empty($fu['overdue']) ? 'overdue' : 'due ' . htmlspecialchars(date('d M', strtotime($fu['due_date']))) ?>
+            <?php if (!empty($fu['reason'])): ?>· <?= htmlspecialchars(str_replace('_', ' ', $fu['reason'])) ?><?php endif; ?>
+        </p>
+        <?php endif; ?>
     </div>
     <div class="flex flex-wrap items-center gap-2">
         <span class="font-mono text-xs"><?= date('H:i', strtotime($row['scheduled_at'])) ?></span>

@@ -125,6 +125,27 @@ final class SuperAdminController
         return Response::redirect('/admin/dashboard?message=churn_' . $flagged . '_emails_' . $sent);
     }
 
+    /** Phase 3 cron: auto-discover prescription templates. */
+    public function runTemplateDiscovery(Request $request): Response
+    {
+        $created = \App\Support\TemplateDiscovery::run();
+        return Response::json(['ok' => true, 'suggestions_created' => $created]);
+    }
+
+    /** Phase 4 cron: queue WhatsApp follow-up reminders (daily 09:00). */
+    public function runFollowUpReminders(Request $request): Response
+    {
+        $queued = \App\Services\FollowUpService::runReminders();
+        return Response::json(['ok' => true, 'reminders_queued' => $queued]);
+    }
+
+    /** Phase 4 cron: mark stale follow-ups missed (daily 03:00). */
+    public function runFollowUpMarkMissed(Request $request): Response
+    {
+        $missed = \App\Services\FollowUpService::runMarkMissed();
+        return Response::json(['ok' => true, 'marked_missed' => $missed]);
+    }
+
     /**
      * Per-clinic detail page: trial extension, founding clinic toggle,
      * add-on management, feature flag overrides.

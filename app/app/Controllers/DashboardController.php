@@ -31,6 +31,14 @@ final class DashboardController
         $checklist = ChecklistService::progress($clinicId, $clinic, $config);
         $hasPharmacy = ModuleGate::check('pharmacy');
 
+        // Phase 4: follow-up widget. Best-effort — empty before Phase 4 SQL.
+        $followUps = ['overdue' => [], 'overdue_count' => 0, 'due_week' => 0, 'done_month' => 0];
+        try {
+            $followUps = \App\Services\FollowUpService::dashboardData($clinicId);
+        } catch (\Throwable $e) {
+            // follow_ups table doesn't exist yet.
+        }
+
         return Response::html(Layout::page('dashboard/index', [
             'stats' => $stats,
             'queue' => $queue,
@@ -40,6 +48,7 @@ final class DashboardController
             'currency' => $clinic['currency'] ?? 'INR',
             'clinic' => $clinic,
             'isDirectoryListed' => (bool) ($clinic['is_directory_listed'] ?? false),
+            'followUps' => $followUps,
         ], 'Dashboard'));
     }
 
