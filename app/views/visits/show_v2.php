@@ -495,22 +495,34 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 <div class="mt-2 space-y-2">
                     <template x-for="(c, idx) in charges" :key="c._k">
                         <div class="flex items-center gap-2">
-                            <input type="text" :disabled="!editable" x-model="c.description" @change="markDirty()"
+                            <input type="text" :disabled="!editable" x-model="c.description" @input="markChargesDirty()"
                                    placeholder="e.g. Consultation, Procedure, Medicines"
                                    class="flex-1 rounded border border-slate-300 px-2 py-1.5 text-sm">
                             <div class="flex items-center rounded border border-slate-300">
                                 <span class="px-2 text-sm text-slate-400">₹</span>
-                                <input type="number" min="0" step="1" :disabled="!editable" x-model.number="c.amount" @change="markDirty()"
+                                <input type="number" min="0" step="1" :disabled="!editable" x-model.number="c.amount" @input="markChargesDirty()"
                                        placeholder="0" class="w-24 border-0 px-1 py-1.5 text-sm focus:outline-none focus:ring-0">
                             </div>
                             <button type="button" :disabled="!editable" @click="removeCharge(idx)" class="text-rose-600 hover:underline disabled:opacity-50" title="Remove">×</button>
                         </div>
                     </template>
                 </div>
-                <div class="mt-2 flex items-center gap-3">
-                    <button type="button" :disabled="!editable" @click="addCharge()" class="text-xs font-medium text-emerald-700 hover:underline disabled:opacity-50">+ Add charge</button>
-                    <button type="button" :disabled="!editable" @click="saveCharges()" class="text-xs font-medium text-emerald-700 hover:underline disabled:opacity-50">Save charges</button>
-                    <span class="text-xs" :class="chargesStatus === 'saved' ? 'text-emerald-600' : 'text-slate-400'" x-text="chargesLabel"></span>
+                <div class="mt-3 flex flex-wrap items-center gap-3">
+                    <button type="button" :disabled="!editable" @click="addCharge()"
+                            class="text-xs font-medium text-emerald-700 hover:underline disabled:opacity-50">+ Add charge</button>
+
+                    <!-- Save is a real button. It's required (highlighted) when there
+                         are unsaved charge rows; disabled/neutral when nothing changed. -->
+                    <button type="button" :disabled="!editable || !chargesDirty || charges.length === 0"
+                            @click="saveCharges()"
+                            class="rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed"
+                            :class="(chargesDirty && charges.length) ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-slate-100 text-slate-400'">
+                        <span x-text="(chargesDirty && charges.length) ? 'Save charges *' : 'Charges saved'"></span>
+                    </button>
+
+                    <span class="text-xs" :class="chargesStatus === 'error' ? 'text-rose-600' : (chargesStatus === 'saved' ? 'text-emerald-600' : 'text-amber-600')"
+                          x-show="chargesLabel" x-text="chargesLabel"></span>
+                    <span class="text-xs text-amber-600" x-show="chargesDirty && charges.length && chargesStatus !== 'saving'">Unsaved charges</span>
                 </div>
             </div>
 
@@ -686,8 +698,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                     Save draft
                 </button>
                 <?php if ($editable): ?>
-                    <form method="post" action="/visits/<?= $visitId ?>/complete"
-                          onsubmit="return confirm('Complete this visit?')">
+                    <form method="post" action="/visits/<?= $visitId ?>/complete" @submit="confirmComplete($event)">
                         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
                         <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
                             Complete visit
@@ -844,16 +855,27 @@ function visitScreenV2(cfg) {
 
         // ---- Charges (visit invoice line items) ----
         _chargeKey: 0,
+        chargesDirty: false,
+        markChargesDirty() { this.dirty = true; this.chargesDirty = true; },
         addCharge() {
-            this.dirty = true;
+            this.markChargesDirty();
             this.charges.push({ _k: 'c' + (++this._chargeKey), description: '', amount: null });
         },
-        removeCharge(idx) { this.dirty = true; this.charges.splice(idx, 1); },
+        removeCharge(idx) { this.markChargesDirty(); this.charges.splice(idx, 1); },
         chargesTotal() {
             return (this.charges || []).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
         },
+        // Block completing a visit while charges are unsaved.
+        confirmComplete(ev) {
+            if (this.chargesDirty && this.charges.length) {
+                ev.preventDefault();
+                alert('You have unsaved charges. Please click "Save charges" before completing the visit.');
+                return;
+            }
+            if (!confirm('Complete this visit?')) ev.preventDefault();
+        },
         async saveCharges() {
-            if (!this.editable) return;
+            if (!this.editable || this.charges.length === 0) return;
             this.chargesStatus = 'saving';
             this.chargesLabel = 'Saving…';
             try {
@@ -869,6 +891,7 @@ function visitScreenV2(cfg) {
                 if (data.ok) {
                     this.chargesStatus = 'saved';
                     this.chargesLabel = 'Saved · ₹' + (data.total || 0);
+                    this.chargesDirty = false;   // clears the "unsaved" / required state
                 } else throw new Error(data.error || 'Save failed');
             } catch (e) {
                 this.chargesStatus = 'error';
