@@ -34,26 +34,27 @@ if (!empty($hasPhotos)) {
         <a href="/visits/new?patient_id=<?= (int) $patient['id'] ?>" class="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white">Start visit</a>
     </div>
 
-    <nav class="flex flex-wrap gap-1 border-b text-sm">
-        <?php
-        $tabLabels = [
-            'overview' => 'Overview', 'visits' => 'Visits', 'vitals' => 'Vitals',
-            'prescriptions' => 'Prescriptions', 'lab' => 'Lab / Radiology',
-            'invoices' => 'Invoices', 'documents' => 'Documents',
-        ];
-        foreach ($tabs as $t):
-            if ($t === 'vitals' && empty($hasVitals)) continue;
-            if ($t === 'lab' && empty($hasLab) && empty($hasRadiology)) continue;
-        ?>
-        <a href="?tab=<?= $t ?>"
-           class="border-b-2 px-3 py-2 <?= $tab === $t ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500' ?>">
-            <?= $tabLabels[$t] ?? $t ?>
-        </a>
+    <?php
+    // Single-page layout (no tabs): every section stacked, each scrolls where
+    // needed. A sticky in-page nav lets the doctor jump to a section.
+    $jump = [
+        ['overview', 'Overview'],
+        ['visits', 'Visits'],
+    ];
+    if ($hasVitals) $jump[] = ['vitals', 'Vitals'];
+    $jump[] = ['prescriptions', 'Prescriptions'];
+    $jump[] = ['invoices', 'Invoices'];
+    $jump[] = ['documents', 'Documents'];
+    if (!empty($hasPhotos)) $jump[] = ['photos', 'Photos'];
+    ?>
+    <nav class="sticky top-16 z-20 -mx-1 flex flex-wrap gap-1 border-b bg-slate-50/95 px-1 py-2 text-sm backdrop-blur">
+        <?php foreach ($jump as [$anchor, $label]): ?>
+        <a href="#sec-<?= $anchor ?>" class="rounded-lg px-3 py-1.5 text-slate-600 hover:bg-white hover:text-emerald-700"><?= htmlspecialchars($label) ?></a>
         <?php endforeach; ?>
     </nav>
 
-    <div class="rounded-xl border bg-white p-6">
-        <?php if ($tab === 'overview'): ?>
+    <!-- ============ OVERVIEW ============ -->
+    <section id="sec-overview" class="scroll-mt-28 rounded-xl border bg-white p-6">
             <?php
             // ---- Derive overview stats from the data the controller already loads ----
             $visitCount = count($visits);
@@ -195,25 +196,37 @@ if (!empty($hasPhotos)) {
                 </div>
 
             </div>
+    </section>
 
-        <?php elseif ($tab === 'visits'): ?>
-            <?php if ($visits === []): ?>
-            <p class="text-sm text-slate-500">No visits recorded yet.</p>
-            <?php else: ?>
-            <ul class="divide-y text-sm">
-                <?php foreach ($visits as $v): ?>
-                <li class="flex justify-between gap-2 py-3">
-                    <span>
-                        <span class="font-medium"><?= htmlspecialchars($v['visited_at'] ?? '') ?></span>
-                        — <?= htmlspecialchars($v['diagnosis'] ?? $v['chief_complaint'] ?? 'Visit') ?>
-                    </span>
-                    <a href="/visits/<?= (int) $v['id'] ?>" class="shrink-0 text-xs text-emerald-600 hover:underline">View</a>
-                </li>
-                <?php endforeach; ?>
-            </ul>
-            <?php endif; ?>
+    <!-- ============ VISITS ============ -->
+    <section id="sec-visits" class="scroll-mt-28 rounded-xl border bg-white p-6">
+        <div class="mb-4 flex items-center justify-between">
+            <h2 class="text-base font-semibold text-slate-900">Visits</h2>
+            <a href="/visits/new?patient_id=<?= (int) $patient['id'] ?>" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white">+ New visit</a>
+        </div>
+        <?php if ($visits === []): ?>
+        <p class="text-sm text-slate-500">No visits recorded yet.</p>
+        <?php else: ?>
+        <div class="max-h-96 overflow-y-auto">
+        <ul class="divide-y text-sm">
+            <?php foreach ($visits as $v): ?>
+            <li class="flex items-center justify-between gap-2 py-3">
+                <span class="min-w-0">
+                    <span class="block font-medium text-slate-800"><?= htmlspecialchars($v['diagnosis'] ?? $v['chief_complaint'] ?? 'Visit') ?></span>
+                    <span class="block text-xs text-slate-400"><?= htmlspecialchars(date('d M Y', strtotime((string) ($v['visited_at'] ?? 'now')))) ?> · <span class="capitalize"><?= htmlspecialchars($v['status'] ?? '') ?></span></span>
+                </span>
+                <a href="/visits/<?= (int) $v['id'] ?>" class="shrink-0 text-xs text-emerald-600 hover:underline">View / edit</a>
+            </li>
+            <?php endforeach; ?>
+        </ul>
+        </div>
+        <?php endif; ?>
+    </section>
 
-        <?php elseif ($tab === 'vitals' && $hasVitals): ?>
+    <?php if ($hasVitals): ?>
+    <!-- ============ VITALS ============ -->
+    <section id="sec-vitals" class="scroll-mt-28 rounded-xl border bg-white p-6">
+        <h2 class="mb-4 text-base font-semibold text-slate-900">Vitals trend</h2>
             <canvas id="vitals-chart" height="120"></canvas>
             <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
             <script>
@@ -233,18 +246,25 @@ if (!empty($hasPhotos)) {
                 });
             })();
             </script>
+    </section>
+    <?php endif; ?>
 
-        <?php elseif ($tab === 'prescriptions'): ?>
-            <?php if ($prescriptions === []): ?>
-            <p class="text-sm text-slate-500">No prescriptions yet.</p>
-            <?php else: ?>
-            <p class="text-sm"><?= count($prescriptions) ?> prescription line(s) on file.</p>
-            <?php endif; ?>
+    <!-- ============ PRESCRIPTIONS ============ -->
+    <section id="sec-prescriptions" class="scroll-mt-28 rounded-xl border bg-white p-6">
+        <div class="mb-4 flex items-center justify-between">
+            <h2 class="text-base font-semibold text-slate-900">Prescriptions</h2>
+            <a href="/prescriptions?patient_id=<?= (int) $patient['id'] ?>" class="text-xs text-emerald-600 hover:underline">View all →</a>
+        </div>
+        <?php if ($prescriptions === []): ?>
+        <p class="text-sm text-slate-500">No prescriptions yet.</p>
+        <?php else: ?>
+        <p class="text-sm text-slate-600"><?= count($prescriptions) ?> prescription line(s) on file across this patient's visits.</p>
+        <?php endif; ?>
+    </section>
 
-        <?php elseif ($tab === 'lab'): ?>
-            <p class="text-sm text-slate-500">Lab and radiology orders appear here when modules are active (Sprint 8+).</p>
-
-        <?php elseif ($tab === 'invoices'): ?>
+    <!-- ============ INVOICES ============ -->
+    <section id="sec-invoices" class="scroll-mt-28 rounded-xl border bg-white p-6">
+        <h2 class="mb-4 text-base font-semibold text-slate-900">Invoices &amp; payments</h2>
             <div class="mb-6 rounded-lg border bg-slate-50 p-4">
                 <p class="text-sm font-medium">Advance balance: ₹<?= number_format((float) ($patient['advance_balance'] ?? 0), 2) ?></p>
                 <form method="post" action="/patients/<?= (int) $patient['id'] ?>/advance" class="mt-3 flex flex-wrap gap-2">
@@ -278,36 +298,44 @@ if (!empty($hasPhotos)) {
                 </tbody>
             </table>
             <?php endif; ?>
+    </section>
 
-        <?php elseif ($tab === 'documents'): ?>
-            <?php if ($documents === []): ?>
-            <p class="text-sm text-slate-500">No documents uploaded.</p>
-            <?php else: ?>
-            <ul class="text-sm">
-                <?php foreach ($documents as $doc): ?>
-                <li class="py-2"><a href="<?= htmlspecialchars($doc['file_path']) ?>" class="text-emerald-600"><?= htmlspecialchars($doc['title']) ?></a></li>
-                <?php endforeach; ?>
-            </ul>
-            <?php endif; ?>
-
-        <?php elseif ($tab === 'photos'): ?>
-            <div x-data="{ lightbox: null }">
-                <?php if ($photos === []): ?>
-                <p class="text-sm text-slate-500">No photos yet. Upload from a visit.</p>
-                <?php else: ?>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <?php foreach ($photos as $ph): ?>
-                    <button type="button" @click="lightbox = '<?= htmlspecialchars($ph['photo_path'], ENT_QUOTES) ?>'" class="rounded-lg border overflow-hidden text-left">
-                        <img src="<?= htmlspecialchars($ph['photo_path']) ?>" alt="" class="h-28 w-full object-cover">
-                        <p class="p-2 text-xs capitalize"><?= htmlspecialchars($ph['type'] ?? '') ?></p>
-                    </button>
-                    <?php endforeach; ?>
-                </div>
-                <div x-show="lightbox" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" @click="lightbox = null" @keydown.escape.window="lightbox = null">
-                    <img :src="lightbox" class="max-h-full max-w-full rounded-lg" @click.stop>
-                </div>
-                <?php endif; ?>
-            </div>
+    <!-- ============ DOCUMENTS ============ -->
+    <section id="sec-documents" class="scroll-mt-28 rounded-xl border bg-white p-6">
+        <h2 class="mb-4 text-base font-semibold text-slate-900">Documents</h2>
+        <?php if ($documents === []): ?>
+        <p class="text-sm text-slate-500">No documents uploaded.</p>
+        <?php else: ?>
+        <ul class="divide-y text-sm">
+            <?php foreach ($documents as $doc): ?>
+            <li class="flex items-center gap-2 py-2">
+                <span class="text-slate-400">📄</span>
+                <a href="/<?= htmlspecialchars(ltrim($doc['file_path'], '/')) ?>" target="_blank" class="text-emerald-600 hover:underline"><?= htmlspecialchars($doc['title']) ?></a>
+            </li>
+            <?php endforeach; ?>
+        </ul>
         <?php endif; ?>
-    </div>
+    </section>
+
+    <?php if (!empty($hasPhotos)): ?>
+    <!-- ============ PHOTOS ============ -->
+    <section id="sec-photos" class="scroll-mt-28 rounded-xl border bg-white p-6" x-data="{ lightbox: null }">
+        <h2 class="mb-4 text-base font-semibold text-slate-900">Photos</h2>
+        <?php if ($photos === []): ?>
+        <p class="text-sm text-slate-500">No photos yet. Upload from a visit.</p>
+        <?php else: ?>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <?php foreach ($photos as $ph): ?>
+            <button type="button" @click="lightbox = '<?= htmlspecialchars($ph['photo_path'], ENT_QUOTES) ?>'" class="rounded-lg border overflow-hidden text-left">
+                <img src="<?= htmlspecialchars($ph['photo_path']) ?>" alt="" class="h-28 w-full object-cover">
+                <p class="p-2 text-xs capitalize"><?= htmlspecialchars($ph['type'] ?? '') ?></p>
+            </button>
+            <?php endforeach; ?>
+        </div>
+        <div x-show="lightbox" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" @click="lightbox = null" @keydown.escape.window="lightbox = null">
+            <img :src="lightbox" class="max-h-full max-w-full rounded-lg" @click.stop>
+        </div>
+        <?php endif; ?>
+    </section>
+    <?php endif; ?>
 </div>
