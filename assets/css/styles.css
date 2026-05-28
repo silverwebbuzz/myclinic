@@ -2332,12 +2332,18 @@ img, video, table { max-width: 100%; }
 .hp-spec-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; margin-bottom: 44px; }
 .hp-spec-head .hp-sub { max-width: 540px; }
 .hp-spec-cta { display: flex; gap: 10px; flex-shrink: 0; }
-.hp-spec-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; }
-.hp-spec-group { font-size: 14px; font-weight: 600; color: var(--ink); margin: 0 0 14px; }
-.hp-spec-list { list-style: none; padding: 0; margin: 0; }
-.hp-spec-list li { margin-bottom: 9px; }
-.hp-spec-list a { font-size: 14.5px; color: var(--mute); transition: color .12s; }
-.hp-spec-list a:hover { color: var(--teal-600); }
+.hp-spec-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+.hp-spec-col { background: var(--bg-3); border: 1px solid var(--line); border-radius: 18px; padding: 22px 18px; }
+.hp-spec-group { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--teal-700); margin: 0 0 14px; }
+.hp-spec-tiles { display: flex; flex-direction: column; gap: 8px; }
+.hp-spec-tile { display: flex; align-items: center; gap: 11px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; transition: transform .12s, border-color .12s, box-shadow .12s; }
+.hp-spec-tile:hover { transform: translateX(2px); border-color: var(--teal-400); box-shadow: 0 4px 14px rgba(15,155,110,0.10); }
+.hp-spec-ic { font-size: 19px; width: 30px; height: 30px; display: grid; place-items: center; background: var(--teal-50); border-radius: 9px; flex-shrink: 0; }
+.hp-spec-label { flex: 1; font-size: 14px; font-weight: 500; color: var(--ink-2); }
+.hp-spec-go { color: var(--teal-600); font-weight: 600; opacity: 0; transition: opacity .12s; }
+.hp-spec-tile:hover .hp-spec-go { opacity: 1; }
+.hp-spec-foot { text-align: center; margin: 36px 0 0; font-size: 15px; color: var(--mute); }
+.hp-spec-foot a { color: var(--teal-600); font-weight: 600; }
 
 /* ---- How booking works ---- */
 .hp-how { padding: 88px 0; background: var(--bg-2); }
@@ -2366,25 +2372,31 @@ img, video, table { max-width: 100%; }
 .hp-dash-dot { width: 11px; height: 11px; border-radius: 50%; }
 .hp-dash-dot.r { background: #FF5F57; } .hp-dash-dot.y { background: #FEBC2E; } .hp-dash-dot.g { background: #28C840; }
 .hp-dash-url { margin-left: 12px; font-size: 11px; color: var(--mute); }
-.hp-dash-body { display: grid; grid-template-columns: 150px 1fr; min-height: 360px; }
-.hp-dash-side { background: var(--bg-3); border-right: 1px solid var(--line); padding: 16px 12px; }
-.hp-dash-brand { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
-.hp-dash-brand em { color: var(--teal-600); font-style: normal; }
-.hp-dash-nav { font-size: 13px; color: var(--mute); padding: 8px 10px; border-radius: 8px; margin-bottom: 2px; }
-.hp-dash-nav.active { background: var(--ink); color: #fff; }
-.hp-dash-main { padding: 20px; }
-.hp-dash-h { display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 15px; margin-bottom: 16px; }
+.hp-dash-body { display: grid; grid-template-columns: 160px 1fr; min-height: 380px; background: #fff; }
+/* white sidebar — mirrors the real portal shell (base.php aside) */
+.hp-dash-side { background: #fff; border-right: 1px solid var(--line); padding: 14px 10px; }
+.hp-dash-clinic { display: flex; align-items: center; gap: 9px; padding: 4px 6px 14px; border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+.hp-dash-logo { width: 30px; height: 30px; border-radius: 9px; background: var(--teal-600); color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+.hp-dash-cname { font-size: 13px; font-weight: 600; color: var(--ink); }
+.hp-dash-ctag { font-size: 9px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mute); }
+.hp-dash-nav { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--mute); padding: 7px 9px; border-radius: 8px; margin-bottom: 2px; }
+.hp-dash-nav span { font-size: 13px; }
+.hp-dash-nav.active { background: var(--teal-50); color: var(--teal-800); font-weight: 600; }
+.hp-dash-main { padding: 20px; background: var(--bg-3); }
+.hp-dash-h { display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 15px; margin-bottom: 14px; }
 .hp-dash-date { font-size: 11px; color: var(--mute); font-weight: 500; }
-.hp-dash-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-.hp-dash-stat { border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
-.hp-dash-stat strong { display: block; font-size: 22px; font-weight: 600; }
-.hp-dash-stat strong.g { color: var(--teal-600); }
-.hp-dash-stat span { font-size: 11px; color: var(--mute); }
-.hp-dash-appt { display: grid; grid-template-columns: 48px 1fr auto; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); }
-.hp-dash-time { font-size: 12px; color: var(--mute); }
-.hp-dash-appt-name { font-size: 13.5px; font-weight: 500; }
-.hp-dash-appt-reason { font-size: 11.5px; color: var(--mute); }
-.hp-dash-status { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 7px; }
+.hp-dash-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+.hp-dash-stat { background: #fff; border: 1px solid var(--line); border-radius: 11px; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+.hp-dash-stat-top { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--mute); }
+.hp-dash-stat strong { display: block; font-size: 21px; font-weight: 600; margin-top: 4px; }
+.hp-dash-queue { background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.hp-dash-queue-h { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; font-weight: 600; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.hp-dash-queue-h span { font-size: 10px; font-weight: 400; color: var(--mute); }
+.hp-dash-appt { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); }
+.hp-dash-appt:first-of-type { border-top: 0; }
+.hp-dash-appt-name { font-size: 13px; font-weight: 500; }
+.hp-dash-appt-reason { font-size: 11px; color: var(--mute); margin-top: 1px; }
+.hp-dash-status { font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: 7px; flex-shrink: 0; }
 .hp-dash-status.now { background: var(--ink); color: #fff; }
 .hp-dash-status.ok { background: var(--teal-50); color: var(--teal-700); }
 .hp-dash-status.pend { background: var(--bg-2); color: var(--mute); }
@@ -2415,37 +2427,36 @@ img, video, table { max-width: 100%; }
 .hp-fc-strike { text-decoration: line-through; color: var(--mute); font-size: 17px; }
 .hp-fc-lock { display: block; font-size: 12px; font-weight: 500; color: var(--ink-2); margin-top: 2px; }
 .hp-fc-sub { font-size: 13px; color: var(--ink-2); margin: 8px 0 14px; }
-.hp-plan { display: grid; grid-template-columns: 1.3fr 1fr; gap: 28px; max-width: 980px; margin: 0 auto; }
-.hp-plan-main { background: #fff; border: 2px solid var(--teal-600); border-radius: 18px; padding: 30px; }
-.hp-plan-name { display: inline-block; background: var(--teal-50); color: var(--teal-700); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; }
-.hp-plan-price { font-size: 46px; font-weight: 300; letter-spacing: -1.2px; margin: 12px 0 2px; }
-.hp-plan-price .per { font-size: 16px; color: var(--mute); }
-.hp-plan-yearly { color: var(--ink-2); font-size: 14px; margin-bottom: 20px; }
-.hp-plan-feats { list-style: none; padding: 0; margin: 0 0 22px; }
-.hp-plan-feats li { display: flex; align-items: center; gap: 10px; font-size: 14.5px; color: var(--ink-2); padding: 6px 0; }
-.hp-plan-addons { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 26px; display: flex; flex-direction: column; gap: 16px; }
-.hp-plan-addons-h { font-size: 15px; font-weight: 600; }
-.hp-addon { display: flex; gap: 14px; }
-.hp-addon-ic { font-size: 24px; }
-.hp-addon-name { font-size: 15px; font-weight: 600; }
-.hp-addon-name span { font-size: 13px; font-weight: 600; color: var(--teal-700); margin-left: 4px; }
-.hp-addon-d { font-size: 13px; color: var(--mute); line-height: 1.5; margin-top: 3px; }
+/* single centered plan card (add-ons removed; WhatsApp/SMS bundled in) */
+.hp-plan-single { max-width: 520px; margin: 0 auto; background: #fff; border: 2px solid var(--teal-600); border-radius: 20px; padding: 36px; text-align: center; box-shadow: 0 14px 40px rgba(15,155,110,0.12); }
+.hp-plan-name { display: inline-block; background: var(--teal-50); color: var(--teal-700); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 12px; border-radius: 999px; }
+.hp-plan-price { font-size: 52px; font-weight: 300; letter-spacing: -1.4px; margin: 14px 0 2px; }
+.hp-plan-price .per { font-size: 17px; color: var(--mute); }
+.hp-plan-yearly { color: var(--ink-2); font-size: 14px; margin-bottom: 24px; }
+.hp-plan-feats { list-style: none; padding: 0; margin: 0 0 26px; text-align: left; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; }
+.hp-plan-feats li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink-2); padding: 5px 0; }
+.hp-doc-fine.center { text-align: center; }
 
-.hp-testimonials { padding: 88px 0; background: #fff; }
+/* ---- FAQ (two columns) ---- */
+.hp-faq { padding-bottom: 96px; }
+.hp-faq-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; max-width: 1000px; margin: 0 auto; }
+.hp-faq-h { display: flex; align-items: center; gap: 10px; font-size: 19px; font-weight: 600; margin: 0 0 12px; }
+.hp-faq-ic { width: 34px; height: 34px; display: grid; place-items: center; background: var(--teal-50); border-radius: 10px; font-size: 17px; }
 
 /* ---- Responsive ---- */
 @media (max-width: 920px) {
-    .hp-hero-grid, .hp-doc-grid, .hp-wa-grid, .hp-plan { grid-template-columns: 1fr; gap: 40px; }
+    .hp-hero-grid, .hp-doc-grid, .hp-wa-grid, .hp-faq-cols { grid-template-columns: 1fr; gap: 40px; }
     .hp-spec-grid { grid-template-columns: repeat(2, 1fr); }
     .hp-steps { grid-template-columns: 1fr; }
     .hp-spec-head { flex-direction: column; align-items: flex-start; }
     .hp-hero-preview { margin-top: 12px; }
 }
 @media (max-width: 560px) {
-    .hp-spec-grid, .hp-feat-grid, .hp-dash-stats { grid-template-columns: 1fr; }
+    .hp-spec-grid, .hp-feat-grid, .hp-dash-stats, .hp-plan-feats { grid-template-columns: 1fr; }
     .hp-hero { padding: 48px 0 64px; }
-    .hp-doc-grid, .hp-doctors, .hp-wa, .hp-specialties, .hp-how, .hp-pricing, .hp-testimonials { padding-left: 0; padding-right: 0; }
+    .hp-doc-grid, .hp-doctors, .hp-wa, .hp-specialties, .hp-how, .hp-pricing, .hp-faq { padding-left: 0; padding-right: 0; }
     .hp-dash-side { display: none; }
     .hp-dash-body { grid-template-columns: 1fr; }
     .hp-spec-cta { width: 100%; }
+    .hp-plan-single { padding: 26px 20px; }
 }

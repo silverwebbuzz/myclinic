@@ -157,23 +157,40 @@ require __DIR__ . '/partials/header.php';
             </div>
         </div>
 
+        <?php
+        // Emoji per specialty slug — friendly, scannable tiles (Nas-Daily style).
+        $specIcons = [
+            'general-physician'=>'🩺','cardiologist'=>'❤️','dermatologist'=>'✨','neurologist'=>'🧠',
+            'pulmonologist'=>'🫁','gastroenterologist'=>'🍽️','endocrinologist'=>'⚖️','nephrologist'=>'💧',
+            'oncologist'=>'🎗️','urologist'=>'🚹','general-surgeon'=>'🔪','neurosurgeon'=>'🧠',
+            'orthopedic'=>'🦴','plastic-surgeon'=>'💉','critical-care'=>'🚑','dentist'=>'🦷',
+            'orthodontist'=>'😁','pediatric-dentist'=>'🪥','gynecologist'=>'🌸','pediatrician'=>'👶',
+            'ophthalmologist'=>'👁️','ent-specialist'=>'👂','homeopathy'=>'🌿','ayurveda'=>'🪔',
+            'physiotherapist'=>'🤸','psychiatrist'=>'🧩','psychologist'=>'💭','dietitian'=>'🥗',
+        ];
+        ?>
         <div class="hp-spec-grid">
             <?php foreach ($specGroups as $group => $slugs): ?>
             <div class="hp-spec-col reveal">
                 <h4 class="hp-spec-group"><?= e($group) ?></h4>
-                <ul class="hp-spec-list">
+                <div class="hp-spec-tiles">
                     <?php foreach ($slugs as $slug):
                         $row = $specMap[$slug] ?? null;
                         if (!$row || (isset($row['safe']) && $row['safe'] === false)) continue;
                     ?>
-                    <li>
-                        <a href="/find-a-doctor/<?= e($slug) ?>"><?= e($row['label']) ?></a>
-                    </li>
+                    <a href="/find-a-doctor/<?= e($slug) ?>" class="hp-spec-tile">
+                        <span class="hp-spec-ic"><?= $specIcons[$slug] ?? '🩺' ?></span>
+                        <span class="hp-spec-label"><?= e($row['label']) ?></span>
+                        <span class="hp-spec-go">→</span>
+                    </a>
                     <?php endforeach; ?>
-                </ul>
+                </div>
             </div>
             <?php endforeach; ?>
         </div>
+        <p class="hp-spec-foot reveal">
+            …and 30+ more — <a href="/find-a-doctor">browse the full directory →</a>
+        </p>
     </div>
 </section>
 
@@ -239,7 +256,9 @@ require __DIR__ . '/partials/header.php';
                 </div>
             </div>
 
-            <!-- Dashboard preview (same calm look as the portal) -->
+            <!-- Dashboard preview — mirrors the real post-login portal dashboard
+                 (white sidebar, the same 4 stat tiles, Today's queue panel) so
+                 doctors see exactly what they're signing up for. -->
             <div class="hp-doc-preview reveal">
                 <div class="hp-dash">
                     <div class="hp-dash-bar">
@@ -248,36 +267,55 @@ require __DIR__ . '/partials/header.php';
                     </div>
                     <div class="hp-dash-body">
                         <div class="hp-dash-side">
-                            <div class="hp-dash-brand">e<em>ClinicPro</em></div>
-                            <?php foreach ([['Appointments',true],['Patients',false],['Prescriptions',false],['Invoices',false],['Follow-ups',false],['Reports',false]] as [$l,$a]): ?>
-                            <div class="hp-dash-nav<?= $a ? ' active' : '' ?>"><?= e($l) ?></div>
+                            <div class="hp-dash-clinic">
+                                <span class="hp-dash-logo">S</span>
+                                <div>
+                                    <div class="hp-dash-cname">Sunrise Clinic</div>
+                                    <div class="hp-dash-ctag">Clinic admin</div>
+                                </div>
+                            </div>
+                            <?php foreach ([
+                                ['🏠','Dashboard',true],['👥','Patients',false],['📅','Appointments',false],
+                                ['℞','Prescriptions',false],['🧾','Invoices',false],['📊','Reports',false],['🔔','Follow-ups',false],
+                            ] as [$ic,$l,$a]): ?>
+                            <div class="hp-dash-nav<?= $a ? ' active' : '' ?>"><span><?= $ic ?></span><?= e($l) ?></div>
                             <?php endforeach; ?>
                         </div>
                         <div class="hp-dash-main">
                             <div class="hp-dash-h">
-                                <span>Today's appointments</span>
-                                <span class="hp-dash-date">MON · 28 MAY</span>
+                                <span>Dashboard</span>
+                                <span class="hp-dash-date">Mon · 28 May</span>
                             </div>
                             <div class="hp-dash-stats">
-                                <div class="hp-dash-stat"><strong>12</strong><span>Today</span></div>
-                                <div class="hp-dash-stat"><strong class="g">8</strong><span>Confirmed</span></div>
-                                <div class="hp-dash-stat"><strong>₹14,200</strong><span>Revenue</span></div>
-                            </div>
-                            <?php foreach ([
-                                ['10:00','Aarav Sharma','Follow-up · Hypertension','Now','now'],
-                                ['10:30','Priya Iyer','New patient · Consult','Confirmed','ok'],
-                                ['11:15','Rohan Verma','Lab review','Confirmed','ok'],
-                                ['12:00','Ananya Pillai','Annual check-up','Pending','pend'],
-                            ] as [$tm,$nm,$rs,$st,$cls]): ?>
-                            <div class="hp-dash-appt">
-                                <span class="hp-dash-time"><?= e($tm) ?></span>
-                                <div class="hp-dash-appt-info">
-                                    <div class="hp-dash-appt-name"><?= e($nm) ?></div>
-                                    <div class="hp-dash-appt-reason"><?= e($rs) ?></div>
+                                <?php foreach ([
+                                    ['👤','Patients today','24'],
+                                    ['📅','Appointments pending','6'],
+                                    ['💰','Revenue today','₹14,200'],
+                                    ['🔔','Follow-ups due','5'],
+                                ] as [$ic,$lbl,$val]): ?>
+                                <div class="hp-dash-stat">
+                                    <div class="hp-dash-stat-top"><span><?= e($lbl) ?></span><span><?= $ic ?></span></div>
+                                    <strong><?= e($val) ?></strong>
                                 </div>
-                                <span class="hp-dash-status <?= e($cls) ?>"><?= e($st) ?></span>
+                                <?php endforeach; ?>
                             </div>
-                            <?php endforeach; ?>
+                            <div class="hp-dash-queue">
+                                <div class="hp-dash-queue-h">Today's queue <span>Updated 10:02</span></div>
+                                <?php foreach ([
+                                    ['Aarav Sharma','Follow-up · Hypertension','Now','now'],
+                                    ['Priya Iyer','New patient · Consult','Waiting','ok'],
+                                    ['Rohan Verma','Lab review','Scheduled','pend'],
+                                    ['Ananya Pillai','Annual check-up','Scheduled','pend'],
+                                ] as [$nm,$rs,$st,$cls]): ?>
+                                <div class="hp-dash-appt">
+                                    <div class="hp-dash-appt-info">
+                                        <div class="hp-dash-appt-name"><?= e($nm) ?></div>
+                                        <div class="hp-dash-appt-reason"><?= e($rs) ?></div>
+                                    </div>
+                                    <span class="hp-dash-status <?= e($cls) ?>"><?= e($st) ?></span>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -316,7 +354,7 @@ require __DIR__ . '/partials/header.php';
                 </div>
             </div>
             <div class="hp-wa-copy reveal">
-                <span class="eyebrow">Patient Connect add-on</span>
+                <span class="eyebrow">Included in your plan</span>
                 <h2 class="h-section">WhatsApp first. SMS as backup. Never a missed message.</h2>
                 <p class="hp-sub">
                     Appointment confirmations, reminders, prescription delivery and
@@ -333,7 +371,7 @@ require __DIR__ . '/partials/header.php';
                     <li><span class="tick">✓</span><?= e($f) ?></li>
                     <?php endforeach; ?>
                 </ul>
-                <p class="hp-doc-fine">Included flows are built-in; full WhatsApp automation is the optional <strong>Patient Connect</strong> add-on (+₹499/mo).</p>
+                <p class="hp-doc-fine">WhatsApp + SMS messaging is <strong>built into every plan</strong> — no extra add-on, no surprise bill.</p>
             </div>
         </div>
     </div>
@@ -357,106 +395,82 @@ require __DIR__ . '/partials/header.php';
         </div>
         <?php endif; ?>
 
-        <div class="hp-plan reveal">
-            <div class="hp-plan-main">
-                <span class="hp-plan-name">Standard</span>
-                <div class="hp-plan-price">₹1,499<span class="per">/month</span></div>
-                <div class="hp-plan-yearly">or ₹14,999/year — one month free</div>
-                <ul class="hp-plan-feats">
-                    <?php foreach ([
-                        'Patient records, visits & prescriptions',
-                        'Appointments & walk-in queue',
-                        'Billing & invoicing (GST-ready)',
-                        'Specialty-aware forms (50+ specialties)',
-                        'Public doctor profile on eclinicpro.com',
-                        'Unlimited patients & staff users',
-                    ] as $f): ?>
-                    <li><span class="tick">✓</span><?= e($f) ?></li>
-                    <?php endforeach; ?>
-                </ul>
-                <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg btn-block">Start 30-day free trial</a>
-            </div>
-            <div class="hp-plan-addons">
-                <div class="hp-plan-addons-h">Optional add-ons</div>
-                <div class="hp-addon">
-                    <div class="hp-addon-ic">💬</div>
-                    <div>
-                        <div class="hp-addon-name">Patient Connect <span>+₹499/mo</span></div>
-                        <div class="hp-addon-d">WhatsApp + SMS automation — reminders, Rx delivery, follow-ups.</div>
-                    </div>
-                </div>
-                <div class="hp-addon">
-                    <div class="hp-addon-ic">🏥</div>
-                    <div>
-                        <div class="hp-addon-name">Clinic Network <span>+₹999/mo / branch</span></div>
-                        <div class="hp-addon-d">Add branches under one account. Shared records, separate queues.</div>
-                    </div>
-                </div>
-                <a href="/pricing" class="btn-link">See full pricing &amp; FAQ →</a>
-            </div>
+        <div class="hp-plan-single reveal">
+            <span class="hp-plan-name">Standard — everything included</span>
+            <div class="hp-plan-price">₹1,499<span class="per">/month</span></div>
+            <div class="hp-plan-yearly">or ₹14,999/year — one month free</div>
+            <ul class="hp-plan-feats">
+                <?php foreach ([
+                    'Patient records, visits & prescriptions',
+                    'Appointments & walk-in queue',
+                    'Billing & invoicing (GST-ready)',
+                    'WhatsApp + SMS messaging built in',
+                    'Specialty-aware forms (50+ specialties)',
+                    'Public doctor profile on eclinicpro.com',
+                    'Unlimited patients & staff users',
+                    'Reports, follow-ups & analytics',
+                ] as $f): ?>
+                <li><span class="tick">✓</span><?= e($f) ?></li>
+                <?php endforeach; ?>
+            </ul>
+            <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg btn-block">Start 30-day free trial</a>
+            <p class="hp-doc-fine center">No credit card. Cancel anytime. <a href="/pricing" style="color:var(--teal-600);font-weight:500;">See full pricing &amp; FAQ →</a></p>
         </div>
     </div>
 </section>
 
-<!-- ============ TESTIMONIALS ============ -->
+<!-- ============ FAQ (split: patients + doctors) ============ -->
 <?php
-$testimonials = [
-    ['Dr. Aarav Sharma', 'AS', 'GP · Mumbai', 'I switched from paper in two weekends. Patients now find me through the directory — that alone paid for the year.'],
-    ['Dr. Priya Iyer', 'PI', 'Homeopath · Pune', 'Case-taking that actually fits how I work, and WhatsApp reminders my patients love. Calm software.'],
-    ['Dr. Rohan Verma', 'RV', 'Dermatologist · Ahmedabad', 'The before/after photos and the public profile bring in new skin patients every week. Worth every rupee.'],
-];
-?>
-<section class="hp-testimonials">
-    <div class="wrap">
-        <div class="section-head reveal">
-            <span class="eyebrow">From the clinics</span>
-            <h2 class="h-section">Doctors who switched, and stayed.</h2>
-        </div>
-        <div class="tgrid">
-            <?php foreach ($testimonials as $i => [$name,$ini,$spec,$quote]): ?>
-            <div class="tcard reveal" style="transition-delay: <?= ($i % 3) * 80 ?>ms;">
-                <div class="stars">★★★★★</div>
-                <blockquote>"<?= e($quote) ?>"</blockquote>
-                <div class="tperson">
-                    <div class="tavatar"><?= e($ini) ?></div>
-                    <div>
-                        <div class="nm"><?= e($name) ?></div>
-                        <div class="sp"><?= e($spec) ?></div>
-                    </div>
-                </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</section>
-
-<!-- ============ FAQ ============ -->
-<?php
-$faqs = [
-    ['Is it free for patients?', 'Yes — searching and booking doctors on eclinicpro.com is completely free. You only pay the doctor\'s consultation fee, shown upfront on every profile.'],
+$faqPatients = [
+    ['Is it free for patients?', 'Yes — searching and booking doctors on eclinicpro.com is completely free. You only pay the doctor\'s consultation fee, which is shown upfront on every profile.'],
     ['How does booking work?', 'Pick a doctor, request a slot, and you instantly get a WhatsApp/SMS with the clinic\'s number. The clinic confirms on their side and you get a final confirmation — no phone-tag.'],
-    ['I\'m a doctor — what does it cost?', 'One plan: ₹1,499/month (or ₹14,999/year). Everything to run a clinic is included. Two optional add-ons cover WhatsApp automation and extra branches. 30-day free trial, no card.'],
-    ['Is my clinic and patient data secure?', 'Yes. Records are encrypted at rest and in transit, with per-clinic isolation and audit logging. You can export everything anytime.'],
+    ['Do I need to create an account to book?', 'No password needed. You just verify your phone with a one-time OTP. After that you can see your bookings and history in your patient panel anytime.'],
+    ['Are the doctors verified?', 'Yes. Every listed doctor is verified by our team before they appear in the directory, and claimed profiles are confirmed against the clinic.'],
+    ['What if I need to cancel or the slot is wrong?', 'You always get the clinic\'s direct number with your booking, so you can call to reschedule. The doctor can also confirm or suggest a different time.'],
+    ['Which cities and specialties are covered?', 'We\'re live across India with 50+ specialties — from general physicians and dentists to homeopaths, dermatologists, physiotherapists and more.'],
+];
+$faqDoctors = [
+    ['What does it cost?', 'One plan: ₹1,499/month (or ₹14,999/year — one month free). Everything to run a clinic is included, with a 30-day free trial and no card required.'],
+    ['Is WhatsApp/SMS an extra add-on?', 'No. WhatsApp-first messaging with SMS fallback — confirmations, reminders, prescription delivery and follow-up nudges — is built into every plan at no extra cost.'],
+    ['Will patients actually find me?', 'Yes. Your public profile on eclinicpro.com\'s directory is included, so patients searching your city and specialty can discover and book you directly.'],
+    ['Is my clinic and patient data secure?', 'Records are encrypted at rest and in transit, with per-clinic isolation and audit logging. You can export everything as PDF or JSON anytime.'],
     ['Can I claim a profile that\'s already listed?', 'Yes. If your clinic is already in the directory, claim it from your profile page — once verified you control your listing, availability and bookings.'],
-    ['Do you support my specialty?', '50+ specialties across modern medicine, dentistry, and AYUSH (homeopathy, ayurveda, and more) — each with specialty-aware visit forms.'],
+    ['Does it fit my specialty?', 'The visit screen adapts to your specialty (homeopathy case-taking, dental charting, pediatric growth, derma photos, and more) so you\'re not fighting a generic form.'],
 ];
 ?>
-<section id="faq" x-data="{ open: 0 }">
+<section id="faq" class="hp-faq" x-data="{ open: null }">
     <div class="wrap">
         <div class="section-head reveal">
             <span class="eyebrow">Questions</span>
             <h2 class="h-section">Good to know.</h2>
         </div>
-        <div class="faq-list reveal">
-            <?php foreach ($faqs as $i => [$q, $a]): ?>
-            <div class="faq-item" :class="open === <?= $i ?> ? 'open' : ''">
-                <button type="button" class="faq-q" @click="open = open === <?= $i ?> ? -1 : <?= $i ?>">
-                    <span><?= e($q) ?></span>
-                    <span class="plus"></span>
-                </button>
-                <div class="faq-a" x-show="open === <?= $i ?>" x-collapse><?= e($a) ?></div>
+        <div class="hp-faq-cols">
+            <div class="hp-faq-col reveal">
+                <h3 class="hp-faq-h"><span class="hp-faq-ic">🔍</span> For patients</h3>
+                <div class="faq-list">
+                    <?php foreach ($faqPatients as $i => [$q, $a]): $k = 'p' . $i; ?>
+                    <div class="faq-item" :class="open === '<?= $k ?>' ? 'open' : ''">
+                        <button type="button" class="faq-q" @click="open = open === '<?= $k ?>' ? null : '<?= $k ?>'">
+                            <span><?= e($q) ?></span><span class="plus"></span>
+                        </button>
+                        <div class="faq-a" x-show="open === '<?= $k ?>'" x-collapse><?= e($a) ?></div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
-            <?php endforeach; ?>
+            <div class="hp-faq-col reveal">
+                <h3 class="hp-faq-h"><span class="hp-faq-ic">🩺</span> For doctors</h3>
+                <div class="faq-list">
+                    <?php foreach ($faqDoctors as $i => [$q, $a]): $k = 'd' . $i; ?>
+                    <div class="faq-item" :class="open === '<?= $k ?>' ? 'open' : ''">
+                        <button type="button" class="faq-q" @click="open = open === '<?= $k ?>' ? null : '<?= $k ?>'">
+                            <span><?= e($q) ?></span><span class="plus"></span>
+                        </button>
+                        <div class="faq-a" x-show="open === '<?= $k ?>'" x-collapse><?= e($a) ?></div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
         </div>
     </div>
 </section>
