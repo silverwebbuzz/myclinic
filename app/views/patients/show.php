@@ -54,18 +54,147 @@ if (!empty($hasPhotos)) {
 
     <div class="rounded-xl border bg-white p-6">
         <?php if ($tab === 'overview'): ?>
-            <dl class="grid gap-3 sm:grid-cols-2 text-sm">
-                <div><dt class="text-slate-500">Phone</dt><dd><?= htmlspecialchars($patient['phone']) ?></dd></div>
-                <div><dt class="text-slate-500">Email</dt><dd><?= htmlspecialchars($patient['email'] ?? '—') ?></dd></div>
-                <div><dt class="text-slate-500">DOB</dt><dd><?= htmlspecialchars($patient['dob'] ?? '—') ?></dd></div>
-                <div><dt class="text-slate-500">Address</dt><dd><?= nl2br(htmlspecialchars($patient['address'] ?? '—')) ?></dd></div>
-            </dl>
-            <?php if ($allergies !== []): ?>
-            <p class="mt-4 text-sm"><strong>Allergies:</strong> <?= htmlspecialchars(implode(', ', $allergies)) ?></p>
-            <?php endif; ?>
-            <?php if ($chronic !== []): ?>
-            <p class="mt-2 text-sm"><strong>Chronic:</strong> <?= htmlspecialchars(implode(', ', $chronic)) ?></p>
-            <?php endif; ?>
+            <?php
+            // ---- Derive overview stats from the data the controller already loads ----
+            $visitCount = count($visits);
+            $completedCount = 0; $cancelledCount = 0;
+            foreach ($visits as $vv) {
+                $st = $vv['status'] ?? '';
+                if ($st === 'completed') $completedCount++;
+                if ($st === 'cancelled') $cancelledCount++;
+            }
+            $latestVitals = !empty($vitals) ? end($vitals) : null;  // vitals are ASC → last = newest
+            $recentVisits = array_slice($visits, 0, 5);
+            $vegLabels = ['veg' => 'Vegetarian', 'nonveg' => 'Non-veg', 'vegan' => 'Vegan', 'eggetarian' => 'Eggetarian'];
+            ?>
+
+            <!-- Stat tiles -->
+            <div class="-m-6 mb-0 grid grid-cols-2 gap-px border-b bg-slate-100 sm:grid-cols-4">
+                <?php
+                $tiles = [
+                    ['Total visits', $visitCount, 'text-slate-900', '🩺'],
+                    ['Completed', $completedCount, 'text-emerald-600', '✓'],
+                    ['Cancelled', $cancelledCount, 'text-rose-500', '⚠️'],
+                    ['Prescriptions', count($prescriptions), 'text-slate-900', '℞'],
+                ];
+                foreach ($tiles as [$lbl, $val, $cls, $ic]):
+                ?>
+                <div class="bg-white px-5 py-4">
+                    <div class="flex items-center gap-2 text-xs text-slate-500"><span><?= $ic ?></span><?= htmlspecialchars($lbl) ?></div>
+                    <div class="mt-1 text-2xl font-semibold <?= $cls ?>"><?= (int) $val ?></div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+
+            <!-- Card grid -->
+            <div class="mt-6 grid gap-5 lg:grid-cols-2">
+
+                <!-- Medical History -->
+                <div class="rounded-xl border border-slate-200 p-5">
+                    <h3 class="text-sm font-semibold text-slate-900">Medical history</h3>
+                    <div class="mt-4 space-y-4 text-sm">
+                        <div>
+                            <div class="text-xs uppercase tracking-wide text-slate-400">Chronic conditions</div>
+                            <?php if ($chronic !== []): ?>
+                            <div class="mt-1.5 flex flex-wrap gap-1.5">
+                                <?php foreach ($chronic as $c): ?>
+                                <span class="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs text-amber-800"><?= htmlspecialchars($c) ?></span>
+                                <?php endforeach; ?>
+                            </div>
+                            <?php else: ?><p class="mt-1 text-slate-400">None recorded</p><?php endif; ?>
+                        </div>
+                        <div>
+                            <div class="text-xs uppercase tracking-wide text-slate-400">Allergies</div>
+                            <?php if ($allergies !== []): ?>
+                            <div class="mt-1.5 flex flex-wrap gap-1.5">
+                                <?php foreach ($allergies as $a): ?>
+                                <span class="rounded-full bg-rose-50 px-2.5 py-0.5 text-xs text-rose-700"><?= htmlspecialchars($a) ?></span>
+                                <?php endforeach; ?>
+                            </div>
+                            <?php else: ?><p class="mt-1 text-slate-400">None recorded</p><?php endif; ?>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 border-t pt-3 text-xs">
+                            <div><span class="text-slate-400">Blood group</span><div class="text-slate-800"><?= htmlspecialchars($patient['blood_group'] ?? '—') ?></div></div>
+                            <div><span class="text-slate-400">Diet</span><div class="text-slate-800"><?= htmlspecialchars($vegLabels[$patient['veg_type'] ?? ''] ?? '—') ?></div></div>
+                            <div><span class="text-slate-400">Phone</span><div class="text-slate-800"><?= htmlspecialchars($patient['phone']) ?></div></div>
+                            <div><span class="text-slate-400">Email</span><div class="text-slate-800 truncate"><?= htmlspecialchars($patient['email'] ?? '—') ?></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vitals (latest) -->
+                <div class="rounded-xl border border-slate-200 p-5">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-slate-900">Latest vitals</h3>
+                        <?php if ($hasVitals): ?><a href="?tab=vitals" class="text-xs text-emerald-600 hover:underline">Trends →</a><?php endif; ?>
+                    </div>
+                    <?php if ($latestVitals): ?>
+                    <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+                        <?php
+                        $vrows = [
+                            ['💓', 'Pulse', ($latestVitals['pulse_rate'] ?? null) ? $latestVitals['pulse_rate'] . ' bpm' : null],
+                            ['🩸', 'BP', ($latestVitals['bp_systolic'] ?? null) ? $latestVitals['bp_systolic'] . '/' . ($latestVitals['bp_diastolic'] ?? '') . ' mmHg' : null],
+                            ['🍬', 'Blood sugar', ($latestVitals['blood_sugar'] ?? null) ? $latestVitals['blood_sugar'] . ' mg/dL' : null],
+                            ['🌡️', 'Temp', ($latestVitals['temperature'] ?? null) ? $latestVitals['temperature'] . '°F' : null],
+                            ['⚖️', 'Weight', ($latestVitals['weight_kg'] ?? null) ? $latestVitals['weight_kg'] . ' kg' : null],
+                            ['🫁', 'SpO₂', ($latestVitals['spo2'] ?? null) ? $latestVitals['spo2'] . '%' : null],
+                        ];
+                        foreach ($vrows as [$ic, $lbl, $val]): if ($val === null) continue; ?>
+                        <div class="flex items-center gap-2">
+                            <span class="text-base"><?= $ic ?></span>
+                            <span><span class="block text-xs text-slate-400"><?= htmlspecialchars($lbl) ?></span><span class="font-medium text-slate-800"><?= htmlspecialchars((string) $val) ?></span></span>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php else: ?>
+                    <p class="mt-4 text-sm text-slate-400">No vitals recorded yet.</p>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Files & Documents -->
+                <div class="rounded-xl border border-slate-200 p-5">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-slate-900">Files &amp; documents</h3>
+                        <a href="?tab=documents" class="text-xs text-emerald-600 hover:underline">View all →</a>
+                    </div>
+                    <?php if (!empty($documents)): ?>
+                    <ul class="mt-3 space-y-2 text-sm">
+                        <?php foreach (array_slice($documents, 0, 4) as $doc): ?>
+                        <li class="flex items-center gap-2">
+                            <span class="text-slate-400">📄</span>
+                            <a href="/<?= htmlspecialchars(ltrim($doc['file_path'] ?? '#', '/')) ?>" target="_blank" class="truncate text-slate-700 hover:text-emerald-700 hover:underline"><?= htmlspecialchars($doc['title'] ?? $doc['file_name'] ?? 'Document') ?></a>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <?php else: ?>
+                    <p class="mt-3 text-sm text-slate-400">No documents uploaded.</p>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Recent Visits -->
+                <div class="rounded-xl border border-slate-200 p-5">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-slate-900">Recent visits</h3>
+                        <a href="/visits/new?patient_id=<?= (int) $patient['id'] ?>" class="text-xs font-medium text-emerald-600 hover:underline">+ New visit</a>
+                    </div>
+                    <?php if (!empty($recentVisits)): ?>
+                    <ul class="mt-3 divide-y text-sm">
+                        <?php foreach ($recentVisits as $v): ?>
+                        <li class="flex items-center justify-between gap-2 py-2.5">
+                            <span class="min-w-0">
+                                <span class="block truncate font-medium text-slate-800"><?= htmlspecialchars($v['diagnosis'] ?? $v['chief_complaint'] ?? 'Consultation') ?></span>
+                                <span class="block text-xs text-slate-400"><?= htmlspecialchars(date('d M Y', strtotime((string) ($v['visited_at'] ?? 'now')))) ?></span>
+                            </span>
+                            <a href="/visits/<?= (int) $v['id'] ?>" class="shrink-0 text-xs text-emerald-600 hover:underline">Open</a>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <?php else: ?>
+                    <p class="mt-3 text-sm text-slate-400">No visits yet. <a href="/visits/new?patient_id=<?= (int) $patient['id'] ?>" class="text-emerald-600 hover:underline">Start one →</a></p>
+                    <?php endif; ?>
+                </div>
+
+            </div>
 
         <?php elseif ($tab === 'visits'): ?>
             <?php if ($visits === []): ?>

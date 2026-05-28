@@ -73,10 +73,10 @@ final class PatientController
 
         $existing = PatientService::findByPhone($clinicId, $payload['phone'] ?? '');
         if ($existing !== null && !$force) {
-            return Response::html(Layout::page('patients/wizard', $this->wizardData($payload) + [
+            return Response::html(Layout::page('patients/wizard', array_merge($this->wizardData($payload), [
                 'duplicate' => $existing,
                 'error' => 'A patient with this phone number already exists.',
-            ], 'New patient'), 409);
+            ]), 'New patient'), 409);
         }
 
         try {
@@ -85,9 +85,9 @@ final class PatientController
 
             return Response::redirect('/patients/' . $patient['id'] . '?created=1');
         } catch (\Throwable $e) {
-            return Response::html(Layout::page('patients/wizard', $this->wizardData($payload) + [
+            return Response::html(Layout::page('patients/wizard', array_merge($this->wizardData($payload), [
                 'error' => 'Could not save patient: ' . $e->getMessage(),
-            ], 'New patient'), 500);
+            ]), 'New patient'), 500);
         }
     }
 
@@ -139,10 +139,13 @@ final class PatientController
 
         $payload = $this->patientToPayload($patient);
 
-        return Response::html(Layout::page('patients/wizard', $this->wizardData($payload) + [
+        // array_merge (not +) so editId/patient OVERRIDE the defaults from
+        // wizardData(); with + the existing 'editId' => null would win and the
+        // wizard would wrongly start at the phone-lookup step.
+        return Response::html(Layout::page('patients/wizard', array_merge($this->wizardData($payload), [
             'patient' => $patient,
             'editId' => (int) $id,
-        ], 'Edit patient'));
+        ]), 'Edit patient'));
     }
 
     public function update(Request $request, string $id): Response
@@ -161,11 +164,11 @@ final class PatientController
 
             return Response::redirect('/patients/' . $patientId . '?updated=1');
         } catch (\Throwable $e) {
-            return Response::html(Layout::page('patients/wizard', $this->wizardData($payload) + [
+            return Response::html(Layout::page('patients/wizard', array_merge($this->wizardData($payload), [
                 'patient' => PatientService::find($clinicId, $patientId),
                 'editId' => $patientId,
                 'error' => $e->getMessage(),
-            ], 'Edit patient'), 500);
+            ]), 'Edit patient'), 500);
         }
     }
 
