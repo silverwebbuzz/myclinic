@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: May 28, 2026 at 02:18 AM
+-- Generation Time: May 28, 2026 at 03:05 AM
 -- Server version: 10.9.8-MariaDB
 -- PHP Version: 7.4.33
 
@@ -700,6 +700,45 @@ CREATE TABLE `feature_flags` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `follow_ups`
+--
+
+CREATE TABLE `follow_ups` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `clinic_id` bigint(20) UNSIGNED NOT NULL,
+  `patient_id` bigint(20) UNSIGNED NOT NULL,
+  `visit_id` bigint(20) UNSIGNED NOT NULL,
+  `doctor_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `due_date` date NOT NULL,
+  `reason` varchar(40) DEFAULT NULL,
+  `reason_other` text DEFAULT NULL,
+  `status` enum('pending','done','missed','rescheduled','cancelled') NOT NULL DEFAULT 'pending',
+  `appointment_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `rescheduled_to_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `completed_visit_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `reminder_sent_at` timestamp NULL DEFAULT NULL,
+  `reminder_count` tinyint(3) UNSIGNED NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `follow_up_reasons`
+--
+
+CREATE TABLE `follow_up_reasons` (
+  `reason_key` varchar(40) NOT NULL,
+  `label` varchar(80) NOT NULL,
+  `clinic_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `sort_order` smallint(6) NOT NULL DEFAULT 0,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `founding_clinic_state`
 --
 
@@ -751,7 +790,6 @@ CREATE TABLE `invoices` (
   `balance_due` decimal(12,2) GENERATED ALWAYS AS (`total` - `advance_paid`) STORED,
   `payment_mode` enum('cash','upi','card','online','insurance','credit') DEFAULT NULL,
   `status` enum('draft','sent','partial','paid','overdue','refunded') DEFAULT 'draft',
-  `stripe_payment_id` varchar(60) DEFAULT NULL,
   `razorpay_order_id` varchar(60) DEFAULT NULL,
   `razorpay_payment_id` varchar(60) DEFAULT NULL,
   `notes` text DEFAULT NULL,
@@ -1368,7 +1406,6 @@ CREATE TABLE `saas_invoices` (
   `period_end` date NOT NULL,
   `modules_billed` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`modules_billed`)),
   `total_usd` decimal(10,2) NOT NULL,
-  `stripe_invoice_id` varchar(60) DEFAULT NULL,
   `razorpay_inv_id` varchar(60) DEFAULT NULL,
   `status` enum('draft','open','paid','void','uncollectable') DEFAULT 'open',
   `paid_at` timestamp NULL DEFAULT NULL,
@@ -1981,6 +2018,26 @@ ALTER TABLE `feature_flags`
   ADD PRIMARY KEY (`flag_key`);
 
 --
+-- Indexes for table `follow_ups`
+--
+ALTER TABLE `follow_ups`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_fu_clinic_due` (`clinic_id`,`status`,`due_date`),
+  ADD KEY `idx_fu_patient` (`patient_id`,`status`),
+  ADD KEY `idx_fu_visit` (`visit_id`),
+  ADD KEY `fk_fu_doctor` (`doctor_id`),
+  ADD KEY `fk_fu_appointment` (`appointment_id`),
+  ADD KEY `fk_fu_rescheduled` (`rescheduled_to_id`),
+  ADD KEY `fk_fu_completed` (`completed_visit_id`);
+
+--
+-- Indexes for table `follow_up_reasons`
+--
+ALTER TABLE `follow_up_reasons`
+  ADD PRIMARY KEY (`reason_key`),
+  ADD KEY `idx_fur_clinic_active` (`clinic_id`,`is_active`,`sort_order`);
+
+--
 -- Indexes for table `founding_clinic_state`
 --
 ALTER TABLE `founding_clinic_state`
@@ -2574,6 +2631,12 @@ ALTER TABLE `expenses`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `follow_ups`
+--
+ALTER TABLE `follow_ups`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `impersonation_tokens`
 --
 ALTER TABLE `impersonation_tokens`
@@ -2990,6 +3053,24 @@ ALTER TABLE `events`
 ALTER TABLE `expenses`
   ADD CONSTRAINT `fk_exp_clinic` FOREIGN KEY (`clinic_id`) REFERENCES `tenants` (`id`),
   ADD CONSTRAINT `fk_exp_entered_by` FOREIGN KEY (`entered_by`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `follow_ups`
+--
+ALTER TABLE `follow_ups`
+  ADD CONSTRAINT `fk_fu_appointment` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_fu_clinic` FOREIGN KEY (`clinic_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_fu_completed` FOREIGN KEY (`completed_visit_id`) REFERENCES `visits` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_fu_doctor` FOREIGN KEY (`doctor_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_fu_patient` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_fu_rescheduled` FOREIGN KEY (`rescheduled_to_id`) REFERENCES `follow_ups` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_fu_visit` FOREIGN KEY (`visit_id`) REFERENCES `visits` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `follow_up_reasons`
+--
+ALTER TABLE `follow_up_reasons`
+  ADD CONSTRAINT `fk_fur_clinic` FOREIGN KEY (`clinic_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `impersonation_tokens`

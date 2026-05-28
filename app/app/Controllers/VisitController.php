@@ -124,13 +124,6 @@ final class VisitController
             'defaultDietWeek' => DietService::defaultWeekPlan(),
             'visibleModules' => $visibleModules,
             'clinic' => $clinic,
-            // Phase 3: server-render the visit's symptoms so chips appear on
-            // first paint (no flash). Best-effort — empty before Phase 3 SQL.
-            'visitSymptoms' => self::fetchVisitSymptoms($clinicId, (int) $id),
-            // Phase 4: follow-up reasons dropdown + pending follow-up + voice lang.
-            'followUpReasons' => self::fetchFollowUpReasons($clinicId),
-            'pendingFollowUp' => self::fetchPendingFollowUp($clinicId, (int) ($visit['patient_id'] ?? 0)),
-            'voiceLang' => self::fetchVoiceLang($clinicId),
         ];
 
         // Phase 2 staged rollout: ?new=1 in URL or ECP_NEW_VISIT_SCREEN=1 in env
@@ -138,6 +131,16 @@ final class VisitController
         // remains for everyone else until we flip the default.
         $useNew = ($request->query['new'] ?? null) === '1'
               || filter_var($_ENV['ECP_NEW_VISIT_SCREEN'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        // Phase 3/4 data only the new screen needs — skip the extra queries
+        // for the legacy tab view.
+        if ($useNew) {
+            $viewData['visitSymptoms'] = self::fetchVisitSymptoms($clinicId, (int) $id);
+            $viewData['followUpReasons'] = self::fetchFollowUpReasons($clinicId);
+            $viewData['pendingFollowUp'] = self::fetchPendingFollowUp($clinicId, (int) ($visit['patient_id'] ?? 0));
+            $viewData['voiceLang'] = self::fetchVoiceLang($clinicId);
+        }
+
         $template = $useNew ? 'visits/show_v2' : 'visits/show';
 
         return Response::html(Layout::page($template, $viewData, 'Consultation'));

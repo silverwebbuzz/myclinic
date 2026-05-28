@@ -2787,3 +2787,288 @@ INSERT INTO platform_admins (email, password_hash, name) VALUES ('admin@managecl
 --   2. (Optional) Run: php database/seeds/demo_data.php  for demo data
 --   3. Set up cron jobs (see document/installation-guide.md §8)
 -- =====================================================================
+
+
+-- =====================================================================
+-- =====================================================================
+-- PHASE 1–4 ADDITIONS (eClinicPro redesign)
+-- Single-plan pricing, visit-screen redesign, symptoms, prescription
+-- templates, follow-ups, diet templates, feature flags.
+--
+-- Appended as ALTERs + new CREATEs so the 54 base tables above stay
+-- untouched. Safe to run on a fresh install right after the base schema.
+-- Mirrors the validated production migrations (document/plan/phase*).
+-- =====================================================================
+
+-- ---- Phase 1: pricing / plan / feature flags ----
+ALTER TABLE tenants
+  MODIFY COLUMN plan ENUM('standard') NOT NULL DEFAULT 'standard';
+
+ALTER TABLE tenants
+  ADD COLUMN is_founding_clinic TINYINT(1) NOT NULL DEFAULT 0 AFTER plan,
+  ADD COLUMN founding_clinic_locked_at TIMESTAMP NULL DEFAULT NULL AFTER is_founding_clinic,
+  ADD COLUMN founding_clinic_locked_until DATE NULL DEFAULT NULL AFTER founding_clinic_locked_at,
+  ADD COLUMN trial_extension_granted TINYINT(1) NOT NULL DEFAULT 0 AFTER trial_ends_at,
+  ADD COLUMN trial_extension_granted_at TIMESTAMP NULL DEFAULT NULL AFTER trial_extension_granted,
+  ADD COLUMN trial_extension_granted_by BIGINT(20) UNSIGNED NULL AFTER trial_extension_granted_at;
+
+ALTER TABLE tenants MODIFY COLUMN specialty VARCHAR(40) DEFAULT 'gp';
+
+ALTER TABLE tenants
+  ADD INDEX idx_tenants_founding (is_founding_clinic),
+  ADD INDEX idx_tenants_trial_ends (trial_ends_at);
+
+CREATE TABLE clinic_settings (
+  clinic_id BIGINT(20) UNSIGNED NOT NULL PRIMARY KEY,
+  visible_modules JSON DEFAULT NULL,
+  section_state JSON DEFAULT NULL,
+  default_visit_template_id BIGINT(20) UNSIGNED NULL,
+  voice_lang VARCHAR(10) DEFAULT 'en-IN',
+  whatsapp_share_default TINYINT(1) DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_clinic_settings_clinic FOREIGN KEY (clinic_id) REFERENCES tenants(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE feature_flags (
+  flag_key VARCHAR(60) NOT NULL PRIMARY KEY,
+  is_enabled TINYINT(1) NOT NULL DEFAULT 0,
+  scope ENUM('all','beta','tenant') NOT NULL DEFAULT 'all',
+  beta_tenant_ids JSON DEFAULT NULL,
+  description TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO feature_flags (flag_key, is_enabled, scope, description) VALUES
+  ('lab_module',0,'beta','Lab orders + reports module'),
+  ('radiology_module',0,'beta','Radiology orders module'),
+  ('pharmacy_module',0,'beta','In-house pharmacy stock module'),
+  ('crm_module',0,'beta','Marketing CRM module'),
+  ('incentive_module',0,'beta','Staff incentive tracking'),
+  ('advanced_analytics',0,'beta','Advanced analytics beyond basic reports'),
+  ('ai_transcription',0,'beta','AI voice-to-structured note conversion'),
+  ('custom_branding',0,'beta','White-label branding'),
+  ('docs_vault',0,'beta','Document vault'),
+  ('teleconsult',1,'all','Teleconsultation — included in base plan');
+
+CREATE TABLE founding_clinic_state (
+  id TINYINT NOT NULL PRIMARY KEY DEFAULT 1,
+  cap INT NOT NULL DEFAULT 100,
+  claimed INT NOT NULL DEFAULT 0,
+  closed_at TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT chk_founding_only_one_row CHECK (id = 1)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT INTO founding_clinic_state (id, cap, claimed) VALUES (1, 100, 0);
+
+-- ---- Phase 2: visit screen ----
+ALTER TABLE visits
+  ADD COLUMN auto_save_data LONGTEXT NULL CHECK (auto_save_data IS NULL OR JSON_VALID(auto_save_data)) AFTER specialty_data,
+  ADD COLUMN last_autosave_at TIMESTAMP NULL DEFAULT NULL AFTER auto_save_data;
+
+ALTER TABLE visits
+  ADD INDEX idx_visits_patient_status (patient_id, status),
+  ADD INDEX idx_visits_draft_cleanup (status, last_autosave_at);
+
+ALTER TABLE prescriptions
+  ADD COLUMN frequency_preset VARCHAR(20) DEFAULT NULL AFTER frequency,
+  ADD COLUMN tapering_steps LONGTEXT NULL CHECK (tapering_steps IS NULL OR JSON_VALID(tapering_steps)) AFTER duration_days,
+  ADD COLUMN dose_unit VARCHAR(20) DEFAULT NULL AFTER potency,
+  ADD COLUMN dose_amount DECIMAL(7,2) DEFAULT NULL AFTER dose_unit,
+  ADD COLUMN food_timing ENUM('before','after','with','empty','bedtime','any') DEFAULT 'any' AFTER dose_amount,
+  ADD COLUMN mix_with VARCHAR(40) DEFAULT NULL AFTER food_timing,
+  ADD INDEX idx_prescriptions_visit_sort (visit_id, sort_order);
+
+-- ---- Phase 3: symptoms + templates ----
+CREATE TABLE symptoms_master (
+  id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  label VARCHAR(120) NOT NULL,
+  slug VARCHAR(120) NOT NULL UNIQUE,
+  synonyms JSON DEFAULT NULL,
+  specialties JSON DEFAULT NULL,
+  category VARCHAR(40) DEFAULT NULL,
+  global_usage_count INT NOT NULL DEFAULT 0,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_symptoms_master_label (label),
+  INDEX idx_symptoms_master_active (is_active, global_usage_count)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE symptoms_personal (
+  id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  doctor_id BIGINT(20) UNSIGNED NOT NULL,
+  clinic_id BIGINT(20) UNSIGNED NOT NULL,
+  label VARCHAR(120) NOT NULL,
+  usage_count INT NOT NULL DEFAULT 1,
+  last_used_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  promoted_to_master_id BIGINT(20) UNSIGNED NULL,
+  UNIQUE KEY uniq_doctor_label (doctor_id, label),
+  INDEX idx_personal_recent (doctor_id, last_used_at DESC),
+  CONSTRAINT fk_personal_doctor FOREIGN KEY (doctor_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_personal_clinic FOREIGN KEY (clinic_id) REFERENCES tenants(id) ON DELETE CASCADE,
+  CONSTRAINT fk_personal_promoted FOREIGN KEY (promoted_to_master_id) REFERENCES symptoms_master(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE visit_symptoms (
+  id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  visit_id BIGINT(20) UNSIGNED NOT NULL,
+  clinic_id BIGINT(20) UNSIGNED NOT NULL,
+  master_id BIGINT(20) UNSIGNED NULL,
+  label VARCHAR(120) NOT NULL,
+  source ENUM('master','personal','custom') NOT NULL DEFAULT 'custom',
+  severity ENUM('mild','moderate','severe') DEFAULT NULL,
+  duration VARCHAR(40) DEFAULT NULL,
+  sort_order TINYINT UNSIGNED DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_vs_visit (visit_id, sort_order),
+  INDEX idx_vs_master (master_id),
+  CONSTRAINT fk_vs_visit FOREIGN KEY (visit_id) REFERENCES visits(id) ON DELETE CASCADE,
+  CONSTRAINT fk_vs_clinic FOREIGN KEY (clinic_id) REFERENCES tenants(id) ON DELETE CASCADE,
+  CONSTRAINT fk_vs_master FOREIGN KEY (master_id) REFERENCES symptoms_master(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE prescription_templates (
+  id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  clinic_id BIGINT(20) UNSIGNED NOT NULL,
+  doctor_id BIGINT(20) UNSIGNED NULL,
+  name VARCHAR(120) NOT NULL,
+  description VARCHAR(240) DEFAULT NULL,
+  mode ENUM('allopathic','homeopathic') NOT NULL DEFAULT 'allopathic',
+  use_count INT NOT NULL DEFAULT 0,
+  last_used_at TIMESTAMP NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  auto_discovered TINYINT(1) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_templates_doctor (doctor_id, use_count DESC),
+  INDEX idx_templates_clinic (clinic_id, use_count DESC),
+  CONSTRAINT fk_templates_clinic FOREIGN KEY (clinic_id) REFERENCES tenants(id) ON DELETE CASCADE,
+  CONSTRAINT fk_templates_doctor FOREIGN KEY (doctor_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE prescription_template_items (
+  id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  template_id BIGINT(20) UNSIGNED NOT NULL,
+  mode ENUM('allopathic','homeopathic') NOT NULL DEFAULT 'allopathic',
+  drug_id BIGINT(20) UNSIGNED NULL,
+  remedy_id BIGINT(20) UNSIGNED NULL,
+  potency VARCHAR(10) DEFAULT NULL,
+  dose_unit VARCHAR(20) DEFAULT NULL,
+  dose_amount DECIMAL(7,2) DEFAULT NULL,
+  frequency_preset VARCHAR(20) DEFAULT NULL,
+  duration_days SMALLINT UNSIGNED DEFAULT NULL,
+  food_timing ENUM('before','after','with','empty','bedtime','any') DEFAULT 'any',
+  mix_with VARCHAR(40) DEFAULT NULL,
+  tapering_steps LONGTEXT NULL CHECK (tapering_steps IS NULL OR JSON_VALID(tapering_steps)),
+  instructions TEXT DEFAULT NULL,
+  sort_order TINYINT UNSIGNED DEFAULT 0,
+  INDEX idx_template_items (template_id, sort_order),
+  CONSTRAINT fk_template_items FOREIGN KEY (template_id) REFERENCES prescription_templates(id) ON DELETE CASCADE,
+  CONSTRAINT fk_template_items_drug FOREIGN KEY (drug_id) REFERENCES drugs(id) ON DELETE SET NULL,
+  CONSTRAINT fk_template_items_remedy FOREIGN KEY (remedy_id) REFERENCES remedies(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE template_usage_log (
+  id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  template_id BIGINT(20) UNSIGNED NOT NULL,
+  doctor_id BIGINT(20) UNSIGNED NOT NULL,
+  clinic_id BIGINT(20) UNSIGNED NOT NULL,
+  visit_id BIGINT(20) UNSIGNED NULL,
+  applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_template_log_doctor (doctor_id, applied_at DESC),
+  INDEX idx_template_log_template (template_id, applied_at DESC),
+  CONSTRAINT fk_tul_template FOREIGN KEY (template_id) REFERENCES prescription_templates(id) ON DELETE CASCADE,
+  CONSTRAINT fk_tul_doctor FOREIGN KEY (doctor_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_tul_clinic FOREIGN KEY (clinic_id) REFERENCES tenants(id) ON DELETE CASCADE,
+  CONSTRAINT fk_tul_visit FOREIGN KEY (visit_id) REFERENCES visits(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE drugs
+  ADD COLUMN usage_count INT NOT NULL DEFAULT 0 AFTER schedule,
+  ADD INDEX idx_drugs_usage (usage_count DESC, name);
+ALTER TABLE remedies
+  ADD COLUMN usage_count INT NOT NULL DEFAULT 0 AFTER source,
+  ADD INDEX idx_remedies_usage (usage_count DESC, name);
+
+-- ---- Phase 4: follow-ups + diet templates ----
+CREATE TABLE follow_ups (
+  id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  clinic_id BIGINT(20) UNSIGNED NOT NULL,
+  patient_id BIGINT(20) UNSIGNED NOT NULL,
+  visit_id BIGINT(20) UNSIGNED NOT NULL,
+  doctor_id BIGINT(20) UNSIGNED NULL,
+  due_date DATE NOT NULL,
+  reason VARCHAR(40) DEFAULT NULL,
+  reason_other TEXT DEFAULT NULL,
+  status ENUM('pending','done','missed','rescheduled','cancelled') NOT NULL DEFAULT 'pending',
+  appointment_id BIGINT(20) UNSIGNED NULL,
+  rescheduled_to_id BIGINT(20) UNSIGNED NULL,
+  completed_visit_id BIGINT(20) UNSIGNED NULL,
+  reminder_sent_at TIMESTAMP NULL,
+  reminder_count TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_fu_clinic_due (clinic_id, status, due_date),
+  INDEX idx_fu_patient (patient_id, status),
+  INDEX idx_fu_visit (visit_id),
+  CONSTRAINT fk_fu_clinic FOREIGN KEY (clinic_id) REFERENCES tenants(id) ON DELETE CASCADE,
+  CONSTRAINT fk_fu_patient FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
+  CONSTRAINT fk_fu_visit FOREIGN KEY (visit_id) REFERENCES visits(id) ON DELETE CASCADE,
+  CONSTRAINT fk_fu_doctor FOREIGN KEY (doctor_id) REFERENCES users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_fu_appointment FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE SET NULL,
+  CONSTRAINT fk_fu_rescheduled FOREIGN KEY (rescheduled_to_id) REFERENCES follow_ups(id) ON DELETE SET NULL,
+  CONSTRAINT fk_fu_completed FOREIGN KEY (completed_visit_id) REFERENCES visits(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE follow_up_reasons (
+  reason_key VARCHAR(40) NOT NULL PRIMARY KEY,
+  label VARCHAR(80) NOT NULL,
+  clinic_id BIGINT(20) UNSIGNED NULL,
+  sort_order SMALLINT NOT NULL DEFAULT 0,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  INDEX idx_fur_clinic_active (clinic_id, is_active, sort_order),
+  CONSTRAINT fk_fur_clinic FOREIGN KEY (clinic_id) REFERENCES tenants(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO follow_up_reasons (reason_key, label, clinic_id, sort_order) VALUES
+  ('check_progress','Check progress',NULL,10),
+  ('retest_labs','Retest labs',NULL,20),
+  ('continue_treatment','Continue treatment',NULL,30),
+  ('post_procedure_review','Post-procedure review',NULL,40),
+  ('acute_followup','Acute episode follow-up',NULL,50),
+  ('other','Other (specify)',NULL,99);
+
+CREATE TABLE diet_templates (
+  id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  clinic_id BIGINT(20) UNSIGNED NULL,
+  doctor_id BIGINT(20) UNSIGNED NULL,
+  name VARCHAR(120) NOT NULL,
+  description VARCHAR(240) DEFAULT NULL,
+  condition_tag VARCHAR(60) DEFAULT NULL,
+  veg_type ENUM('veg','nonveg','vegan','eggetarian','any') DEFAULT 'any',
+  plan_json LONGTEXT NOT NULL CHECK (JSON_VALID(plan_json)),
+  use_count INT NOT NULL DEFAULT 0,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_diet_clinic_doctor (clinic_id, doctor_id, is_active),
+  INDEX idx_diet_condition (condition_tag),
+  CONSTRAINT fk_dt_clinic FOREIGN KEY (clinic_id) REFERENCES tenants(id) ON DELETE CASCADE,
+  CONSTRAINT fk_dt_doctor FOREIGN KEY (doctor_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE diet_plans
+  ADD COLUMN template_id BIGINT(20) UNSIGNED NULL AFTER veg_type,
+  ADD COLUMN share_token VARCHAR(32) DEFAULT NULL AFTER pdf_path,
+  ADD COLUMN share_token_expires TIMESTAMP NULL AFTER share_token,
+  ADD INDEX idx_diet_plans_template (template_id),
+  ADD UNIQUE INDEX uniq_diet_share_token (share_token),
+  ADD CONSTRAINT fk_diet_plans_template FOREIGN KEY (template_id) REFERENCES diet_templates(id) ON DELETE SET NULL;
+
+ALTER TABLE clinic_modules ADD INDEX idx_clinic_modules_clinic_active (clinic_id, is_active);
+
+-- =====================================================================
+-- After install, seed reference content:
+--   document/seeds/phase3_symptoms_seed.sql   (~290 master symptoms)
+--   document/seeds/phase4_diet_seed.sql        (12 system diet templates)
+-- =====================================================================
