@@ -290,7 +290,7 @@ $cityUrl = static function (string $citySlug) use ($currentSpecSlug): string {
         <!-- Specialty pills as REAL LINKS (SEO-friendly internal links) -->
         <?php if (!empty($alsoSpecs) || $currentSpec): ?>
         <div class="fd-seo-spec-row">
-            <a href="/find-a-doctor/<?= e($currentCitySlug) ?>"
+            <a href="<?= $hasCity ? '/find-a-doctor/' . e($currentCitySlug) : '/find-a-doctor' ?>"
                class="fd-seo-spec <?= $currentSpec ? '' : 'is-active' ?>">All specialties</a>
             <?php if ($currentSpec): ?>
                 <a class="fd-seo-spec is-active" aria-current="page">

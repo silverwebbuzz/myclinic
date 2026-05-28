@@ -787,6 +787,7 @@ function visitScreenV2(cfg) {
             try {
                 const r = await fetch('/api/v1/visits/' + this.visitId + '/autosave', {
                     method: 'POST',
+                    credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify(this.payload()),
                 });
@@ -805,7 +806,7 @@ function visitScreenV2(cfg) {
         async searchIcd(q) {
             if (!q || q.length < 2) { this.icdResults = []; return; }
             try {
-                const r = await fetch('/api/v1/icd10/search?q=' + encodeURIComponent(q));
+                const r = await fetch('/api/v1/icd10/search?q=' + encodeURIComponent(q), { credentials: 'same-origin' });
                 const data = await r.json();
                 this.icdResults = data.codes || [];
             } catch (e) {
@@ -817,7 +818,7 @@ function visitScreenV2(cfg) {
             if (!q || q.length < 2) return;
             const url = this.useHomeo ? '/api/v1/remedies/search?q=' : '/api/v1/drugs/search?q=';
             try {
-                const r = await fetch(url + encodeURIComponent(q));
+                const r = await fetch(url + encodeURIComponent(q), { credentials: 'same-origin' });
                 const data = await r.json();
                 const list = data.remedies || data.drugs || [];
                 if (list[0]) {
@@ -928,7 +929,7 @@ function symptomPicker() {
             const q = (this.query || '').trim();
             try {
                 const url = '/api/v1/symptoms/search?q=' + encodeURIComponent(q);
-                const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                const r = await fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
                 const data = await r.json();
                 // Filter out anything already selected (case-insensitive label match)
                 const taken = new Set(this.symptoms.map(s => s.label.toLowerCase()));
@@ -1064,7 +1065,7 @@ function prescriptionPanel() {
                 ? '/api/v1/remedies/search?q=' + encodeURIComponent(query)
                 : '/api/v1/drugs/search?q=' + encodeURIComponent(query);
             try {
-                const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                const r = await fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
                 const data = await r.json();
                 line._suggestions = data.drugs || data.remedies || [];
                 line._dropdown = line._suggestions.length > 0;

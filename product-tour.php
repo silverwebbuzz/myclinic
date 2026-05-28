@@ -28,7 +28,7 @@ $chapters = [
             ['2.1', 'Patient profile', 'Everything about a patient on one screen. Tabs along the top let you drill into visits, prescriptions, vitals, files, and bills. Allergy and chronic-condition flags follow you everywhere.', '👤',
                 [['🛡️', 'Allergy flags', 'Surface across every Rx and procedure screen.'], ['📋', 'Visit history', 'Twelve months on one scrollable timeline.'], ['🖼️', 'Files & images', 'Inline preview for PDFs, X-rays, scans.']]],
             ['2.2', 'Visit notes', 'SOAP, free-form, or specialty templates. Voice-dictate or type. Auto-saves every 2 seconds. The vitals strip stays pinned so you always have the numbers in view.', '📝',
-                [['📋', 'SOAP or free', 'Pick the format. Templates by specialty.'], ['⚡', 'Voice dictation', '18 languages. Edit before signing.'], ['✓', 'Auto-save', 'Every 2 seconds. Nothing ever lost.']]],
+                [['📋', 'SOAP or free', 'Pick the format. Templates by specialty.'], ['⚡', 'Voice dictation', 'English, Hindi & Gujarati. Edit before signing.'], ['✓', 'Auto-save', 'Every 2 seconds. Nothing ever lost.']]],
             ['2.3', 'Vitals trends', 'Every reading flows into a chart you can review during a 30-second walk into the room. Target bands shaded. Trend direction called out. Patient sees the same view on their app.', '📈',
                 [['📊', 'Target bands', 'The system knows what your patient should be at.'], ['📈', 'Auto trends', 'Improving, stable, worsening — labelled clearly.'], ['🌐', 'Shared view', 'Patient sees the same chart in their app.']]],
         ],
@@ -90,10 +90,10 @@ $chapters = [
     [
         'id' => 'setup', 'label' => 'Setup & control',
         'title' => 'Tune the system to your clinic.',
-        'blurb' => 'Turn modules on or off any time. Your monthly bill adjusts within 24 hours. No long contracts, no negotiation.',
+        'blurb' => 'Pick your specialty and the right tools appear automatically. One simple plan — no module juggling, no surprise bills.',
         'screens' => [
-            ['7.1', 'Module marketplace', 'Toggle any module on or off. Free modules — patient records, appointments — are always on. Everything else is a single switch. See your projected monthly bill update in real time.', '🛍️',
-                [['✓', 'One-tap toggle', 'On now, off next month — easy.'], ['🧾', 'Live bill', 'See your total update as you change.'], ['🛡️', 'Always-on core', 'Records & appointments never charge.']]],
+            ['7.1', 'Specialty setup', 'Choose your specialty once. The visit screen, vitals, and case forms adapt to how you actually work — homeopathy case-taking, dental charting, pediatric growth, and more. Change it any time from Settings.', '🛠️',
+                [['✓', 'Smart defaults', 'The right sections show for your specialty.'], ['🧾', 'One plan', '₹1,499/month — everything included.'], ['🛡️', 'Your control', 'Toggle optional sections on or off per clinic.']]],
         ],
     ],
 ];

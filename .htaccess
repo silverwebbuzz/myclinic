@@ -96,4 +96,4 @@ RewriteRule ^partials/ - [F,L]
 </IfModule>
 
 # -------- Custom 404 --------
-ErrorDocument 404 /index.html
+ErrorDocument 404 /404.php

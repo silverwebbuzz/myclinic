@@ -5,7 +5,7 @@
 require_once __DIR__ . '/partials/helpers.php';
 
 $pageTitle = 'Features — eClinicPro';
-$metaDesc = 'Forty-plus features organized into seven categories. Turn on what your clinic needs, never pay for what you don\'t use.';
+$metaDesc = 'Everything to run your clinic — patient records, prescriptions, appointments, billing, WhatsApp/SMS, and more. All included in one simple plan.';
 $activePage = 'features';
 
 $cats = [
@@ -40,7 +40,7 @@ $cats = [
         ['📊', 'Adherence tracking', "See who refilled, who didn't, and follow up automatically."],
      ]],
     ['clinical', 'Clinical tools',
-     'The specialty-specific toolkit. Picked from the marketplace, one module at a time.',
+     'The specialty-specific toolkit — the right tools appear automatically for your specialty.',
      [
         ['📈', 'Vitals trend charts', 'BP, HR, glucose, weight — visual time series with target bands.'],
         ['🧪', 'Lab orders & results', 'Order, receive, attach. Auto-flagged abnormals.'],
@@ -72,12 +72,12 @@ $cats = [
     ['platform', 'Platform & integrations',
      'Everything underneath the surface — engineered for clinics, not enterprises.',
      [
-        ['🛡️', 'HIPAA / GDPR / DPDP', 'Compliant in 47 countries. Real audit logs, real DPAs.'],
-        ['⚡', 'Offline-first', 'Day cached on device. Syncs when you reconnect.'],
-        ['🌐', '18 languages', 'UI in EN, HI, ES, PT, AR, ZH, FR, ID, BN, JA, KO, and more.'],
-        ['🔄', 'Import from anywhere', 'Practo, Cliniko, SimplePractice, Drchrono — or messy spreadsheets.'],
+        ['🛡️', 'India DPDP ready', 'Encrypted at rest & in transit, per-clinic isolation, real audit logs.'],
+        ['⚡', 'Fast & reliable', 'Built for Indian clinics and networks — quick even on patchy connections.'],
+        ['🌐', 'Multi-language', 'Interface and prescriptions in English, Hindi, Gujarati and more.'],
+        ['🔄', 'Easy migration', 'Import from Practo, spreadsheets, or your existing system.'],
         ['🔌', 'API & webhooks', 'Full REST API. Webhook on every meaningful event.'],
-        ['🔐', 'SSO + audit logs', 'SAML SSO, granular roles, signed audit trail (Hospital tier).'],
+        ['🔐', 'Roles & audit logs', 'Granular staff roles and a signed audit trail on every record.'],
      ]],
 ];
 
@@ -89,9 +89,9 @@ require __DIR__ . '/partials/header.php';
     <div style="position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%, rgba(15,155,110,0.06) 0%, transparent 60%); pointer-events: none;"></div>
     <div class="wrap" style="position: relative; max-width: 820px;">
         <span class="eyebrow" style="display: block; margin-bottom: 16px;">Everything eClinicPro does</span>
-        <h1 class="h-display" style="font-size: clamp(40px, 5.5vw, 60px); letter-spacing: -1.3px;">The complete feature catalog.</h1>
+        <h1 class="h-display" style="font-size: clamp(40px, 5.5vw, 60px); letter-spacing: -1.3px;">Everything to run your clinic.</h1>
         <p class="lede" style="font-size: 19px; margin-top: 22px; max-width: 640px; margin-left: auto; margin-right: auto;">
-            Forty-plus features organized into seven categories. Turn on what your clinic needs, leave the rest off, never pay for what you don't use.
+            Forty-plus features across seven areas — patient records, prescriptions, billing, WhatsApp/SMS and more. All included in one simple ₹1,499/month plan.
         </p>
     </div>
 </section>
@@ -100,10 +100,10 @@ require __DIR__ . '/partials/header.php';
 <section style="padding: 64px 0; border-top: 0.5px solid var(--line); border-bottom: 0.5px solid var(--line); background: var(--bg-2);">
     <div class="wrap">
         <div class="stats">
-            <div class="stat"><div class="stat-num">42</div><div class="stat-label">Features today</div></div>
-            <div class="stat"><div class="stat-num">24</div><div class="stat-label">Modules</div></div>
-            <div class="stat"><div class="stat-num">7</div><div class="stat-label">Specialties</div></div>
-            <div class="stat"><div class="stat-num">18</div><div class="stat-label">Languages</div></div>
+            <div class="stat"><div class="stat-num">42</div><div class="stat-label">Features included</div></div>
+            <div class="stat"><div class="stat-num">50+</div><div class="stat-label">Specialties</div></div>
+            <div class="stat"><div class="stat-num">1</div><div class="stat-label">Simple plan</div></div>
+            <div class="stat"><div class="stat-num">₹1,499</div><div class="stat-label">Per month</div></div>
         </div>
     </div>
 </section>

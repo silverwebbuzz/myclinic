@@ -12,7 +12,7 @@ $pillars = [
     ['🛡️', 'Encryption everywhere', 'AES-256 at rest. TLS 1.3 in transit. Per-clinic keys, rotated quarterly. Field-level encryption for the most sensitive data (allergies, diagnoses, mental health notes).'],
     ['✓', 'Compliant by default', 'HIPAA (US), GDPR (EU/UK), DPDP (India), PIPEDA (Canada), POPIA (South Africa), HDS (France). Region-aware data residency.'],
     ['📋', 'You own your data', 'Export everything as portable JSON, CSV, or HL7 FHIR — anytime, free. Delete your account and we erase within 30 days, audit-logged.'],
-    ['🔐', 'Granular access control', 'Roles for doctor, nurse, receptionist, accountant, owner. Per-module, per-action permissions. Time-limited access for locums.'],
+    ['🔐', 'Granular access control', 'Roles for doctor, nurse, receptionist, accountant, owner. Per-action permissions. Time-limited access for locums.'],
     ['📊', 'Audit trail forever', 'Every read, write, and export is logged with user, IP, device, and timestamp. Tamper-evident, exportable on demand.'],
     ['🌐', 'Data residency you choose', 'Pick where your data lives: US, EU, India, UAE, Singapore. It never leaves that region — not for backups, not for analytics.'],
     ['⚡', 'Resilient infrastructure', '99.95% uptime SLA (Hospital plan). Three-region failover. Backups every 15 minutes, restorable to any point in the last 90 days.'],
