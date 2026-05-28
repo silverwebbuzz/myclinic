@@ -72,7 +72,7 @@ require __DIR__ . '/partials/header.php';
                 </span>
                 <h1 class="hp-h1">
                     Healthcare,<br>
-                    <span class="hl">made simple.</span>
+                    <span class="grad">made simple.</span>
                 </h1>
                 <p class="hp-lede">
                     Whether you want to book a doctor or run your clinic — eClinicPro
@@ -147,7 +147,7 @@ require __DIR__ . '/partials/header.php';
     <div class="wrap">
         <div class="hp-spec-head reveal">
             <div>
-                <h2 class="h-section">30+ specialties. <span class="hl">One booking flow.</span></h2>
+                <h2 class="h-section">30+ specialties. <span class="grad">One booking flow.</span></h2>
                 <p class="hp-sub">Whatever you need — from a general physician to a neurosurgeon,
                     a homeopath to a dietitian — find them in seconds. All verified, all across India.</p>
             </div>
@@ -226,14 +226,14 @@ require __DIR__ . '/partials/header.php';
         <div class="hp-doc-grid">
             <div class="hp-doc-copy reveal">
                 <span class="eyebrow light">🌿 For doctors</span>
-                <h2 class="hp-doc-h2">The clinic software<br><span class="hl">doctors actually love.</span></h2>
+                <h2 class="hp-doc-h2">The clinic software<br><span class="grad-light">doctors actually love.</span></h2>
                 <p class="hp-doc-lede">
                     Run your practice from one calm dashboard — appointments, patient
                     records, prescriptions, billing and follow-ups. Just the essentials
                     you use every day, and a public profile that brings you new patients.
                 </p>
                 <div class="hp-doc-ctas">
-                    <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-lime btn-lg">Start your clinic — free →</a>
+                    <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg">Start your clinic — free →</a>
                     <a href="/product-tour" class="btn btn-ghost-light btn-lg">See a 2-min walkthrough</a>
                 </div>
                 <p class="hp-doc-fine">30-day free trial · No credit card · Your data stays yours.</p>

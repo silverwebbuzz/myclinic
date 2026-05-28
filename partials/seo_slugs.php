@@ -328,8 +328,40 @@ function ecp_resolve_seo_path(string $path): array {
         return ['redirect' => $canonical];
     }
 
-    // --- Pattern 3: just a city
+    // --- Pattern 3: just a specialty, e.g. "pediatric-dentist" (no city)
+    $spec = ecp_specialty_by_slug($path);
+    if ($spec !== null) {
+        return _ecp_resolve_spec_only($path, $spec);
+    }
+
+    // --- Pattern 4: just a city
     return _ecp_resolve_city_only($path);
+}
+
+/**
+ * Specialty-only SEO page (all cities), e.g. /find-a-doctor/pediatric-dentist.
+ * Linked from the homepage specialty tiles + footer.
+ */
+function _ecp_resolve_spec_only(string $specSlug, array $spec): array {
+    $count = ecp_count_doctors(null, $spec['db']);
+    // Don't 404 a specialty page just because the directory is thin — these are
+    // primary nav targets from the homepage. Show the page; the list can be empty.
+    $plural = $spec['plural'] ?? ($spec['label'] . 's');
+    return [
+        'match' => [
+            'city'         => null,
+            'specialty'    => $spec,
+            'canonical'    => '/find-a-doctor/' . $specSlug,
+            'title'        => "{$plural} — Book Appointment Online | eClinicPro",
+            'h1'           => "Find {$plural}",
+            'intro'        => "Book verified {$plural} across India. "
+                            . "Real availability, transparent fees, instant confirmation — "
+                            . "no call needed.",
+            'doctor_count' => $count,
+            'filter_city'  => null,
+            'filter_spec'  => $spec['db'],
+        ],
+    ];
 }
 
 function _ecp_resolve_city_only(string $citySlug): array {

@@ -135,7 +135,7 @@ if ($seoMeta) {
     unset($it);
 
     // 3. FAQ — generic, always useful, ranks for "common questions" snippets.
-    $cityName    = $seoMeta['city']['city'];
+    $cityName    = $seoMeta['city']['city'] ?? 'India';
     $specLabel   = $seoMeta['specialty']['plural'] ?? 'doctors';
     $specSing    = $seoMeta['specialty']['label']  ?? 'doctor';
     $specLower   = strtolower($specLabel);
@@ -194,12 +194,14 @@ require __DIR__ . '/partials/header.php';
 
 <?php if ($seoMeta): ?>
 <?php
-// Pre-compute SEO hero state once.
-$currentCity     = $seoMeta['city']['city'];
+// Pre-compute SEO hero state once. City may be null on specialty-only pages
+// (e.g. /find-a-doctor/pediatric-dentist — all cities).
+$currentCity     = $seoMeta['city']['city'] ?? null;
 $currentState    = $seoMeta['city']['state'] ?? '';
-$currentCitySlug = ecp_slug_for_city($currentCity);
+$currentCitySlug = $currentCity ? ecp_slug_for_city($currentCity) : null;
 $currentSpec     = $seoMeta['specialty'] ?? null;
 $currentSpecSlug = $currentSpec ? ecp_slug_for_db_specialty($currentSpec['db']) : null;
+$hasCity         = $currentCity !== null;
 
 $topCities = ecp_seo_top_cities(12);
 $alsoSpecs = ecp_seo_also_specialties($seoMeta);
@@ -220,9 +222,11 @@ $cityUrl = static function (string $citySlug) use ($currentSpecSlug): string {
             <span>›</span>
             <a href="/find-a-doctor">Doctors</a>
             <span>›</span>
-            <?php if ($currentSpec): ?>
+            <?php if ($currentSpec && $hasCity): ?>
                 <a href="/find-a-doctor/<?= e($currentCitySlug) ?>"><?= e($currentCity) ?></a>
                 <span>›</span>
+                <span class="current"><?= e($currentSpec['plural']) ?></span>
+            <?php elseif ($currentSpec): ?>
                 <span class="current"><?= e($currentSpec['plural']) ?></span>
             <?php else: ?>
                 <span class="current"><?= e($currentCity) ?></span>
@@ -235,7 +239,7 @@ $cityUrl = static function (string $citySlug) use ($currentSpecSlug): string {
         <!-- City switcher pill (under lede). Click → menu of major cities. -->
         <div class="fd-city-switch" x-data="{ open: false }" @click.outside="open = false">
             <button type="button" class="fd-city-switch-btn" @click="open = !open" :aria-expanded="open">
-                📍 <span><?= e($currentCity) ?></span>
+                📍 <span><?= $hasCity ? e($currentCity) : 'All of India' ?></span>
                 <?php if ($currentState): ?><span class="fd-city-state">· <?= e($currentState) ?></span><?php endif; ?>
                 <span class="fd-city-caret" :class="open ? 'rot' : ''">▾</span>
             </button>
@@ -436,7 +440,7 @@ $cityUrl = static function (string $citySlug) use ($currentSpecSlug): string {
                     <?php if (!empty($seoMeta['specialty'])): ?>
                         · <strong><?= e($seoMeta['specialty']['plural']) ?></strong>
                     <?php endif; ?>
-                    in <strong><?= e($seoMeta['city']['city']) ?></strong>
+                    in <strong><?= e($seoMeta['city']['city'] ?? 'India') ?></strong>
                     <template x-if="q">
                         <span> · matching "<strong x-text="q"></strong>"</span>
                     </template>
@@ -807,7 +811,7 @@ $cityUrl = static function (string $citySlug) use ($currentSpecSlug): string {
                 <h2>Browse more</h2>
 
                 <?php if (!empty($alsoSpecs)): ?>
-                <h3>Other specialties in <?= e($seoMeta['city']['city']) ?></h3>
+                <h3>Other specialties in <?= e($seoMeta['city']['city'] ?? 'India') ?></h3>
                 <ul>
                     <?php foreach ($alsoSpecs as $s): ?>
                     <li><a href="<?= e($s['url']) ?>"><?= e($s['label']) ?></a></li>
@@ -836,7 +840,7 @@ $cityUrl = static function (string $citySlug) use ($currentSpecSlug): string {
             <section class="fd-faq">
                 <h2>Frequently asked</h2>
                 <?php
-                $cityName  = $seoMeta['city']['city'];
+                $cityName  = $seoMeta['city']['city'] ?? 'India';
                 $specLabel = $seoMeta['specialty']['plural'] ?? 'doctors';
                 $singular  = $seoMeta['specialty']['label']  ?? 'doctor';
                 ?>

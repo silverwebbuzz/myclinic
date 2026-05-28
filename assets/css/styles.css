@@ -20,30 +20,8 @@
   --red: #FF453A;
   --green: #30D158;
   --amber: #FF9F0A;
-  /* Lime accent (Realize/Nas-Daily energy) — used sparingly as a highlighter
-     on key words + on the primary marketing CTA. Calm green stays the base. */
-  --lime: #C5F84E;
-  --lime-2: #B4ED36;
-  --lime-ink: #143601;   /* dark text that reads on lime */
 }
 
-/* Highlighter — wrap one or two key words, not whole sentences. */
-.hl {
-  background: var(--lime);
-  color: var(--lime-ink);
-  padding: 0 0.18em;
-  border-radius: 4px;
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
-}
-
-/* Headings use Poppins (rounded geometric) for a friendlier, modern feel.
-   Body text stays Inter. */
-h1, h2, h3,
-.h-display, .h-section, .hp-h1, .hp-doc-h2,
-.hero h1, .section-head h2, .price-name, .stat-num {
-  font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-}
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -106,8 +84,6 @@ button { font: inherit; cursor: pointer; border: none; background: none; color: 
 .btn-lg { padding: 16px 28px; font-size: 16px; }
 .btn-primary { background: var(--teal-600); color: #fff; }
 .btn-primary:hover { background: var(--teal-700); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(15,155,110,0.25); }
-.btn-lime { background: var(--lime); color: var(--lime-ink); font-weight: 600; }
-.btn-lime:hover { background: var(--lime-2); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(180,237,54,0.35); }
 .btn-dark { background: var(--ink); color: #fff; }
 .btn-dark:hover { background: #222; transform: translateY(-1px); }
 .btn-ghost-dark { background: transparent; color: var(--ink); border: 1px solid rgba(0,0,0,0.18); }
