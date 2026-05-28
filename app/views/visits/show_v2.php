@@ -126,9 +126,9 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                            class="flex-1 min-w-[180px] border-0 bg-transparent p-0.5 text-sm focus:outline-none focus:ring-0">
                 </div>
 
-                <!-- Suggestion dropdown — suppressed while the browse panel is
-                     open, since typing then live-filters the open system's pills. -->
-                <div x-show="!browseOpen && (suggestions.length || catMatches.length) && showSuggestions" x-cloak
+                <!-- Suggestion dropdown — always shows while typing, searching
+                     across ALL systems (independent of the browse panel). -->
+                <div x-show="(suggestions.length || catMatches.length) && showSuggestions" x-cloak
                      @click.outside="showSuggestions = false"
                      class="relative">
                     <ul class="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-lg border bg-white shadow-lg">
@@ -181,14 +181,11 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                             </button>
                         </template>
                     </div>
-                    <!-- Symptom pills for the open category -->
+                    <!-- Symptom pills for the open category (click to add/remove) -->
                     <div x-show="activeCat" class="mt-3 border-t border-slate-200 pt-3">
                         <p x-show="catLoading" class="text-xs text-slate-400">Loading…</p>
-                        <p x-show="query.trim().length >= 1 && !catLoading" class="mb-2 text-xs text-slate-400">
-                            Showing matches for "<span class="font-medium text-slate-600" x-text="query.trim()"></span>" — clear the box to see all.
-                        </p>
                         <div class="flex flex-wrap gap-1.5">
-                            <template x-for="s in visibleCatSymptoms()" :key="s.master_id">
+                            <template x-for="s in catSymptoms" :key="s.master_id">
                                 <button type="button" :disabled="!editable" @click="toggleSymptom(s)"
                                         class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition disabled:opacity-50"
                                         :class="isSelected(s.label) ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-slate-300 bg-white text-slate-700 hover:border-emerald-400'">
@@ -196,10 +193,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                     <span x-text="s.label"></span>
                                 </button>
                             </template>
-                            <p x-show="!catLoading && visibleCatSymptoms().length === 0" class="text-xs text-slate-400">
-                                <span x-show="query.trim().length >= 1">No matching symptoms — press Enter to add "<span x-text="query.trim()"></span>" as custom.</span>
-                                <span x-show="query.trim().length === 0">No symptoms in this system.</span>
-                            </p>
+                            <p x-show="!catLoading && catSymptoms.length === 0" class="text-xs text-slate-400">No symptoms in this system.</p>
                         </div>
                     </div>
                 </div>
@@ -1017,13 +1011,6 @@ function symptomPicker() {
             this.catLoading = false;
         },
 
-        // Open category's pills, live-filtered by whatever's typed in the box.
-        visibleCatSymptoms() {
-            const q = (this.query || '').trim().toLowerCase();
-            if (!q) return this.catSymptoms;
-            return this.catSymptoms.filter(s => s.label.toLowerCase().includes(q));
-        },
-
         isSelected(label) {
             const l = (label || '').toLowerCase();
             return this.symptoms.some(s => s.label.toLowerCase() === l);
@@ -1117,16 +1104,6 @@ function symptomPicker() {
         },
 
         addCurrentOrFirst() {
-            // When browsing a system, Enter adds the top filtered pill.
-            if (this.browseOpen && this.activeCat) {
-                const filtered = this.visibleCatSymptoms();
-                if (filtered.length > 0) {
-                    this.addSymptom(filtered[0]);
-                    this.query = '';
-                    this.persistSymptoms();
-                    return;
-                }
-            }
             if (this.suggestions.length > 0 && this.suggestions[0]) {
                 this.addSymptom(this.suggestions[0]);
             } else if (this.query.trim()) {
