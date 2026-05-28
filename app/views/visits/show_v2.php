@@ -493,7 +493,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                     <span class="text-xs text-slate-500">Total: <span class="font-semibold text-slate-800" x-text="'₹' + chargesTotal()"></span></span>
                 </div>
                 <div class="mt-2 space-y-2">
-                    <template x-for="(c, idx) in charges" :key="idx">
+                    <template x-for="(c, idx) in charges" :key="c._k">
                         <div class="flex items-center gap-2">
                             <input type="text" :disabled="!editable" x-model="c.description" @change="markDirty()"
                                    placeholder="e.g. Consultation, Procedure, Medicines"
@@ -817,9 +817,15 @@ function visitScreenV2(cfg) {
     if (typeof vitals.extra_vitals === 'string') vitals.extra = JSON.parse(vitals.extra_vitals || '{}');
     else if (vitals.extra_vitals) vitals.extra = vitals.extra_vitals;
 
+    // Give each pre-loaded charge a stable key for x-for reactivity.
+    const charges = (Array.isArray(cfg.charges) ? cfg.charges : []).map((c, i) => ({
+        _k: 'c0' + i, description: c.description || '', amount: c.amount ?? null,
+    }));
+
     return {
         ...cfg,
         vitals,
+        charges,
         saveStatus: 'idle',
         saveLabel: 'Auto-save on',
         icdResults: [],
@@ -837,7 +843,11 @@ function visitScreenV2(cfg) {
         markDirty() { this.dirty = true; },
 
         // ---- Charges (visit invoice line items) ----
-        addCharge() { this.dirty = true; this.charges.push({ description: '', amount: null }); },
+        _chargeKey: 0,
+        addCharge() {
+            this.dirty = true;
+            this.charges.push({ _k: 'c' + (++this._chargeKey), description: '', amount: null });
+        },
         removeCharge(idx) { this.dirty = true; this.charges.splice(idx, 1); },
         chargesTotal() {
             return (this.charges || []).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
@@ -847,11 +857,13 @@ function visitScreenV2(cfg) {
             this.chargesStatus = 'saving';
             this.chargesLabel = 'Saving…';
             try {
+                // Strip the UI-only _k key before sending.
+                const items = this.charges.map(c => ({ description: c.description, amount: c.amount }));
                 const r = await fetch('/api/v1/visits/' + this.visitId + '/charges', {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                    body: JSON.stringify({ items: this.charges }),
+                    body: JSON.stringify({ items: items }),
                 });
                 const data = await r.json();
                 if (data.ok) {
