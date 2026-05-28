@@ -17,10 +17,7 @@ final class SpecialtyAdapter
 
     public static function prescriptionMode(): string
     {
-        $spec = self::current();
-        $catalog = require dirname(__DIR__, 2) . '/config/specialties.php';
-
-        return $catalog[$spec]['prescription_mode'] ?? 'allopathic';
+        return SpecialtyCatalog::prescriptionMode(self::current());
     }
 
     /** @return list<array<string, mixed>> */

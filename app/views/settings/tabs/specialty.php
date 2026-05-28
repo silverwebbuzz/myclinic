@@ -11,12 +11,26 @@ $options = $options ?? [];
         Change specialty (resets specialty-specific patient fields)
     </label>
 
-    <div class="grid grid-cols-2 gap-2 sm:grid-cols-3" x-data="{ change: false }">
-        <?php foreach ($specialties as $key => $spec): ?>
-        <label class="rounded-lg border p-2 text-center text-xs has-[:checked]:border-emerald-500">
-            <input type="radio" name="specialty" value="<?= htmlspecialchars($key) ?>" class="sr-only" <?= $specialty === $key ? 'checked' : '' ?>>
-            <?= $spec['icon'] ?> <?= htmlspecialchars($spec['label']) ?>
-        </label>
+    <?php
+    // Group the catalog by its 'group' key, preserving config order.
+    $grouped = [];
+    foreach ($specialties as $key => $spec) {
+        $grouped[$spec['group'] ?? 'Other'][$key] = $spec;
+    }
+    ?>
+    <div class="space-y-5">
+        <?php foreach ($grouped as $groupLabel => $items): ?>
+        <div>
+            <h3 class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400"><?= htmlspecialchars($groupLabel) ?></h3>
+            <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <?php foreach ($items as $key => $spec): ?>
+                <label class="cursor-pointer rounded-lg border p-2 text-center text-xs hover:border-emerald-300 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50">
+                    <input type="radio" name="specialty" value="<?= htmlspecialchars($key) ?>" class="sr-only" <?= $specialty === $key ? 'checked' : '' ?>>
+                    <?= $spec['icon'] ?> <?= htmlspecialchars($spec['label']) ?>
+                </label>
+                <?php endforeach; ?>
+            </div>
+        </div>
         <?php endforeach; ?>
     </div>
 

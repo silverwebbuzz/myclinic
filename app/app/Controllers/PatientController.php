@@ -325,7 +325,7 @@ final class PatientController
         return [
             'payload' => $payload ?? [],
             'specialty' => $specialty,
-            'specialties' => require dirname(__DIR__, 2) . '/config/specialties.php',
+            'specialties' => \App\Support\SpecialtyCatalog::all(),
             'duplicate' => null,
             'error' => null,
             'editId' => null,

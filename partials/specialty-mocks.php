@@ -61,7 +61,7 @@ function render_spec_mock(string $key): void
             echo _spec_mock_phone_shell_close();
             return;
 
-        case 'homeo':
+        case 'homeopathy':
             echo _spec_mock_phone_shell_open();
             ?>
             <div style="padding: 8px 16px 14px;">

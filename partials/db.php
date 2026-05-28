@@ -436,7 +436,7 @@ function ecp_directory_locations(): ?array
 }
 
 /**
- * Map a specialty slug ('eye', 'prosthodontist', 'homeo', ...) to its
+ * Map a specialty slug ('eye', 'prosthodontist', 'homeopathy', ...) to its
  * display label ('Ophthalmologist', etc.), loading the seed file once.
  * Falls back to a title-cased slug for unknown values.
  */

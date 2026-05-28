@@ -103,7 +103,7 @@ function ecp_specialty_map(): array {
         'endodontist'       => ['db' => 'endodontist',    'label' => 'Endodontist',        'plural' => 'Endodontists'],
         'implantologist'    => ['db' => 'implantologist', 'label' => 'Dental implant specialist', 'plural' => 'Dental implant specialists'],
         'ayurveda'          => ['db' => 'ayurveda',       'label' => 'Ayurveda doctor',    'plural' => 'Ayurveda doctors'],
-        'homeopathy'        => ['db' => 'homeo',          'label' => 'Homeopathy doctor',  'plural' => 'Homeopathy doctors'],
+        'homeopathy'        => ['db' => 'homeopathy',     'label' => 'Homeopathy doctor',  'plural' => 'Homeopathy doctors'],
         'siddha'            => ['db' => 'siddha',         'label' => 'Siddha doctor',      'plural' => 'Siddha doctors'],
         'unani'             => ['db' => 'unani',          'label' => 'Unani doctor',       'plural' => 'Unani doctors'],
         'naturopathy'       => ['db' => 'naturopathy',    'label' => 'Naturopathy doctor', 'plural' => 'Naturopathy doctors'],

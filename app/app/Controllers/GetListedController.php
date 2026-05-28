@@ -95,7 +95,7 @@ final class GetListedController
             'endodontist'     => 'Endodontist',
             'implantologist'  => 'Dental Implant Specialist',
             'ayurveda'        => 'Ayurveda',
-            'homeo'           => 'Homeopathy',
+            'homeopathy'      => 'Homeopathy',
             'siddha'          => 'Siddha',
             'unani'           => 'Unani',
             'naturopathy'     => 'Naturopathy',

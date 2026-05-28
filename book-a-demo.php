@@ -150,7 +150,7 @@ require __DIR__ . '/partials/header.php';
                                     <?php foreach ([
                                         'gp' => 'General practice',
                                         'dental' => 'Dental',
-                                        'homeo' => 'Homeopathy',
+                                        'homeopathy' => 'Homeopathy',
                                         'derma' => 'Dermatology',
                                         'peds' => 'Pediatrics',
                                         'physio' => 'Physiotherapy',

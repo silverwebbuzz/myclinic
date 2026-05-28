@@ -1,5 +1,4 @@
-<section x-show="activeTab === 'discharge'" class="rounded-xl border bg-white p-6 space-y-4">
-    <h3 class="font-semibold">Discharge summary</h3>
+<div class="space-y-4">
     <?php if (!empty($_GET['discharge_saved'])): ?>
     <p class="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Draft saved.</p>
     <?php endif; ?>
@@ -63,4 +62,4 @@
     }
     </script>
     <?php endif; ?>
-</section>
+</div>

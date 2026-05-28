@@ -101,7 +101,7 @@ final class ClinicSettingsService
         }
         $clinic = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first();
         $specialty = $clinic['specialty'] ?? 'gp';
-        $specConfig = require dirname(__DIR__, 2) . '/config/specialties.php';
+        $specConfig = \App\Support\SpecialtyCatalog::all();
         QueryBuilder::table('specialty_configs')->insert([
             'clinic_id' => $clinicId,
             'specialty' => $specialty,
@@ -121,11 +121,11 @@ final class ClinicSettingsService
     public static function saveSpecialty(int $clinicId, string $specialty, array $post, bool $changeSpecialty): void
     {
         if ($changeSpecialty) {
-            $specialties = array_keys(require dirname(__DIR__, 2) . '/config/specialties.php');
+            $specialties = array_keys(\App\Support\SpecialtyCatalog::all(true));
             if (in_array($post['specialty'] ?? '', $specialties, true)) {
                 $specialty = $post['specialty'];
                 QueryBuilder::table('tenants')->where('id', '=', $clinicId)->update(['specialty' => $specialty]);
-                $specConfig = require dirname(__DIR__, 2) . '/config/specialties.php';
+                $specConfig = \App\Support\SpecialtyCatalog::all();
                 QueryBuilder::table('specialty_configs')->where('clinic_id', '=', $clinicId)->update([
                     'prescription_mode' => $specConfig[$specialty]['prescription_mode'] ?? 'allopathic',
                     'specialty_options' => json_encode([]),

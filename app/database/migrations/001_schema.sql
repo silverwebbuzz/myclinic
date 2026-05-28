@@ -7,7 +7,7 @@ CREATE TABLE tenants (
   name                    VARCHAR(150) NOT NULL,
   slug                    VARCHAR(60) NOT NULL,
   custom_domain           VARCHAR(150) NULL,
-  specialty               ENUM('gp','homeopathy','dental','derma','peds','physio','other') DEFAULT 'gp',
+  specialty               VARCHAR(40) DEFAULT 'gp',  -- slug from specialty_master (admin-managed catalog)
   country_code            CHAR(2) DEFAULT 'IN',
   currency                CHAR(3) DEFAULT 'INR',
   timezone                VARCHAR(50) DEFAULT 'Asia/Kolkata',

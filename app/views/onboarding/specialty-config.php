@@ -2,7 +2,7 @@
 $title = 'Specialty settings — ManageClinic';
 $options = $options ?? [];
 $specialty = $specialty ?? 'gp';
-$specialties = require dirname(__DIR__, 2) . '/config/specialties.php';
+$specialties = \App\Support\SpecialtyCatalog::all(true);
 ob_start();
 ?>
 <h1 class="text-2xl font-semibold text-slate-900">Specialty configuration</h1>

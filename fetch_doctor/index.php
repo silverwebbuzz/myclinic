@@ -324,7 +324,7 @@ $QUERIES = [
 
     // ----- Alternative Medicine -----
     ['q' => 'ayurveda clinic',       'spec' => 'ayurveda'],
-    ['q' => 'homeopathy clinic',     'spec' => 'homeo'],
+    ['q' => 'homeopathy clinic',     'spec' => 'homeopathy'],
     ['q' => 'siddha clinic',         'spec' => 'siddha'],
     ['q' => 'unani clinic',          'spec' => 'unani'],
     ['q' => 'naturopathy clinic',    'spec' => 'naturopathy'],
@@ -933,7 +933,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['names'])) {
             $hint = strtolower($rawName . ' ' . implode(' ', (array) ($details['types'] ?? [])));
             $map = [
                 'dentist' => 'dental', 'dental' => 'dental',
-                'homeo' => 'homeo', 'bhms' => 'homeo',
+                'homeo' => 'homeopathy', 'bhms' => 'homeopathy',
                 'pediatric' => 'peds', 'paediatric' => 'peds',
                 'dermatolog' => 'derma', 'skin' => 'derma',
                 'gyne' => 'gyno', 'obstet' => 'gyno',

@@ -99,7 +99,7 @@ return [
         'ctaSub' => 'Start free. Add modules when your day demands it.',
     ],
 
-    'homeo' => [
+    'homeopathy' => [
         'slug' => 'homeopaths',
         'label' => 'Homeopaths',
         'icon' => '🌿',

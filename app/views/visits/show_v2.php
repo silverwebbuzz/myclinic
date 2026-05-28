@@ -29,7 +29,7 @@ $optionalModules = ['vitals', 'labs', 'photos', 'diet', 'consent', 'case_special
 $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !in_array($m, $visibleModules, true)));
 ?>
 
-<div class="mx-auto max-w-5xl space-y-4"
+<div class="mx-auto max-w-7xl space-y-4"
      x-data="visitScreenV2(<?= htmlspecialchars(json_encode([
         'visitId' => $visitId,
         'patientId' => (int) $patient['id'],
@@ -74,6 +74,10 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         require __DIR__ . '/../patients/_patient_header.php';
         ?>
     </div>
+
+    <!-- ====== Two-column: visit form (left) + history (right) ====== -->
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+    <div class="space-y-4 lg:col-span-2">
 
     <!-- ====== TODAY'S VISIT ====== -->
     <section class="rounded-xl border bg-white shadow-sm">
@@ -540,6 +544,15 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 </details>
             <?php endif; ?>
 
+            <?php if (!empty($hasDischarge)): ?>
+                <details class="rounded-lg border border-slate-200 bg-slate-50/50">
+                    <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Discharge summary</summary>
+                    <div class="px-4 pb-4 pt-2">
+                        <?php require __DIR__ . '/partials/discharge.php'; ?>
+                    </div>
+                </details>
+            <?php endif; ?>
+
             <!-- ---- Ghost-link strip: reveal hidden sections for this visit ---- -->
             <?php if (!empty($ghostModules)): ?>
                 <div class="flex flex-wrap items-center gap-2 border-t border-dashed border-slate-200 pt-3 text-xs text-slate-500">
@@ -595,12 +608,16 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         </div>
     </section>
 
-    <!-- ====== VISIT HISTORY ====== -->
-    <section class="rounded-xl border bg-white shadow-sm">
+    </div><!-- /left column -->
+
+    <!-- ====== VISIT HISTORY (right column, sticky on desktop) ====== -->
+    <aside class="lg:col-span-1">
+    <section class="rounded-xl border bg-white shadow-sm lg:sticky lg:top-20">
         <div class="flex items-center justify-between border-b px-5 py-3">
             <h2 class="text-base font-semibold text-slate-900">Visit history</h2>
             <span class="text-xs text-slate-400"><?= count($recentVisits ?? []) ?> recent</span>
         </div>
+        <div class="max-h-[70vh] overflow-y-auto">
         <ul class="divide-y text-sm">
             <?php if (empty($recentVisits)): ?>
                 <li class="px-5 py-6 text-center text-sm text-slate-500">No prior visits.</li>
@@ -652,7 +669,11 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 <?php endforeach; ?>
             <?php endif; ?>
         </ul>
+        </div><!-- /scroll wrapper -->
     </section>
+    </aside><!-- /right column -->
+
+    </div><!-- /two-column grid -->
 </div>
 
 <script>

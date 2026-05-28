@@ -63,7 +63,7 @@ final class OnboardingController
 
         $clinic = RequestContext::clinic();
         $config = OnboardingService::specialtyConfig((int) $clinic['id']) ?? [];
-        $specialties = require dirname(__DIR__, 2) . '/config/specialties.php';
+        $specialties = \App\Support\SpecialtyCatalog::all();
 
         $workingHours = $config['working_hours'] ?? null;
         if (is_string($workingHours)) {
@@ -95,7 +95,7 @@ final class OnboardingController
 
         $clinicId = RequestContext::clinicId();
         $specialty = $request->post['specialty'] ?? 'gp';
-        $specialties = array_keys(require dirname(__DIR__, 2) . '/config/specialties.php');
+        $specialties = array_keys(\App\Support\SpecialtyCatalog::all(true));
         if (!in_array($specialty, $specialties, true)) {
             $specialty = 'gp';
         }
@@ -133,7 +133,7 @@ final class OnboardingController
 
         QueryBuilder::table('tenants')->where('id', '=', $clinicId)->update($tenantUpdate);
 
-        $specConfig = require dirname(__DIR__, 2) . '/config/specialties.php';
+        $specConfig = \App\Support\SpecialtyCatalog::all();
         $prescriptionMode = $specConfig[$specialty]['prescription_mode'] ?? 'allopathic';
 
         $configData = [
@@ -313,7 +313,7 @@ final class OnboardingController
         $planKey = $clinic['plan'] ?? 'standard';
         $plan = $plans[$planKey] ?? ($plans['standard'] ?? reset($plans));
 
-        $specialties = require dirname(__DIR__, 2) . '/config/specialties.php';
+        $specialties = \App\Support\SpecialtyCatalog::all();
 
         return $this->page('onboarding/complete', [
             'csrf' => CsrfService::token(),

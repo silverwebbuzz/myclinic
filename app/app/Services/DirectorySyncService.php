@@ -121,17 +121,12 @@ final class DirectorySyncService
 
     private static function mapSpecialty(string $raw): string
     {
-        $map = [
-            'gp' => 'General Physician',
-            'homeopathy' => 'Homeopathy',
-            'dental' => 'Dentist',
-            'derma' => 'Dermatologist',
-            'peds' => 'Pediatrician',
-            'physio' => 'Physiotherapist',
-        ];
-        $key = strtolower($raw);
-
-        return $map[$key] ?? ucfirst($raw);
+        // Portal specialty slug → public directory display label, from the
+        // admin-managed catalog (specialty_master). Falls back to a humanised
+        // slug if the catalog is unavailable.
+        $key = strtolower(trim($raw));
+        $label = \App\Support\SpecialtyCatalog::label($key);
+        return $label !== '' ? $label : ucfirst($raw);
     }
 
     private static function extractCity(string $address): string

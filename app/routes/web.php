@@ -37,6 +37,7 @@ use App\Controllers\FollowUpController;
 use App\Controllers\DietTemplateController;
 use App\Controllers\HelpController;
 use App\Controllers\MessagingAdminController;
+use App\Controllers\SpecialtyAdminController;
 use App\Controllers\VitalsController;
 use App\Controllers\WebhookController;
 use App\Core\GroupedRouteRegistrar;
@@ -394,6 +395,11 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/messaging/template/{id}', [MessagingAdminController::class, 'saveTemplate']);
         $admin->post('/messaging/rule/{id}', [MessagingAdminController::class, 'saveRule']);
         $admin->post('/messaging/test', [MessagingAdminController::class, 'sendTest']);
+
+        // Specialty catalog (single source of truth for portal + directory)
+        $admin->get('/specialties', [SpecialtyAdminController::class, 'index']);
+        $admin->post('/specialties', [SpecialtyAdminController::class, 'save']);
+        $admin->post('/specialties/{id}/toggle', [SpecialtyAdminController::class, 'toggle']);
         // Messaging crons
         $admin->post('/cron/notifications-process', [MessagingAdminController::class, 'runProcess']);
         $admin->post('/cron/leads-nudges', [MessagingAdminController::class, 'runLeadNudges']);

@@ -45,7 +45,7 @@ final class ClinicSettingsController
         }
         $clinicId = (int) $clinic['id'];
         $config = OnboardingService::specialtyConfig($clinicId) ?? [];
-        $specialties = require dirname(__DIR__, 2) . '/config/specialties.php';
+        $specialties = \App\Support\SpecialtyCatalog::all();
 
         $workingHours = $config['working_hours'] ?? null;
         if (is_string($workingHours)) {

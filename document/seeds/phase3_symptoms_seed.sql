@@ -453,26 +453,26 @@ INSERT IGNORE INTO symptoms_master (label, slug, synonyms, specialties, category
 -- HOMEOPATHY-SPECIFIC (constitutional / mental-emotional)
 -- =============================================================
 INSERT IGNORE INTO symptoms_master (label, slug, synonyms, specialties, category) VALUES
-('Aversion to cold',             'aversion-to-cold',             '["dislikes cold","sensitive to cold"]', '["homeo"]', 'constitutional'),
-('Desire for cold drinks',       'desire-cold-drinks',           '["craves cold water"]', '["homeo"]', 'constitutional'),
-('Desire for sweets',            'desire-sweets',                '["sweet craving","meetha pasand"]', '["homeo","endocrinology"]', 'constitutional'),
-('Desire for salt',              'desire-salt',                  '["salt craving","namak pasand"]', '["homeo","endocrinology"]', 'constitutional'),
-('Aversion to milk',             'aversion-to-milk',             '["dislikes milk","milk intolerance"]', '["homeo","gastro"]', 'constitutional'),
-('Worse from heat',              'worse-from-heat',              '["aggravated by heat","heat makes worse"]', '["homeo"]', 'constitutional'),
-('Worse at night',               'worse-at-night',               '["aggravated at night","raat ko zyada"]', '["homeo"]', 'constitutional'),
-('Worse in the morning',         'worse-in-morning',             '["morning aggravation","subah zyada"]', '["homeo"]', 'constitutional'),
-('Better from warmth',           'better-from-warmth',           '["relieved by warmth","garmi se aaram"]', '["homeo"]', 'constitutional'),
-('Restlessness',                 'restlessness',                 '["fidgety","bechaini","cant sit still"]', '["homeo","psychiatrist"]', 'psych'),
-('Anticipatory anxiety',         'anticipatory-anxiety',         '["pre-event anxiety","stage fright"]', '["homeo","psychiatrist"]', 'psych'),
-('Grief',                        'grief',                        '["bereavement","loss","gham"]', '["homeo","psychiatrist","psychologist"]', 'psych'),
-('Fear of being alone',          'fear-of-being-alone',          '["monophobia","aloneness fear"]', '["homeo","psychiatrist"]', 'psych'),
-('Fear of crowds',               'fear-of-crowds',               '["agoraphobia","bheed se dar"]', '["homeo","psychiatrist"]', 'psych'),
-('Indecisiveness',               'indecisiveness',               '["cannot decide","faisla nahi le sakte"]', '["homeo","psychiatrist"]', 'psych'),
-('Sensitive to noise',           'sensitive-to-noise',           '["noise intolerance","awaz se dard"]', '["homeo","neuro"]', 'psych'),
-('Sensitive to smells',          'sensitive-to-smells',          '["smell intolerance","sungh se dikkat"]', '["homeo"]', 'psych'),
-('Worse from emotional excitement','worse-from-emotional-excitement','["excitement aggravates"]', '["homeo","psychiatrist"]', 'psych'),
-('Better from open air',         'better-from-open-air',         '["fresh air relieves"]', '["homeo"]', 'constitutional'),
-('Worse from milk',              'worse-from-milk',              '["milk aggravates","dudh se taklif"]', '["homeo","gastro"]', 'gi');
+('Aversion to cold',             'aversion-to-cold',             '["dislikes cold","sensitive to cold"]', '["homeopathy"]', 'constitutional'),
+('Desire for cold drinks',       'desire-cold-drinks',           '["craves cold water"]', '["homeopathy"]', 'constitutional'),
+('Desire for sweets',            'desire-sweets',                '["sweet craving","meetha pasand"]', '["homeopathy","endocrinology"]', 'constitutional'),
+('Desire for salt',              'desire-salt',                  '["salt craving","namak pasand"]', '["homeopathy","endocrinology"]', 'constitutional'),
+('Aversion to milk',             'aversion-to-milk',             '["dislikes milk","milk intolerance"]', '["homeopathy","gastro"]', 'constitutional'),
+('Worse from heat',              'worse-from-heat',              '["aggravated by heat","heat makes worse"]', '["homeopathy"]', 'constitutional'),
+('Worse at night',               'worse-at-night',               '["aggravated at night","raat ko zyada"]', '["homeopathy"]', 'constitutional'),
+('Worse in the morning',         'worse-in-morning',             '["morning aggravation","subah zyada"]', '["homeopathy"]', 'constitutional'),
+('Better from warmth',           'better-from-warmth',           '["relieved by warmth","garmi se aaram"]', '["homeopathy"]', 'constitutional'),
+('Restlessness',                 'restlessness',                 '["fidgety","bechaini","cant sit still"]', '["homeopathy","psychiatrist"]', 'psych'),
+('Anticipatory anxiety',         'anticipatory-anxiety',         '["pre-event anxiety","stage fright"]', '["homeopathy","psychiatrist"]', 'psych'),
+('Grief',                        'grief',                        '["bereavement","loss","gham"]', '["homeopathy","psychiatrist","psychologist"]', 'psych'),
+('Fear of being alone',          'fear-of-being-alone',          '["monophobia","aloneness fear"]', '["homeopathy","psychiatrist"]', 'psych'),
+('Fear of crowds',               'fear-of-crowds',               '["agoraphobia","bheed se dar"]', '["homeopathy","psychiatrist"]', 'psych'),
+('Indecisiveness',               'indecisiveness',               '["cannot decide","faisla nahi le sakte"]', '["homeopathy","psychiatrist"]', 'psych'),
+('Sensitive to noise',           'sensitive-to-noise',           '["noise intolerance","awaz se dard"]', '["homeopathy","neuro"]', 'psych'),
+('Sensitive to smells',          'sensitive-to-smells',          '["smell intolerance","sungh se dikkat"]', '["homeopathy"]', 'psych'),
+('Worse from emotional excitement','worse-from-emotional-excitement','["excitement aggravates"]', '["homeopathy","psychiatrist"]', 'psych'),
+('Better from open air',         'better-from-open-air',         '["fresh air relieves"]', '["homeopathy"]', 'constitutional'),
+('Worse from milk',              'worse-from-milk',              '["milk aggravates","dudh se taklif"]', '["homeopathy","gastro"]', 'gi');
 
 -- =============================================================
 -- ONCOLOGY / RED-FLAG

@@ -358,7 +358,7 @@ final class DoctorClaimService
             'general_surgery','plastic_surgery','bariatric','vascular',
             'radiology','critical_care','dental','prosthodontist',
             'orthodontist','pediatric_dentist','endodontist','implantologist',
-            'ayurveda','homeo','siddha','unani','naturopathy','acupuncturist',
+            'ayurveda','homeopathy','siddha','unani','naturopathy','acupuncturist',
             'physio','psychologist','audiologist','speech','dietitian',
         ];
         if (in_array($value, $dbValues, true)) return $value;

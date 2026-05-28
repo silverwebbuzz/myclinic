@@ -126,23 +126,13 @@ final class VisitController
             'clinic' => $clinic,
         ];
 
-        // Single-screen layout is now the default for everyone. The legacy
-        // tabbed layout stays reachable via ?old=1 for one release as an
-        // escape hatch, then show.php can be deleted.
-        $useNew = ($request->query['old'] ?? null) !== '1';
+        // Single-screen consultation layout (the only visit screen).
+        $viewData['visitSymptoms'] = self::fetchVisitSymptoms($clinicId, (int) $id);
+        $viewData['followUpReasons'] = self::fetchFollowUpReasons($clinicId);
+        $viewData['pendingFollowUp'] = self::fetchPendingFollowUp($clinicId, (int) ($visit['patient_id'] ?? 0));
+        $viewData['voiceLang'] = self::fetchVoiceLang($clinicId);
 
-        // Phase 3/4 data only the new screen needs — skip the extra queries
-        // for the legacy tab view.
-        if ($useNew) {
-            $viewData['visitSymptoms'] = self::fetchVisitSymptoms($clinicId, (int) $id);
-            $viewData['followUpReasons'] = self::fetchFollowUpReasons($clinicId);
-            $viewData['pendingFollowUp'] = self::fetchPendingFollowUp($clinicId, (int) ($visit['patient_id'] ?? 0));
-            $viewData['voiceLang'] = self::fetchVoiceLang($clinicId);
-        }
-
-        $template = $useNew ? 'visits/show_v2' : 'visits/show';
-
-        return Response::html(Layout::page($template, $viewData, 'Consultation'));
+        return Response::html(Layout::page('visits/show_v2', $viewData, 'Consultation'));
     }
 
     public function saveDiet(Request $request, string $id): Response

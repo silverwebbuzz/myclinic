@@ -351,6 +351,8 @@ Add these via **cPanel → Cron Jobs** (or `crontab -e`). Replace `/home/USER/my
 - [ ] `php database/migrate.php` ran clean
 - [ ] `.env` is `chmod 640` and outside `public/`
 - [ ] All 14 cron jobs added (9 original + 5 lead/follow-up/template workers)
+- [ ] Specialties: run `document/seeds/specialty_master.sql` (catalog table + 54 specialties). Manage from `/admin/specialties`.
+- [ ] Symptoms: run `document/seeds/phase3_symptoms_seed.sql` · Diet templates: run `document/seeds/phase4_diet_seed.sql`
 - [ ] WhatsApp/SMS: run `document/seeds/whatsapp_migrations.sql`, then set creds + enable in `/admin/messaging`, then approve templates in Meta
 - [ ] SSL active (padlock in browser)
 - [ ] Test register → onboarding → dashboard flow

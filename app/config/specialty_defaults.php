@@ -29,7 +29,7 @@ declare(strict_types=1);
 
 return [
     // -- Pure-consultation specialties (no vitals, no labs by default) --
-    'homeo'             => ['case_specialty'],
+    'homeopathy'        => ['case_specialty'],
     'ayurveda'          => ['case_specialty'],
     'siddha'            => ['case_specialty'],
     'unani'             => ['case_specialty'],
