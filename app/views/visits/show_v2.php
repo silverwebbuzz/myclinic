@@ -865,14 +865,34 @@ function visitScreenV2(cfg) {
         chargesTotal() {
             return (this.charges || []).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
         },
-        // Block completing a visit while charges are unsaved.
-        confirmComplete(ev) {
+        // Persist symptoms to the visit_symptoms table NOW (synchronously
+        // awaited). Used before navigating/completing so an in-flight
+        // fire-and-forget save isn't cancelled by the page leaving.
+        async persistSymptomsNow() {
+            if (!this.editable) return;
+            try {
+                await fetch('/api/v1/visits/' + this.visitId + '/symptoms', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ symptoms: this.symptoms || [] }),
+                });
+            } catch (e) { /* ignore — completion proceeds */ }
+        },
+
+        // Block completing a visit while charges are unsaved; flush symptoms
+        // + autosave first so nothing entered just before is lost.
+        async confirmComplete(ev) {
+            ev.preventDefault();
             if (this.chargesDirty && this.charges.length) {
-                ev.preventDefault();
                 alert('You have unsaved charges. Please click "Save charges" before completing the visit.');
                 return;
             }
-            if (!confirm('Complete this visit?')) ev.preventDefault();
+            if (!confirm('Complete this visit?')) return;
+            // Flush symptoms + the main form before the visit is locked.
+            await this.persistSymptomsNow();
+            if (this.dirty) { try { await this.save(); } catch (e) {} }
+            ev.target.submit();
         },
         async saveCharges() {
             if (!this.editable || this.charges.length === 0) return;
@@ -923,9 +943,10 @@ function visitScreenV2(cfg) {
             if (!this.editable) return;
             this.autosaveTimer = setInterval(() => this.save(), 30000);
             // Save when the tab loses focus too — captures last edit. Guarded by
-            // `dirty` so merely viewing a visit never re-saves it.
+            // `dirty` so merely viewing a visit never re-saves it. Symptoms are
+            // flushed regardless (their endpoint is a cheap replace).
             document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'hidden') this.save();
+                if (document.visibilityState === 'hidden') { this.save(); this.persistSymptomsNow(); }
             });
             // Mark dirty on any input/change within the visit form.
             this.$nextTick(() => {
