@@ -133,9 +133,9 @@ if (!function_exists('ui_toggle')) {
             return $switch;
         }
 
-        return '<div class="flex items-center justify-between gap-4 py-1">'
-            . '<div class="min-w-0"><p class="ui-label">' . ui_e($label) . '</p>'
-            . ($sub !== '' ? '<p class="ui-help">' . ui_e($sub) . '</p>' : '') . '</div>'
+        return '<div class="ui-row">'
+            . '<div class="min-w-0"><p class="text-sm font-medium text-slate-800">' . ui_e($label) . '</p>'
+            . ($sub !== '' ? '<p class="ui-help mt-0.5">' . ui_e($sub) . '</p>' : '') . '</div>'
             . $switch . '</div>';
     }
 }

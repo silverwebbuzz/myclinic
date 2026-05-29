@@ -24,13 +24,19 @@ if (!defined('UI_TOKENS_EMITTED')) {
     .ui-group-label  { font-size: 0.625rem; line-height: 1rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
     .ui-help         { font-size: 0.75rem;  line-height: 1rem; color: #94a3b8; }
     .ui-card {
-        background: #fff; border: 1px solid #e2e8f0;
-        border-radius: var(--ui-radius-card); box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+        background: #fff; border: 1px solid #e9eef4;
+        border-radius: var(--ui-radius-card);
+        box-shadow: 0 1px 2px 0 rgb(16 24 40 / 0.04), 0 1px 3px 0 rgb(16 24 40 / 0.06);
     }
-    .ui-card-pad { padding: 1.25rem 1.5rem; }
+    .ui-card-pad { padding: 1.5rem 1.75rem; }
     .ui-card-header {
         display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-        padding: 1.25rem 1.5rem; border-bottom: 1px solid #f1f5f9;
+        padding: 1.25rem 1.75rem; border-bottom: 1px solid #f1f5f9;
+    }
+    /* A subtle row used for settings/list items */
+    .ui-row {
+        display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        padding: 0.875rem 1rem;
     }
     .ui-btn {
         display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
@@ -67,11 +73,11 @@ if (!defined('UI_TOKENS_EMITTED')) {
     .ui-badge-danger  { background: #fef2f2; color: #b91c1c; }
     .ui-badge-warning { background: #fffbeb; color: #b45309; }
     .ui-badge-neutral { background: #f1f5f9; color: #475569; }
-    .ui-toggle { position: relative; display: inline-flex; height: 1.5rem; width: 2.75rem; flex-shrink: 0; cursor: pointer; align-items: center; }
-    .ui-toggle input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
-    .ui-toggle-track { width: 100%; height: 100%; border-radius: 9999px; background: #cbd5e1; transition: background .2s ease; }
-    .ui-toggle-thumb { position: absolute; left: 0.1875rem; height: 1.125rem; width: 1.125rem; border-radius: 9999px; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 0.2); transition: transform .2s ease; }
+    .ui-toggle { position: relative; display: inline-flex; height: 1.625rem; width: 3rem; flex-shrink: 0; cursor: pointer; align-items: center; }
+    .ui-toggle input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; z-index: 2; }
+    .ui-toggle-track { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 9999px; background: #d1d9e2; transition: background .2s ease; }
+    .ui-toggle-thumb { position: absolute; left: 0.1875rem; top: 50%; transform: translateY(-50%); height: 1.25rem; width: 1.25rem; border-radius: 9999px; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 0.25); transition: left .2s ease; }
     .ui-toggle input:checked ~ .ui-toggle-track { background: var(--brand); }
-    .ui-toggle input:checked ~ .ui-toggle-thumb { transform: translateX(1.25rem); }
+    .ui-toggle input:checked ~ .ui-toggle-thumb { left: 1.5625rem; }
 </style>
 <?php } ?>
