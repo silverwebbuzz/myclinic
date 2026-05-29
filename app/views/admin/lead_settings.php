@@ -36,7 +36,7 @@
                     <div class="text-xs text-slate-500">Master switch. When OFF, leads still record in DB but no SMS goes out.</div>
                 </div>
                 <label class="relative inline-flex cursor-pointer items-center">
-                    <input type="checkbox" name="enabled" value="1" <?= !empty($settings['enabled']) ? 'checked' : '' ?> class="peer sr-only">
+                    <input class="ui-checkbox" type="checkbox" name="enabled" value="1" <?= !empty($settings['enabled']) ? 'checked' : '' ?> class="peer sr-only">
                     <div class="h-6 w-11 rounded-full bg-slate-300 peer-checked:bg-emerald-500 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-5"></div>
                 </label>
             </div>

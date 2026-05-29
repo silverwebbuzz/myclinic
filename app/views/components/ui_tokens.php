@@ -79,5 +79,30 @@ if (!defined('UI_TOKENS_EMITTED')) {
     .ui-toggle-thumb { position: absolute; left: 0.1875rem; top: 50%; transform: translateY(-50%); height: 1.25rem; width: 1.25rem; border-radius: 9999px; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 0.25); transition: left .2s ease; }
     .ui-toggle input:checked ~ .ui-toggle-track { background: var(--brand); }
     .ui-toggle input:checked ~ .ui-toggle-thumb { left: 1.5625rem; }
+
+    /* Custom checkbox + radio (brand-colored) */
+    .ui-checkbox, .ui-radio {
+        appearance: none; -webkit-appearance: none;
+        width: 1.125rem; height: 1.125rem; flex-shrink: 0;
+        border: 1.5px solid #cbd5e1; background: #fff; cursor: pointer;
+        transition: border-color .15s, background .15s;
+        display: inline-grid; place-content: center;
+    }
+    .ui-checkbox { border-radius: 0.3125rem; }
+    .ui-radio { border-radius: 9999px; }
+    .ui-checkbox:checked, .ui-radio:checked { background: var(--brand); border-color: var(--brand); }
+    .ui-checkbox:checked::before {
+        content: ''; width: 0.625rem; height: 0.625rem;
+        background: #fff; clip-path: polygon(13% 50%, 34% 71%, 87% 18%, 96% 27%, 34% 89%, 4% 59%);
+    }
+    .ui-radio:checked::before { content: ''; width: 0.5rem; height: 0.5rem; border-radius: 9999px; background: #fff; }
+    .ui-checkbox:focus-visible, .ui-radio:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+    /* Page header */
+    .ui-page-header-title { font-size: 1.5rem; line-height: 2rem; font-weight: 600; letter-spacing: -0.02em; color: #0f172a; }
+
+    /* Section block inside a settings/list page */
+    .ui-section { padding: 1.5rem 0; border-top: 1px solid #f1f5f9; }
+    .ui-section:first-child { border-top: 0; padding-top: 0; }
 </style>
 <?php } ?>

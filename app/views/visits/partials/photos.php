@@ -13,7 +13,7 @@
         </label>
         <label class="block">Label<input name="condition_label" class="mt-1 w-full rounded border px-2 py-1" placeholder="e.g. Acne"></label>
         <label class="block sm:col-span-2">Image<input type="file" name="photo" accept="image/*" required class="mt-1 w-full text-sm"></label>
-        <label class="flex gap-2 text-xs sm:col-span-2"><input type="checkbox" name="is_public" value="1"> Mark public (triggers webhook stub)</label>
+        <label class="flex gap-2 text-xs sm:col-span-2"><input class="ui-checkbox" type="checkbox" name="is_public" value="1"> Mark public (triggers webhook stub)</label>
         <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-white sm:col-span-2 sm:w-auto">Upload</button>
     </form>
 

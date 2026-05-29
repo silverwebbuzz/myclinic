@@ -21,7 +21,7 @@
             <div class="mt-2 flex flex-wrap gap-3 text-sm">
                 <?php foreach ($apiScopes as $scope): ?>
                 <label class="flex items-center gap-1">
-                    <input type="checkbox" name="scopes[]" value="<?= htmlspecialchars($scope) ?>">
+                    <input class="ui-checkbox" type="checkbox" name="scopes[]" value="<?= htmlspecialchars($scope) ?>">
                     <?= htmlspecialchars($scope) ?>
                 </label>
                 <?php endforeach; ?>

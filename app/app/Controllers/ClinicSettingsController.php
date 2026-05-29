@@ -76,7 +76,9 @@ final class ClinicSettingsController
         $leaveMonth = $request->query['month'] ?? date('Y-m');
         $leaves = $doctorId !== null ? LeaveService::forDoctor($clinicId, $doctorId, $leaveMonth) : [];
 
-        $tabContent = View::render('settings/tabs/' . $tab, [
+        // Shared data for every tab partial — the page now renders ALL
+        // sections stacked on a single scrollable page (not one tab at a time).
+        $tabData = [
             'clinic' => $clinic,
             'config' => $config,
             'csrf' => \App\Services\CsrfService::token(),
@@ -103,19 +105,25 @@ final class ClinicSettingsController
             'apiKeys' => ApiKeyService::listForClinic($clinicId),
             'apiScopes' => ApiKeyService::SCOPES,
             'newApiKey' => $request->query['new_key'] ?? null,
-            'domainVerify' => $tab === 'branding' && !empty($clinic['custom_domain'])
+            'domainVerify' => !empty($clinic['custom_domain'])
                 ? [
                     'host' => '_manageclinic.' . $clinic['custom_domain'],
                     'token' => $clinic['domain_verify_token'] ?? '',
                     'verified' => (int) ($clinic['custom_domain_verified'] ?? 0) === 1,
                 ]
                 : null,
-        ]);
+        ];
+
+        // Render each section partial up-front so the view can stack them.
+        $sections = [];
+        foreach ($tabs as $t) {
+            $sections[$t] = View::render('settings/tabs/' . $t, $tabData);
+        }
 
         return Response::html(Layout::page('settings/index', [
             'tab' => $tab,
             'tabs' => $tabs,
-            'tabContent' => $tabContent,
+            'sections' => $sections,
             'message' => $request->query['message'] ?? null,
         ], 'Settings'));
     }

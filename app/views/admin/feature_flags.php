@@ -44,7 +44,7 @@
                         <p class="text-xs text-slate-500 mt-1"><?= htmlspecialchars($f['description'] ?? '') ?></p>
                     </div>
                     <label class="inline-flex items-center text-xs">
-                        <input type="checkbox" name="is_enabled" value="1"
+                        <input class="ui-checkbox" type="checkbox" name="is_enabled" value="1"
                                <?= !empty($f['is_enabled']) ? 'checked' : '' ?>
                                class="mr-1">
                         Enabled

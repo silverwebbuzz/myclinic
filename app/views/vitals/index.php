@@ -12,7 +12,7 @@
             <input type="date" name="from" value="<?= htmlspecialchars($filters['from']) ?>" class="ui-input">
             <input type="date" name="to" value="<?= htmlspecialchars($filters['to']) ?>" class="ui-input">
             <label class="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="abnormal" value="1" <?= !empty($filters['abnormal']) ? 'checked' : '' ?>>
+                <input class="ui-checkbox" type="checkbox" name="abnormal" value="1" <?= !empty($filters['abnormal']) ? 'checked' : '' ?>>
                 Abnormal only
             </label>
             <button type="submit" class="ui-btn ui-btn-primary">Filter</button>

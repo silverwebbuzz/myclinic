@@ -19,7 +19,7 @@ $week = is_array($plan['plan_json'] ?? null) ? $plan['plan_json'] : ($defaultDie
                 </select>
             </label>
         </div>
-        <label class="flex gap-2 text-xs"><input type="checkbox" name="include_homeo_warnings" value="1" checked> Include homeopathic dietary warnings from Rx</label>
+        <label class="flex gap-2 text-xs"><input class="ui-checkbox" type="checkbox" name="include_homeo_warnings" value="1" checked> Include homeopathic dietary warnings from Rx</label>
         <textarea name="antidotes_shown" rows="2" placeholder="Additional restrictions" class="w-full rounded border px-2 py-1 text-xs"><?= htmlspecialchars($plan['antidotes_shown'] ?? '') ?></textarea>
 
         <div class="overflow-x-auto">

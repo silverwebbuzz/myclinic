@@ -62,7 +62,7 @@
                         <?php endforeach; ?>
                     </select>
                     <label class="flex items-center gap-2 text-xs">
-                        <input type="checkbox" name="is_active" value="1" <?= (int) ($member['is_active'] ?? 1) ? 'checked' : '' ?> <?= !empty($member['is_owner']) ? 'disabled' : '' ?>>
+                        <input class="ui-checkbox" type="checkbox" name="is_active" value="1" <?= (int) ($member['is_active'] ?? 1) ? 'checked' : '' ?> <?= !empty($member['is_owner']) ? 'disabled' : '' ?>>
                         Active
                     </label>
                     <?php if (empty($member['is_owner'])): ?>

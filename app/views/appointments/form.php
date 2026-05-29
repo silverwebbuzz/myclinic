@@ -215,7 +215,7 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
         </label>
 
         <label class="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="is_followup" value="1" <?= $isFollowup ? 'checked' : '' ?>>
+            <input class="ui-checkbox" type="checkbox" name="is_followup" value="1" <?= $isFollowup ? 'checked' : '' ?>>
             Follow-up visit
         </label>
 

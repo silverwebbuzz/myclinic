@@ -60,7 +60,7 @@ $due = (float) $invoice['total'] - (float) ($invoice['advance_paid'] ?? 0);
                     <input name="tax_percent" type="number" step="0.01" value="<?= htmlspecialchars((string) ($invoice['tax_percent'] ?? $taxPercent)) ?>" class="ui-input" id="tax-pct">
                 </label>
                 <label class="text-sm flex items-end gap-2 pb-2">
-                    <input type="checkbox" name="apply_advance" value="1" <?= (float) ($patient['advance_balance'] ?? 0) > 0 ? '' : 'disabled' ?>>
+                    <input class="ui-checkbox" type="checkbox" name="apply_advance" value="1" <?= (float) ($patient['advance_balance'] ?? 0) > 0 ? '' : 'disabled' ?>>
                     Apply patient advance
                 </label>
             </div>

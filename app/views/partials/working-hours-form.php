@@ -14,7 +14,7 @@ $workingHours = is_array($workingHours ?? null) ? $workingHours : [];
     ?>
     <div class="rounded-lg border border-slate-200 p-3">
         <label class="flex items-center gap-2 text-sm font-medium">
-            <input type="checkbox" name="<?= $key ?>_enabled" value="1" <?= !empty($day['enabled']) ? 'checked' : '' ?>>
+            <input class="ui-checkbox" type="checkbox" name="<?= $key ?>_enabled" value="1" <?= !empty($day['enabled']) ? 'checked' : '' ?>>
             <?= htmlspecialchars($label) ?>
         </label>
         <div class="mt-2 grid gap-2 sm:grid-cols-2 text-xs">

@@ -44,7 +44,7 @@
                            class="ml-1 rounded border px-2 py-1 text-sm w-24">
                 </label>
                 <label class="text-xs inline-flex items-center">
-                    <input type="checkbox" name="close" value="1" <?= !empty($state['closed_at']) ? 'checked' : '' ?>>
+                    <input class="ui-checkbox" type="checkbox" name="close" value="1" <?= !empty($state['closed_at']) ? 'checked' : '' ?>>
                     <span class="ml-1">Close program</span>
                 </label>
                 <button type="submit" class="rounded bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-900">

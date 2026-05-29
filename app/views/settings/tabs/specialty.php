@@ -7,7 +7,7 @@ $options = $options ?? [];
     <h2 class="ui-section-title">Specialty settings</h2>
 
     <label class="flex items-center gap-2 text-sm text-amber-800">
-        <input type="checkbox" name="change_specialty" value="1">
+        <input class="ui-checkbox" type="checkbox" name="change_specialty" value="1">
         Change specialty (resets specialty-specific patient fields)
     </label>
 
@@ -25,7 +25,7 @@ $options = $options ?? [];
             <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 <?php foreach ($items as $key => $spec): ?>
                 <label class="cursor-pointer rounded-lg border p-2 text-center text-xs hover:border-emerald-300 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50">
-                    <input type="radio" name="specialty" value="<?= htmlspecialchars($key) ?>" class="sr-only" <?= $specialty === $key ? 'checked' : '' ?>>
+                    <input class="ui-radio" type="radio" name="specialty" value="<?= htmlspecialchars($key) ?>" class="sr-only" <?= $specialty === $key ? 'checked' : '' ?>>
                     <?= $spec['icon'] ?> <?= htmlspecialchars($spec['label']) ?>
                 </label>
                 <?php endforeach; ?>
@@ -44,7 +44,7 @@ $options = $options ?? [];
     </div>
 
     <?php if ($specialty === 'gp'): ?>
-    <label class="flex gap-2 text-sm"><input type="checkbox" name="icd10_enabled" value="1" <?= !empty($options['icd10_enabled']) ? 'checked' : '' ?>> ICD-10 codes</label>
+    <label class="flex gap-2 text-sm"><input class="ui-checkbox" type="checkbox" name="icd10_enabled" value="1" <?= !empty($options['icd10_enabled']) ? 'checked' : '' ?>> ICD-10 codes</label>
     <?php endif; ?>
 
     <button type="submit" class="ui-btn ui-btn-primary">Save specialty</button>

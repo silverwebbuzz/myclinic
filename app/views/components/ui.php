@@ -148,3 +148,24 @@ if (!function_exists('ui_badge')) {
         return '<span class="ui-badge ui-badge-' . $tone . '">' . ui_e($label) . '</span>';
     }
 }
+
+if (!function_exists('ui_page_header')) {
+    /** Big page title + optional subtitle + optional right-side action HTML. */
+    function ui_page_header(string $title, string $subtitle = '', string $action = ''): string
+    {
+        return '<div class="mb-6 flex flex-wrap items-start justify-between gap-3">'
+            . '<div><h1 class="ui-page-header-title">' . ui_e($title) . '</h1>'
+            . ($subtitle !== '' ? '<p class="mt-1 text-sm text-slate-500">' . ui_e($subtitle) . '</p>' : '')
+            . '</div>'
+            . ($action !== '' ? '<div class="shrink-0">' . $action . '</div>' : '')
+            . '</div>';
+    }
+}
+
+if (!function_exists('ui_toggle_row')) {
+    /** A label + description + toggle row (alias of ui_toggle with label/sub). */
+    function ui_toggle_row(string $name, bool $checked, string $label, string $sub = '', string $value = '1'): string
+    {
+        return ui_toggle($name, $value, $checked, ['label' => $label, 'sub' => $sub]);
+    }
+}

@@ -99,15 +99,15 @@ $categories = [
                            class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
                 </label>
                 <label class="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="is_active" value="1" :checked="editing ? editing.is_active == 1 : true">
+                    <input class="ui-checkbox" type="checkbox" name="is_active" value="1" :checked="editing ? editing.is_active == 1 : true">
                     Active
                 </label>
                 <label class="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="seo_safe" value="1" :checked="editing ? editing.seo_safe == 1 : true">
+                    <input class="ui-checkbox" type="checkbox" name="seo_safe" value="1" :checked="editing ? editing.seo_safe == 1 : true">
                     Show on marketing/SEO
                 </label>
                 <label class="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="has_custom_form" value="1" :checked="editing ? editing.has_custom_form == 1 : false">
+                    <input class="ui-checkbox" type="checkbox" name="has_custom_form" value="1" :checked="editing ? editing.has_custom_form == 1 : false">
                     Has custom clinical form (code)
                 </label>
             </div>

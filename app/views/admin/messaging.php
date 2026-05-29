@@ -52,7 +52,7 @@ $enabled = ($settings['messaging_enabled']['setting_value'] ?? '0') === '1';
                 <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
 
                 <label class="flex items-center gap-2 sm:col-span-2 text-sm">
-                    <input type="checkbox" name="messaging_enabled" value="1" <?= $enabled ? 'checked' : '' ?>>
+                    <input class="ui-checkbox" type="checkbox" name="messaging_enabled" value="1" <?= $enabled ? 'checked' : '' ?>>
                     <span class="font-medium">Messaging enabled (master switch)</span>
                 </label>
 
@@ -136,7 +136,7 @@ $enabled = ($settings['messaging_enabled']['setting_value'] ?? '0') === '1';
                     <textarea name="body_text" rows="2" class="mt-2 w-full rounded border px-2 py-1 text-xs" placeholder="Body with {{1}} {{2}}"><?= htmlspecialchars($t['body_text']) ?></textarea>
                     <textarea name="sms_fallback_text" rows="1" class="mt-1 w-full rounded border px-2 py-1 text-xs" placeholder="SMS fallback text"><?= htmlspecialchars((string) $t['sms_fallback_text']) ?></textarea>
                     <div class="mt-2 flex items-center justify-between">
-                        <label class="text-xs"><input type="checkbox" name="is_active" value="1" <?= $t['is_active'] ? 'checked' : '' ?>> active</label>
+                        <label class="text-xs"><input class="ui-checkbox" type="checkbox" name="is_active" value="1" <?= $t['is_active'] ? 'checked' : '' ?>> active</label>
                         <button type="submit" class="rounded bg-slate-800 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-900">Save</button>
                     </div>
                 </form>
@@ -175,7 +175,7 @@ $enabled = ($settings['messaging_enabled']['setting_value'] ?? '0') === '1';
                         <td><input type="number" name="per_day_cap" value="<?= htmlspecialchars((string) ($r['per_day_cap'] ?? '')) ?>" class="w-12 rounded border px-1 py-0.5"></td>
                         <td><input type="number" name="per_week_cap" value="<?= htmlspecialchars((string) ($r['per_week_cap'] ?? '')) ?>" class="w-12 rounded border px-1 py-0.5"></td>
                         <td><input type="number" name="per_month_cap" value="<?= htmlspecialchars((string) ($r['per_month_cap'] ?? '')) ?>" class="w-12 rounded border px-1 py-0.5"></td>
-                        <td><input type="checkbox" name="is_active" value="1" <?= $r['is_active'] ? 'checked' : '' ?>></td>
+                        <td><input class="ui-checkbox" type="checkbox" name="is_active" value="1" <?= $r['is_active'] ? 'checked' : '' ?>></td>
                         <td><button type="submit" class="rounded bg-slate-700 px-2 py-0.5 text-white">Save</button></td>
                         </form>
                     </tr>
