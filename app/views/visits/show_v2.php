@@ -119,10 +119,10 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
             </div>
         </div>
 
-        <div class="space-y-4 px-4 py-4">
+        <div class="space-y-3 bg-slate-50/50 p-3">
 
             <!-- ---- SYMPTOMS — chip picker with autocomplete (Phase 3) ---- -->
-            <div x-data="symptomPicker()">
+            <div x-data="symptomPicker()" class="rounded-lg border border-slate-200 bg-white p-3">
                 <label class="ui-group-label">Symptoms</label>
 
                 <!-- Selected chips -->
@@ -228,7 +228,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
             </div>
 
             <!-- ---- PRESCRIPTION ---- -->
-            <div x-data="prescriptionPanel()" x-init="loadTemplates()">
+            <div x-data="prescriptionPanel()" x-init="loadTemplates()" class="rounded-lg border border-slate-200 bg-white p-3">
                 <div class="flex items-baseline justify-between">
                     <label class="ui-group-label">Prescription</label>
                     <button type="button" :disabled="!editable" @click="cloneLastVisit()"
@@ -446,14 +446,14 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
             </div>
 
             <!-- ---- NOTES (always visible) ---- -->
-            <div>
+            <div class="rounded-lg border border-slate-200 bg-white p-3">
                 <div class="flex items-center justify-between">
                     <label class="ui-group-label">Notes &amp; next visit</label>
                     <button type="button" :disabled="!editable" x-show="voiceSupported"
                             @click="dictateInto('clinical_notes')"
                             :class="listening === 'clinical_notes' ? 'text-rose-600 animate-pulse' : 'text-slate-500'"
                             class="text-xs hover:text-brand disabled:opacity-50"
-                            title="Dictate notes">🎙 <span x-text="listening === 'clinical_notes' ? 'Listening…' : 'Voice'"></span></button>
+                            title="Dictate notes"><span class="inline-flex items-center gap-1"><?= ui_icon('bell', 13) ?><span x-text="listening === 'clinical_notes' ? 'Listening…' : 'Voice'"></span></span></button>
                 </div>
                 <textarea x-model="clinical_notes" :disabled="!editable" rows="2"
                           placeholder="Observations, advice, what changed"
@@ -490,7 +490,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
             </div>
 
             <!-- ---- CHARGES (line items → visit invoice) ---- -->
-            <div>
+            <div class="rounded-lg border border-slate-200 bg-white p-3">
                 <div class="flex items-baseline justify-between">
                     <label class="ui-group-label">Charges</label>
                     <span class="text-xs text-slate-500">Total: <span class="font-semibold text-slate-800" x-text="'₹' + chargesTotal()"></span></span>
