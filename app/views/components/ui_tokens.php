@@ -17,7 +17,20 @@ if (!defined('UI_TOKENS_EMITTED')) {
         --ui-radius-card: 0.625rem;
         --ui-radius-control: 0.4375rem;
     }
-    /* Type scale — label & input both 14px per spec; tight line-heights */
+
+    /* ============================================================
+       GLOBAL 12px BASE — normal body text is 12px across the whole
+       app (doctor + admin). Tailwind's text-sm/text-base utilities
+       are remapped down so existing markup follows the spec without
+       editing every file. Headings (text-lg+) keep their hierarchy.
+       ============================================================ */
+    body { font-size: 12px; line-height: 1.5; }
+    .text-xs   { font-size: 0.6875rem !important; line-height: 1rem !important; }   /* 11px */
+    .text-sm   { font-size: 0.75rem  !important; line-height: 1.125rem !important; } /* 12px */
+    .text-base { font-size: 0.8125rem !important; line-height: 1.25rem !important; } /* 13px */
+    /* text-lg and above are headings — leave them to keep visual hierarchy. */
+
+    /* Type scale tokens */
     .ui-page-title   { font-size: 1rem;     line-height: 1.375rem; font-weight: 600; color: #0f172a; letter-spacing: -0.01em; }
     .ui-section-title{ font-size: 0.9375rem; line-height: 1.25rem; font-weight: 600; color: #0f172a; }
     .ui-section-sub  { font-size: 0.8125rem; line-height: 1.125rem; color: #64748b; }
@@ -113,5 +126,24 @@ if (!defined('UI_TOKENS_EMITTED')) {
     /* Section block inside a settings/list page — ~10px vertical */
     .ui-section { padding: 0.75rem 0; border-top: 1px solid #f1f5f9; }
     .ui-section:first-child { border-top: 0; padding-top: 0; }
+
+    /* ============================================================
+       BRAND-COLOR BRIDGE — legacy markup uses hardcoded `emerald-*`
+       Tailwind classes (429 across the app). Remap them to the clinic
+       --brand variable so changing brand color in Settings reflects
+       site-wide without editing every file. Strong shades -> --brand,
+       light tints -> --brand-light, dark hovers -> --brand-dark.
+       ============================================================ */
+    .bg-emerald-600, .bg-emerald-700, .bg-emerald-500 { background-color: var(--brand) !important; }
+    .hover\:bg-emerald-700:hover, .hover\:bg-emerald-600:hover { background-color: var(--brand-dark) !important; }
+    .bg-emerald-50, .bg-emerald-100 { background-color: var(--brand-light) !important; }
+    .hover\:bg-emerald-50:hover, .hover\:bg-emerald-100:hover { background-color: var(--brand-light) !important; }
+    .text-emerald-600, .text-emerald-700, .text-emerald-800, .text-emerald-900 { color: var(--brand) !important; }
+    .hover\:text-emerald-700:hover, .hover\:text-emerald-800:hover { color: var(--brand-dark) !important; }
+    .border-emerald-200, .border-emerald-300, .border-emerald-400, .border-emerald-500 { border-color: var(--brand) !important; }
+    .ring-emerald-500, .ring-emerald-400 { --tw-ring-color: var(--brand) !important; }
+    .focus\:ring-emerald-500:focus, .focus\:border-emerald-500:focus { --tw-ring-color: var(--brand) !important; border-color: var(--brand) !important; }
+    .focus-within\:ring-emerald-500:focus-within { --tw-ring-color: var(--brand) !important; }
+    .focus-within\:border-emerald-500:focus-within { border-color: var(--brand) !important; }
 </style>
 <?php } ?>

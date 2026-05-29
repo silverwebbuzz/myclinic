@@ -47,17 +47,17 @@ $timeField = static function (string $name, string $label, string $value): strin
         <!-- Mon–Sat -->
         <div class="ui-section">
             <h3 class="ui-label">Monday – Saturday sessions</h3>
-            <div class="mt-3 space-y-5">
-                <div class="rounded-xl border border-slate-200 p-4">
+            <div class="mt-2 space-y-3">
+                <div class="rounded-lg border border-slate-200 p-3">
                     <?= ui_toggle('weekday_morning_enabled', '1', $morningEnabled, ['label' => 'Morning session', 'sub' => 'Daytime consultation hours']) ?>
-                    <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+                    <div class="mt-2 flex flex-wrap gap-x-6 gap-y-2">
                         <?= $timeField('weekday_morning_start', 'Start', (string) ($morning['start'] ?? '09:30')) ?>
                         <?= $timeField('weekday_morning_end', 'End', (string) ($morning['end'] ?? '13:00')) ?>
                     </div>
                 </div>
-                <div class="rounded-xl border border-slate-200 p-4">
+                <div class="rounded-lg border border-slate-200 p-3">
                     <?= ui_toggle('weekday_evening_enabled', '1', $eveningEnabled, ['label' => 'Evening session', 'sub' => 'Evening consultation hours']) ?>
-                    <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+                    <div class="mt-2 flex flex-wrap gap-x-6 gap-y-2">
                         <?= $timeField('weekday_evening_start', 'Start', (string) ($evening['start'] ?? '16:30')) ?>
                         <?= $timeField('weekday_evening_end', 'End', (string) ($evening['end'] ?? '20:30')) ?>
                     </div>
@@ -68,7 +68,7 @@ $timeField = static function (string $name, string $label, string $value): strin
         <!-- Sunday -->
         <div class="ui-section">
             <h3 class="ui-label">Sunday</h3>
-            <div class="mt-3 rounded-xl border border-slate-200 p-4">
+            <div class="mt-2 rounded-lg border border-slate-200 p-3">
                 <?= ui_toggle('sunday_open', '1', !empty($sundayDay['enabled']), ['label' => 'Open on Sunday', 'sub' => 'Allow Sunday bookings']) ?>
                 <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2">
                     <?= $timeField('sunday_start', 'Start', (string) ($sundaySession['start'] ?? '10:00')) ?>

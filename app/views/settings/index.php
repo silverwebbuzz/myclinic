@@ -13,7 +13,7 @@
 // top; everything else flows into two balanced columns below.
 $fullOrder  = ['general'];
 $leftOrder  = ['hours', 'specialty', 'branding'];
-$rightOrder = ['notifications', 'leaves', 'team', 'subscription', 'api', 'consent-forms'];
+$rightOrder = ['notifications', 'leaves', 'team', 'subscription', 'consent-forms'];
 
 $render = static function (array $order, array $tabs, array $sections): string {
     $out = '';

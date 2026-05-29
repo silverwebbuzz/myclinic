@@ -26,7 +26,7 @@ use App\Support\VisitView;
 
 final class ClinicSettingsController
 {
-    private const TABS = ['general', 'hours', 'specialty', 'leaves', 'notifications', 'subscription', 'team', 'api', 'branding', 'consent-forms'];
+    private const TABS = ['general', 'hours', 'specialty', 'leaves', 'notifications', 'subscription', 'team', 'branding', 'consent-forms'];
 
     public function index(Request $request): Response
     {

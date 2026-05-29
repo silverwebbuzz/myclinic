@@ -84,15 +84,15 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
 
     <!-- ====== TODAY'S VISIT ====== -->
     <section class="ui-card shadow-sm">
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b px-5 py-3" x-data="{ editDate: false }">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-2.5" x-data="{ editDate: false }">
             <div class="flex items-baseline gap-3">
-                <h2 class="text-base font-semibold text-slate-900">Today's visit</h2>
+                <h2 class="ui-section-title">Today's visit</h2>
                 <span class="flex items-center gap-2 text-xs text-slate-400">
                     Visit #<?= (int) $visit['visit_number'] ?> ·
                     <!-- Editable visit date/time (for late catch-up entry) -->
                     <template x-if="!editDate">
                         <button type="button" :disabled="!editable" @click="editDate = true"
-                                class="text-slate-500 hover:text-emerald-700 disabled:cursor-default disabled:hover:text-slate-500"
+                                class="text-slate-500 hover:text-brand disabled:cursor-default disabled:hover:text-slate-500"
                                 x-text="visited_at ? new Date(visited_at).toLocaleString() : 'Set date'"></button>
                     </template>
                     <template x-if="editDate">
@@ -107,32 +107,32 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                     :class="saveStatus === 'saved' ? 'text-emerald-600' : (saveStatus === 'saving' ? 'text-amber-600' : (saveStatus === 'error' ? 'text-rose-600' : 'text-slate-400'))"
                     x-text="saveLabel"></span>
                 <?php if ($editable): ?>
-                    <button type="button" @click="dirty = true; save()" class="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700">Save now</button>
+                    <button type="button" @click="dirty = true; save()" class="ui-btn ui-btn-primary ui-btn-sm">Save now</button>
                 <?php endif; ?>
                 <?php if (!$editable): ?>
                     <span class="rounded-full bg-slate-200 px-2 py-0.5 text-xs">Read-only</span>
                     <form method="post" action="/visits/<?= $visitId ?>/unlock" class="inline">
                         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
-                        <button type="submit" class="rounded-full border border-emerald-300 px-2.5 py-0.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50">Edit this visit</button>
+                        <button type="submit" class="rounded-full border border-brand px-2.5 py-0.5 text-xs font-medium text-brand hover:bg-brand-light">Edit this visit</button>
                     </form>
                 <?php endif; ?>
             </div>
         </div>
 
-        <div class="space-y-5 px-5 py-5">
+        <div class="space-y-4 px-4 py-4">
 
             <!-- ---- SYMPTOMS — chip picker with autocomplete (Phase 3) ---- -->
             <div x-data="symptomPicker()">
-                <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Symptoms</label>
+                <label class="ui-group-label">Symptoms</label>
 
                 <!-- Selected chips -->
                 <div class="mt-1.5 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2 py-1.5
-                            focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500">
+                            focus-within:border-brand focus-within:ring-1 focus-within:ring-brand">
                     <template x-for="(s, idx) in symptoms" :key="idx">
-                        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800">
+                        <span class="inline-flex items-center gap-1 rounded-full bg-brand-light px-2 py-0.5 text-xs text-brand">
                             <span x-text="s.label"></span>
                             <button type="button" :disabled="!editable" @click="removeSymptom(idx); persistSymptoms()"
-                                    class="text-emerald-700 hover:text-rose-600 disabled:opacity-50"
+                                    class="text-brand hover:text-rose-600 disabled:opacity-50"
                                     title="Remove">×</button>
                         </span>
                     </template>
@@ -156,19 +156,19 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                         <template x-for="c in catMatches" :key="'sys-' + c.key">
                             <li>
                                 <button type="button" @click="pickSystem(c)"
-                                        class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm hover:bg-emerald-50">
+                                        class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm hover:bg-brand-light">
                                     <span class="inline-flex items-center gap-1.5"><span class="text-slate-400"><?= ui_icon('emr', 14) ?></span><span x-text="c.label"></span></span>
-                                    <span class="text-xs uppercase tracking-wider text-emerald-700" x-text="'system · ' + c.count"></span>
+                                    <span class="text-xs uppercase tracking-wider text-brand" x-text="'system · ' + c.count"></span>
                                 </button>
                             </li>
                         </template>
                         <template x-for="(sug, i) in suggestions" :key="sug.label + i">
                             <li>
                                 <button type="button" @click="addSymptom(sug); persistSymptoms()"
-                                        class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm hover:bg-emerald-50">
+                                        class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm hover:bg-brand-light">
                                     <span x-text="sug.label"></span>
                                     <span class="text-xs uppercase tracking-wider"
-                                          :class="sug.source === 'personal' ? 'text-emerald-700' : 'text-slate-400'"
+                                          :class="sug.source === 'personal' ? 'text-brand' : 'text-slate-400'"
                                           x-text="sug.source"></span>
                                 </button>
                             </li>
@@ -176,7 +176,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                         <template x-if="query.trim().length >= 2 && !exactMatch(query)">
                             <li class="border-t">
                                 <button type="button" @click="addCustom(query); persistSymptoms()"
-                                        class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-slate-600 hover:bg-emerald-50">
+                                        class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-slate-600 hover:bg-brand-light">
                                     + Add <strong x-text="query"></strong> as custom
                                 </button>
                             </li>
@@ -186,7 +186,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
 
                 <!-- Browse by system (Review-of-Systems quick picker) -->
                 <button type="button" :disabled="!editable" @click="toggleBrowse()"
-                        class="mt-2 text-xs font-medium text-emerald-700 hover:underline disabled:opacity-50">
+                        class="mt-2 text-xs font-medium text-brand hover:underline disabled:opacity-50">
                     <span x-text="browseOpen ? '− Hide systems' : '+ Browse by system'"></span>
                 </button>
                 <div x-show="browseOpen" x-cloak x-collapse class="mt-2 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
@@ -195,7 +195,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                         <template x-for="c in categories" :key="c.key">
                             <button type="button" @click="openCategory(c.key)"
                                     class="rounded-full border px-2.5 py-1 text-xs transition"
-                                    :class="activeCat === c.key ? 'border-emerald-500 bg-emerald-600 text-white' : 'border-slate-300 bg-white text-slate-700 hover:border-emerald-400'">
+                                    :class="activeCat === c.key ? 'border-brand bg-brand text-white' : 'border-slate-300 bg-white text-slate-700 hover:border-brand'">
                                 <span x-text="c.label"></span>
                                 <span class="opacity-60" x-text="'· ' + c.count"></span>
                             </button>
@@ -208,7 +208,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                             <template x-for="s in catSymptoms" :key="s.master_id">
                                 <button type="button" :disabled="!editable" @click="toggleSymptom(s)"
                                         class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition disabled:opacity-50"
-                                        :class="isSelected(s.label) ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-slate-300 bg-white text-slate-700 hover:border-emerald-400'">
+                                        :class="isSelected(s.label) ? 'border-brand bg-brand-light text-brand' : 'border-slate-300 bg-white text-slate-700 hover:border-brand'">
                                     <span x-text="isSelected(s.label) ? '✓' : '+'"></span>
                                     <span x-text="s.label"></span>
                                 </button>
@@ -223,22 +223,22 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                     <summary class="cursor-pointer text-xs text-slate-500 hover:text-slate-700">+ Narrative complaint (optional)</summary>
                     <textarea x-model="chief_complaint" :disabled="!editable" rows="2"
                               placeholder="Free-text complaint, in patient's own words"
-                              class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
+                              class="ui-input mt-1.5"></textarea>
                 </details>
             </div>
 
             <!-- ---- PRESCRIPTION ---- -->
             <div x-data="prescriptionPanel()" x-init="loadTemplates()">
                 <div class="flex items-baseline justify-between">
-                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Prescription</label>
+                    <label class="ui-group-label">Prescription</label>
                     <button type="button" :disabled="!editable" @click="cloneLastVisit()"
-                            class="text-xs font-medium text-emerald-700 hover:underline disabled:opacity-50">
+                            class="text-xs font-medium text-brand hover:underline disabled:opacity-50">
                         ↻ Same as last visit
                     </button>
                 </div>
 
                 <template x-if="lastVisitNote">
-                    <p class="mt-1 rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-800"
+                    <p class="mt-1 rounded bg-brand-light px-2 py-1 text-xs text-brand"
                        x-text="lastVisitNote"></p>
                 </template>
 
@@ -247,17 +247,17 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                     <span class="text-xs text-slate-500">Apply:</span>
                     <template x-for="tpl in templates.slice(0, 5)" :key="tpl.id">
                         <button type="button" :disabled="!editable" @click="applyTemplate(tpl.id)"
-                                class="rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs hover:border-emerald-500 hover:text-emerald-700 disabled:opacity-50">
+                                class="rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs hover:border-brand hover:text-brand disabled:opacity-50">
                             <span x-text="tpl.name"></span>
                         </button>
                     </template>
                     <template x-if="templates.length > 5">
                         <details class="relative">
-                            <summary class="cursor-pointer rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs hover:border-emerald-500">More…</summary>
+                            <summary class="cursor-pointer rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs hover:border-brand">More…</summary>
                             <div class="absolute z-10 mt-1 w-56 max-h-64 overflow-y-auto rounded-lg border bg-white shadow-lg p-1">
                                 <template x-for="tpl in templates.slice(5)" :key="tpl.id">
                                     <button type="button" :disabled="!editable" @click="applyTemplate(tpl.id)"
-                                            class="block w-full rounded px-2 py-1 text-left text-xs hover:bg-emerald-50 disabled:opacity-50">
+                                            class="block w-full rounded px-2 py-1 text-left text-xs hover:bg-brand-light disabled:opacity-50">
                                         <span x-text="tpl.name"></span>
                                         <span class="text-slate-400" x-show="tpl.use_count > 0" x-text="' · ' + tpl.use_count + ' uses'"></span>
                                     </button>
@@ -272,7 +272,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                     <div class="mt-2 flex items-center justify-between gap-2 rounded-lg border border-dashed border-amber-300 bg-amber-50/50 p-2 text-xs">
                         <span class="text-amber-900" x-text="sug.description + ' (' + sug.name + ')'"></span>
                         <div class="flex gap-2">
-                            <button type="button" @click="activateSuggestion(sug)" class="font-semibold text-emerald-700 hover:underline">Save as template</button>
+                            <button type="button" @click="activateSuggestion(sug)" class="font-semibold text-brand hover:underline">Save as template</button>
                             <button type="button" @click="dismissSuggestion(sug.id)" class="text-slate-500 hover:underline">Dismiss</button>
                         </div>
                     </div>
@@ -297,7 +297,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                             <li>
                                                 <button type="button"
                                                         @click="pickDrugFor(idx, d)"
-                                                        class="block w-full px-2 py-1 text-left text-xs hover:bg-emerald-50">
+                                                        class="block w-full px-2 py-1 text-left text-xs hover:bg-brand-light">
                                                     <span x-text="d.name"></span>
                                                     <span class="text-slate-400" x-show="d.strength" x-text="' ' + d.strength"></span>
                                                 </button>
@@ -332,7 +332,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                 </select>
                                 <div class="sm:col-span-2 flex items-center justify-end gap-2 text-xs">
                                     <button type="button" :disabled="!editable" @click="line._drawer = !line._drawer"
-                                            class="rounded border border-slate-300 px-1.5 py-0.5 text-slate-600 hover:border-emerald-500 hover:text-emerald-700 disabled:opacity-50"
+                                            class="rounded border border-slate-300 px-1.5 py-0.5 text-slate-600 hover:border-brand hover:text-brand disabled:opacity-50"
                                             title="Advanced">⋮</button>
                                     <button type="button" :disabled="!editable" @click="removeRxLine(idx)"
                                             class="text-rose-600 hover:underline"
@@ -439,7 +439,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                     </template>
 
                     <button type="button" :disabled="!editable" @click="addRxLine()"
-                            class="text-xs font-medium text-emerald-700 hover:underline disabled:opacity-50">
+                            class="text-xs font-medium text-brand hover:underline disabled:opacity-50">
                         + Add medicine
                     </button>
                 </div>
@@ -448,16 +448,16 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
             <!-- ---- NOTES (always visible) ---- -->
             <div>
                 <div class="flex items-center justify-between">
-                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Notes &amp; next visit</label>
+                    <label class="ui-group-label">Notes &amp; next visit</label>
                     <button type="button" :disabled="!editable" x-show="voiceSupported"
                             @click="dictateInto('clinical_notes')"
                             :class="listening === 'clinical_notes' ? 'text-rose-600 animate-pulse' : 'text-slate-500'"
-                            class="text-xs hover:text-emerald-700 disabled:opacity-50"
+                            class="text-xs hover:text-brand disabled:opacity-50"
                             title="Dictate notes">🎙 <span x-text="listening === 'clinical_notes' ? 'Listening…' : 'Voice'"></span></button>
                 </div>
                 <textarea x-model="clinical_notes" :disabled="!editable" rows="2"
                           placeholder="Observations, advice, what changed"
-                          class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"></textarea>
+                          class="ui-input mt-1.5"></textarea>
 
                 <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
                     <span class="text-slate-500">Next visit:</span>
@@ -492,7 +492,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
             <!-- ---- CHARGES (line items → visit invoice) ---- -->
             <div>
                 <div class="flex items-baseline justify-between">
-                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Charges</label>
+                    <label class="ui-group-label">Charges</label>
                     <span class="text-xs text-slate-500">Total: <span class="font-semibold text-slate-800" x-text="'₹' + chargesTotal()"></span></span>
                 </div>
                 <div class="mt-2 space-y-2">
@@ -500,7 +500,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                         <div class="flex items-center gap-2">
                             <input type="text" :disabled="!editable" x-model="c.description" @input="markChargesDirty()"
                                    placeholder="e.g. Consultation, Procedure, Medicines"
-                                   class="flex-1 rounded border border-slate-300 px-2 py-1.5 text-sm">
+                                   class="ui-input flex-1">
                             <div class="flex items-center rounded border border-slate-300">
                                 <span class="px-2 text-sm text-slate-400">₹</span>
                                 <input type="number" min="0" step="1" :disabled="!editable" x-model.number="c.amount" @input="markChargesDirty()"
@@ -512,14 +512,14 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 </div>
                 <div class="mt-3 flex flex-wrap items-center gap-3">
                     <button type="button" :disabled="!editable" @click="addCharge()"
-                            class="text-xs font-medium text-emerald-700 hover:underline disabled:opacity-50">+ Add charge</button>
+                            class="text-xs font-medium text-brand hover:underline disabled:opacity-50">+ Add charge</button>
 
                     <!-- Save is a real button. It's required (highlighted) when there
                          are unsaved charge rows; disabled/neutral when nothing changed. -->
                     <button type="button" :disabled="!editable || !chargesDirty || charges.length === 0"
                             @click="saveCharges()"
                             class="rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed"
-                            :class="(chargesDirty && charges.length) ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-slate-100 text-slate-400'">
+                            :class="(chargesDirty && charges.length) ? 'bg-brand text-white hover:bg-brand-dark' : 'bg-slate-100 text-slate-400'">
                         <span x-text="(chargesDirty && charges.length) ? 'Save charges *' : 'Charges saved'"></span>
                     </button>
 
@@ -539,7 +539,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 <div class="px-4 pb-4 pt-2">
                     <input type="text" x-model="diagnosis" :disabled="!editable"
                            placeholder="e.g. Viral fever"
-                           class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                           class="ui-input">
                     <div class="mt-2 flex items-center gap-2">
                         <input type="search" x-model="icd10_code" :disabled="!editable"
                                @input.debounce.300ms="searchIcd($event.target.value)"
@@ -549,7 +549,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                             <template x-for="c in icdResults" :key="c.code">
                                 <li>
                                     <button type="button" @click="icd10_code = c.code; icdResults = []"
-                                            class="rounded bg-slate-100 px-2 py-0.5 text-xs hover:bg-emerald-50"
+                                            class="rounded bg-slate-100 px-2 py-0.5 text-xs hover:bg-brand-light"
                                             x-text="c.code"></button>
                                 </li>
                             </template>
@@ -674,7 +674,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                         };
                     ?>
                         <button type="button" @click="revealGhost('<?= $g ?>')"
-                                class="rounded-full border border-slate-300 px-2.5 py-1 hover:border-emerald-400 hover:text-emerald-700"
+                                class="rounded-full border border-slate-300 px-2.5 py-1 hover:border-brand hover:text-brand"
                                 x-show="!ghostRevealed.includes('<?= $g ?>')">
                             <?= htmlspecialchars($label) ?>
                         </button>
@@ -685,10 +685,10 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                      minimal — Phase 3+ will move per-section UIs into Alpine
                      components shared with the always-visible ones above). -->
                 <template x-for="g in ghostRevealed" :key="g">
-                    <div class="rounded-lg border border-emerald-200 bg-emerald-50/30 p-3 text-xs text-slate-600">
+                    <div class="rounded-lg border border-brand bg-brand-light/30 p-3 text-xs text-slate-600">
                         <span class="font-semibold" x-text="g"></span>
                         — this section was hidden by default for your specialty.
-                        Reveal in <a href="/settings?tab=specialty" class="text-emerald-700 underline">clinic settings</a>
+                        Reveal in <a href="/settings?tab=specialty" class="text-brand underline">clinic settings</a>
                         to always show it.
                     </div>
                 </template>
@@ -697,7 +697,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
             <!-- ---- Save / Complete actions ---- -->
             <div class="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
                 <button type="button" :disabled="!editable" @click="save()"
-                        class="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-50">
+                        class="ui-btn ui-btn-secondary">
                     Save draft
                 </button>
                 <?php if ($editable): ?>
@@ -717,8 +717,8 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
     <!-- ====== VISIT HISTORY (right column, sticky on desktop) ====== -->
     <aside class="lg:col-span-1">
     <section class="ui-card shadow-sm lg:sticky lg:top-20">
-        <div class="flex items-center justify-between border-b px-5 py-3">
-            <h2 class="text-base font-semibold text-slate-900">Visit history</h2>
+        <div class="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
+            <h2 class="ui-section-title">Visit history</h2>
             <span class="text-xs text-slate-400"><?= count($recentVisits ?? []) ?> recent</span>
         </div>
 
@@ -734,7 +734,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 ?>
                     <li class="group px-5 py-3 hover:bg-slate-50">
                         <div class="flex items-center justify-between gap-2">
-                            <span class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                            <span class="inline-flex items-center gap-1.5 text-xs font-medium text-brand">
                                 <?= ui_icon('appointments', 13) ?><?= htmlspecialchars(date('d M Y', strtotime((string) $rv['visited_at']))) ?>
                             </span>
                             <span class="text-[11px] text-slate-400">#<?= (int) $rv['visit_number'] ?></span>
@@ -756,7 +756,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                             <?php if ($inv): ?>
                                 <span class="inline-flex items-center gap-1.5 text-xs">
                                     <span class="font-semibold text-slate-700">₹<?= number_format((float) $inv['total'], 0) ?></span>
-                                    <span class="rounded px-1.5 py-0.5 text-[10px] font-medium <?= $isPaid ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500' ?>">
+                                    <span class="rounded px-1.5 py-0.5 text-[10px] font-medium <?= $isPaid ? 'bg-brand-light text-brand' : 'bg-slate-100 text-slate-500' ?>">
                                         <?= $isPaid ? '✓ Paid' : 'Unpaid' ?>
                                     </span>
                                 </span>
@@ -765,9 +765,9 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                             <?php endif; ?>
                             <span class="flex gap-3 text-[11px]">
                                 <?php if ($inv): ?>
-                                    <a href="/billing/<?= (int) $inv['id'] ?>" class="text-emerald-700 hover:underline">Invoice</a>
+                                    <a href="/billing/<?= (int) $inv['id'] ?>" class="text-brand hover:underline">Invoice</a>
                                 <?php endif; ?>
-                                <button type="button" @click="togglePeek(<?= (int) $rv['id'] ?>)" class="font-medium text-emerald-700 hover:underline">
+                                <button type="button" @click="togglePeek(<?= (int) $rv['id'] ?>)" class="font-medium text-brand hover:underline">
                                     <span x-text="peekId === <?= (int) $rv['id'] ?> ? '▲ Hide' : '▼ View'"></span>
                                 </button>
                                 <a href="/visits/<?= (int) $rv['id'] ?>" class="text-slate-500 hover:text-slate-800 hover:underline">Open</a>
@@ -783,7 +783,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                             <div class="text-[11px] font-semibold uppercase text-slate-400">Symptoms</div>
                                             <div class="mt-1 flex flex-wrap gap-1">
                                                 <template x-for="s in peek.symptoms" :key="s">
-                                                    <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800" x-text="s"></span>
+                                                    <span class="rounded-full bg-brand-light px-2 py-0.5 text-xs text-brand" x-text="s"></span>
                                                 </template>
                                             </div>
                                         </div>
@@ -807,7 +807,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                     <template x-if="!peek.symptoms?.length && !peek.diagnosis && !peek.prescriptions?.length && !peek.clinical_notes">
                                         <p class="text-slate-400">No clinical details recorded.</p>
                                     </template>
-                                    <a :href="'/visits/' + peek.id" class="mt-2 inline-block text-xs font-medium text-emerald-700 hover:underline">Open full visit to edit →</a>
+                                    <a :href="'/visits/' + peek.id" class="mt-2 inline-block text-xs font-medium text-brand hover:underline">Open full visit to edit →</a>
                                 </div>
                             </template>
                             <p x-show="peekLoading" class="text-xs text-slate-400">Loading…</p>
