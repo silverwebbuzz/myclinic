@@ -20,15 +20,21 @@ $tabLabels = [
 <?php endif; ?>
 
 <div class="flex flex-col gap-6 lg:flex-row">
-    <nav class="flex flex-wrap gap-1 lg:w-48 lg:flex-col">
-        <?php foreach ($tabs as $t): ?>
-        <a href="/settings?tab=<?= urlencode($t) ?>"
-           class="rounded-lg px-3 py-2 text-sm <?= $tab === $t ? 'bg-emerald-50 font-medium text-emerald-800' : 'text-slate-600 hover:bg-slate-100' ?>">
-            <?= htmlspecialchars($tabLabels[$t] ?? $t) ?>
-        </a>
-        <?php endforeach; ?>
-        <a href="/settings/password" class="rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100">Password</a>
-        <a href="/settings/sessions" class="rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100">Sessions</a>
+    <nav class="flex flex-wrap gap-1 lg:w-52 lg:flex-col">
+        <?php
+        $navLink = static function (string $href, string $label, bool $active): string {
+            $cls = $active
+                ? 'bg-brand-light font-semibold text-brand'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900';
+            return '<a href="' . htmlspecialchars($href) . '" class="rounded-lg px-3 py-2 text-sm transition ' . $cls . '">'
+                . htmlspecialchars($label) . '</a>';
+        };
+        foreach ($tabs as $t) {
+            echo $navLink('/settings?tab=' . urlencode($t), $tabLabels[$t] ?? $t, $tab === $t);
+        }
+        echo $navLink('/settings/password', 'Password', false);
+        echo $navLink('/settings/sessions', 'Sessions', false);
+        ?>
     </nav>
     <div class="min-w-0 flex-1">
         <?= $tabContent ?? '' ?>

@@ -2,31 +2,31 @@
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <div class="space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-lg font-semibold">Analytics</h2>
+        <h2 class="ui-section-title">Analytics</h2>
         <div class="flex flex-wrap gap-2">
-            <a href="/analytics/export/excel" class="rounded-lg border px-3 py-2 text-sm">Export Excel</a>
-            <a href="/analytics/export/tally" class="rounded-lg border px-3 py-2 text-sm">Tally XML</a>
+            <a href="/analytics/export/excel" class="ui-btn ui-btn-secondary ui-btn-sm">Export Excel</a>
+            <a href="/analytics/export/tally" class="ui-btn ui-btn-secondary ui-btn-sm">Tally XML</a>
         </div>
     </div>
 
     <div class="grid gap-4 lg:grid-cols-2">
-        <div class="rounded-xl border bg-white p-4">
+        <div class="ui-card p-4">
             <h3 class="text-sm font-medium text-slate-600 mb-3">12-month revenue vs expenses</h3>
             <canvas id="revenue-chart" height="200"></canvas>
         </div>
-        <div class="rounded-xl border bg-white p-4">
+        <div class="ui-card p-4">
             <h3 class="text-sm font-medium text-slate-600 mb-3">Patient flow</h3>
             <canvas id="flow-chart" height="200"></canvas>
         </div>
     </div>
 
-    <div class="rounded-xl border bg-white p-4">
+    <div class="ui-card p-4">
         <h3 class="text-sm font-medium text-slate-600 mb-3">No-show heatmap (day × hour)</h3>
         <div id="heatmap" class="overflow-x-auto"></div>
     </div>
 
     <div class="grid gap-4 lg:grid-cols-3">
-        <div class="rounded-xl border bg-white p-4 lg:col-span-1">
+        <div class="ui-card p-4 lg:col-span-1">
             <h3 class="text-sm font-semibold">P&amp;L (<?= htmlspecialchars($from) ?> → <?= htmlspecialchars($to) ?>)</h3>
             <dl class="mt-3 space-y-2 text-sm">
                 <div class="flex justify-between"><dt>Revenue</dt><dd>₹<?= number_format($pnl['revenue'], 2) ?></dd></div>
@@ -39,7 +39,7 @@
                 <button type="submit" class="rounded bg-slate-800 px-2 py-1 text-white">Apply</button>
             </form>
         </div>
-        <div class="rounded-xl border bg-white p-4 lg:col-span-2">
+        <div class="ui-card p-4 lg:col-span-2">
             <h3 class="text-sm font-semibold">Doctor performance</h3>
             <table class="mt-3 w-full text-sm">
                 <thead class="text-xs text-slate-500"><tr><th class="text-left py-1">Doctor</th><th>Visits</th><th>Revenue</th></tr></thead>
@@ -52,7 +52,7 @@
         </div>
     </div>
 
-    <div class="rounded-xl border bg-white p-4">
+    <div class="ui-card p-4">
         <h3 class="text-sm font-semibold">Record expense</h3>
         <form method="post" action="/analytics/expenses" class="mt-3 grid gap-3 sm:grid-cols-4 text-sm">
             <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">

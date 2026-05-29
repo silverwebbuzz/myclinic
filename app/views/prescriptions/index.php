@@ -15,7 +15,7 @@ $formatLine = static function (array $line): string {
 ?>
 <div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-lg font-semibold">Prescriptions</h2>
+        <h2 class="ui-section-title">Prescriptions</h2>
         <p class="text-sm text-slate-500"><?= (int) $total ?> visit<?= $total === 1 ? '' : 's' ?> with prescriptions</p>
     </div>
 
@@ -23,26 +23,26 @@ $formatLine = static function (array $line): string {
     <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800"><?= htmlspecialchars((string) $_GET['error']) ?></p>
     <?php endif; ?>
 
-    <form method="get" class="rounded-xl border bg-white p-4">
+    <form method="get" class="ui-card p-4">
         <div class="flex flex-wrap gap-3">
             <input type="search" name="q" value="<?= htmlspecialchars($filters['q']) ?>"
                    placeholder="Search patient, UHID, drug, remedy…"
-                   class="min-w-[220px] flex-1 rounded-lg border px-3 py-2 text-sm">
+                   class="min-w-[220px] flex-1 ui-input">
             <select name="mode" class="rounded-lg border px-2 py-2 text-sm">
                 <option value="">All modes</option>
                 <option value="allopathic" <?= $filters['mode'] === 'allopathic' ? 'selected' : '' ?>>Allopathic</option>
                 <option value="homeopathic" <?= $filters['mode'] === 'homeopathic' ? 'selected' : '' ?>>Homeopathic</option>
             </select>
-            <input type="date" name="from" value="<?= htmlspecialchars($filters['from']) ?>" class="rounded-lg border px-3 py-2 text-sm">
-            <input type="date" name="to" value="<?= htmlspecialchars($filters['to']) ?>" class="rounded-lg border px-3 py-2 text-sm">
-            <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white">Filter</button>
-            <a href="/prescriptions" class="rounded-lg border px-4 py-2 text-sm">Reset</a>
+            <input type="date" name="from" value="<?= htmlspecialchars($filters['from']) ?>" class="ui-input">
+            <input type="date" name="to" value="<?= htmlspecialchars($filters['to']) ?>" class="ui-input">
+            <button type="submit" class="ui-btn ui-btn-primary">Filter</button>
+            <a href="/prescriptions" class="ui-btn ui-btn-secondary">Reset</a>
         </div>
     </form>
 
     <div class="space-y-3">
         <?php foreach ($rows as $visit): ?>
-        <div class="rounded-xl border bg-white p-4 transition hover:shadow-sm">
+        <div class="ui-card p-4 transition hover:shadow-sm">
             <div class="flex flex-wrap items-start justify-between gap-3 border-b pb-3">
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-baseline gap-3">
@@ -55,18 +55,18 @@ $formatLine = static function (array $line): string {
                             <span class="text-xs text-slate-500">· <?= htmlspecialchars($visit['patient_phone']) ?></span>
                         <?php endif; ?>
                     </div>
-                    <div class="mt-1 flex flex-wrap gap-3 text-xs text-slate-500">
-                        <span>📅 <?= htmlspecialchars(date('d M Y, h:i A', strtotime((string) $visit['visited_at']))) ?></span>
-                        <span>👨‍⚕️ <?= htmlspecialchars($visit['doctor_name'] ?? '') ?></span>
+                    <div class="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                        <span class="inline-flex items-center gap-1.5"><?= ui_icon('appointments', 13) ?><?= htmlspecialchars(date('d M Y, h:i A', strtotime((string) $visit['visited_at']))) ?></span>
+                        <span class="inline-flex items-center gap-1.5"><?= ui_icon('staff', 13) ?><?= htmlspecialchars($visit['doctor_name'] ?? '') ?></span>
                         <span><?= (int) $visit['line_count'] ?> item<?= (int) $visit['line_count'] === 1 ? '' : 's' ?></span>
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <a href="/visits/<?= (int) $visit['visit_id'] ?>"
-                       class="rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-slate-50">View visit</a>
+                       class="ui-btn ui-btn-secondary ui-btn-sm">View visit</a>
                     <a href="/prescriptions/<?= (int) $visit['visit_id'] ?>/pdf"
-                       class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700">
-                        📄 Print Rx
+                       class="ui-btn ui-btn-primary ui-btn-sm">
+                        <?= ui_icon('emr', 14) ?><span>Print Rx</span>
                     </a>
                 </div>
             </div>
@@ -103,8 +103,8 @@ $formatLine = static function (array $line): string {
         <?php endforeach; ?>
 
         <?php if (empty($rows)): ?>
-        <div class="rounded-xl border bg-white p-12 text-center">
-            <p class="text-4xl mb-2">💊</p>
+        <div class="ui-card p-12 text-center">
+            <p class="mb-3 flex justify-center text-slate-300"><?= ui_icon('prescription', 40) ?></p>
             <p class="text-sm font-medium text-slate-700">No prescriptions found</p>
             <p class="mt-1 text-xs text-slate-500">Adjust filters or wait for new visits to be completed.</p>
         </div>

@@ -1,9 +1,9 @@
 <div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-lg font-semibold">Lab catalog</h2>
-        <a href="/lab/orders" class="rounded-lg border px-3 py-2 text-sm hover:bg-slate-50">Pending orders →</a>
+        <h2 class="ui-section-title">Lab catalog</h2>
+        <a href="/lab/orders" class="ui-btn ui-btn-secondary ui-btn-sm">Pending orders →</a>
     </div>
-    <div class="overflow-hidden rounded-xl border bg-white">
+    <div class="overflow-hidden ui-card">
         <table class="w-full text-sm">
             <thead class="bg-slate-50 text-left text-xs text-slate-500">
                 <tr><th class="px-4 py-3">Code</th><th class="px-4 py-3">Test</th><th class="px-4 py-3">Category</th><th class="px-4 py-3">Parameters</th></tr>

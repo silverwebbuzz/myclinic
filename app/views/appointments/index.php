@@ -13,8 +13,8 @@ $qs = static function (array $extra) use ($date, $doctorId, $statusFilter): stri
 <div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
-            <h2 class="flex items-center gap-2 text-lg font-semibold">
-                <span>📅</span> Appointments
+            <h2 class="flex items-center gap-2 ui-page-title">
+                <span class="text-brand"><?= ui_icon('appointments', 20) ?></span> Appointments
             </h2>
             <p class="text-xs text-slate-500"><?= htmlspecialchars($displayDate) ?></p>
         </div>
@@ -24,13 +24,13 @@ $qs = static function (array $extra) use ($date, $doctorId, $statusFilter): stri
                 Today
             </a>
             <a href="?<?= htmlspecialchars($qs(['date' => date('Y-m-d', strtotime('monday this week'))])) ?>"
-               class="rounded-lg border px-3 py-2 text-sm hover:bg-slate-50">This week</a>
+               class="ui-btn ui-btn-secondary ui-btn-sm">This week</a>
             <a href="?<?= htmlspecialchars($qs(['date' => date('Y-m-01')])) ?>"
-               class="rounded-lg border px-3 py-2 text-sm hover:bg-slate-50">This month</a>
+               class="ui-btn ui-btn-secondary ui-btn-sm">This month</a>
 
             <div class="flex items-center gap-1">
                 <a href="?<?= htmlspecialchars($qs(['date' => $prevDate])) ?>"
-                   class="rounded-lg border px-3 py-2 text-sm hover:bg-slate-50" aria-label="Previous day">‹</a>
+                   class="ui-btn ui-btn-secondary ui-btn-sm" aria-label="Previous day">‹</a>
                 <form method="get" class="contents">
                     <?php foreach (['doctor_id' => $doctorId, 'status' => $statusFilter] as $k => $v): ?>
                         <?php if ($v !== null && $v !== ''): ?>
@@ -39,14 +39,14 @@ $qs = static function (array $extra) use ($date, $doctorId, $statusFilter): stri
                     <?php endforeach; ?>
                     <input type="date" name="date" value="<?= htmlspecialchars($date) ?>"
                            onchange="this.form.submit()"
-                           class="rounded-lg border px-3 py-2 text-sm">
+                           class="ui-input">
                 </form>
                 <a href="?<?= htmlspecialchars($qs(['date' => $nextDate])) ?>"
-                   class="rounded-lg border px-3 py-2 text-sm hover:bg-slate-50" aria-label="Next day">›</a>
+                   class="ui-btn ui-btn-secondary ui-btn-sm" aria-label="Next day">›</a>
             </div>
 
             <a href="/appointments/new?date=<?= urlencode($date) ?>"
-               class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">+ Book</a>
+               class="ui-btn ui-btn-primary">+ Book</a>
         </div>
     </div>
 
@@ -73,9 +73,9 @@ $qs = static function (array $extra) use ($date, $doctorId, $statusFilter): stri
             <input type="hidden" name="date" value="<?= htmlspecialchars($date) ?>">
             <input type="hidden" name="status" value="<?= htmlspecialchars($statusFilter) ?>">
             <label class="flex items-center gap-2 text-sm">
-                <span class="font-medium text-slate-600">👨‍⚕️ Doctor:</span>
+                <span class="font-medium text-slate-600">Doctor:</span>
                 <select name="doctor_id" onchange="this.form.submit()"
-                        class="rounded-lg border px-3 py-2 text-sm <?= $doctorId !== null ? 'border-emerald-400 bg-emerald-50 font-medium text-emerald-800' : '' ?>">
+                        class="ui-input <?= $doctorId !== null ? 'border-emerald-400 bg-emerald-50 font-medium text-emerald-800' : '' ?>">
                     <option value="">All doctors (<?= count($doctors) ?>)</option>
                     <?php foreach ($doctors as $doc): ?>
                     <option value="<?= (int) $doc['id'] ?>" <?= $doctorId === (int) $doc['id'] ? 'selected' : '' ?>>
@@ -93,9 +93,9 @@ $qs = static function (array $extra) use ($date, $doctorId, $statusFilter): stri
             </span>
         <?php endif; ?>
         <div class="ml-auto flex gap-2">
-            <a href="/queue" class="rounded-lg border px-3 py-2 text-sm hover:bg-slate-50">Today's queue</a>
+            <a href="/queue" class="ui-btn ui-btn-secondary ui-btn-sm">Today's queue</a>
             <a href="/queue/display?clinic=<?= urlencode($clinicSlug ?? '') ?>" target="_blank"
-               class="rounded-lg border px-3 py-2 text-sm hover:bg-slate-50">Display screen</a>
+               class="ui-btn ui-btn-secondary ui-btn-sm">Display screen</a>
         </div>
     </div>
 
@@ -118,7 +118,7 @@ $qs = static function (array $extra) use ($date, $doctorId, $statusFilter): stri
         <?php endforeach; ?>
     </div>
 
-    <div class="overflow-hidden rounded-xl border bg-white">
+    <div class="overflow-hidden ui-card">
         <div class="flex flex-wrap gap-1 border-b px-2 py-2 text-sm">
             <?php
             $tabs = [
@@ -228,11 +228,11 @@ $qs = static function (array $extra) use ($date, $doctorId, $statusFilter): stri
 
         <?php if (empty($appointments)): ?>
         <div class="p-12 text-center">
-            <p class="text-4xl mb-2">📭</p>
+            <p class="mb-3 flex justify-center text-slate-300"><?= ui_icon('appointments', 40) ?></p>
             <p class="text-sm font-medium text-slate-700">No appointments<?= $statusFilter !== 'all' ? ' in this status' : '' ?> on <?= htmlspecialchars($displayDate) ?></p>
             <p class="mt-1 text-xs text-slate-500">Try another date or status, or book a new appointment.</p>
             <a href="/appointments/new?date=<?= urlencode($date) ?>"
-               class="mt-4 inline-block rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">+ Book appointment</a>
+               class="mt-4 inline-block ui-btn ui-btn-primary">+ Book appointment</a>
         </div>
         <?php endif; ?>
     </div>

@@ -1,6 +1,6 @@
 <div class="max-w-xl space-y-4">
-    <h2 class="text-lg font-semibold"><?= $lead ? 'Edit lead' : 'Add lead' ?></h2>
-    <form method="post" action="/crm/save" class="rounded-xl border bg-white p-6 space-y-4 text-sm">
+    <h2 class="ui-section-title"><?= $lead ? 'Edit lead' : 'Add lead' ?></h2>
+    <form method="post" action="/crm/save" class="ui-card ui-card-pad space-y-4 text-sm">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
         <?php if ($lead): ?><input type="hidden" name="lead_id" value="<?= (int) $lead['id'] ?>"><?php endif; ?>
         <label class="block">Name<input name="name" required value="<?= htmlspecialchars($lead['name'] ?? '') ?>" class="mt-1 w-full rounded-lg border px-3 py-2"></label>

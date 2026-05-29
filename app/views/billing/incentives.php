@@ -1,8 +1,8 @@
 <div class="space-y-6">
-    <h2 class="text-lg font-semibold">Doctor incentives</h2>
+    <h2 class="ui-section-title">Doctor incentives</h2>
     <?php if (!empty($message)): ?><p class="text-sm text-emerald-600"><?= htmlspecialchars($message) ?></p><?php endif; ?>
 
-    <form method="post" action="/billing/incentives/config" class="rounded-xl border bg-white p-4 space-y-3">
+    <form method="post" action="/billing/incentives/config" class="ui-card p-4 space-y-3">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
         <h3 class="text-sm font-medium">Per-doctor config</h3>
         <?php foreach ($doctors as $i => $doc): ?>
@@ -19,10 +19,10 @@
     <form method="post" action="/billing/incentives/calculate" class="flex flex-wrap gap-2 items-end">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
         <label class="text-sm">Period <input name="period" type="month" value="<?= htmlspecialchars($period) ?>" class="rounded border px-2 py-1"></label>
-        <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white">Calculate month</button>
+        <button type="submit" class="ui-btn ui-btn-primary">Calculate month</button>
     </form>
 
-    <div class="overflow-hidden rounded-xl border bg-white">
+    <div class="overflow-hidden ui-card">
         <table class="w-full text-sm">
             <thead class="bg-slate-50 text-xs text-slate-500"><tr>
                 <th class="px-4 py-3 text-left">Doctor</th><th>Revenue</th><th>Gross</th><th>Net</th><th></th>

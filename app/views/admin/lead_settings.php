@@ -26,7 +26,7 @@
         <?php endif; ?>
 
         <!-- ===== Global settings ===== -->
-        <form method="post" action="/admin/lead-settings" class="mt-6 space-y-6 rounded-xl border bg-white p-6">
+        <form method="post" action="/admin/lead-settings" class="mt-6 space-y-6 ui-card ui-card-pad">
             <input type="hidden" name="_csrf" value="<?= htmlspecialchars((string) $csrf) ?>">
 
             <!-- Master toggle -->
@@ -120,7 +120,7 @@
         </form>
 
         <!-- ===== Per-doctor overrides ===== -->
-        <section class="mt-6 rounded-xl border bg-white">
+        <section class="mt-6 ui-card">
             <div class="border-b p-4">
                 <h2 class="text-base font-semibold text-slate-900">Per-doctor overrides</h2>
                 <p class="text-xs text-slate-500">

@@ -12,7 +12,7 @@
         <?php if (!empty($_GET['error'])): ?>
         <p class="mt-2 text-sm text-red-600"><?= htmlspecialchars($_GET['error']) ?></p>
         <?php endif; ?>
-        <div class="mt-4 overflow-x-auto rounded-xl border bg-white">
+        <div class="mt-4 overflow-x-auto ui-card">
             <table class="w-full text-left text-sm">
                 <thead class="border-b bg-slate-50 text-xs uppercase text-slate-500">
                     <tr>

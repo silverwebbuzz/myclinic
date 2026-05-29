@@ -10,10 +10,10 @@ $due = (float) $invoice['total'] - (float) ($invoice['advance_paid'] ?? 0);
     </p>
     <?php endif; ?>
 
-    <div class="rounded-xl border bg-white p-6">
+    <div class="ui-card ui-card-pad">
         <div class="flex flex-wrap justify-between gap-3">
             <div>
-                <h2 class="text-lg font-semibold"><?= htmlspecialchars($invoice['invoice_number']) ?></h2>
+                <h2 class="ui-section-title"><?= htmlspecialchars($invoice['invoice_number']) ?></h2>
                 <p class="text-sm text-slate-500"><?= htmlspecialchars($patient['patient_name'] ?? $patient['name'] ?? '') ?> · <?= htmlspecialchars($patient['uhid'] ?? '') ?></p>
                 <?php if ((float) ($patient['advance_balance'] ?? 0) > 0): ?>
                 <p class="mt-1 text-xs text-emerald-700">Advance balance: ₹<?= number_format((float) $patient['advance_balance'], 2) ?></p>
@@ -22,8 +22,8 @@ $due = (float) $invoice['total'] - (float) ($invoice['advance_paid'] ?? 0);
             <div class="text-right">
                 <p class="text-2xl font-bold">₹<span id="live-total"><?= number_format((float) $invoice['total'], 2) ?></span></p>
                 <a href="/billing/<?= (int) $invoice['id'] ?>/pdf"
-                   class="mt-2 inline-block rounded-lg border px-3 py-1.5 text-xs hover:bg-slate-50">
-                    📄 Download PDF
+                   class="ui-btn ui-btn-secondary ui-btn-sm mt-2">
+                    <?= ui_icon('emr', 14) ?><span>Download PDF</span>
                 </a>
             </div>
         </div>
@@ -54,10 +54,10 @@ $due = (float) $invoice['total'] - (float) ($invoice['advance_paid'] ?? 0);
 
             <div class="grid gap-3 sm:grid-cols-3">
                 <label class="text-sm">Discount %
-                    <input name="discount_percent" type="number" step="0.1" value="0" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" id="discount-pct">
+                    <input name="discount_percent" type="number" step="0.1" value="0" class="ui-input" id="discount-pct">
                 </label>
                 <label class="text-sm">Tax % (<?= htmlspecialchars($invoice['tax_label'] ?? 'GST') ?>)
-                    <input name="tax_percent" type="number" step="0.01" value="<?= htmlspecialchars((string) ($invoice['tax_percent'] ?? $taxPercent)) ?>" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" id="tax-pct">
+                    <input name="tax_percent" type="number" step="0.01" value="<?= htmlspecialchars((string) ($invoice['tax_percent'] ?? $taxPercent)) ?>" class="ui-input" id="tax-pct">
                 </label>
                 <label class="text-sm flex items-end gap-2 pb-2">
                     <input type="checkbox" name="apply_advance" value="1" <?= (float) ($patient['advance_balance'] ?? 0) > 0 ? '' : 'disabled' ?>>
@@ -66,15 +66,15 @@ $due = (float) $invoice['total'] - (float) ($invoice['advance_paid'] ?? 0);
             </div>
 
             <label class="block text-sm">Notes
-                <textarea name="notes" rows="2" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"><?= htmlspecialchars($invoice['notes'] ?? '') ?></textarea>
+                <textarea name="notes" rows="2" class="ui-input"><?= htmlspecialchars($invoice['notes'] ?? '') ?></textarea>
             </label>
 
-            <button type="submit" class="rounded-lg border px-4 py-2 text-sm">Save invoice</button>
+            <button type="submit" class="ui-btn ui-btn-secondary">Save invoice</button>
         </form>
     </div>
 
     <?php if (($invoice['status'] ?? '') !== 'paid'): ?>
-    <div class="rounded-xl border bg-white p-6 space-y-4">
+    <div class="ui-card ui-card-pad space-y-4">
         <h3 class="font-semibold">Collect payment · Due ₹<?= number_format($due, 2) ?></h3>
         <form method="post" action="/billing/<?= (int) $invoice['id'] ?>/pay-cash" class="inline">
             <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
@@ -82,9 +82,9 @@ $due = (float) $invoice['total'] - (float) ($invoice['advance_paid'] ?? 0);
         </form>
         <div class="border-t pt-4">
             <p class="text-sm font-medium">UPI (Razorpay)</p>
-            <button type="button" @click="createUpi()" class="mt-2 rounded-lg border px-4 py-2 text-sm">Generate UPI QR</button>
+            <button type="button" @click="createUpi()" class="mt-2 ui-btn ui-btn-secondary">Generate UPI QR</button>
             <p x-show="qrData" class="mt-2 break-all text-xs text-slate-600" x-text="qrData"></p>
-            <button type="button" @click="checkPayment()" class="mt-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white">Check payment</button>
+            <button type="button" @click="checkPayment()" class="mt-2 ui-btn ui-btn-primary">Check payment</button>
             <button type="button" @click="simulatePay()" class="mt-2 ml-2 rounded-lg border px-3 py-2 text-xs text-slate-600">Simulate pay (dev)</button>
             <p x-show="payStatus" class="mt-2 text-sm" x-text="payStatus"></p>
         </div>

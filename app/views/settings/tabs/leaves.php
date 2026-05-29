@@ -6,8 +6,8 @@ foreach ($leaves as $lv) {
     $leaveMap[$lv['leave_date']][] = $lv;
 }
 ?>
-<div class="space-y-6 rounded-xl border bg-white p-6">
-    <h2 class="text-lg font-semibold">Doctor leaves</h2>
+<div class="space-y-6 ui-card ui-card-pad">
+    <h2 class="ui-section-title">Doctor leaves</h2>
     <p class="text-sm text-slate-500">Mark full or half-day leave. Conflicting appointments are warned before save.</p>
 
     <?php if (!empty($warning)): ?>
@@ -16,15 +16,15 @@ foreach ($leaves as $lv) {
 
     <form method="get" action="/settings" class="flex flex-wrap gap-3">
         <input type="hidden" name="tab" value="leaves">
-        <select name="doctor_id" class="rounded-lg border px-3 py-2 text-sm" onchange="this.form.submit()">
+        <select name="doctor_id" class="ui-input" onchange="this.form.submit()">
             <?php foreach ($doctors as $doc): ?>
             <option value="<?= (int) $doc['id'] ?>" <?= (int) ($doctorId ?? 0) === (int) $doc['id'] ? 'selected' : '' ?>>
                 <?= htmlspecialchars($doc['name']) ?>
             </option>
             <?php endforeach; ?>
         </select>
-        <input type="month" name="month" value="<?= htmlspecialchars($leaveMonth) ?>" class="rounded-lg border px-3 py-2 text-sm">
-        <button type="submit" class="rounded-lg border px-3 py-2 text-sm">Go</button>
+        <input type="month" name="month" value="<?= htmlspecialchars($leaveMonth) ?>" class="ui-input">
+        <button type="submit" class="ui-input">Go</button>
     </form>
 
     <div class="grid grid-cols-7 gap-1 text-center text-xs">
@@ -54,11 +54,11 @@ foreach ($leaves as $lv) {
         <input type="hidden" name="doctor_id" value="<?= (int) ($doctorId ?? 0) ?>">
         <label class="text-sm">
             <span class="text-slate-600">Date</span>
-            <input type="date" name="leave_date" required class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+            <input type="date" name="leave_date" required class="ui-input">
         </label>
         <label class="text-sm">
             <span class="text-slate-600">Session</span>
-            <select name="session" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+            <select name="session" class="ui-input">
                 <option value="full">Full day</option>
                 <option value="morning">Morning</option>
                 <option value="evening">Evening</option>
@@ -66,9 +66,9 @@ foreach ($leaves as $lv) {
         </label>
         <label class="text-sm sm:col-span-2">
             <span class="text-slate-600">Reason (optional)</span>
-            <input type="text" name="reason" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+            <input type="text" name="reason" class="ui-input">
         </label>
-        <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 sm:col-span-2">Add leave</button>
+        <button type="submit" class="ui-btn ui-btn-primary sm:col-span-2">Add leave</button>
     </form>
 
     <?php if ($leaves !== []): ?>

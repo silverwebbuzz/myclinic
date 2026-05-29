@@ -25,7 +25,7 @@
         <?php endif; ?>
 
         <?php if (empty($flags)): ?>
-            <div class="rounded-xl border bg-white p-6 text-sm text-slate-500">
+            <div class="ui-card ui-card-pad text-sm text-slate-500">
                 The <code>feature_flags</code> table doesn't exist yet. Run Phase 1 migrations first.
             </div>
         <?php else: ?>
@@ -35,7 +35,7 @@
                 $betaStr = is_array($betaIds) ? implode(', ', $betaIds) : '';
             ?>
             <form method="post" action="/admin/feature-flags/<?= htmlspecialchars($f['flag_key']) ?>"
-                  class="rounded-xl border bg-white p-4">
+                  class="ui-card p-4">
                 <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
 
                 <div class="flex items-start justify-between">

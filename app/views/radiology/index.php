@@ -1,14 +1,14 @@
 <div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-lg font-semibold">Radiology orders</h2>
+        <h2 class="ui-section-title">Radiology orders</h2>
         <p class="text-sm text-slate-500"><?= (int) $total ?> total</p>
     </div>
 
-    <form method="get" class="rounded-xl border bg-white p-4">
+    <form method="get" class="ui-card p-4">
         <div class="flex flex-wrap gap-3">
             <input type="search" name="q" value="<?= htmlspecialchars($filters['q']) ?>"
                    placeholder="Search patient, UHID, body part…"
-                   class="min-w-[220px] flex-1 rounded-lg border px-3 py-2 text-sm">
+                   class="min-w-[220px] flex-1 ui-input">
             <select name="modality" class="rounded-lg border px-2 py-2 text-sm">
                 <option value="">All modalities</option>
                 <?php foreach (['xray','ct','mri','ultrasound','mammography','dexa','pet','other'] as $m): ?>
@@ -21,14 +21,14 @@
                 <option value="<?= $s ?>" <?= $filters['status'] === $s ? 'selected' : '' ?>><?= htmlspecialchars($s) ?></option>
                 <?php endforeach; ?>
             </select>
-            <input type="date" name="from" value="<?= htmlspecialchars($filters['from']) ?>" class="rounded-lg border px-3 py-2 text-sm">
-            <input type="date" name="to" value="<?= htmlspecialchars($filters['to']) ?>" class="rounded-lg border px-3 py-2 text-sm">
-            <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white">Filter</button>
-            <a href="/radiology" class="rounded-lg border px-4 py-2 text-sm">Reset</a>
+            <input type="date" name="from" value="<?= htmlspecialchars($filters['from']) ?>" class="ui-input">
+            <input type="date" name="to" value="<?= htmlspecialchars($filters['to']) ?>" class="ui-input">
+            <button type="submit" class="ui-btn ui-btn-primary">Filter</button>
+            <a href="/radiology" class="ui-btn ui-btn-secondary">Reset</a>
         </div>
     </form>
 
-    <div class="overflow-hidden rounded-xl border bg-white">
+    <div class="overflow-hidden ui-card">
         <table class="w-full text-sm">
             <thead class="bg-slate-50 text-left text-xs text-slate-500">
                 <tr>

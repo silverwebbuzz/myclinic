@@ -1,4 +1,4 @@
-<section x-show="activeTab === 'photos'" class="rounded-xl border bg-white p-6 space-y-4">
+<section x-show="activeTab === 'photos'" class="ui-card ui-card-pad space-y-4">
     <h3 class="font-semibold">Before / after photos</h3>
     <?php if (!empty($_GET['photo_uploaded'])): ?><p class="text-sm text-emerald-600">Photo uploaded.</p><?php endif; ?>
 

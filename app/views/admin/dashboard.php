@@ -13,29 +13,29 @@
         <p class="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800"><?= htmlspecialchars($_GET['message']) ?></p>
         <?php endif; ?>
         <div class="grid gap-4 sm:grid-cols-4">
-            <div class="rounded-xl border bg-white p-4">
+            <div class="ui-card p-4">
                 <p class="text-xs text-slate-500">MRR</p>
                 <p class="text-2xl font-bold">$<?= number_format($metrics['mrr'] ?? 0, 0) ?></p>
             </div>
-            <div class="rounded-xl border bg-white p-4">
+            <div class="ui-card p-4">
                 <p class="text-xs text-slate-500">ARR</p>
                 <p class="text-2xl font-bold">$<?= number_format($metrics['arr'] ?? 0, 0) ?></p>
             </div>
-            <div class="rounded-xl border bg-white p-4">
+            <div class="ui-card p-4">
                 <p class="text-xs text-slate-500">Clinics</p>
                 <p class="text-2xl font-bold"><?= (int) ($metrics['clinics'] ?? 0) ?></p>
             </div>
-            <div class="rounded-xl border bg-white p-4">
+            <div class="ui-card p-4">
                 <p class="text-xs text-slate-500">At churn risk</p>
                 <p class="text-2xl font-bold text-amber-600"><?= (int) ($metrics['at_risk'] ?? 0) ?></p>
             </div>
         </div>
         <div class="mt-6 grid gap-6 lg:grid-cols-2">
-            <div class="rounded-xl border bg-white p-4">
+            <div class="ui-card p-4">
                 <h2 class="font-semibold">MRR trend</h2>
                 <canvas id="mrrChart" height="200"></canvas>
             </div>
-            <div class="rounded-xl border bg-white p-4">
+            <div class="ui-card p-4">
                 <h2 class="font-semibold">Clinics by plan</h2>
                 <canvas id="planChart" height="200"></canvas>
             </div>

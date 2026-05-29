@@ -29,7 +29,7 @@
                 custom symptoms; this queue fills automatically.
             </div>
         <?php else: ?>
-            <div class="overflow-x-auto rounded-xl border bg-white">
+            <div class="overflow-x-auto ui-card">
                 <table class="w-full text-left text-sm">
                     <thead class="border-b bg-slate-50 text-xs uppercase text-slate-500">
                         <tr>

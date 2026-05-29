@@ -1,6 +1,6 @@
-<div class="mx-auto max-w-lg rounded-xl border bg-white p-6">
+<div class="mx-auto max-w-lg ui-card ui-card-pad">
     <div class="flex items-center justify-between">
-        <h1 class="text-lg font-semibold">Active sessions</h1>
+        <h1 class="ui-section-title">Active sessions</h1>
         <?php if (count($sessions) > 1): ?>
         <form method="post" action="/settings/sessions/revoke-all">
             <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">

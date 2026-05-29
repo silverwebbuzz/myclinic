@@ -25,7 +25,7 @@ $gender = match (strtoupper((string) ($patient['gender'] ?? ''))) {
 $phone = (string) ($patient['phone'] ?? '');
 $visitCount = $visitCount ?? null;
 ?>
-<div class="<?= $compact ? 'pt-2 pb-3' : 'p-5' ?> flex flex-wrap items-center gap-4 rounded-xl border bg-white">
+<div class="<?= $compact ? 'pt-2 pb-3' : 'p-5' ?> flex flex-wrap items-center gap-4 ui-card">
     <?php if ($photoUrl): ?>
         <img src="<?= htmlspecialchars($photoUrl) ?>" alt=""
              class="<?= $compact ? 'h-10 w-10' : 'h-14 w-14' ?> rounded-full object-cover">

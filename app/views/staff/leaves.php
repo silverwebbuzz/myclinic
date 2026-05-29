@@ -1,10 +1,10 @@
 <div class="space-y-4">
     <div class="flex flex-wrap gap-2">
         <h2 class="text-lg font-semibold flex-1">Staff leave requests</h2>
-        <a href="/staff/attendance" class="rounded-lg border px-3 py-2 text-sm">Attendance</a>
+        <a href="/staff/attendance" class="ui-btn ui-btn-secondary ui-btn-sm">Attendance</a>
     </div>
 
-    <form method="post" action="/staff/leaves" class="rounded-xl border bg-white p-4 grid gap-3 sm:grid-cols-2 text-sm max-w-2xl">
+    <form method="post" action="/staff/leaves" class="ui-card p-4 grid gap-3 sm:grid-cols-2 text-sm max-w-2xl">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
         <h3 class="sm:col-span-2 font-medium">Request leave</h3>
         <select name="leave_type" class="rounded-lg border px-3 py-2">
@@ -18,7 +18,7 @@
         <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-white sm:col-span-2 sm:w-auto">Submit</button>
     </form>
 
-    <div class="overflow-hidden rounded-xl border bg-white">
+    <div class="overflow-hidden ui-card">
         <table class="w-full text-sm">
             <thead class="bg-slate-50 text-xs text-slate-500"><tr><th class="px-4 py-3 text-left">Staff</th><th>Type</th><th>Dates</th><th>Status</th><th></th></tr></thead>
             <tbody class="divide-y">

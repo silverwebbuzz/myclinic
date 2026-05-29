@@ -14,29 +14,29 @@
                 <h1 class="text-xl font-semibold">Lead pipeline</h1>
                 <p class="text-sm text-slate-500">Patient bookings on unclaimed directory clinics — your doctor-acquisition funnel.</p>
             </div>
-            <a href="/admin/lead-settings" class="rounded-lg border bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-slate-400">
-                ⚙ SMS settings
+            <a href="/admin/lead-settings" class="ui-btn ui-btn-secondary ui-btn-sm">
+                <?= ui_icon('settings', 15) ?><span>SMS settings</span>
             </a>
         </div>
 
         <!-- KPI tiles -->
         <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div class="rounded-xl border bg-white p-4">
+            <div class="ui-card p-4">
                 <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">Bookings (30d)</div>
                 <div class="mt-1 text-2xl font-bold text-slate-900"><?= (int) ($kpis['book_submitted_30d'] ?? 0) ?></div>
                 <div class="text-xs text-slate-500">All time: <?= (int) ($kpis['book_submitted_total'] ?? 0) ?></div>
             </div>
-            <div class="rounded-xl border bg-white p-4">
+            <div class="ui-card p-4">
                 <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">This week</div>
                 <div class="mt-1 text-2xl font-bold text-slate-900"><?= (int) ($kpis['book_submitted_7d'] ?? 0) ?></div>
                 <div class="text-xs text-slate-500">vs. <?= max(0, (int) ($kpis['book_submitted_30d'] ?? 0) - (int) ($kpis['book_submitted_7d'] ?? 0)) ?> in 7–30d</div>
             </div>
-            <div class="rounded-xl border bg-white p-4">
+            <div class="ui-card p-4">
                 <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">SMS sent (30d)</div>
                 <div class="mt-1 text-2xl font-bold text-slate-900"><?= (int) ($kpis['sms_sent_30d'] ?? 0) ?></div>
                 <div class="text-xs text-slate-500">Est. spend: ₹<?= number_format(((int) ($kpis['sms_sent_30d'] ?? 0)) * 0.20, 2) ?></div>
             </div>
-            <div class="rounded-xl border bg-white p-4">
+            <div class="ui-card p-4">
                 <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">Doctor-view rate</div>
                 <div class="mt-1 text-2xl font-bold text-emerald-600"><?= htmlspecialchars((string) ($kpis['doctor_view_rate'] ?? 0)) ?>%</div>
                 <div class="text-xs text-slate-500"><?= (int) ($kpis['doctor_views_total'] ?? 0) ?> doctors opened SMS</div>
@@ -44,7 +44,7 @@
         </div>
 
         <!-- SMS dispatch breakdown -->
-        <section class="mt-6 rounded-xl border bg-white p-4">
+        <section class="mt-6 ui-card p-4">
             <h2 class="text-sm font-semibold text-slate-900">SMS dispatch breakdown (last 30d)</h2>
             <div class="mt-3 flex flex-wrap gap-2">
                 <?php
@@ -72,9 +72,9 @@
         </section>
 
         <!-- Sales call list -->
-        <section class="mt-6 rounded-xl border bg-white">
+        <section class="mt-6 ui-card">
             <div class="border-b p-4">
-                <h2 class="text-base font-semibold text-slate-900">📞 Sales call list — top unclaimed doctors by lead volume</h2>
+                <h2 class="ui-section-title">Sales call list — top unclaimed doctors by lead volume</h2>
                 <p class="mt-0.5 text-xs text-slate-500">Last 30 days. Call these doctors first — they're getting demand they don't even know about.</p>
             </div>
             <?php if (empty($topDoctors)): ?>
@@ -140,8 +140,8 @@
 
         <!-- City heatmap -->
         <section class="mt-6 grid gap-6 lg:grid-cols-2">
-            <div class="rounded-xl border bg-white p-4">
-                <h2 class="text-sm font-semibold text-slate-900">🌆 Top cities (unclaimed demand)</h2>
+            <div class="ui-card p-4">
+                <h2 class="ui-section-title">Top cities (unclaimed demand)</h2>
                 <p class="text-xs text-slate-500">Where to focus your acquisition efforts.</p>
                 <ul class="mt-3 space-y-2 text-sm">
                     <?php foreach ($topCities as $i => $c): ?>
@@ -164,8 +164,8 @@
             </div>
 
             <!-- Daily sparkline -->
-            <div class="rounded-xl border bg-white p-4">
-                <h2 class="text-sm font-semibold text-slate-900">📈 Bookings — last 30 days</h2>
+            <div class="ui-card p-4">
+                <h2 class="ui-section-title">Bookings — last 30 days</h2>
                 <p class="text-xs text-slate-500">Daily count of patient booking submissions.</p>
                 <div class="mt-3 flex h-32 items-end gap-1">
                     <?php
@@ -193,9 +193,9 @@
         </section>
 
         <!-- Recent leads feed -->
-        <section class="mt-6 rounded-xl border bg-white">
+        <section class="mt-6 ui-card">
             <div class="border-b p-4">
-                <h2 class="text-base font-semibold text-slate-900">📥 Recent leads</h2>
+                <h2 class="ui-section-title">Recent leads</h2>
                 <p class="mt-0.5 text-xs text-slate-500">Newest first. Click a row to view details / contact patient.</p>
             </div>
             <?php if (empty($recent)): ?>
@@ -230,7 +230,7 @@
                         ?>
                         <span class="rounded-full px-2 py-0.5 font-semibold <?= $smsBadge[1] ?>"><?= htmlspecialchars($smsBadge[0]) ?></span>
                         <?php if (!empty($l['doctor_viewed_at'])): ?>
-                        <div class="mt-1 text-emerald-600">👁 Doctor opened</div>
+                        <div class="mt-1 text-emerald-600">Doctor opened</div>
                         <?php endif; ?>
                         <div class="mt-1 text-slate-400"><?= htmlspecialchars(date('M j H:i', strtotime((string) $l['created_at']))) ?></div>
                     </div>

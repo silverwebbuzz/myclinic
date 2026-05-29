@@ -37,7 +37,7 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
     'isEdit' => $isEdit,
 ]), ENT_QUOTES) ?>)">
     <div class="flex flex-wrap items-center justify-between gap-2">
-        <h2 class="text-lg font-semibold">📅 <?= $isEdit ? 'Edit appointment' : 'Book appointment' ?></h2>
+        <h2 class="flex items-center gap-2 ui-section-title"><span class="text-brand"><?= ui_icon('appointments', 18) ?></span><?= $isEdit ? 'Edit appointment' : 'Book appointment' ?></h2>
         <a href="/appointments" class="text-sm text-slate-500 hover:underline">← Back</a>
     </div>
 
@@ -45,7 +45,7 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
     <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800"><?= htmlspecialchars($error) ?></p>
     <?php endif; ?>
 
-    <form method="post" action="<?= htmlspecialchars($action) ?>" class="space-y-5 rounded-xl border bg-white p-6">
+    <form method="post" action="<?= htmlspecialchars($action) ?>" class="space-y-5 ui-card ui-card-pad">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf ?? '') ?>">
         <input type="hidden" name="patient_id" x-model="patientId">
 
@@ -62,7 +62,7 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
                 <input type="search" x-model="patientQuery" @input.debounce.300ms="searchPatients()" @focus="searchPatients()"
                        :placeholder="patientId ? '' : 'Search name, phone, UHID…'"
                        :disabled="patientId > 0"
-                       class="w-full rounded-lg border px-3 py-2 text-sm disabled:bg-slate-100">
+                       class="ui-input disabled:bg-slate-100">
                 <button type="button" x-show="patientId > 0" @click="clearPatient()"
                         class="absolute right-2 top-1/2 -translate-y-1/2 rounded border px-2 py-0.5 text-xs hover:bg-slate-50">
                     Clear
@@ -85,7 +85,7 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
             </div>
             <div x-show="patientId > 0" x-transition.opacity
                  class="mt-2 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm">
-                <span>👤</span>
+                <span class="text-emerald-700"><?= ui_icon('patients', 15) ?></span>
                 <span class="font-medium text-emerald-900" x-text="patientLabel"></span>
                 <span class="text-emerald-700" x-text="patientPhone"></span>
             </div>
@@ -97,12 +97,12 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
             <label class="block text-sm">
                 <span class="text-slate-600">New patient name</span>
                 <input type="text" name="new_patient_name" x-model="newName"
-                       class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Full name">
+                       class="ui-input" placeholder="Full name">
             </label>
             <label class="block text-sm">
                 <span class="text-slate-600">Phone</span>
                 <input type="tel" name="new_patient_phone" x-model="newPhone"
-                       class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" placeholder="Contact number">
+                       class="ui-input" placeholder="Contact number">
             </label>
         </div>
         <?php endif; ?>
@@ -112,7 +112,7 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
             <label class="block text-sm">
                 <span class="text-slate-600">Doctor</span>
                 <select name="doctor_id" x-model="doctorId" @change="loadSlots()" required
-                        class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                        class="ui-input">
                     <option value="">Select doctor</option>
                     <?php foreach ($doctors as $doc): ?>
                     <option value="<?= (int) $doc['id'] ?>"><?= htmlspecialchars($doc['name']) ?></option>
@@ -122,14 +122,14 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
             <label class="block text-sm">
                 <span class="text-slate-600">Date</span>
                 <input type="date" name="scheduled_date" x-model="date" @change="loadSlots()" required
-                       class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                       class="ui-input">
             </label>
         </div>
 
         <!-- Type -->
         <label class="block text-sm">
             <span class="text-slate-600">Type</span>
-            <select name="type" x-model="apptType" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+            <select name="type" x-model="apptType" class="ui-input">
                 <?php foreach (['prebooked' => 'Pre-booked', 'walkin' => 'Walk-in', 'online' => 'Online (telemedicine)', 'followup' => 'Follow-up'] as $v => $l): ?>
                 <option value="<?= $v ?>" <?= $type === $v ? 'selected' : '' ?>><?= $l ?></option>
                 <?php endforeach; ?>
@@ -163,7 +163,7 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
                     Set hours in <a href="/scheduling" class="underline">Scheduling</a> first, or enter a manual time below.
                 </p>
                 <input type="time" x-model="selectedTime"
-                       class="mt-2 w-full max-w-[200px] rounded-lg border px-3 py-2 text-sm">
+                       class="mt-2 w-full max-w-[200px] ui-input">
             </div>
 
             <div x-show="morningSlots.length > 0" class="mt-3">
@@ -211,7 +211,7 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
         <label class="block text-sm">
             <span class="text-slate-600">Chief complaint</span>
             <textarea name="chief_complaint" rows="2" placeholder="Reason for visit"
-                      class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"><?= htmlspecialchars($complaint) ?></textarea>
+                      class="ui-input"><?= htmlspecialchars($complaint) ?></textarea>
         </label>
 
         <label class="flex items-center gap-2 text-sm">
@@ -221,10 +221,10 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
 
         <!-- Submit -->
         <div class="flex flex-wrap gap-3 border-t pt-4">
-            <button type="submit" class="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-medium text-white hover:bg-emerald-700">
-                <?= $isEdit ? 'Save changes' : (($type === 'walkin') ? '🎫 Generate token' : 'Book appointment') ?>
+            <button type="submit" class="ui-btn ui-btn-primary">
+                <?= $isEdit ? 'Save changes' : (($type === 'walkin') ? 'Generate token' : 'Book appointment') ?>
             </button>
-            <a href="/appointments" class="rounded-lg border px-4 py-2 text-sm">Cancel</a>
+            <a href="/appointments" class="ui-btn ui-btn-secondary">Cancel</a>
         </div>
     </form>
 

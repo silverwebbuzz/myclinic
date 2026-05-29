@@ -1,5 +1,5 @@
-<div class="space-y-6 rounded-xl border bg-white p-6">
-    <h2 class="text-lg font-semibold">White-label branding</h2>
+<div class="space-y-6 ui-card ui-card-pad">
+    <h2 class="ui-section-title">White-label branding</h2>
     <p class="text-sm text-slate-600">Enterprise: custom domain, logo, and brand color. “Powered by ManageClinic” is hidden on your plan.</p>
 
     <form method="post" action="/settings/branding" enctype="multipart/form-data" class="space-y-4">
@@ -21,8 +21,8 @@
     <form method="post" action="/settings/branding/domain" class="mt-3 flex flex-wrap gap-2">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
         <input name="custom_domain" placeholder="app.yourclinic.com" value="<?= htmlspecialchars($clinic['custom_domain'] ?? '') ?>"
-               class="min-w-[200px] flex-1 rounded-lg border px-3 py-2 text-sm">
-        <button type="submit" class="rounded-lg border px-4 py-2 text-sm hover:bg-slate-50">Start DNS verify</button>
+               class="min-w-[200px] flex-1 ui-input">
+        <button type="submit" class="ui-btn ui-btn-secondary hover:bg-slate-50">Start DNS verify</button>
     </form>
 
     <?php if (!empty($domainVerify)): ?>

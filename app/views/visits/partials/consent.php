@@ -1,4 +1,4 @@
-<section x-show="activeTab === 'consent'" class="rounded-xl border bg-white p-6 space-y-4">
+<section x-show="activeTab === 'consent'" class="ui-card ui-card-pad space-y-4">
     <h3 class="font-semibold">Consent form</h3>
     <?php if (!empty($_GET['consent_signed'])): ?>
     <p class="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Consent signed and PDF saved.</p>
@@ -20,7 +20,7 @@
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
         <div>
             <label class="text-xs font-medium">Template</label>
-            <select class="mt-1 w-full rounded-lg border px-3 py-2 text-sm" @change="loadTemplate($event)">
+            <select class="ui-input" @change="loadTemplate($event)">
                 <option value="">— Custom —</option>
                 <?php foreach ($consentTemplates as $tpl): ?>
                 <option value="<?= (int) $tpl['id'] ?>" data-content="<?= htmlspecialchars($tpl['content'] ?? '') ?>"><?= htmlspecialchars($tpl['name']) ?></option>
@@ -29,17 +29,17 @@
         </div>
         <div>
             <label class="text-xs font-medium">Form content</label>
-            <textarea name="form_content" x-model="content" rows="8" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm font-mono"></textarea>
+            <textarea name="form_content" x-model="content" rows="8" class="ui-input font-mono"></textarea>
             <p class="mt-1 text-xs text-slate-500">Merge fields: {{patient_name}}, {{uhid}}, {{clinic_name}}, {{date}}, {{procedure}}, {{doctor_name}}</p>
         </div>
         <div class="grid gap-3 sm:grid-cols-2">
             <div>
                 <label class="text-xs font-medium">Signed by</label>
-                <input name="signed_by_name" value="<?= htmlspecialchars($patient['name']) ?>" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                <input name="signed_by_name" value="<?= htmlspecialchars($patient['name']) ?>" class="ui-input">
             </div>
             <div>
                 <label class="text-xs font-medium">Relationship</label>
-                <select name="relationship" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                <select name="relationship" class="ui-input">
                     <option value="self">Self</option>
                     <option value="guardian">Guardian</option>
                     <option value="spouse">Spouse</option>
@@ -48,7 +48,7 @@
         </div>
         <div>
             <label class="text-xs font-medium">Witness (optional)</label>
-            <input name="witness_name" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+            <input name="witness_name" class="ui-input">
         </div>
         <div>
             <label class="text-xs font-medium block mb-1">Signature</label>
@@ -58,7 +58,7 @@
             <button type="button" @click="clear()" class="mt-1 text-xs text-slate-500">Clear</button>
             <input type="hidden" name="signature" x-model="signature">
         </div>
-        <button type="submit" @click="captureSig()" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white">Sign &amp; save PDF</button>
+        <button type="submit" @click="captureSig()" class="ui-btn ui-btn-primary">Sign &amp; save PDF</button>
     </form>
     <script>
     function consentPad() {

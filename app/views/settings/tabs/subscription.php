@@ -6,8 +6,8 @@ $plan = $plans[$planKey] ?? ($plans['standard'] ?? reset($plans));
 $seatLimit = (int) ($clinic['seat_limit'] ?? 2) + (int) ($clinic['extra_seats_purchased'] ?? 0);
 ?>
 <div class="space-y-6">
-    <section class="rounded-xl border bg-white p-6">
-        <h2 class="text-lg font-semibold">Subscription</h2>
+    <section class="ui-card ui-card-pad">
+        <h2 class="ui-section-title">Subscription</h2>
         <p class="mt-2 text-sm text-slate-600">
             Plan: <strong><?= htmlspecialchars($plan['name'] ?? 'Free') ?></strong>
             · Seats: <?= (int) ($staffCount ?? 1) ?> / <?= $seatLimit ?>
@@ -15,11 +15,11 @@ $seatLimit = (int) ($clinic['seat_limit'] ?? 2) + (int) ($clinic['extra_seats_pu
         <?php if (!empty($clinic['trial_ends_at'])): ?>
         <p class="text-xs text-slate-500">Trial ends <?= htmlspecialchars($clinic['trial_ends_at']) ?></p>
         <?php endif; ?>
-        <a href="/onboarding/plan-selection" class="mt-4 inline-block rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white">Upgrade plan</a>
+        <a href="/onboarding/plan-selection" class="mt-4 inline-block ui-btn ui-btn-primary">Upgrade plan</a>
     </section>
 
-    <section class="rounded-xl border bg-white p-6">
-        <h3 class="text-sm font-semibold">Active modules</h3>
+    <section class="ui-card ui-card-pad">
+        <h3 class="ui-section-title">Active modules</h3>
         <ul class="mt-3 divide-y text-sm">
             <?php foreach ($modules as $mod): ?>
             <li class="flex justify-between py-2">
@@ -30,8 +30,8 @@ $seatLimit = (int) ($clinic['seat_limit'] ?? 2) + (int) ($clinic['extra_seats_pu
         </ul>
     </section>
 
-    <section class="rounded-xl border bg-white p-6">
-        <h3 class="text-sm font-semibold">Billing history</h3>
+    <section class="ui-card ui-card-pad">
+        <h3 class="ui-section-title">Billing history</h3>
         <?php if ($invoices === []): ?>
         <p class="mt-2 text-sm text-slate-500">No invoices yet.</p>
         <?php else: ?>

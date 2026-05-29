@@ -37,7 +37,7 @@
             <?php foreach ($claims as $c): ?>
                 <?php $isClaim = $c['type'] === 'claim'; $listing = $c['_listing'] ?? null; ?>
                 <a href="/admin/claims/<?= (int) $c['id'] ?>"
-                   class="block rounded-xl border bg-white p-4 hover:border-emerald-400 hover:shadow-sm transition">
+                   class="block ui-card p-4 hover:border-emerald-400 hover:shadow-sm transition">
                     <div class="flex items-start justify-between gap-4">
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-2 flex-wrap">

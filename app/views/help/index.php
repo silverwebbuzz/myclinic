@@ -7,26 +7,26 @@ $has = static fn (string $m) => in_array($m, $visibleModules ?? [], true);
 
         <!-- TOC -->
         <aside class="lg:sticky lg:top-4 lg:self-start">
-            <div class="rounded-xl border bg-white p-4">
-                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Contents</p>
+            <div class="ui-card p-4">
+                <p class="ui-group-label">Contents</p>
                 <nav class="mt-2 space-y-0.5 text-sm">
-                    <a href="#overview" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-emerald-700">System overview</a>
-                    <a href="#roles" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-emerald-700">Roles &amp; permissions</a>
-                    <a href="#day" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-emerald-700">A typical clinic day</a>
-                    <a href="#dashboard" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-emerald-700">Dashboard</a>
+                    <a href="#overview" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-brand">System overview</a>
+                    <a href="#roles" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-brand">Roles &amp; permissions</a>
+                    <a href="#day" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-brand">A typical clinic day</a>
+                    <a href="#dashboard" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-brand">Dashboard</a>
                     <?php if ($isClinical): ?>
-                    <a href="#visit" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-emerald-700">Patient visit screen</a>
-                    <a href="#symptoms" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-emerald-700">Symptoms</a>
-                    <a href="#prescription" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-emerald-700">Prescription</a>
-                    <a href="#followups" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-emerald-700">Follow-ups</a>
+                    <a href="#visit" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-brand">Patient visit screen</a>
+                    <a href="#symptoms" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-brand">Symptoms</a>
+                    <a href="#prescription" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-brand">Prescription</a>
+                    <a href="#followups" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-brand">Follow-ups</a>
                     <?php if ($has('diet')): ?>
-                    <a href="#diet" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-emerald-700">Diet plans</a>
+                    <a href="#diet" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-brand">Diet plans</a>
                     <?php endif; ?>
                     <?php endif; ?>
-                    <a href="#appointments" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-emerald-700">Appointments &amp; queue</a>
-                    <a href="#billing" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-emerald-700">Billing</a>
-                    <a href="#plan" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-emerald-700">Plan &amp; add-ons</a>
-                    <a href="#faq" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-emerald-700">FAQ</a>
+                    <a href="#appointments" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-brand">Appointments &amp; queue</a>
+                    <a href="#billing" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-brand">Billing</a>
+                    <a href="#plan" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-brand">Plan &amp; add-ons</a>
+                    <a href="#faq" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-brand">FAQ</a>
                 </nav>
             </div>
         </aside>
@@ -34,8 +34,8 @@ $has = static fn (string $m) => in_array($m, $visibleModules ?? [], true);
         <!-- Content -->
         <div class="space-y-5">
 
-            <section id="overview" class="scroll-mt-4 rounded-xl border bg-white p-6">
-                <h2 class="text-lg font-bold text-slate-900">System overview</h2>
+            <section id="overview" class="scroll-mt-4 ui-card p-6">
+                <h2 class="ui-section-title text-[17px]">System overview</h2>
                 <p class="mt-2 text-sm leading-relaxed text-slate-600">
                     eClinicPro runs your clinic end-to-end: appointments and walk-in queue,
                     patient records, the consultation screen, prescriptions, billing, and
@@ -47,8 +47,8 @@ $has = static fn (string $m) => in_array($m, $visibleModules ?? [], true);
                 </p>
             </section>
 
-            <section id="roles" class="scroll-mt-4 rounded-xl border bg-white p-6">
-                <h2 class="text-lg font-bold text-slate-900">Roles &amp; permissions</h2>
+            <section id="roles" class="scroll-mt-4 ui-card p-6">
+                <h2 class="ui-section-title text-[17px]">Roles &amp; permissions</h2>
                 <table class="mt-3 w-full border-collapse text-sm">
                     <thead>
                         <tr class="border-b text-left text-xs uppercase text-slate-500">
@@ -66,8 +66,8 @@ $has = static fn (string $m) => in_array($m, $visibleModules ?? [], true);
                 </table>
             </section>
 
-            <section id="day" class="scroll-mt-4 rounded-xl border bg-white p-6">
-                <h2 class="text-lg font-bold text-slate-900">A typical clinic day</h2>
+            <section id="day" class="scroll-mt-4 ui-card p-6">
+                <h2 class="ui-section-title text-[17px]">A typical clinic day</h2>
                 <ol class="mt-2 list-decimal space-y-1.5 pl-5 text-sm text-slate-600">
                     <li><strong>Reception</strong> opens the queue, adds walk-ins, marks patients arrived.</li>
                     <li><strong>Doctor</strong> opens a patient → fills the single-screen visit → saves.</li>
@@ -77,8 +77,8 @@ $has = static fn (string $m) => in_array($m, $visibleModules ?? [], true);
                 </ol>
             </section>
 
-            <section id="dashboard" class="scroll-mt-4 rounded-xl border bg-white p-6">
-                <h2 class="text-lg font-bold text-slate-900">Dashboard</h2>
+            <section id="dashboard" class="scroll-mt-4 ui-card p-6">
+                <h2 class="ui-section-title text-[17px]">Dashboard</h2>
                 <p class="mt-2 text-sm text-slate-600">
                     Top tiles: patients today, pending appointments, revenue today, follow-ups due.
                     The <strong>Follow-ups</strong> widget lists overdue patients so none slip through.
@@ -86,8 +86,8 @@ $has = static fn (string $m) => in_array($m, $visibleModules ?? [], true);
             </section>
 
             <?php if ($isClinical): ?>
-            <section id="visit" class="scroll-mt-4 rounded-xl border bg-white p-6">
-                <h2 class="text-lg font-bold text-slate-900">Patient visit screen</h2>
+            <section id="visit" class="scroll-mt-4 ui-card p-6">
+                <h2 class="ui-section-title text-[17px]">Patient visit screen</h2>
                 <p class="mt-2 text-sm text-slate-600">
                     One screen, no tabs. The four core sections are always visible:
                     <strong>Symptoms, Diagnosis, Prescription, Notes</strong>. Optional sections
@@ -103,14 +103,15 @@ $has = static fn (string $m) => in_array($m, $visibleModules ?? [], true);
                     ?>) appear based on your specialty. The form <strong>auto-saves</strong> every
                     30 seconds and when you switch tabs — you never lose work.
                 </p>
-                <div class="mt-3 rounded-lg bg-amber-50 p-3 text-xs text-amber-900">
-                    💡 <strong>Same as last visit</strong> copies the prior visit's symptoms and
-                    prescription into the current draft — perfect for follow-ups.
+                <div class="mt-3 flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-900">
+                    <span class="mt-0.5 shrink-0 text-amber-600"><?= ui_icon('help', 14) ?></span>
+                    <span><strong>Same as last visit</strong> copies the prior visit's symptoms and
+                    prescription into the current draft — perfect for follow-ups.</span>
                 </div>
             </section>
 
-            <section id="symptoms" class="scroll-mt-4 rounded-xl border bg-white p-6">
-                <h2 class="text-lg font-bold text-slate-900">Symptoms</h2>
+            <section id="symptoms" class="scroll-mt-4 ui-card p-6">
+                <h2 class="ui-section-title text-[17px]">Symptoms</h2>
                 <p class="mt-2 text-sm text-slate-600">
                     Type to search; matches appear ranked for your specialty. Press <strong>Enter</strong>
                     to add the top match as a chip. If a symptom isn't in the list, type it and choose
@@ -118,8 +119,8 @@ $has = static fn (string $m) => in_array($m, $visibleModules ?? [], true);
                 </p>
             </section>
 
-            <section id="prescription" class="scroll-mt-4 rounded-xl border bg-white p-6">
-                <h2 class="text-lg font-bold text-slate-900">Prescription</h2>
+            <section id="prescription" class="scroll-mt-4 ui-card p-6">
+                <h2 class="ui-section-title text-[17px]">Prescription</h2>
                 <p class="mt-2 text-sm text-slate-600">
                     Pick a medicine, set frequency with the <strong>1-0-1</strong> presets, days, and
                     food timing. For tapering doses, open the <strong>⋮ drawer</strong> on a row and
@@ -128,8 +129,8 @@ $has = static fn (string $m) => in_array($m, $visibleModules ?? [], true);
                 </p>
             </section>
 
-            <section id="followups" class="scroll-mt-4 rounded-xl border bg-white p-6">
-                <h2 class="text-lg font-bold text-slate-900">Follow-ups</h2>
+            <section id="followups" class="scroll-mt-4 ui-card p-6">
+                <h2 class="ui-section-title text-[17px]">Follow-ups</h2>
                 <p class="mt-2 text-sm text-slate-600">
                     At the bottom of the Notes section, tap a date chip (<strong>+3d, +5d, +1w, +2w</strong>)
                     or pick a custom date, then choose a reason. The patient appears on your dashboard's
@@ -142,8 +143,8 @@ $has = static fn (string $m) => in_array($m, $visibleModules ?? [], true);
             </section>
 
             <?php if ($has('diet')): ?>
-            <section id="diet" class="scroll-mt-4 rounded-xl border bg-white p-6">
-                <h2 class="text-lg font-bold text-slate-900">Diet plans</h2>
+            <section id="diet" class="scroll-mt-4 ui-card p-6">
+                <h2 class="ui-section-title text-[17px]">Diet plans</h2>
                 <p class="mt-2 text-sm text-slate-600">
                     Pick a ready-made plan (diabetic, low-salt, weight-loss, etc.), tweak it for the
                     patient, and save your edits as a personal template. Share it on WhatsApp, or copy
@@ -153,8 +154,8 @@ $has = static fn (string $m) => in_array($m, $visibleModules ?? [], true);
             <?php endif; ?>
             <?php endif; ?>
 
-            <section id="appointments" class="scroll-mt-4 rounded-xl border bg-white p-6">
-                <h2 class="text-lg font-bold text-slate-900">Appointments &amp; queue</h2>
+            <section id="appointments" class="scroll-mt-4 ui-card p-6">
+                <h2 class="ui-section-title text-[17px]">Appointments &amp; queue</h2>
                 <p class="mt-2 text-sm text-slate-600">
                     Patients book online or walk in. Reception adds them to today's queue and marks
                     them arrived; the doctor calls them from the queue. Status flows:
@@ -162,26 +163,26 @@ $has = static fn (string $m) => in_array($m, $visibleModules ?? [], true);
                 </p>
             </section>
 
-            <section id="billing" class="scroll-mt-4 rounded-xl border bg-white p-6">
-                <h2 class="text-lg font-bold text-slate-900">Billing</h2>
+            <section id="billing" class="scroll-mt-4 ui-card p-6">
+                <h2 class="ui-section-title text-[17px]">Billing</h2>
                 <p class="mt-2 text-sm text-slate-600">
                     Generate GST-compliant invoices per visit. Collect payment by cash, UPI, or card.
                     Invoices can be printed or shared with the patient.
                 </p>
             </section>
 
-            <section id="plan" class="scroll-mt-4 rounded-xl border bg-white p-6">
-                <h2 class="text-lg font-bold text-slate-900">Plan &amp; add-ons</h2>
+            <section id="plan" class="scroll-mt-4 ui-card p-6">
+                <h2 class="ui-section-title text-[17px]">Plan &amp; add-ons</h2>
                 <p class="mt-2 text-sm text-slate-600">
                     One plan, ₹1,499/month, includes everything to run your clinic. Two optional
                     add-ons: <strong>Patient Connect</strong> (WhatsApp automation) and
                     <strong>Clinic Network</strong> (extra branches). Manage these under
-                    <a href="/settings?tab=subscription" class="text-emerald-700 hover:underline">Settings → Subscription</a>.
+                    <a href="/settings?tab=subscription" class="font-medium text-brand hover:underline">Settings → Subscription</a>.
                 </p>
             </section>
 
-            <section id="faq" class="scroll-mt-4 rounded-xl border bg-white p-6">
-                <h2 class="text-lg font-bold text-slate-900">FAQ</h2>
+            <section id="faq" class="scroll-mt-4 ui-card p-6">
+                <h2 class="ui-section-title text-[17px]">FAQ</h2>
                 <div class="mt-3 space-y-3 text-sm" x-data="{ open: null }">
                     <?php
                     $faqs = [

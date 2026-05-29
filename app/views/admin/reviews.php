@@ -11,7 +11,7 @@
         <h1 class="text-xl font-semibold">Pending doctor reviews</h1>
         <div class="mt-4 space-y-3">
             <?php foreach ($reviews as $r): ?>
-            <div class="rounded-xl border bg-white p-4">
+            <div class="ui-card p-4">
                 <p class="font-medium"><?= htmlspecialchars($r['reviewer_name'] ?? '') ?> — <?= (int) ($r['rating'] ?? 0) ?>★</p>
                 <p class="mt-1 text-sm text-slate-600"><?= htmlspecialchars($r['body'] ?? '') ?></p>
                 <div class="mt-3 flex gap-2">

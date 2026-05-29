@@ -1,9 +1,9 @@
 <div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-lg font-semibold">Visits</h2>
+        <h2 class="ui-section-title">Visits</h2>
     </div>
 
-    <div class="overflow-hidden rounded-xl border bg-white">
+    <div class="overflow-hidden ui-card">
         <table class="w-full text-sm">
             <thead class="bg-slate-50 text-left text-xs text-slate-500">
                 <tr>

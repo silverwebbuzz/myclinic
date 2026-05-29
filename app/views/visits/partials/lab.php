@@ -1,4 +1,4 @@
-<section x-show="activeTab === 'lab'" class="rounded-xl border bg-white p-6 space-y-4">
+<section x-show="activeTab === 'lab'" class="ui-card ui-card-pad space-y-4">
     <h3 class="font-semibold">Lab orders</h3>
     <form method="post" action="/lab/orders" class="flex flex-wrap gap-2 items-end">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
@@ -6,13 +6,13 @@
         <input type="hidden" name="visit_id" value="<?= (int) $visit['id'] ?>">
         <div class="min-w-[200px] flex-1">
             <label class="text-xs font-medium">Test</label>
-            <select name="test_id" required class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+            <select name="test_id" required class="ui-input">
                 <?php foreach ($labTests as $t): ?>
                 <option value="<?= (int) $t['id'] ?>"><?= htmlspecialchars($t['test_name']) ?> (<?= htmlspecialchars($t['test_code'] ?? '') ?>)</option>
                 <?php endforeach; ?>
             </select>
         </div>
-        <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white">Order test</button>
+        <button type="submit" class="ui-btn ui-btn-primary">Order test</button>
     </form>
     <?php if ($labOrders === []): ?>
     <p class="text-sm text-slate-500">No lab orders for this visit.</p>

@@ -111,13 +111,13 @@ $categories = [
                     Has custom clinical form (code)
                 </label>
             </div>
-            <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
+            <button type="submit" class="ui-btn ui-btn-primary">
                 <span x-text="editing ? 'Update specialty' : 'Add specialty'"></span>
             </button>
         </form>
 
         <!-- ===== List ===== -->
-        <div class="overflow-x-auto rounded-xl border bg-white shadow-sm">
+        <div class="overflow-x-auto ui-card shadow-sm">
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr>

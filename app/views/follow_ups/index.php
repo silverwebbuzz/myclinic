@@ -4,7 +4,7 @@ $d = $data ?? ['overdue' => [], 'overdue_count' => 0, 'due_week' => 0, 'done_mon
 ?>
 <div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-lg font-semibold">Follow-ups</h2>
+        <h2 class="ui-section-title">Follow-ups</h2>
         <div class="flex gap-4 text-sm text-slate-500">
             <span class="text-rose-700 font-medium"><?= (int) $d['overdue_count'] ?> overdue</span>
             <span><?= (int) $d['due_week'] ?> due this week</span>
@@ -12,7 +12,7 @@ $d = $data ?? ['overdue' => [], 'overdue_count' => 0, 'due_week' => 0, 'done_mon
         </div>
     </div>
 
-    <div class="rounded-xl border bg-white">
+    <div class="ui-card">
         <div class="border-b px-4 py-3">
             <h3 class="text-sm font-semibold text-rose-700">Overdue</h3>
         </div>

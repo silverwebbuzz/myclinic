@@ -143,7 +143,7 @@
                     <input type="hidden" name="_csrf" value="<?= htmlspecialchars((string) $csrf) ?>">
                     <input type="hidden" name="claim_id" value="<?= (int) $claim['id'] ?>">
                     <textarea name="notes" rows="2" placeholder="Internal notes (optional, visible only to admins)"
-                              class="w-full rounded-lg border px-3 py-2 text-sm"></textarea>
+                              class="ui-input"></textarea>
                     <div class="flex gap-2 flex-wrap">
                         <button type="submit" formaction="/admin/claims/approve"
                                 class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">

@@ -1,24 +1,24 @@
 <div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-lg font-semibold">Billing</h2>
+        <h2 class="ui-section-title">Billing</h2>
         <div class="flex flex-wrap gap-2">
-            <a href="/billing/export/excel" class="rounded-lg border px-3 py-2 text-sm">Export Excel</a>
-            <a href="/billing/export/tally" class="rounded-lg border px-3 py-2 text-sm">Tally XML</a>
+            <a href="/billing/export/excel" class="ui-btn ui-btn-secondary ui-btn-sm">Export Excel</a>
+            <a href="/billing/export/tally" class="ui-btn ui-btn-secondary ui-btn-sm">Tally XML</a>
         </div>
     </div>
 
-    <form method="get" class="flex flex-wrap gap-2 rounded-xl border bg-white p-4">
-        <input type="search" name="q" value="<?= htmlspecialchars($filters['q'] ?? '') ?>" placeholder="Search invoice, patient…" class="min-w-[200px] flex-1 rounded-lg border px-3 py-2 text-sm">
-        <select name="status" class="rounded-lg border px-3 py-2 text-sm">
+    <form method="get" class="flex flex-wrap gap-2 ui-card p-4">
+        <input type="search" name="q" value="<?= htmlspecialchars($filters['q'] ?? '') ?>" placeholder="Search invoice, patient…" class="min-w-[200px] flex-1 ui-input">
+        <select name="status" class="ui-input">
             <option value="">All statuses</option>
             <?php foreach (['draft','sent','partial','paid','overdue'] as $st): ?>
             <option value="<?= $st ?>" <?= ($filters['status'] ?? '') === $st ? 'selected' : '' ?>><?= ucfirst($st) ?></option>
             <?php endforeach; ?>
         </select>
-        <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white">Filter</button>
+        <button type="submit" class="ui-btn ui-btn-primary">Filter</button>
     </form>
 
-    <div class="overflow-hidden rounded-xl border bg-white">
+    <div class="overflow-hidden ui-card">
         <table class="w-full text-sm">
             <thead class="bg-slate-50 text-left text-xs text-slate-500">
                 <tr>
@@ -43,8 +43,8 @@
                     <td class="px-4 py-3 text-xs"><?= htmlspecialchars(substr($inv['created_at'] ?? '', 0, 10)) ?></td>
                     <td class="px-4 py-3 text-right">
                         <div class="flex justify-end gap-2">
-                            <a href="/billing/<?= (int) $inv['id'] ?>" class="text-emerald-600 hover:underline">Open</a>
-                            <a href="/billing/<?= (int) $inv['id'] ?>/pdf" class="text-slate-500 hover:underline" title="Download PDF">📄</a>
+                            <a href="/billing/<?= (int) $inv['id'] ?>" class="font-medium text-brand hover:underline">Open</a>
+                            <a href="/billing/<?= (int) $inv['id'] ?>/pdf" class="text-slate-400 hover:text-slate-700" title="Download PDF"><?= ui_icon('emr', 16) ?></a>
                         </div>
                     </td>
                 </tr>

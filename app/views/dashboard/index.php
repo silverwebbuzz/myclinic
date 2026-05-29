@@ -48,10 +48,10 @@
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <?php
         $tiles = [
-            ['label' => 'Patients today', 'key' => 'patients_today', 'icon' => '👤'],
-            ['label' => 'Appointments pending', 'key' => 'appointments_pending', 'icon' => '📅'],
-            ['label' => 'Revenue today', 'key' => 'revenue_today', 'icon' => '💰', 'money' => true],
-            ['label' => 'Follow-ups due', 'key' => 'follow_ups_due', 'icon' => '🔔'],
+            ['label' => 'Patients today', 'key' => 'patients_today', 'icon' => 'patients'],
+            ['label' => 'Appointments pending', 'key' => 'appointments_pending', 'icon' => 'appointments'],
+            ['label' => 'Revenue today', 'key' => 'revenue_today', 'icon' => 'billing', 'money' => true],
+            ['label' => 'Follow-ups due', 'key' => 'follow_ups_due', 'icon' => 'bell'],
         ];
         foreach ($tiles as $tile):
             $val = $stats[$tile['key']] ?? 0;
@@ -59,23 +59,25 @@
                 ? ($currency ?? 'INR') . ' ' . number_format((float) $val, 2)
                 : (string) (int) $val;
         ?>
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="ui-card p-5">
             <div class="flex items-center justify-between">
-                <p class="text-xs font-medium text-slate-500"><?= htmlspecialchars($tile['label']) ?></p>
-                <span><?= $tile['icon'] ?></span>
+                <p class="ui-label text-slate-500"><?= htmlspecialchars($tile['label']) ?></p>
+                <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-light text-brand">
+                    <?= ui_icon($tile['icon'], 18) ?>
+                </span>
             </div>
-            <p class="mt-2 text-2xl font-semibold" x-text="stats.<?= $tile['key'] ?>Display"><?= htmlspecialchars($display) ?></p>
+            <p class="mt-3 text-2xl font-semibold text-slate-900" x-text="stats.<?= $tile['key'] ?>Display"><?= htmlspecialchars($display) ?></p>
         </div>
         <?php endforeach; ?>
     </div>
 
     <div class="grid gap-6 lg:grid-cols-3">
-        <div class="lg:col-span-2 rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div class="flex items-center justify-between border-b px-4 py-3">
-                <h2 class="text-sm font-semibold">Today's queue</h2>
-                <span class="text-xs text-slate-400" x-text="lastRefresh ? 'Updated ' + lastRefresh : ''"></span>
+        <div class="lg:col-span-2 ui-card">
+            <div class="ui-card-header">
+                <h2 class="ui-section-title">Today's queue</h2>
+                <span class="ui-help" x-text="lastRefresh ? 'Updated ' + lastRefresh : ''"></span>
             </div>
-            <div id="queue-body" class="divide-y max-h-96 overflow-y-auto">
+            <div id="queue-body" class="divide-y divide-slate-100 max-h-96 overflow-y-auto">
                 <?php require __DIR__ . '/_queue_rows.php'; ?>
             </div>
         </div>
@@ -83,10 +85,10 @@
         <div class="space-y-6">
             <?php if (!empty($followUps['overdue_count']) || !empty($followUps['due_week'])): ?>
             <!-- ============ Follow-ups widget (Phase 4) ============ -->
-            <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="ui-card ui-card-pad">
                 <div class="flex items-center justify-between">
-                    <h2 class="text-sm font-semibold">Follow-ups</h2>
-                    <a href="/follow-ups" class="text-xs text-emerald-700 hover:underline">View all</a>
+                    <h2 class="ui-section-title">Follow-ups</h2>
+                    <a href="/follow-ups" class="text-xs font-medium text-brand hover:underline">View all</a>
                 </div>
                 <?php if (!empty($followUps['overdue_count'])): ?>
                 <p class="mt-2 text-xs font-medium text-rose-700">
@@ -103,9 +105,9 @@
                     <?php endforeach; ?>
                 </ul>
                 <?php endif; ?>
-                <div class="mt-2 flex gap-4 border-t pt-2 text-xs text-slate-500">
-                    <span>📅 <?= (int) ($followUps['due_week'] ?? 0) ?> due this week</span>
-                    <span>✓ <?= (int) ($followUps['done_month'] ?? 0) ?> done this month</span>
+                <div class="mt-2 flex gap-4 border-t border-slate-100 pt-2 text-xs text-slate-500">
+                    <span class="inline-flex items-center gap-1.5"><?= ui_icon('appointments', 13) ?><?= (int) ($followUps['due_week'] ?? 0) ?> due this week</span>
+                    <span class="inline-flex items-center gap-1.5"><?= ui_icon('check', 13) ?><?= (int) ($followUps['done_month'] ?? 0) ?> done this month</span>
                 </div>
             </div>
             <?php endif; ?>
@@ -126,17 +128,20 @@
             <?php endif; ?>
 
             <?php if (!empty($checklist) && empty($checklist['dismissed']) && ($checklist['percent'] ?? 0) < 100): ?>
-            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <div class="ui-card ui-card-pad bg-brand-light" style="border-color: var(--brand-light);">
                 <div class="flex items-center justify-between">
-                    <h2 class="text-sm font-semibold text-emerald-900">Getting started</h2>
-                    <span class="text-xs font-medium text-emerald-700"><?= (int) ($checklist['percent'] ?? 0) ?>%</span>
+                    <h2 class="ui-section-title text-brand">Getting started</h2>
+                    <span class="text-xs font-semibold text-brand"><?= (int) ($checklist['percent'] ?? 0) ?>%</span>
                 </div>
-                <div class="mt-2 h-1.5 rounded-full bg-emerald-200">
-                    <div class="h-1.5 rounded-full bg-emerald-600" style="width: <?= (int) ($checklist['percent'] ?? 0) ?>%"></div>
+                <div class="mt-2 h-1.5 rounded-full bg-white/70">
+                    <div class="h-1.5 rounded-full bg-brand" style="width: <?= (int) ($checklist['percent'] ?? 0) ?>%"></div>
                 </div>
-                <ul class="mt-3 space-y-1 text-xs text-emerald-800">
+                <ul class="mt-3 space-y-1.5 text-xs text-slate-700">
                     <?php foreach ($checklist['items'] as $item): ?>
-                    <li><?= !empty($item['done']) ? '✓' : '☐' ?> <?= htmlspecialchars($item['label']) ?></li>
+                    <li class="flex items-center gap-2">
+                        <span class="<?= !empty($item['done']) ? 'text-brand' : 'text-slate-300' ?>"><?= ui_icon('check', 14) ?></span>
+                        <span><?= htmlspecialchars($item['label']) ?></span>
+                    </li>
                     <?php endforeach; ?>
                 </ul>
             </div>

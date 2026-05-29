@@ -1,9 +1,9 @@
 <div class="space-y-4">
     <div class="flex flex-wrap gap-2">
         <h2 class="text-lg font-semibold flex-1">Narcotic register (Schedule H / H1)</h2>
-        <a href="/pharmacy/pos" class="rounded-lg border px-3 py-2 text-sm">POS</a>
+        <a href="/pharmacy/pos" class="ui-btn ui-btn-secondary ui-btn-sm">POS</a>
     </div>
-    <div class="overflow-hidden rounded-xl border bg-white">
+    <div class="overflow-hidden ui-card">
         <table class="w-full text-sm">
             <thead class="bg-slate-50 text-xs text-slate-500">
                 <tr>

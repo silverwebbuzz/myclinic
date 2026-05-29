@@ -43,9 +43,10 @@ $sp = is_array($p['specialty_data'] ?? null) ? $p['specialty_data'] : [];
                 </button>
             </form>
 
-            <div class="mt-5 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
-                💡 <strong>Why we ask first:</strong> If this patient already has a profile on eClinicPro
-                (either with you or another clinic), we'll auto-fill the basics so you don't retype.
+            <div class="mt-5 flex items-start gap-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
+                <span class="mt-0.5 shrink-0 text-slate-400"><?= ui_icon('help', 13) ?></span>
+                <span><strong>Why we ask first:</strong> If this patient already has a profile on eClinicPro
+                (either with you or another clinic), we'll auto-fill the basics so you don't retype.</span>
             </div>
         </div>
     </div>
@@ -90,11 +91,11 @@ $sp = is_array($p['specialty_data'] ?? null) ? $p['specialty_data'] : [];
         <input type="hidden" name="force_duplicate" :value="forceDuplicate ? '1' : ''">
 
         <!-- Step 1 -->
-        <div x-show="step === 1" class="space-y-4 rounded-xl border bg-white p-6">
+        <div x-show="step === 1" class="space-y-4 ui-card ui-card-pad">
             <h2 class="font-semibold">Personal details</h2>
             <div>
                 <label class="text-xs font-medium">Full name *</label>
-                <input name="name" x-model="form.name" required class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                <input name="name" x-model="form.name" required class="ui-input">
             </div>
             <div>
                 <label class="text-xs font-medium">Phone *</label>
@@ -110,11 +111,11 @@ $sp = is_array($p['specialty_data'] ?? null) ? $p['specialty_data'] : [];
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
                     <label class="text-xs font-medium">Date of birth</label>
-                    <input name="dob" type="date" x-model="form.dob" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                    <input name="dob" type="date" x-model="form.dob" class="ui-input">
                 </div>
                 <div>
                     <label class="text-xs font-medium">Gender</label>
-                    <select name="gender" x-model="form.gender" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                    <select name="gender" x-model="form.gender" class="ui-input">
                         <option value="">—</option>
                         <option value="M">Male</option>
                         <option value="F">Female</option>
@@ -124,16 +125,16 @@ $sp = is_array($p['specialty_data'] ?? null) ? $p['specialty_data'] : [];
             </div>
             <div>
                 <label class="text-xs font-medium">Email</label>
-                <input name="email" type="email" x-model="form.email" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                <input name="email" type="email" x-model="form.email" class="ui-input">
             </div>
             <div>
                 <label class="text-xs font-medium">Address</label>
-                <textarea name="address" x-model="form.address" rows="2" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"></textarea>
+                <textarea name="address" x-model="form.address" rows="2" class="ui-input"></textarea>
             </div>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
                     <label class="text-xs font-medium">Blood group</label>
-                    <select name="blood_group" x-model="form.blood_group" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                    <select name="blood_group" x-model="form.blood_group" class="ui-input">
                         <option value="">—</option>
                         <?php foreach (['A+','A-','B+','B-','O+','O-','AB+','AB-'] as $bg): ?>
                         <option value="<?= $bg ?>"><?= $bg ?></option>
@@ -142,7 +143,7 @@ $sp = is_array($p['specialty_data'] ?? null) ? $p['specialty_data'] : [];
                 </div>
                 <div>
                     <label class="text-xs font-medium">Diet</label>
-                    <select name="veg_type" x-model="form.veg_type" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                    <select name="veg_type" x-model="form.veg_type" class="ui-input">
                         <option value="veg">Vegetarian</option>
                         <option value="nonveg">Non-vegetarian</option>
                         <option value="vegan">Vegan</option>
@@ -158,32 +159,32 @@ $sp = is_array($p['specialty_data'] ?? null) ? $p['specialty_data'] : [];
         </div>
 
         <!-- Step 2 -->
-        <div x-show="step === 2" class="space-y-4 rounded-xl border bg-white p-6">
+        <div x-show="step === 2" class="space-y-4 ui-card ui-card-pad">
             <h2 class="font-semibold">Medical history</h2>
             <div>
                 <label class="text-xs font-medium">Allergies (comma-separated)</label>
-                <input name="allergies" x-model="form.allergies" placeholder="Penicillin, Peanuts" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                <input name="allergies" x-model="form.allergies" placeholder="Penicillin, Peanuts" class="ui-input">
             </div>
             <div>
                 <label class="text-xs font-medium">Chronic conditions</label>
-                <input name="chronic_conditions" x-model="form.chronic_conditions" placeholder="Diabetes, Hypertension" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                <input name="chronic_conditions" x-model="form.chronic_conditions" placeholder="Diabetes, Hypertension" class="ui-input">
             </div>
             <div>
                 <label class="text-xs font-medium">Past surgeries</label>
-                <textarea name="surgeries" x-model="form.surgeries" rows="2" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"></textarea>
+                <textarea name="surgeries" x-model="form.surgeries" rows="2" class="ui-input"></textarea>
             </div>
             <div>
                 <label class="text-xs font-medium">Family history</label>
-                <textarea name="family_history" x-model="form.family_history" rows="2" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm"></textarea>
+                <textarea name="family_history" x-model="form.family_history" rows="2" class="ui-input"></textarea>
             </div>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
                     <label class="text-xs font-medium">Insurance provider</label>
-                    <input name="insurance_provider" x-model="form.insurance_provider" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                    <input name="insurance_provider" x-model="form.insurance_provider" class="ui-input">
                 </div>
                 <div>
                     <label class="text-xs font-medium">Policy ID</label>
-                    <input name="insurance_id" x-model="form.insurance_id" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                    <input name="insurance_id" x-model="form.insurance_id" class="ui-input">
                 </div>
             </div>
             <!-- Phase 2: referral / source moved here. Step 3 (specialty fields)
@@ -192,11 +193,11 @@ $sp = is_array($p['specialty_data'] ?? null) ? $p['specialty_data'] : [];
             <div class="grid gap-4 sm:grid-cols-2 border-t pt-4">
                 <div>
                     <label class="text-xs font-medium">Referred by</label>
-                    <input name="referred_by" x-model="form.referred_by" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                    <input name="referred_by" x-model="form.referred_by" class="ui-input">
                 </div>
                 <div>
                     <label class="text-xs font-medium">Source</label>
-                    <select name="source" x-model="form.source" class="mt-1 w-full rounded-lg border px-3 py-2 text-sm">
+                    <select name="source" x-model="form.source" class="ui-input">
                         <option value="walk_in">Walk-in</option>
                         <option value="referral">Referral</option>
                         <option value="online">Online</option>

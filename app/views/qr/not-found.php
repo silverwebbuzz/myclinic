@@ -8,7 +8,7 @@
 </head>
 <body class="flex min-h-screen items-center justify-center bg-slate-50 p-4">
     <div class="rounded-xl border bg-white p-8 text-center">
-        <h1 class="text-lg font-semibold">Invalid QR code</h1>
+        <h1 class="ui-section-title">Invalid QR code</h1>
         <p class="mt-2 text-sm text-slate-500">This patient card is not recognized or has expired.</p>
     </div>
 </body>

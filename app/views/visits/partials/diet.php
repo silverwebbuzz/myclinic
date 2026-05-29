@@ -2,7 +2,7 @@
 $plan = $dietPlan ?? null;
 $week = is_array($plan['plan_json'] ?? null) ? $plan['plan_json'] : ($defaultDietWeek ?? []);
 ?>
-<section x-show="activeTab === 'diet'" class="rounded-xl border bg-white p-6 space-y-4">
+<section x-show="activeTab === 'diet'" class="ui-card ui-card-pad space-y-4">
     <h3 class="font-semibold">Diet plan</h3>
     <?php if (!empty($_GET['diet_saved'])): ?><p class="text-sm text-emerald-600">Draft saved.</p><?php endif; ?>
     <?php if (!empty($_GET['diet_shared'])): ?><p class="text-sm text-emerald-600">Plan shared via WhatsApp.</p><?php endif; ?>

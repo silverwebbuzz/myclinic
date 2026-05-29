@@ -1,3 +1,4 @@
+<?php require_once dirname(__DIR__) . '/components/ui.php'; ?>
 <!DOCTYPE html>
 <html lang="en" x-data="appShell()" class="antialiased">
 <head>
@@ -68,6 +69,7 @@
             background-color: var(--brand);
         }
     </style>
+    <?php require dirname(__DIR__) . '/components/ui_tokens.php'; ?>
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-900 antialiased">
     <?php require dirname(__DIR__) . '/components/impersonation-banner.php'; ?>
@@ -84,6 +86,20 @@
                 if ($hrefPath === '/dashboard') return $currentUri === '/dashboard';
                 // Other items active when path begins with the href path segment.
                 return $currentUri === $hrefPath || str_starts_with($currentUri, $hrefPath . '/');
+            };
+
+            // Map legacy emoji icons (config/modules_nav.php) to SVG registry
+            // names for the enterprise look, without changing the config shape.
+            $emojiToIcon = [
+                '🏠' => 'dashboard', '👤' => 'patients', '📋' => 'emr', '💊' => 'prescription',
+                '❤️' => 'vitals', '🔬' => 'lab', '🩻' => 'radiology', '🏪' => 'pharmacy',
+                '📅' => 'appointments', '🗓️' => 'scheduling', '🧾' => 'billing', '💬' => 'whatsapp',
+                '📱' => 'qr', '📊' => 'analytics', '🎯' => 'crm', '👥' => 'staff',
+            ];
+            $navIcon = static function (string $raw) use ($emojiToIcon): string {
+                // Already an SVG name in the registry? use as-is; else map emoji.
+                $name = $emojiToIcon[$raw] ?? $raw;
+                return ui_icon($name, 18, 'shrink-0');
             };
         ?>
         <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
@@ -108,34 +124,34 @@
                 ?>
                 <a href="<?= htmlspecialchars($dashHref) ?>"
                    class="relative mb-2 flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $dashActive ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50' ?>">
-                    <span class="text-base"><?= $nav['dashboard']['icon'] ?? '🏠' ?></span>
+                    <?= $navIcon((string) ($nav['dashboard']['icon'] ?? 'dashboard')) ?>
                     <span>Dashboard</span>
                 </a>
                 <?php foreach ($nav['groups'] ?? [] as $group): ?>
-                <p class="mb-1 mt-5 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400"><?= htmlspecialchars($group['label']) ?></p>
+                <p class="ui-group-label mb-1 mt-5 px-3"><?= htmlspecialchars($group['label']) ?></p>
                 <?php foreach ($group['items'] as $item):
                     $active = $isActive((string) $item['href']);
                 ?>
                 <a href="<?= htmlspecialchars($item['href']) ?>"
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $active ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
-                    <span class="text-base"><?= $item['icon'] ?></span>
+                    <?= $navIcon((string) $item['icon']) ?>
                     <span><?= htmlspecialchars($item['label']) ?></span>
                 </a>
                 <?php endforeach; ?>
                 <?php endforeach; ?>
 
-                <p class="mb-1 mt-5 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Account</p>
+                <p class="ui-group-label mb-1 mt-5 px-3">Account</p>
                 <a href="/follow-ups"
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/follow-ups') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
-                    <span class="text-base">🔔</span><span>Follow-ups</span>
+                    <?= ui_icon('bell', 18, 'shrink-0') ?><span>Follow-ups</span>
                 </a>
                 <a href="/settings"
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/settings') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
-                    <span class="text-base">⚙️</span><span>Settings</span>
+                    <?= ui_icon('settings', 18, 'shrink-0') ?><span>Settings</span>
                 </a>
                 <a href="/help"
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/help') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
-                    <span class="text-base">❓</span><span>Help &amp; Guide</span>
+                    <?= ui_icon('help', 18, 'shrink-0') ?><span>Help &amp; Guide</span>
                 </a>
             </nav>
         </aside>
@@ -146,7 +162,7 @@
                     <button type="button" @click="sidebarOpen = !sidebarOpen" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden" aria-label="Menu">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                     </button>
-                    <h1 class="hidden text-base font-semibold text-slate-900 sm:block"><?= htmlspecialchars($pageTitle ?? 'Dashboard') ?></h1>
+                    <h1 class="ui-page-title hidden sm:block"><?= htmlspecialchars($pageTitle ?? 'Dashboard') ?></h1>
                 </div>
 
                 <!-- Global patient search — jump to any patient from anywhere -->
@@ -182,7 +198,7 @@
                 </div>
                 <div class="flex items-center gap-2">
                     <button type="button" class="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100" title="Notifications">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        <?= ui_icon('bell', 18) ?>
                     </button>
                     <div x-data="{ open: false }" class="relative">
                         <button type="button" @click="open = !open" class="flex items-center gap-2 rounded-lg p-1 hover:bg-slate-100">

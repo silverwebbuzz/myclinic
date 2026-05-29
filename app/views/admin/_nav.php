@@ -7,7 +7,15 @@ if (!isset($pendingClaimCount)) {
         $pendingClaimCount = 0;
     }
 }
+// Admin pages are standalone (own <head>, no clinic shell), so pull in the
+// shared UI helpers + token stylesheet here. Admin has no per-clinic brand,
+// so set a neutral slate brand for the .ui-* button/focus colors.
+require_once dirname(__DIR__) . '/components/ui.php';
 ?>
+<style>
+    :root { --brand: #334155; --brand-light: rgba(51,65,85,0.1); --brand-dark: #1e293b; }
+</style>
+<?php require dirname(__DIR__) . '/components/ui_tokens.php'; ?>
 <header class="border-b bg-slate-900 text-white">
     <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
         <a href="/admin/dashboard" class="font-semibold">ManageClinic Admin</a>

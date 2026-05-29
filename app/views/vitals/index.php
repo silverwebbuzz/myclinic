@@ -1,26 +1,26 @@
 <div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-lg font-semibold">Vitals</h2>
+        <h2 class="ui-section-title">Vitals</h2>
         <p class="text-sm text-slate-500"><?= (int) $total ?> readings</p>
     </div>
 
-    <form method="get" class="rounded-xl border bg-white p-4">
+    <form method="get" class="ui-card p-4">
         <div class="flex flex-wrap gap-3">
             <input type="search" name="q" value="<?= htmlspecialchars($filters['q']) ?>"
                    placeholder="Search patient or UHID…"
-                   class="min-w-[220px] flex-1 rounded-lg border px-3 py-2 text-sm">
-            <input type="date" name="from" value="<?= htmlspecialchars($filters['from']) ?>" class="rounded-lg border px-3 py-2 text-sm">
-            <input type="date" name="to" value="<?= htmlspecialchars($filters['to']) ?>" class="rounded-lg border px-3 py-2 text-sm">
+                   class="min-w-[220px] flex-1 ui-input">
+            <input type="date" name="from" value="<?= htmlspecialchars($filters['from']) ?>" class="ui-input">
+            <input type="date" name="to" value="<?= htmlspecialchars($filters['to']) ?>" class="ui-input">
             <label class="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="abnormal" value="1" <?= !empty($filters['abnormal']) ? 'checked' : '' ?>>
                 Abnormal only
             </label>
-            <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white">Filter</button>
-            <a href="/vitals" class="rounded-lg border px-4 py-2 text-sm">Reset</a>
+            <button type="submit" class="ui-btn ui-btn-primary">Filter</button>
+            <a href="/vitals" class="ui-btn ui-btn-secondary">Reset</a>
         </div>
     </form>
 
-    <div class="overflow-x-auto rounded-xl border bg-white">
+    <div class="overflow-x-auto ui-card">
         <table class="w-full min-w-[900px] text-sm">
             <thead class="bg-slate-50 text-left text-xs text-slate-500">
                 <tr>

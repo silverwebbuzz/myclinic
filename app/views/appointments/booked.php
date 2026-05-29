@@ -12,9 +12,9 @@
     <p class="text-xs text-slate-500">WhatsApp reminder queued for 24 hours before visit.</p>
     <div class="flex flex-wrap justify-center gap-3 pt-4">
         <?php if (!empty($slipUrl)): ?>
-        <a href="<?= htmlspecialchars($slipUrl) ?>" target="_blank" class="rounded-lg border px-4 py-2 text-sm">Download slip</a>
+        <a href="<?= htmlspecialchars($slipUrl) ?>" target="_blank" class="ui-btn ui-btn-secondary">Download slip</a>
         <?php endif; ?>
-        <a href="/queue" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white">View queue</a>
-        <a href="/appointments/new" class="rounded-lg border px-4 py-2 text-sm">Book another</a>
+        <a href="/queue" class="ui-btn ui-btn-primary">View queue</a>
+        <a href="/appointments/new" class="ui-btn ui-btn-secondary">Book another</a>
     </div>
 </div>

@@ -1,8 +1,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-lg font-semibold">CRM &amp; Leads</h2>
-        <a href="/crm/new" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white">Add lead</a>
+        <h2 class="ui-section-title">CRM &amp; Leads</h2>
+        <a href="/crm/new" class="ui-btn ui-btn-primary">Add lead</a>
     </div>
     <div class="flex flex-wrap gap-2">
         <a href="/crm" class="rounded-full px-3 py-1 text-xs <?= ($status ?? '') === '' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100' ?>">All (<?= array_sum($counts) ?>)</a>
@@ -14,7 +14,7 @@
         <?php endforeach; ?>
     </div>
     <div class="grid gap-4 lg:grid-cols-3">
-        <div class="lg:col-span-2 overflow-hidden rounded-xl border bg-white">
+        <div class="lg:col-span-2 overflow-hidden ui-card">
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-xs text-slate-500"><tr>
                     <th class="px-4 py-3 text-left">Name</th><th>Phone</th><th>Source</th><th>Status</th><th></th>
@@ -44,7 +44,7 @@
                 </tbody>
             </table>
         </div>
-        <div class="rounded-xl border bg-white p-4">
+        <div class="ui-card p-4">
             <h3 class="text-sm font-medium">Leads by source</h3>
             <canvas id="source-chart" height="180"></canvas>
         </div>

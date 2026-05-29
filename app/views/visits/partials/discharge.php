@@ -37,7 +37,7 @@
             </select>
         </label>
         <?php if (!$isFinal): ?>
-        <button type="submit" class="rounded-lg border px-4 py-2 text-sm">Save draft</button>
+        <button type="submit" class="ui-btn ui-btn-secondary">Save draft</button>
         <?php endif; ?>
     </form>
     <?php if (!$isFinal && $editable): ?>
@@ -47,7 +47,7 @@
         <canvas x-ref="canvas" width="400" height="80" class="border rounded-lg bg-white w-full max-w-md"
                 @mousedown="startDraw" @mousemove="draw" @mouseup="endDraw"></canvas>
         <input type="hidden" name="signature" x-model="signature">
-        <button type="submit" @click="captureSig()" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white">Finalize &amp; send</button>
+        <button type="submit" @click="captureSig()" class="ui-btn ui-btn-primary">Finalize &amp; send</button>
     </form>
     <script>
     function dischargeSig() {

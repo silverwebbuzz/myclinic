@@ -83,7 +83,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
     <div class="space-y-4 lg:col-span-2">
 
     <!-- ====== TODAY'S VISIT ====== -->
-    <section class="rounded-xl border bg-white shadow-sm">
+    <section class="ui-card shadow-sm">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b px-5 py-3" x-data="{ editDate: false }">
             <div class="flex items-baseline gap-3">
                 <h2 class="text-base font-semibold text-slate-900">Today's visit</h2>
@@ -157,7 +157,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                             <li>
                                 <button type="button" @click="pickSystem(c)"
                                         class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm hover:bg-emerald-50">
-                                    <span><span class="mr-1">📂</span><span x-text="c.label"></span></span>
+                                    <span class="inline-flex items-center gap-1.5"><span class="text-slate-400"><?= ui_icon('emr', 14) ?></span><span x-text="c.label"></span></span>
                                     <span class="text-xs uppercase tracking-wider text-emerald-700" x-text="'system · ' + c.count"></span>
                                 </button>
                             </li>
@@ -703,7 +703,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 <?php if ($editable): ?>
                     <form method="post" action="/visits/<?= $visitId ?>/complete" @submit="confirmComplete($event)">
                         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
-                        <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
+                        <button type="submit" class="ui-btn ui-btn-primary">
                             Complete visit
                         </button>
                     </form>
@@ -716,7 +716,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
 
     <!-- ====== VISIT HISTORY (right column, sticky on desktop) ====== -->
     <aside class="lg:col-span-1">
-    <section class="rounded-xl border bg-white shadow-sm lg:sticky lg:top-20">
+    <section class="ui-card shadow-sm lg:sticky lg:top-20">
         <div class="flex items-center justify-between border-b px-5 py-3">
             <h2 class="text-base font-semibold text-slate-900">Visit history</h2>
             <span class="text-xs text-slate-400"><?= count($recentVisits ?? []) ?> recent</span>
@@ -735,7 +735,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                     <li class="group px-5 py-3 hover:bg-slate-50">
                         <div class="flex items-center justify-between gap-2">
                             <span class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
-                                📅 <?= htmlspecialchars(date('d M Y', strtotime((string) $rv['visited_at']))) ?>
+                                <?= ui_icon('appointments', 13) ?><?= htmlspecialchars(date('d M Y', strtotime((string) $rv['visited_at']))) ?>
                             </span>
                             <span class="text-[11px] text-slate-400">#<?= (int) $rv['visit_number'] ?></span>
                         </div>

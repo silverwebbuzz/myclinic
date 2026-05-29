@@ -57,7 +57,7 @@ $statusBadge = static function (string $s): array {
             <p class="text-xs text-slate-500"><?= htmlspecialchars($monthLabel) ?></p>
         </div>
         <div class="flex gap-2">
-            <a href="/staff/leaves" class="rounded-lg border px-3 py-2 text-sm hover:bg-slate-50">📋 Leave requests</a>
+            <a href="/staff/leaves" class="ui-btn ui-btn-secondary ui-btn-sm"><?= ui_icon('emr', 15) ?><span>Leave requests</span></a>
         </div>
     </div>
 
@@ -69,17 +69,17 @@ $statusBadge = static function (string $s): array {
     <?php endif; ?>
 
     <!-- ===== Your status today (big card) ===== -->
-    <div class="rounded-xl border bg-white p-5">
+    <div class="ui-card p-5">
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div>
-                <p class="text-xs uppercase tracking-wide text-slate-500">Your status today</p>
+                <p class="ui-group-label">Your status today</p>
                 <p class="mt-1 text-base font-semibold">
                     <?php if ($clockedOut): ?>
-                        <span class="text-slate-700">🌙 Day complete</span>
+                        <span class="inline-flex items-center gap-2 text-slate-700"><span class="h-2 w-2 rounded-full bg-slate-400"></span>Day complete</span>
                     <?php elseif ($clockedIn): ?>
-                        <span class="text-emerald-700">🟢 Clocked in</span>
+                        <span class="inline-flex items-center gap-2 text-emerald-700"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>Clocked in</span>
                     <?php else: ?>
-                        <span class="text-slate-500">⚪ Not clocked in yet</span>
+                        <span class="inline-flex items-center gap-2 text-slate-500"><span class="h-2 w-2 rounded-full bg-slate-300"></span>Not clocked in yet</span>
                     <?php endif; ?>
                 </p>
                 <?php if ($today): ?>
@@ -109,7 +109,7 @@ $statusBadge = static function (string $s): array {
     </div>
 
     <!-- ===== Today's roll-call ===== -->
-    <div class="rounded-xl border bg-white">
+    <div class="ui-card">
         <div class="flex items-center justify-between border-b px-5 py-3">
             <h3 class="text-sm font-semibold">Today — <?= htmlspecialchars(date('D, j M')) ?></h3>
             <p class="text-xs text-slate-500"><?= count($todayRows) ?> entries</p>
@@ -143,7 +143,7 @@ $statusBadge = static function (string $s): array {
     </div>
 
     <!-- ===== Month picker ===== -->
-    <form method="get" class="flex flex-wrap items-center gap-2 rounded-xl border bg-white p-4 text-sm">
+    <form method="get" class="flex flex-wrap items-center gap-2 ui-card p-4 text-sm">
         <span class="text-slate-600">Viewing:</span>
         <select name="month" class="rounded-lg border px-3 py-2">
             <?php for ($m = 1; $m <= 12; $m++): ?>
@@ -155,7 +155,7 @@ $statusBadge = static function (string $s): array {
     </form>
 
     <!-- ===== Monthly per-staff summary ===== -->
-    <div class="overflow-hidden rounded-xl border bg-white">
+    <div class="overflow-hidden ui-card">
         <div class="flex items-center justify-between border-b px-5 py-3">
             <h3 class="text-sm font-semibold">Monthly summary — <?= htmlspecialchars($monthLabel) ?></h3>
             <p class="text-xs text-slate-500"><?= count($summary) ?> staff</p>
@@ -195,7 +195,7 @@ $statusBadge = static function (string $s): array {
     </div>
 
     <!-- ===== Detailed log (collapsible) ===== -->
-    <div class="rounded-xl border bg-white">
+    <div class="ui-card">
         <button type="button" @click="showLog = !showLog"
                 class="flex w-full items-center justify-between px-5 py-3 text-sm font-medium hover:bg-slate-50">
             <span>Detailed daily log (<?= count($report) ?> entries)</span>
