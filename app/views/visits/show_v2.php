@@ -104,8 +104,11 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
             </div>
             <div class="flex items-center gap-3 text-xs">
                 <span
-                    :class="saveStatus === 'saved' ? 'text-emerald-600' : (saveStatus === 'saving' ? 'text-amber-600' : 'text-slate-400')"
+                    :class="saveStatus === 'saved' ? 'text-emerald-600' : (saveStatus === 'saving' ? 'text-amber-600' : (saveStatus === 'error' ? 'text-rose-600' : 'text-slate-400'))"
                     x-text="saveLabel"></span>
+                <?php if ($editable): ?>
+                    <button type="button" @click="dirty = true; save()" class="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700">Save now</button>
+                <?php endif; ?>
                 <?php if (!$editable): ?>
                     <span class="rounded-full bg-slate-200 px-2 py-0.5 text-xs">Read-only</span>
                     <form method="post" action="/visits/<?= $visitId ?>/unlock" class="inline">
@@ -939,21 +942,26 @@ function visitScreenV2(cfg) {
             try { return new Date(d.replace(' ', 'T')).toLocaleString(); } catch (e) { return d; }
         },
 
+        _saveDebounce: null,
         initAutosave() {
             if (!this.editable) return;
-            this.autosaveTimer = setInterval(() => this.save(), 30000);
-            // Save when the tab loses focus too — captures last edit. Guarded by
-            // `dirty` so merely viewing a visit never re-saves it. Symptoms are
-            // flushed regardless (their endpoint is a cheap replace).
+            // Periodic safety save.
+            this.autosaveTimer = setInterval(() => { if (this.dirty) this.save(); }, 30000);
+            // Save when the tab loses focus too.
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'hidden') { this.save(); this.persistSymptomsNow(); }
             });
-            // Mark dirty on any input/change within the visit form.
-            this.$nextTick(() => {
-                const root = this.$root || document;
-                root.addEventListener && root.addEventListener('input', () => this.markDirty());
-                root.addEventListener && root.addEventListener('change', () => this.markDirty());
-            });
+            // Any edit inside the form marks dirty + schedules a debounced save
+            // (2s after the doctor stops typing) — so changes persist quickly
+            // without waiting for the 30s tick. Attached to the component root el.
+            this.$el.addEventListener('input', () => this.onFormEdit());
+            this.$el.addEventListener('change', () => this.onFormEdit());
+        },
+
+        onFormEdit() {
+            this.dirty = true;
+            clearTimeout(this._saveDebounce);
+            this._saveDebounce = setTimeout(() => this.save(), 2000);
         },
 
         // ---- Voice dictation (Web Speech API, browser-native) ----
@@ -1047,15 +1055,19 @@ function visitScreenV2(cfg) {
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify(this.payload()),
                 });
-                const data = await r.json();
-                if (data.ok) {
+                let data = {};
+                try { data = await r.json(); } catch (e) { /* non-JSON (likely 500 HTML) */ }
+                if (r.ok && data.ok) {
                     this.saveStatus = 'saved';
-                    this.saveLabel = 'Saved ' + new Date().toLocaleTimeString();
+                    this.saveLabel = '✓ Saved ' + new Date().toLocaleTimeString();
+                    this.dirty = false;
                     this.vitalsWarnings = data.warnings || [];
-                } else throw new Error(data.error || 'Save failed');
+                } else {
+                    throw new Error(data.error || ('Save failed (HTTP ' + r.status + ')'));
+                }
             } catch (e) {
                 this.saveStatus = 'error';
-                this.saveLabel = e.message;
+                this.saveLabel = '⚠ ' + e.message;
             }
         },
 
