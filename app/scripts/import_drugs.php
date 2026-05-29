@@ -34,19 +34,41 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 use App\Core\Application;
 use App\Core\Database;
 
-$base = dirname(__DIR__);
+$base = dirname(__DIR__);          // the app/ dir (has vendor + .env)
+$repoRoot = dirname($base);        // repo root (one level up from app/)
 Application::boot($base);
 
-$csvPath = $argv[1] ?? ($base . '/document/A_Z_medicines_dataset_of_India.csv');
-if (!str_starts_with($csvPath, '/')) {
-    $csvPath = $base . '/' . $csvPath;
-}
 $fresh = in_array('--fresh', $argv, true);
 
-if (!is_file($csvPath)) {
-    fwrite(STDERR, "CSV not found: {$csvPath}\n");
+// First non-flag argument is the CSV path (optional).
+$argCsv = null;
+foreach (array_slice($argv, 1) as $a) {
+    if ($a !== '' && $a[0] !== '-') { $argCsv = $a; break; }
+}
+
+// Resolve the CSV from the most likely locations so it works no matter
+// which directory you run the script from.
+$csvName = 'document/A_Z_medicines_dataset_of_India.csv';
+$candidates = [];
+if ($argCsv !== null) {
+    $candidates[] = str_starts_with($argCsv, '/') ? $argCsv : getcwd() . '/' . $argCsv; // as given (abs or relative to cwd)
+    $candidates[] = $argCsv;                          // raw (relative to cwd already)
+}
+$candidates[] = $repoRoot . '/' . $csvName;           // repo-root/document/...  (your layout)
+$candidates[] = $base . '/' . $csvName;               // app/document/...
+$candidates[] = getcwd() . '/' . $csvName;            // cwd/document/...
+
+$csvPath = null;
+foreach ($candidates as $c) {
+    if ($c !== null && is_file($c)) { $csvPath = $c; break; }
+}
+
+if ($csvPath === null) {
+    fwrite(STDERR, "CSV not found. Tried:\n  - " . implode("\n  - ", array_filter($candidates)) . "\n");
+    fwrite(STDERR, "Pass an explicit path, e.g.:\n  php scripts/import_drugs.php /full/path/to.csv --fresh\n");
     exit(1);
 }
+echo "Using CSV: {$csvPath}\n";
 
 $pdo = Database::connection();
 
