@@ -21,7 +21,7 @@ if (!defined('UI_TOKENS_EMITTED')) {
     .ui-page-title   { font-size: 1rem;     line-height: 1.375rem; font-weight: 600; color: #0f172a; letter-spacing: -0.01em; }
     .ui-section-title{ font-size: 0.9375rem; line-height: 1.25rem; font-weight: 600; color: #0f172a; }
     .ui-section-sub  { font-size: 0.8125rem; line-height: 1.125rem; color: #64748b; }
-    .ui-label        { font-size: 0.875rem;  line-height: 1.25rem; font-weight: 500; color: #334155; }
+    .ui-label        { font-size: 0.75rem;   line-height: 1.125rem; font-weight: 500; color: #334155; }
     .ui-group-label  { font-size: 0.6875rem; line-height: 1rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; }
     .ui-help         { font-size: 0.75rem;   line-height: 1rem; color: #94a3b8; }
     .ui-card {
@@ -61,11 +61,17 @@ if (!defined('UI_TOKENS_EMITTED')) {
     .ui-input {
         width: 100%; border: 1px solid #cbd5e1; border-radius: var(--ui-radius-control);
         background: #fff; padding: 0.3125rem 0.5rem;
-        font-size: 0.875rem; line-height: 1.375rem; color: #0f172a;
+        font-size: 0.75rem; line-height: 1.25rem; color: #0f172a;
         transition: border-color .15s ease, box-shadow .15s ease;
     }
     .ui-input::placeholder { color: #94a3b8; }
     .ui-input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-light); }
+    /* Global 12px for ALL form controls site-wide (doctor + admin),
+       regardless of which utility classes a given input uses. */
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    select, textarea {
+        font-size: 0.75rem;
+    }
     .ui-badge {
         display: inline-flex; align-items: center; gap: 0.375rem;
         border-radius: 9999px; padding: 0.125rem 0.625rem;

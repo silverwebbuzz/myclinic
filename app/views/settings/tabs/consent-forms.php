@@ -1,4 +1,4 @@
-<form method="post" action="/settings/consent-forms" class="space-y-6 ui-card ui-card-pad">
+<form method="post" action="/settings/consent-forms" class="space-y-4 ui-card ui-card-pad">
     <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
     <h2 class="ui-section-title">Consent form templates</h2>
     <p class="text-sm text-slate-500">Use merge fields: {{patient_name}}, {{uhid}}, {{clinic_name}}, {{date}}, {{procedure}}, {{doctor_name}}</p>

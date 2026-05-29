@@ -5,7 +5,7 @@
             <p class="ui-section-sub mt-0.5">Configure patient messaging channels and reminders.</p>
         </div>
     </div>
-    <div class="ui-card-pad space-y-6">
+    <div class="ui-card-pad space-y-4">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
 
         <?php if (!empty($message)): ?><p class="text-sm text-emerald-600"><?= htmlspecialchars($message) ?></p><?php endif; ?>

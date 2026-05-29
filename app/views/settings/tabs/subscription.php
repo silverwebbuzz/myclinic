@@ -5,7 +5,7 @@ $planKey = $clinic['plan'] ?? 'standard';
 $plan = $plans[$planKey] ?? ($plans['standard'] ?? reset($plans));
 $seatLimit = (int) ($clinic['seat_limit'] ?? 2) + (int) ($clinic['extra_seats_purchased'] ?? 0);
 ?>
-<div class="space-y-6">
+<div class="space-y-4">
     <section class="ui-card ui-card-pad">
         <h2 class="ui-section-title">Subscription</h2>
         <p class="mt-2 text-sm text-slate-600">

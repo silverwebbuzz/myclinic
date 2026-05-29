@@ -1,4 +1,4 @@
-<div class="space-y-6 ui-card ui-card-pad">
+<div class="space-y-4 ui-card ui-card-pad">
     <h2 class="ui-section-title">White-label branding</h2>
     <p class="text-sm text-slate-600">Enterprise: custom domain, logo, and brand color. “Powered by ManageClinic” is hidden on your plan.</p>
 

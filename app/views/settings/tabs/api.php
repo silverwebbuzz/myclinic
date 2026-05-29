@@ -1,4 +1,4 @@
-<div class="space-y-6 ui-card ui-card-pad">
+<div class="space-y-4 ui-card ui-card-pad">
     <h2 class="ui-section-title">REST API keys</h2>
     <p class="text-sm text-slate-600">Use Bearer tokens for <code class="rounded bg-slate-100 px-1">/api/v1/rest/*</code>. Docs: <a href="/docs" class="text-emerald-600 hover:underline" target="_blank">/docs</a></p>
 

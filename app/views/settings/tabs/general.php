@@ -105,40 +105,32 @@ $qrSrc       = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=
     </div>
 </div>
 
-<form method="post" action="/settings/general" enctype="multipart/form-data" class="space-y-6 ui-card ui-card-pad">
+<form method="post" action="/settings/general" enctype="multipart/form-data" class="space-y-4 ui-card ui-card-pad">
     <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
     <h2 class="ui-section-title">General</h2>
-    <div class="grid gap-4 sm:grid-cols-2">
-        <div class="sm:col-span-2">
-            <label class="text-xs font-medium text-slate-600">Clinic name</label>
+    <div class="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="lg:col-span-2">
+            <label class="ui-label mb-1 block">Clinic name</label>
             <input name="clinic_name" required value="<?= htmlspecialchars($clinic['name'] ?? '') ?>" class="ui-input">
         </div>
-        <div class="sm:col-span-2">
-            <label class="text-xs font-medium text-slate-600">Address</label>
-            <textarea name="address" rows="2" class="ui-input"><?= htmlspecialchars($clinic['address'] ?? '') ?></textarea>
-        </div>
         <div>
-            <label class="text-xs font-medium text-slate-600">Phone</label>
+            <label class="ui-label mb-1 block">Phone</label>
             <input name="phone" value="<?= htmlspecialchars($clinic['phone'] ?? '') ?>" class="ui-input">
         </div>
-        <div>
-            <label class="text-xs font-medium text-slate-600">Email</label>
+        <div class="sm:col-span-2">
+            <label class="ui-label mb-1 block">Email</label>
             <input name="email" type="email" value="<?= htmlspecialchars($clinic['email'] ?? '') ?>" class="ui-input">
         </div>
         <div>
-            <label class="text-xs font-medium text-slate-600">GSTIN</label>
+            <label class="ui-label mb-1 block">GSTIN</label>
             <input name="gstin" value="<?= htmlspecialchars($clinic['gstin'] ?? '') ?>" class="ui-input">
         </div>
-        <div>
-            <label class="text-xs font-medium text-slate-600">Brand color</label>
-            <input name="brand_color" type="color" value="<?= htmlspecialchars($clinic['brand_color'] ?? '#0F9B6E') ?>" class="mt-1 h-10 w-full rounded border">
-        </div>
-        <div class="sm:col-span-2">
-            <label class="text-xs font-medium text-slate-600">Logo</label>
-            <input name="logo" type="file" accept="image/png,image/jpeg" class="mt-1 w-full text-sm">
+        <div class="sm:col-span-2 lg:col-span-3">
+            <label class="ui-label mb-1 block">Address</label>
+            <textarea name="address" rows="2" class="ui-input"><?= htmlspecialchars($clinic['address'] ?? '') ?></textarea>
         </div>
         <div>
-            <label class="text-xs font-medium text-slate-600">Country</label>
+            <label class="ui-label mb-1 block">Country</label>
             <select name="country_code" class="ui-input">
                 <?php foreach ($countries as $code => $name): ?>
                 <option value="<?= $code ?>" <?= ($clinic['country_code'] ?? 'IN') === $code ? 'selected' : '' ?>><?= htmlspecialchars($name) ?></option>
@@ -146,32 +138,40 @@ $qrSrc       = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=
             </select>
         </div>
         <div>
-            <label class="text-xs font-medium text-slate-600">Currency</label>
+            <label class="ui-label mb-1 block">Currency</label>
             <input name="currency" value="<?= htmlspecialchars($clinic['currency'] ?? 'INR') ?>" class="ui-input">
         </div>
         <div>
-            <label class="text-xs font-medium text-slate-600">Timezone</label>
+            <label class="ui-label mb-1 block">Timezone</label>
             <input name="timezone" value="<?= htmlspecialchars($clinic['timezone'] ?? 'Asia/Kolkata') ?>" class="ui-input">
         </div>
         <div>
-            <label class="text-xs font-medium text-slate-600">UHID prefix</label>
+            <label class="ui-label mb-1 block">UHID prefix</label>
             <input name="uhid_prefix" maxlength="6" value="<?= htmlspecialchars($config['uhid_prefix'] ?? 'MC') ?>" class="ui-input">
         </div>
         <div>
-            <label class="text-xs font-medium text-slate-600">Invoice prefix</label>
+            <label class="ui-label mb-1 block">Invoice prefix</label>
             <input name="invoice_prefix" value="<?= htmlspecialchars($config['invoice_prefix'] ?? 'INV') ?>" class="ui-input">
         </div>
         <div>
-            <label class="text-xs font-medium text-slate-600">Consultation fee</label>
+            <label class="ui-label mb-1 block">Consultation fee</label>
             <input name="consultation_fee" type="number" step="0.01" value="<?= htmlspecialchars((string) ($config['consultation_fee'] ?? '0')) ?>" class="ui-input">
         </div>
         <div>
-            <label class="text-xs font-medium text-slate-600">Tax label</label>
+            <label class="ui-label mb-1 block">Tax label</label>
             <input name="invoice_tax_label" value="<?= htmlspecialchars($config['invoice_tax_label'] ?? 'GST') ?>" class="ui-input">
         </div>
         <div>
-            <label class="text-xs font-medium text-slate-600">Tax %</label>
+            <label class="ui-label mb-1 block">Tax %</label>
             <input name="invoice_tax_percent" type="number" step="0.01" value="<?= htmlspecialchars((string) ($config['invoice_tax_percent'] ?? '0')) ?>" class="ui-input">
+        </div>
+        <div>
+            <label class="ui-label mb-1 block">Brand color</label>
+            <input name="brand_color" type="color" value="<?= htmlspecialchars($clinic['brand_color'] ?? '#0F9B6E') ?>" class="h-[34px] w-full rounded-lg border border-slate-300 p-1">
+        </div>
+        <div class="sm:col-span-2">
+            <label class="ui-label mb-1 block">Logo</label>
+            <input name="logo" type="file" accept="image/png,image/jpeg" class="ui-input file:mr-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-0.5 file:text-xs">
         </div>
     </div>
     <button type="submit" class="ui-btn ui-btn-primary">Save general</button>
