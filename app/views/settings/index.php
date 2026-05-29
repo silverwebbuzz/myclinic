@@ -21,52 +21,19 @@ $tabLabels = [
 
 <?= ui_page_header('Settings', 'Personalize your clinic and manage preferences securely.') ?>
 
-<div class="flex flex-col gap-8 lg:flex-row" x-data="{ active: '<?= htmlspecialchars($tab) ?>' }">
-    <!-- Sticky in-page jump nav -->
-    <nav class="lg:sticky lg:top-20 lg:h-max lg:w-56 lg:self-start">
-        <div class="flex flex-wrap gap-1 lg:flex-col">
-            <?php
-            $allTabs = $tabs;
-            $allTabs[] = 'password';
-            $allTabs[] = 'sessions';
-            $tabLabels['password'] = 'Password';
-            $tabLabels['sessions'] = 'Sessions';
-            foreach ($allTabs as $t):
-                $isAnchor = !in_array($t, ['password', 'sessions'], true);
-                $href = $isAnchor ? '#sec-' . $t : '/settings/' . $t;
-            ?>
-            <a href="<?= htmlspecialchars($href) ?>"
-               <?php if ($isAnchor): ?>@click="active = '<?= $t ?>'" :class="active === '<?= $t ?>' ? 'bg-brand-light font-semibold text-brand' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"<?php else: ?>class="text-slate-600 hover:bg-slate-100 hover:text-slate-900"<?php endif; ?>
-               class="rounded-lg px-3.5 py-2.5 text-sm transition">
-                <?= htmlspecialchars($tabLabels[$t] ?? $t) ?>
-            </a>
-            <?php endforeach; ?>
-        </div>
-    </nav>
-
-    <!-- All sections stacked -->
-    <div class="min-w-0 flex-1 max-w-3xl space-y-6">
-        <?php foreach ($tabs as $t): ?>
-        <section id="sec-<?= htmlspecialchars($t) ?>" class="scroll-mt-24">
-            <?= $sections[$t] ?? '' ?>
-        </section>
-        <?php endforeach; ?>
+<!-- Two-column card grid (reference 2: Medicare). No sub-menu — every
+     section is a card laid out side by side. CSS columns let cards of
+     different heights pack naturally; each card stays unbroken. -->
+<div class="settings-grid">
+    <?php foreach ($tabs as $t): ?>
+    <div class="settings-grid-item">
+        <?= $sections[$t] ?? '' ?>
     </div>
+    <?php endforeach; ?>
 </div>
 
-<script>
-// Highlight the nav item for the section currently in view.
-(function () {
-    const root = document.querySelector('[x-data]');
-    const sections = document.querySelectorAll('section[id^="sec-"]');
-    if (!('IntersectionObserver' in window) || !sections.length) return;
-    const obs = new IntersectionObserver((entries) => {
-        entries.forEach((e) => {
-            if (e.isIntersecting && root && root.__x) {
-                root.__x.$data.active = e.target.id.replace('sec-', '');
-            }
-        });
-    }, { rootMargin: '-20% 0px -70% 0px' });
-    sections.forEach((s) => obs.observe(s));
-})();
-</script>
+<style>
+    .settings-grid { column-gap: 1.5rem; }
+    .settings-grid-item { break-inside: avoid; margin-bottom: 1.5rem; }
+    @media (min-width: 1024px) { .settings-grid { column-count: 2; } }
+</style>
