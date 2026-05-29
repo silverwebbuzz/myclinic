@@ -91,8 +91,8 @@ $CONTENT = [
     ],
 
     // ===================== PEDIATRICS =====================
-    'pediatrics' => [
-        'label' => 'Pediatrics',
+    'peds' => [
+        'label' => 'Pediatrician',
         'conditions' => [
             ['name' => 'Pediatric Fever', 'desc' => 'Weight-based; confirm dose',
              'items' => [
@@ -120,8 +120,8 @@ $CONTENT = [
     ],
 
     // ===================== DERMATOLOGY =====================
-    'dermatology' => [
-        'label' => 'Dermatology',
+    'derma' => [
+        'label' => 'Dermatologist',
         'conditions' => [
             ['name' => 'Acne (mild-moderate)', 'desc' => 'Topical + supportive',
              'items' => [
@@ -176,8 +176,8 @@ $CONTENT = [
     ],
 
     // ===================== ORTHOPEDICS =====================
-    'orthopedics' => [
-        'label' => 'Orthopedics',
+    'ortho' => [
+        'label' => 'Orthopedic doctor',
         'conditions' => [
             ['name' => 'Acute Low Back Pain', 'desc' => 'Mechanical back pain',
              'items' => [
@@ -199,8 +199,8 @@ $CONTENT = [
     ],
 
     // ===================== GYNECOLOGY =====================
-    'gynecology' => [
-        'label' => 'Gynecology',
+    'gyno' => [
+        'label' => 'Gynecologist',
         'conditions' => [
             ['name' => 'Bacterial Vaginosis', 'desc' => 'Vaginal infection',
              'items' => [
@@ -224,8 +224,8 @@ $CONTENT = [
     ],
 
     // ===================== CARDIOLOGY =====================
-    'cardiology' => [
-        'label' => 'Cardiology',
+    'cardio' => [
+        'label' => 'Cardiologist',
         'conditions' => [
             ['name' => 'Hypertension (starter)', 'desc' => 'First-line; titrate',
              'items' => [
@@ -265,8 +265,8 @@ $CONTENT = [
     ],
 
     // ===================== GASTROENTEROLOGY =====================
-    'gastroenterology' => [
-        'label' => 'Gastroenterology',
+    'gastro' => [
+        'label' => 'Gastroenterologist',
         'conditions' => [
             ['name' => 'GERD', 'desc' => 'Reflux',
              'items' => [
@@ -285,8 +285,8 @@ $CONTENT = [
     ],
 
     // ===================== PSYCHIATRY =====================
-    'psychiatry' => [
-        'label' => 'Psychiatry',
+    'psychiatrist' => [
+        'label' => 'Psychiatrist',
         'conditions' => [
             ['name' => 'Depression (starter SSRI)', 'desc' => 'First-line; review in 2-4w',
              'items' => [
@@ -321,8 +321,8 @@ $CONTENT = [
     ],
 
     // ===================== OPHTHALMOLOGY =====================
-    'ophthalmology' => [
-        'label' => 'Ophthalmology',
+    'eye' => [
+        'label' => 'Ophthalmologist',
         'conditions' => [
             ['name' => 'Bacterial Conjunctivitis', 'desc' => 'Red eye, discharge',
              'items' => [
@@ -340,8 +340,8 @@ $CONTENT = [
     ],
 
     // ===================== UROLOGY =====================
-    'urology' => [
-        'label' => 'Urology',
+    'urologist' => [
+        'label' => 'Urologist',
         'conditions' => [
             ['name' => 'Uncomplicated UTI', 'desc' => 'Lower urinary tract infection',
              'items' => [
@@ -350,6 +350,247 @@ $CONTENT = [
             ['name' => 'BPH (symptomatic)', 'desc' => 'Prostatic symptoms',
              'items' => [
                 ['generic' => 'Tamsulosin', 'dose_unit' => 'capsule', 'dose_amount' => 1, 'freq' => '0-0-1', 'days' => 30, 'food' => 'after'],
+             ]],
+        ],
+    ],
+
+    // ===================== NEUROLOGY =====================
+    'neuro' => [
+        'label' => 'Neurologist',
+        'conditions' => [
+            ['name' => 'Migraine (acute)', 'desc' => 'Acute attack',
+             'items' => [
+                ['generic' => 'Sumatriptan', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => 'SOS', 'days' => 5, 'food' => 'after'],
+                ['generic' => 'Naproxen', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => 'SOS', 'days' => 5, 'food' => 'after'],
+             ]],
+            ['name' => 'Migraine Prophylaxis', 'desc' => 'Preventive',
+             'items' => [
+                ['generic' => 'Propranolol', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 30, 'food' => 'after'],
+             ]],
+            ['name' => 'Neuropathic Pain', 'desc' => 'Peripheral neuropathy',
+             'items' => [
+                ['generic' => 'Pregabalin', 'dose_unit' => 'capsule', 'dose_amount' => 1, 'freq' => '0-0-1', 'days' => 30, 'food' => 'after'],
+                ['generic' => 'Methylcobalamin', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 30, 'food' => 'after'],
+             ]],
+        ],
+    ],
+
+    // ===================== NEPHROLOGY =====================
+    'nephrology' => [
+        'label' => 'Nephrologist',
+        'conditions' => [
+            ['name' => 'CKD — BP control', 'desc' => 'Renoprotective',
+             'items' => [
+                ['generic' => 'Telmisartan', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 30, 'food' => 'after'],
+             ]],
+            ['name' => 'Edema / Fluid Overload', 'desc' => 'Diuresis',
+             'items' => [
+                ['generic' => 'Furosemide', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 14, 'food' => 'after'],
+             ]],
+        ],
+    ],
+
+    // ===================== ENDOCRINOLOGY =====================
+    'endocrinology' => [
+        'label' => 'Endocrinologist',
+        'conditions' => [
+            ['name' => 'Hypothyroidism', 'desc' => 'Thyroid replacement',
+             'items' => [
+                ['generic' => 'Thyroxine', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 30, 'food' => 'empty', 'instructions' => 'Empty stomach, before breakfast'],
+             ]],
+            ['name' => 'Type 2 Diabetes', 'desc' => 'First-line',
+             'items' => [
+                ['generic' => 'Metformin', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 30, 'food' => 'after'],
+                ['generic' => 'Sitagliptin', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 30, 'food' => 'after'],
+             ]],
+        ],
+    ],
+
+    // ===================== RHEUMATOLOGY =====================
+    'rheumatology' => [
+        'label' => 'Rheumatologist',
+        'conditions' => [
+            ['name' => 'Gout (acute)', 'desc' => 'Acute flare',
+             'items' => [
+                ['generic' => 'Etoricoxib', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 5, 'food' => 'after'],
+                ['generic' => 'Pantoprazole', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 5, 'food' => 'before'],
+             ]],
+            ['name' => 'Gout (maintenance)', 'desc' => 'Urate lowering',
+             'items' => [
+                ['generic' => 'Febuxostat', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 30, 'food' => 'after'],
+             ]],
+            ['name' => 'Rheumatoid Arthritis (symptomatic)', 'desc' => 'Pain control; DMARDs by specialist',
+             'items' => [
+                ['generic' => 'Naproxen', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 7, 'food' => 'after'],
+             ]],
+        ],
+    ],
+
+    // ===================== ALLERGY / IMMUNOLOGY =====================
+    'allergy' => [
+        'label' => 'Allergist',
+        'conditions' => [
+            ['name' => 'Allergic Rhinitis', 'desc' => 'Nasal allergy',
+             'items' => [
+                ['generic' => 'Fexofenadine', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 14, 'food' => 'after'],
+                ['generic' => 'Montelukast', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '0-0-1', 'days' => 14, 'food' => 'after'],
+             ]],
+            ['name' => 'Chronic Urticaria', 'desc' => 'Antihistamine-based',
+             'items' => [
+                ['generic' => 'Levocetirizine', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '0-0-1', 'days' => 28, 'food' => 'after'],
+             ]],
+        ],
+    ],
+
+    // ===================== PAIN MANAGEMENT =====================
+    'pain_management' => [
+        'label' => 'Pain management specialist',
+        'conditions' => [
+            ['name' => 'Chronic Musculoskeletal Pain', 'desc' => 'Multimodal',
+             'items' => [
+                ['generic' => 'Etoricoxib', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 7, 'food' => 'after'],
+                ['generic' => 'Pantoprazole', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 7, 'food' => 'before'],
+             ]],
+            ['name' => 'Neuropathic Pain', 'desc' => 'Nerve pain',
+             'items' => [
+                ['generic' => 'Pregabalin', 'dose_unit' => 'capsule', 'dose_amount' => 1, 'freq' => '0-0-1', 'days' => 30, 'food' => 'after'],
+                ['generic' => 'Duloxetine', 'dose_unit' => 'capsule', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 30, 'food' => 'after'],
+             ]],
+        ],
+    ],
+
+    // ===================== DENTAL =====================
+    'dental' => [
+        'label' => 'Dentist',
+        'conditions' => [
+            ['name' => 'Dental Infection / Abscess', 'desc' => 'Odontogenic infection',
+             'items' => [
+                ['generic' => 'Amoxycillin', 'dose_unit' => 'capsule', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 5, 'food' => 'after'],
+                ['generic' => 'Metronidazole', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-1-1', 'days' => 5, 'food' => 'after'],
+                ['generic' => 'Diclofenac', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 3, 'food' => 'after'],
+             ]],
+            ['name' => 'Post-extraction', 'desc' => 'Analgesia + cover',
+             'items' => [
+                ['generic' => 'Aceclofenac', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 3, 'food' => 'after'],
+                ['generic' => 'Chlorhexidine', 'dose_unit' => 'ml', 'dose_amount' => 10, 'freq' => '1-0-1', 'days' => 5, 'food' => 'after', 'instructions' => 'Mouth rinse, do not swallow'],
+             ]],
+        ],
+    ],
+
+    // ===================== PHYSIOTHERAPY (supportive meds) =====================
+    'physio' => [
+        'label' => 'Physiotherapist',
+        'conditions' => [
+            ['name' => 'Muscle Spasm (adjunct)', 'desc' => 'Supportive to therapy',
+             'items' => [
+                ['generic' => 'Thiocolchicoside', 'dose_unit' => 'capsule', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 5, 'food' => 'after'],
+             ]],
+        ],
+    ],
+
+    // ===================== FAMILY MEDICINE =====================
+    'family_medicine' => [
+        'label' => 'Family medicine doctor',
+        'conditions' => [
+            ['name' => 'Common Cold', 'desc' => 'Viral URI',
+             'items' => [
+                ['generic' => 'Paracetamol', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-1-1', 'days' => 3, 'food' => 'after'],
+                ['generic' => 'Levocetirizine', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '0-0-1', 'days' => 5, 'food' => 'after'],
+             ]],
+            ['name' => 'Acidity / GERD', 'desc' => 'Dyspepsia',
+             'items' => [
+                ['generic' => 'Pantoprazole', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 14, 'food' => 'before'],
+             ]],
+            ['name' => 'Hypertension (starter)', 'desc' => 'First-line',
+             'items' => [
+                ['generic' => 'Amlodipine', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 30, 'food' => 'after'],
+             ]],
+        ],
+    ],
+
+    // ===================== GASTRO / HEPATOLOGY =====================
+    'hepatology' => [
+        'label' => 'Hepatologist',
+        'conditions' => [
+            ['name' => 'Fatty Liver (supportive)', 'desc' => 'Lifestyle + support',
+             'items' => [
+                ['generic' => 'Ursodeoxycholic', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 30, 'food' => 'after'],
+             ]],
+        ],
+    ],
+
+    // ===================== TRICHOLOGY =====================
+    'trichology' => [
+        'label' => 'Trichologist',
+        'conditions' => [
+            ['name' => 'Androgenetic Hair Loss (male)', 'desc' => 'Topical + oral',
+             'items' => [
+                ['generic' => 'Finasteride', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 30, 'food' => 'after'],
+                ['generic' => 'Minoxidil', 'dose_unit' => 'ml', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 30, 'food' => 'any', 'instructions' => 'Apply to scalp'],
+             ]],
+        ],
+    ],
+
+    // ===================== SEXOLOGY / ANDROLOGY =====================
+    'andrology' => [
+        'label' => 'Andrologist',
+        'conditions' => [
+            ['name' => 'Erectile Dysfunction', 'desc' => 'On-demand',
+             'items' => [
+                ['generic' => 'Tadalafil', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => 'SOS', 'days' => 10, 'food' => 'any'],
+             ]],
+        ],
+    ],
+    'sexology' => [
+        'label' => 'Sexologist',
+        'conditions' => [
+            ['name' => 'Erectile Dysfunction', 'desc' => 'On-demand',
+             'items' => [
+                ['generic' => 'Sildenafil', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => 'SOS', 'days' => 10, 'food' => 'empty', 'instructions' => 'On empty stomach, 1h before activity'],
+             ]],
+        ],
+    ],
+
+    // ===================== PSYCHOLOGY (limited pharma) =====================
+    'psychologist' => [
+        'label' => 'Psychologist',
+        'conditions' => [
+            ['name' => 'Sleep Hygiene Support', 'desc' => 'Short-term aid (refer for Rx)',
+             'items' => [
+                ['generic' => 'Melatonin', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '0-0-1', 'days' => 10, 'food' => 'bedtime'],
+             ]],
+        ],
+    ],
+
+    // ===================== GENERAL SURGERY =====================
+    'general_surgery' => [
+        'label' => 'General surgeon',
+        'conditions' => [
+            ['name' => 'Post-op Analgesia + Cover', 'desc' => 'Routine post-operative',
+             'items' => [
+                ['generic' => 'Aceclofenac', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 5, 'food' => 'after'],
+                ['generic' => 'Pantoprazole', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 5, 'food' => 'before'],
+                ['generic' => 'Cefixime', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 5, 'food' => 'after'],
+             ]],
+            ['name' => 'Hemorrhoids / Piles', 'desc' => 'Conservative',
+             'items' => [
+                ['generic' => 'Diosmin', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 7, 'food' => 'after'],
+             ]],
+        ],
+    ],
+
+    // ===================== DIETITIAN (supplements only) =====================
+    'dietitian' => [
+        'label' => 'Dietitian',
+        'conditions' => [
+            ['name' => 'Iron Deficiency Support', 'desc' => 'Nutritional support',
+             'items' => [
+                ['generic' => 'Ferrous Ascorbate', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 30, 'food' => 'after'],
+             ]],
+            ['name' => 'General Supplementation', 'desc' => 'Vitamins',
+             'items' => [
+                ['generic' => 'Vitamin D3', 'dose_unit' => 'sachet', 'dose_amount' => 1, 'freq' => '0-0-0', 'days' => 7, 'food' => 'after', 'instructions' => 'Once weekly'],
+                ['generic' => 'Vitamin B', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 30, 'food' => 'after'],
              ]],
         ],
     ],
