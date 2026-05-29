@@ -1,16 +1,29 @@
 <?php
-$tabLabels = [
-    'general' => 'General',
-    'hours' => 'Working hours',
-    'specialty' => 'Specialty',
-    'leaves' => 'Doctor leaves',
-    'notifications' => 'Notifications',
-    'subscription' => 'Subscription',
-    'team' => 'Team',
-    'api' => 'API',
-    'branding' => 'White-label',
-    'consent-forms' => 'Consent forms',
-];
+/**
+ * Settings — single page, two-column balanced layout (reference: Medicare).
+ * No sub-menu. The 10 section partials are grouped into 4 logical panels
+ * and explicitly placed into a left and right column so heights stay
+ * balanced (a CSS-columns masonry made them lopsided).
+ *
+ * Each $sections[$t] is already a self-contained .ui-card, so we just
+ * place them; grouping is by column assignment below.
+ */
+
+// Column assignment — keeps the two sides roughly equal in height.
+// Left  : the big clinic-config sections.
+// Right : scheduling, billing/account, communications.
+$leftOrder  = ['general', 'specialty', 'hours'];
+$rightOrder = ['notifications', 'leaves', 'team', 'subscription', 'api', 'branding', 'consent-forms'];
+
+$render = static function (array $order, array $tabs, array $sections): string {
+    $out = '';
+    foreach ($order as $t) {
+        if (in_array($t, $tabs, true) && isset($sections[$t])) {
+            $out .= '<div>' . $sections[$t] . '</div>';
+        }
+    }
+    return $out;
+};
 ?>
 <?php if (!empty($message)): ?>
 <div class="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Settings saved.</div>
@@ -21,19 +34,7 @@ $tabLabels = [
 
 <?= ui_page_header('Settings', 'Personalize your clinic and manage preferences securely.') ?>
 
-<!-- Two-column card grid (reference 2: Medicare). No sub-menu — every
-     section is a card laid out side by side. CSS columns let cards of
-     different heights pack naturally; each card stays unbroken. -->
-<div class="settings-grid">
-    <?php foreach ($tabs as $t): ?>
-    <div class="settings-grid-item">
-        <?= $sections[$t] ?? '' ?>
-    </div>
-    <?php endforeach; ?>
+<div class="grid items-start gap-6 lg:grid-cols-2">
+    <div class="space-y-6"><?= $render($leftOrder, $tabs, $sections) ?></div>
+    <div class="space-y-6"><?= $render($rightOrder, $tabs, $sections) ?></div>
 </div>
-
-<style>
-    .settings-grid { column-gap: 1.5rem; }
-    .settings-grid-item { break-inside: avoid; margin-bottom: 1.5rem; }
-    @media (min-width: 1024px) { .settings-grid { column-count: 2; } }
-</style>

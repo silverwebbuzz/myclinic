@@ -24,9 +24,9 @@ $options = $options ?? [];
             <h3 class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400"><?= htmlspecialchars($groupLabel) ?></h3>
             <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 <?php foreach ($items as $key => $spec): ?>
-                <label class="cursor-pointer rounded-lg border p-2 text-center text-xs hover:border-emerald-300 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50">
-                    <input class="ui-radio" type="radio" name="specialty" value="<?= htmlspecialchars($key) ?>" class="sr-only" <?= $specialty === $key ? 'checked' : '' ?>>
-                    <?= $spec['icon'] ?> <?= htmlspecialchars($spec['label']) ?>
+                <label class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2.5 text-center text-sm text-slate-700 transition hover:border-slate-300 has-[:checked]:border-brand has-[:checked]:bg-brand-light has-[:checked]:font-medium has-[:checked]:text-brand">
+                    <input type="radio" name="specialty" value="<?= htmlspecialchars($key) ?>" class="sr-only" <?= $specialty === $key ? 'checked' : '' ?>>
+                    <?= htmlspecialchars($spec['label']) ?>
                 </label>
                 <?php endforeach; ?>
             </div>
