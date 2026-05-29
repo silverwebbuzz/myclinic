@@ -26,6 +26,7 @@ require_once dirname(__DIR__) . '/components/ui.php';
             <a href="/admin/feature-flags" class="hover:underline">Flags</a>
             <a href="/admin/symptom-promotions" class="hover:underline">Symptoms</a>
             <a href="/admin/specialties" class="hover:underline">Specialties</a>
+            <a href="/admin/rx-templates" class="hover:underline">Rx Templates</a>
             <a href="/admin/messaging" class="hover:underline">Messaging</a>
             <a href="/admin/claims" class="hover:underline">Claims<?php if (!empty($pendingClaimCount)): ?> <span class="ml-1 inline-flex items-center rounded-full bg-amber-500 px-2 text-[10px] font-semibold text-white"><?= (int) $pendingClaimCount ?></span><?php endif; ?></a>
             <a href="/admin/leads" class="hover:underline">Leads</a>

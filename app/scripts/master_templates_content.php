@@ -595,4 +595,272 @@ $CONTENT = [
         ],
     ],
 
+    // =====================================================================
+    // BELOW: previously-skipped specialties. ALL seeded INACTIVE ('active'=>0)
+    // for a doctor to review/activate. Content is conservative SUPPORTIVE
+    // care only — NOT disease-specific protocols. AYUSH systems use their
+    // own formulary (herbs not in this allopathic catalog), so their items
+    // are co-prescribed allopathic supportives the practitioner can replace.
+    // =====================================================================
+
+    // ---- AYUSH (review: replace with system-specific formulary) ----
+    'ayurveda' => [
+        'label' => 'Ayurveda doctor', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Supportive — Fever (review)', 'desc' => 'Allopathic supportive; replace with Ayurvedic formulary',
+             'items' => [
+                ['generic' => 'Paracetamol', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-1-1', 'days' => 3, 'food' => 'after'],
+             ]],
+        ],
+    ],
+    'homeopathy' => [
+        'label' => 'Homeopathy doctor', 'active' => 0, 'mode' => 'homeopathic',
+        'conditions' => [
+            ['name' => 'Supportive — Fever (review)', 'desc' => 'Placeholder; homeopathy uses remedies, not drugs',
+             'items' => [
+                ['generic' => 'Paracetamol', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => 'SOS', 'days' => 3, 'food' => 'after'],
+             ]],
+        ],
+    ],
+    'siddha' => [
+        'label' => 'Siddha doctor', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Supportive — Pain (review)', 'desc' => 'Replace with Siddha formulary',
+             'items' => [
+                ['generic' => 'Paracetamol', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => 'SOS', 'days' => 3, 'food' => 'after'],
+             ]],
+        ],
+    ],
+    'unani' => [
+        'label' => 'Unani doctor', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Supportive — Pain (review)', 'desc' => 'Replace with Unani formulary',
+             'items' => [
+                ['generic' => 'Paracetamol', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => 'SOS', 'days' => 3, 'food' => 'after'],
+             ]],
+        ],
+    ],
+    'naturopathy' => [
+        'label' => 'Naturopathy doctor', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Supportive — Supplements (review)', 'desc' => 'Replace with naturopathy plan',
+             'items' => [
+                ['generic' => 'Vitamin D3', 'dose_unit' => 'sachet', 'dose_amount' => 1, 'freq' => '0-0-0', 'days' => 7, 'food' => 'after', 'instructions' => 'Once weekly'],
+             ]],
+        ],
+    ],
+    'acupuncturist' => [
+        'label' => 'Acupuncturist', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Supportive — Pain (review)', 'desc' => 'Adjunct only',
+             'items' => [
+                ['generic' => 'Paracetamol', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => 'SOS', 'days' => 3, 'food' => 'after'],
+             ]],
+        ],
+    ],
+
+    // ---- Oncology / high-risk (review: specialist oversight required) ----
+    'oncology' => [
+        'label' => 'Oncologist', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Chemo-induced Nausea (review)', 'desc' => 'Supportive antiemetic',
+             'items' => [
+                ['generic' => 'Ondansetron', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 5, 'food' => 'before'],
+                ['generic' => 'Dexamethasone', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 3, 'food' => 'after'],
+             ]],
+            ['name' => 'Cancer Pain (review)', 'desc' => 'Step analgesia — titrate',
+             'items' => [
+                ['generic' => 'Tramadol', 'dose_unit' => 'capsule', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 7, 'food' => 'after'],
+             ]],
+        ],
+    ],
+    'hematology' => [
+        'label' => 'Hematologist', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Iron Deficiency Anemia (review)', 'desc' => 'Oral iron',
+             'items' => [
+                ['generic' => 'Ferrous Ascorbate', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 30, 'food' => 'after'],
+                ['generic' => 'Folic Acid', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 30, 'food' => 'after'],
+             ]],
+        ],
+    ],
+
+    // ---- Surgical specialties (review: post-op supportive) ----
+    'neurosurgery' => [
+        'label' => 'Neurosurgeon', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Post-op Supportive (review)', 'desc' => 'Analgesia + gastroprotection',
+             'items' => [
+                ['generic' => 'Paracetamol', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-1-1', 'days' => 5, 'food' => 'after'],
+                ['generic' => 'Pantoprazole', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 5, 'food' => 'before'],
+             ]],
+        ],
+    ],
+    'plastic_surgery' => [
+        'label' => 'Plastic surgeon', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Post-op Supportive (review)', 'desc' => 'Analgesia + cover',
+             'items' => [
+                ['generic' => 'Aceclofenac', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 5, 'food' => 'after'],
+                ['generic' => 'Cefixime', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 5, 'food' => 'after'],
+             ]],
+        ],
+    ],
+    'bariatric' => [
+        'label' => 'Bariatric surgeon', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Post-op Supportive (review)', 'desc' => 'PPI + supplements',
+             'items' => [
+                ['generic' => 'Pantoprazole', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 30, 'food' => 'before'],
+                ['generic' => 'Vitamin B', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 30, 'food' => 'after'],
+             ]],
+        ],
+    ],
+    'vascular' => [
+        'label' => 'Vascular surgeon', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Antiplatelet (review)', 'desc' => 'Secondary prevention',
+             'items' => [
+                ['generic' => 'Aspirin', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '0-1-0', 'days' => 30, 'food' => 'after'],
+             ]],
+        ],
+    ],
+    'gi_surgery' => [
+        'label' => 'GI surgeon', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Post-op Supportive (review)', 'desc' => 'Analgesia + cover',
+             'items' => [
+                ['generic' => 'Aceclofenac', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 5, 'food' => 'after'],
+                ['generic' => 'Pantoprazole', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 5, 'food' => 'before'],
+             ]],
+        ],
+    ],
+    'spine' => [
+        'label' => 'Spine surgeon', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Back Pain Supportive (review)', 'desc' => 'Analgesia + muscle relaxant',
+             'items' => [
+                ['generic' => 'Aceclofenac', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 5, 'food' => 'after'],
+                ['generic' => 'Thiocolchicoside', 'dose_unit' => 'capsule', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 5, 'food' => 'after'],
+             ]],
+        ],
+    ],
+    'sports_medicine' => [
+        'label' => 'Sports medicine doctor', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Soft-tissue Injury (review)', 'desc' => 'Anti-inflammatory',
+             'items' => [
+                ['generic' => 'Naproxen', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 5, 'food' => 'after'],
+             ]],
+        ],
+    ],
+    'critical_care' => [
+        'label' => 'Critical care specialist', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Stress Ulcer Prophylaxis (review)', 'desc' => 'ICU supportive',
+             'items' => [
+                ['generic' => 'Pantoprazole', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 7, 'food' => 'before'],
+             ]],
+        ],
+    ],
+
+    // ---- Diagnostic / procedure-based (review: minimal Rx) ----
+    'radiology' => [
+        'label' => 'Radiologist', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Contrast Premedication (review)', 'desc' => 'Allergy prophylaxis',
+             'items' => [
+                ['generic' => 'Prednisolone', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 1, 'food' => 'after'],
+                ['generic' => 'Levocetirizine', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '0-0-1', 'days' => 1, 'food' => 'after'],
+             ]],
+        ],
+    ],
+    'audiologist' => [
+        'label' => 'Audiologist', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Ear Wax / Supportive (review)', 'desc' => 'Adjunct',
+             'items' => [
+                ['generic' => 'Paracetamol', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => 'SOS', 'days' => 3, 'food' => 'after'],
+             ]],
+        ],
+    ],
+    'speech' => [
+        'label' => 'Speech therapist', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Supportive (review)', 'desc' => 'Rarely prescribes',
+             'items' => [
+                ['generic' => 'Vitamin B', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 30, 'food' => 'after'],
+             ]],
+        ],
+    ],
+
+    // ---- Dental sub-specialties (review) ----
+    'prosthodontist' => [
+        'label' => 'Prosthodontist', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Post-procedure (review)', 'desc' => 'Analgesia',
+             'items' => [
+                ['generic' => 'Aceclofenac', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 3, 'food' => 'after'],
+             ]],
+        ],
+    ],
+    'orthodontist' => [
+        'label' => 'Orthodontist', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Orthodontic Pain (review)', 'desc' => 'Analgesia',
+             'items' => [
+                ['generic' => 'Paracetamol', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => 'SOS', 'days' => 3, 'food' => 'after'],
+             ]],
+        ],
+    ],
+    'pediatric_dentist' => [
+        'label' => 'Pediatric dentist', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Pediatric Dental Pain (review)', 'desc' => 'Weight-based',
+             'items' => [
+                ['generic' => 'Paracetamol', 'dose_unit' => 'ml', 'dose_amount' => 5, 'freq' => 'SOS', 'days' => 3, 'food' => 'after', 'instructions' => 'Dose by weight'],
+             ]],
+        ],
+    ],
+    'endodontist' => [
+        'label' => 'Endodontist', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Endodontic Infection (review)', 'desc' => 'Antibiotic + analgesia',
+             'items' => [
+                ['generic' => 'Amoxycillin', 'dose_unit' => 'capsule', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 5, 'food' => 'after'],
+                ['generic' => 'Aceclofenac', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 3, 'food' => 'after'],
+             ]],
+        ],
+    ],
+    'implantologist' => [
+        'label' => 'Dental implant specialist', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Post-implant (review)', 'desc' => 'Cover + analgesia',
+             'items' => [
+                ['generic' => 'Amoxycillin', 'dose_unit' => 'capsule', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 5, 'food' => 'after'],
+                ['generic' => 'Chlorhexidine', 'dose_unit' => 'ml', 'dose_amount' => 10, 'freq' => '1-0-1', 'days' => 7, 'food' => 'after', 'instructions' => 'Mouth rinse'],
+             ]],
+        ],
+    ],
+
+    // ---- Niche (review) ----
+    'cosmetology' => [
+        'label' => 'Cosmetologist', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Post-procedure Skin (review)', 'desc' => 'Supportive',
+             'items' => [
+                ['generic' => 'Levocetirizine', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '0-0-1', 'days' => 5, 'food' => 'after'],
+             ]],
+        ],
+    ],
+    'fertility' => [
+        'label' => 'Fertility specialist', 'active' => 0,
+        'conditions' => [
+            ['name' => 'Preconception Support (review)', 'desc' => 'Folate',
+             'items' => [
+                ['generic' => 'Folic Acid', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 30, 'food' => 'after'],
+             ]],
+        ],
+    ],
+
 ];

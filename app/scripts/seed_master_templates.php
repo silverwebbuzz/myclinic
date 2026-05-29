@@ -126,7 +126,7 @@ if ($fresh && !$dry) {
 
 $insTpl = $pdo->prepare(
     'INSERT INTO prescription_templates_master (specialty, name, description, mode, is_active)
-     VALUES (:specialty, :name, :description, :mode, 1)'
+     VALUES (:specialty, :name, :description, :mode, :active)'
 );
 $insItem = $pdo->prepare(
     'INSERT INTO prescription_template_master_items
@@ -146,8 +146,14 @@ foreach ($CONTENT as $specKey => $spec) {
         continue;
     }
 
+    // Specialty-level active default (e.g. AYUSH/surgical seeded inactive
+    // for a doctor to review). A condition can override with its own 'active'.
+    $specActive = array_key_exists('active', $spec) ? (int) (bool) $spec['active'] : 1;
+    $specMode = $spec['mode'] ?? 'allopathic';
+
     foreach ($spec['conditions'] as $cond) {
-        $mode = $cond['mode'] ?? 'allopathic';
+        $mode = $cond['mode'] ?? $specMode;
+        $active = array_key_exists('active', $cond) ? (int) (bool) $cond['active'] : $specActive;
 
         // Resolve all items first; skip the whole template only if NOTHING matches.
         $resolved = [];
@@ -170,6 +176,7 @@ foreach ($CONTENT as $specKey => $spec) {
             ':name' => $cond['name'],
             ':description' => $cond['desc'] ?? null,
             ':mode' => $mode,
+            ':active' => $active,
         ]);
         $tid = (int) $pdo->lastInsertId();
         $tplCount++;

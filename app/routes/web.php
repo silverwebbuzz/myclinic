@@ -403,6 +403,15 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/specialties', [SpecialtyAdminController::class, 'index']);
         $admin->post('/specialties', [SpecialtyAdminController::class, 'save']);
         $admin->post('/specialties/{id}/toggle', [SpecialtyAdminController::class, 'toggle']);
+
+        // Master prescription templates (system-provided per specialty)
+        $admin->get('/rx-templates', [\App\Controllers\MasterTemplateAdminController::class, 'index']);
+        $admin->get('/rx-templates/new', [\App\Controllers\MasterTemplateAdminController::class, 'create']);
+        $admin->get('/rx-templates/{id}', [\App\Controllers\MasterTemplateAdminController::class, 'edit']);
+        $admin->post('/rx-templates/save', [\App\Controllers\MasterTemplateAdminController::class, 'save']);
+        $admin->post('/rx-templates/{id}/toggle', [\App\Controllers\MasterTemplateAdminController::class, 'toggle']);
+        $admin->post('/rx-templates/{id}/delete', [\App\Controllers\MasterTemplateAdminController::class, 'delete']);
+
         // Messaging crons
         $admin->post('/cron/notifications-process', [MessagingAdminController::class, 'runProcess']);
         $admin->post('/cron/leads-nudges', [MessagingAdminController::class, 'runLeadNudges']);
