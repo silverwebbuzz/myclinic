@@ -19,30 +19,18 @@ $seatLimit = (int) ($clinic['seat_limit'] ?? 2) + (int) ($clinic['extra_seats_pu
     </section>
 
     <section class="ui-card ui-card-pad">
-        <h3 class="ui-section-title">Active modules</h3>
-        <ul class="mt-3 divide-y text-sm">
-            <?php foreach ($modules as $mod): ?>
-            <li class="flex justify-between py-2">
-                <span><?= htmlspecialchars($mod['name'] ?? $mod['module_id']) ?></span>
-                <span class="text-slate-400">$<?= number_format((float)($mod['price_monthly_usd'] ?? 0), 2) ?>/mo</span>
-            </li>
-            <?php endforeach; ?>
-        </ul>
-    </section>
-
-    <section class="ui-card ui-card-pad">
         <h3 class="ui-section-title">Billing history</h3>
         <?php if ($invoices === []): ?>
         <p class="mt-2 text-sm text-slate-500">No invoices yet.</p>
         <?php else: ?>
         <table class="mt-3 w-full text-sm">
-            <thead><tr class="text-left text-xs text-slate-500"><th>Period</th><th>Total</th><th>Status</th></tr></thead>
-            <tbody>
+            <thead><tr class="text-left ui-group-label"><th class="pb-2">Period</th><th class="pb-2">Total</th><th class="pb-2">Status</th></tr></thead>
+            <tbody class="divide-y divide-slate-100">
             <?php foreach ($invoices as $inv): ?>
-            <tr class="border-t">
-                <td class="py-2"><?= htmlspecialchars($inv['period_start'] ?? '') ?> – <?= htmlspecialchars($inv['period_end'] ?? '') ?></td>
-                <td>$<?= number_format((float)($inv['total_usd'] ?? 0), 2) ?></td>
-                <td class="capitalize"><?= htmlspecialchars($inv['status'] ?? '') ?></td>
+            <tr>
+                <td class="py-2 text-slate-700"><?= htmlspecialchars($inv['period_start'] ?? '') ?> – <?= htmlspecialchars($inv['period_end'] ?? '') ?></td>
+                <td class="text-slate-700">$<?= number_format((float)($inv['total_usd'] ?? 0), 2) ?></td>
+                <td class="capitalize text-slate-600"><?= htmlspecialchars($inv['status'] ?? '') ?></td>
             </tr>
             <?php endforeach; ?>
             </tbody>

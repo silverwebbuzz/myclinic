@@ -31,11 +31,11 @@ $timeField = static function (string $name, string $label, string $value): strin
         <div class="ui-section">
             <h3 class="ui-label">Slot duration</h3>
             <p class="ui-help mt-0.5">Each visible booking slot will be this long.</p>
-            <div class="mt-3 flex flex-wrap gap-5 text-sm">
+            <div class="mt-2 inline-flex flex-wrap gap-2">
                 <?php foreach ([15 => '15 minutes', 30 => '30 minutes'] as $v => $l): ?>
-                <label class="flex items-center gap-2 cursor-pointer">
+                <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 transition hover:border-slate-300 has-[:checked]:border-brand has-[:checked]:bg-brand-light has-[:checked]:font-medium has-[:checked]:text-brand">
                     <input type="radio" class="ui-radio" name="slot_duration_min" value="<?= $v ?>" <?= $slotDuration === $v ? 'checked' : '' ?>>
-                    <span class="text-slate-700"><?= $l ?></span>
+                    <?= $l ?>
                 </label>
                 <?php endforeach; ?>
             </div>
@@ -89,11 +89,11 @@ $timeField = static function (string $name, string $label, string $value): strin
         <div class="ui-section">
             <h3 class="ui-label">Online booking window</h3>
             <p class="ui-help mt-0.5">How many days ahead can patients book through the public booking page?</p>
-            <div class="mt-3 flex flex-wrap gap-5 text-sm">
+            <div class="mt-2 inline-flex flex-wrap gap-2">
                 <?php foreach ([7, 15, 30, 60, 90] as $d): ?>
-                <label class="flex items-center gap-2 cursor-pointer">
+                <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 transition hover:border-slate-300 has-[:checked]:border-brand has-[:checked]:bg-brand-light has-[:checked]:font-medium has-[:checked]:text-brand">
                     <input type="radio" class="ui-radio" name="booking_window_days" value="<?= $d ?>" <?= $bookingWindow === $d ? 'checked' : '' ?>>
-                    <span class="text-slate-700"><?= $d ?> days</span>
+                    <?= $d ?> days
                 </label>
                 <?php endforeach; ?>
             </div>

@@ -9,11 +9,11 @@
  * place them; grouping is by column assignment below.
  */
 
-// Column assignment — keeps the two sides roughly equal in height.
-// Left  : the big clinic-config sections.
-// Right : scheduling, billing/account, communications.
-$leftOrder  = ['general', 'specialty', 'hours'];
-$rightOrder = ['notifications', 'leaves', 'team', 'subscription', 'api', 'branding', 'consent-forms'];
+// 'general' (the booking-page hero + clinic details) spans the full row on
+// top; everything else flows into two balanced columns below.
+$fullOrder  = ['general'];
+$leftOrder  = ['hours', 'specialty', 'branding'];
+$rightOrder = ['notifications', 'leaves', 'team', 'subscription', 'api', 'consent-forms'];
 
 $render = static function (array $order, array $tabs, array $sections): string {
     $out = '';
@@ -34,7 +34,11 @@ $render = static function (array $order, array $tabs, array $sections): string {
 
 <?= ui_page_header('Settings', 'Personalize your clinic and manage preferences securely.') ?>
 
-<div class="grid items-start gap-6 lg:grid-cols-2">
-    <div class="space-y-6"><?= $render($leftOrder, $tabs, $sections) ?></div>
-    <div class="space-y-6"><?= $render($rightOrder, $tabs, $sections) ?></div>
+<!-- Booking page + clinic details: full width -->
+<div class="mb-4 space-y-4"><?= $render($fullOrder, $tabs, $sections) ?></div>
+
+<!-- Everything else: two balanced columns -->
+<div class="grid items-start gap-4 lg:grid-cols-2">
+    <div class="space-y-4"><?= $render($leftOrder, $tabs, $sections) ?></div>
+    <div class="space-y-4"><?= $render($rightOrder, $tabs, $sections) ?></div>
 </div>

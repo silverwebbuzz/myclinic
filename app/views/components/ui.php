@@ -153,9 +153,9 @@ if (!function_exists('ui_page_header')) {
     /** Big page title + optional subtitle + optional right-side action HTML. */
     function ui_page_header(string $title, string $subtitle = '', string $action = ''): string
     {
-        return '<div class="mb-6 flex flex-wrap items-start justify-between gap-3">'
+        return '<div class="mb-4 flex flex-wrap items-start justify-between gap-3">'
             . '<div><h1 class="ui-page-header-title">' . ui_e($title) . '</h1>'
-            . ($subtitle !== '' ? '<p class="mt-1 text-sm text-slate-500">' . ui_e($subtitle) . '</p>' : '')
+            . ($subtitle !== '' ? '<p class="mt-0.5 text-sm text-slate-500">' . ui_e($subtitle) . '</p>' : '')
             . '</div>'
             . ($action !== '' ? '<div class="shrink-0">' . $action . '</div>' : '')
             . '</div>';
