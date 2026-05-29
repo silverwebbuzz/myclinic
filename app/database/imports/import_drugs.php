@@ -29,12 +29,12 @@ declare(strict_types=1);
  * are left at their defaults — the CSV has no such data.
  */
 
-require dirname(__DIR__) . '/vendor/autoload.php';
+require dirname(__DIR__, 2) . '/vendor/autoload.php';
 
 use App\Core\Application;
 use App\Core\Database;
 
-$base = dirname(__DIR__);          // the app/ dir (has vendor + .env)
+$base = dirname(__DIR__, 2);       // the app/ dir (has vendor + .env)
 $repoRoot = dirname($base);        // repo root (one level up from app/)
 Application::boot($base);
 

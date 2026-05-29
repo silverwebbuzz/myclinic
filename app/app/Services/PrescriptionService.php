@@ -161,8 +161,24 @@ final class PrescriptionService
         $remedyIdsUsed = [];
 
         foreach ($lines as $line) {
-            if (empty($line['drug_id']) && empty($line['remedy_id']) && empty($line['dosage'])) {
+            // Keep a line if it has ANY meaningful content. Previously this
+            // only checked drug_id/remedy_id/dosage, so a free-typed medicine
+            // (name without a catalog pick) was silently dropped. Now we also
+            // keep lines that carry a typed name, frequency or dose.
+            $typedName = trim((string) ($line['drug_name'] ?? ''));
+            $hasContent = !empty($line['drug_id']) || !empty($line['remedy_id'])
+                || !empty($line['dosage']) || $typedName !== ''
+                || !empty($line['frequency_preset']) || !empty($line['dose_amount']);
+            if (!$hasContent) {
                 continue;
+            }
+
+            // If the doctor typed a medicine but didn't pick from the catalog
+            // (no drug_id), preserve the typed name in `dosage` so it isn't lost
+            // (prescriptions has no free-text name column).
+            $dosage = $line['dosage'] ?? null;
+            if ($dosage === null && empty($line['drug_id']) && empty($line['remedy_id']) && $typedName !== '') {
+                $dosage = mb_substr($typedName, 0, 60);
             }
 
             $row = [
@@ -174,7 +190,7 @@ final class PrescriptionService
                 'remedy_id' => !empty($line['remedy_id']) ? (int) $line['remedy_id'] : null,
                 'potency' => $line['potency'] ?? null,
                 'form' => $line['form'] ?? null,
-                'dosage' => $line['dosage'] ?? null,
+                'dosage' => $dosage,
                 'frequency' => $line['frequency'] ?? 'BD',
                 'duration_days' => !empty($line['duration_days']) ? (int) $line['duration_days'] : null,
                 'instructions' => $line['instructions'] ?? null,

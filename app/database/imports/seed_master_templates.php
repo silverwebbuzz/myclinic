@@ -27,12 +27,12 @@ declare(strict_types=1);
  *   php scripts/seed_master_templates.php --dry      # match-report only, no writes
  */
 
-require dirname(__DIR__) . '/vendor/autoload.php';
+require dirname(__DIR__, 2) . '/vendor/autoload.php';
 
 use App\Core\Application;
 use App\Core\Database;
 
-$base = dirname(__DIR__);
+$base = dirname(__DIR__, 2);
 Application::boot($base);
 $pdo = Database::connection();
 
