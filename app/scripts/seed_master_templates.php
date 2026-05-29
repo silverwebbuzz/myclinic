@@ -44,6 +44,17 @@ require __DIR__ . '/master_templates_content.php';   // defines $CONTENT
 
 // ---- Resolve specialty slugs from the live specialty_master ----
 $specRows = $pdo->query('SELECT slug, label FROM specialty_master')->fetchAll(PDO::FETCH_ASSOC);
+
+// --list-specialties: print every real slug+label and exit (so content
+// keys can be matched to the authoritative catalog — never guess slugs).
+if (in_array('--list-specialties', $argv, true)) {
+    echo "Specialties in specialty_master (slug => label):\n";
+    foreach ($specRows as $r) {
+        echo "  {$r['slug']}  =>  {$r['label']}\n";
+    }
+    exit(0);
+}
+
 $slugByKey = [];          // normalized label/slug => actual slug
 foreach ($specRows as $r) {
     $slugByKey[strtolower($r['slug'])] = $r['slug'];

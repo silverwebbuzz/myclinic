@@ -84,7 +84,7 @@ $CONTENT = [
              ]],
             ['name' => 'Vitamin Deficiency / Tonic', 'desc' => 'General supplementation',
              'items' => [
-                ['generic' => 'Multivitamin', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 30, 'food' => 'after'],
+                ['generic' => 'Vitamin B', 'dose_unit' => 'tablet', 'dose_amount' => 1, 'freq' => '1-0-0', 'days' => 30, 'food' => 'after'],
                 ['generic' => 'Vitamin D3', 'dose_unit' => 'sachet', 'dose_amount' => 1, 'freq' => '0-0-0', 'days' => 7, 'food' => 'after', 'instructions' => 'Once weekly'],
              ]],
         ],
@@ -140,7 +140,7 @@ $CONTENT = [
              ]],
             ['name' => 'Bacterial Skin Infection', 'desc' => 'Impetigo / pyoderma',
              'items' => [
-                ['generic' => 'Cephalexin', 'dose_unit' => 'capsule', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 7, 'food' => 'after'],
+                ['generic' => 'Cefalexin', 'dose_unit' => 'capsule', 'dose_amount' => 1, 'freq' => '1-0-1', 'days' => 7, 'food' => 'after'],
              ]],
             ['name' => 'Eczema / Dermatitis', 'desc' => 'Itch control',
              'items' => [
