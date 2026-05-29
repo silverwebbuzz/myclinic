@@ -128,8 +128,12 @@ if ($fh === false) {
 
 $header = fgetcsv($fh); // discard header row
 $insert = $pdo->prepare(
-    'INSERT INTO drugs (name, generic_name, strength, form, is_active)
-     VALUES (:name, :generic, :strength, :form, :active)'
+    'INSERT INTO drugs
+        (name, generic_name, strength, composition, form, pack_size,
+         medicine_type, manufacturer, mrp, source_ref, is_active)
+     VALUES
+        (:name, :generic, :strength, :composition, :form, :pack_size,
+         :medicine_type, :manufacturer, :mrp, :source_ref, :active)'
 );
 
 $pdo->beginTransaction();
@@ -146,15 +150,27 @@ while (($row = fgetcsv($fh)) !== false) {
         continue;
     }
     $discontinued = strtoupper(trim((string) ($row[3] ?? 'FALSE'))) === 'TRUE';
-    [$generic, $strength] = $parseComposition((string) ($row[7] ?? ''), (string) ($row[8] ?? ''));
+    $comp1 = trim((string) ($row[7] ?? ''));
+    $comp2 = trim((string) ($row[8] ?? ''));
+    [$generic, $strength] = $parseComposition($comp1, $comp2);
     $form = $inferForm((string) ($row[6] ?? ''));
+    $composition = trim($comp1 . ($comp2 !== '' ? ', ' . $comp2 : ''));
+    $composition = preg_replace('/\s+/', ' ', $composition) ?? $composition;
+    $price = (string) ($row[2] ?? '');
+    $mrp = is_numeric($price) ? (float) $price : null;
 
     $insert->execute([
-        'name'     => mb_substr($name, 0, 150),
-        'generic'  => $generic !== null ? mb_substr($generic, 0, 150) : null,
-        'strength' => $strength !== null ? mb_substr($strength, 0, 30) : null,
-        'form'     => $form,
-        'active'   => $discontinued ? 0 : 1,
+        'name'          => mb_substr($name, 0, 150),
+        'generic'       => $generic !== null ? mb_substr($generic, 0, 150) : null,
+        'strength'      => $strength !== null ? mb_substr($strength, 0, 30) : null,
+        'composition'   => $composition !== '' ? mb_substr($composition, 0, 255) : null,
+        'form'          => $form,
+        'pack_size'     => mb_substr(trim((string) ($row[6] ?? '')), 0, 80) ?: null,
+        'medicine_type' => mb_substr(trim((string) ($row[5] ?? '')), 0, 20) ?: null,
+        'manufacturer'  => mb_substr(trim((string) ($row[4] ?? '')), 0, 120) ?: null,
+        'mrp'           => $mrp,
+        'source_ref'    => mb_substr(trim((string) ($row[0] ?? '')), 0, 40) ?: null,
+        'active'        => $discontinued ? 0 : 1,
     ]);
 
     $count++;

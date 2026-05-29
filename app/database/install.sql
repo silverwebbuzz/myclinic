@@ -2986,6 +2986,15 @@ CREATE TABLE template_usage_log (
 ALTER TABLE drugs
   ADD COLUMN usage_count INT NOT NULL DEFAULT 0 AFTER schedule,
   ADD INDEX idx_drugs_usage (usage_count DESC, name);
+-- Extended catalog fields (A-Z India dataset import; see migration 017).
+ALTER TABLE drugs
+  ADD COLUMN manufacturer   VARCHAR(120) NULL AFTER drug_class,
+  ADD COLUMN composition    VARCHAR(255) NULL AFTER strength,
+  ADD COLUMN pack_size      VARCHAR(80)  NULL AFTER form,
+  ADD COLUMN medicine_type  VARCHAR(20)  NULL AFTER pack_size,
+  ADD COLUMN mrp            DECIMAL(10,2) NULL AFTER medicine_type,
+  ADD COLUMN source_ref     VARCHAR(40)  NULL AFTER mrp,
+  ADD INDEX idx_drugs_manufacturer (manufacturer);
 ALTER TABLE remedies
   ADD COLUMN usage_count INT NOT NULL DEFAULT 0 AFTER source,
   ADD INDEX idx_remedies_usage (usage_count DESC, name);
