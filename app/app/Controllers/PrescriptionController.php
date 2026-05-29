@@ -144,6 +144,36 @@ final class PrescriptionController
         $stmt->execute($params);
         $templates = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // Prepend GLOBAL master templates for this clinic's specialty (like
+        // symptoms_master). IDs are prefixed 'm' so apply/show can route them
+        // to the master tables. Only when scope is 'all' or 'clinic'.
+        if ($scope !== 'mine') {
+            $clinic = RequestContext::clinic() ?? [];
+            $specialty = (string) ($clinic['specialty'] ?? '');
+            if ($specialty !== '') {
+                $mstmt = $pdo->prepare(
+                    "SELECT id, name, description, mode
+                       FROM prescription_templates_master
+                      WHERE specialty = :s AND is_active = 1
+                      ORDER BY global_usage_count DESC, name ASC
+                      LIMIT 50"
+                );
+                $mstmt->execute([':s' => $specialty]);
+                $master = array_map(static function (array $r): array {
+                    return [
+                        'id' => 'm' . $r['id'],   // prefixed id
+                        'name' => $r['name'],
+                        'description' => $r['description'],
+                        'mode' => $r['mode'],
+                        'doctor_id' => null,
+                        'use_count' => 0,
+                        'is_master' => true,
+                    ];
+                }, $mstmt->fetchAll(PDO::FETCH_ASSOC));
+                $templates = array_merge($master, $templates);
+            }
+        }
+
         // Auto-discovered suggestions for THIS doctor only (is_active=0).
         $sug = $pdo->prepare(
             'SELECT id, name, description, mode, use_count
@@ -298,8 +328,11 @@ final class PrescriptionController
         $clinicId = (int) RequestContext::clinicId();
         $user = RequestContext::user() ?? [];
         $doctorId = (int) ($user['id'] ?? 0);
-        $tid = (int) $id;
         $vid = (int) $visitId;
+
+        // Master templates carry an 'm' prefix (e.g. "m42").
+        $isMaster = is_string($id) && str_starts_with($id, 'm');
+        $tid = (int) ($isMaster ? substr($id, 1) : $id);
 
         $visit = VisitService::find($clinicId, $vid);
         if ($visit === null) {
@@ -311,23 +344,41 @@ final class PrescriptionController
 
         $pdo = Database::connection();
 
-        // Verify template belongs to this clinic + scope is allowed.
-        $hdr = $pdo->prepare(
-            'SELECT * FROM prescription_templates
-              WHERE id = :id AND clinic_id = :c LIMIT 1'
-        );
-        $hdr->execute([':id' => $tid, ':c' => $clinicId]);
-        $template = $hdr->fetch(PDO::FETCH_ASSOC);
-        if (!$template) {
-            return Response::json(['error' => 'Template not found'], 404);
+        if ($isMaster) {
+            // Global master template — not tied to a clinic.
+            $hdr = $pdo->prepare(
+                'SELECT * FROM prescription_templates_master
+                  WHERE id = :id AND is_active = 1 LIMIT 1'
+            );
+            $hdr->execute([':id' => $tid]);
+            $template = $hdr->fetch(PDO::FETCH_ASSOC);
+            if (!$template) {
+                return Response::json(['error' => 'Template not found'], 404);
+            }
+            $items = $pdo->prepare(
+                'SELECT * FROM prescription_template_master_items
+                  WHERE template_id = :id ORDER BY sort_order ASC'
+            );
+            $items->execute([':id' => $tid]);
+            $rows = $items->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            // Verify template belongs to this clinic + scope is allowed.
+            $hdr = $pdo->prepare(
+                'SELECT * FROM prescription_templates
+                  WHERE id = :id AND clinic_id = :c LIMIT 1'
+            );
+            $hdr->execute([':id' => $tid, ':c' => $clinicId]);
+            $template = $hdr->fetch(PDO::FETCH_ASSOC);
+            if (!$template) {
+                return Response::json(['error' => 'Template not found'], 404);
+            }
+            $items = $pdo->prepare(
+                'SELECT * FROM prescription_template_items
+                  WHERE template_id = :id ORDER BY sort_order ASC'
+            );
+            $items->execute([':id' => $tid]);
+            $rows = $items->fetchAll(PDO::FETCH_ASSOC);
         }
-
-        $items = $pdo->prepare(
-            'SELECT * FROM prescription_template_items
-              WHERE template_id = :id ORDER BY sort_order ASC'
-        );
-        $items->execute([':id' => $tid]);
-        $rows = $items->fetchAll(PDO::FETCH_ASSOC);
 
         // Translate template items → autosave payload.prescriptions shape,
         // then reuse VisitService::autosave to write into prescriptions table.
@@ -355,25 +406,34 @@ final class PrescriptionController
             return Response::json(['error' => $e->getMessage()], 422);
         }
 
-        // Bump use_count + log.
-        $pdo->prepare(
-            'UPDATE prescription_templates
-                SET use_count = use_count + 1, last_used_at = NOW()
-              WHERE id = :id'
-        )->execute([':id' => $tid]);
+        // Bump use_count + log. Master templates have their own counter and
+        // are NOT in prescription_templates (the usage_log FK), so guard it.
+        if ($isMaster) {
+            $pdo->prepare(
+                'UPDATE prescription_templates_master
+                    SET global_usage_count = global_usage_count + 1
+                  WHERE id = :id'
+            )->execute([':id' => $tid]);
+        } else {
+            $pdo->prepare(
+                'UPDATE prescription_templates
+                    SET use_count = use_count + 1, last_used_at = NOW()
+                  WHERE id = :id'
+            )->execute([':id' => $tid]);
 
-        $pdo->prepare(
-            'INSERT INTO template_usage_log
-                (template_id, doctor_id, clinic_id, visit_id, applied_at)
-             VALUES (:t, :d, :c, :v, NOW())'
-        )->execute([
-            ':t' => $tid, ':d' => $doctorId, ':c' => $clinicId, ':v' => $vid,
-        ]);
+            $pdo->prepare(
+                'INSERT INTO template_usage_log
+                    (template_id, doctor_id, clinic_id, visit_id, applied_at)
+                 VALUES (:t, :d, :c, :v, NOW())'
+            )->execute([
+                ':t' => $tid, ':d' => $doctorId, ':c' => $clinicId, ':v' => $vid,
+            ]);
+        }
 
         AuditService::log($request, 'UPDATE', 'prescriptions', $vid);
         return Response::json([
             'ok' => true,
-            'template_id' => $tid,
+            'template_id' => $id,
             'item_count' => count($prescriptions),
         ]);
     }
