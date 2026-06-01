@@ -304,6 +304,10 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                             </li>
                                         </template>
                                     </ul>
+                                    <!-- Visible error so doctors don't get a silent empty dropdown -->
+                                    <p x-show="line._dropdown && !((line._suggestions || []).length) && line._searchError" x-cloak
+                                       class="absolute z-10 mt-1 w-full rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800"
+                                       x-text="line._searchError"></p>
                                 </div>
 
                                 <select :disabled="!editable || !!line.tapering_steps" x-model="line.frequency_preset"
@@ -1424,17 +1428,31 @@ function prescriptionPanel() {
             const line = this.$root.prescriptions[idx];
             if (!line) return;
             const query = (q || '').trim();
-            if (query.length < 2) { line._suggestions = []; line._dropdown = false; return; }
+            if (query.length < 2) { line._suggestions = []; line._dropdown = false; line._searchError = ''; return; }
             const url = this.$root.useHomeo
                 ? '/api/v1/remedies/search?q=' + encodeURIComponent(query)
                 : '/api/v1/drugs/search?q=' + encodeURIComponent(query);
             try {
                 const r = await fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+                // Surface API problems instead of silently showing an empty dropdown.
+                // Most common: 402 from ModuleGate when the `prescription` module
+                // isn't active for the clinic — without this, doctors see nothing.
+                if (!r.ok) {
+                    line._suggestions = [];
+                    line._dropdown = true;
+                    line._searchError = r.status === 402
+                        ? 'Prescription module not active for this clinic — contact admin.'
+                        : 'Drug search failed (HTTP ' + r.status + ').';
+                    return;
+                }
                 const data = await r.json();
                 line._suggestions = data.drugs || data.remedies || [];
-                line._dropdown = line._suggestions.length > 0;
+                line._dropdown = true;
+                line._searchError = line._suggestions.length === 0 ? 'No medicines match "' + query + '".' : '';
             } catch (e) {
                 line._suggestions = [];
+                line._dropdown = true;
+                line._searchError = 'Network error fetching medicines.';
             }
         },
 
