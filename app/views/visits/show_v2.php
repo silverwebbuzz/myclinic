@@ -948,6 +948,10 @@ function visitScreenV2(cfg) {
 
         _saveDebounce: null,
         initAutosave() {
+            // Expose the canonical visit scope so inner panels (prescription,
+            // symptom) can reach data Alpine's $root cannot — $root would
+            // resolve to appShell on <html>, which doesn't own visit state.
+            window.__visit = this;
             if (!this.editable) return;
             // Periodic safety save.
             this.autosaveTimer = setInterval(() => { if (this.dirty) this.save(); }, 30000);
@@ -1183,18 +1187,14 @@ function visitScreenV2(cfg) {
 function symptomPicker() {
     return {
         // The parent visitScreenV2 owns the canonical symptoms list; this
-        // component reads/writes via $parent so reloads + autosave still see it.
-        // Defensive: during Alpine's bind phase $parent can be undefined for
-        // a tick — fall back to safe defaults instead of crashing.
-        get symptoms() {
-            const p = this.$parent;
-            if (!p) return [];
-            if (!Array.isArray(p.symptoms)) p.symptoms = [];
-            return p.symptoms;
-        },
-        set symptoms(v) { if (this.$parent) this.$parent.symptoms = v; },
-        get chief_complaint() { return this.$parent ? (this.$parent.chief_complaint || '') : ''; },
-        set chief_complaint(v) { if (this.$parent) this.$parent.chief_complaint = v; },
+        // component reads/writes via $root so reloads + autosave still see it.
+        // (The lazy-creation `= ... || []` ensures the array exists on the root
+        // scope on first access — kept for backward compat with how this view
+        // bootstraps. Don't change to $parent: it's undefined during init.)
+        get symptoms() { return this.$root.symptoms = this.$root.symptoms || []; },
+        set symptoms(v) { this.$root.symptoms = v; },
+        get chief_complaint() { return this.$root.chief_complaint; },
+        set chief_complaint(v) { this.$root.chief_complaint = v; },
 
         query: '',
         suggestions: [],
@@ -1354,9 +1354,9 @@ function symptomPicker() {
         },
 
         async persistSymptoms() {
-            if (!this.$parent.editable) return;
+            if (!this.$root.editable) return;
             try {
-                await fetch('/api/v1/visits/' + this.$parent.visitId + '/symptoms', {
+                await fetch('/api/v1/visits/' + this.$root.visitId + '/symptoms', {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -1387,11 +1387,11 @@ function prescriptionPanel() {
         },
 
         async applyTemplate(templateId) {
-            if (!this.$parent.editable) return;
-            const hasItems = (this.$parent.prescriptions || []).some(p => p.drug_name);
+            if (!window.__visit.editable) return;
+            const hasItems = (window.__visit.prescriptions || []).some(p => p.drug_name);
             if (hasItems && !confirm('Append template medicines to current prescription?')) return;
             try {
-                const r = await fetch('/api/v1/prescriptions/templates/' + templateId + '/apply/' + this.$parent.visitId, {
+                const r = await fetch('/api/v1/prescriptions/templates/' + templateId + '/apply/' + window.__visit.visitId, {
                     method: 'POST',
                     headers: { 'Accept': 'application/json' },
                 });
@@ -1432,13 +1432,13 @@ function prescriptionPanel() {
         },
 
         async searchDrugFor(idx, q) {
-            const parent = this.$parent;
+            const parent = window.__visit;
             if (!parent || !Array.isArray(parent.prescriptions)) return;
             const line = parent.prescriptions[idx];
             if (!line) return;
             const query = (q || '').trim();
             if (query.length < 2) { line._suggestions = []; line._dropdown = false; line._searchError = ''; return; }
-            const url = this.$parent.useHomeo
+            const url = window.__visit.useHomeo
                 ? '/api/v1/remedies/search?q=' + encodeURIComponent(query)
                 : '/api/v1/drugs/search?q=' + encodeURIComponent(query);
             try {
@@ -1466,7 +1466,7 @@ function prescriptionPanel() {
         },
 
         pickDrugFor(idx, drug) {
-            const parent = this.$parent;
+            const parent = window.__visit;
             if (!parent || !Array.isArray(parent.prescriptions)) return;
             const line = parent.prescriptions[idx];
             if (!line) return;
