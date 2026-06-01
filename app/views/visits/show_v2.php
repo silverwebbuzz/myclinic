@@ -1184,10 +1184,10 @@ function symptomPicker() {
     return {
         // The parent visitScreenV2 owns the canonical symptoms list; this
         // component reads/writes via $root so reloads + autosave still see it.
-        get symptoms() { return this.$root.symptoms = this.$root.symptoms || []; },
-        set symptoms(v) { this.$root.symptoms = v; },
-        get chief_complaint() { return this.$root.chief_complaint; },
-        set chief_complaint(v) { this.$root.chief_complaint = v; },
+        get symptoms() { return this.$parent.symptoms = this.$parent.symptoms || []; },
+        set symptoms(v) { this.$parent.symptoms = v; },
+        get chief_complaint() { return this.$parent.chief_complaint; },
+        set chief_complaint(v) { this.$parent.chief_complaint = v; },
 
         query: '',
         suggestions: [],
@@ -1347,9 +1347,9 @@ function symptomPicker() {
         },
 
         async persistSymptoms() {
-            if (!this.$root.editable) return;
+            if (!this.$parent.editable) return;
             try {
-                await fetch('/api/v1/visits/' + this.$root.visitId + '/symptoms', {
+                await fetch('/api/v1/visits/' + this.$parent.visitId + '/symptoms', {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -1380,11 +1380,11 @@ function prescriptionPanel() {
         },
 
         async applyTemplate(templateId) {
-            if (!this.$root.editable) return;
-            const hasItems = (this.$root.prescriptions || []).some(p => p.drug_name);
+            if (!this.$parent.editable) return;
+            const hasItems = (this.$parent.prescriptions || []).some(p => p.drug_name);
             if (hasItems && !confirm('Append template medicines to current prescription?')) return;
             try {
-                const r = await fetch('/api/v1/prescriptions/templates/' + templateId + '/apply/' + this.$root.visitId, {
+                const r = await fetch('/api/v1/prescriptions/templates/' + templateId + '/apply/' + this.$parent.visitId, {
                     method: 'POST',
                     headers: { 'Accept': 'application/json' },
                 });
@@ -1425,11 +1425,11 @@ function prescriptionPanel() {
         },
 
         async searchDrugFor(idx, q) {
-            const line = this.$root.prescriptions[idx];
+            const line = this.$parent.prescriptions[idx];
             if (!line) return;
             const query = (q || '').trim();
             if (query.length < 2) { line._suggestions = []; line._dropdown = false; line._searchError = ''; return; }
-            const url = this.$root.useHomeo
+            const url = this.$parent.useHomeo
                 ? '/api/v1/remedies/search?q=' + encodeURIComponent(query)
                 : '/api/v1/drugs/search?q=' + encodeURIComponent(query);
             try {
@@ -1457,9 +1457,9 @@ function prescriptionPanel() {
         },
 
         pickDrugFor(idx, drug) {
-            const line = this.$root.prescriptions[idx];
+            const line = this.$parent.prescriptions[idx];
             if (!line) return;
-            if (this.$root.useHomeo) {
+            if (this.$parent.useHomeo) {
                 line.remedy_id = drug.id;
                 line.drug_id = null;
             } else {
