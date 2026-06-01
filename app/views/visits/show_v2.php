@@ -442,10 +442,65 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                         </div>
                     </template>
 
-                    <button type="button" :disabled="!editable" @click="addRxLine()"
-                            class="text-xs font-medium text-brand hover:underline disabled:opacity-50">
-                        + Add medicine
-                    </button>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <button type="button" :disabled="!editable" @click="addRxLine()"
+                                class="text-xs font-medium text-brand hover:underline disabled:opacity-50">
+                            + Add medicine
+                        </button>
+                        <button type="button" :disabled="!editable" @click="openSaveTemplate()"
+                                x-show="(window.__visit && (window.__visit.prescriptions || []).some(p => p.drug_id || p.drug_name))"
+                                class="text-xs font-medium text-slate-600 hover:text-brand hover:underline disabled:opacity-50">
+                            Save as template…
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Save-as-template modal -->
+                <div x-show="saveTplModal.open" x-cloak
+                     @keydown.escape.window="saveTplModal.open = false"
+                     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div @click.outside="saveTplModal.open = false" class="w-full max-w-md rounded-xl bg-white shadow-xl">
+                        <div class="border-b border-slate-100 px-4 py-3">
+                            <h3 class="ui-section-title">Save as template</h3>
+                            <p class="ui-section-sub mt-0.5">Reuse this set of medicines on future visits.</p>
+                        </div>
+                        <div class="space-y-3 px-4 py-4">
+                            <label class="block">
+                                <span class="ui-label mb-1 block">Template name</span>
+                                <input type="text" x-model="saveTplModal.name"
+                                       placeholder="e.g. Common Cold — adult"
+                                       class="ui-input"
+                                       @keydown.enter.prevent="confirmSaveTemplate()">
+                            </label>
+                            <label class="block">
+                                <span class="ui-label mb-1 block">Description (optional)</span>
+                                <input type="text" x-model="saveTplModal.description"
+                                       placeholder="When to use this"
+                                       class="ui-input">
+                            </label>
+                            <div>
+                                <span class="ui-label mb-1 block">Visible to</span>
+                                <div class="flex gap-2">
+                                    <label class="flex flex-1 cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm has-[:checked]:border-brand has-[:checked]:bg-brand-light has-[:checked]:text-brand">
+                                        <input type="radio" name="tpl_scope" value="mine" x-model="saveTplModal.scope" class="ui-radio">
+                                        Only me
+                                    </label>
+                                    <label class="flex flex-1 cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm has-[:checked]:border-brand has-[:checked]:bg-brand-light has-[:checked]:text-brand">
+                                        <input type="radio" name="tpl_scope" value="clinic" x-model="saveTplModal.scope" class="ui-radio">
+                                        Whole clinic
+                                    </label>
+                                </div>
+                            </div>
+                            <p x-show="saveTplModal.error" x-text="saveTplModal.error" class="text-xs text-red-600"></p>
+                        </div>
+                        <div class="flex justify-end gap-2 border-t border-slate-100 px-4 py-3">
+                            <button type="button" @click="saveTplModal.open = false" class="ui-btn ui-btn-secondary ui-btn-sm">Cancel</button>
+                            <button type="button" @click="confirmSaveTemplate()" :disabled="saveTplModal.saving"
+                                    class="ui-btn ui-btn-primary ui-btn-sm">
+                                <span x-text="saveTplModal.saving ? 'Saving…' : 'Save template'"></span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1381,6 +1436,91 @@ function prescriptionPanel() {
     return {
         templates: [],
         suggestions: [],
+
+        // Save-as-template modal state.
+        saveTplModal: {
+            open: false,
+            name: '',
+            description: '',
+            scope: 'mine',     // 'mine' (this doctor) | 'clinic' (whole clinic)
+            saving: false,
+            error: '',
+        },
+
+        // Open the modal — pre-fill with the chief complaint as a sensible
+        // default name (doctor can change it).
+        openSaveTemplate() {
+            const v = window.__visit;
+            if (!v || !v.editable) return;
+            const items = (v.prescriptions || []).filter(p => p.drug_id || p.drug_name);
+            if (items.length === 0) {
+                alert('Add at least one medicine before saving as template.');
+                return;
+            }
+            this.saveTplModal.name = (v.chief_complaint || '').trim().slice(0, 80);
+            this.saveTplModal.description = '';
+            this.saveTplModal.scope = 'mine';
+            this.saveTplModal.error = '';
+            this.saveTplModal.saving = false;
+            this.saveTplModal.open = true;
+        },
+
+        async confirmSaveTemplate() {
+            if (this.saveTplModal.saving) return;
+            const m = this.saveTplModal;
+            const v = window.__visit;
+            const name = (m.name || '').trim();
+            if (name === '') { m.error = 'Please enter a name.'; return; }
+            if (!v) { m.error = 'Visit not ready.'; return; }
+
+            // Map prescription rows -> template item shape the API expects.
+            const items = (v.prescriptions || [])
+                .filter(p => p.drug_id || p.drug_name)
+                .map(p => ({
+                    drug_id: p.drug_id || null,
+                    remedy_id: p.remedy_id || null,
+                    potency: p.potency || null,
+                    dose_unit: p.dose_unit || null,
+                    dose_amount: p.dose_amount || null,
+                    frequency_preset: p.frequency_preset || null,
+                    duration_days: p.duration_days || null,
+                    food_timing: p.food_timing || 'any',
+                    mix_with: p.mix_with || null,
+                    tapering_steps: Array.isArray(p.tapering_steps) && p.tapering_steps.length ? p.tapering_steps : null,
+                    instructions: p.instructions || null,
+                }));
+            if (items.length === 0) { m.error = 'No medicines to save.'; return; }
+
+            m.saving = true;
+            m.error = '';
+            try {
+                const r = await fetch('/api/v1/prescriptions/templates', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        description: (m.description || '').trim() || null,
+                        scope: m.scope === 'clinic' ? 'clinic' : 'mine',
+                        mode: v.useHomeo ? 'homeopathic' : 'allopathic',
+                        items: items,
+                    }),
+                });
+                const data = await r.json().catch(() => ({}));
+                if (!r.ok || !data.ok) {
+                    m.error = data.error || ('Save failed (HTTP ' + r.status + ').');
+                    m.saving = false;
+                    return;
+                }
+                m.open = false;
+                m.saving = false;
+                // Refresh the "Apply:" chips so the new template shows immediately.
+                await this.loadTemplates();
+            } catch (e) {
+                m.error = 'Network error.';
+                m.saving = false;
+            }
+        },
 
         async loadTemplates() {
             try {
