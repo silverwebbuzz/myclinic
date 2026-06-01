@@ -1183,11 +1183,18 @@ function visitScreenV2(cfg) {
 function symptomPicker() {
     return {
         // The parent visitScreenV2 owns the canonical symptoms list; this
-        // component reads/writes via $root so reloads + autosave still see it.
-        get symptoms() { return this.$parent.symptoms = this.$parent.symptoms || []; },
-        set symptoms(v) { this.$parent.symptoms = v; },
-        get chief_complaint() { return this.$parent.chief_complaint; },
-        set chief_complaint(v) { this.$parent.chief_complaint = v; },
+        // component reads/writes via $parent so reloads + autosave still see it.
+        // Defensive: during Alpine's bind phase $parent can be undefined for
+        // a tick — fall back to safe defaults instead of crashing.
+        get symptoms() {
+            const p = this.$parent;
+            if (!p) return [];
+            if (!Array.isArray(p.symptoms)) p.symptoms = [];
+            return p.symptoms;
+        },
+        set symptoms(v) { if (this.$parent) this.$parent.symptoms = v; },
+        get chief_complaint() { return this.$parent ? (this.$parent.chief_complaint || '') : ''; },
+        set chief_complaint(v) { if (this.$parent) this.$parent.chief_complaint = v; },
 
         query: '',
         suggestions: [],
@@ -1425,7 +1432,9 @@ function prescriptionPanel() {
         },
 
         async searchDrugFor(idx, q) {
-            const line = this.$parent.prescriptions[idx];
+            const parent = this.$parent;
+            if (!parent || !Array.isArray(parent.prescriptions)) return;
+            const line = parent.prescriptions[idx];
             if (!line) return;
             const query = (q || '').trim();
             if (query.length < 2) { line._suggestions = []; line._dropdown = false; line._searchError = ''; return; }
@@ -1457,9 +1466,11 @@ function prescriptionPanel() {
         },
 
         pickDrugFor(idx, drug) {
-            const line = this.$parent.prescriptions[idx];
+            const parent = this.$parent;
+            if (!parent || !Array.isArray(parent.prescriptions)) return;
+            const line = parent.prescriptions[idx];
             if (!line) return;
-            if (this.$parent.useHomeo) {
+            if (parent.useHomeo) {
                 line.remedy_id = drug.id;
                 line.drug_id = null;
             } else {
