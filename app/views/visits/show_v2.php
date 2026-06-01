@@ -1186,15 +1186,21 @@ function visitScreenV2(cfg) {
 // ─────────────────────────────────────────────────────────────
 function symptomPicker() {
     return {
-        // The parent visitScreenV2 owns the canonical symptoms list; this
-        // component reads/writes via $root so reloads + autosave still see it.
-        // (The lazy-creation `= ... || []` ensures the array exists on the root
-        // scope on first access — kept for backward compat with how this view
-        // bootstraps. Don't change to $parent: it's undefined during init.)
-        get symptoms() { return this.$root.symptoms = this.$root.symptoms || []; },
-        set symptoms(v) { this.$root.symptoms = v; },
-        get chief_complaint() { return this.$root.chief_complaint; },
-        set chief_complaint(v) { this.$root.chief_complaint = v; },
+        // The parent visitScreenV2 owns the canonical symptoms list. We MUST
+        // read it from window.__visit (set in visitScreenV2.initAutosave) —
+        // Alpine's `this.$root` resolves to appShell on <html>, which is the
+        // WRONG scope and would silently create a parallel empty array there.
+        // That's exactly why symptoms never appeared after save+reload: the UI
+        // was reading from appShell while the data lived on visitScreenV2.
+        get symptoms() {
+            const v = window.__visit;
+            if (!v) return [];
+            if (!Array.isArray(v.symptoms)) v.symptoms = [];
+            return v.symptoms;
+        },
+        set symptoms(val) { if (window.__visit) window.__visit.symptoms = val; },
+        get chief_complaint() { return window.__visit ? (window.__visit.chief_complaint || '') : ''; },
+        set chief_complaint(v) { if (window.__visit) window.__visit.chief_complaint = v; },
 
         query: '',
         suggestions: [],
@@ -1354,9 +1360,10 @@ function symptomPicker() {
         },
 
         async persistSymptoms() {
-            if (!this.$root.editable) return;
+            const v = window.__visit;
+            if (!v || !v.editable) return;
             try {
-                await fetch('/api/v1/visits/' + this.$root.visitId + '/symptoms', {
+                await fetch('/api/v1/visits/' + v.visitId + '/symptoms', {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },

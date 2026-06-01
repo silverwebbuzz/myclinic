@@ -224,7 +224,7 @@
                 </div>
             </header>
 
-            <main class="flex-1 p-5 lg:p-8">
+            <main class="flex-1 p-5 lg:p-2">
                 <?= $content ?? '' ?>
             </main>
             <?php

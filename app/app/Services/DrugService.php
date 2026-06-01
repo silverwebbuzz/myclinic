@@ -49,22 +49,27 @@ final class DrugService
             return $rows;
         }
 
-        // Fulltext fallback for multi-word / substring matches.
-        $stmt = $pdo->prepare(
-            'SELECT id, name, generic_name, strength, form, interactions, contraindications
-             FROM drugs
-             WHERE is_active = 1
-             AND MATCH(name, generic_name) AGAINST(:q IN BOOLEAN MODE)
-             ORDER BY usage_count DESC
-             LIMIT :lim',
-        );
-        $term = '+' . implode('* +', array_filter(explode(' ', $q))) . '*';
-        $stmt->bindValue(':q', $term);
-        $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
-        $stmt->execute();
-        $rows = $stmt->fetchAll() ?: [];
-        if ($rows !== []) {
-            return $rows;
+        // Fulltext fallback for multi-word / substring matches. Wrapped so
+        // a missing FULLTEXT index falls through to LIKE instead of 500'ing.
+        try {
+            $stmt = $pdo->prepare(
+                'SELECT id, name, generic_name, strength, form, interactions, contraindications
+                 FROM drugs
+                 WHERE is_active = 1
+                 AND MATCH(name, generic_name) AGAINST(:q IN BOOLEAN MODE)
+                 ORDER BY usage_count DESC
+                 LIMIT :lim',
+            );
+            $term = '+' . implode('* +', array_filter(explode(' ', $q))) . '*';
+            $stmt->bindValue(':q', $term);
+            $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
+            $stmt->execute();
+            $rows = $stmt->fetchAll() ?: [];
+            if ($rows !== []) {
+                return $rows;
+            }
+        } catch (\Throwable $e) {
+            // No FULLTEXT index — fall through to LIKE below.
         }
 
         // Final fallback: contains LIKE.

@@ -50,21 +50,28 @@ final class RemedyService
         }
 
         // Fulltext fallback for substring matches against key_indications.
-        $stmt = $pdo->prepare(
-            'SELECT id, name, abbreviation, antidotes, dietary_restrictions
-             FROM remedies
-             WHERE is_active = 1
-             AND MATCH(name, abbreviation, key_indications) AGAINST(:q IN BOOLEAN MODE)
-             ORDER BY usage_count DESC
-             LIMIT :lim',
-        );
-        $term = '+' . implode('* +', array_filter(explode(' ', $q))) . '*';
-        $stmt->bindValue(':q', $term);
-        $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
-        $stmt->execute();
-        $rows = $stmt->fetchAll() ?: [];
-        if ($rows !== []) {
-            return $rows;
+        // Wrapped — the FULLTEXT index isn't present on every install; if it
+        // doesn't exist we skip straight to the LIKE fallback below instead
+        // of 500'ing the request.
+        try {
+            $stmt = $pdo->prepare(
+                'SELECT id, name, abbreviation, antidotes, dietary_restrictions
+                 FROM remedies
+                 WHERE is_active = 1
+                 AND MATCH(name, abbreviation, key_indications) AGAINST(:q IN BOOLEAN MODE)
+                 ORDER BY usage_count DESC
+                 LIMIT :lim',
+            );
+            $term = '+' . implode('* +', array_filter(explode(' ', $q))) . '*';
+            $stmt->bindValue(':q', $term);
+            $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
+            $stmt->execute();
+            $rows = $stmt->fetchAll() ?: [];
+            if ($rows !== []) {
+                return $rows;
+            }
+        } catch (\Throwable $e) {
+            // No FULLTEXT index on remedies — fall through to LIKE.
         }
 
         // Final fallback: contains LIKE.
