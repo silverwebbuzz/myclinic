@@ -1,0 +1,9 @@
+# Large MySQL dumps (full schema + data export) — exclude from graph
+# tokenization. These are 100s of MB and not source code. Real schema lives in
+# app/database/migrations/*.sql and document/seeds/*.sql which graphify DOES index.
+document/silverwebbuzz_in_myclinic*.sql
+*.sql.gz
+*.dump
+
+# Belt-and-suspenders: ignore any .sql over the dump-size threshold by name pattern.
+# (Add specific dump filenames here if you export more.)

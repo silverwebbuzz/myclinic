@@ -142,7 +142,37 @@ final class PublicBookingService
             'is_followup' => !empty($data['is_followup']),
         ]);
 
+        // Online booking is a "request received", not a confirmed slot. Notify
+        // the doctor (so they can call) and acknowledge to the patient.
+        $doctor = QueryBuilder::table('users')
+            ->forClinic($clinicId)
+            ->where('id', '=', (int) $data['doctor_id'])
+            ->first();
+        $clinic = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first();
+        if ($doctor !== null && $clinic !== null) {
+            // doctor.phone is nullable. Fall back to the clinic owner's phone
+            // (same canonical contact MessagingPolicy uses) so the booking
+            // alert is never silently lost.
+            if (empty($doctor['phone'])) {
+                $doctor['phone'] = self::clinicContactPhone($clinicId);
+            }
+            NotificationService::queueOnlineBooking($appointment, $patient, $doctor, $clinic);
+        }
+
         return ['patient' => $patient, 'appointment' => $appointment];
+    }
+
+    /**
+     * Canonical clinic contact phone for fallback alerts: the clinic owner's
+     * phone (mirrors MessagingPolicy's owner lookup). Returns '' if none set.
+     */
+    private static function clinicContactPhone(int $clinicId): string
+    {
+        $owner = QueryBuilder::table('users')
+            ->forClinic($clinicId)
+            ->where('is_owner', '=', 1)
+            ->first();
+        return (string) ($owner['phone'] ?? '');
     }
 
     /**
