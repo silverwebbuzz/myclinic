@@ -1,2 +1,5 @@
 .claude/settings.local.json
 .claude/settings.json
+
+# graphify generated knowledge graph
+graphify-out/
