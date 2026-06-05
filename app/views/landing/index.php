@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>eClinicPro — The clinic OS doctors love</title>
-    <meta name="description" content="Run your clinic on eClinicPro — patients, prescriptions, schedule, billing, all in one place. Free 14-day trial.">
+    <meta name="description" content="Run your clinic on eClinicPro — patients, prescriptions, schedule, billing, all in one place. Free 30-day trial.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -73,7 +73,7 @@
                     </div>
 
                     <p class="mt-4 text-xs text-slate-500">
-                        🎁 14-day free trial · No credit card needed · Cancel anytime
+                        🎁 30-day free trial · No credit card needed · Cancel anytime
                     </p>
                 </div>
 

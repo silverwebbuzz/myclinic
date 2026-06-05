@@ -97,9 +97,16 @@ final class PlanService
         ];
 
         // After Phase 1: 30-day trial for all new tenants (was 14).
-        // 'free' guard kept harmless — that tier no longer exists.
+        // The trial clock starts at registration (AuthService::registerClinic),
+        // so only SET a trial here if the tenant doesn't already have one —
+        // never overwrite/extend an in-progress trial during onboarding.
         if ($withTrial && $planId !== 'free') {
-            $data['trial_ends_at'] = date('Y-m-d', strtotime('+30 days'));
+            $existing = QueryBuilder::table('tenants')
+                ->where('id', '=', $clinicId)
+                ->first();
+            if (empty($existing['trial_ends_at'])) {
+                $data['trial_ends_at'] = date('Y-m-d', strtotime('+30 days'));
+            }
         }
 
         QueryBuilder::table('tenants')->where('id', '=', $clinicId)->update($data);

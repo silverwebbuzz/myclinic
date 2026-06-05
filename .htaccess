@@ -43,8 +43,12 @@ RewriteRule ^find-a-doctor/([A-Za-z0-9][A-Za-z0-9\-]*)/([A-Za-z0-9][A-Za-z0-9\-]
 # Sitemap — auto-generated PHP, served as XML
 RewriteRule ^sitemap\.xml$ sitemap.php [L]
 
+# -------- Pricing moved into the For-doctors (features) page --------
+# Redirect the retired /pricing page to the new section so old links/SEO survive.
+RewriteRule ^pricing/?$ /features#pricing [R=301,L]
+
 # -------- Clean URLs --------
-# /pricing -> pricing.php (internal rewrite, browser still sees /pricing)
+# /features -> features.php (internal rewrite, browser still sees /features)
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}.php -f
 RewriteRule ^([^.]+)$ $1.php [L]

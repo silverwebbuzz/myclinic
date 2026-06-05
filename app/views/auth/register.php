@@ -4,7 +4,7 @@ ob_start();
 ?>
 <div class="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
     <h1 class="text-xl font-semibold text-slate-900">Start your clinic</h1>
-    <p class="mt-1 text-sm text-slate-500">14-day free trial · No credit card required</p>
+    <p class="mt-1 text-sm text-slate-500">30-day free trial · No credit card required</p>
 
     <?php if (!empty($google)): ?>
         <p class="mt-4 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800">

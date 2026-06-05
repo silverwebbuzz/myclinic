@@ -17,7 +17,7 @@ $yearly = $yearly ?? true;
 
 <div class="mb-6 text-center">
     <h1 class="text-2xl font-semibold text-slate-900">Choose your plan</h1>
-    <p class="mt-1 text-sm text-slate-500">Start free or try Clinic features for 14 days</p>
+    <p class="mt-1 text-sm text-slate-500">Try the full product free for 30 days</p>
 </div>
 
 <div class="mb-6 flex justify-center" x-data="{ yearly: <?= $yearly ? 'true' : 'false' ?> }">
@@ -61,7 +61,7 @@ $yearly = $yearly ?? true;
         </ul>
 
         <button type="submit" class="w-full rounded-lg py-2 text-sm font-medium <?= !empty($plan['featured']) ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'border border-slate-300 text-slate-700 hover:bg-slate-50' ?>">
-            <?= $planId === 'free' ? 'Continue with Free' : 'Start ' . htmlspecialchars($plan['name']) . ' — 14-day trial' ?>
+            <?= $planId === 'free' ? 'Continue with Free' : 'Start ' . htmlspecialchars($plan['name']) . ' — 30-day trial' ?>
         </button>
     </form>
     <?php endforeach; ?>

@@ -148,7 +148,6 @@ $ecpPatientJson = $ecpPatient
             <a href="/find-a-doctor" class="nav-link <?= nav_active('find') ?>">Find a doctor</a>
             <a href="/features" class="nav-link <?= nav_active('features') ?>">For doctors</a>
             <a href="/#specialties" class="nav-link <?= nav_active('specialties') ?>">Specialties</a>
-            <a href="/pricing" class="nav-link <?= nav_active('pricing') ?>">Pricing</a>
             <a href="/security" class="nav-link <?= nav_active('security') ?>">Security</a>
         </nav>
 

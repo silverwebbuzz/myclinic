@@ -425,7 +425,7 @@ require __DIR__ . '/partials/header.php';
                 <?php endforeach; ?>
             </ul>
             <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg btn-block">Start 30-day free trial</a>
-            <p class="hp-doc-fine center">No credit card. Cancel anytime. <a href="/pricing" style="color:var(--teal-600);font-weight:500;">See full pricing &amp; FAQ →</a></p>
+            <p class="hp-doc-fine center">No credit card. Cancel anytime. <a href="/features#pricing" style="color:var(--teal-600);font-weight:500;">See full pricing &amp; FAQ →</a></p>
         </div>
     </div>
 </section>

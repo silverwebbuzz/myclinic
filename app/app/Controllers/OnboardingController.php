@@ -39,7 +39,10 @@ final class OnboardingController
         if ($step <= 1) {
             // Auto-apply the standard plan only for fresh onboarding tenants.
             // This avoids resetting established tenants back to step 2.
-            PlanService::applyPlanToTenant($clinicId, 'standard', false);
+            // withTrial=true is safe: applyPlanToTenant only SETS a trial when
+            // one doesn't already exist, so the 30-day clock from registration
+            // is preserved (never reset/extended here).
+            PlanService::applyPlanToTenant($clinicId, 'standard', true);
             OnboardingService::advanceTo($clinicId, 2);
         }
 

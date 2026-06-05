@@ -143,11 +143,115 @@ require __DIR__ . '/partials/header.php';
     </div>
 </section>
 
+<!-- ============ Pricing ============ -->
+<section id="pricing" class="feat-pricing">
+    <div class="wrap">
+        <div class="feat-pricing-head reveal">
+            <span class="eyebrow">Pricing</span>
+            <h2 class="h-section">One plan. Everything included.</h2>
+            <p class="lede center">
+                No tiers, no per-seat games, no surprise upsells. One annual price gets you
+                the whole clinic system — and you start with a 30-day free trial, no card needed.
+            </p>
+        </div>
+
+        <div class="feat-plan-grid reveal">
+            <!-- Plan card -->
+            <div class="plan-card primary">
+                <div class="plan-head">
+                    <span class="plan-name">Standard</span>
+                    <h3 class="plan-price">
+                        <span class="currency">₹</span>16,000<span class="per">/year</span>
+                    </h3>
+                    <p class="plan-yearly">
+                        <span class="plan-strike">₹17,988</span>
+                        <span class="plan-save">Save 10%</span>
+                        <br>+ 18% GST at checkout
+                    </p>
+                </div>
+                <ul class="plan-features">
+                    <li>✓ Patient records, visits, prescriptions</li>
+                    <li>✓ Appointments &amp; walk-in queue</li>
+                    <li>✓ Billing &amp; invoicing (GST-ready)</li>
+                    <li>✓ Vitals, diagnosis, follow-up tracking</li>
+                    <li>✓ Specialty-aware forms (50+ specialties)</li>
+                    <li>✓ Teleconsultation built in</li>
+                    <li>✓ Public doctor profile on eclinicpro.com</li>
+                    <li>✓ Daily reports &amp; analytics</li>
+                    <li>✓ Unlimited patients, unlimited staff users</li>
+                    <li>✓ 30-day free trial — no credit card</li>
+                </ul>
+                <a href="https://app.eclinicpro.com/register" class="btn btn-primary btn-lg btn-block">
+                    Start 30-day free trial
+                </a>
+                <p class="plan-fineprint">No card needed. Cancel anytime during trial.</p>
+            </div>
+
+            <!-- Add-ons + FAQ column -->
+            <div class="addon-column">
+                <h3 class="addon-heading">Optional add-ons</h3>
+                <div class="addon-card">
+                    <div class="addon-icon">💬</div>
+                    <div>
+                        <h4 class="addon-name">Patient Connect</h4>
+                        <p class="addon-desc">WhatsApp automation: appointment reminders, prescription delivery, follow-up nudges. Cuts no-show rates in half.</p>
+                        <div class="addon-price">+₹499/month</div>
+                    </div>
+                </div>
+                <div class="addon-card">
+                    <div class="addon-icon">🌿</div>
+                    <div>
+                        <h4 class="addon-name">Clinic Network</h4>
+                        <p class="addon-desc">Add an extra clinic branch under one account. Unified patient records, separate queues per branch.</p>
+                        <div class="addon-price">+₹999/month per branch</div>
+                    </div>
+                </div>
+                <p class="addon-tease">
+                    GST (18%) is added at checkout. After the 30-day trial you decide whether to
+                    continue — no automatic charges and no card taken upfront.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
 <style>
 @media (max-width: 800px) {
     .feat-cat-head { grid-template-columns: 1fr !important; gap: 16px !important; }
     .feat-grid { grid-template-columns: 1fr !important; }
 }
+
+/* ---- Pricing block (self-contained; mirrors old pricing.php styles) ---- */
+.feat-pricing { padding: 72px 0 96px; border-top: 0.5px solid var(--line); background: var(--bg-2); }
+.feat-pricing-head { text-align: center; margin-bottom: 40px; }
+.feat-pricing-head .lede.center { max-width: 640px; margin: 16px auto 0; }
+.feat-plan-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 32px; max-width: 1100px; margin: 0 auto; }
+@media (max-width: 900px) { .feat-plan-grid { grid-template-columns: 1fr; } }
+
+.plan-card { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 32px; box-shadow: 0 4px 16px rgba(0,0,0,0.04); }
+.plan-card.primary { border: 2px solid var(--teal-600); }
+.plan-name { display: inline-block; background: var(--teal-50); color: var(--teal-700); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; }
+.plan-price { font-size: 48px; font-weight: 300; letter-spacing: -1.2px; margin: 12px 0 4px; }
+.plan-price .currency { font-size: 24px; vertical-align: super; opacity: 0.7; margin-right: 2px; }
+.plan-price .per { font-size: 16px; font-weight: 400; color: var(--mute); margin-left: 4px; }
+.plan-yearly { color: var(--ink-2); margin: 0 0 24px; font-size: 14px; line-height: 1.6; }
+.plan-strike { text-decoration: line-through; color: var(--mute); margin-right: 8px; }
+.plan-save { display: inline-block; background: var(--teal-50); color: var(--teal-700); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; padding: 2px 8px; border-radius: 999px; }
+.plan-features { list-style: none; padding: 0; margin: 0 0 24px; }
+.plan-features li { padding: 6px 0; font-size: 14.5px; color: var(--ink-2); }
+.btn-block { display: block; text-align: center; width: 100%; }
+.plan-fineprint { font-size: 12px; color: var(--mute); margin: 10px 0 0; text-align: center; }
+
+.addon-column { display: flex; flex-direction: column; gap: 16px; }
+.addon-heading { font-size: 16px; font-weight: 600; margin: 0 0 4px; color: var(--ink-2); }
+.addon-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: flex; gap: 16px; transition: border-color .15s; }
+.addon-card:hover { border-color: var(--teal-400); }
+.addon-icon { font-size: 28px; flex-shrink: 0; }
+.addon-name { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
+.addon-desc { font-size: 13.5px; color: var(--ink-2); line-height: 1.55; margin: 0 0 8px; }
+.addon-price { font-size: 14px; font-weight: 600; color: var(--teal-700); }
+.addon-tease { font-size: 12.5px; color: var(--mute); padding: 0 4px; line-height: 1.5; }
+@media (max-width: 600px) { .plan-card { padding: 22px; } .plan-price { font-size: 36px; } }
 </style>
 
 <?php require __DIR__ . '/partials/footer.php'; ?>

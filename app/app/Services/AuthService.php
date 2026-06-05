@@ -30,13 +30,17 @@ final class AuthService
         $pdo = Database::connection();
         $pdo->beginTransaction();
         try {
+            // New clinics start a 30-day trial of the full Standard plan
+            // (matches the "30-day free trial — full product" marketing).
+            // The trial clock starts here at registration and is NOT reset
+            // later during onboarding. See PlanService::applyPlanToTenant().
             $tenantId = QueryBuilder::table('tenants')->insert([
                 'name' => $clinicName,
                 'slug' => $slug,
                 'email' => $email,
-                'plan' => 'free',
-                'seat_limit' => 2,
-                'trial_ends_at' => date('Y-m-d', strtotime('+14 days')),
+                'plan' => 'standard',
+                'seat_limit' => 999,
+                'trial_ends_at' => date('Y-m-d', strtotime('+30 days')),
                 'onboarding_step' => 1,
             ]);
 

@@ -82,7 +82,7 @@ try {
                     <li><a href="/find-a-doctor">Find a doctor</a></li>
                     <li><a href="/features">For doctors</a></li>
                     <li><a href="/product-tour">Product tour</a></li>
-                    <li><a href="/pricing">Pricing</a></li>
+                    <li><a href="/features#pricing">Pricing</a></li>
                     <li><a href="/#specialties">Specialties</a></li>
                 </ul>
             </div>
