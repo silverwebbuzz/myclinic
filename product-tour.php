@@ -93,7 +93,7 @@ $chapters = [
         'blurb' => 'Pick your specialty and the right tools appear automatically. One simple plan — no module juggling, no surprise bills.',
         'screens' => [
             ['7.1', 'Specialty setup', 'Choose your specialty once. The visit screen, vitals, and case forms adapt to how you actually work — homeopathy case-taking, dental charting, pediatric growth, and more. Change it any time from Settings.', '🛠️',
-                [['✓', 'Smart defaults', 'The right sections show for your specialty.'], ['🧾', 'One plan', '₹1,499/month — everything included.'], ['🛡️', 'Your control', 'Toggle optional sections on or off per clinic.']]],
+                [['✓', 'Smart defaults', 'The right sections show for your specialty.'], ['🧾', 'One plan', '₹16,000/year — everything included.'], ['🛡️', 'Your control', 'Toggle optional sections on or off per clinic.']]],
         ],
     ],
 ];

@@ -66,16 +66,24 @@ function ecp_search_doctors(array $filters): array {
 
     $relevanceExpr = null;
     if ($q !== '') {
-        if (strlen($q) >= 3) {
+        // Split on ANY non-letter/digit (whitespace AND punctuation), so a query
+        // like "dr.feel" becomes ["dr","feel"] rather than one token "drfeel".
+        $rawTokens = preg_split('/[^\p{L}\p{N}]+/u', $q, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        // MySQL fulltext ignores tokens shorter than innodb_ft_min_token_size
+        // (default 3), so drop them — "dr" can never match in BOOLEAN MODE.
+        $ftTokens = array_values(array_filter($rawTokens, static fn ($t) => mb_strlen($t) >= 3));
+
+        if ($ftTokens) {
+            // Prefix each remaining token: "feel" -> "feel*" matches "Feelgood".
             $where[] = "MATCH(dd.name, dd.doctor_name) AGAINST(:q IN BOOLEAN MODE)";
-            $tokens = array_filter(preg_split('/\s+/', $q) ?: []);
-            $tokens = array_map(static fn ($t) => preg_replace('/[^\w]/', '', $t) . '*', $tokens);
-            $params['q']   = implode(' ', $tokens);
+            $params['q']   = implode(' ', array_map(static fn ($t) => $t . '*', $ftTokens));
             $relevanceExpr = "MATCH(dd.name, dd.doctor_name) AGAINST(:qrel IN BOOLEAN MODE)";
             $params['qrel'] = $params['q'];
         } else {
+            // Every token too short for fulltext (e.g. "dr") — fall back to a
+            // substring LIKE so the search still returns something useful.
             $where[] = "(dd.name LIKE :qlike OR dd.doctor_name LIKE :qlike OR dd.area LIKE :qlike OR dd.city LIKE :qlike)";
-            $params['qlike'] = $q . '%';
+            $params['qlike'] = '%' . $q . '%';
         }
     }
 

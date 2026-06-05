@@ -2,7 +2,8 @@
 $title = 'Choose your plan — ManageClinic';
 ob_start();
 $plans = $plans ?? [];
-$yearly = $yearly ?? false;
+// Annual-only plan model — default to yearly so the ₹16,000/year price shows.
+$yearly = $yearly ?? true;
 ?>
 <?php if (!empty($error)): ?>
 <div class="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700"><?= htmlspecialchars($error) ?></div>
@@ -22,7 +23,7 @@ $yearly = $yearly ?? false;
 <div class="mb-6 flex justify-center" x-data="{ yearly: <?= $yearly ? 'true' : 'false' ?> }">
     <div class="inline-flex rounded-lg border border-slate-200 bg-white p-1 text-sm">
         <a href="?cycle=monthly" class="rounded-md px-4 py-1.5 <?= !$yearly ? 'bg-emerald-600 text-white' : 'text-slate-600' ?>">Monthly</a>
-        <a href="?cycle=yearly" class="rounded-md px-4 py-1.5 <?= $yearly ? 'bg-emerald-600 text-white' : 'text-slate-600' ?>">Yearly <span class="text-xs opacity-80">-20%</span></a>
+        <a href="?cycle=yearly" class="rounded-md px-4 py-1.5 <?= $yearly ? 'bg-emerald-600 text-white' : 'text-slate-600' ?>">Yearly <span class="text-xs opacity-80">Save 10%</span></a>
     </div>
 </div>
 
@@ -42,11 +43,11 @@ $yearly = $yearly ?? false;
 
         <div class="my-4">
             <?php if ($planId === 'free'): ?>
-            <span class="text-3xl font-bold">$0</span>
+            <span class="text-3xl font-bold">₹0</span>
             <span class="text-sm text-slate-500">/forever</span>
             <?php else: ?>
-            <span class="text-3xl font-bold">$<?= $yearly ? (int) $plan['yearly_usd'] : (int) $plan['monthly_usd'] ?></span>
-            <span class="text-sm text-slate-500">/<?= $yearly ? 'mo billed yearly' : 'mo' ?></span>
+            <span class="text-3xl font-bold">₹<?= number_format($yearly ? (int) $plan['yearly_usd'] : (int) $plan['monthly_usd']) ?></span>
+            <span class="text-sm text-slate-500">/<?= $yearly ? 'year' : 'month' ?></span>
             <?php endif; ?>
         </div>
 

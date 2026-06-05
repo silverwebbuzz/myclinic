@@ -21,10 +21,9 @@ Single product, single plan. "Simple by default, powerful when needed."
 
 ## 2. Pricing model
 
-- **One plan**: ₹1,499/month or ₹14,999/year. Everything to run a clinic.
+- **One annual plan**: ₹16,000/year (10% off the ₹17,988 list price; GST 18% added
+  at checkout). No monthly option. Everything to run a clinic is included.
 - **30-day free trial**, no card. Admin can grant a one-time 15-day extension.
-- **Founding Clinic deal**: first 100 sign-ups → ₹999/month locked for 24 months,
-  then auto-converts to ₹1,499.
 - **Two paid add-ons**:
   - **Patient Connect** (₹499/mo) — WhatsApp automation
   - **Clinic Network** (₹999/mo per branch) — extra branches

@@ -91,7 +91,7 @@ require __DIR__ . '/partials/header.php';
         <span class="eyebrow" style="display: block; margin-bottom: 16px;">Everything eClinicPro does</span>
         <h1 class="h-display" style="font-size: clamp(40px, 5.5vw, 60px); letter-spacing: -1.3px;">Everything to run your clinic.</h1>
         <p class="lede" style="font-size: 19px; margin-top: 22px; max-width: 640px; margin-left: auto; margin-right: auto;">
-            Forty-plus features across seven areas — patient records, prescriptions, billing, WhatsApp/SMS and more. All included in one simple ₹1,499/month plan.
+            Forty-plus features across seven areas — patient records, prescriptions, billing, WhatsApp/SMS and more. All included in one simple ₹16,000/year plan.
         </p>
     </div>
 </section>
@@ -103,7 +103,7 @@ require __DIR__ . '/partials/header.php';
             <div class="stat"><div class="stat-num">42</div><div class="stat-label">Features included</div></div>
             <div class="stat"><div class="stat-num">50+</div><div class="stat-label">Specialties</div></div>
             <div class="stat"><div class="stat-num">1</div><div class="stat-label">Simple plan</div></div>
-            <div class="stat"><div class="stat-num">₹1,499</div><div class="stat-label">Per month</div></div>
+            <div class="stat"><div class="stat-num">₹16,000</div><div class="stat-label">Per year</div></div>
         </div>
     </div>
 </section>

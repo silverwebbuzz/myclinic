@@ -1,33 +1,12 @@
 <?php
 // =====================================================================
-// pricing.php — eClinicPro pricing (single plan, two add-ons, founding clinic)
+// pricing.php — eClinicPro pricing (single annual plan + two add-ons)
 // =====================================================================
 require_once __DIR__ . '/partials/helpers.php';
 
 $pageTitle = 'Pricing — eClinicPro';
-$metaDesc = 'One simple plan. ₹1,499/month. Everything to run your clinic. Plus optional add-ons for WhatsApp and multi-branch.';
+$metaDesc = 'One simple annual plan. ₹16,000/year — everything to run your clinic. Plus optional add-ons for WhatsApp and multi-branch.';
 $activePage = 'pricing';
-
-// Pull founding clinic counter from DB if available; fall back to constants
-// when the table isn't migrated yet (don't 500 the marketing page).
-$fcCap = 100;
-$fcClaimed = 0;
-$fcOpen = true;
-try {
-    $db = ecp_db();
-    if ($db) {
-        $row = $db->query("SELECT cap, claimed, closed_at FROM founding_clinic_state WHERE id = 1")
-            ->fetch(PDO::FETCH_ASSOC);
-        if ($row) {
-            $fcCap = (int) $row['cap'];
-            $fcClaimed = (int) $row['claimed'];
-            $fcOpen = empty($row['closed_at']) && $fcClaimed < $fcCap;
-        }
-    }
-} catch (Throwable $e) {
-    // Table doesn't exist yet during phased rollout — silently fall back.
-}
-$fcRemaining = max(0, $fcCap - $fcClaimed);
 
 require __DIR__ . '/partials/header.php';
 ?>
@@ -43,27 +22,6 @@ require __DIR__ . '/partials/header.php';
     </div>
 </section>
 
-<?php if ($fcOpen): ?>
-<section class="founding-banner">
-    <div class="wrap">
-        <div class="fc-card">
-            <div class="fc-badge">Founding clinic deal</div>
-            <h2 class="fc-title">
-                ₹999/month <span class="fc-strike">₹1,499</span>
-                <span class="fc-locked">locked for 24 months</span>
-            </h2>
-            <p class="fc-sub">
-                First <strong><?= $fcCap ?></strong> clinics to sign up get this rate, locked in.
-                <strong><?= $fcRemaining ?></strong> of <?= $fcCap ?> spots remaining.
-            </p>
-            <a href="https://app.eclinicpro.com/register?fc=1" class="btn btn-primary btn-lg">
-                Claim founding clinic price
-            </a>
-        </div>
-    </div>
-</section>
-<?php endif; ?>
-
 <section class="plan-section">
     <div class="wrap">
         <div class="plan-grid">
@@ -73,10 +31,12 @@ require __DIR__ . '/partials/header.php';
                 <div class="plan-head">
                     <span class="plan-name">Standard</span>
                     <h3 class="plan-price">
-                        <span class="currency">₹</span>1,499<span class="per">/month</span>
+                        <span class="currency">₹</span>16,000<span class="per">/year</span>
                     </h3>
                     <p class="plan-yearly">
-                        or <strong>₹14,999/year</strong> — one month free
+                        <span class="plan-strike">₹17,988</span>
+                        <span class="plan-save">Save 10%</span>
+                        <br>+ 18% GST at checkout
                     </p>
                 </div>
 
@@ -144,8 +104,8 @@ require __DIR__ . '/partials/header.php';
             <h3>Is there really only one plan?</h3>
             <p>
                 Yes. We removed Basic/Pro/Enterprise tiers because Indian clinics don't want to
-                guess which one they need. Everything required to run a clinic is included in
-                ₹1,499/month. Two optional add-ons cover the extras most clinics ask for.
+                guess which one they need. Everything required to run a clinic is included in one
+                annual plan — ₹16,000/year. Two optional add-ons cover the extras most clinics ask for.
             </p>
         </div>
 
@@ -166,9 +126,10 @@ require __DIR__ . '/partials/header.php';
         </div>
 
         <div class="faq-item">
-            <h3>Do you offer annual discounts?</h3>
+            <h3>How does the annual price work?</h3>
             <p>
-                Yes. Pay ₹14,999/year (one month free) or ₹1,499/month. Same features.
+                It's a single annual plan: ₹16,000/year — already 10% off the regular ₹17,988.
+                GST (18%) is added at checkout. No monthly option, no tiers, no surprises.
             </p>
         </div>
 
@@ -188,19 +149,6 @@ require __DIR__ . '/partials/header.php';
             </p>
         </div>
 
-        <div class="faq-item">
-            <h3>What's the Founding Clinic deal?</h3>
-            <p>
-                The first <?= $fcCap ?> clinics to sign up lock in ₹999/month for 24 months —
-                a permanent discount as a thank-you for being early. After 24 months your
-                account converts to the standard ₹1,499/month rate.
-                <?php if ($fcOpen): ?>
-                <strong><?= $fcRemaining ?> spots left.</strong>
-                <?php else: ?>
-                Sold out.
-                <?php endif; ?>
-            </p>
-        </div>
     </div>
 </section>
 
@@ -290,7 +238,18 @@ require __DIR__ . '/partials/header.php';
 }
 .plan-price .currency { font-size: 24px; vertical-align: super; opacity: 0.7; margin-right: 2px; }
 .plan-price .per { font-size: 16px; font-weight: 400; color: var(--mute); margin-left: 4px; }
-.plan-yearly { color: var(--ink-2); margin: 0 0 24px; }
+.plan-yearly { color: var(--ink-2); margin: 0 0 24px; font-size: 14px; line-height: 1.6; }
+.plan-strike { text-decoration: line-through; color: var(--mute); margin-right: 8px; }
+.plan-save {
+    display: inline-block;
+    background: var(--teal-50);
+    color: var(--teal-700);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: 999px;
+}
 .plan-features { list-style: none; padding: 0; margin: 0 0 24px; }
 .plan-features li { padding: 6px 0; font-size: 14.5px; color: var(--ink-2); }
 .btn-block { display: block; text-align: center; width: 100%; }
@@ -322,7 +281,7 @@ require __DIR__ . '/partials/header.php';
 .faq-item h3 { font-size: 17px; font-weight: 600; margin: 0 0 8px; color: var(--ink); }
 .faq-item p { font-size: 14.5px; color: var(--ink-2); line-height: 1.65; margin: 0; }
 
-.cta-block { padding: 80px 0; background: #fff; }
+/* Use the global dark .cta-block style (white text needs the dark bg). */
 
 @media (max-width: 600px) {
     .fc-title { font-size: 24px; }

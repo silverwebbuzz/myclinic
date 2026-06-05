@@ -128,8 +128,6 @@ button { font: inherit; cursor: pointer; border: none; background: none; color: 
 .logo em { color: var(--teal-600); font-style: normal; font-weight: 600; }
 .logo { display: inline-flex; align-items: center; }
 .logo-img { display: block; height: 36px; width: auto; }
-/* Footer sits on a dark background — render the logo white. */
-.foot-brand .logo-img { filter: brightness(0) invert(1); }
 .nav-links { display: flex; gap: 24px; flex: 1; min-width: 0; }
 .nav-link {
   font-size: 14px;

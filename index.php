@@ -11,28 +11,12 @@ require_once __DIR__ . '/partials/helpers.php';
 require_once __DIR__ . '/partials/seo_slugs.php';
 
 $pageTitle = 'eClinicPro — Book a doctor, or run your clinic';
-$metaDesc  = 'Find and book verified doctors across India in 60 seconds — or run your whole practice on one simple, beautiful clinic system. One plan, ₹1,499/month.';
+$metaDesc  = 'Find and book verified doctors across India in 60 seconds — or run your whole practice on one simple, beautiful clinic system. One plan, ₹16,000/year.';
 $activePage = '';
 
 // ---- Real numbers from the DB (helpers fall back to safe floors) ----
 $clinicCount = ecp_active_clinic_count();
 $doctorCount = ecp_directory_doctor_count();
-
-// ---- Founding-clinic state (same read as pricing.php; never 500 the page) ----
-$fcCap = 100; $fcClaimed = 0; $fcOpen = true;
-try {
-    $db = ecp_db();
-    if ($db) {
-        $row = $db->query("SELECT cap, claimed, closed_at FROM founding_clinic_state WHERE id = 1")
-            ->fetch(PDO::FETCH_ASSOC);
-        if ($row) {
-            $fcCap = (int) $row['cap'];
-            $fcClaimed = (int) $row['claimed'];
-            $fcOpen = empty($row['closed_at']) && $fcClaimed < $fcCap;
-        }
-    }
-} catch (Throwable $e) { /* table not migrated yet → fall back */ }
-$fcRemaining = max(0, $fcCap - $fcClaimed);
 
 // ---- Specialty showcase pulled from the canonical specialty map ----
 // Group a curated subset into the four columns from the directory.
@@ -386,19 +370,10 @@ require __DIR__ . '/partials/header.php';
             <p class="hp-sub">No tiers, no per-seat games, no surprise upsells. Try free for 30 days — no card.</p>
         </div>
 
-        <?php if ($fcOpen): ?>
-        <div class="hp-fc reveal">
-            <span class="hp-fc-badge">Founding clinic deal</span>
-            <div class="hp-fc-price">₹999<span>/mo</span> <span class="hp-fc-strike">₹1,499</span> <span class="hp-fc-lock">locked for 24 months</span></div>
-            <p class="hp-fc-sub">First <?= $fcCap ?> clinics only · <strong><?= $fcRemaining ?></strong> spots left.</p>
-            <a href="<?= e(ecp_portal_url('/register?fc=1')) ?>" class="btn btn-primary">Claim founding price</a>
-        </div>
-        <?php endif; ?>
-
         <div class="hp-plan-single reveal">
             <span class="hp-plan-name">Standard — everything included</span>
-            <div class="hp-plan-price">₹1,499<span class="per">/month</span></div>
-            <div class="hp-plan-yearly">or ₹14,999/year — one month free</div>
+            <div class="hp-plan-price">₹16,000<span class="per">/year</span></div>
+            <div class="hp-plan-yearly"><span class="hp-fc-strike">₹17,988</span> Save 10% · + 18% GST at checkout</div>
             <ul class="hp-plan-feats">
                 <?php foreach ([
                     'Patient records, visits & prescriptions',
@@ -430,7 +405,7 @@ $faqPatients = [
     ['Which cities and specialties are covered?', 'We\'re live across India with 50+ specialties — from general physicians and dentists to homeopaths, dermatologists, physiotherapists and more.'],
 ];
 $faqDoctors = [
-    ['What does it cost?', 'One plan: ₹1,499/month (or ₹14,999/year — one month free). Everything to run a clinic is included, with a 30-day free trial and no card required.'],
+    ['What does it cost?', 'One annual plan: ₹16,000/year (10% off ₹17,988; GST added at checkout). Everything to run a clinic is included, with a 30-day free trial and no card required.'],
     ['Is WhatsApp/SMS an extra add-on?', 'No. WhatsApp-first messaging with SMS fallback — confirmations, reminders, prescription delivery and follow-up nudges — is built into every plan at no extra cost.'],
     ['Will patients actually find me?', 'Yes. Your public profile on eclinicpro.com\'s directory is included, so patients searching your city and specialty can discover and book you directly.'],
     ['Is my clinic and patient data secure?', 'Records are encrypted at rest and in transit, with per-clinic isolation and audit logging. You can export everything as PDF or JSON anytime.'],
