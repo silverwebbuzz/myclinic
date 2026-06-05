@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Core\Database;
 use App\Core\QueryBuilder;
 use App\Core\RequestContext;
+use App\Gates\ModuleGate;
 
 final class AppointmentService
 {
@@ -174,7 +175,7 @@ final class AppointmentService
             NotificationService::queueCancellationNotice($existing, $patient, $clinic);
         }
 
-        if (ModuleGate::check('advanced_scheduling')) {
+        if (self::canRunAdvancedScheduling($clinicId)) {
             WaitingListService::notifyOnCancellation(
                 $clinicId,
                 (int) $existing['doctor_id'],
@@ -338,5 +339,19 @@ final class AppointmentService
         $stmt->execute([$clinicId]);
 
         return (int) ($stmt->fetch()['n'] ?? 1);
+    }
+
+    private static function canRunAdvancedScheduling(int $clinicId): bool
+    {
+        // Keep cancellation robust even if gating infrastructure is unavailable.
+        if (!class_exists(ModuleGate::class)) {
+            return false;
+        }
+
+        try {
+            return ModuleGate::check('advanced_scheduling');
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 }

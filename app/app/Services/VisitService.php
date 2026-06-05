@@ -30,7 +30,211 @@ final class VisitService
             $row['specialty_data'] = [];
         }
 
+        $sd = $row['specialty_data'];
+        $row['specialty_data'] = self::applyCaseTakingToSpecialtyData($sd);
+
         return $row;
+    }
+
+    /**
+     * Case taking for visit screen binding (stored in visits.specialty_data JSON).
+     *
+     * @param array<string, mixed> $visit
+     * @return array<string, mixed>
+     */
+    public static function extractCaseTaking(array $visit): array
+    {
+        $sd = $visit['specialty_data'] ?? [];
+        if (!is_array($sd)) {
+            $sd = is_string($sd) ? (json_decode($sd, true) ?: []) : [];
+        }
+
+        $sd = self::applyCaseTakingToSpecialtyData($sd);
+
+        return $sd['case_taking'] ?? [];
+    }
+
+    /**
+     * @param array<string, mixed> $sd
+     * @return array<string, mixed>
+     */
+    private static function applyCaseTakingToSpecialtyData(array $sd): array
+    {
+        $sd['case_taking'] = self::caseTakingForView(self::buildCaseTakingFromSpecialtyData($sd));
+
+        return $sd;
+    }
+
+    /**
+     * @param array<string, mixed> $sd
+     * @return array<string, mixed>
+     */
+    private static function buildCaseTakingFromSpecialtyData(array $sd): array
+    {
+        $legacyCaseKeys = [
+            'present_illness',
+            'past_medical_history',
+            'past_history',
+            'family_history',
+            'systemic_review',
+            'mental_generals',
+            'physical_generals',
+            'modalities',
+            'srp',
+            'lesion_description',
+            'body_map_note',
+            'pain_location',
+            'rom_assessment',
+            'functional_goals',
+            'tooth_quadrant',
+            'dental_findings',
+            'treatment_plan',
+        ];
+
+        $caseTaking = [];
+        if (isset($sd['case_taking'])) {
+            $caseTaking = self::decodeJsonMap($sd['case_taking']);
+        }
+        if (isset($sd['caseTaking'])) {
+            $caseTaking = array_replace(self::decodeJsonMap($sd['caseTaking']), $caseTaking);
+        }
+        foreach ($legacyCaseKeys as $k) {
+            if (array_key_exists($k, $sd) && !array_key_exists($k, $caseTaking)) {
+                $caseTaking[$k] = $sd[$k];
+            }
+        }
+
+        return $caseTaking;
+    }
+
+    /** Canonical GP case-taking keys stored in specialty_data.case_taking JSON. */
+    private const CASE_TAKING_GP_KEYS = [
+        'present_illness',
+        'past_medical_history',
+        'family_history',
+        'systemic_review',
+    ];
+
+    /**
+     * Map legacy saved keys to canonical form field names for screen binding.
+     *
+     * @param array<string, mixed> $case
+     * @return array<string, mixed>
+     */
+    private static function caseTakingForView(array $case): array
+    {
+        $legacyToCanonical = [
+            'past_history' => 'past_medical_history',
+            'family_medical_history' => 'family_history',
+            'systemic_history' => 'systemic_review',
+        ];
+        foreach ($legacyToCanonical as $legacyKey => $canonicalKey) {
+            if (self::hasNonEmptyScalar($case[$legacyKey] ?? null) && !self::hasNonEmptyScalar($case[$canonicalKey] ?? null)) {
+                $case[$canonicalKey] = $case[$legacyKey];
+            }
+        }
+
+        return $case;
+    }
+
+    /**
+     * Persist case_taking as canonical JSON (GP keys + specialty-specific extras).
+     *
+     * @param array<string, mixed> $case
+     * @return array<string, mixed>
+     */
+    private static function caseTakingForStorage(array $case): array
+    {
+        $stored = [];
+        $sourceKeys = [
+            'present_illness' => ['present_illness'],
+            'past_medical_history' => ['past_medical_history', 'past_history'],
+            'family_history' => ['family_history', 'family_medical_history'],
+            'systemic_review' => ['systemic_review', 'systemic_history'],
+        ];
+        foreach ($sourceKeys as $canonical => $candidates) {
+            foreach ($candidates as $key) {
+                if (self::hasNonEmptyScalar($case[$key] ?? null)) {
+                    $stored[$canonical] = is_string($case[$key]) ? trim((string) $case[$key]) : $case[$key];
+                    break;
+                }
+            }
+        }
+
+        $reserved = array_merge(
+            self::CASE_TAKING_GP_KEYS,
+            ['past_history', 'family_medical_history', 'systemic_history'],
+        );
+        foreach ($case as $key => $value) {
+            if (in_array($key, $reserved, true) || !self::hasNonEmptyScalar($value)) {
+                continue;
+            }
+            $stored[$key] = is_string($value) ? trim((string) $value) : $value;
+        }
+
+        return $stored;
+    }
+
+    /**
+     * @param array<string, mixed> $existing
+     * @param array<string, mixed> $incoming
+     * @return array<string, mixed>
+     */
+    private static function mergeCaseTakingPreservingSaved(array $existing, array $incoming): array
+    {
+        $existing = self::caseTakingForView(self::decodeJsonMap($existing));
+        $incoming = self::caseTakingForView(self::decodeJsonMap($incoming));
+
+        foreach ($incoming as $key => $value) {
+            if (!self::hasNonEmptyScalar($value)) {
+                continue;
+            }
+            $existing[$key] = is_string($value) ? trim((string) $value) : $value;
+        }
+
+        return self::caseTakingForStorage($existing);
+    }
+
+    /**
+     * @param array<string, mixed> $existing
+     * @param array<string, mixed> $incoming
+     * @return array<string, mixed>
+     */
+    private static function mergeSpecialtyData(array $existing, array $incoming): array
+    {
+        $merged = array_merge($existing, $incoming);
+        if (array_key_exists('case_taking', $existing) || array_key_exists('case_taking', $incoming)) {
+            $merged['case_taking'] = self::mergeCaseTakingPreservingSaved(
+                is_array($existing['case_taking'] ?? null) ? $existing['case_taking'] : [],
+                is_array($incoming['case_taking'] ?? null) ? $incoming['case_taking'] : [],
+            );
+        }
+
+        return $merged;
+    }
+
+    private static function hasNonEmptyScalar(mixed $value): bool
+    {
+        if ($value === null) {
+            return false;
+        }
+
+        return is_string($value) ? trim($value) !== '' : true;
+    }
+
+    /** @return array<string, mixed> */
+    private static function decodeJsonMap(mixed $value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+        if (is_string($value) && $value !== '') {
+            $decoded = json_decode($value, true);
+
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return [];
     }
 
     public static function isEditable(array $visit): bool
@@ -145,9 +349,25 @@ final class VisitService
             $update['follow_up_date'] = $payload['follow_up_date'] === '' ? null : $payload['follow_up_date'];
         }
 
+        $sd = $visit['specialty_data'] ?? [];
+        if (!is_array($sd)) {
+            $sd = [];
+        }
+        $specialtyDirty = false;
         if (isset($payload['specialty_data']) && is_array($payload['specialty_data'])) {
-            $merged = array_merge($visit['specialty_data'] ?? [], $payload['specialty_data']);
-            $update['specialty_data'] = json_encode($merged);
+            $sd = self::mergeSpecialtyData($sd, $payload['specialty_data']);
+            $specialtyDirty = true;
+        }
+        // Top-level case_taking wins over nested specialty_data.case_taking (avoids stale overwrite).
+        if (isset($payload['case_taking']) && is_array($payload['case_taking'])) {
+            $sd['case_taking'] = self::mergeCaseTakingPreservingSaved(
+                is_array($sd['case_taking'] ?? null) ? $sd['case_taking'] : [],
+                $payload['case_taking'],
+            );
+            $specialtyDirty = true;
+        }
+        if ($specialtyDirty) {
+            $update['specialty_data'] = json_encode($sd);
         }
 
         // Phase 2: stash the full client-side form blob for crash recovery.

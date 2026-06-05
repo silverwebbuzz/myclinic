@@ -1,14 +1,17 @@
 <?php
 /** Follow-ups page. $data = FollowUpService::dashboardData(). */
-$d = $data ?? ['overdue' => [], 'overdue_count' => 0, 'due_week' => 0, 'done_month' => 0];
+$d = array_merge(
+    ['overdue' => [], 'overdue_count' => 0, 'due_week' => 0, 'done_month' => 0],
+    is_array($data ?? null) ? $data : []
+);
 ?>
 <div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <h2 class="ui-section-title">Follow-ups</h2>
         <div class="flex gap-4 text-sm text-slate-500">
-            <span class="text-rose-700 font-medium"><?= (int) $d['overdue_count'] ?> overdue</span>
-            <span><?= (int) $d['due_week'] ?> due this week</span>
-            <span><?= (int) $d['done_month'] ?> done this month</span>
+            <span class="text-rose-700 font-medium"><?= (int) ($d['overdue_count'] ?? 0) ?> overdue</span>
+            <span><?= (int) ($d['due_week'] ?? 0) ?> due this week</span>
+            <span><?= (int) ($d['done_month'] ?? 0) ?> done this month</span>
         </div>
     </div>
 
@@ -16,7 +19,7 @@ $d = $data ?? ['overdue' => [], 'overdue_count' => 0, 'due_week' => 0, 'done_mon
         <div class="border-b px-4 py-3">
             <h3 class="text-sm font-semibold text-rose-700">Overdue</h3>
         </div>
-        <?php if (empty($d['overdue'])): ?>
+        <?php if (empty($d['overdue']) || !is_array($d['overdue'])): ?>
         <p class="p-6 text-center text-sm text-slate-500">No overdue follow-ups. 🎉</p>
         <?php else: ?>
         <ul class="divide-y text-sm">

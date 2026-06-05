@@ -27,9 +27,18 @@ final class OnboardingController
     public function planSelection(Request $request): Response
     {
         $clinicId = RequestContext::clinicId();
-        if ($clinicId !== null) {
-            // Auto-apply the standard plan, start trial. Idempotent — calling
-            // twice is safe; PlanService::applyPlanToTenant guards on its own.
+        if ($clinicId === null) {
+            return Response::redirect('/login');
+        }
+
+        $step = OnboardingService::currentStep();
+        if ($step >= 5) {
+            return Response::redirect('/dashboard');
+        }
+
+        if ($step <= 1) {
+            // Auto-apply the standard plan only for fresh onboarding tenants.
+            // This avoids resetting established tenants back to step 2.
             PlanService::applyPlanToTenant($clinicId, 'standard', false);
             OnboardingService::advanceTo($clinicId, 2);
         }

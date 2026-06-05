@@ -17,6 +17,19 @@ final class DischargeService
             ->first();
 
         if ($row === null) {
+            // Legacy compatibility: discharge rows created before clinic_id backfill.
+            $row = QueryBuilder::table('discharge_summaries')
+                ->where('visit_id', '=', $visitId)
+                ->first();
+            if ($row !== null && empty($row['clinic_id'])) {
+                QueryBuilder::table('discharge_summaries')
+                    ->where('id', '=', (int) $row['id'])
+                    ->update(['clinic_id' => $clinicId]);
+                $row['clinic_id'] = $clinicId;
+            }
+        }
+
+        if ($row === null) {
             return null;
         }
         if (is_string($row['icd10_codes'] ?? null)) {
@@ -24,6 +37,19 @@ final class DischargeService
         }
         if (is_string($row['medications_at_discharge'] ?? null)) {
             $row['medications_at_discharge'] = json_decode($row['medications_at_discharge'], true);
+        }
+        // Legacy key normalization for older discharge payloads.
+        if (!isset($row['final_diagnosis']) && isset($row['diagnosis'])) {
+            $row['final_diagnosis'] = $row['diagnosis'];
+        }
+        if (!isset($row['treatment_summary']) && isset($row['treatment'])) {
+            $row['treatment_summary'] = $row['treatment'];
+        }
+        if (!isset($row['follow_up_instructions']) && isset($row['followup_instructions'])) {
+            $row['follow_up_instructions'] = $row['followup_instructions'];
+        }
+        if (!isset($row['condition_at_discharge']) || $row['condition_at_discharge'] === null || $row['condition_at_discharge'] === '') {
+            $row['condition_at_discharge'] = 'stable';
         }
 
         return $row;

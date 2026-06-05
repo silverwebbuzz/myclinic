@@ -20,10 +20,11 @@ final class SchedulingConfigService
 
     public static function saveSchedule(int $clinicId, int $doctorId, array $data): int
     {
-        return QueryBuilder::table('doctor_schedules')->insert([
+        $day = (int) ($data['day_of_week'] ?? 1);
+        $id = QueryBuilder::table('doctor_schedules')->insert([
             'clinic_id' => $clinicId,
             'doctor_id' => $doctorId,
-            'day_of_week' => (int) ($data['day_of_week'] ?? 1),
+            'day_of_week' => $day,
             'start_time' => self::toTime((string) ($data['start_time'] ?? '09:00')),
             'end_time' => self::toTime((string) ($data['end_time'] ?? '18:00')),
             'slot_duration' => (int) ($data['slot_duration'] ?? 15),
@@ -31,6 +32,15 @@ final class SchedulingConfigService
             'session_name' => $data['session_name'] ?? null,
             'is_active' => 1,
         ]);
+
+        for ($i = 0; $i <= 90; $i++) {
+            $date = date('Y-m-d', strtotime("+{$i} days"));
+            if ((int) date('w', strtotime($date)) === $day) {
+                SlotService::invalidate($clinicId, $doctorId, $date);
+            }
+        }
+
+        return $id;
     }
 
     public static function googleCalendarStub(): array

@@ -185,6 +185,7 @@ return static function (RouteRegistrar $router): void {
         $app->get('/visits/new', [VisitController::class, 'start']);
         $app->get('/visits/{id}', [VisitController::class, 'show']);
         $app->post('/visits/{id}/complete', [VisitController::class, 'complete']);
+        $app->get('/visits/{id}/unlock', [VisitController::class, 'unlockGet']);
         $app->post('/visits/{id}/unlock', [VisitController::class, 'unlock']);
         $app->post('/visits/{id}/consent', [VisitController::class, 'signConsent']);
         $app->post('/visits/{id}/discharge', [VisitController::class, 'saveDischarge']);

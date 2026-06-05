@@ -116,7 +116,78 @@ final class VitalsService
             ->where('visit_id', '=', $visitId)
             ->first();
 
-        return $row ?: null;
+        if ($row !== null) {
+            return self::hydrateForEdit($row);
+        }
+
+        // Legacy compatibility: old rows may have null/0 clinic_id.
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare(
+            'SELECT * FROM vitals
+             WHERE visit_id = :visit_id
+               AND (clinic_id IS NULL OR clinic_id = 0 OR clinic_id = :clinic_id)
+             ORDER BY id DESC
+             LIMIT 1'
+        );
+        $stmt->execute([
+            ':visit_id' => $visitId,
+            ':clinic_id' => $clinicId,
+        ]);
+        $legacy = $stmt->fetch() ?: null;
+        if ($legacy !== null && empty($legacy['clinic_id'])) {
+            QueryBuilder::table('vitals')
+                ->where('id', '=', (int) $legacy['id'])
+                ->update(['clinic_id' => $clinicId]);
+            $legacy['clinic_id'] = $clinicId;
+        }
+
+        return $legacy !== null ? self::hydrateForEdit($legacy) : null;
+    }
+
+    /**
+     * Decode extra_vitals JSON and normalize keys for edit form binding (e.g. hba1c).
+     *
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private static function hydrateForEdit(array $row): array
+    {
+        $extra = [];
+        $raw = $row['extra_vitals'] ?? null;
+        if (is_string($raw) && $raw !== '') {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) {
+                $extra = $decoded;
+            }
+        } elseif (is_array($raw)) {
+            $extra = $raw;
+        }
+        if (isset($row['extra']) && is_array($row['extra'])) {
+            $extra = array_merge($extra, $row['extra']);
+        }
+
+        $normalized = [];
+        foreach ($extra as $key => $value) {
+            if ($value === '' || $value === null) {
+                continue;
+            }
+            $k = strtolower((string) preg_replace('/^extra\./', '', (string) $key));
+            if (in_array($k, ['hba1c', 'hba1c_percent', 'hba1c_%', 'hba1cpercent'], true)) {
+                $normalized['hba1c'] = $value;
+                continue;
+            }
+            $normKey = (string) preg_replace('/^extra\./', '', (string) $key);
+            $normalized[$normKey] = $value;
+        }
+
+        if ($normalized !== []) {
+            $row['extra'] = $normalized;
+            $row['extra_vitals'] = $normalized;
+        } else {
+            unset($row['extra_vitals'], $row['extra']);
+        }
+
+        return $row;
     }
 
     /** @return list<array<string, mixed>> */

@@ -379,12 +379,12 @@ foreach ($doctors ?? [] as $d) {
                                 <div class="mx-auto h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-brand"></div>
                                 <p class="mt-2">Loading slots…</p>
                             </div>
-                            <div x-show="!loadingSlots && morningSlots.length === 0 && eveningSlots.length === 0" x-cloak
+                            <div x-show="!loadingSlots && allSlots.length === 0" x-cloak
                                  class="rounded-xl bg-amber-50 px-3 py-4 text-center text-sm text-amber-800">
                                 No slots on this day. Try another date.
                             </div>
 
-                            <div x-show="morningSlots.length > 0" x-cloak>
+                            <div x-show="allSlots.length > 0 && morningSlots.length > 0" x-cloak>
                                 <p class="text-xs font-semibold text-slate-600">
                                     <span class="text-amber-500">☀️</span> Morning
                                     <span class="ml-1 font-normal text-slate-400">(<span x-text="morningSlots.filter(s => s.available).length"></span> slots)</span>
@@ -403,7 +403,7 @@ foreach ($doctors ?? [] as $d) {
                                 </div>
                             </div>
 
-                            <div x-show="eveningSlots.length > 0" x-cloak>
+                            <div x-show="allSlots.length > 0 && eveningSlots.length > 0" x-cloak>
                                 <p class="text-xs font-semibold text-slate-600">
                                     <span class="text-indigo-500">🌙</span> Evening
                                     <span class="ml-1 font-normal text-slate-400">(<span x-text="eveningSlots.filter(s => s.available).length"></span> slots)</span>
@@ -536,6 +536,7 @@ function bookingWizard() {
         selectedDate: '<?= htmlspecialchars($days[0]['date'] ?? date('Y-m-d')) ?>',
         selectedSlot: '',
         selectedSlotLabel: '',
+        allSlots: [],
         morningSlots: [],
         eveningSlots: [],
         loadingSlots: false,
@@ -585,9 +586,14 @@ function bookingWizard() {
                     label: this._formatTime(s.time),
                     hour: parseInt(s.time.split(':')[0], 10),
                 }));
+                this.allSlots = all;
                 this.morningSlots = all.filter(s => s.hour < 13);
                 this.eveningSlots = all.filter(s => s.hour >= 13);
+                if (data.meta) {
+                    console.debug('[book slots]', data.meta);
+                }
             } catch (e) {
+                this.allSlots = [];
                 this.morningSlots = [];
                 this.eveningSlots = [];
             } finally {

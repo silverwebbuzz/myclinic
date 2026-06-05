@@ -17,6 +17,8 @@ final class SlotService
      */
     public static function available(int $clinicId, int $doctorId, string $date, bool $includeExtended = false): array
     {
+        $date = self::normalizeDate($date);
+
         // Today's slot list changes minute-by-minute (past slots drop off), so skip Redis cache for today.
         $tz = self::clinicTimezone($clinicId);
         try {
@@ -46,7 +48,31 @@ final class SlotService
 
     public static function invalidate(int $clinicId, int $doctorId, string $date): void
     {
+        $date = self::normalizeDate($date);
         RedisClient::del("slots:{$clinicId}:{$doctorId}:{$date}");
+        RedisClient::del("slots:{$clinicId}:{$doctorId}:{$date}:ext");
+    }
+
+    /**
+     * Clear cached slot lists after working hours / schedule changes.
+     *
+     * @param list<int> $doctorIds
+     */
+    public static function invalidateForClinic(int $clinicId, array $doctorIds, ?int $daysAhead = null): void
+    {
+        $daysAhead ??= max(30, PublicBookingService::bookingWindowDays($clinicId));
+        foreach ($doctorIds as $doctorId) {
+            for ($i = 0; $i <= $daysAhead; $i++) {
+                $date = date('Y-m-d', strtotime("+{$i} days"));
+                self::invalidate($clinicId, (int) $doctorId, $date);
+            }
+        }
+        error_log(sprintf(
+            '[SlotService] invalidated slot cache clinic=%d doctors=%s days=%d',
+            $clinicId,
+            implode(',', array_map('strval', $doctorIds)),
+            $daysAhead,
+        ));
     }
 
     public static function invalidateForAppointment(int $clinicId, int $doctorId, string $scheduledAt): void
@@ -98,12 +124,20 @@ final class SlotService
         $slots = [];
         foreach ($schedules as $sched) {
             $duration = (int) ($sched['slot_duration'] ?? 15);
-            $start = strtotime($date . ' ' . substr((string) $sched['start_time'], 0, 5));
-            $normalEnd = strtotime($date . ' ' . substr((string) $sched['end_time'], 0, 5));
+            if (!in_array($duration, [15, 30], true)) {
+                $duration = 15;
+            }
+
+            $start = self::timeOnDate($date, (string) ($sched['start_time'] ?? ''));
+            $normalEnd = self::timeOnDate($date, (string) ($sched['end_time'] ?? ''));
+            if ($start === null || $normalEnd === null || $normalEnd <= $start) {
+                continue;
+            }
+
             $hardEnd = $normalEnd;
             if ($includeExtended && !empty($sched['extended_end_time'])) {
-                $extTs = strtotime($date . ' ' . substr((string) $sched['extended_end_time'], 0, 5));
-                if ($extTs > $normalEnd) {
+                $extTs = self::timeOnDate($date, (string) $sched['extended_end_time']);
+                if ($extTs !== null && $extTs > $normalEnd) {
                     $hardEnd = $extTs;
                 }
             }
@@ -131,7 +165,46 @@ final class SlotService
             }
         }
 
+        usort($slots, static fn (array $a, array $b) => strcmp($a['datetime'], $b['datetime']));
+
+        self::logSlotGeneration($clinicId, $doctorId, $date, count($schedules), $slots);
+
         return $slots;
+    }
+
+    private static function timeOnDate(string $date, string $time): ?int
+    {
+        $normalized = DoctorScheduleService::normalizeTime($time);
+        if ($normalized === null) {
+            $normalized = DoctorScheduleService::normalizeTime(substr($time, 0, 5));
+        }
+        if ($normalized === null) {
+            return null;
+        }
+
+        $ts = strtotime($date . ' ' . substr($normalized, 0, 5));
+
+        return $ts !== false ? $ts : null;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $schedules
+     * @param list<array{time: string, datetime: string, available: bool, extended?: bool}> $slots
+     */
+    private static function logSlotGeneration(int $clinicId, int $doctorId, string $date, int $scheduleCount, array $slots): void
+    {
+        $first = $slots[0]['time'] ?? null;
+        $last = $slots !== [] ? $slots[array_key_last($slots)]['time'] : null;
+        error_log(sprintf(
+            '[SlotService] clinic=%d doctor=%d date=%s schedules=%d slots=%d range=%s-%s',
+            $clinicId,
+            $doctorId,
+            $date,
+            $scheduleCount,
+            count($slots),
+            (string) $first,
+            (string) $last,
+        ));
     }
 
     /**
@@ -171,6 +244,23 @@ final class SlotService
         $row = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first();
         $tz = $row['timezone'] ?? 'Asia/Kolkata';
         return is_string($tz) && $tz !== '' ? $tz : 'Asia/Kolkata';
+    }
+
+    private static function normalizeDate(string $date): string
+    {
+        $date = trim($date);
+        if ($date !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1) {
+            return $date;
+        }
+
+        if ($date !== '') {
+            $ts = strtotime($date);
+            if ($ts !== false) {
+                return date('Y-m-d', $ts);
+            }
+        }
+
+        return date('Y-m-d');
     }
 
     /** @return array<string, true> */

@@ -92,20 +92,46 @@ final class VisitController
         $user = RequestContext::user();
         $clinic = RequestContext::clinic() ?? [];
         $visibleModules = VisitView::visibleModules($clinicId, (string) ($clinic['specialty'] ?? ''));
+        $discharge = DischargeService::forVisit($clinicId, (int) $id);
+        $editable = VisitService::isEditable($visit);
+        $vitalsData = is_array($vitals)
+            ? self::mergeFormDefaults(self::defaultVitalsData(), $vitals)
+            : self::defaultVitalsData();
+
+        // Vitals + Case taking must always be visible while creating/editing
+        // an editable visit, even if clinic visible_modules was customized.
+        if ($editable && !in_array('vitals', $visibleModules, true)) {
+            $visibleModules[] = 'vitals';
+        } elseif ($vitals !== null && !in_array('vitals', $visibleModules, true)) {
+            $visibleModules[] = 'vitals';
+        }
+        if ($editable && !in_array('case_specialty', $visibleModules, true)) {
+            $visibleModules[] = 'case_specialty';
+        } elseif (self::hasMeaningfulData($visit['specialty_data']['case_taking'] ?? null)
+            && !in_array('case_specialty', $visibleModules, true)) {
+            $visibleModules[] = 'case_specialty';
+        }
+
+        $caseTaking = VisitService::extractCaseTaking($visit);
+        $visit['specialty_data'] = array_merge($visit['specialty_data'] ?? [], ['case_taking' => $caseTaking]);
+        $dischargeData = is_array($discharge)
+            ? self::mergeFormDefaults(self::defaultDischargeData(), $discharge)
+            : self::defaultDischargeData();
 
         $viewData = [
             'visit' => $visit,
             'patient' => $patient,
-            'canUnlock' => !empty($user['is_owner']) || ($user['role'] ?? '') === 'admin',
-            'vitals' => $vitals ?? [],
+            'canUnlock' => self::canUnlockCompletedVisit($user),
+            'vitals' => $vitalsData,
             'prescriptions' => $prescriptions,
             'allergies' => $allergies,
             'recentVisits' => VisitService::recentForPatient($clinicId, (int) $patient['id'], 5, (int) $id),
             'vitalsFields' => SpecialtyAdapter::vitalsFields(),
             'casePartial' => SpecialtyAdapter::caseTakingPartial(),
+            'caseTaking' => $caseTaking,
             'rxMode' => SpecialtyAdapter::prescriptionMode(),
             'useHomeo' => SpecialtyAdapter::usesHomeopathicRx(),
-            'editable' => VisitService::isEditable($visit),
+            'editable' => $editable,
             'vitalsWarnings' => $vitals ? VitalsService::rangeWarnings($vitals) : [],
             'chartSeries' => VitalsService::chartSeries($clinicId, (int) $patient['id']),
             'completed' => $request->query['completed'] ?? null,
@@ -116,7 +142,8 @@ final class VisitController
             'labTests' => ModuleGate::check('lab') ? LabCatalogService::listForClinic($clinicId) : [],
             'consent' => ModuleGate::check('consent') ? ConsentService::forVisit($clinicId, (int) $id) : null,
             'consentTemplates' => ModuleGate::check('consent') ? ConsentTemplateService::list($clinicId) : [],
-            'discharge' => ModuleGate::check('discharge') ? DischargeService::forVisit($clinicId, (int) $id) : null,
+            'discharge' => $dischargeData,
+            'hasDischargeSection' => $editable || ModuleGate::check('discharge') || $discharge !== null,
             'hasDiet' => ModuleGate::check('diet'),
             'hasPhotos' => ModuleGate::check('before_after'),
             'dietPlan' => ModuleGate::check('diet') ? DietService::forVisit($clinicId, (int) $id) : null,
@@ -284,10 +311,53 @@ final class VisitController
         }
 
         $clinicId = (int) RequestContext::clinicId();
-        VisitService::unlock($clinicId, (int) $id);
-        AuditService::log($request, 'UPDATE', 'visits', (int) $id);
+        $user = RequestContext::user();
+        if (!self::canUnlockCompletedVisit($user)) {
+            return Response::redirect('/visits/' . $id . '?unlock_error=1');
+        }
+
+        try {
+            VisitService::unlock($clinicId, (int) $id);
+            AuditService::log($request, 'UPDATE', 'visits', (int) $id);
+        } catch (\RuntimeException $e) {
+            return Response::redirect('/visits/' . $id . '?unlock_error=1');
+        }
 
         return Response::redirect('/visits/' . $id . '?unlocked=1');
+    }
+
+    public function unlockGet(Request $request, string $id): Response
+    {
+        if ($denied = $this->requireModule()) {
+            return $denied;
+        }
+
+        $clinicId = (int) RequestContext::clinicId();
+        $user = RequestContext::user();
+        if (!self::canUnlockCompletedVisit($user)) {
+            return Response::redirect('/visits/' . $id . '?unlock_error=1');
+        }
+
+        try {
+            VisitService::unlock($clinicId, (int) $id);
+            AuditService::log($request, 'UPDATE', 'visits', (int) $id);
+        } catch (\RuntimeException $e) {
+            return Response::redirect('/visits/' . $id . '?unlock_error=1');
+        }
+
+        return Response::redirect('/visits/' . $id . '?unlocked=1');
+    }
+
+    /** @param array<string,mixed> $user */
+    private static function canUnlockCompletedVisit(array $user): bool
+    {
+        if (!empty($user['is_owner'])) {
+            return true;
+        }
+
+        $role = strtolower(trim((string) ($user['role'] ?? '')));
+
+        return $role === 'admin';
     }
 
     public function autosaveApi(Request $request, string $id): Response
@@ -667,6 +737,77 @@ final class VisitController
         } catch (\Throwable $e) {
             // Best-effort — old visits or pre-Phase-3 DB. Don't fail the clone.
         }
+    }
+
+    /**
+     * Fill only missing form keys — never replace saved values with empty defaults.
+     *
+     * @param array<string, mixed> $defaults
+     * @param array<string, mixed> $saved
+     * @return array<string, mixed>
+     */
+    private static function mergeFormDefaults(array $defaults, array $saved): array
+    {
+        foreach ($defaults as $key => $value) {
+            if (!array_key_exists($key, $saved)) {
+                $saved[$key] = $value;
+            }
+        }
+
+        return $saved;
+    }
+
+    /** @param mixed $value */
+    private static function hasMeaningfulData($value): bool
+    {
+        if (is_array($value)) {
+            foreach ($value as $item) {
+                if (self::hasMeaningfulData($item)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        if ($value === null) {
+            return false;
+        }
+
+        if (is_string($value)) {
+            return trim($value) !== '';
+        }
+
+        return true;
+    }
+
+    /** @return array<string,mixed> */
+    private static function defaultVitalsData(): array
+    {
+        return [
+            'bp_systolic' => null,
+            'bp_diastolic' => null,
+            'blood_sugar' => null,
+            'sugar_type' => null,
+            'weight_kg' => null,
+            'height_cm' => null,
+            'temperature' => null,
+            'spo2' => null,
+            'pulse_rate' => null,
+        ];
+    }
+
+    /** @return array<string,mixed> */
+    private static function defaultDischargeData(): array
+    {
+        return [
+            'final_diagnosis' => '',
+            'procedures_done' => '',
+            'treatment_summary' => '',
+            'follow_up_instructions' => '',
+            'diet_at_discharge' => '',
+            'condition_at_discharge' => 'stable',
+            'status' => 'draft',
+        ];
     }
 
     private function requireModule(): ?Response

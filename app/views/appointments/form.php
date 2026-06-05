@@ -156,7 +156,7 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
                 Select a doctor and date to see available slots.
             </div>
 
-            <div x-show="doctorId && morningSlots.length === 0 && eveningSlots.length === 0 && !slotsLoading"
+            <div x-show="doctorId && allSlots.length === 0 && !slotsLoading"
                  class="mt-2 rounded-lg bg-amber-50 p-3">
                 <p class="text-xs text-amber-900">
                     No working hours configured for this doctor on the selected day.
@@ -166,7 +166,9 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
                        class="mt-2 w-full max-w-[200px] ui-input">
             </div>
 
-            <div x-show="morningSlots.length > 0" class="mt-3">
+            <p x-show="slotError" x-cloak class="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700" x-text="slotError"></p>
+
+            <div x-show="allSlots.length > 0 && morningSlots.length > 0" class="mt-3">
                 <p class="text-xs font-semibold uppercase tracking-wide text-amber-600">☀️ Morning</p>
                 <div class="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
                     <template x-for="slot in morningSlots" :key="slot.datetime">
@@ -184,7 +186,7 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
                 </div>
             </div>
 
-            <div x-show="eveningSlots.length > 0" class="mt-4">
+            <div x-show="allSlots.length > 0 && eveningSlots.length > 0" class="mt-4">
                 <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">🌙 Evening</p>
                 <div class="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
                     <template x-for="slot in eveningSlots" :key="slot.datetime">
@@ -253,9 +255,11 @@ function bookAppointment(cfg) {
         selectedTime: cfg.selectedTime || '',
         apptType: cfg.apptType || 'prebooked',
         slots: [],
+        allSlots: [],
         morningSlots: [],
         eveningSlots: [],
         slotsLoading: false,
+        slotError: '',
         slotTimer: null,
         init() {
             if (this.apptType === 'walkin' && !this.selectedTime) {
@@ -302,22 +306,35 @@ function bookAppointment(cfg) {
         },
         async loadSlots() {
             if (!this.doctorId || !this.date) {
-                this.morningSlots = []; this.eveningSlots = [];
+                this.allSlots = []; this.morningSlots = []; this.eveningSlots = [];
+                this.slotError = '';
                 return;
             }
             this.slotsLoading = true;
+            this.slotError = '';
             try {
                 const r = await fetch('/api/v1/slots?doctor_id=' + this.doctorId + '&date=' + this.date, { credentials: 'same-origin' });
+                if (!r.ok) {
+                    this.allSlots = []; this.morningSlots = []; this.eveningSlots = [];
+                    this.slotError = 'Unable to load slots right now. Please refresh and try again.';
+                    return;
+                }
                 const data = await r.json();
                 const all = (data.slots || []).map(s => ({
                     ...s,
                     label: this._formatTime(s.time),
                     hour: parseInt(s.time.split(':')[0], 10),
+                    minute: parseInt((s.time.split(':')[1] || '0'), 10),
                 }));
+                this.allSlots = all;
                 this.morningSlots = all.filter(s => s.hour < 13);
                 this.eveningSlots = all.filter(s => s.hour >= 13);
+                if (data.meta) {
+                    console.debug('[slots]', data.meta, 'first=', all[0]?.time, 'last=', all[all.length - 1]?.time);
+                }
             } catch (e) {
-                this.morningSlots = []; this.eveningSlots = [];
+                this.allSlots = []; this.morningSlots = []; this.eveningSlots = [];
+                this.slotError = 'Network error while loading slots.';
             } finally {
                 this.slotsLoading = false;
             }

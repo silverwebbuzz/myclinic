@@ -113,7 +113,15 @@ final class FollowUpController
             return $denied;
         }
         $clinicId = (int) RequestContext::clinicId();
-        $data = FollowUpService::dashboardData($clinicId);
+        $data = array_merge(
+            [
+                'overdue' => [],
+                'overdue_count' => 0,
+                'due_week' => 0,
+                'done_month' => 0,
+            ],
+            FollowUpService::dashboardData($clinicId),
+        );
 
         return Response::html(Layout::page('follow_ups/index', [
             'data' => $data,

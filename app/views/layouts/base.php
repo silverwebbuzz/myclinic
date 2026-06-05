@@ -157,7 +157,7 @@
         </aside>
 
         <div class="flex min-w-0 flex-1 flex-col">
-            <header class="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-6 backdrop-blur">
+            <header class="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-6 backdrop-blur">
                 <div class="flex items-center gap-3">
                     <button type="button" @click="sidebarOpen = !sidebarOpen" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden" aria-label="Menu">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -200,14 +200,14 @@
                     <button type="button" class="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100" title="Notifications">
                         <?= ui_icon('bell', 18) ?>
                     </button>
-                    <div x-data="{ open: false }" class="relative">
+                    <div x-data="{ open: false }" class="relative z-50">
                         <button type="button" @click="open = !open" class="flex items-center gap-2 rounded-lg p-1 hover:bg-slate-100">
                             <span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-sm font-semibold text-white shadow-sm">
                                 <?= htmlspecialchars(mb_substr($user['name'] ?? 'U', 0, 1)) ?>
                             </span>
                         </button>
                         <div x-show="open" @click.outside="open = false" x-transition
-                             class="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                             class="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
                             <div class="border-b border-slate-100 px-4 py-3">
                                 <p class="truncate text-sm font-semibold text-slate-900"><?= htmlspecialchars($user['name'] ?? '') ?></p>
                                 <p class="truncate text-xs text-slate-500"><?= htmlspecialchars($user['email'] ?? '') ?></p>

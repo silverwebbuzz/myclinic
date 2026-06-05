@@ -10,7 +10,7 @@
  * Ships behind ?new=1 until the default is flipped in VisitController::show().
  */
 $sd = $visit['specialty_data'] ?? [];
-$case = $sd['case_taking'] ?? [];
+$case = $caseTaking ?? ($sd['case_taking'] ?? []);
 
 // $visibleModules comes from VisitView::visibleModules() in the controller.
 $visibleModules = $visibleModules ?? ['vitals', 'case_specialty'];
@@ -23,6 +23,7 @@ $caseAvailable = is_file($casePartialPath);
 
 $visitId = (int) $visit['id'];
 $visibleCount = count($visibleModules);
+$canUnlock = !empty($canUnlock);
 
 // Ghost-link list: every optional section NOT in visible_modules.
 $optionalModules = ['vitals', 'labs', 'photos', 'diet', 'consent', 'case_specialty'];
@@ -111,10 +112,17 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 <?php endif; ?>
                 <?php if (!$editable): ?>
                     <span class="rounded-full bg-slate-200 px-2 py-0.5 text-xs">Read-only</span>
-                    <form method="post" action="/visits/<?= $visitId ?>/unlock" class="inline">
-                        <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
-                        <button type="submit" class="rounded-full border border-brand px-2.5 py-0.5 text-xs font-medium text-brand hover:bg-brand-light">Edit this visit</button>
-                    </form>
+                    <?php if ($canUnlock): ?>
+                        <form method="post" action="/visits/<?= $visitId ?>/unlock" class="inline">
+                            <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+                            <button type="submit" class="rounded-full border border-brand px-2.5 py-0.5 text-xs font-medium text-brand hover:bg-brand-light">Edit this visit</button>
+                        </form>
+                    <?php else: ?>
+                        <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">Only clinic admin can edit a completed visit</span>
+                    <?php endif; ?>
+                    <?php if (!empty($_GET['unlock_error'])): ?>
+                        <span class="rounded-full bg-rose-100 px-2 py-0.5 text-xs text-rose-700">Unlock denied. Contact clinic admin.</span>
+                    <?php endif; ?>
                 <?php endif; ?>
             </div>
         </div>
@@ -708,7 +716,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 </details>
             <?php endif; ?>
 
-            <?php if (!empty($hasDischarge)): ?>
+            <?php if (!empty($hasDischargeSection)): ?>
                 <details class="rounded-lg border border-slate-200 bg-slate-50/50">
                     <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Discharge summary</summary>
                     <div class="px-4 pb-4 pt-2">
@@ -883,7 +891,33 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
 </div>
 
 <script>
+/** Map legacy saved keys to canonical case_taking field names for Alpine binding. */
+function normalizeCaseTaking(raw) {
+    const ct = (raw && typeof raw === 'object') ? { ...raw } : {};
+    if (typeof raw === 'string') {
+        try {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+                Object.assign(ct, parsed);
+            }
+        } catch (e) { /* ignore */ }
+    }
+    if (ct.past_history && !ct.past_medical_history) {
+        ct.past_medical_history = ct.past_history;
+    }
+    if (ct.systemic_history && !ct.systemic_review) {
+        ct.systemic_review = ct.systemic_history;
+    }
+    if (ct.family_medical_history && !ct.family_history) {
+        ct.family_history = ct.family_medical_history;
+    }
+    return ct;
+}
+
 function visitScreenV2(cfg) {
+    const caseTaking = normalizeCaseTaking(cfg.case_taking || cfg.specialty_data?.case_taking || {});
+    const specialtyData = { ...(cfg.specialty_data || {}), case_taking: caseTaking };
+
     // Normalize vitals.extra into an object — same handling as legacy view.
     const vitals = cfg.vitals || {};
     if (!vitals.extra) vitals.extra = {};
@@ -897,6 +931,8 @@ function visitScreenV2(cfg) {
 
     return {
         ...cfg,
+        specialty_data: specialtyData,
+        case_taking: caseTaking,
         vitals,
         charges,
         saveStatus: 'idle',
@@ -1093,7 +1129,8 @@ function visitScreenV2(cfg) {
                 visited_at: this.visited_at,
                 vitals: this.vitals,
                 prescriptions: cleanRx,
-                specialty_data: { case_taking: this.case_taking, ...this.specialty_data },
+                case_taking: this.case_taking,
+                specialty_data: { ...this.specialty_data, case_taking: this.case_taking },
                 _form_blob: {
                     chief_complaint: this.chief_complaint,
                     diagnosis: this.diagnosis,

@@ -98,10 +98,20 @@ final class BookController
         }
 
         $doctorId = (int) ($request->query['doctor_id'] ?? 0);
-        $date = $request->query['date'] ?? date('Y-m-d');
+        $dateRaw = (string) ($request->query['date'] ?? date('Y-m-d'));
+        $ts = strtotime($dateRaw);
+        $date = $ts !== false ? date('Y-m-d', $ts) : date('Y-m-d');
+        $clinicId = (int) $clinic['id'];
+        $slots = PublicBookingService::slots($clinicId, $doctorId, $date);
 
         return Response::json([
-            'slots' => PublicBookingService::slots((int) $clinic['id'], $doctorId, $date),
+            'slots' => $slots,
+            'meta' => [
+                'clinic_id' => $clinicId,
+                'doctor_id' => $doctorId,
+                'date' => $date,
+                'count' => count($slots),
+            ],
         ]);
     }
 

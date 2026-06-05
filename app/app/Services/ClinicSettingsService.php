@@ -83,7 +83,10 @@ final class ClinicSettingsService
         ]);
 
         try {
-            $doctorIds = DoctorScheduleService::doctorIdsForClinic($clinicId);
+            $doctorIds = array_map(
+                static fn (array $d) => (int) $d['id'],
+                AppointmentService::doctorsForClinic($clinicId),
+            );
             DoctorScheduleService::syncFromWorkingHours($clinicId, $workingHours, $doctorIds, $slotDuration);
         } catch (\Throwable $e) {
             error_log('[saveHours] doctor schedule sync failed: ' . $e->getMessage());

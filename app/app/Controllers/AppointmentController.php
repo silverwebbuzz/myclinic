@@ -279,16 +279,41 @@ final class AppointmentController
 
         $clinicId = (int) RequestContext::clinicId();
         $doctorId = (int) ($request->query['doctor_id'] ?? 0);
-        $date = $request->query['date'] ?? date('Y-m-d');
+        $date = self::normalizeDate((string) ($request->query['date'] ?? ''));
 
         if ($doctorId < 1) {
             return Response::json(['slots' => []]);
         }
 
+        $slots = SlotService::available($clinicId, $doctorId, $date, true);
+
         return Response::json([
-            'slots' => SlotService::available($clinicId, $doctorId, $date, true),
+            'slots' => $slots,
             'refreshed_at' => date('c'),
+            'meta' => [
+                'clinic_id' => $clinicId,
+                'doctor_id' => $doctorId,
+                'date' => $date,
+                'count' => count($slots),
+            ],
         ]);
+    }
+
+    private static function normalizeDate(string $date): string
+    {
+        $date = trim($date);
+        if ($date !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1) {
+            return $date;
+        }
+
+        if ($date !== '') {
+            $ts = strtotime($date);
+            if ($ts !== false) {
+                return date('Y-m-d', $ts);
+            }
+        }
+
+        return date('Y-m-d');
     }
 
     public function calendarApi(Request $request): Response
