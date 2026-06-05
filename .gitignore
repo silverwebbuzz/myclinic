@@ -1,6 +1,9 @@
 .claude/settings.local.json
 .claude/settings.json
 
+# macOS Finder junk
+.DS_Store
+
 # graphify generated knowledge graph
 graphify-out/
 
