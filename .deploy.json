@@ -1,7 +1,0 @@
-{
-    "DEPLOYPATH": "/home/silverwebbuzz_in/public_html/eclinicpro/",
-    "task": [
-        "/bin/cp -R . /home/silverwebbuzz_in/public_html/eclinicpro/",
-        "/usr/local/bin/php -r 'if(function_exists(\"opcache_reset\")) opcache_reset();'"
-    ]
-}

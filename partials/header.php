@@ -27,7 +27,7 @@ if (!isset($canonicalUrl)) {
     $reqPath = preg_replace('/\.php$/', '', (string) $reqPath);
     $canonicalUrl = 'https://eclinicpro.com' . $reqPath;
 }
-$ogImage = $ogImage ?? 'https://eclinicpro.com/assets/og-default.png';
+$ogImage = $ogImage ?? 'https://eclinicpro.com/assets/img/logos/logo.png';
 $ogType  = $ogType  ?? 'website';
 
 // Resolve the logged-in patient once, server-side. Passed to the header
@@ -80,8 +80,9 @@ $ecpPatientJson = $ecpPatient
     <meta name="twitter:image"       content="<?= e($ogImage) ?>" />
 
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/assets/favicon.png" />
-    <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/assets/img/logos/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/assets/img/logos/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/img/logos/apple-touch-icon.png" />
 
     <!-- Site-wide Organization JSON-LD (trust signal) -->
     <script type="application/ld+json">
@@ -90,7 +91,7 @@ $ecpPatientJson = $ecpPatient
         "@type": "Organization",
         "name": "eClinicPro",
         "url": "https://eclinicpro.com",
-        "logo": "https://eclinicpro.com/assets/og-default.png",
+        "logo": "https://eclinicpro.com/assets/img/logos/logo.png",
         "description": "The clinic operating system — patient records, prescriptions, appointments, billing — all in one place.",
         "sameAs": [],
         "contactPoint": {
@@ -139,7 +140,9 @@ $ecpPatientJson = $ecpPatient
 
 <header class="nav">
     <div class="nav-inner">
-        <a href="/" class="logo">e<em>ClinicPro</em></a>
+        <a href="/" class="logo" aria-label="eClinicPro home">
+            <img src="/assets/img/logos/logo.svg" alt="eClinicPro" class="logo-img" width="160" height="40" />
+        </a>
 
         <nav class="nav-links" :class="mobileNav ? 'is-open' : ''">
             <a href="/find-a-doctor" class="nav-link <?= nav_active('find') ?>">Find a doctor</a>

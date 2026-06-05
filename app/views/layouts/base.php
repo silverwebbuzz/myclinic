@@ -8,7 +8,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/png" href="https://eclinicpro.com/assets/favicon.png">
+    <link rel="icon" type="image/svg+xml" href="https://eclinicpro.com/assets/img/logos/favicon.svg">
+    <link rel="icon" type="image/png" sizes="64x64" href="https://eclinicpro.com/assets/img/logos/favicon.png">
+    <link rel="apple-touch-icon" href="https://eclinicpro.com/assets/img/logos/apple-touch-icon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Collapse plugin must load before Alpine core so x-collapse registers. -->
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.14.1/dist/cdn.min.js"></script>
