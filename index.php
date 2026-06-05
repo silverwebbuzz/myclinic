@@ -19,14 +19,47 @@ $clinicCount = ecp_active_clinic_count();
 $doctorCount = ecp_directory_doctor_count();
 
 // ---- Specialty showcase pulled from the canonical specialty map ----
-// Group a curated subset into the four columns from the directory.
+// Specialty mega-menu. Single source of truth is the specialty_master table —
+// the SAME source the Find-a-doctor page reads — so the two menus stay in sync.
+// Groups are keyed by the table's `category`; each item links by its URL slug
+// (via ecp_slug_for_db_specialty). Falls back to a curated hardcoded list when
+// the DB is unavailable so the homepage never breaks.
 $specMap = function_exists('ecp_specialty_map') ? ecp_specialty_map() : [];
+$dbIcons  = []; // url-slug => emoji, filled when the DB path is taken
+$dbLabels = []; // url-slug => label, filled when the DB path is taken
+
+// Fallback (used only if the DB query below yields nothing): curated columns.
 $specGroups = [
     'General & specialists' => ['general-physician','cardiologist','dermatologist','neurologist','pulmonologist','gastroenterologist','endocrinologist','nephrologist','oncologist','urologist'],
     'Surgeons & critical care' => ['general-surgeon','neurosurgeon','orthopedic','plastic-surgeon','critical-care'],
     'Dental & child & eye / ENT' => ['dentist','orthodontist','pediatric-dentist','gynecologist','pediatrician','ophthalmologist','ent-specialist'],
     'Alternative & therapy' => ['homeopathy','ayurveda','physiotherapist','psychiatrist','psychologist','dietitian'],
 ];
+
+// DB-driven groups (preferred). Build category => [url-slug, ...] from
+// specialty_master, mirroring find-doctor-data.php's query + seo_safe rule.
+// url_slug is a real column here, so we link by it directly (no reverse map).
+if (function_exists('ecp_db') && ($__hpDb = ecp_db())) {
+    try {
+        $rows = $__hpDb->query(
+            "SELECT url_slug, label, icon, category, seo_safe
+               FROM specialty_master
+              WHERE is_active = 1 AND seo_safe = 1
+              ORDER BY sort_order ASC, label ASC"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        $dbGroups = [];
+        foreach ($rows as $r) {
+            $urlSlug = (string) ($r['url_slug'] ?? '');
+            if ($urlSlug === '') continue;                     // unlinkable -> skip
+            $dbGroups[$r['category']][] = $urlSlug;
+            if (!empty($r['icon']))  $dbIcons[$urlSlug]  = $r['icon'];
+            if (!empty($r['label'])) $dbLabels[$urlSlug] = $r['label'];
+        }
+        if ($dbGroups) {
+            $specGroups = $dbGroups;                           // category => [url-slug,...]
+        }
+    } catch (Throwable $e) { /* keep hardcoded fallback */ }
+}
 
 // WebSite + SearchAction JSON-LD (brand search box in Google).
 $extraHead = '<script type="application/ld+json">' . json_encode([
@@ -159,12 +192,15 @@ require __DIR__ . '/partials/header.php';
                 <h4 class="hp-spec-group"><?= e($group) ?></h4>
                 <div class="hp-spec-tiles">
                     <?php foreach ($slugs as $slug):
-                        $row = $specMap[$slug] ?? null;
-                        if (!$row || (isset($row['safe']) && $row['safe'] === false)) continue;
+                        $row   = $specMap[$slug] ?? null;
+                        // Prefer the DB label; fall back to the seo-map label.
+                        $label = $dbLabels[$slug] ?? ($row['label'] ?? null);
+                        // Skip only if we have no label at all, or it's flagged unsafe.
+                        if (!$label || ($row && isset($row['safe']) && $row['safe'] === false)) continue;
                     ?>
                     <a href="/find-a-doctor/<?= e($slug) ?>" class="hp-spec-tile">
-                        <span class="hp-spec-ic"><?= $specIcons[$slug] ?? '🩺' ?></span>
-                        <span class="hp-spec-label"><?= e($row['label']) ?></span>
+                        <span class="hp-spec-ic"><?= ($dbIcons[$slug] ?? null) ?: ($specIcons[$slug] ?? '🩺') ?></span>
+                        <span class="hp-spec-label"><?= e($label) ?></span>
                         <span class="hp-spec-go">→</span>
                     </a>
                     <?php endforeach; ?>

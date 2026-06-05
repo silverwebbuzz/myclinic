@@ -2336,7 +2336,7 @@ img, video, table { max-width: 100%; }
 .hp-spec-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; margin-bottom: 44px; }
 .hp-spec-head .hp-sub { max-width: 540px; }
 .hp-spec-cta { display: flex; gap: 10px; flex-shrink: 0; }
-.hp-spec-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+.hp-spec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 22px; }
 .hp-spec-col { background: var(--bg-3); border: 1px solid var(--line); border-radius: 18px; padding: 22px 18px; }
 .hp-spec-group { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--teal-700); margin: 0 0 14px; }
 .hp-spec-tiles { display: flex; flex-direction: column; gap: 8px; }
