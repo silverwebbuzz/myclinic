@@ -118,13 +118,13 @@ try {
             </div>
         </div>
         <div class="foot-bottom">
-            <div>© <?= date('Y') ?> eClinicPro · Made with care for clinics across India 🌿</div>
+            <div>© <?= date('Y') ?> eClinicPro — a brand of Silver Webbuzz Pvt Ltd · Made with care for clinics across India 🌿</div>
             <div class="links">
-                <a href="#">Privacy</a>
-                <a href="#">Terms</a>
+                <a href="/privacy-policy">Privacy</a>
+                <a href="/terms">Terms</a>
+                <a href="/refund-policy">Refunds</a>
+                <a href="/privacy-policy#grievance">Grievance</a>
                 <a href="/security">Security</a>
-                <a href="#">HIPAA</a>
-                <a href="#">GDPR</a>
             </div>
         </div>
     </div>
