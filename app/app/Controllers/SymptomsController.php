@@ -284,11 +284,11 @@ final class SymptomsController
         // never yet promoted, never in master library.
         $sql = "
             SELECT LOWER(sp.label) AS norm_label,
-                   ANY_VALUE(sp.label) AS label,
+                   MIN(sp.label) AS label,
                    COUNT(DISTINCT sp.doctor_id) AS doctors,
                    SUM(sp.usage_count) AS total_uses,
                    MAX(sp.last_used_at) AS last_used,
-                   ANY_VALUE(sp.id) AS sample_id
+                   MIN(sp.id) AS sample_id
               FROM symptoms_personal sp
          LEFT JOIN symptoms_master sm ON LOWER(sm.label) = LOWER(sp.label)
              WHERE sp.promoted_to_master_id IS NULL
