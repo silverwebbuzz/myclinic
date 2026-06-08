@@ -34,12 +34,15 @@ final class AuthService
             // (matches the "30-day free trial — full product" marketing).
             // The trial clock starts here at registration and is NOT reset
             // later during onboarding. See PlanService::applyPlanToTenant().
+            // seat_limit is TINYINT UNSIGNED (max 255) — 255 = "unlimited in
+            // practice". Do NOT use 999 here: it overflows the column and, under
+            // MySQL strict mode (cPanel default), aborts the whole registration.
             $tenantId = QueryBuilder::table('tenants')->insert([
                 'name' => $clinicName,
                 'slug' => $slug,
                 'email' => $email,
                 'plan' => 'standard',
-                'seat_limit' => 999,
+                'seat_limit' => 255,
                 'trial_ends_at' => date('Y-m-d', strtotime('+30 days')),
                 'onboarding_step' => 1,
             ]);

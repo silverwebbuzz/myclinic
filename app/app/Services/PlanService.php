@@ -89,7 +89,10 @@ final class PlanService
 
     public static function applyPlanToTenant(int $clinicId, string $planId, bool $withTrial = false): void
     {
-        $seatLimit = self::seatLimitFor($planId);
+        // tenants.seat_limit is TINYINT UNSIGNED (max 255). Config uses 999 to
+        // mean "unlimited in practice" — cap it so the value fits the column and
+        // doesn't overflow under MySQL strict mode (which aborts the write).
+        $seatLimit = min(255, self::seatLimitFor($planId));
         $data = [
             'plan' => $planId,
             'seat_limit' => $seatLimit,
