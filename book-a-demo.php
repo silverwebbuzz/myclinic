@@ -3,6 +3,7 @@
 // book-a-demo.php — request a tailored demo
 // =====================================================================
 require_once __DIR__ . '/partials/helpers.php';
+require_once __DIR__ . '/partials/mailer.php';
 
 $pageTitle = 'Book a Demo — eClinicPro';
 $metaDesc = 'See your specialty\'s templates and workflow live on eClinicPro. 15-minute tailored demo, no pressure.';
@@ -29,9 +30,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $formError = 'That email looks off — could you double-check?';
     } elseif (ecp_save_demo_request($form)) {
         $submitted = true;
+        // Fire confirmation + internal notification. Mail failures are logged
+        // inside the mailer and must NOT change the success state — the lead is
+        // already saved, so the visitor still sees the thank-you screen.
+        ecp_demo_emails($form);
     } else {
         $formError = 'Something went wrong saving your request. Email us at hello@eclinicpro.com instead.';
     }
+}
+
+/**
+ * Send the two book-a-demo emails: a branded confirmation to the visitor and
+ * a plain notification to the eClinicPro inbox.
+ *
+ * @param array<string,string> $form
+ */
+function ecp_demo_emails(array $form): void
+{
+    $name = $form['name'] ?? '';
+    $email = $form['email'] ?? '';
+    $phone = $form['phone'] ?? '';
+    $clinic = $form['clinic_name'] ?? '';
+    $specialty = $form['specialty'] ?? '';
+    $message = $form['message'] ?? '';
+
+    $e = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+    $cfg = ecp_smtp_config();
+    $inbox = $cfg['SMTP_TO_EMAIL'] ?? 'hello@eclinicpro.com';
+
+    // 1) Confirmation to the visitor.
+    $visitorBody = '<p style="margin:0 0 16px; font-size:15px; line-height:1.65; color:#1c1c1e;">'
+        . 'Hi ' . $e($name) . ',</p>'
+        . '<p style="margin:0 0 16px; font-size:15px; line-height:1.65; color:#1c1c1e;">'
+        . 'Thanks for requesting a demo of eClinicPro. We\'ve received your request and our team '
+        . 'will email you within 24 hours with available 15-minute demo times tailored to your specialty.</p>'
+        . '<p style="margin:0 0 8px; font-size:13px; color:#6e6e73;">What you sent us:</p>'
+        . '<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px; color:#1c1c1e;">'
+        . ($clinic !== '' ? '<tr><td style="padding:2px 12px 2px 0; color:#6e6e73;">Clinic</td><td>' . $e($clinic) . '</td></tr>' : '')
+        . ($specialty !== '' ? '<tr><td style="padding:2px 12px 2px 0; color:#6e6e73;">Specialty</td><td>' . $e($specialty) . '</td></tr>' : '')
+        . ($phone !== '' ? '<tr><td style="padding:2px 12px 2px 0; color:#6e6e73;">Phone</td><td>' . $e($phone) . '</td></tr>' : '')
+        . '</table>';
+    ecp_send_mail(
+        $email,
+        'We received your eClinicPro demo request',
+        ecp_email_template('Your demo request is in 🎉', $visitorBody),
+        $name,
+        $inbox
+    );
+
+    // 2) Internal notification to the eClinicPro inbox.
+    $adminBody = '<p style="margin:0 0 16px; font-size:15px; line-height:1.65;">New demo request from the website:</p>'
+        . '<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px; color:#1c1c1e;">'
+        . '<tr><td style="padding:3px 12px 3px 0; color:#6e6e73;">Name</td><td>' . $e($name) . '</td></tr>'
+        . '<tr><td style="padding:3px 12px 3px 0; color:#6e6e73;">Email</td><td>' . $e($email) . '</td></tr>'
+        . '<tr><td style="padding:3px 12px 3px 0; color:#6e6e73;">Phone</td><td>' . $e($phone ?: '—') . '</td></tr>'
+        . '<tr><td style="padding:3px 12px 3px 0; color:#6e6e73;">Clinic</td><td>' . $e($clinic ?: '—') . '</td></tr>'
+        . '<tr><td style="padding:3px 12px 3px 0; color:#6e6e73;">Specialty</td><td>' . $e($specialty ?: '—') . '</td></tr>'
+        . '</table>'
+        . ($message !== '' ? '<p style="margin:16px 0 0; font-size:14px; line-height:1.6;"><strong>Message:</strong><br>' . nl2br($e($message)) . '</p>' : '');
+    ecp_send_mail(
+        $inbox,
+        'New demo request: ' . $name,
+        ecp_email_template('New demo request', $adminBody),
+        'eClinicPro',
+        $email
+    );
 }
 
 require __DIR__ . '/partials/header.php';

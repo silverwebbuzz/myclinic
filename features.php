@@ -129,7 +129,7 @@ require __DIR__ . '/partials/header.php';
                 </div>
                 <p class="lede"><?= e($blurb) ?></p>
             </div>
-            <div class="feat-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px;">
+            <div class="feat-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 28px;">
                 <?php foreach ($items as $i => [$ic, $n, $d]): ?>
                 <div class="feat-item reveal" style="transition-delay: <?= ($i % 3) * 60 ?>ms;">
                     <div class="ico" style="width: 40px; height: 40px; border-radius: 10px; background: var(--teal-50); color: var(--teal-700); display: grid; place-items: center; font-size: 18px; margin-bottom: 14px;"><?= $ic ?></div>

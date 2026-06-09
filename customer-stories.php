@@ -134,7 +134,7 @@ require __DIR__ . '/partials/header.php';
                         "<?= e($s['quote']) ?>"
                     </blockquote>
 
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; padding: 18px 0; border-top: 0.5px solid var(--line); border-bottom: 0.5px solid var(--line);">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr)); gap: 12px; margin-bottom: 24px; padding: 18px 0; border-top: 0.5px solid var(--line); border-bottom: 0.5px solid var(--line);">
                         <?php foreach ($s['metrics'] as [$v, $l]): ?>
                         <div>
                             <div style="font-size: 22px; font-weight: 300; letter-spacing: -0.5px; color: var(--ink);"><?= e($v) ?></div>

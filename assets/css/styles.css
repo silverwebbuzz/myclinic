@@ -38,6 +38,19 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
+  /* Site-wide guard against horizontal scroll: a single stray wide element
+     (a long word, an inline-styled grid, a preview panel) should never let the
+     whole page scroll sideways on mobile. Wrappers that genuinely need to
+     scroll (.cmp-wrap, .spec-tabs, etc.) set their own overflow-x: auto. */
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* Media never overflows its container on small screens. */
+img,
+svg,
+video {
+  max-width: 100%;
 }
 
 a {
@@ -1955,7 +1968,9 @@ footer.foot {
     /* hidden by default */
     flex: none;
     position: fixed;
-    top: 56px;
+    /* Must match .nav height (80px) so the menu sits flush below the bar
+       instead of overlapping it. */
+    top: 80px;
     left: 0;
     right: 0;
     flex-direction: column;
@@ -1965,7 +1980,7 @@ footer.foot {
     padding: 16px 20px;
     gap: 4px;
     z-index: 50;
-    max-height: calc(100vh - 56px);
+    max-height: calc(100vh - 80px);
     overflow-y: auto;
   }
 
@@ -6291,6 +6306,28 @@ body {
 
   .hp-eyebrow::before,
   .hp-eyebrow::after {
+    display: none;
+  }
+}
+
+/* =====================================================================
+   Home page — two-column blocks that lacked a mobile breakpoint and so
+   stayed side-by-side (or kept a fixed-px sidebar) on phones. Stack them
+   at the tablet breakpoint so they reflow cleanly.
+   ===================================================================== */
+@media (max-width: 900px) {
+  .hp-doc-grid,
+  .hp-faq-cols {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  /* Dashboard preview: drop the fixed 160px sidebar so the panel fits. */
+  .hp-dash-body {
+    grid-template-columns: 1fr;
+  }
+
+  .hp-dash-side {
     display: none;
   }
 }
