@@ -380,10 +380,12 @@ button {
 
 .hp-hero-copy {
   width: 40%;
+  min-width: 0;
 }
 
 .hp-hero-preview {
   width: 60%;
+  min-width: 0;
 }
 
 .hp-hero-preview .image-box {
@@ -4502,6 +4504,7 @@ table {
   position: relative;
   display: flex;
   gap: 60px;
+  align-items: center;
 }
 
 .hp-pill {
@@ -5480,7 +5483,19 @@ table {
 /* ---- Responsive ---- */
 @media (max-width: 920px) {
 
-  .hp-hero-grid,
+  /* Hero is a flexbox (not grid) — it must stack via flex-direction.
+     grid-template-columns does nothing here, which is why it stayed
+     side-by-side and squeezed the copy on mobile. */
+  .hp-hero-grid {
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  .hp-hero-copy,
+  .hp-hero-preview {
+    width: 100%;
+  }
+
   .hp-doc-grid,
   .hp-wa-grid,
   .hp-faq-cols {
