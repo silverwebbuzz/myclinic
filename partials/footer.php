@@ -72,7 +72,7 @@ try {
         <div class="foot-grid">
             <div class="foot-brand">
                 <a href="/" class="logo" aria-label="eClinicPro home">
-                    <img src="/assets/img/logos/logo.svg" alt="eClinicPro" class="logo-img" width="160" height="40" />
+                    <img src="/assets/img/logos/logo-2.svg" alt="eClinicPro" class="logo-img" width="160" height="160" />
                 </a>
                 <p>Book a verified doctor, or run your whole clinic — one simple system. Made in India, for Indian clinics. 🌿</p>
             </div>

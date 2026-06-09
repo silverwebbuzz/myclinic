@@ -30,10 +30,10 @@ $dbLabels = []; // url-slug => label, filled when the DB path is taken
 
 // Fallback (used only if the DB query below yields nothing): curated columns.
 $specGroups = [
-    'General & specialists' => ['general-physician','cardiologist','dermatologist','neurologist','pulmonologist','gastroenterologist','endocrinologist','nephrologist','oncologist','urologist'],
-    'Surgeons & critical care' => ['general-surgeon','neurosurgeon','orthopedic','plastic-surgeon','critical-care'],
-    'Dental & child & eye / ENT' => ['dentist','orthodontist','pediatric-dentist','gynecologist','pediatrician','ophthalmologist','ent-specialist'],
-    'Alternative & therapy' => ['homeopathy','ayurveda','physiotherapist','psychiatrist','psychologist','dietitian'],
+    'General & specialists' => ['general-physician', 'cardiologist', 'dermatologist', 'neurologist', 'pulmonologist', 'gastroenterologist', 'endocrinologist', 'nephrologist', 'oncologist', 'urologist'],
+    'Surgeons & critical care' => ['general-surgeon', 'neurosurgeon', 'orthopedic', 'plastic-surgeon', 'critical-care'],
+    'Dental & child & eye / ENT' => ['dentist', 'orthodontist', 'pediatric-dentist', 'gynecologist', 'pediatrician', 'ophthalmologist', 'ent-specialist'],
+    'Alternative & therapy' => ['homeopathy', 'ayurveda', 'physiotherapist', 'psychiatrist', 'psychologist', 'dietitian'],
 ];
 
 // DB-driven groups (preferred). Build category => [url-slug, ...] from
@@ -58,7 +58,8 @@ if (function_exists('ecp_db') && ($__hpDb = ecp_db())) {
         if ($dbGroups) {
             $specGroups = $dbGroups;                           // category => [url-slug,...]
         }
-    } catch (Throwable $e) { /* keep hardcoded fallback */ }
+    } catch (Throwable $e) { /* keep hardcoded fallback */
+    }
 }
 
 // WebSite + SearchAction JSON-LD (brand search box in Google).
@@ -80,7 +81,7 @@ require __DIR__ . '/partials/header.php';
 <!-- ============ DUAL-PATH HERO ============ -->
 <section class="hp-hero" id="top">
     <div class="hp-hero-bg"></div>
-    <div class="wrap">
+    <div class="nav-inner">
         <div class="hp-hero-grid">
             <div class="hp-hero-copy reveal">
                 <span class="hp-pill">
@@ -124,7 +125,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <!-- Live doctor-card preview (matches the directory result style) -->
-            <div class="hp-hero-preview reveal">
+            <!-- <div class="hp-hero-preview reveal">
                 <div class="hp-preview-tag">⚡ Verified · Real availability</div>
                 <div class="hp-preview-card">
                     <div class="hp-preview-search">Search doctors in your city…</div>
@@ -134,7 +135,7 @@ require __DIR__ . '/partials/header.php';
                         ['PI', 'Dr. Priya Iyer', 'Dermatology · 12 yrs · Fortis', '4.8', '₹950', 'Tomorrow 11 AM', 'linear-gradient(135deg,#60A5FA,#2563EB)'],
                         ['RV', 'Dr. Rohan Verma', 'Homeopathy · 22 yrs · Clinic', '4.7', '₹600', 'In 2 days', 'linear-gradient(135deg,#C084FC,#7C3AED)'],
                     ];
-                    foreach ($previewDocs as [$ini,$name,$meta,$rating,$fee,$slot,$grad]):
+                    foreach ($previewDocs as [$ini, $name, $meta, $rating, $fee, $slot, $grad]):
                     ?>
                     <div class="hp-doc-row">
                         <span class="hp-doc-av" style="background: <?= $grad ?>;"><?= e($ini) ?></span>
@@ -153,6 +154,12 @@ require __DIR__ . '/partials/header.php';
                 <div class="hp-preview-float">
                     <span class="hp-float-dot"></span>
                     <strong><?= ecp_num(max(1200, $doctorCount * 6)) ?></strong>&nbsp;bookings this week
+                </div>
+            </div> -->
+
+            <div class="hp-hero-preview reveal">
+                <div class="image-box">
+                    <img src="/assets/img/logos/carely-hero-img1.webp" alt="Doctor">
                 </div>
             </div>
         </div>
@@ -177,35 +184,56 @@ require __DIR__ . '/partials/header.php';
         <?php
         // Emoji per specialty slug — friendly, scannable tiles (Nas-Daily style).
         $specIcons = [
-            'general-physician'=>'🩺','cardiologist'=>'❤️','dermatologist'=>'✨','neurologist'=>'🧠',
-            'pulmonologist'=>'🫁','gastroenterologist'=>'🍽️','endocrinologist'=>'⚖️','nephrologist'=>'💧',
-            'oncologist'=>'🎗️','urologist'=>'🚹','general-surgeon'=>'🔪','neurosurgeon'=>'🧠',
-            'orthopedic'=>'🦴','plastic-surgeon'=>'💉','critical-care'=>'🚑','dentist'=>'🦷',
-            'orthodontist'=>'😁','pediatric-dentist'=>'🪥','gynecologist'=>'🌸','pediatrician'=>'👶',
-            'ophthalmologist'=>'👁️','ent-specialist'=>'👂','homeopathy'=>'🌿','ayurveda'=>'🪔',
-            'physiotherapist'=>'🤸','psychiatrist'=>'🧩','psychologist'=>'💭','dietitian'=>'🥗',
+            'general-physician' => '🩺',
+            'cardiologist' => '❤️',
+            'dermatologist' => '✨',
+            'neurologist' => '🧠',
+            'pulmonologist' => '🫁',
+            'gastroenterologist' => '🍽️',
+            'endocrinologist' => '⚖️',
+            'nephrologist' => '💧',
+            'oncologist' => '🎗️',
+            'urologist' => '🚹',
+            'general-surgeon' => '🔪',
+            'neurosurgeon' => '🧠',
+            'orthopedic' => '🦴',
+            'plastic-surgeon' => '💉',
+            'critical-care' => '🚑',
+            'dentist' => '🦷',
+            'orthodontist' => '😁',
+            'pediatric-dentist' => '🪥',
+            'gynecologist' => '🌸',
+            'pediatrician' => '👶',
+            'ophthalmologist' => '👁️',
+            'ent-specialist' => '👂',
+            'homeopathy' => '🌿',
+            'ayurveda' => '🪔',
+            'physiotherapist' => '🤸',
+            'psychiatrist' => '🧩',
+            'psychologist' => '💭',
+            'dietitian' => '🥗',
         ];
         ?>
         <div class="hp-spec-grid">
             <?php foreach ($specGroups as $group => $slugs): ?>
-            <div class="hp-spec-col reveal">
-                <h4 class="hp-spec-group"><?= e($group) ?></h4>
-                <div class="hp-spec-tiles">
-                    <?php foreach ($slugs as $slug):
-                        $row   = $specMap[$slug] ?? null;
-                        // Prefer the DB label; fall back to the seo-map label.
-                        $label = $dbLabels[$slug] ?? ($row['label'] ?? null);
-                        // Skip only if we have no label at all, or it's flagged unsafe.
-                        if (!$label || ($row && isset($row['safe']) && $row['safe'] === false)) continue;
-                    ?>
-                    <a href="/find-a-doctor/<?= e($slug) ?>" class="hp-spec-tile">
-                        <span class="hp-spec-ic"><?= ($dbIcons[$slug] ?? null) ?: ($specIcons[$slug] ?? '🩺') ?></span>
-                        <span class="hp-spec-label"><?= e($label) ?></span>
-                        <span class="hp-spec-go">→</span>
-                    </a>
-                    <?php endforeach; ?>
+                <div class="hp-spec-col reveal">
+                    <h4 class="hp-spec-group"><?= e($group) ?></h4>
+                    <div class="hp-spec-tiles">
+                        <?php foreach ($slugs as $slug):
+                            $row   = $specMap[$slug] ?? null;
+                            // Prefer the DB label; fall back to the seo-map label.
+                            $label = $dbLabels[$slug] ?? ($row['label'] ?? null);
+                            // Skip only if we have no label at all, or it's flagged unsafe.
+                            if (!$label || ($row && isset($row['safe']) && $row['safe'] === false)) continue;
+                        ?>
+                            <a href="/find-a-doctor/<?= e($slug) ?>" class="hp-spec-tile">
+                                <span class="hp-spec-ic"><?= ($dbIcons[$slug] ?? null) ?: ($specIcons[$slug] ?? '🩺') ?></span>
+                                <span class="hp-spec-label"><?= e($label) ?></span>
+                                <span class="hp-spec-go">→</span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
-            </div>
             <?php endforeach; ?>
         </div>
         <p class="hp-spec-foot reveal">
@@ -222,16 +250,18 @@ require __DIR__ . '/partials/header.php';
             <h2 class="h-section">Book in 60 seconds. No call centre.</h2>
         </div>
         <div class="hp-steps">
-            <?php foreach ([
-                ['1', 'Search', 'Pick your city and specialty, or just type a name. See verified doctors with real fees.'],
-                ['2', 'Request a slot', 'Tap book. You instantly get a WhatsApp/SMS confirming your request — and the clinic\'s number, just in case.'],
-                ['3', 'Doctor confirms', 'The clinic confirms on their side. You get a final confirmation. Zero phone-tag.'],
-            ] as [$n,$t,$d]): ?>
-            <div class="hp-step reveal">
-                <div class="hp-step-n"><?= e($n) ?></div>
-                <div class="hp-step-t"><?= e($t) ?></div>
-                <div class="hp-step-d"><?= e($d) ?></div>
-            </div>
+            <?php foreach (
+                [
+                    ['1', 'Search', 'Pick your city and specialty, or just type a name. See verified doctors with real fees.'],
+                    ['2', 'Request a slot', 'Tap book. You instantly get a WhatsApp/SMS confirming your request — and the clinic\'s number, just in case.'],
+                    ['3', 'Doctor confirms', 'The clinic confirms on their side. You get a final confirmation. Zero phone-tag.'],
+                ] as [$n, $t, $d]
+            ): ?>
+                <div class="hp-step reveal">
+                    <div class="hp-step-n"><?= e($n) ?></div>
+                    <div class="hp-step-t"><?= e($t) ?></div>
+                    <div class="hp-step-d"><?= e($d) ?></div>
+                </div>
             <?php endforeach; ?>
         </div>
         <div class="hp-how-cta reveal">
@@ -259,19 +289,21 @@ require __DIR__ . '/partials/header.php';
                 <p class="hp-doc-fine">30-day free trial · No credit card · Your data stays yours.</p>
 
                 <div class="hp-feat-grid">
-                    <?php foreach ([
-                        ['📅','Online bookings','Patients book from your public profile. WhatsApp confirmations and reminders included.'],
-                        ['📋','Patient records','Encrypted records, history and contact info — always one search away.'],
-                        ['℞','Prescriptions','Signed digital Rx, delivered to the patient on WhatsApp before they leave.'],
-                        ['🧾','Billing & invoices','Clean, GST-ready invoices in seconds. WhatsApp delivery.'],
-                        ['🔁','Follow-ups','Never lose a follow-up. Automatic reminders, overdue tracking, a calm queue.'],
-                        ['📊','Reports','Revenue, top diagnoses, patient retention. Numbers that matter, nothing else.'],
-                    ] as [$ic,$t,$d]): ?>
-                    <div class="hp-feat">
-                        <div class="hp-feat-ic"><?= $ic ?></div>
-                        <div class="hp-feat-t"><?= e($t) ?></div>
-                        <div class="hp-feat-d"><?= e($d) ?></div>
-                    </div>
+                    <?php foreach (
+                        [
+                            ['📅', 'Online bookings', 'Patients book from your public profile. WhatsApp confirmations and reminders included.'],
+                            ['📋', 'Patient records', 'Encrypted records, history and contact info — always one search away.'],
+                            ['℞', 'Prescriptions', 'Signed digital Rx, delivered to the patient on WhatsApp before they leave.'],
+                            ['🧾', 'Billing & invoices', 'Clean, GST-ready invoices in seconds. WhatsApp delivery.'],
+                            ['🔁', 'Follow-ups', 'Never lose a follow-up. Automatic reminders, overdue tracking, a calm queue.'],
+                            ['📊', 'Reports', 'Revenue, top diagnoses, patient retention. Numbers that matter, nothing else.'],
+                        ] as [$ic, $t, $d]
+                    ): ?>
+                        <div class="hp-feat">
+                            <div class="hp-feat-ic"><?= $ic ?></div>
+                            <div class="hp-feat-t"><?= e($t) ?></div>
+                            <div class="hp-feat-d"><?= e($d) ?></div>
+                        </div>
                     <?php endforeach; ?>
                 </div>
             </div>
@@ -294,11 +326,18 @@ require __DIR__ . '/partials/header.php';
                                     <div class="hp-dash-ctag">Clinic admin</div>
                                 </div>
                             </div>
-                            <?php foreach ([
-                                ['🏠','Dashboard',true],['👥','Patients',false],['📅','Appointments',false],
-                                ['℞','Prescriptions',false],['🧾','Invoices',false],['📊','Reports',false],['🔔','Follow-ups',false],
-                            ] as [$ic,$l,$a]): ?>
-                            <div class="hp-dash-nav<?= $a ? ' active' : '' ?>"><span><?= $ic ?></span><?= e($l) ?></div>
+                            <?php foreach (
+                                [
+                                    ['🏠', 'Dashboard', true],
+                                    ['👥', 'Patients', false],
+                                    ['📅', 'Appointments', false],
+                                    ['℞', 'Prescriptions', false],
+                                    ['🧾', 'Invoices', false],
+                                    ['📊', 'Reports', false],
+                                    ['🔔', 'Follow-ups', false],
+                                ] as [$ic, $l, $a]
+                            ): ?>
+                                <div class="hp-dash-nav<?= $a ? ' active' : '' ?>"><span><?= $ic ?></span><?= e($l) ?></div>
                             <?php endforeach; ?>
                         </div>
                         <div class="hp-dash-main">
@@ -307,33 +346,37 @@ require __DIR__ . '/partials/header.php';
                                 <span class="hp-dash-date">Mon · 28 May</span>
                             </div>
                             <div class="hp-dash-stats">
-                                <?php foreach ([
-                                    ['👤','Patients today','24'],
-                                    ['📅','Appointments pending','6'],
-                                    ['💰','Revenue today','₹14,200'],
-                                    ['🔔','Follow-ups due','5'],
-                                ] as [$ic,$lbl,$val]): ?>
-                                <div class="hp-dash-stat">
-                                    <div class="hp-dash-stat-top"><span><?= e($lbl) ?></span><span><?= $ic ?></span></div>
-                                    <strong><?= e($val) ?></strong>
-                                </div>
+                                <?php foreach (
+                                    [
+                                        ['👤', 'Patients today', '24'],
+                                        ['📅', 'Appointments pending', '6'],
+                                        ['💰', 'Revenue today', '₹14,200'],
+                                        ['🔔', 'Follow-ups due', '5'],
+                                    ] as [$ic, $lbl, $val]
+                                ): ?>
+                                    <div class="hp-dash-stat">
+                                        <div class="hp-dash-stat-top"><span><?= e($lbl) ?></span><span><?= $ic ?></span></div>
+                                        <strong><?= e($val) ?></strong>
+                                    </div>
                                 <?php endforeach; ?>
                             </div>
                             <div class="hp-dash-queue">
                                 <div class="hp-dash-queue-h">Today's queue <span>Updated 10:02</span></div>
-                                <?php foreach ([
-                                    ['Aarav Sharma','Follow-up · Hypertension','Now','now'],
-                                    ['Priya Iyer','New patient · Consult','Waiting','ok'],
-                                    ['Rohan Verma','Lab review','Scheduled','pend'],
-                                    ['Ananya Pillai','Annual check-up','Scheduled','pend'],
-                                ] as [$nm,$rs,$st,$cls]): ?>
-                                <div class="hp-dash-appt">
-                                    <div class="hp-dash-appt-info">
-                                        <div class="hp-dash-appt-name"><?= e($nm) ?></div>
-                                        <div class="hp-dash-appt-reason"><?= e($rs) ?></div>
+                                <?php foreach (
+                                    [
+                                        ['Aarav Sharma', 'Follow-up · Hypertension', 'Now', 'now'],
+                                        ['Priya Iyer', 'New patient · Consult', 'Waiting', 'ok'],
+                                        ['Rohan Verma', 'Lab review', 'Scheduled', 'pend'],
+                                        ['Ananya Pillai', 'Annual check-up', 'Scheduled', 'pend'],
+                                    ] as [$nm, $rs, $st, $cls]
+                                ): ?>
+                                    <div class="hp-dash-appt">
+                                        <div class="hp-dash-appt-info">
+                                            <div class="hp-dash-appt-name"><?= e($nm) ?></div>
+                                            <div class="hp-dash-appt-reason"><?= e($rs) ?></div>
+                                        </div>
+                                        <span class="hp-dash-status <?= e($cls) ?>"><?= e($st) ?></span>
                                     </div>
-                                    <span class="hp-dash-status <?= e($cls) ?>"><?= e($st) ?></span>
-                                </div>
                                 <?php endforeach; ?>
                             </div>
                         </div>
@@ -382,13 +425,15 @@ require __DIR__ . '/partials/header.php';
                     that number? We fall back to SMS — so the message always lands.
                 </p>
                 <ul class="hp-wa-list">
-                    <?php foreach ([
-                        'Booking confirmations & reminders that cut no-shows',
-                        'Signed prescriptions delivered as a PDF',
-                        'Follow-up nudges, sent at sensible hours only',
-                        'Smart cost controls — daily/monthly caps you set',
-                    ] as $f): ?>
-                    <li><span class="tick">✓</span><?= e($f) ?></li>
+                    <?php foreach (
+                        [
+                            'Booking confirmations & reminders that cut no-shows',
+                            'Signed prescriptions delivered as a PDF',
+                            'Follow-up nudges, sent at sensible hours only',
+                            'Smart cost controls — daily/monthly caps you set',
+                        ] as $f
+                    ): ?>
+                        <li><span class="tick">✓</span><?= e($f) ?></li>
                     <?php endforeach; ?>
                 </ul>
                 <p class="hp-doc-fine">WhatsApp + SMS messaging is <strong>built into every plan</strong> — no extra add-on, no surprise bill.</p>
@@ -411,17 +456,19 @@ require __DIR__ . '/partials/header.php';
             <div class="hp-plan-price">₹16,000<span class="per">/year</span></div>
             <div class="hp-plan-yearly"><span class="hp-fc-strike">₹17,988</span> Save 10% · + 18% GST at checkout</div>
             <ul class="hp-plan-feats">
-                <?php foreach ([
-                    'Patient records, visits & prescriptions',
-                    'Appointments & walk-in queue',
-                    'Billing & invoicing (GST-ready)',
-                    'WhatsApp + SMS messaging built in',
-                    'Specialty-aware forms (50+ specialties)',
-                    'Public doctor profile on eclinicpro.com',
-                    'Unlimited patients & staff users',
-                    'Reports, follow-ups & analytics',
-                ] as $f): ?>
-                <li><span class="tick">✓</span><?= e($f) ?></li>
+                <?php foreach (
+                    [
+                        'Patient records, visits & prescriptions',
+                        'Appointments & walk-in queue',
+                        'Billing & invoicing (GST-ready)',
+                        'WhatsApp + SMS messaging built in',
+                        'Specialty-aware forms (50+ specialties)',
+                        'Public doctor profile on eclinicpro.com',
+                        'Unlimited patients & staff users',
+                        'Reports, follow-ups & analytics',
+                    ] as $f
+                ): ?>
+                    <li><span class="tick">✓</span><?= e($f) ?></li>
                 <?php endforeach; ?>
             </ul>
             <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg btn-block">Start 30-day free trial</a>
@@ -460,12 +507,12 @@ $faqDoctors = [
                 <h3 class="hp-faq-h"><span class="hp-faq-ic">🔍</span> For patients</h3>
                 <div class="faq-list">
                     <?php foreach ($faqPatients as $i => [$q, $a]): $k = 'p' . $i; ?>
-                    <div class="faq-item" :class="open === '<?= $k ?>' ? 'open' : ''">
-                        <button type="button" class="faq-q" @click="open = open === '<?= $k ?>' ? null : '<?= $k ?>'">
-                            <span><?= e($q) ?></span><span class="plus"></span>
-                        </button>
-                        <div class="faq-a" x-show="open === '<?= $k ?>'" x-collapse><?= e($a) ?></div>
-                    </div>
+                        <div class="faq-item" :class="open === '<?= $k ?>' ? 'open' : ''">
+                            <button type="button" class="faq-q" @click="open = open === '<?= $k ?>' ? null : '<?= $k ?>'">
+                                <span><?= e($q) ?></span><span class="plus"></span>
+                            </button>
+                            <div class="faq-a" x-show="open === '<?= $k ?>'" x-collapse><?= e($a) ?></div>
+                        </div>
                     <?php endforeach; ?>
                 </div>
             </div>
@@ -473,12 +520,12 @@ $faqDoctors = [
                 <h3 class="hp-faq-h"><span class="hp-faq-ic">🩺</span> For doctors</h3>
                 <div class="faq-list">
                     <?php foreach ($faqDoctors as $i => [$q, $a]): $k = 'd' . $i; ?>
-                    <div class="faq-item" :class="open === '<?= $k ?>' ? 'open' : ''">
-                        <button type="button" class="faq-q" @click="open = open === '<?= $k ?>' ? null : '<?= $k ?>'">
-                            <span><?= e($q) ?></span><span class="plus"></span>
-                        </button>
-                        <div class="faq-a" x-show="open === '<?= $k ?>'" x-collapse><?= e($a) ?></div>
-                    </div>
+                        <div class="faq-item" :class="open === '<?= $k ?>' ? 'open' : ''">
+                            <button type="button" class="faq-q" @click="open = open === '<?= $k ?>' ? null : '<?= $k ?>'">
+                                <span><?= e($q) ?></span><span class="plus"></span>
+                            </button>
+                            <div class="faq-a" x-show="open === '<?= $k ?>'" x-collapse><?= e($a) ?></div>
+                        </div>
                     <?php endforeach; ?>
                 </div>
             </div>
