@@ -7,6 +7,17 @@
 // LINKS into them, never reimplements them.
 // =====================================================================
 
+require_once __DIR__ . '/partials/request_router.php';
+$__ecpPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+if (ecp_dispatch_clean_url($_SERVER['REQUEST_URI'] ?? '/')) {
+    return;
+}
+if ($__ecpPath !== '/' && $__ecpPath !== '/index.php') {
+    http_response_code(404);
+    require __DIR__ . '/404.php';
+    return;
+}
+
 require_once __DIR__ . '/partials/helpers.php';
 require_once __DIR__ . '/partials/seo_slugs.php';
 
@@ -103,19 +114,19 @@ require __DIR__ . '/partials/header.php';
                     <a href="/find-a-doctor" class="hp-path hp-path-patient">
                         <div class="hp-path-ic">🔍</div>
                         <div class="hp-path-body">
-                            <div class="hp-path-title">I'm a patient</div>
+                            <div class="hp-path-title">Find a Doctor</div>
                             <div class="hp-path-sub">Find &amp; book a doctor in 60 seconds</div>
                         </div>
                         <span class="hp-path-arrow">→</span>
                     </a>
-                    <a href="<?= e(ecp_portal_url('/register')) ?>" class="hp-path hp-path-doctor">
-                        <div class="hp-path-ic">🩺</div>
-                        <div class="hp-path-body">
-                            <div class="hp-path-title">I'm a doctor</div>
-                            <div class="hp-path-sub">Run my clinic — free for 30 days</div>
-                        </div>
-                        <span class="hp-path-arrow">→</span>
-                    </a>
+                    <!-- <a href="<?= e(ecp_portal_url('/register')) ?>" class="hp-path hp-path-doctor">
+                            <div class="hp-path-ic">🩺</div>
+                            <div class="hp-path-body">
+                                <div class="hp-path-title">I'm a doctor</div>
+                                <div class="hp-path-sub">Run my clinic — free for 30 days</div>
+                            </div>
+                            <span class="hp-path-arrow">→</span>
+                        </a> -->
                 </div>
 
                 <div class="hp-hero-trust">
@@ -160,7 +171,31 @@ require __DIR__ . '/partials/header.php';
             <div class="hp-hero-preview reveal">
                 <div class="image-box">
                     <img src="/assets/img/logos/carely-hero-img1.webp" alt="Doctor">
+                    <div class="security">
+                        <div class="security-item">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 2l8 4v6c0 5-3.5 9.5-8 10-4.5-.5-8-5-8-10V6l8-4z" />
+                            </svg>
+                            <span>HIPAA Compliant</span>
+                        </div>
+
+                        <div class="security-item">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M19 18H6a4 4 0 010-8 5 5 0 019.7-1.6A4.5 4.5 0 1119 18z" />
+                                <path d="M12 13v4m-2-2h4" />
+                            </svg>
+                            <span>Secure Cloud Storage</span>
+                        </div>
+
+                        <div class="security-item">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M3 12h4l2-5 4 10 2-5h6" />
+                            </svg>
+                            <span>99.9% Uptime</span>
+                        </div>
+                    </div>
                 </div>
+
             </div>
         </div>
     </div>
@@ -169,78 +204,325 @@ require __DIR__ . '/partials/header.php';
 <!-- ============ SPECIALTIES (patient discovery) ============ -->
 <section class="hp-specialties" id="specialties">
     <div class="wrap">
+
+        <!-- ── Header ── -->
         <div class="hp-spec-head reveal">
-            <div>
-                <h2 class="h-section">30+ specialties. <span class="grad">One booking flow.</span></h2>
-                <p class="hp-sub">Whatever you need — from a general physician to a neurosurgeon,
-                    a homeopath to a dietitian — find them in seconds. All verified, all across India.</p>
+            <p class="hp-eyebrow">ALL YOU NEED, ALL IN ONE PLACE</p>
+            <h2 class="h-section">30+ specialties. <span class="grad">One booking flow.</span></h2>
+            <p class="hp-sub">Whatever you need — from a general physician to a neurosurgeon,
+                a homeopath to a dietitian — find them in seconds. All verified, all across India.</p>
+        </div>
+
+        <!-- ── Filter Tabs ── -->
+        <div class="hp-spec-tabs reveal">
+            <button class="tab active" data-filter="all">All Specialties</button>
+            <button class="tab" data-filter="medical">
+                <span class="tab-ic">🩺</span> Medical
+            </button>
+            <button class="tab" data-filter="surgical">
+                <span class="tab-ic">🔪</span> Surgical
+            </button>
+            <button class="tab" data-filter="dental">
+                <span class="tab-ic">🦷</span> Dental
+            </button>
+            <button class="tab" data-filter="wellness">
+                <span class="tab-ic">🌿</span> Wellness
+            </button>
+            <button class="tab" data-filter="mental">
+                <span class="tab-ic">🧩</span> Mental Health
+            </button>
+        </div>
+
+        <!-- ── Specialty Cards Grid ── -->
+        <div class="hp-spec-grid" id="specGrid">
+
+            <!-- ── Medical ── -->
+            <div class="hp-spec-card" data-group="medical">
+                <span class="card-ic">🩺</span>
+                <div class="card-body">
+                    <h4>General Physician</h4>
+                    <p>Your first stop for fever, infections, and everyday health concerns.</p>
+                </div>
+                <a href="/find-a-doctor/general-physician" class="card-arrow">→</a>
             </div>
-            <div class="hp-spec-cta">
-                <a href="/find-a-doctor" class="btn btn-ghost-dark">Browse by city</a>
-                <a href="/find-a-doctor" class="btn btn-dark">See all doctors →</a>
+
+            <div class="hp-spec-card" data-group="medical">
+                <span class="card-ic">❤️</span>
+                <div class="card-body">
+                    <h4>Cardiologist</h4>
+                    <p>Expert care for heart conditions, BP, cholesterol and more.</p>
+                </div>
+                <a href="/find-a-doctor/cardiologist" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="medical">
+                <span class="card-ic">✨</span>
+                <div class="card-body">
+                    <h4>Dermatologist</h4>
+                    <p>Skin, hair and nail treatments — acne to eczema and beyond.</p>
+                </div>
+                <a href="/find-a-doctor/dermatologist" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="medical">
+                <span class="card-ic">🧠</span>
+                <div class="card-body">
+                    <h4>Neurologist</h4>
+                    <p>Brain and nervous system specialist for migraines, epilepsy and more.</p>
+                </div>
+                <a href="/find-a-doctor/neurologist" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="medical">
+                <span class="card-ic">🫁</span>
+                <div class="card-body">
+                    <h4>Pulmonologist</h4>
+                    <p>Lung and respiratory specialist for asthma, COPD and infections.</p>
+                </div>
+                <a href="/find-a-doctor/pulmonologist" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="medical">
+                <span class="card-ic">🍽️</span>
+                <div class="card-body">
+                    <h4>Gastroenterologist</h4>
+                    <p>Digestive health expert — stomach, liver, intestine care.</p>
+                </div>
+                <a href="/find-a-doctor/gastroenterologist" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="medical">
+                <span class="card-ic">⚖️</span>
+                <div class="card-body">
+                    <h4>Endocrinologist</h4>
+                    <p>Hormones, diabetes, thyroid and metabolic disorder specialist.</p>
+                </div>
+                <a href="/find-a-doctor/endocrinologist" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="medical">
+                <span class="card-ic">💧</span>
+                <div class="card-body">
+                    <h4>Nephrologist</h4>
+                    <p>Kidney disease management including CKD and dialysis support.</p>
+                </div>
+                <a href="/find-a-doctor/nephrologist" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="medical">
+                <span class="card-ic">🎗️</span>
+                <div class="card-body">
+                    <h4>Oncologist</h4>
+                    <p>Cancer diagnosis, treatment planning and ongoing care.</p>
+                </div>
+                <a href="/find-a-doctor/oncologist" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="medical">
+                <span class="card-ic">🚹</span>
+                <div class="card-body">
+                    <h4>Urologist</h4>
+                    <p>Urinary tract and prostate health for men and women.</p>
+                </div>
+                <a href="/find-a-doctor/urologist" class="card-arrow">→</a>
+            </div>
+
+            <!-- ── Surgical ── -->
+            <div class="hp-spec-card" data-group="surgical">
+                <span class="card-ic">🔪</span>
+                <div class="card-body">
+                    <h4>General Surgeon</h4>
+                    <p>Appendix, hernia, gallbladder and other common surgeries.</p>
+                </div>
+                <a href="/find-a-doctor/general-surgeon" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="surgical">
+                <span class="card-ic">🧠</span>
+                <div class="card-body">
+                    <h4>Neurosurgeon</h4>
+                    <p>Brain and spine surgical interventions by top specialists.</p>
+                </div>
+                <a href="/find-a-doctor/neurosurgeon" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="surgical">
+                <span class="card-ic">🦴</span>
+                <div class="card-body">
+                    <h4>Orthopaedic</h4>
+                    <p>Bone, joint and muscle surgeries including replacements.</p>
+                </div>
+                <a href="/find-a-doctor/orthopedic" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="surgical">
+                <span class="card-ic">💉</span>
+                <div class="card-body">
+                    <h4>Plastic Surgeon</h4>
+                    <p>Reconstructive and cosmetic surgeries with precision care.</p>
+                </div>
+                <a href="/find-a-doctor/plastic-surgeon" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="surgical">
+                <span class="card-ic">🚑</span>
+                <div class="card-body">
+                    <h4>Critical Care</h4>
+                    <p>Intensive care specialists for life-threatening conditions.</p>
+                </div>
+                <a href="/find-a-doctor/critical-care" class="card-arrow">→</a>
+            </div>
+
+            <!-- ── Dental ── -->
+            <div class="hp-spec-card" data-group="dental">
+                <span class="card-ic">🦷</span>
+                <div class="card-body">
+                    <h4>Dentist</h4>
+                    <p>Routine cleanings, fillings, extractions and oral hygiene.</p>
+                </div>
+                <a href="/find-a-doctor/dentist" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="dental">
+                <span class="card-ic">😁</span>
+                <div class="card-body">
+                    <h4>Orthodontist</h4>
+                    <p>Braces, aligners and teeth-straightening solutions.</p>
+                </div>
+                <a href="/find-a-doctor/orthodontist" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="dental">
+                <span class="card-ic">🪥</span>
+                <div class="card-body">
+                    <h4>Pediatric Dentist</h4>
+                    <p>Child-friendly dental care from first tooth to teens.</p>
+                </div>
+                <a href="/find-a-doctor/pediatric-dentist" class="card-arrow">→</a>
+            </div>
+
+            <!-- ── Wellness ── -->
+            <div class="hp-spec-card" data-group="wellness">
+                <span class="card-ic">🌸</span>
+                <div class="card-body">
+                    <h4>Gynaecologist</h4>
+                    <p>Women's health, pregnancy, fertility and hormonal care.</p>
+                </div>
+                <a href="/find-a-doctor/gynecologist" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="wellness">
+                <span class="card-ic">👶</span>
+                <div class="card-body">
+                    <h4>Paediatrician</h4>
+                    <p>Child health and development from newborns to adolescents.</p>
+                </div>
+                <a href="/find-a-doctor/pediatrician" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="wellness">
+                <span class="card-ic">👁️</span>
+                <div class="card-body">
+                    <h4>Ophthalmologist</h4>
+                    <p>Eye exams, glasses, LASIK and retinal care specialists.</p>
+                </div>
+                <a href="/find-a-doctor/ophthalmologist" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="wellness">
+                <span class="card-ic">👂</span>
+                <div class="card-body">
+                    <h4>ENT Specialist</h4>
+                    <p>Ear, nose and throat conditions including sinusitis and hearing loss.</p>
+                </div>
+                <a href="/find-a-doctor/ent-specialist" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="wellness">
+                <span class="card-ic">🌿</span>
+                <div class="card-body">
+                    <h4>Homeopathy</h4>
+                    <p>Holistic treatment with natural remedies and personalised care.</p>
+                </div>
+                <a href="/find-a-doctor/homeopathy" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="wellness">
+                <span class="card-ic">🪔</span>
+                <div class="card-body">
+                    <h4>Ayurveda</h4>
+                    <p>Ancient Indian healing — herbs, therapies and detox plans.</p>
+                </div>
+                <a href="/find-a-doctor/ayurveda" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="wellness">
+                <span class="card-ic">🤸</span>
+                <div class="card-body">
+                    <h4>Physiotherapist</h4>
+                    <p>Rehabilitation and movement therapy for pain and injuries.</p>
+                </div>
+                <a href="/find-a-doctor/physiotherapist" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="wellness">
+                <span class="card-ic">🥗</span>
+                <div class="card-body">
+                    <h4>Dietitian</h4>
+                    <p>Personalised nutrition plans for weight, diabetes and gut health.</p>
+                </div>
+                <a href="/find-a-doctor/dietitian" class="card-arrow">→</a>
+            </div>
+
+            <!-- ── Mental Health ── -->
+            <div class="hp-spec-card" data-group="mental">
+                <span class="card-ic">🧩</span>
+                <div class="card-body">
+                    <h4>Psychiatrist</h4>
+                    <p>Medical mental health care — anxiety, depression, bipolar and more.</p>
+                </div>
+                <a href="/find-a-doctor/psychiatrist" class="card-arrow">→</a>
+            </div>
+
+            <div class="hp-spec-card" data-group="mental">
+                <span class="card-ic">💭</span>
+                <div class="card-body">
+                    <h4>Psychologist</h4>
+                    <p>Talk therapy and counselling for emotional wellbeing.</p>
+                </div>
+                <a href="/find-a-doctor/psychologist" class="card-arrow">→</a>
+            </div>
+
+        </div><!-- /grid -->
+
+        <!-- ── Load More ── -->
+        <div class="hp-load-more-wrap" id="loadMoreWrap">
+            <p class="hp-load-more-count" id="loadMoreCount"></p>
+            <button class="btn-load-more" id="loadMoreBtn">
+                <span class="lm-icon">↓</span>
+                Load more specialties
+            </button>
+        </div>
+
+        <!-- ── Footer Banner ── -->
+        <div class="hp-spec-banner reveal">
+            <div class="banner-left">
+                <span class="banner-emoji">🏥</span>
+                <div>
+                    <h3>Everything works together</h3>
+                    <p>All specialties are connected under one seamless booking flow — find, compare
+                        and book verified doctors across India in seconds.</p>
+                </div>
+            </div>
+            <div class="banner-cta">
+                <a href="/find-a-doctor" class="btn btn-teal">Explore all specialties →</a>
+                <a href="/find-a-doctor" class="btn btn-ghost">Browse by city</a>
             </div>
         </div>
 
-        <?php
-        // Emoji per specialty slug — friendly, scannable tiles (Nas-Daily style).
-        $specIcons = [
-            'general-physician' => '🩺',
-            'cardiologist' => '❤️',
-            'dermatologist' => '✨',
-            'neurologist' => '🧠',
-            'pulmonologist' => '🫁',
-            'gastroenterologist' => '🍽️',
-            'endocrinologist' => '⚖️',
-            'nephrologist' => '💧',
-            'oncologist' => '🎗️',
-            'urologist' => '🚹',
-            'general-surgeon' => '🔪',
-            'neurosurgeon' => '🧠',
-            'orthopedic' => '🦴',
-            'plastic-surgeon' => '💉',
-            'critical-care' => '🚑',
-            'dentist' => '🦷',
-            'orthodontist' => '😁',
-            'pediatric-dentist' => '🪥',
-            'gynecologist' => '🌸',
-            'pediatrician' => '👶',
-            'ophthalmologist' => '👁️',
-            'ent-specialist' => '👂',
-            'homeopathy' => '🌿',
-            'ayurveda' => '🪔',
-            'physiotherapist' => '🤸',
-            'psychiatrist' => '🧩',
-            'psychologist' => '💭',
-            'dietitian' => '🥗',
-        ];
-        ?>
-        <div class="hp-spec-grid">
-            <?php foreach ($specGroups as $group => $slugs): ?>
-                <div class="hp-spec-col reveal">
-                    <h4 class="hp-spec-group"><?= e($group) ?></h4>
-                    <div class="hp-spec-tiles">
-                        <?php foreach ($slugs as $slug):
-                            $row   = $specMap[$slug] ?? null;
-                            // Prefer the DB label; fall back to the seo-map label.
-                            $label = $dbLabels[$slug] ?? ($row['label'] ?? null);
-                            // Skip only if we have no label at all, or it's flagged unsafe.
-                            if (!$label || ($row && isset($row['safe']) && $row['safe'] === false)) continue;
-                        ?>
-                            <a href="/find-a-doctor/<?= e($slug) ?>" class="hp-spec-tile">
-                                <span class="hp-spec-ic"><?= ($dbIcons[$slug] ?? null) ?: ($specIcons[$slug] ?? '🩺') ?></span>
-                                <span class="hp-spec-label"><?= e($label) ?></span>
-                                <span class="hp-spec-go">→</span>
-                            </a>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        </div>
-        <p class="hp-spec-foot reveal">
-            …and 30+ more — <a href="/find-a-doctor">browse the full directory →</a>
-        </p>
-    </div>
+    </div><!-- /wrap -->
 </section>
+
 
 <!-- ============ HOW BOOKING WORKS (patient) ============ -->
 <section class="hp-how">
@@ -532,5 +814,144 @@ $faqDoctors = [
         </div>
     </div>
 </section>
+
+<script>
+    /* ─────────────────────────────────────────
+           CONFIG
+        ───────────────────────────────────────── */
+    const PAGE_SIZE = 15; // cards per page
+
+    /* ─────────────────────────────────────────
+       ELEMENTS
+    ───────────────────────────────────────── */
+    const tabs = document.querySelectorAll('.tab');
+    const allCards = Array.from(document.querySelectorAll('.hp-spec-card'));
+    const loadMoreBtn = document.getElementById('loadMoreBtn');
+    const loadMoreCount = document.getElementById('loadMoreCount');
+
+    /* ─────────────────────────────────────────
+       SCROLL-REVEAL (IntersectionObserver)
+    ───────────────────────────────────────── */
+    const observer = new IntersectionObserver(
+        (entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, {
+            threshold: 0.08
+        }
+    );
+
+    // Observe static reveal elements (header, tabs, banner)
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    /* ─────────────────────────────────────────
+       STATE
+    ───────────────────────────────────────── */
+    let currentFilter = 'all';
+    let visibleCount = 0; // how many cards are currently shown
+
+    /* ─────────────────────────────────────────
+       HELPERS
+    ───────────────────────────────────────── */
+
+    // Returns cards matching the current filter
+    function getFiltered() {
+        return allCards.filter(card =>
+            currentFilter === 'all' || card.dataset.group === currentFilter
+        );
+    }
+
+    // Show/hide a card with optional stagger delay
+    function showCard(card, delayMs) {
+        card.style.display = '';
+        card.style.transitionDelay = `${delayMs}ms`;
+        card.classList.add('reveal');
+        // double-rAF to ensure transition fires
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            card.classList.add('visible');
+        }));
+        observer.observe(card);
+    }
+
+    function hideCard(card) {
+        card.classList.remove('reveal', 'visible');
+        card.style.display = 'none';
+        card.style.transitionDelay = '';
+    }
+
+    // Update counter text and button state
+    function updateUI(filtered) {
+        const total = filtered.length;
+        const showing = Math.min(visibleCount, total);
+
+        loadMoreCount.innerHTML =
+            `Showing <span>${showing}</span> of <span>${total}</span> specialties`;
+
+        if (total <= PAGE_SIZE) {
+            // If 15 or fewer records → hide button
+            loadMoreBtn.style.display = 'none';
+        } else {
+            loadMoreBtn.style.display = 'block';
+        }
+
+        if (showing >= total) {
+            loadMoreBtn.classList.add('all-loaded');
+            loadMoreBtn.innerHTML = `<span class="lm-icon">✓</span> All specialties shown`;
+        } else {
+            loadMoreBtn.classList.remove('all-loaded');
+            loadMoreBtn.innerHTML = `<span class="lm-icon">↓</span> Load more specialties`;
+        }
+    }
+
+    /* ─────────────────────────────────────────
+       RENDER — apply filter + pagination
+    ───────────────────────────────────────── */
+    function render(resetCount) {
+        if (resetCount) visibleCount = PAGE_SIZE;
+
+        const filtered = getFiltered();
+        const toShow = Math.min(visibleCount, filtered.length);
+        const filteredSet = new Set(filtered);
+
+        // Hide ALL cards first
+        allCards.forEach(card => hideCard(card));
+
+        // Show first `toShow` filtered cards with stagger
+        filtered.slice(0, toShow).forEach((card, i) => {
+            showCard(card, i * 40);
+        });
+
+        updateUI(filtered);
+    }
+
+    /* ─────────────────────────────────────────
+       FILTER TABS
+    ───────────────────────────────────────── */
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            currentFilter = tab.dataset.filter;
+            render(true); // reset to first page
+        });
+    });
+
+    /* ─────────────────────────────────────────
+       LOAD MORE BUTTON
+    ───────────────────────────────────────── */
+    loadMoreBtn.addEventListener('click', () => {
+        visibleCount += PAGE_SIZE;
+        render(false); // keep adding, don't reset
+    });
+
+    /* ─────────────────────────────────────────
+       INIT — first render
+    ───────────────────────────────────────── */
+    render(true);
+</script>
 
 <?php require __DIR__ . '/partials/footer.php'; ?>
