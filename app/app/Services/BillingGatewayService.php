@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Core\QueryBuilder;
+use App\Services\PartnerCommissionService;
 
 /**
  * Razorpay checkout — uses live API when keys exist, simulates in local dev.
@@ -74,10 +75,28 @@ final class BillingGatewayService
             'razorpay_customer_id' => 'sim_razorpay_' . $clinicId,
         ]);
 
+        // Partner program: record commission if this clinic was referred.
+        // Simulated payments have no saas_invoice row, so we pass a reference.
+        PartnerCommissionService::recordPaidConversion(
+            $clinicId,
+            self::yearlyInrAmount($planId),
+            'INR',
+            null,
+            'sim:' . $planId . ':' . date('Y-m-d'),
+        );
+
         return [
             'type' => 'redirect',
             'url' => '/onboarding/clinic-setup?simulated=1',
         ];
+    }
+
+    /** Yearly plan price in INR (matches the checkout conversion: yearly_usd × 83). */
+    private static function yearlyInrAmount(string $planId): float
+    {
+        $plan = PlanService::get($planId);
+
+        return round((float) (($plan['yearly_usd'] ?? 0)) * 83, 2);
     }
 
     public static function handleRazorpayWebhook(string $payload, ?string $signature): bool
@@ -103,6 +122,23 @@ final class BillingGatewayService
         $plan = (string) ($notes['plan'] ?? 'clinic');
         if ($clinicId > 0 && in_array($event['event'] ?? '', ['subscription.activated', 'subscription.charged'], true)) {
             PlanService::applyPlanToTenant($clinicId, $plan, false);
+
+            // Partner program: each activation/charge is a paid conversion.
+            // The first one is the initial sale; later charges are renewals
+            // (Razorpay fires subscription.charged on every billing cycle).
+            // Prefer the actual paid amount from the payment entity when present.
+            $paidPaise = (int) ($event['payload']['payment']['entity']['amount'] ?? 0);
+            $baseAmount = $paidPaise > 0 ? round($paidPaise / 100, 2) : self::yearlyInrAmount($plan);
+            $paymentId = $event['payload']['payment']['entity']['id']
+                ?? ($event['payload']['subscription']['entity']['id'] ?? null);
+
+            PartnerCommissionService::recordPaidConversion(
+                $clinicId,
+                $baseAmount,
+                'INR',
+                null,
+                $paymentId !== null ? (string) $paymentId : null,
+            );
         }
 
         return true;

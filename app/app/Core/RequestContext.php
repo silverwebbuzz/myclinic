@@ -15,6 +15,7 @@ final class RequestContext
     private static ?array $portalPatient = null;
 
     private static ?array $superAdmin = null;
+    private static ?array $partner = null;
 
     /** @var array{clinic_id: int, scopes: list<string>, key_id: int}|null */
     private static ?array $apiAuth = null;
@@ -72,6 +73,21 @@ final class RequestContext
     public static function superAdmin(): ?array
     {
         return self::$superAdmin;
+    }
+
+    public static function setPartner(array $partner): void
+    {
+        self::$partner = $partner;
+    }
+
+    public static function partner(): ?array
+    {
+        return self::$partner;
+    }
+
+    public static function partnerId(): ?int
+    {
+        return isset(self::$partner['id']) ? (int) self::$partner['id'] : null;
     }
 
     /** @param array{clinic_id: int, scopes: list<string>, key_id: int} $auth */

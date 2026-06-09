@@ -30,6 +30,8 @@ require_once dirname(__DIR__) . '/components/ui.php';
             <a href="/admin/messaging" class="hover:underline">Messaging</a>
             <a href="/admin/claims" class="hover:underline">Claims<?php if (!empty($pendingClaimCount)): ?> <span class="ml-1 inline-flex items-center rounded-full bg-amber-500 px-2 text-[10px] font-semibold text-white"><?= (int) $pendingClaimCount ?></span><?php endif; ?></a>
             <a href="/admin/leads" class="hover:underline">Leads</a>
+            <a href="/admin/partners" class="hover:underline">Partners</a>
+            <a href="/admin/partner-payouts" class="hover:underline">Payouts</a>
             <a href="/admin/reviews" class="hover:underline">Reviews</a>
             <form method="post" action="/admin/logout" class="inline">
                 <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf ?? '') ?>">

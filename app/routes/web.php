@@ -32,6 +32,9 @@ use App\Controllers\DirectoryController;
 use App\Controllers\DocsController;
 use App\Controllers\ImpersonateController;
 use App\Controllers\SuperAdminController;
+use App\Controllers\PartnerAdminController;
+use App\Controllers\PartnerAuthController;
+use App\Controllers\PartnerDashboardController;
 use App\Controllers\SymptomsController;
 use App\Controllers\FollowUpController;
 use App\Controllers\DietTemplateController;
@@ -430,6 +433,40 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/lead-settings', [\App\Controllers\LeadSettingsController::class, 'index']);
         $admin->post('/lead-settings', [\App\Controllers\LeadSettingsController::class, 'save']);
         $admin->post('/lead-settings/doctor-quota', [\App\Controllers\LeadSettingsController::class, 'saveDoctorQuota']);
+
+        // Partner / affiliate program management
+        $admin->get('/partners', [PartnerAdminController::class, 'index']);
+        $admin->post('/partner-settings', [PartnerAdminController::class, 'saveSettings']);
+        $admin->get('/partner-payouts', [PartnerAdminController::class, 'payouts']);
+        $admin->post('/partner-payouts/{id}/process', [PartnerAdminController::class, 'processPayout']);
+        $admin->get('/partners/{id}', [PartnerAdminController::class, 'show']);
+        $admin->post('/partners/{id}/approve', [PartnerAdminController::class, 'approve']);
+        $admin->post('/partners/{id}/status', [PartnerAdminController::class, 'setStatus']);
+        $admin->post('/partners/{id}/override', [PartnerAdminController::class, 'setOverride']);
+        $admin->post('/partners/{id}/document', [PartnerAdminController::class, 'reviewDocument']);
+    });
+
+    // Partner program — public auth pages + guarded partner dashboard.
+    // Separate guard (mc_partner_token) from clinic users and platform admins.
+    $router->group([
+        'prefix' => '/partner',
+        'middleware' => ['rate', 'csrf', 'partner'],
+    ], static function (GroupedRouteRegistrar $partner): void {
+        // Public (the partner middleware lets /partner/login & /partner/register through)
+        $partner->get('/login', [PartnerAuthController::class, 'showLogin']);
+        $partner->post('/login', [PartnerAuthController::class, 'login']);
+        $partner->get('/register', [PartnerAuthController::class, 'showRegister']);
+        $partner->post('/register', [PartnerAuthController::class, 'register']);
+        $partner->post('/logout', [PartnerAuthController::class, 'logout']);
+
+        // Authenticated dashboard
+        $partner->get('/dashboard', [PartnerDashboardController::class, 'dashboard']);
+        $partner->get('/referrals', [PartnerDashboardController::class, 'referrals']);
+        $partner->get('/earnings', [PartnerDashboardController::class, 'earnings']);
+        $partner->post('/payout-request', [PartnerDashboardController::class, 'requestPayout']);
+        $partner->post('/payout-details', [PartnerDashboardController::class, 'savePayoutDetails']);
+        $partner->get('/documents', [PartnerDashboardController::class, 'documents']);
+        $partner->post('/documents/upload', [PartnerDashboardController::class, 'uploadDocument']);
     });
 
     $router->group([
