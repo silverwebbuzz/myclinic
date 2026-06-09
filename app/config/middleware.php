@@ -6,6 +6,7 @@ use App\Middleware\ApiBearerMiddleware;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\CsrfMiddleware;
 use App\Middleware\ModuleGateMiddleware;
+use App\Middleware\PartnerAuthMiddleware;
 use App\Middleware\RateLimitMiddleware;
 use App\Middleware\RbacMiddleware;
 use App\Middleware\RefreshTokenMiddleware;
@@ -21,5 +22,6 @@ return [
     'csrf' => CsrfMiddleware::class,
     'rate' => RateLimitMiddleware::class,
     'superadmin' => SuperAdminAuthMiddleware::class,
+    'partner' => PartnerAuthMiddleware::class,
     'api_bearer' => ApiBearerMiddleware::class,
 ];

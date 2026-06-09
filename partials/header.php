@@ -13,6 +13,23 @@
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/patient_auth.php';   // gives us ecp_patient_current()
 
+// Partner referral capture: if a visitor arrives via ?ref=CODE, drop a 30-day
+// cookie so the partner is credited when this visitor later registers a clinic.
+// Set before any output (this file is required at the top of every page).
+if (!empty($_GET['ref']) && empty($_COOKIE['mc_ref'])) {
+    $ecpRef = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $_GET['ref']));
+    if ($ecpRef !== '' && strlen($ecpRef) <= 20) {
+        setcookie('mc_ref', $ecpRef, [
+            'expires'  => time() + (30 * 86400),
+            'path'     => '/',
+            'secure'   => !empty($_SERVER['HTTPS']),
+            'httponly' => false,
+            'samesite' => 'Lax',
+        ]);
+        $_COOKIE['mc_ref'] = $ecpRef;
+    }
+}
+
 $pageTitle = $pageTitle ?? 'eClinicPro — The clinic OS doctors love';
 $metaDesc = $metaDesc ?? 'eClinicPro is the global clinic operating system. Pick your modules. Pay for what you use. Beautiful, fast, and made for every specialty.';
 $activePage = $activePage ?? '';

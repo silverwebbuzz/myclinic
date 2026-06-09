@@ -53,6 +53,18 @@ ob_start();
         </div>
         <?php endif; ?>
 
+        <?php
+        // Partner referral: prefill from ?ref= or the mc_ref cookie if present.
+        $prefRef = $_GET['ref'] ?? ($_COOKIE['mc_ref'] ?? '');
+        $prefRef = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $prefRef));
+        ?>
+        <div>
+            <label class="block text-xs font-medium text-slate-600">Referral code <span class="text-slate-400">(optional)</span></label>
+            <input name="referral_code" type="text" value="<?= htmlspecialchars($prefRef) ?>"
+                   placeholder="Have a partner code? Enter it here"
+                   class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm uppercase focus:border-emerald-500 focus:outline-none">
+        </div>
+
         <button type="submit" class="w-full rounded-lg bg-emerald-600 py-2.5 text-sm font-medium text-white hover:bg-emerald-700">
             Create clinic account
         </button>

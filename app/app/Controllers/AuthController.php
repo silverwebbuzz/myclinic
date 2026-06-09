@@ -13,6 +13,7 @@ use App\Services\AuthService;
 use App\Services\CsrfService;
 use App\Services\GoogleOAuthService;
 use App\Services\JwtService;
+use App\Services\PartnerReferralService;
 use App\Services\PasswordResetService;
 use App\Services\SessionService;
 use App\Support\View;
@@ -77,6 +78,21 @@ final class AuthController
 
         $result = AuthService::registerClinic($clinicName, $slug, $email, $password, $googleId);
         GoogleOAuthService::clearPendingRegistration();
+
+        // Partner program: attribute this clinic to a referring partner if a
+        // referral code was typed (wins) or carried in the mc_ref cookie.
+        $referral = PartnerReferralService::resolveForRegistration(
+            $request->post['referral_code'] ?? null,
+            $request->cookies,
+        );
+        if ($referral !== null) {
+            PartnerReferralService::attribute(
+                (int) $referral['partner']['id'],
+                (int) $result['tenant_id'],
+                $referral['code'],
+                $referral['via'],
+            );
+        }
 
         $user = QueryBuilder::table('users')->where('id', '=', $result['user_id'])->first();
         $token = JwtService::issue($user, $result['tenant_id']);
