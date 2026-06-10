@@ -734,27 +734,43 @@ require __DIR__ . '/partials/header.php';
         </div>
 
         <div class="hp-plan-single reveal">
-            <span class="hp-plan-name">Standard — everything included</span>
-            <div class="hp-plan-price">₹16,000<span class="per">/year</span></div>
-            <div class="hp-plan-yearly"><span class="hp-fc-strike">₹17,988</span> Save 10% · + 18% GST at checkout</div>
-            <ul class="hp-plan-feats">
-                <?php foreach (
-                    [
-                        'Patient records, visits & prescriptions',
-                        'Appointments & walk-in queue',
-                        'Billing & invoicing (GST-ready)',
-                        'WhatsApp + SMS messaging built in',
-                        'Specialty-aware forms (50+ specialties)',
-                        'Public doctor profile on eclinicpro.com',
-                        'Unlimited patients & staff users',
-                        'Reports, follow-ups & analytics',
-                    ] as $f
-                ): ?>
-                    <li><span class="tick">✓</span><?= e($f) ?></li>
-                <?php endforeach; ?>
-            </ul>
-            <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg btn-block">Start 30-day free trial</a>
-            <p class="hp-doc-fine center">No credit card. Cancel anytime. <a href="/features#pricing" style="color:var(--teal-600);font-weight:500;">See full pricing &amp; FAQ →</a></p>
+            <div class="hp-plan-head">
+                <span class="hp-plan-name">Standard — everything included</span>
+                <div class="hp-plan-price">₹16,000<span class="per">/year</span></div>
+                <div class="hp-plan-yearly">
+                    <span class="hp-fc-strike">₹17,988</span>
+                    <span class="hp-plan-badge">Save 10%</span>
+                    <span class="hp-plan-gst">+ 18% GST at checkout</span>
+                </div>
+            </div>
+
+            <div class="hp-plan-body">
+                <ul class="hp-plan-feats">
+                    <?php foreach (
+                        [
+                            'Patient records, visits & prescriptions',
+                            'Appointments & walk-in queue',
+                            'Billing & invoicing (GST-ready)',
+                            'WhatsApp + SMS messaging built in',
+                            'Specialty-aware forms (50+ specialties)',
+                            'Public doctor profile on eclinicpro.com',
+                            'Unlimited patients & staff users',
+                            'Reports, follow-ups & analytics',
+                        ] as $f
+                    ): ?>
+                        <li><span class="tick">✓</span><span><?= e($f) ?></span></li>
+                    <?php endforeach; ?>
+                </ul>
+
+                <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg btn-block">Start 30-day free trial</a>
+
+                <ul class="hp-plan-trust">
+                    <li>No credit card</li>
+                    <li>Cancel anytime</li>
+                    <li>Setup in minutes</li>
+                </ul>
+                <p class="hp-plan-link"><a href="/features#pricing">See full pricing &amp; FAQ →</a></p>
+            </div>
         </div>
     </div>
 </section>

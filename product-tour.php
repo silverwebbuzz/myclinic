@@ -99,25 +99,35 @@ $chapters = [
 ];
 
 require __DIR__ . '/partials/header.php';
+
+// Flat list of every screen, so the hero can show an honest count instead of
+// the hard-coded "twenty-plus".
+$screenCount = array_sum(array_map(fn($c) => count($c['screens']), $chapters));
 ?>
 
-<section style="padding: 140px 0 60px; text-align: center; position: relative; overflow: hidden;">
-    <div style="position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%, rgba(15,155,110,0.06) 0%, transparent 60%); pointer-events: none;"></div>
-    <div class="wrap" style="position: relative; max-width: 820px;">
-        <span class="eyebrow" style="display: block; margin-bottom: 16px;">Product tour</span>
-        <h1 class="h-display" style="font-size: clamp(40px, 5.5vw, 60px); letter-spacing: -1.3px;">A guided walk through every screen.</h1>
-        <p class="lede" style="font-size: 19px; margin-top: 22px; max-width: 640px; margin-left: auto; margin-right: auto;">
-            Seven chapters, twenty-plus screens. The complete tour of how eClinicPro feels in your hands.
+<!-- ============ TOUR HERO ============ -->
+<section class="pt-hero">
+    <div class="pt-hero-glow" aria-hidden="true"></div>
+    <div class="wrap pt-hero-inner">
+        <span class="eyebrow">Product tour</span>
+        <h1 class="h-display pt-hero-h">A guided walk through every screen.</h1>
+        <p class="lede pt-hero-sub">
+            <?= count($chapters) ?> chapters, <?= $screenCount ?> screens. See exactly how eClinicPro feels in
+            your hands — from the daily queue to specialty tools, billing and the patient app.
         </p>
+        <div class="pt-hero-cta">
+            <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg">Start 30-day free trial</a>
+            <a href="/features" class="btn btn-ghost-dark btn-lg">See all features</a>
+        </div>
     </div>
 </section>
 
-<!-- Sticky chapter TOC -->
-<div style="position: sticky; top: 56px; z-index: 50; background: rgba(255,255,255,0.85); backdrop-filter: saturate(180%) blur(20px); border-bottom: 0.5px solid var(--line); padding: 14px 0;">
-    <div class="wrap" style="display: flex; gap: 4px; overflow-x: auto; justify-content: center; flex-wrap: wrap;">
+<!-- Sticky chapter TOC — offset to clear the 80px fixed nav. -->
+<div class="pt-toc">
+    <div class="wrap pt-toc-inner">
         <?php foreach ($chapters as $i => $c): ?>
-        <a href="#<?= e($c['id']) ?>" class="spec-tab" style="white-space: nowrap;">
-            <span style="color: var(--mute); font-family: 'JetBrains Mono', monospace; font-size: 11px; margin-right: 6px;"><?= $i + 1 ?></span><?= e($c['label']) ?>
+        <a href="#<?= e($c['id']) ?>" class="spec-tab pt-toc-tab">
+            <span class="pt-toc-num"><?= $i + 1 ?></span><?= e($c['label']) ?>
         </a>
         <?php endforeach; ?>
     </div>
@@ -125,41 +135,48 @@ require __DIR__ . '/partials/header.php';
 
 <!-- Chapters -->
 <?php foreach ($chapters as $cIdx => $c): ?>
-<section id="<?= e($c['id']) ?>" style="padding: 80px 0; border-top: 0.5px solid var(--line);">
+<section id="<?= e($c['id']) ?>" class="pt-chapter">
     <div class="wrap">
-        <div class="reveal" style="max-width: 720px; margin: 0 auto 60px; text-align: center;">
+        <div class="pt-chapter-head reveal">
             <span class="eyebrow">Chapter <?= $cIdx + 1 ?></span>
-            <h2 class="h-section" style="margin-top: 10px;"><?= e($c['title']) ?></h2>
+            <h2 class="h-section pt-chapter-title"><?= e($c['title']) ?></h2>
             <p class="lede"><?= e($c['blurb']) ?></p>
         </div>
 
-        <?php foreach ($c['screens'] as $s ): list($num, $title, $desc, $icon, $bullets) = $s; ?>
-        <div class="screen-block reveal" style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 60px; padding: 50px 0; border-top: 0.5px solid var(--line); align-items: start;">
-            <div class="meta">
-                <div>
-                    <span class="num" style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--mute); letter-spacing: 0.04em;"><?= e($num) ?></span>
-                    <h3 style="font-size: 26px; font-weight: 500; letter-spacing: -0.4px; margin-top: 6px;"><?= e($title) ?></h3>
-                </div>
-                <p style="margin-top: 14px; font-size: 15px; color: var(--ink-2); line-height: 1.65;"><?= e($desc) ?></p>
+        <?php foreach ($c['screens'] as $sIdx => $s): list($num, $title, $desc, $icon, $bullets) = $s; ?>
+        <div class="pt-screen reveal <?= $sIdx % 2 ? 'is-flip' : '' ?>">
+            <div class="pt-screen-meta">
+                <span class="pt-screen-num"><?= e($num) ?></span>
+                <h3 class="pt-screen-title"><?= e($title) ?></h3>
+                <p class="pt-screen-desc"><?= e($desc) ?></p>
 
-                <div class="bullets" style="margin-top: 24px; display: flex; flex-direction: column; gap: 14px;">
+                <div class="pt-bullets">
                     <?php foreach ($bullets as [$bIcon, $bTitle, $bSub]): ?>
-                    <div class="bullet" style="display: flex; gap: 12px; align-items: flex-start;">
-                        <div class="ico" style="width: 24px; height: 24px; border-radius: 6px; background: var(--teal-50); color: var(--teal-700); display: grid; place-items: center; font-size: 11px; flex-shrink: 0; margin-top: 2px;"><?= $bIcon ?></div>
+                    <div class="pt-bullet">
+                        <div class="pt-bullet-ico"><?= $bIcon ?></div>
                         <div>
-                            <b style="font-size: 13.5px; font-weight: 500; display: block;"><?= e($bTitle) ?></b>
-                            <span style="font-size: 12.5px; color: var(--mute);"><?= e($bSub) ?></span>
+                            <b class="pt-bullet-title"><?= e($bTitle) ?></b>
+                            <span class="pt-bullet-sub"><?= e($bSub) ?></span>
                         </div>
                     </div>
                     <?php endforeach; ?>
                 </div>
             </div>
 
-            <div class="screen-frame" style="background: linear-gradient(135deg, var(--bg-2) 0%, var(--bg-3) 100%); border: 0.5px solid var(--line); border-radius: 16px; padding: 36px; min-height: 360px; display: grid; place-items: center; text-align: center;">
-                <div>
-                    <div style="font-size: 80px; margin-bottom: 14px;"><?= $icon ?></div>
-                    <div style="font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500;">Screen <?= e($num) ?></div>
-                    <div style="font-size: 14px; color: var(--ink-2); margin-top: 4px;"><?= e($title) ?></div>
+            <!-- Browser-chrome mockup frame: reads as a real product window. -->
+            <div class="pt-frame">
+                <div class="pt-frame-bar">
+                    <span class="pt-dot"></span><span class="pt-dot"></span><span class="pt-dot"></span>
+                    <span class="pt-frame-url">eclinicpro.com · Screen <?= e($num) ?></span>
+                </div>
+                <div class="pt-frame-body">
+                    <div class="pt-frame-icon"><?= $icon ?></div>
+                    <div class="pt-frame-label"><?= e($title) ?></div>
+                    <div class="pt-frame-rows">
+                        <span class="pt-frame-row w70"></span>
+                        <span class="pt-frame-row w90"></span>
+                        <span class="pt-frame-row w55"></span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -168,9 +185,230 @@ require __DIR__ . '/partials/header.php';
 </section>
 <?php endforeach; ?>
 
+<!-- ============ CLOSING CTA ============ -->
+<section class="pt-end">
+    <div class="wrap pt-end-inner reveal">
+        <h2 class="h-section pt-end-h">That’s the whole tour. Try it on your own clinic.</h2>
+        <p class="lede pt-end-sub">One plan, everything included — ₹16,000/year. 30-day free trial, no card required.</p>
+        <div class="pt-hero-cta">
+            <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg">Start 30-day free trial</a>
+            <a href="/#pricing" class="btn btn-ghost-dark btn-lg">See pricing</a>
+        </div>
+    </div>
+</section>
+
 <style>
+/* ===== Product tour — scoped styles (16px body baseline) ===== */
+.pt-hero {
+    position: relative;
+    padding: 150px 0 64px;
+    text-align: center;
+    overflow: hidden;
+}
+.pt-hero-glow {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(15, 155, 110, 0.08) 0%, transparent 60%);
+    pointer-events: none;
+}
+.pt-hero-inner { position: relative; max-width: 820px; }
+.pt-hero .eyebrow { display: block; margin-bottom: 16px; }
+.pt-hero-h { font-size: clamp(40px, 5.5vw, 60px); letter-spacing: -1.3px; }
+.pt-hero-sub {
+    font-size: 19px;
+    margin: 22px auto 0;
+    max-width: 660px;
+}
+.pt-hero-cta {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 30px;
+}
+
+/* Sticky chapter nav */
+.pt-toc {
+    position: sticky;
+    top: 80px;
+    z-index: 50;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-block: 0.5px solid var(--line);
+    padding: 12px 0;
+}
+.pt-toc-inner {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.pt-toc-tab { white-space: nowrap; }
+.pt-toc-num {
+    color: var(--teal-600);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    margin-right: 7px;
+}
+
+/* Chapter */
+.pt-chapter {
+    padding: 80px 0;
+    border-top: 0.5px solid var(--line);
+}
+.pt-chapter-head {
+    max-width: 720px;
+    margin: 0 auto 56px;
+    text-align: center;
+}
+.pt-chapter-title { margin: 10px 0 14px; }
+
+/* Screen row */
+.pt-screen {
+    display: grid;
+    grid-template-columns: 1fr 1.25fr;
+    gap: 56px;
+    padding: 48px 0;
+    align-items: center;
+    border-top: 0.5px solid var(--line);
+}
+.pt-screen:first-of-type { border-top: 0; }
+.pt-screen.is-flip .pt-screen-meta { order: 2; }
+.pt-screen.is-flip .pt-frame { order: 1; }
+
+.pt-screen-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--teal-600);
+    letter-spacing: 0.04em;
+}
+.pt-screen-title {
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -0.5px;
+    margin: 8px 0 0;
+}
+.pt-screen-desc {
+    margin-top: 14px;
+    font-size: 16px;
+    color: var(--ink-2);
+    line-height: 1.65;
+}
+
+.pt-bullets {
+    margin-top: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.pt-bullet { display: flex; gap: 12px; align-items: flex-start; }
+.pt-bullet-ico {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--teal-50);
+    color: var(--teal-700);
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+.pt-bullet-title {
+    font-size: 15px;
+    font-weight: 600;
+    display: block;
+    color: var(--ink);
+}
+.pt-bullet-sub {
+    font-size: 14px;
+    color: var(--mute);
+    line-height: 1.5;
+}
+
+/* Mockup frame */
+.pt-frame {
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.18);
+}
+.pt-frame-bar {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 12px 16px;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--line);
+}
+.pt-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.14);
+}
+.pt-frame-url {
+    margin-left: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--mute);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pt-frame-body {
+    padding: 44px 36px 48px;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: linear-gradient(160deg, var(--bg-3) 0%, #fff 100%);
+}
+.pt-frame-icon {
+    font-size: 64px;
+    line-height: 1;
+    margin-bottom: 18px;
+}
+.pt-frame-label {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+}
+.pt-frame-rows {
+    width: min(280px, 80%);
+    margin-top: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.pt-frame-row {
+    height: 9px;
+    border-radius: 999px;
+    background: var(--line);
+}
+.pt-frame-row.w90 { width: 90%; }
+.pt-frame-row.w70 { width: 70%; }
+.pt-frame-row.w55 { width: 55%; background: var(--teal-100); }
+
+/* Closing CTA */
+.pt-end {
+    padding: 88px 0 110px;
+    border-top: 0.5px solid var(--line);
+    background: var(--bg-2);
+    text-align: center;
+}
+.pt-end-inner { max-width: 700px; }
+.pt-end-h { letter-spacing: -0.6px; }
+.pt-end-sub { font-size: 18px; margin: 16px auto 0; }
+
 @media (max-width: 800px) {
-    .screen-block { grid-template-columns: 1fr !important; gap: 30px !important; }
+    .pt-screen { grid-template-columns: 1fr; gap: 28px; }
+    .pt-screen.is-flip .pt-screen-meta { order: 0; }
+    .pt-screen.is-flip .pt-frame { order: 0; }
 }
 </style>
 
