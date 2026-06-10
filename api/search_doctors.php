@@ -22,7 +22,7 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: public, max-age=60');
 header('X-Content-Type-Options: nosniff');
 
-require_once __DIR__ . '/../partials/search_doctors_query.php';
+require_once __DIR__ . '/../partials/find_doctor_search.php';
 
 set_exception_handler(function (Throwable $e) {
     error_log('[api/search_doctors] ' . $e->getMessage());
@@ -31,15 +31,18 @@ set_exception_handler(function (Throwable $e) {
     exit;
 });
 
+$parsed = ecp_parse_find_doctor_filters($_GET, null);
+
 $resp = ecp_search_doctors([
-    'q'          => $_GET['q']          ?? '',
-    'country'    => $_GET['country']    ?? 'IN',
-    'state'      => $_GET['state']      ?? '',
-    'city'       => $_GET['city']       ?? '',
-    'area'       => $_GET['area']       ?? '',
-    'spec'       => $_GET['spec']       ?? '',
-    'min_rating' => $_GET['min_rating'] ?? 0,
-    'sort'       => $_GET['sort']       ?? 'relevance',
+    'q'          => $parsed['q'] ?? '',
+    'country'    => $parsed['country'] ?? 'IN',
+    'state'      => $parsed['state'] ?? '',
+    'city'       => $parsed['city'] ?? '',
+    'area'       => $parsed['area'] ?? '',
+    'loc'        => $parsed['loc'] ?? '',
+    'spec'       => $parsed['spec'] ?? '',
+    'min_rating' => $parsed['min_rating'] ?? 0,
+    'sort'       => $parsed['sort'] ?? 'relevance',
     'lat'        => isset($_GET['lat']) ? (float) $_GET['lat'] : null,
     'lng'        => isset($_GET['lng']) ? (float) $_GET['lng'] : null,
     'max_km'     => $_GET['max_km']     ?? 0,

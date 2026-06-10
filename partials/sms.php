@@ -21,28 +21,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/helpers.php';
 
 /**
- * Reads .env once per request and caches in a static.
- * Same loader as ecp_db() uses but exposed here so we don't need
- * to drag in the whole db.php for SMS-only callers.
- */
-function ecp_env(string $key, ?string $default = null): ?string {
-    static $env = null;
-    if ($env === null) {
-        $env = [];
-        $path = __DIR__ . '/../app/.env';
-        if (is_file($path)) {
-            foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
-                if (str_starts_with(trim($line), '#')) continue;
-                if (!str_contains($line, '=')) continue;
-                [$k, $v] = explode('=', $line, 2);
-                $env[trim($k)] = trim($v, " \t\n\r\0\x0B\"'");
-            }
-        }
-    }
-    return $env[$key] ?? $default;
-}
-
-/**
  * Send a 6-digit OTP to a phone number.
  * Returns ['ok' => bool, 'mode' => 'dev'|'live', 'message_id' => string|null,
  *          'dev_code' => string|null, 'error' => string|null]

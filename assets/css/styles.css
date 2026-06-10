@@ -198,6 +198,7 @@ button {
   transition: all .25s ease;
   height: 80px;
   display: flex;
+  align-items: center;
 }
 
 .nav-inner {
@@ -206,11 +207,14 @@ button {
   padding: 0 20px;
   /* height: 56px; */
   width: 100%;
+  
+}
+
+.nav  .nav-inner {
   display: flex;
   align-items: center;
   gap: 28px;
 }
-
 .logo {
   font-size: 18px;
   font-weight: 600;
@@ -410,7 +414,7 @@ button {
 
 /* ----- Sections ----- */
 section {
-  padding: 96px 0;
+  padding: 0 0;
   position: relative;
 }
 
@@ -2209,7 +2213,7 @@ footer.foot {
   /* ---- nav ---- */
   .nav-inner {
     padding: 0 16px;
-    height: 56px;
+    /* height: 56px; */
     gap: 8px;
   }
 
@@ -2890,6 +2894,22 @@ footer.foot {
 .fd-avatar.g6 {
   background: linear-gradient(135deg, #FFE0E5, #FF453A);
 }
+
+/* .fd-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.fd-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+} */
 
 .fd-identity {
   min-width: 0;
@@ -6351,4 +6371,68 @@ body {
   .hp-spec-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Directory profile page only — does not affect doctor list */
+.dp { padding: 100px 0 72px; background: var(--bg, #f7f9fb); }
+.dp-wrap { max-width: 1120px; margin: 0 auto; }
+.dp-crumbs { display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; color: var(--mute); margin-bottom: 20px; }
+.dp-crumbs a { color: var(--teal-600, #0F9B6E); text-decoration: none; }
+.dp-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; align-items: start; }
+.dp-hero { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 24px; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 24px; margin-bottom: 20px; }
+.dp-hero-media { position: relative; width: 200px; min-height: 200px; }
+.dp-hero-img { width: 200px; height: 200px; object-fit: cover; border-radius: 12px; display: block; }
+.dp-hero-avatar { width: 200px; height: 200px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 700; color: #fff; }
+.dp-hero-avatar.g1 { background: linear-gradient(135deg, #0F9B6E, #0bb884); }
+.dp-hero-avatar.g2 { background: linear-gradient(135deg, #2563eb, #60a5fa); }
+.dp-hero-avatar.g3 { background: linear-gradient(135deg, #7c3aed, #a78bfa); }
+.dp-hero-avatar.g4 { background: linear-gradient(135deg, #db2777, #f472b6); }
+.dp-hero-avatar.g5 { background: linear-gradient(135deg, #d97706, #fbbf24); }
+.dp-hero-avatar.g6 { background: linear-gradient(135deg, #0891b2, #22d3ee); }
+.dp-hero-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+.dp-entity-pill { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #ecfdf5; color: #0b7f5c; }
+.dp-verified { font-size: 12px; font-weight: 600; color: #0F9B6E; }
+.dp-rating { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.dp-rating-val { font-weight: 700; font-size: 16px; }
+.dp-rating-count { font-size: 13px; color: var(--mute); }
+.dp-title { font-size: clamp(22px, 3vw, 30px); font-weight: 700; margin: 0 0 6px; }
+.dp-spec { margin: 0 0 10px; color: var(--teal-700, #0b7f5c); font-weight: 600; }
+.dp-meta-list { display: grid; gap: 8px; font-size: 14px; }
+.dp-meta-row { display: flex; gap: 8px; }
+.dp-content-block { background: #fff; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.dp-tabs { display: flex; overflow-x: auto; border-bottom: 1px solid var(--line); padding: 0 12px; }
+.dp-tab { border: 0; background: transparent; padding: 16px 18px; font-weight: 600; color: var(--mute); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+.dp-tab.on { color: var(--teal-600, #0F9B6E); border-bottom-color: var(--teal-600, #0F9B6E); }
+.dp-panels { padding: 24px; }
+.dp-panel h2 { font-size: 18px; font-weight: 700; margin: 0 0 14px; }
+.dp-subhead { font-size: 15px; font-weight: 600; margin: 20px 0 8px; }
+.dp-about { line-height: 1.6; margin: 0; }
+.dp-hours { margin: 0; padding-left: 18px; }
+.dp-treatment-list { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
+.dp-doctor-grid { display: grid; gap: 12px; }
+.dp-doctor-card { display: grid; grid-template-columns: 56px 1fr; gap: 12px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 12px; text-decoration: none; color: inherit; }
+.dp-doctor-photo { width: 56px; height: 56px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: 14px; }
+.dp-doctor-photo.g1 { background: linear-gradient(135deg, #0F9B6E, #0bb884); }
+.dp-doctor-photo.g2 { background: linear-gradient(135deg, #2563eb, #60a5fa); }
+.dp-doctor-photo.g3 { background: linear-gradient(135deg, #7c3aed, #a78bfa); }
+.dp-doctor-photo.g4 { background: linear-gradient(135deg, #db2777, #f472b6); }
+.dp-doctor-photo.g5 { background: linear-gradient(135deg, #d97706, #fbbf24); }
+.dp-doctor-photo.g6 { background: linear-gradient(135deg, #0891b2, #22d3ee); }
+.dp-doctor-name { font-weight: 600; }
+.dp-doctor-spec { font-size: 13px; color: var(--mute); }
+.dp-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+.dp-gallery-item img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 10px; }
+.dp-side { display: grid; gap: 16px; position: sticky; top: 88px; }
+.dp-side-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 10px; }
+.dp-btn { display: flex; align-items: center; justify-content: center; padding: 12px 14px; border-radius: 10px; font-weight: 600; text-decoration: none; border: 1px solid transparent; cursor: pointer; }
+.dp-btn-call { background: #fff; border-color: var(--teal-600, #0F9B6E); color: var(--teal-600, #0F9B6E); }
+.dp-btn-book { background: var(--teal-600, #0F9B6E); color: #fff; }
+.dp-btn-ghost { background: #f8fafc; border-color: var(--line); color: var(--ink); }
+.dp-related { list-style: none; margin: 0; padding: 0; }
+.dp-related a { text-decoration: none; color: inherit; display: block; padding: 8px 0; border-bottom: 1px solid var(--line); }
+@media (max-width: 900px) {
+  .dp-layout { grid-template-columns: 1fr; }
+  .dp-side { position: static; }
+  .dp-hero { grid-template-columns: 1fr; }
+  .dp-hero-media, .dp-hero-img, .dp-hero-avatar { width: 100%; max-width: 220px; height: 220px; margin: 0 auto; }
 }

@@ -29,6 +29,15 @@ function ecp_dispatch_clean_url(string $requestUri): bool
         return true;
     }
 
+    if (preg_match('#^/([a-z0-9][a-z0-9\-]*)/(clinic|doctor)/([a-z0-9][a-z0-9\-]*)/?$#i', $uri, $m)) {
+        $_GET['city'] = strtolower($m[1]);
+        $_GET['entity_type'] = strtolower($m[2]);
+        $_GET['slug'] = strtolower($m[3]);
+        require __DIR__ . '/../profile.php';
+
+        return true;
+    }
+
     if (preg_match('#^/L/([a-f0-9]{16})/?$#', $uri, $m)) {
         $_GET['t'] = $m[1];
         require __DIR__ . '/../L.php';

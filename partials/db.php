@@ -8,6 +8,58 @@
 
 declare(strict_types=1);
 
+function ecp_env(string $key, string $default = ''): string
+{
+    static $env = null;
+    if ($env === null) {
+        $env = [];
+        foreach ([__DIR__ . '/../app/.env', __DIR__ . '/../fetch_doctor/.env'] as $path) {
+            if (!is_file($path)) {
+                continue;
+            }
+            foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+                $line = trim($line);
+                if ($line === '' || str_starts_with($line, '#') || !str_contains($line, '=')) {
+                    continue;
+                }
+                [$k, $v] = explode('=', $line, 2);
+                $env[trim($k)] = trim($v, " \t\n\r\0\x0B\"'");
+            }
+        }
+    }
+    if (isset($env[$key]) && $env[$key] !== '') {
+        return $env[$key];
+    }
+    $fromEnv = getenv($key);
+    if ($fromEnv !== false && $fromEnv !== '') {
+        return (string) $fromEnv;
+    }
+
+    return $default;
+}
+
+function ecp_base_url(): string
+{
+    static $base = null;
+    if ($base !== null) {
+        return $base;
+    }
+    $configured = ecp_env('BASE_URL') ?: ecp_env('APP_URL');
+    if ($configured !== '' && !str_contains($configured, 'app.eclinicpro.com')) {
+        return $base = rtrim($configured, '/');
+    }
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+        ? 'https' : 'http';
+
+    return $base = $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'eclinicpro.com');
+}
+
+function ecp_google_maps_api_key(): string
+{
+    return ecp_env('GOOGLE_MAPS_API_KEY');
+}
+
 /**
  * Returns a PDO connection, reusing one per request.
  * Reads credentials from /app/.env (same file the portal uses).
@@ -342,15 +394,32 @@ function ecp_directory_doctors(?string $countryCode = null): ?array
  */
 function ecp_doctor_photo_url(?string $photoRef, int $maxWidth = 400): ?string
 {
-    if ($photoRef === null || $photoRef === '') return null;
-    $key = getenv('GOOGLE_MAPS_API_KEY') ?: ($_ENV['GOOGLE_MAPS_API_KEY'] ?? '');
-    if ($key === '') return null;
-    return 'https://maps.googleapis.com/maps/api/place/photo?'
-        . http_build_query([
-            'maxwidth' => $maxWidth,
-            'photoreference' => $photoRef,
-            'key' => $key,
-        ]);
+    if ($photoRef === null || trim($photoRef) === '' || ecp_google_maps_api_key() === '') {
+        return null;
+    }
+
+    return ecp_base_url() . '/api/photo.php?' . http_build_query([
+        'ref' => $photoRef,
+        'w'   => max(80, min(1600, $maxWidth)),
+    ]);
+}
+
+/** @return array{url: ?string, initials: string, gradient: int} */
+function ecp_directory_avatar(array $row, int $photoWidth = 400): array
+{
+    $clinicName = (string) ($row['name'] ?? '');
+    $doctorName = trim((string) ($row['doctor_name'] ?? ''));
+    $display = $doctorName !== '' ? $doctorName : $clinicName;
+    $forInit = preg_replace('/^Dr\.?\s+/i', '', $display) ?? $display;
+    $parts = preg_split('/\s+/', trim($forInit)) ?: [''];
+    $first = mb_substr($parts[0] ?? '', 0, 1) ?: 'D';
+    $last = count($parts) > 1 ? mb_substr($parts[count($parts) - 1], 0, 1) : '';
+
+    return [
+        'url'      => ecp_doctor_photo_url($row['photo_reference'] ?? null, $photoWidth),
+        'initials' => strtoupper($first . $last),
+        'gradient' => 1 + ((int) ($row['id'] ?? 0) % 6),
+    ];
 }
 
 /**

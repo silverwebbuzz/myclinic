@@ -131,6 +131,11 @@ try {
     </div>
 </footer>
 
+<?php if (($activePage ?? '') === 'find'): ?>
+<?php $fdSearchBust = @filemtime(__DIR__ . '/../assets/js/find-doctor-search.js') ?: time(); ?>
+<script defer src="/assets/js/find-doctor-search.js?v=<?= (int) $fdSearchBust ?>"></script>
+<?php endif; ?>
+
 <!-- Reveal-on-scroll: light replacement for the React IntersectionObserver -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {

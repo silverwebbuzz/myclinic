@@ -25,6 +25,11 @@ RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
 # Short URL goes into outbound SMS — keep it as short and clean as possible.
 RewriteRule ^L/([a-f0-9]{16})/?$ L.php?t=$1 [L,QSA]
 
+# -------- Directory profile pages --------
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-z0-9][a-z0-9\-]*)/(clinic|doctor)/([a-z0-9][a-z0-9\-]*)/?$ profile.php?city=$1&entity_type=$2&slug=$3 [L,QSA,NC]
+
 # -------- SEO city / specialty-in-city pages --------
 # Examples:
 #   /find-a-doctor/mumbai
