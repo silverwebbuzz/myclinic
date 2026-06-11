@@ -175,13 +175,14 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
                         <button type="button"
                                 :disabled="!slot.available"
                                 @click="selectedTime = slot.time"
-                                :title="slot.extended ? 'Extended hours (walk-in only)' : ''"
+                                :title="slot.blocked ? 'Doctor on leave' : (slot.extended ? 'Extended hours (staff booking)' : '')"
                                 :class="selectedTime === slot.time
                                     ? 'bg-emerald-600 text-white shadow'
-                                    : (!slot.available ? 'border bg-slate-100 text-slate-400 cursor-not-allowed line-through'
-                                        : (slot.extended ? 'border-2 border-red-300 bg-red-50 text-red-700 hover:bg-red-100' : 'border bg-white hover:bg-emerald-50'))"
+                                    : (slot.blocked ? 'border bg-amber-100 text-amber-800 cursor-not-allowed'
+                                        : (!slot.available ? 'border bg-slate-100 text-slate-400 cursor-not-allowed line-through'
+                                            : (slot.extended ? 'border-2 border-red-300 bg-red-50 text-red-700 hover:bg-red-100' : 'border bg-white hover:bg-emerald-50')))"
                                 class="rounded-lg px-2 py-2 text-xs font-medium"
-                                x-text="slot.extended ? '🚨 ' + slot.label : slot.label"></button>
+                                x-text="slot.blocked ? slot.label + ' · leave' : (slot.extended ? '🚨 ' + slot.label : slot.label)"></button>
                     </template>
                 </div>
             </div>
@@ -193,13 +194,14 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
                         <button type="button"
                                 :disabled="!slot.available"
                                 @click="selectedTime = slot.time"
-                                :title="slot.extended ? 'Extended hours (walk-in only)' : ''"
+                                :title="slot.blocked ? 'Doctor on leave' : (slot.extended ? 'Extended hours (staff booking)' : '')"
                                 :class="selectedTime === slot.time
                                     ? 'bg-emerald-600 text-white shadow'
-                                    : (!slot.available ? 'border bg-slate-100 text-slate-400 cursor-not-allowed line-through'
-                                        : (slot.extended ? 'border-2 border-red-300 bg-red-50 text-red-700 hover:bg-red-100' : 'border bg-white hover:bg-emerald-50'))"
+                                    : (slot.blocked ? 'border bg-amber-100 text-amber-800 cursor-not-allowed'
+                                        : (!slot.available ? 'border bg-slate-100 text-slate-400 cursor-not-allowed line-through'
+                                            : (slot.extended ? 'border-2 border-red-300 bg-red-50 text-red-700 hover:bg-red-100' : 'border bg-white hover:bg-emerald-50')))"
                                 class="rounded-lg px-2 py-2 text-xs font-medium"
-                                x-text="slot.extended ? '🚨 ' + slot.label : slot.label"></button>
+                                x-text="slot.blocked ? slot.label + ' · leave' : (slot.extended ? '🚨 ' + slot.label : slot.label)"></button>
                     </template>
                 </div>
             </div>

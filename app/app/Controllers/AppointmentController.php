@@ -30,6 +30,25 @@ final class AppointmentController
         $ts = strtotime((string) $dateRaw);
         $date = $ts ? date('Y-m-d', $ts) : date('Y-m-d');
 
+        $view = ($request->query['view'] ?? 'day') === 'week' ? 'week' : 'day';
+
+        // Week view: Mon–Sun agenda around the selected date.
+        $weekStart = date('Y-m-d', strtotime('monday this week', strtotime($date)));
+        $weekEnd = date('Y-m-d', strtotime($weekStart . ' +6 days'));
+        $weekAppointments = [];
+        if ($view === 'week') {
+            foreach (AppointmentService::forRange($clinicId, $weekStart, $weekEnd, $doctorId) as $a) {
+                $weekAppointments[date('Y-m-d', strtotime((string) $a['scheduled_at']))][] = $a;
+            }
+        }
+
+        // Day view: slot timeline for the selected doctor (available / booked /
+        // blocked / extended states at a glance).
+        $daySlots = [];
+        if ($view === 'day' && $doctorId !== null) {
+            $daySlots = SlotService::available($clinicId, $doctorId, $date, true);
+        }
+
         $statusFilter = $request->query['status'] ?? 'all';
         $appointments = AppointmentService::forDate($clinicId, $date, $doctorId);
 
@@ -62,12 +81,16 @@ final class AppointmentController
             'doctors' => $doctors,
             'doctorId' => $doctorId,
             'date' => $date,
-            'prevDate' => date('Y-m-d', strtotime($date . ' -1 day')),
-            'nextDate' => date('Y-m-d', strtotime($date . ' +1 day')),
+            'prevDate' => date('Y-m-d', strtotime($date . ($view === 'week' ? ' -7 days' : ' -1 day'))),
+            'nextDate' => date('Y-m-d', strtotime($date . ($view === 'week' ? ' +7 days' : ' +1 day'))),
             'appointments' => $appointments,
             'counts' => $counts,
             'statusFilter' => $statusFilter,
             'clinicSlug' => $clinic['slug'] ?? 'demo',
+            'view' => $view,
+            'weekStart' => $weekStart,
+            'weekAppointments' => $weekAppointments,
+            'daySlots' => $daySlots,
         ], 'Appointments'));
     }
 

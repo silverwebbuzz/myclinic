@@ -59,42 +59,78 @@ final class AppointmentService
         }
         $scheduledDate = date('Y-m-d', $scheduledTs);
 
+        $source = (string) ($data['source'] ?? 'reception');
+
+        // Serialize check + insert per slot: without the lock, two concurrent
+        // bookings both pass the availability check and double-book (TOCTOU).
+        // Migration 022's unique slot_key is the DB-level backstop.
+        $pdo = Database::connection();
+        $lockName = null;
         if ($type !== 'walkin') {
-            $slots = SlotService::available($clinicId, $doctorId, $scheduledDate);
-            $slotOk = false;
-            foreach ($slots as $slot) {
-                if ($slot['datetime'] === $scheduledAt && $slot['available']) {
-                    $slotOk = true;
-                    break;
+            $lockName = "slot:{$clinicId}:{$doctorId}:{$scheduledAt}";
+            $lockStmt = $pdo->prepare('SELECT GET_LOCK(?, 3) AS got');
+            $lockStmt->execute([$lockName]);
+            if ((int) ($lockStmt->fetch()['got'] ?? 0) !== 1) {
+                throw new \RuntimeException('This slot is being booked by someone else right now — please try again.');
+            }
+        }
+
+        try {
+            if ($type !== 'walkin') {
+                // Staff may book extended hours; public website booking may not.
+                $slots = SlotService::available($clinicId, $doctorId, $scheduledDate, $source !== 'website');
+
+                if ($slots === [] && $source !== 'website') {
+                    // No working hours configured for this day — the form falls
+                    // back to a manual time input; don't block reception.
+                } else {
+                    $slotOk = false;
+                    foreach ($slots as $slot) {
+                        if ($slot['datetime'] === $scheduledAt && $slot['available']) {
+                            $slotOk = true;
+                            break;
+                        }
+                    }
+                    if (!$slotOk) {
+                        throw new \RuntimeException('Selected slot is no longer available.');
+                    }
                 }
             }
-            if (!$slotOk) {
-                throw new \RuntimeException('Selected slot is no longer available.');
+
+            $tokenNumber = null;
+            if ($type === 'walkin' && $scheduledDate === date('Y-m-d')) {
+                $tokenNumber = self::nextTokenNumber($clinicId);
+            }
+
+            $user = RequestContext::user();
+            try {
+                $id = QueryBuilder::table('appointments')->insert([
+                    'clinic_id' => $clinicId,
+                    'patient_id' => (int) $data['patient_id'],
+                    'doctor_id' => $doctorId,
+                    'scheduled_at' => $scheduledAt,
+                    'slot_duration' => (int) ($data['slot_duration'] ?? 15),
+                    'type' => in_array($type, ['walkin', 'prebooked', 'online', 'followup'], true) ? $type : 'prebooked',
+                    'source' => $source,
+                    'status' => $data['status'] ?? 'scheduled',
+                    'chief_complaint' => trim((string) ($data['chief_complaint'] ?? '')) ?: null,
+                    'token_number' => $tokenNumber,
+                    'is_followup' => !empty($data['is_followup']) ? 1 : 0,
+                    'parent_visit_id' => !empty($data['parent_visit_id']) ? (int) $data['parent_visit_id'] : null,
+                    'notes' => trim((string) ($data['notes'] ?? '')) ?: null,
+                    'created_by' => $user['id'] ?? null,
+                ]);
+            } catch (\PDOException $e) {
+                if (str_contains($e->getMessage(), 'uq_appt_slot')) {
+                    throw new \RuntimeException('Selected slot was just booked by someone else. Please pick another slot.');
+                }
+                throw $e;
+            }
+        } finally {
+            if ($lockName !== null) {
+                $pdo->prepare('SELECT RELEASE_LOCK(?)')->execute([$lockName]);
             }
         }
-
-        $tokenNumber = null;
-        if ($type === 'walkin' && $scheduledDate === date('Y-m-d')) {
-            $tokenNumber = self::nextTokenNumber($clinicId);
-        }
-
-        $user = RequestContext::user();
-        $id = QueryBuilder::table('appointments')->insert([
-            'clinic_id' => $clinicId,
-            'patient_id' => (int) $data['patient_id'],
-            'doctor_id' => $doctorId,
-            'scheduled_at' => $scheduledAt,
-            'slot_duration' => (int) ($data['slot_duration'] ?? 15),
-            'type' => in_array($type, ['walkin', 'prebooked', 'online', 'followup'], true) ? $type : 'prebooked',
-            'source' => $data['source'] ?? 'reception',
-            'status' => $data['status'] ?? 'scheduled',
-            'chief_complaint' => trim((string) ($data['chief_complaint'] ?? '')) ?: null,
-            'token_number' => $tokenNumber,
-            'is_followup' => !empty($data['is_followup']) ? 1 : 0,
-            'parent_visit_id' => !empty($data['parent_visit_id']) ? (int) $data['parent_visit_id'] : null,
-            'notes' => trim((string) ($data['notes'] ?? '')) ?: null,
-            'created_by' => $user['id'] ?? null,
-        ]);
 
         SlotService::invalidateForAppointment($clinicId, $doctorId, $scheduledAt);
         DashboardService::invalidateStats($clinicId);
@@ -133,11 +169,41 @@ final class AppointmentService
             }
         }
 
+        // Reschedules / doctor moves never re-checked the target slot, so an
+        // edit could double-book even without a race. Walk-ins may share times.
+        if (isset($update['scheduled_at']) || isset($update['doctor_id'])) {
+            $targetDoctor = (int) ($update['doctor_id'] ?? $existing['doctor_id']);
+            $targetAt = (string) ($update['scheduled_at'] ?? $existing['scheduled_at']);
+            $targetType = (string) ($update['type'] ?? $existing['type'] ?? 'prebooked');
+            $changed = $targetAt !== (string) $existing['scheduled_at']
+                || $targetDoctor !== (int) $existing['doctor_id'];
+
+            if ($changed && $targetType !== 'walkin') {
+                $stmt = Database::connection()->prepare(
+                    "SELECT id FROM appointments
+                     WHERE clinic_id = ? AND doctor_id = ? AND scheduled_at = ?
+                     AND status NOT IN ('cancelled', 'no_show') AND id != ?
+                     LIMIT 1",
+                );
+                $stmt->execute([$clinicId, $targetDoctor, $targetAt, $id]);
+                if ($stmt->fetch()) {
+                    throw new \RuntimeException('That slot is already booked for the selected doctor. Please pick another time.');
+                }
+            }
+        }
+
         if ($update !== []) {
-            QueryBuilder::table('appointments')
-                ->forClinic($clinicId)
-                ->where('id', '=', $id)
-                ->update($update);
+            try {
+                QueryBuilder::table('appointments')
+                    ->forClinic($clinicId)
+                    ->where('id', '=', $id)
+                    ->update($update);
+            } catch (\PDOException $e) {
+                if (str_contains($e->getMessage(), 'uq_appt_slot')) {
+                    throw new \RuntimeException('That slot is already booked for the selected doctor. Please pick another time.');
+                }
+                throw $e;
+            }
 
             if (($update['status'] ?? '') === 'confirmed') {
                 TelemedicineService::onConfirmed($clinicId, $id);
@@ -273,6 +339,39 @@ final class AppointmentService
                 INNER JOIN users u ON u.id = a.doctor_id
                 WHERE a.clinic_id = ? AND a.scheduled_at >= ? AND a.scheduled_at < ?';
         $params = [$clinicId, $date . ' 00:00:00', date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00'];
+        if ($doctorId !== null) {
+            $sql .= ' AND a.doctor_id = ?';
+            $params[] = $doctorId;
+        }
+        $sql .= ' ORDER BY a.scheduled_at ASC, a.id ASC';
+
+        $stmt = Database::connection()->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll() ?: [];
+    }
+
+    /**
+     * Appointments across a date range (inclusive), for the week view.
+     * @return list<array<string, mixed>>
+     */
+    public static function forRange(int $clinicId, string $startDate, string $endDate, ?int $doctorId = null): array
+    {
+        if (!Database::ping()) {
+            return [];
+        }
+
+        $sql = 'SELECT a.*, p.name AS patient_name, p.uhid, p.phone AS patient_phone,
+                       u.name AS doctor_name
+                FROM appointments a
+                INNER JOIN patients p ON p.id = a.patient_id
+                INNER JOIN users u ON u.id = a.doctor_id
+                WHERE a.clinic_id = ? AND a.scheduled_at >= ? AND a.scheduled_at < ?';
+        $params = [
+            $clinicId,
+            $startDate . ' 00:00:00',
+            date('Y-m-d', strtotime($endDate . ' +1 day')) . ' 00:00:00',
+        ];
         if ($doctorId !== null) {
             $sql .= ' AND a.doctor_id = ?';
             $params[] = $doctorId;

@@ -146,20 +146,21 @@ final class SlotService
                 $time = date('H:i', $t);
                 $datetime = date('Y-m-d H:i:s', $t);
 
-                if (self::isBlockedByLeave($time, $leaveBlocks)) {
-                    continue;
-                }
-
                 // Skip slots that have already started on today.
                 if ($isToday && $t <= $nowTs) {
                     continue;
                 }
 
-                $available = !isset($booked[$datetime]);
+                // Leave-blocked slots used to be silently dropped, which made
+                // "doctor on leave" look identical to "no schedule". Keep them
+                // in the list (never available) so UIs can render them as blocked.
+                $blocked = self::isBlockedByLeave($time, $leaveBlocks);
+
                 $slots[] = [
                     'time' => $time,
                     'datetime' => $datetime,
-                    'available' => $available,
+                    'available' => !$blocked && !isset($booked[$datetime]),
+                    'blocked' => $blocked,
                     'extended' => $t >= $normalEnd,
                 ];
             }
@@ -270,10 +271,15 @@ final class SlotService
         $stmt = $pdo->prepare(
             "SELECT scheduled_at FROM appointments
              WHERE clinic_id = ? AND doctor_id = ?
-             AND DATE(scheduled_at) = ?
+             AND scheduled_at >= ? AND scheduled_at < ?
              AND status NOT IN ('cancelled', 'no_show')",
         );
-        $stmt->execute([$clinicId, $doctorId, $date]);
+        $stmt->execute([
+            $clinicId,
+            $doctorId,
+            $date . ' 00:00:00',
+            date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00',
+        ]);
         $booked = [];
         while ($row = $stmt->fetch()) {
             $booked[date('Y-m-d H:i:s', strtotime($row['scheduled_at']))] = true;
