@@ -11,12 +11,9 @@ use App\Core\QueryBuilder;
 use App\Http\Request;
 use App\Http\Response;
 use App\Services\AuditService;
-use App\Services\CsrfService;
-use App\Services\DrugService;
 use App\Services\PatientService;
 use App\Services\PrescriptionPdfService;
 use App\Services\PrescriptionService;
-use App\Services\RemedyService;
 use App\Services\VisitService;
 use App\Support\Layout;
 use PDO;
@@ -63,40 +60,26 @@ final class PrescriptionController
         $clinic = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first() ?? [];
         $lines = PrescriptionService::forVisit($clinicId, (int) $visitId);
 
+        // ?paper=a4 for full-page pads; default A5. ?download=1 forces a file
+        // download — the default opens inline so the browser shows a print
+        // preview in one click.
+        $paper = strtolower((string) ($request->query['paper'] ?? 'a5')) === 'a4' ? 'A4' : 'A5';
+
         try {
-            $rel = PrescriptionPdfService::generate($visit, $patient, $clinic, $lines);
-            $absolute = dirname(__DIR__, 2) . '/public' . $rel;
+            $absolute = PrescriptionPdfService::generate($visit, $patient, $clinic, $lines, $paper);
             if (!is_file($absolute)) {
                 return Response::redirect('/prescriptions?error=' . urlencode('PDF could not be generated'));
             }
             $filename = 'rx-' . (string) ($patient['uhid'] ?? 'patient') . '-' . date('Ymd', strtotime((string) $visit['visited_at'])) . '.pdf';
-            return Response::download($absolute, $filename);
+            $disposition = !empty($request->query['download']) ? 'attachment' : 'inline';
+
+            return Response::download($absolute, $filename)
+                ->withHeader('Content-Type', 'application/pdf')
+                ->withHeader('Content-Disposition', $disposition . '; filename="' . addslashes($filename) . '"');
         } catch (\Throwable $e) {
             error_log('[prescription PDF] ' . $e->getMessage());
             return Response::redirect('/prescriptions?error=' . urlencode('Could not generate PDF: ' . $e->getMessage()));
         }
-    }
-
-    // =====================================================
-    // Phase 3 — drug / remedy autocomplete (ranked by usage_count)
-    // =====================================================
-
-    public function drugSearchApi(Request $request): Response
-    {
-        if ($denied = ModuleGate::require('prescription')) {
-            return $denied;
-        }
-        $q = trim((string) ($request->query['q'] ?? ''));
-        return Response::json(['drugs' => DrugService::search($q)]);
-    }
-
-    public function remedySearchApi(Request $request): Response
-    {
-        if ($denied = ModuleGate::require('prescription')) {
-            return $denied;
-        }
-        $q = trim((string) ($request->query['q'] ?? ''));
-        return Response::json(['remedies' => RemedyService::search($q)]);
     }
 
     // =====================================================

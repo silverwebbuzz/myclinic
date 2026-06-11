@@ -79,6 +79,53 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         ?>
     </div>
 
+    <?php
+    // Post-completion action bar: print / WhatsApp / follow-up, right where
+    // the doctor lands after "Complete visit". wa.me opens a prefilled chat
+    // (works with WhatsApp Web/app, no Meta template approval needed).
+    $rxSummaryLines = [];
+    foreach ($prescriptions as $rxLine) {
+        $rxName = $rxLine['drug']['name'] ?? $rxLine['remedy']['name'] ?? '';
+        if ($rxName === '') {
+            continue;
+        }
+        $bits = [$rxName];
+        if (!empty($rxLine['frequency_preset'])) {
+            $bits[] = (string) $rxLine['frequency_preset'];
+        } elseif (!empty($rxLine['frequency'])) {
+            $bits[] = (string) $rxLine['frequency'];
+        }
+        if (!empty($rxLine['duration_days'])) {
+            $bits[] = ((int) $rxLine['duration_days']) . ' days';
+        }
+        $rxSummaryLines[] = count($rxSummaryLines) + 1 . '. ' . implode(' — ', $bits);
+    }
+    $waPhone = preg_replace('/[^0-9]/', '', (string) ($patient['phone'] ?? '')) ?? '';
+    if (strlen($waPhone) === 10) {
+        $waPhone = '91' . $waPhone; // bare Indian mobile — add country code
+    }
+    $waText = 'Prescription for ' . ($patient['name'] ?? '')
+        . ' (' . date('d M Y', strtotime((string) ($visit['visited_at'] ?? 'now'))) . ")\n"
+        . implode("\n", $rxSummaryLines)
+        . "\n— " . ($visit['doctor_name'] ?? '');
+    $waHref = 'https://wa.me/' . $waPhone . '?text=' . rawurlencode($waText);
+    ?>
+    <?php if (!empty($_GET['completed']) && !$editable): ?>
+    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+        <p class="text-sm font-medium text-emerald-800">✓ Visit completed.</p>
+        <div class="flex flex-wrap gap-2">
+            <?php if ($rxSummaryLines !== []): ?>
+            <a href="/prescriptions/<?= $visitId ?>/pdf" target="_blank" class="ui-btn ui-btn-primary ui-btn-sm">Print prescription (A5)</a>
+            <a href="/prescriptions/<?= $visitId ?>/pdf?paper=a4" target="_blank" class="ui-btn ui-btn-secondary ui-btn-sm">A4</a>
+            <?php if ($waPhone !== ''): ?>
+            <a href="<?= htmlspecialchars($waHref) ?>" target="_blank" rel="noopener" class="ui-btn ui-btn-secondary ui-btn-sm">Share on WhatsApp</a>
+            <?php endif; ?>
+            <?php endif; ?>
+            <a href="/appointments/new?patient_id=<?= (int) $patient['id'] ?>" class="ui-btn ui-btn-secondary ui-btn-sm">Book follow-up</a>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- ====== Two-column: visit form (left) + history (right) ====== -->
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
     <div class="space-y-4 lg:col-span-2">
@@ -612,12 +659,15 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                @input.debounce.300ms="searchIcd($event.target.value)"
                                placeholder="ICD-10 code (optional)"
                                class="w-40 rounded border border-slate-200 px-2 py-1 text-xs">
-                        <ul x-show="icdResults.length" class="ml-2 inline-flex max-h-32 flex-wrap gap-1">
+                        <ul x-show="icdResults.length" class="ml-2 inline-flex max-h-32 flex-wrap gap-1 overflow-y-auto">
                             <template x-for="c in icdResults" :key="c.code">
                                 <li>
-                                    <button type="button" @click="icd10_code = c.code; icdResults = []"
+                                    <!-- Code alone is unreadable — show the label, and use it as
+                                         the diagnosis text when the doctor hasn't typed one. -->
+                                    <button type="button"
+                                            @click="icd10_code = c.code; if (!diagnosis) diagnosis = c.label; icdResults = []"
                                             class="rounded bg-slate-100 px-2 py-0.5 text-xs hover:bg-brand-light"
-                                            x-text="c.code"></button>
+                                            x-text="c.code + ' · ' + c.label"></button>
                                 </li>
                             </template>
                         </ul>
@@ -763,10 +813,18 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
 
             <!-- ---- Save / Complete actions ---- -->
             <div class="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
-                <button type="button" :disabled="!editable" @click="save()"
-                        class="ui-btn ui-btn-secondary">
-                    Save draft
-                </button>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" :disabled="!editable" @click="save()"
+                            class="ui-btn ui-btn-secondary">
+                        Save draft
+                    </button>
+                    <button type="button" @click="printRx()"
+                            x-show="(prescriptions || []).some(p => p.drug_id || p.remedy_id || p.drug_name)"
+                            class="ui-btn ui-btn-secondary"
+                            title="Saves the draft first, then opens the A5 print preview">
+                        Print preview
+                    </button>
+                </div>
                 <?php if ($editable): ?>
                     <form method="post" action="/visits/<?= $visitId ?>/complete" @submit="confirmComplete($event)">
                         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
@@ -1182,20 +1240,13 @@ function visitScreenV2(cfg) {
             }
         },
 
-        async searchDrug(idx, q) {
-            if (!q || q.length < 2) return;
-            const url = this.useHomeo ? '/api/v1/remedies/search?q=' : '/api/v1/drugs/search?q=';
-            try {
-                const r = await fetch(url + encodeURIComponent(q), { credentials: 'same-origin' });
-                const data = await r.json();
-                const list = data.remedies || data.drugs || [];
-                if (list[0]) {
-                    const item = list[0];
-                    this.prescriptions[idx].drug_id = this.useHomeo ? null : item.id;
-                    this.prescriptions[idx].remedy_id = this.useHomeo ? item.id : null;
-                    this.prescriptions[idx].drug_name = item.name;
-                }
-            } catch (e) { /* ignore */ }
+        // One-click print preview: flush the draft so the PDF reflects what's
+        // on screen, then open the A5 preview in a new tab.
+        async printRx(paper) {
+            if (this.editable && this.dirty) {
+                try { await this.save(); } catch (e) { /* preview still opens */ }
+            }
+            window.open('/prescriptions/' + this.visitId + '/pdf' + (paper === 'a4' ? '?paper=a4' : ''), '_blank', 'noopener');
         },
 
         addRxLine() {
@@ -1662,6 +1713,19 @@ function prescriptionPanel() {
                 line.remedy_id = null;
             }
             line.drug_name = drug.name + (drug.strength ? ' ' + drug.strength : '');
+
+            // Smart defaults: pre-fill from the clinic's last prescription of
+            // this drug — but never overwrite what the doctor already entered.
+            const def = drug.defaults || {};
+            if (!line.frequency_preset && def.frequency_preset) {
+                line.frequency_preset = def.frequency_preset;
+                if (def.frequency) line.frequency = def.frequency; // keep legacy field in sync
+            }
+            if (!line.duration_days && def.duration_days) line.duration_days = def.duration_days;
+            if ((!line.food_timing || line.food_timing === 'any') && def.food_timing) line.food_timing = def.food_timing;
+            if (!line.dose_unit && def.dose_unit) line.dose_unit = def.dose_unit;
+            if (!line.dose_amount && def.dose_amount) line.dose_amount = def.dose_amount;
+
             line._suggestions = [];
             line._dropdown = false;
         },

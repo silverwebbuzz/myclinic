@@ -299,9 +299,10 @@ final class VisitController
         VisitService::complete($clinicId, (int) $id);
         AuditService::log($request, 'UPDATE', 'visits', (int) $id);
 
-        $visit = VisitService::find($clinicId, (int) $id);
-
-        return Response::redirect('/patients/' . ($visit['patient_id'] ?? '') . '?tab=visits&visit_completed=1');
+        // Stay on the visit: this is the moment the doctor prints the Rx or
+        // shares it on WhatsApp. The old redirect to the patient profile was
+        // a dead end (dead ?tab= param, no print/share, no success message).
+        return Response::redirect('/visits/' . (int) $id . '?completed=1');
     }
 
     public function unlock(Request $request, string $id): Response
@@ -519,7 +520,18 @@ final class VisitController
             return $denied;
         }
 
-        return Response::json(['drugs' => DrugService::search($request->query['q'] ?? '')]);
+        $drugs = DrugService::search($request->query['q'] ?? '');
+
+        // Smart defaults: attach the clinic's last-used frequency/duration/dose
+        // per drug so picking a medicine pre-fills the empty fields.
+        $clinicId = (int) RequestContext::clinicId();
+        $defaults = DrugService::lastUsedDefaults($clinicId, array_map(static fn ($d) => (int) $d['id'], $drugs));
+        foreach ($drugs as &$drug) {
+            $drug['defaults'] = $defaults[(int) $drug['id']] ?? null;
+        }
+        unset($drug);
+
+        return Response::json(['drugs' => $drugs]);
     }
 
     public function remediesApi(Request $request): Response

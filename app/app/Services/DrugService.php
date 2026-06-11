@@ -91,6 +91,55 @@ final class DrugService
         return $row ?: null;
     }
 
+    /**
+     * Smart defaults for the prescription builder: the clinic's most recent
+     * frequency/duration/dose per drug, keyed by drug_id. The UI applies them
+     * only to fields the doctor hasn't filled yet.
+     *
+     * Best-effort: returns [] if the Phase-2 columns or the index migration
+     * (021) aren't in place yet.
+     *
+     * @param list<int> $drugIds
+     * @return array<int, array<string, mixed>>
+     */
+    public static function lastUsedDefaults(int $clinicId, array $drugIds): array
+    {
+        $drugIds = array_values(array_filter(array_map('intval', $drugIds)));
+        if ($drugIds === [] || !Database::ping()) {
+            return [];
+        }
+
+        try {
+            $placeholders = implode(',', array_fill(0, count($drugIds), '?'));
+            $stmt = Database::connection()->prepare(
+                "SELECT rx.drug_id, rx.frequency_preset, rx.frequency, rx.duration_days,
+                        rx.food_timing, rx.dose_unit, rx.dose_amount
+                 FROM prescriptions rx
+                 JOIN (SELECT drug_id, MAX(id) AS max_id FROM prescriptions
+                       WHERE clinic_id = ? AND drug_id IN ({$placeholders})
+                       GROUP BY drug_id) latest ON latest.max_id = rx.id",
+            );
+            $stmt->execute(array_merge([$clinicId], $drugIds));
+
+            $defaults = [];
+            foreach ($stmt->fetchAll() ?: [] as $row) {
+                $defaults[(int) $row['drug_id']] = [
+                    'frequency_preset' => $row['frequency_preset'] ?? null,
+                    'frequency' => $row['frequency'] ?? null,
+                    'duration_days' => $row['duration_days'] ?? null,
+                    'food_timing' => $row['food_timing'] ?? null,
+                    'dose_unit' => $row['dose_unit'] ?? null,
+                    'dose_amount' => $row['dose_amount'] ?? null,
+                ];
+            }
+
+            return $defaults;
+        } catch (\Throwable $e) {
+            // Pre-Phase-2 schema — no defaults, autocomplete still works.
+            return [];
+        }
+    }
+
     /** @param list<string> $allergies @return list<string> warnings */
     public static function allergyWarnings(array $drug, array $allergies): array
     {

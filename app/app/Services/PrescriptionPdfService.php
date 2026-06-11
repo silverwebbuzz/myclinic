@@ -15,18 +15,27 @@ final class PrescriptionPdfService
      * @param array<string, mixed> $clinic
      * @param list<array<string, mixed>> $lines
      */
-    public static function generate(array $visit, array $patient, array $clinic, array $lines): string
+    /**
+     * Renders the prescription PDF and returns its ABSOLUTE path.
+     *
+     * Files live in app/storage (NOT the public webroot): prescriptions are
+     * medical records, and /uploads/... URLs were guessable (sequential visit
+     * ids) and served without auth. The controller streams the file instead.
+     *
+     * @param 'A5'|'A4' $format prescription pad size
+     */
+    public static function generate(array $visit, array $patient, array $clinic, array $lines, string $format = 'A5'): string
     {
         $clinicId = (int) ($clinic['id'] ?? 0);
         $visitId = (int) ($visit['id'] ?? 0);
+        $format = strtoupper($format) === 'A4' ? 'A4' : 'A5';
 
-        $dir = dirname(__DIR__, 2) . '/public/uploads/prescriptions/' . $clinicId;
+        $dir = dirname(__DIR__, 2) . '/storage/prescriptions/' . $clinicId;
         if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
             throw new \RuntimeException('Cannot create prescription PDF directory.');
         }
 
-        $rel = '/uploads/prescriptions/' . $clinicId . '/rx-' . $visitId . '.pdf';
-        $path = dirname(__DIR__, 2) . '/public' . $rel;
+        $path = $dir . '/rx-' . $visitId . '-' . strtolower($format) . '.pdf';
 
         $clinicName = htmlspecialchars((string) ($clinic['name'] ?? 'Clinic'), ENT_QUOTES, 'UTF-8');
         $clinicPhone = htmlspecialchars((string) ($clinic['phone'] ?? ''), ENT_QUOTES, 'UTF-8');
@@ -108,7 +117,7 @@ final class PrescriptionPdfService
 
         if (!class_exists(Mpdf::class)) {
             file_put_contents($path, strip_tags($html));
-            return $rel;
+            return $path;
         }
 
         $uid = function_exists('posix_getuid') ? posix_getuid() : getmyuid();
@@ -118,7 +127,7 @@ final class PrescriptionPdfService
         }
 
         try {
-            $mpdf = new Mpdf(['format' => 'A5', 'tempDir' => $tmpDir]);
+            $mpdf = new Mpdf(['format' => $format, 'tempDir' => $tmpDir]);
             $mpdf->WriteHTML($html);
             $mpdf->Output($path, Destination::FILE);
         } catch (\Throwable $e) {
@@ -126,7 +135,7 @@ final class PrescriptionPdfService
             file_put_contents($path, strip_tags($html));
         }
 
-        return $rel;
+        return $path;
     }
 
     private static function ageFromDob(string $dob): string

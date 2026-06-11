@@ -11,3 +11,6 @@
 # Internal/private notes — anything prefixed with "internal-" or "private-"
 document/internal-*
 document/private-*
+
+# Generated prescription PDFs (private; streamed via controller)
+/storage/prescriptions/*

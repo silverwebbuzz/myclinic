@@ -12,6 +12,27 @@ $formatLine = static function (array $line): string {
     $main = implode(' ', $parts);
     return $detail !== [] ? $main . ' — ' . implode(' · ', $detail) : $main;
 };
+
+// wa.me click-to-chat link with the prescription summary prefilled.
+$waLink = static function (array $visit) use ($formatLine): ?string {
+    $phone = preg_replace('/[^0-9]/', '', (string) ($visit['patient_phone'] ?? '')) ?? '';
+    if ($phone === '') {
+        return null;
+    }
+    if (strlen($phone) === 10) {
+        $phone = '91' . $phone; // bare Indian mobile — add country code
+    }
+    $lines = [];
+    foreach ($visit['lines'] as $i => $line) {
+        $lines[] = ($i + 1) . '. ' . $formatLine($line);
+    }
+    $text = 'Prescription for ' . ($visit['patient_name'] ?? '')
+        . ' (' . date('d M Y', strtotime((string) $visit['visited_at'])) . ")\n"
+        . implode("\n", $lines)
+        . "\n— " . ($visit['doctor_name'] ?? '');
+
+    return 'https://wa.me/' . $phone . '?text=' . rawurlencode($text);
+};
 ?>
 <div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -64,7 +85,12 @@ $formatLine = static function (array $line): string {
                 <div class="flex flex-wrap gap-2">
                     <a href="/visits/<?= (int) $visit['visit_id'] ?>"
                        class="ui-btn ui-btn-secondary ui-btn-sm">View visit</a>
-                    <a href="/prescriptions/<?= (int) $visit['visit_id'] ?>/pdf"
+                    <?php $wa = $waLink($visit); ?>
+                    <?php if ($wa !== null): ?>
+                    <a href="<?= htmlspecialchars($wa) ?>" target="_blank" rel="noopener"
+                       class="ui-btn ui-btn-secondary ui-btn-sm">WhatsApp</a>
+                    <?php endif; ?>
+                    <a href="/prescriptions/<?= (int) $visit['visit_id'] ?>/pdf" target="_blank"
                        class="ui-btn ui-btn-primary ui-btn-sm">
                         <?= ui_icon('emr', 14) ?><span>Print Rx</span>
                     </a>
@@ -112,14 +138,32 @@ $formatLine = static function (array $line): string {
     </div>
 
     <?php
+    // Windowed pager with Prev/Next — every page reachable, filters preserved.
     $totalPages = (int) ceil(max(1, $total) / max(1, $perPage));
     if ($totalPages > 1):
+        $pageUrl = static fn (int $p): string => '?' . http_build_query(array_merge(array_filter($filters), ['page' => $p]));
+        $winStart = max(1, $page - 2);
+        $winEnd = min($totalPages, $page + 2);
     ?>
-    <div class="flex justify-center gap-2 text-sm">
-        <?php for ($p = 1; $p <= min($totalPages, 10); $p++): ?>
-        <a href="?page=<?= $p ?>&<?= http_build_query(array_filter($filters)) ?>"
-           class="rounded px-2 py-1 <?= $p === $page ? 'bg-emerald-100 text-emerald-800' : 'border' ?>"><?= $p ?></a>
+    <div class="flex flex-wrap items-center justify-center gap-2 text-sm">
+        <?php if ($page > 1): ?>
+        <a href="<?= htmlspecialchars($pageUrl($page - 1)) ?>" class="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 hover:bg-slate-50">← Prev</a>
+        <?php endif; ?>
+        <?php if ($winStart > 1): ?>
+        <a href="<?= htmlspecialchars($pageUrl(1)) ?>" class="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 hover:bg-slate-50">1</a>
+        <?php if ($winStart > 2): ?><span class="px-1 text-slate-400">…</span><?php endif; ?>
+        <?php endif; ?>
+        <?php for ($p = $winStart; $p <= $winEnd; $p++): ?>
+        <a href="<?= htmlspecialchars($pageUrl($p)) ?>"
+           class="rounded-lg px-3 py-1.5 font-medium <?= $p === $page ? 'bg-brand text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-50' ?>"><?= $p ?></a>
         <?php endfor; ?>
+        <?php if ($winEnd < $totalPages): ?>
+        <?php if ($winEnd < $totalPages - 1): ?><span class="px-1 text-slate-400">…</span><?php endif; ?>
+        <a href="<?= htmlspecialchars($pageUrl($totalPages)) ?>" class="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 hover:bg-slate-50"><?= $totalPages ?></a>
+        <?php endif; ?>
+        <?php if ($page < $totalPages): ?>
+        <a href="<?= htmlspecialchars($pageUrl($page + 1)) ?>" class="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 hover:bg-slate-50">Next →</a>
+        <?php endif; ?>
     </div>
     <?php endif; ?>
 </div>
