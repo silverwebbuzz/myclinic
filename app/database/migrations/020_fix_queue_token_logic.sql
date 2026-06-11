@@ -1,6 +1,7 @@
-USE manageclinic;
-
 -- 020_fix_queue_token_logic.sql
+-- No USE statement: cPanel DB names are prefixed (not "manageclinic").
+-- In phpMyAdmin, click your app database in the left sidebar FIRST, then
+-- paste this into the SQL tab. migrate.php targets DB_DATABASE from .env.
 -- Problem 1: Walk-in token numbers were assigned with SELECT MAX(token_number)+1
 --            (read-then-insert). Two concurrent bookings could claim the same
 --            token. A per-clinic per-day counter row makes the claim atomic via
