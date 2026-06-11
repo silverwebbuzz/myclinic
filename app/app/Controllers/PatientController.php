@@ -103,11 +103,8 @@ final class PatientController
             return Response::html('Patient not found', 404);
         }
 
-        $tab = $request->query['tab'] ?? 'overview';
-
         return Response::html(Layout::page('patients/show', [
             'patient' => $patient,
-            'tab' => $tab,
             'allergies' => PatientService::decodeTags($patient['allergies'] ?? null),
             'chronic' => PatientService::decodeTags($patient['chronic_conditions'] ?? null),
             'specialtyData' => json_decode($patient['specialty_data'] ?? '{}', true) ?: [],
@@ -259,6 +256,19 @@ final class PatientController
         $dir = $request->query['dir'] ?? 'asc';
 
         $result = PatientService::search($clinicId, $filters, $page, $sort, $dir);
+
+        // Whitelist columns: the raw rows carry qr_token (a bearer credential
+        // for the public /qr/{token} page) plus the whole chart. Consumers
+        // (header quick-search, appointment patient picker) only need these.
+        $result['rows'] = array_map(static fn (array $p): array => [
+            'id' => (int) $p['id'],
+            'uhid' => $p['uhid'] ?? '',
+            'name' => $p['name'] ?? '',
+            'phone' => $p['phone'] ?? '',
+            'gender' => $p['gender'] ?? null,
+            'dob' => $p['dob'] ?? null,
+            'last_visit' => $p['last_visit'] ?? null,
+        ], $result['rows']);
 
         return Response::json($result);
     }

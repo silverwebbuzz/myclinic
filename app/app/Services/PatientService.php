@@ -201,24 +201,36 @@ final class PatientService
 
         $whereSql = implode(' AND ', $where);
         $pdo = Database::connection();
-        $params['clinic_id_lv'] = $clinicId;
 
-        $countSql = "SELECT COUNT(*) AS c FROM patients p
-            LEFT JOIN (SELECT patient_id, MAX(visited_at) AS last_visit FROM visits WHERE clinic_id = :clinic_id_lv GROUP BY patient_id) lv
-            ON lv.patient_id = p.id
-            WHERE {$whereSql}";
+        // The lv derived table aggregates EVERY visit in the clinic — only pay
+        // for it when the query actually filters or sorts on last_visit. The
+        // plain case gets last_visit per displayed row via a correlated MAX()
+        // on idx_patient_visits (clinic_id, patient_id, visited_at) instead.
+        $needsLv = !empty($filters['last_visit']) || $sort === 'last_visit';
+        $lvJoin = 'LEFT JOIN (SELECT patient_id, MAX(visited_at) AS last_visit
+            FROM visits WHERE clinic_id = :clinic_id_lv GROUP BY patient_id) lv
+            ON lv.patient_id = p.id';
+
+        $countSql = $needsLv
+            ? "SELECT COUNT(*) AS c FROM patients p {$lvJoin} WHERE {$whereSql}"
+            : "SELECT COUNT(*) AS c FROM patients p WHERE {$whereSql}";
         $countStmt = $pdo->prepare($countSql);
-        $countStmt->execute($params);
+        $countStmt->execute($needsLv ? array_merge($params, ['clinic_id_lv' => $clinicId]) : $params);
         $total = (int) ($countStmt->fetch()['c'] ?? 0);
 
-        $sql = "SELECT p.*, lv.last_visit FROM patients p
-            LEFT JOIN (SELECT patient_id, MAX(visited_at) AS last_visit FROM visits WHERE clinic_id = :clinic_id_lv GROUP BY patient_id) lv
-            ON lv.patient_id = p.id
-            WHERE {$whereSql}
-            ORDER BY {$orderCol} {$orderDir}
-            LIMIT {$perPage} OFFSET {$offset}";
+        $sql = $needsLv
+            ? "SELECT p.*, lv.last_visit FROM patients p {$lvJoin}
+                WHERE {$whereSql}
+                ORDER BY {$orderCol} {$orderDir}
+                LIMIT {$perPage} OFFSET {$offset}"
+            : "SELECT p.*, (SELECT MAX(v.visited_at) FROM visits v
+                    WHERE v.clinic_id = :clinic_id_lv AND v.patient_id = p.id) AS last_visit
+                FROM patients p
+                WHERE {$whereSql}
+                ORDER BY {$orderCol} {$orderDir}
+                LIMIT {$perPage} OFFSET {$offset}";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
+        $stmt->execute(array_merge($params, ['clinic_id_lv' => $clinicId]));
 
         return [
             'rows' => $stmt->fetchAll() ?: [],
@@ -240,6 +252,7 @@ final class PatientService
 
             $qrToken = bin2hex(random_bytes(32));
             $data = self::mapPayload($payload);
+            self::assertValid($data);
             $patientId = QueryBuilder::table('patients')->insert(array_merge($data, [
                 'clinic_id' => $clinicId,
                 'uhid' => $uhid,
@@ -281,6 +294,18 @@ final class PatientService
         }
 
         $data = self::mapPayload($payload);
+        self::assertValid($data);
+
+        // The create flow blocks duplicate phones; without the same guard here
+        // an edit could silently produce two charts sharing one number, and
+        // phone lookup (booking, check-in) would pick one arbitrarily.
+        $dupe = self::findByPhone($clinicId, $data['phone']);
+        if ($dupe !== null && (int) $dupe['id'] !== $patientId) {
+            throw new \RuntimeException(
+                'Another patient (' . ($dupe['uhid'] ?? $dupe['name'] ?? 'unknown') . ') already uses this phone number.',
+            );
+        }
+
         if ($photoFile !== null) {
             $path = StorageService::storePatientPhoto($clinicId, $patientId, $photoFile);
             if ($path !== null) {
@@ -339,12 +364,17 @@ final class PatientService
     /** @return list<array<string, mixed>> */
     public static function vitals(int $clinicId, int $patientId, int $limit = 50): array
     {
-        return QueryBuilder::table('vitals')
+        // Most recent N readings (ASC + LIMIT would return the OLDEST N and
+        // hide everything new once a patient passes the cap). Reverse so the
+        // result is still oldest→newest for charts and end()-style "latest".
+        $rows = QueryBuilder::table('vitals')
             ->forClinic($clinicId)
             ->where('patient_id', '=', $patientId)
-            ->orderBy('recorded_at', 'ASC')
+            ->orderBy('recorded_at', 'DESC')
             ->limit($limit)
             ->get();
+
+        return array_reverse($rows);
     }
 
     /** @return list<array<string, mixed>> */
@@ -455,6 +485,23 @@ final class PatientService
     public static function normalizePhone(string $phone): string
     {
         return preg_replace('/[^0-9+]/', '', trim($phone)) ?? '';
+    }
+
+    /**
+     * Server-side mirror of the wizard's required fields — the client-side
+     * `required` attributes are advisory only.
+     *
+     * @param array<string, mixed> $data mapped payload (phone already normalized)
+     */
+    private static function assertValid(array $data): void
+    {
+        if (trim((string) ($data['name'] ?? '')) === '') {
+            throw new \RuntimeException('Patient name is required.');
+        }
+        $digits = preg_replace('/[^0-9]/', '', (string) ($data['phone'] ?? '')) ?? '';
+        if (strlen($digits) < 7) {
+            throw new \RuntimeException('A valid phone number (at least 7 digits) is required.');
+        }
     }
 
     /** @return list<string> */

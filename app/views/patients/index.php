@@ -122,14 +122,32 @@ $sortIcon = static function (string $col) use ($sort, $dir): string {
     </div>
 
     <?php
+    // Windowed pager: Prev/Next + pages around the current one, so any page
+    // stays reachable no matter how many patients the clinic has.
     $totalPages = (int) ceil(max(1, $total) / max(1, $perPage));
     if ($totalPages > 1):
+        $winStart = max(1, $page - 2);
+        $winEnd = min($totalPages, $page + 2);
     ?>
-    <div class="flex justify-center gap-2 text-sm">
-        <?php for ($p = 1; $p <= min($totalPages, 10); $p++): ?>
+    <div class="flex flex-wrap items-center justify-center gap-2 text-sm">
+        <?php if ($page > 1): ?>
+        <a href="?<?= htmlspecialchars($qs(['page' => $page - 1])) ?>" class="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 hover:bg-slate-50">← Prev</a>
+        <?php endif; ?>
+        <?php if ($winStart > 1): ?>
+        <a href="?<?= htmlspecialchars($qs(['page' => 1])) ?>" class="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 hover:bg-slate-50">1</a>
+        <?php if ($winStart > 2): ?><span class="px-1 text-slate-400">…</span><?php endif; ?>
+        <?php endif; ?>
+        <?php for ($p = $winStart; $p <= $winEnd; $p++): ?>
         <a href="?<?= htmlspecialchars($qs(['page' => $p])) ?>"
            class="rounded-lg px-3 py-1.5 font-medium <?= $p === $page ? 'bg-brand text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-50' ?>"><?= $p ?></a>
         <?php endfor; ?>
+        <?php if ($winEnd < $totalPages): ?>
+        <?php if ($winEnd < $totalPages - 1): ?><span class="px-1 text-slate-400">…</span><?php endif; ?>
+        <a href="?<?= htmlspecialchars($qs(['page' => $totalPages])) ?>" class="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 hover:bg-slate-50"><?= $totalPages ?></a>
+        <?php endif; ?>
+        <?php if ($page < $totalPages): ?>
+        <a href="?<?= htmlspecialchars($qs(['page' => $page + 1])) ?>" class="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 hover:bg-slate-50">Next →</a>
+        <?php endif; ?>
     </div>
     <?php endif; ?>
 

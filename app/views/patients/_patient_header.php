@@ -9,10 +9,12 @@
  * Optional:
  *   $visitCount  — int, displayed beside ID if set
  *   $allergies   — list<string> decoded already (saves a call)
+ *   $chronic     — list<string> chronic conditions, decoded already
  *   $compact     — bool, renders the slim sticky variant
  */
 $photoUrl = !empty($patient['photo_path']) ? '/' . ltrim((string) $patient['photo_path'], '/') : null;
 $allergies = $allergies ?? [];
+$chronic = $chronic ?? [];
 $compact = !empty($compact);
 $initials = strtoupper(substr(trim((string) ($patient['name'] ?? '')), 0, 1)) ?: '?';
 
@@ -66,6 +68,11 @@ $visitCount = $visitCount ?? null;
         <?php if (!empty($allergies)): ?>
             <p class="mt-1 text-xs text-rose-700">
                 ⚠ Allergies: <?= htmlspecialchars(implode(', ', $allergies)) ?>
+            </p>
+        <?php endif; ?>
+        <?php if (!empty($chronic)): ?>
+            <p class="mt-0.5 text-xs text-amber-700">
+                Chronic: <?= htmlspecialchars(implode(', ', $chronic)) ?>
             </p>
         <?php endif; ?>
     </div>

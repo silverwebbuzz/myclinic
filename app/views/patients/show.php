@@ -1,10 +1,6 @@
 <?php
 $photoUrl = !empty($patient['photo_path']) ? '/' . ltrim($patient['photo_path'], '/') : null;
 $qrCard = $patient['qr_card_path'] ?? null;
-$tabs = ['overview', 'visits', 'vitals', 'prescriptions', 'lab', 'invoices', 'documents'];
-if (!empty($hasPhotos)) {
-    $tabs[] = 'photos';
-}
 ?>
 <div class="space-y-6">
     <?php if (!empty($created)): ?>
@@ -126,7 +122,7 @@ if (!empty($hasPhotos)) {
                 <div class="ui-card p-5">
                     <div class="flex items-center justify-between">
                         <h3 class="ui-section-title">Latest vitals</h3>
-                        <?php if ($hasVitals): ?><a href="?tab=vitals" class="text-xs font-medium text-brand hover:underline">Trends →</a><?php endif; ?>
+                        <?php if ($hasVitals): ?><a href="#sec-vitals" class="text-xs font-medium text-brand hover:underline">Trends →</a><?php endif; ?>
                     </div>
                     <?php if ($latestVitals): ?>
                     <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -155,7 +151,7 @@ if (!empty($hasPhotos)) {
                 <div class="ui-card p-5">
                     <div class="flex items-center justify-between">
                         <h3 class="ui-section-title">Files &amp; documents</h3>
-                        <a href="?tab=documents" class="text-xs font-medium text-brand hover:underline">View all →</a>
+                        <a href="#sec-documents" class="text-xs font-medium text-brand hover:underline">View all →</a>
                     </div>
                     <?php if (!empty($documents)): ?>
                     <ul class="mt-3 space-y-2 text-sm">
@@ -202,26 +198,54 @@ if (!empty($hasPhotos)) {
     <?php if ($hasVitals): ?>
     <!-- ============ VITALS ============ -->
     <section id="sec-vitals" class="scroll-mt-28 ui-card p-6">
-        <h2 class="mb-4 ui-section-title">Vitals trend</h2>
+        <div class="mb-4 flex items-center justify-between">
+            <h2 class="ui-section-title">Vitals trend</h2>
+            <span class="ui-help">Click a legend item to show/hide that metric</span>
+        </div>
+            <?php if ($vitals === []): ?>
+            <p class="text-sm text-slate-500">No vitals recorded yet. Vitals are captured during a visit.</p>
+            <?php else: ?>
             <canvas id="vitals-chart" height="120"></canvas>
             <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
             <script>
             (function() {
-                const data = <?= json_encode(array_map(fn($v) => [
+                const data = <?= json_encode(array_map(fn ($v) => [
                     'date' => substr($v['recorded_at'] ?? '', 0, 10),
                     'weight' => $v['weight_kg'] ?? null,
+                    'bp_sys' => $v['bp_systolic'] ?? null,
+                    'bp_dia' => $v['bp_diastolic'] ?? null,
+                    'spo2' => $v['spo2'] ?? null,
+                    'sugar' => $v['blood_sugar'] ?? null,
                 ], $vitals)) ?>;
                 if (!data.length) return;
+                // Only plot metrics that have at least one reading; spanGaps
+                // bridges visits where a metric wasn't taken.
+                const metrics = [
+                    { key: 'weight', label: 'Weight (kg)', color: '#0F9B6E' },
+                    { key: 'bp_sys', label: 'BP systolic', color: '#ef4444' },
+                    { key: 'bp_dia', label: 'BP diastolic', color: '#f97316' },
+                    { key: 'spo2',  label: 'SpO₂ (%)', color: '#3b82f6' },
+                    { key: 'sugar', label: 'Blood sugar (mg/dL)', color: '#8b5cf6' },
+                ].filter(m => data.some(d => d[m.key] !== null && d[m.key] !== ''));
                 new Chart(document.getElementById('vitals-chart'), {
                     type: 'line',
                     data: {
                         labels: data.map(d => d.date),
-                        datasets: [{ label: 'Weight (kg)', data: data.map(d => d.weight), borderColor: '#0F9B6E' }]
+                        datasets: metrics.map(m => ({
+                            label: m.label,
+                            data: data.map(d => d[m.key]),
+                            borderColor: m.color,
+                            backgroundColor: m.color,
+                            spanGaps: true,
+                            tension: 0.25,
+                            pointRadius: 3,
+                        })),
                     },
                     options: { responsive: true, scales: { y: { beginAtZero: false } } }
                 });
             })();
             </script>
+            <?php endif; ?>
     </section>
     <?php endif; ?>
 
