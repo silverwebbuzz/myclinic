@@ -183,6 +183,7 @@ return static function (RouteRegistrar $router): void {
 
         $app->get('/queue', [QueueController::class, 'index']);
         $app->post('/queue/{id}/status', [QueueController::class, 'updateStatus']);
+        $app->post('/queue/call-next', [QueueController::class, 'callNext']);
 
         $app->get('/visits', [VisitController::class, 'index']);
         $app->get('/visits/new', [VisitController::class, 'start']);

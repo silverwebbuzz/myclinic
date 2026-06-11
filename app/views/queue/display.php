@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($clinic['name'] ?? 'Queue') ?> — Waiting room</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <meta http-equiv="refresh" content="10">
+    <noscript><meta http-equiv="refresh" content="10"></noscript>
     <style>
         :root { --brand: <?= htmlspecialchars($clinic['brand_color'] ?? '#0F9B6E') ?>; }
         .text-brand { color: var(--brand); }
@@ -58,5 +58,19 @@
             <?php endif; ?>
         </div>
     </div>
+
+    <script>
+    // Refresh the board in place every 10s — a full-page reload flickers on
+    // waiting-room TVs. <noscript> keeps the old meta-refresh as fallback.
+    setInterval(async () => {
+        try {
+            const r = await fetch(window.location.href, { headers: { 'Accept': 'text/html' } });
+            if (!r.ok) return;
+            const doc = new DOMParser().parseFromString(await r.text(), 'text/html');
+            const fresh = doc.getElementById('queue-display');
+            if (fresh) document.getElementById('queue-display').innerHTML = fresh.innerHTML;
+        } catch (e) { /* network blip — keep the last board */ }
+    }, 10000);
+    </script>
 </body>
 </html>

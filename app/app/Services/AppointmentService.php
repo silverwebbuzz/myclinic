@@ -195,14 +195,64 @@ final class AppointmentService
             throw new \InvalidArgumentException('Invalid status');
         }
 
+        $existing = self::find($clinicId, $id);
+        if ($existing === null) {
+            throw new \RuntimeException('Appointment not found');
+        }
+
+        $update = ['status' => $status];
+
+        // Pre-booked patients have no token until they reach the chair. Assign
+        // one when the consultation starts so the waiting-room display stays
+        // coherent for every appointment type, not just walk-ins.
+        if ($status === 'in_progress'
+            && empty($existing['token_number'])
+            && date('Y-m-d', strtotime((string) $existing['scheduled_at'])) === date('Y-m-d')) {
+            $update['token_number'] = self::nextTokenNumber($clinicId);
+        }
+
         QueryBuilder::table('appointments')
             ->forClinic($clinicId)
             ->where('id', '=', $id)
-            ->update(['status' => $status]);
+            ->update($update);
 
         DashboardService::invalidateStats($clinicId);
 
         return self::findDetailed($clinicId, $id) ?? [];
+    }
+
+    /**
+     * One-click "call next patient": completes the doctor's current
+     * in-consultation appointment (if any) and moves the next waiting
+     * patient — tokens first, then earliest slot — to in_progress.
+     *
+     * @return array<string, mixed>|null the appointment now being served
+     */
+    public static function callNext(int $clinicId, ?int $doctorId = null): ?array
+    {
+        $queue = self::todayQueue($clinicId, $doctorId);
+
+        $next = null;
+        foreach ($queue as $row) {
+            if (in_array($row['status'] ?? '', ['scheduled', 'confirmed'], true)) {
+                $next = $row;
+                break;
+            }
+        }
+        if ($next === null) {
+            return null;
+        }
+
+        // Close out only the called doctor's current consultation. With "All
+        // doctors" selected, another doctor's in-progress patient is left alone.
+        $targetDoctor = (int) $next['doctor_id'];
+        foreach ($queue as $row) {
+            if (($row['status'] ?? '') === 'in_progress' && (int) $row['doctor_id'] === $targetDoctor) {
+                self::updateStatus($clinicId, (int) $row['id'], 'completed');
+            }
+        }
+
+        return self::updateStatus($clinicId, (int) $next['id'], 'in_progress');
     }
 
     /** @return list<array<string, mixed>> */
@@ -221,8 +271,8 @@ final class AppointmentService
                 FROM appointments a
                 INNER JOIN patients p ON p.id = a.patient_id
                 INNER JOIN users u ON u.id = a.doctor_id
-                WHERE a.clinic_id = ? AND DATE(a.scheduled_at) = ?';
-        $params = [$clinicId, $date];
+                WHERE a.clinic_id = ? AND a.scheduled_at >= ? AND a.scheduled_at < ?';
+        $params = [$clinicId, $date . ' 00:00:00', date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00'];
         if ($doctorId !== null) {
             $sql .= ' AND a.doctor_id = ?';
             $params[] = $doctorId;
@@ -247,9 +297,9 @@ final class AppointmentService
                 FROM appointments a
                 INNER JOIN patients p ON p.id = a.patient_id
                 INNER JOIN users u ON u.id = a.doctor_id
-                WHERE a.clinic_id = ? AND DATE(a.scheduled_at) = ?
+                WHERE a.clinic_id = ? AND a.scheduled_at >= ? AND a.scheduled_at < ?
                 AND a.status NOT IN (\'cancelled\')';
-        $params = [$clinicId, $today];
+        $params = [$clinicId, $today . ' 00:00:00', date('Y-m-d', strtotime('+1 day')) . ' 00:00:00'];
         if ($doctorId !== null) {
             $sql .= ' AND a.doctor_id = ?';
             $params[] = $doctorId;
@@ -332,13 +382,30 @@ final class AppointmentService
     private static function nextTokenNumber(int $clinicId): int
     {
         $pdo = Database::connection();
-        $stmt = $pdo->prepare(
-            "SELECT COALESCE(MAX(token_number), 0) + 1 AS n FROM appointments
-             WHERE clinic_id = ? AND DATE(scheduled_at) = CURDATE() AND token_number IS NOT NULL",
-        );
-        $stmt->execute([$clinicId]);
 
-        return (int) ($stmt->fetch()['n'] ?? 1);
+        // Atomic claim via the per-clinic per-day counter row: two concurrent
+        // bookings can never receive the same token. LAST_INSERT_ID(expr)
+        // makes the claimed value readable on this connection.
+        try {
+            $stmt = $pdo->prepare(
+                'INSERT INTO appointment_token_counters (clinic_id, token_date, last_token)
+                 VALUES (?, CURDATE(), LAST_INSERT_ID(1))
+                 ON DUPLICATE KEY UPDATE last_token = LAST_INSERT_ID(last_token + 1)',
+            );
+            $stmt->execute([$clinicId]);
+
+            return (int) $pdo->lastInsertId();
+        } catch (\Throwable $e) {
+            // Counter table not migrated yet (migration 020) — legacy MAX+1.
+            $stmt = $pdo->prepare(
+                'SELECT COALESCE(MAX(token_number), 0) + 1 AS n FROM appointments
+                 WHERE clinic_id = ? AND scheduled_at >= CURDATE()
+                 AND scheduled_at < CURDATE() + INTERVAL 1 DAY AND token_number IS NOT NULL',
+            );
+            $stmt->execute([$clinicId]);
+
+            return (int) ($stmt->fetch()['n'] ?? 1);
+        }
     }
 
     private static function canRunAdvancedScheduling(int $clinicId): bool

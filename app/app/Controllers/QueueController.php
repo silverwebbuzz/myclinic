@@ -51,11 +51,48 @@ final class QueueController
         }
 
         $clinicId = (int) RequestContext::clinicId();
-        $status = $request->post['status'] ?? 'confirmed';
-        AppointmentService::updateStatus($clinicId, (int) $id, $status);
+        $status = (string) ($request->post['status'] ?? '');
+        $back = self::queueUrl($request);
+
+        try {
+            AppointmentService::updateStatus($clinicId, (int) $id, $status);
+        } catch (\InvalidArgumentException $e) {
+            return Response::redirect($back . (str_contains($back, '?') ? '&' : '?') . 'error=invalid_status');
+        } catch (\RuntimeException $e) {
+            return Response::redirect($back . (str_contains($back, '?') ? '&' : '?') . 'error=not_found');
+        }
+
         AuditService::log($request, 'UPDATE', 'appointments', (int) $id);
 
-        return Response::redirect('/queue');
+        return Response::redirect($back . (str_contains($back, '?') ? '&' : '?') . 'message=status_updated');
+    }
+
+    public function callNext(Request $request): Response
+    {
+        if (!ModuleGate::check('appointments_basic')) {
+            return Response::redirect('/login');
+        }
+
+        $clinicId = (int) RequestContext::clinicId();
+        $doctorId = !empty($request->post['doctor_id']) ? (int) $request->post['doctor_id'] : null;
+        $next = AppointmentService::callNext($clinicId, $doctorId);
+        $back = self::queueUrl($request);
+
+        if ($next === null) {
+            return Response::redirect($back . (str_contains($back, '?') ? '&' : '?') . 'message=queue_empty');
+        }
+
+        AuditService::log($request, 'UPDATE', 'appointments', (int) $next['id']);
+
+        return Response::redirect($back . (str_contains($back, '?') ? '&' : '?') . 'message=called_next');
+    }
+
+    /** Preserve the doctor filter across status-change redirects. */
+    private static function queueUrl(Request $request): string
+    {
+        $doctorId = (int) ($request->post['doctor_id'] ?? $request->query['doctor_id'] ?? 0);
+
+        return $doctorId > 0 ? '/queue?doctor_id=' . $doctorId : '/queue';
     }
 
     public function api(Request $request): Response
@@ -66,12 +103,25 @@ final class QueueController
 
         $clinicId = (int) RequestContext::clinicId();
         $doctorId = !empty($request->query['doctor_id']) ? (int) $request->query['doctor_id'] : null;
+        $queue = AppointmentService::todayQueue($clinicId, $doctorId);
+
+        // Same follow-up flags as the initial page load, so the badges don't
+        // vanish on the first auto-refresh.
+        $followUpFlags = [];
+        try {
+            $patientIds = array_filter(array_map(static fn ($r) => (int) ($r['patient_id'] ?? 0), $queue));
+            $followUpFlags = \App\Services\FollowUpService::pendingForPatients($clinicId, $patientIds);
+        } catch (\Throwable $e) {
+            // follow_ups table doesn't exist yet.
+        }
 
         return Response::json([
-            'queue' => AppointmentService::todayQueue($clinicId, $doctorId),
+            'queue' => $queue,
             'html' => View::render('queue/_rows', [
-                'queue' => AppointmentService::todayQueue($clinicId, $doctorId),
+                'queue' => $queue,
                 'csrf' => CsrfService::token(),
+                'followUpFlags' => $followUpFlags,
+                'doctorId' => $doctorId,
             ]),
             'refreshed_at' => date('c'),
         ]);

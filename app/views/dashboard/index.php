@@ -75,7 +75,10 @@
         <div class="lg:col-span-2 ui-card">
             <div class="ui-card-header">
                 <h2 class="ui-section-title">Today's queue</h2>
-                <span class="ui-help" x-text="lastRefresh ? 'Updated ' + lastRefresh : ''"></span>
+                <div class="flex items-center gap-3">
+                    <span class="ui-help" x-text="lastRefresh ? 'Updated ' + lastRefresh : ''"></span>
+                    <a href="/queue" class="text-xs font-medium text-brand hover:underline">Open queue →</a>
+                </div>
             </div>
             <div id="queue-body" class="divide-y divide-slate-100 max-h-96 overflow-y-auto">
                 <?php require __DIR__ . '/_queue_rows.php'; ?>

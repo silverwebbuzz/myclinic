@@ -37,28 +37,14 @@ final class DashboardService
     /** @return list<array<string, mixed>> */
     public static function todayQueue(int $clinicId): array
     {
-        if (!Database::ping()) {
-            return [];
-        }
+        // Single source of truth for queue contents/ordering (tokens first,
+        // then slot time) — the dashboard widget just hides no-shows.
+        $queue = array_values(array_filter(
+            AppointmentService::todayQueue($clinicId),
+            static fn (array $row): bool => ($row['status'] ?? '') !== 'no_show',
+        ));
 
-        $today = date('Y-m-d');
-        $pdo = Database::connection();
-        $sql = <<<SQL
-            SELECT a.id, a.scheduled_at, a.status, a.token_number, a.type,
-                   p.name AS patient_name, p.uhid, u.name AS doctor_name
-            FROM appointments a
-            INNER JOIN patients p ON p.id = a.patient_id
-            INNER JOIN users u ON u.id = a.doctor_id
-            WHERE a.clinic_id = :clinic_id
-              AND DATE(a.scheduled_at) = :today
-              AND a.status NOT IN ('cancelled', 'no_show')
-            ORDER BY a.scheduled_at ASC
-            LIMIT 50
-        SQL;
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute(['clinic_id' => $clinicId, 'today' => $today]);
-
-        return $stmt->fetchAll() ?: [];
+        return array_slice($queue, 0, 50);
     }
 
     /** @return list<array<string, mixed>> */
@@ -97,39 +83,42 @@ final class DashboardService
             ];
         }
 
-        $today = date('Y-m-d');
+        // Half-open day range so the (clinic_id, scheduled_at) indexes are
+        // usable — DATE(col) = ? forces a full scan.
+        $dayStart = date('Y-m-d') . ' 00:00:00';
+        $dayEnd = date('Y-m-d', strtotime('+1 day')) . ' 00:00:00';
         $pdo = Database::connection();
 
         $patientsStmt = $pdo->prepare(
             'SELECT COUNT(DISTINCT patient_id) AS c FROM visits
-             WHERE clinic_id = ? AND DATE(visited_at) = ?',
+             WHERE clinic_id = ? AND visited_at >= ? AND visited_at < ?',
         );
-        $patientsStmt->execute([$clinicId, $today]);
+        $patientsStmt->execute([$clinicId, $dayStart, $dayEnd]);
         $patientsToday = (int) ($patientsStmt->fetch()['c'] ?? 0);
 
         $pendingStmt = $pdo->prepare(
             "SELECT COUNT(*) AS c FROM appointments
-             WHERE clinic_id = ? AND DATE(scheduled_at) = ?
+             WHERE clinic_id = ? AND scheduled_at >= ? AND scheduled_at < ?
              AND status IN ('scheduled', 'confirmed', 'in_progress')",
         );
-        $pendingStmt->execute([$clinicId, $today]);
+        $pendingStmt->execute([$clinicId, $dayStart, $dayEnd]);
         $pending = (int) ($pendingStmt->fetch()['c'] ?? 0);
 
         $revenueStmt = $pdo->prepare(
             "SELECT COALESCE(SUM(total), 0) AS s FROM invoices
              WHERE clinic_id = ? AND status IN ('paid', 'partial')
-             AND DATE(COALESCE(paid_at, created_at)) = ?",
+             AND COALESCE(paid_at, created_at) >= ? AND COALESCE(paid_at, created_at) < ?",
         );
-        $revenueStmt->execute([$clinicId, $today]);
+        $revenueStmt->execute([$clinicId, $dayStart, $dayEnd]);
         $revenue = (float) ($revenueStmt->fetch()['s'] ?? 0);
 
         $followStmt = $pdo->prepare(
             "SELECT COUNT(*) AS c FROM appointments
              WHERE clinic_id = ? AND is_followup = 1
              AND status IN ('scheduled', 'confirmed')
-             AND DATE(scheduled_at) >= ?",
+             AND scheduled_at >= ?",
         );
-        $followStmt->execute([$clinicId, $today]);
+        $followStmt->execute([$clinicId, $dayStart]);
         $followUps = (int) ($followStmt->fetch()['c'] ?? 0);
 
         return [
