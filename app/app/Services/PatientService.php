@@ -156,10 +156,18 @@ final class PatientService
 
         $q = trim((string) ($filters['q'] ?? ''));
         if ($q !== '') {
-            $where[] = '(p.name LIKE :q_name OR p.phone LIKE :q_phone OR p.uhid LIKE :q_uhid)';
+            // Phones are stored normalized (digits + optional +). A query typed
+            // as "98765 43210" or "+91-98765…" can never match the raw string —
+            // strip formatting from the query before the phone LIKE.
+            $qDigits = preg_replace('/[^0-9]/', '', $q) ?? '';
+            $where[] = '(p.name LIKE :q_name OR p.uhid LIKE :q_uhid'
+                . ($qDigits !== '' ? ' OR p.phone LIKE :q_phone' : '')
+                . ')';
             $params['q_name'] = '%' . $q . '%';
-            $params['q_phone'] = '%' . $q . '%';
             $params['q_uhid'] = '%' . $q . '%';
+            if ($qDigits !== '') {
+                $params['q_phone'] = '%' . $qDigits . '%';
+            }
         }
         if (!empty($filters['gender'])) {
             $where[] = 'p.gender = :gender';

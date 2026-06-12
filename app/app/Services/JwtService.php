@@ -9,9 +9,20 @@ use Firebase\JWT\Key;
 
 final class JwtService
 {
+    /**
+     * Access-token lifetime. Product requirement: a doctor's login must last
+     * a full working day (>= 10h), so the env value is floored at 600 minutes
+     * — a stale JWT_TTL_MINUTES=15 in a server .env can't log doctors out
+     * mid-consultation.
+     */
+    public static function ttlMinutes(): int
+    {
+        return max((int) ($_ENV['JWT_TTL_MINUTES'] ?? 720), 600);
+    }
+
     public static function issue(array $user, int $clinicId): string
     {
-        $ttl = (int) ($_ENV['JWT_TTL_MINUTES'] ?? 15);
+        $ttl = self::ttlMinutes();
         $payload = [
             'sub' => (int) $user['id'],
             'clinic_id' => $clinicId,
@@ -37,12 +48,15 @@ final class JwtService
     public static function setAuthCookies(string $accessToken, ?string $refreshToken = null): void
     {
         $secure = ($_ENV['APP_ENV'] ?? 'local') !== 'local';
+        // SameSite=Lax (not Strict): doctors arrive via links in WhatsApp /
+        // email / Google — Strict drops the cookies on that first navigation
+        // and the app looks logged-out even though the session is fine.
         setcookie('mc_token', $accessToken, [
-            'expires' => time() + ((int) ($_ENV['JWT_TTL_MINUTES'] ?? 15) * 60),
+            'expires' => time() + (self::ttlMinutes() * 60),
             'path' => '/',
             'secure' => $secure,
             'httponly' => true,
-            'samesite' => 'Strict',
+            'samesite' => 'Lax',
         ]);
 
         if ($refreshToken !== null) {
@@ -52,7 +66,7 @@ final class JwtService
                 'path' => '/',
                 'secure' => $secure,
                 'httponly' => true,
-                'samesite' => 'Strict',
+                'samesite' => 'Lax',
             ]);
         }
     }

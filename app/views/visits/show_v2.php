@@ -184,7 +184,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 <div class="mt-1.5 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2 py-1.5
                             focus-within:border-brand focus-within:ring-1 focus-within:ring-brand">
                     <template x-for="(s, idx) in symptoms" :key="idx">
-                        <span class="inline-flex items-center gap-1 rounded-full bg-brand-light px-2 py-0.5 text-xs text-brand">
+                        <span class="inline-flex items-center gap-1 rounded-full bg-brand-light px-2.5 py-1 text-sm text-brand">
                             <span x-text="s.label"></span>
                             <button type="button" :disabled="!editable" @click="removeSymptom(idx); persistSymptoms()"
                                     class="text-brand hover:text-rose-600 disabled:opacity-50"
@@ -241,7 +241,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
 
                 <!-- Browse by system (Review-of-Systems quick picker) -->
                 <button type="button" :disabled="!editable" @click="toggleBrowse()"
-                        class="mt-2 text-xs font-medium text-brand hover:underline disabled:opacity-50">
+                        class="mt-2 text-sm font-medium text-brand hover:underline disabled:opacity-50">
                     <span x-text="browseOpen ? '− Hide systems' : '+ Browse by system'"></span>
                 </button>
                 <div x-show="browseOpen" x-cloak x-collapse class="mt-2 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
@@ -287,7 +287,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 <div class="flex items-baseline justify-between">
                     <label class="ui-group-label">Prescription</label>
                     <button type="button" :disabled="!editable" @click="cloneLastVisit()"
-                            class="text-xs font-medium text-brand hover:underline disabled:opacity-50">
+                            class="text-sm font-medium text-brand hover:underline disabled:opacity-50">
                         ↻ Same as last visit
                     </button>
                 </div>
@@ -302,7 +302,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                     <span class="text-xs text-slate-500">Apply:</span>
                     <template x-for="tpl in templates.slice(0, 5)" :key="tpl.id">
                         <button type="button" :disabled="!editable" @click="applyTemplate(tpl.id)"
-                                class="rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs hover:border-brand hover:text-brand disabled:opacity-50">
+                                class="rounded-full border border-slate-300 bg-white px-3 py-1 text-sm hover:border-brand hover:text-brand disabled:opacity-50">
                             <span x-text="tpl.name"></span>
                         </button>
                     </template>
@@ -366,7 +366,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                 </div>
 
                                 <select :disabled="!editable || !!line.tapering_steps" x-model="line.frequency_preset"
-                                        class="sm:col-span-2 rounded border px-2 py-1 text-xs">
+                                        class="sm:col-span-2 rounded border px-2 py-1 text-sm">
                                     <option value="">Frequency…</option>
                                     <option value="1-0-0">1-0-0</option>
                                     <option value="0-0-1">0-0-1</option>
@@ -380,9 +380,9 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                        :disabled="!editable || !!line.tapering_steps"
                                        x-model="line.duration_days"
                                        placeholder="Days"
-                                       class="sm:col-span-2 rounded border px-2 py-1 text-xs">
+                                       class="sm:col-span-2 rounded border px-2 py-1 text-sm">
                                 <select :disabled="!editable" x-model="line.food_timing"
-                                        class="sm:col-span-2 rounded border px-2 py-1 text-xs">
+                                        class="sm:col-span-2 rounded border px-2 py-1 text-sm">
                                     <option value="any">Any time</option>
                                     <option value="before">Before food</option>
                                     <option value="after">After food</option>
@@ -499,7 +499,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
 
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <button type="button" :disabled="!editable" @click="addRxLine()"
-                                class="text-xs font-medium text-brand hover:underline disabled:opacity-50">
+                                class="text-sm font-medium text-brand hover:underline disabled:opacity-50">
                             + Add medicine
                         </button>
                         <button type="button" :disabled="!editable" @click="openSaveTemplate()"
@@ -626,7 +626,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 </div>
                 <div class="mt-3 flex flex-wrap items-center gap-3">
                     <button type="button" :disabled="!editable" @click="addCharge()"
-                            class="text-xs font-medium text-brand hover:underline disabled:opacity-50">+ Add charge</button>
+                            class="text-sm font-medium text-brand hover:underline disabled:opacity-50">+ Add charge</button>
 
                     <!-- Save is a real button. It's required (highlighted) when there
                          are unsaved charge rows; disabled/neutral when nothing changed. -->
@@ -908,7 +908,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                             <div class="text-[11px] font-semibold uppercase text-slate-400">Symptoms</div>
                                             <div class="mt-1 flex flex-wrap gap-1">
                                                 <template x-for="s in peek.symptoms" :key="s">
-                                                    <span class="rounded-full bg-brand-light px-2 py-0.5 text-xs text-brand" x-text="s"></span>
+                                                    <span class="rounded-full bg-brand-light px-2.5 py-1 text-sm text-brand" x-text="s"></span>
                                                 </template>
                                             </div>
                                         </div>
@@ -932,7 +932,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                     <template x-if="!peek.symptoms?.length && !peek.diagnosis && !peek.prescriptions?.length && !peek.clinical_notes">
                                         <p class="text-slate-400">No clinical details recorded.</p>
                                     </template>
-                                    <a :href="'/visits/' + peek.id" class="mt-2 inline-block text-xs font-medium text-brand hover:underline">Open full visit to edit →</a>
+                                    <a :href="'/visits/' + peek.id" class="mt-2 inline-block text-sm font-medium text-brand hover:underline">Open full visit to edit →</a>
                                 </div>
                             </template>
                             <p x-show="peekLoading" class="text-xs text-slate-400">Loading…</p>

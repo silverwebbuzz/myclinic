@@ -282,6 +282,9 @@ final class AppointmentController
         }
 
         $clinic = RequestContext::clinic();
+        // generate() returns null when the PDF can't be produced (e.g. temp
+        // dir perms) — the booking still succeeded, so always show the
+        // confirmation page; it simply hides the "Download slip" button.
         $path = AppointmentSlipService::generate($appointment, $clinic ?? []);
 
         if (!empty($request->query['booked'])) {
@@ -289,6 +292,10 @@ final class AppointmentController
                 'appointment' => $appointment,
                 'slipUrl' => $path,
             ], 'Appointment booked'));
+        }
+
+        if ($path === null) {
+            return Response::redirect('/appointments?error=' . urlencode('Slip PDF could not be generated.'));
         }
 
         return Response::redirect($path);

@@ -77,14 +77,21 @@ final class AuthService
             $userId = QueryBuilder::table('users')->insert($userData);
 
             $pdo->commit();
-
-            MailService::send($email, 'welcome', ['clinic_name' => $clinicName], $tenantId);
-
-            return ['tenant_id' => $tenantId, 'user_id' => $userId];
         } catch (\Throwable $e) {
             $pdo->rollBack();
             throw $e;
         }
+
+        // Outside the transaction try/catch: the clinic + user are committed.
+        // A broken SMTP/Mailgun config must not 500 the registration (and the
+        // old rollBack() after commit threw its own exception on top).
+        try {
+            MailService::send($email, 'welcome', ['clinic_name' => $clinicName], $tenantId);
+        } catch (\Throwable $e) {
+            error_log('[registerClinic] welcome mail failed: ' . $e->getMessage());
+        }
+
+        return ['tenant_id' => $tenantId, 'user_id' => $userId];
     }
 
     public static function findUserByEmail(string $email): ?array

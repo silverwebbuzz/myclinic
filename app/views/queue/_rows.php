@@ -43,7 +43,7 @@ $statusStyles = [
         <form method="post" action="/queue/<?= (int) $row['id'] ?>/status" class="inline">
             <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf ?? '') ?>">
             <input type="hidden" name="doctor_id" value="<?= (int) ($doctorId ?? 0) ?: '' ?>">
-            <select name="status" class="rounded border px-2 py-1 text-xs" aria-label="Change status"
+            <select name="status" class="rounded border px-2 py-1 text-sm" aria-label="Change status"
                     data-current="<?= htmlspecialchars($row['status'] ?? '') ?>"
                     onchange="if (['cancelled','no_show'].includes(this.value) && !confirm('Mark this appointment as ' + this.options[this.selectedIndex].text.toLowerCase() + '? The patient will leave the queue.')) { this.value = this.dataset.current; return; } this.classList.add('opacity-50','pointer-events-none'); this.form.submit();">
                 <?php foreach (['scheduled','confirmed','in_progress','completed','no_show','cancelled'] as $st): ?>

@@ -130,6 +130,10 @@ if (!defined('UI_TOKENS_EMITTED')) {
         font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
         letter-spacing: 0.05em; color: var(--ui-text-3); background: #F8FAFC;
     }
+    /* Cell content reads at body size (14px) even where legacy markup says
+       text-xs — (0,1,1) specificity beats the utility. Inner spans/divs that
+       declare their own size (secondary lines, badges) keep it. */
+    .ui-card td { font-size: 0.875rem; }
     .ui-card tbody tr { transition: background .15s ease; }
     .ui-card tbody tr:hover { background: var(--brand-soft, #F0FDFA); }
 

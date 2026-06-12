@@ -42,8 +42,11 @@ final class RefreshTokenMiddleware implements MiddlewareInterface
 
         $session = SessionService::findByRefreshToken($refresh);
         if ($session === null) {
-            JwtService::clearAuthCookies();
-
+            // Do NOT clear cookies here: when several requests race at token
+            // expiry (page nav + queue poll + autosave), the first one rotates
+            // the refresh token and the laggards arrive with the stale one.
+            // Clearing would wipe the freshly-rotated cookies and log the
+            // doctor out. A stale token simply doesn't authenticate.
             return $next();
         }
 
