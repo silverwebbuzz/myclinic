@@ -92,7 +92,7 @@ final class WhiteLabelService
     public static function saveBranding(int $clinicId, array $post, ?array $file): void
     {
         $update = [
-            'brand_color' => $post['brand_color'] ?? '#0F9B6E',
+            'brand_color' => $post['brand_color'] ?? '#0F766E',
             'white_label' => 1,
         ];
 

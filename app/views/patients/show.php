@@ -221,7 +221,7 @@ $qrCard = $patient['qr_card_path'] ?? null;
                 // Only plot metrics that have at least one reading; spanGaps
                 // bridges visits where a metric wasn't taken.
                 const metrics = [
-                    { key: 'weight', label: 'Weight (kg)', color: '#0F9B6E' },
+                    { key: 'weight', label: 'Weight (kg)', color: '#0F766E' },
                     { key: 'bp_sys', label: 'BP systolic', color: '#ef4444' },
                     { key: 'bp_dia', label: 'BP diastolic', color: '#f97316' },
                     { key: 'spo2',  label: 'SpO₂ (%)', color: '#3b82f6' },

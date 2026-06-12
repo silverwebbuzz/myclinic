@@ -57,44 +57,53 @@
         };
     </script>
     <?php
-        $brandHex = $brandColor ?? '#0F9B6E';
-        // Compute light/dark variants for nicer hover/active states.
-        $h = ltrim((string) $brandHex, '#');
-        $r = (int) hexdec(substr($h, 0, 2));
-        $g = (int) hexdec(substr($h, 2, 2));
-        $b = (int) hexdec(substr($h, 4, 2));
-        $brandLight = sprintf('rgba(%d, %d, %d, 0.1)', $r, $g, $b);
-        $brandDark = sprintf('rgb(%d, %d, %d)', (int) max(0, $r - 30), (int) max(0, $g - 30), (int) max(0, $b - 30));
+        // Design-system primary: Teal 600. Clinics that never picked a custom
+        // brand carry the legacy green default in the DB — migrate it here so
+        // the whole fleet moves to the new palette without a data change.
+        $brandHex = $brandColor ?? '#0F766E';
+        if (strtoupper(ltrim((string) $brandHex, '#')) === '0F9B6E') {
+            $brandHex = '#0F766E';
+        }
+
+        if (strtoupper(ltrim((string) $brandHex, '#')) === '0F766E') {
+            // Spec palette: exact hover / light / soft values.
+            $brandDark = '#115E59';
+            $brandLight = '#CCFBF1';
+            $brandSoft = '#F0FDFA';
+        } else {
+            // Custom clinic brand — derive variants.
+            $h = ltrim((string) $brandHex, '#');
+            $r = (int) hexdec(substr($h, 0, 2));
+            $g = (int) hexdec(substr($h, 2, 2));
+            $b = (int) hexdec(substr($h, 4, 2));
+            $brandLight = sprintf('rgba(%d, %d, %d, 0.12)', $r, $g, $b);
+            $brandSoft = sprintf('rgba(%d, %d, %d, 0.05)', $r, $g, $b);
+            $brandDark = sprintf('rgb(%d, %d, %d)', (int) max(0, $r - 30), (int) max(0, $g - 30), (int) max(0, $b - 30));
+        }
     ?>
     <style>
         :root {
             --brand: <?= htmlspecialchars($brandHex) ?>;
             --brand-light: <?= htmlspecialchars($brandLight) ?>;
             --brand-dark: <?= htmlspecialchars($brandDark) ?>;
+            --brand-soft: <?= htmlspecialchars($brandSoft) ?>;
         }
         body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
         .bg-brand { background-color: var(--brand); }
         .bg-brand-light { background-color: var(--brand-light); }
+        .bg-brand-soft { background-color: var(--brand-soft); }
         .text-brand { color: var(--brand); }
         .border-brand { border-color: var(--brand); }
         .hover\:bg-brand-dark:hover { background-color: var(--brand-dark); }
         .ring-brand:focus { --tw-ring-color: var(--brand); }
-        /* Smoother sidebar item active state */
+        /* Sidebar active state — solid brand pill, white text + icon */
         .nav-item-active {
-            background-color: var(--brand-light);
-            color: var(--brand);
+            background-color: var(--brand);
+            color: #fff;
             font-weight: 600;
         }
-        .nav-item-active::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0.25rem;
-            bottom: 0.25rem;
-            width: 3px;
-            border-radius: 0 4px 4px 0;
-            background-color: var(--brand);
-        }
+        .nav-item-active svg { color: #fff; }
+        .nav-item-active:hover { background-color: var(--brand-dark); }
     </style>
     <?php require dirname(__DIR__) . '/components/ui_tokens.php'; ?>
 </head>
@@ -130,8 +139,8 @@
             };
         ?>
         <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
-               class="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform duration-200 lg:static lg:z-auto">
-            <div class="flex h-16 items-center gap-3 border-b border-slate-100 px-5">
+               class="fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col border-r border-slate-200 bg-white transition-transform duration-150 lg:static lg:z-auto">
+            <div class="flex h-[72px] items-center gap-3 border-b border-slate-100 px-5">
                 <?php if (!empty($logoUrl)): ?>
                     <img src="<?= htmlspecialchars($logoUrl) ?>" alt="" class="h-9 w-9 rounded-lg object-cover shadow-sm">
                 <?php else: ?>
@@ -184,7 +193,7 @@
         </aside>
 
         <div class="flex min-w-0 flex-1 flex-col">
-            <header class="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-6 backdrop-blur">
+            <header class="sticky top-0 z-40 flex h-[72px] items-center justify-between border-b border-slate-200 bg-white/95 px-6 backdrop-blur">
                 <div class="flex items-center gap-3">
                     <button type="button" @click="sidebarOpen = !sidebarOpen" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden" aria-label="Menu">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -251,7 +260,7 @@
                 </div>
             </header>
 
-            <main class="flex-1 p-5 lg:p-2">
+            <main class="mx-auto w-full max-w-[1600px] flex-1 p-4 lg:p-6">
                 <?= $content ?? '' ?>
             </main>
             <?php

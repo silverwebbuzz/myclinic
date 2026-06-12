@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <noscript><meta http-equiv="refresh" content="10"></noscript>
     <style>
-        :root { --brand: <?= htmlspecialchars($clinic['brand_color'] ?? '#0F9B6E') ?>; }
+        :root { --brand: <?= htmlspecialchars($clinic['brand_color'] ?? '#0F766E') ?>; }
         .text-brand { color: var(--brand); }
     </style>
 </head>

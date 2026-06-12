@@ -6,7 +6,7 @@
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
         <label class="block text-sm">
             <span class="text-slate-600">Brand color</span>
-            <input name="brand_color" type="color" value="<?= htmlspecialchars($clinic['brand_color'] ?? '#0F9B6E') ?>" class="mt-1 h-10 w-full rounded border">
+            <input name="brand_color" type="color" value="<?= htmlspecialchars($clinic['brand_color'] ?? '#0F766E') ?>" class="mt-1 h-10 w-full rounded border">
         </label>
         <label class="block text-sm">
             <span class="text-slate-600">Logo</span>

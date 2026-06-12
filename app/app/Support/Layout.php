@@ -24,7 +24,7 @@ final class Layout
         $data['user'] = $user;
         $data['csrf'] = CsrfService::token();
         $data['nav'] = SidebarService::build();
-        $data['brandColor'] = $clinic['brand_color'] ?? '#0F9B6E';
+        $data['brandColor'] = $clinic['brand_color'] ?? '#0F766E';
         $data['logoUrl'] = !empty($clinic['logo_path'])
             ? '/' . ltrim((string) $clinic['logo_path'], '/')
             : null;
@@ -40,7 +40,7 @@ final class Layout
         $data['pageTitle'] = $pageTitle ?? 'Patient Portal';
         $data['title'] = ($clinic['name'] ?? 'Clinic') . ' — Portal';
         $data['clinic'] = $clinic;
-        $data['brandColor'] = $clinic['brand_color'] ?? '#0F9B6E';
+        $data['brandColor'] = $clinic['brand_color'] ?? '#0F766E';
 
         return View::render('layouts/portal', $data);
     }

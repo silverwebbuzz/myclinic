@@ -66,7 +66,7 @@
                     <?= ui_icon($tile['icon'], 18) ?>
                 </span>
             </div>
-            <p class="mt-3 text-2xl font-semibold text-slate-900" x-text="stats.<?= $tile['key'] ?>Display"><?= htmlspecialchars($display) ?></p>
+            <p class="mt-3 text-3xl font-bold tracking-tight text-slate-900" x-text="stats.<?= $tile['key'] ?>Display"><?= htmlspecialchars($display) ?></p>
         </div>
         <?php endforeach; ?>
     </div>

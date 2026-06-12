@@ -167,7 +167,7 @@ $qrSrc       = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=
         </div>
         <div>
             <label class="ui-label mb-1 block">Brand color</label>
-            <input name="brand_color" type="color" value="<?= htmlspecialchars($clinic['brand_color'] ?? '#0F9B6E') ?>" class="h-[34px] w-full rounded-lg border border-slate-300 p-1">
+            <input name="brand_color" type="color" value="<?= htmlspecialchars($clinic['brand_color'] ?? '#0F766E') ?>" class="h-[34px] w-full rounded-lg border border-slate-300 p-1">
         </div>
         <div class="sm:col-span-2">
             <label class="ui-label mb-1 block">Logo</label>

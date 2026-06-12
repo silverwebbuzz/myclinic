@@ -29,7 +29,7 @@ final class ClinicSettingsService
             'country_code' => $country,
             'currency' => $post['currency'] ?? OnboardingService::currencyForCountry($country),
             'timezone' => $post['timezone'] ?? 'Asia/Kolkata',
-            'brand_color' => $post['brand_color'] ?? '#0F9B6E',
+            'brand_color' => $post['brand_color'] ?? '#0F766E',
         ];
 
         if ($file !== null && !empty($file['tmp_name'])) {

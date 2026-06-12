@@ -141,10 +141,10 @@ if (!function_exists('ui_toggle')) {
 }
 
 if (!function_exists('ui_badge')) {
-    /** @param string $tone success|danger|warning|neutral */
+    /** @param string $tone success|danger|warning|info|neutral */
     function ui_badge(string $label, string $tone = 'neutral'): string
     {
-        $tone = in_array($tone, ['success', 'danger', 'warning', 'neutral'], true) ? $tone : 'neutral';
+        $tone = in_array($tone, ['success', 'danger', 'warning', 'info', 'neutral'], true) ? $tone : 'neutral';
         return '<span class="ui-badge ui-badge-' . $tone . '">' . ui_e($label) . '</span>';
     }
 }

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($title ?? 'Portal') ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>:root { --brand: <?= htmlspecialchars($brandColor ?? '#0F9B6E') ?>; }</style>
+    <style>:root { --brand: <?= htmlspecialchars($brandColor ?? '#0F766E') ?>; }</style>
 </head>
 <body class="min-h-screen bg-slate-50">
     <header class="border-b bg-white px-4 py-3">

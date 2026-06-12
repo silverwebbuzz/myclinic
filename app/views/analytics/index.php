@@ -82,7 +82,7 @@ new Chart(document.getElementById('revenue-chart'), {
     data: {
         labels: rev.labels,
         datasets: [
-            { label: 'Revenue', data: rev.revenue, backgroundColor: '#0F9B6E' },
+            { label: 'Revenue', data: rev.revenue, backgroundColor: '#0F766E' },
             { label: 'Expenses', data: rev.expenses, backgroundColor: '#f59e0b' },
         ],
     },
@@ -94,7 +94,7 @@ new Chart(document.getElementById('flow-chart'), {
     data: {
         labels: flow.labels,
         datasets: [
-            { label: 'Visits', data: flow.visits, borderColor: '#0F9B6E', tension: 0.3 },
+            { label: 'Visits', data: flow.visits, borderColor: '#0F766E', tension: 0.3 },
             { label: 'New patients', data: flow.new_patients, borderColor: '#3b82f6', tension: 0.3 },
         ],
     },

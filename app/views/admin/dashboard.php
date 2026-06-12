@@ -51,7 +51,7 @@
         type: 'line',
         data: {
             labels: trend.map(r => r.month),
-            datasets: [{ label: 'MRR (USD)', data: trend.map(r => r.mrr), borderColor: '#0F9B6E', fill: false }]
+            datasets: [{ label: 'MRR (USD)', data: trend.map(r => r.mrr), borderColor: '#0F766E', fill: false }]
         },
         options: { responsive: true, plugins: { legend: { display: false } } }
     });
@@ -60,7 +60,7 @@
         type: 'doughnut',
         data: {
             labels: Object.keys(byPlan),
-            datasets: [{ data: Object.values(byPlan), backgroundColor: ['#94a3b8','#0F9B6E','#3b82f6','#8b5cf6'] }]
+            datasets: [{ data: Object.values(byPlan), backgroundColor: ['#94a3b8','#0F766E','#3b82f6','#8b5cf6'] }]
         }
     });
     </script>

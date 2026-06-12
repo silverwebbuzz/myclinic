@@ -87,8 +87,8 @@ final class PrescriptionPdfService
         }
 
         $html = '<div style="font-family:sans-serif;padding:0;font-size:11pt;color:#0f172a;">'
-            . '<div style="border-bottom:2px solid #0F9B6E;padding-bottom:8px;margin-bottom:12px;">'
-            . '<h2 style="margin:0;font-size:16pt;color:#0F9B6E;">' . $clinicName . '</h2>'
+            . '<div style="border-bottom:2px solid #0F766E;padding-bottom:8px;margin-bottom:12px;">'
+            . '<h2 style="margin:0;font-size:16pt;color:#0F766E;">' . $clinicName . '</h2>'
             . ($rxHeader !== '' ? '<div style="font-size:9.5pt;color:#334155;">' . $rxHeader . '</div>' : '')
             . ($clinicAddr !== '' ? '<div style="font-size:9pt;color:#475569;">' . $clinicAddr . '</div>' : '')
             . ($clinicPhone !== '' ? '<div style="font-size:9pt;color:#475569;">Phone: ' . $clinicPhone . '</div>' : '')

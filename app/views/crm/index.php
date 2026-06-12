@@ -55,7 +55,7 @@ const sc = <?= json_encode($sourceChart) ?>;
 if (sc.labels.length) {
     new Chart(document.getElementById('source-chart'), {
         type: 'doughnut',
-        data: { labels: sc.labels, datasets: [{ data: sc.values, backgroundColor: ['#0F9B6E','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#64748b'] }] },
+        data: { labels: sc.labels, datasets: [{ data: sc.values, backgroundColor: ['#0F766E','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#64748b'] }] },
     });
 }
 </script>
