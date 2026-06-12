@@ -236,7 +236,10 @@ return static function (RouteRegistrar $router): void {
 
     $router->group([
         'prefix' => '/api/v1',
-        'middleware' => ['refresh', 'tenant', 'auth', 'rbac', 'module', 'rate'],
+        // csrf: these run on session cookies, so cross-site POSTs were possible
+        // (autosave, templates, billing). Token arrives via X-CSRF-Token header,
+        // injected globally by the base layout's fetch() hook.
+        'middleware' => ['refresh', 'tenant', 'auth', 'csrf', 'rbac', 'module', 'rate'],
     ], static function (GroupedRouteRegistrar $api): void {
         $api->get('/ping', static fn () => \App\Http\Response::json(['pong' => true]));
         $api->get('/dashboard/queue', [DashboardController::class, 'queueApi']);

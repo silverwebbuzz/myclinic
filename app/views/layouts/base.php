@@ -4,7 +4,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?= htmlspecialchars($csrf ?? '') ?>">
     <title><?= htmlspecialchars($title ?? 'eClinicPro') ?></title>
+    <script>
+    // Attach the session CSRF token to every same-origin mutating fetch().
+    // One global hook instead of per-call-site headers, so /api/v1 POSTs pass
+    // CsrfMiddleware without touching (or missing) any of the existing calls.
+    (function () {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+        if (!token) return;
+        const orig = window.fetch;
+        window.fetch = function (input, init) {
+            try {
+                const url = typeof input === 'string' ? input : ((input && input.url) || '');
+                const method = ((init && init.method) || (typeof input === 'object' && input && input.method) || 'GET').toUpperCase();
+                const sameOrigin = url.startsWith('/') || url.startsWith(window.location.origin);
+                if (sameOrigin && method !== 'GET' && method !== 'HEAD') {
+                    init = init || {};
+                    const headers = new Headers(init.headers || (typeof input === 'object' && input ? input.headers : undefined) || {});
+                    if (!headers.has('X-CSRF-Token')) headers.set('X-CSRF-Token', token);
+                    init.headers = headers;
+                }
+            } catch (e) { /* fall back to the original call untouched */ }
+            return orig.call(this, input, init);
+        };
+    })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
