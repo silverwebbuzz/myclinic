@@ -525,7 +525,7 @@ require __DIR__ . '/partials/header.php';
 
 
 <!-- ============ HOW BOOKING WORKS (patient) ============ -->
-<section class="hp-how">
+<!-- <section class="hp-how">
     <div class="wrap">
         <div class="section-head reveal">
             <span class="eyebrow">For patients</span>
@@ -548,6 +548,163 @@ require __DIR__ . '/partials/header.php';
         </div>
         <div class="hp-how-cta reveal">
             <a href="/find-a-doctor" class="btn btn-primary btn-lg">Find your doctor →</a>
+        </div>
+    </div>
+</section> -->
+
+<section class="section">
+    <div class="wrap">
+        <!-- dot grid decoration -->
+        <div class="dot-grid" id="dotGrid"></div>
+
+        <!-- ── Header ── -->
+        <div class="header">
+            <div class="eyebrow">For Patients</div>
+            <h1 class="headline">Book in 60 seconds. No call centre.</h1>
+            <p class="subline">EclinicPro makes appointment booking simple, fast and hassle-free<br>for every patient.</p>
+        </div>
+
+        <!-- ── Body ── -->
+        <div class="body">
+
+            <!-- Steps + Benefits -->
+            <div class="steps-col">
+
+                <!-- Steps row -->
+                <div class="steps-row">
+
+                    <!-- Step 1 -->
+                    <div class="step-card" style="margin-top:20px">
+                        <div class="step-badge badge-green">01</div>
+                        <div class="step-icon icon-green">
+                            <!-- Search icon -->
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#1cb98f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="7" />
+                                <line x1="16.5" y1="16.5" x2="22" y2="22" />
+                            </svg>
+                        </div>
+                        <div class="step-title">Search</div>
+                        <div class="step-desc">Search your city, specialty or doctor name and explore verified doctors with real fees.</div>
+                    </div>
+
+                    <!-- connector -->
+                    <div class="step-connector">
+                        <svg viewBox="0 0 80 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M2 10 Q40 2 78 10" stroke="#b0c8e0" stroke-width="1.5" stroke-dasharray="5 4" fill="none" />
+                            <polygon points="74,6 80,10 74,14" fill="#b0c8e0" />
+                        </svg>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="step-card" style="margin-top:20px">
+                        <div class="step-badge badge-teal">02</div>
+                        <div class="step-icon icon-teal">
+                            <!-- Calendar icon -->
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#2ab5d4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="4" width="18" height="17" rx="3" />
+                                <line x1="3" y1="9" x2="21" y2="9" />
+                                <line x1="8" y1="2" x2="8" y2="6" />
+                                <line x1="16" y1="2" x2="16" y2="6" />
+                                <circle cx="15.5" cy="15.5" r="3" fill="#e5f7fb" stroke="#2ab5d4" stroke-width="1.5" />
+                                <polyline points="14.5,15.5 15.5,16.5 17,14.5" stroke="#2ab5d4" stroke-width="1.5" fill="none" />
+                            </svg>
+                        </div>
+                        <div class="step-title">Request a slot</div>
+                        <div class="step-desc">Choose a convenient date and time. You'll instantly get a request confirmation via WhatsApp/SMS.</div>
+                    </div>
+
+                    <!-- connector -->
+                    <div class="step-connector">
+                        <svg viewBox="0 0 80 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M2 10 Q40 2 78 10" stroke="#b0c8e0" stroke-width="1.5" stroke-dasharray="5 4" fill="none" />
+                            <polygon points="74,6 80,10 74,14" fill="#b0c8e0" />
+                        </svg>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="step-card" style="margin-top:20px">
+                        <div class="step-badge badge-blue">03</div>
+                        <div class="step-icon icon-blue">
+                            <!-- Shield check -->
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#4a90d9" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2L3 6v6c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V6L12 2z" />
+                                <polyline points="9,12 11,14 15,10" stroke="#4a90d9" stroke-width="2.2" fill="none" />
+                            </svg>
+                        </div>
+                        <div class="step-title">Doctor confirms</div>
+                        <div class="step-desc">The clinic confirms your appointment and you get a final confirmation. Zero phone-tag.</div>
+                    </div>
+
+                </div><!-- /steps-row -->
+
+                <!-- Benefits row -->
+                <div class="benefits">
+
+                    <div class="benefit">
+                        <div class="benefit-icon bi-green">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#1cb98f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.9 9.44 19.79 19.79 0 01.87 4.2 2 2 0 012.86 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L7.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" />
+                                <line x1="1" y1="1" x2="23" y2="23" />
+                            </svg>
+                        </div>
+                        <div class="benefit-title">No Calls</div>
+                        <div class="benefit-desc">Avoid busy call centres and long hold times.</div>
+                    </div>
+
+                    <div class="benefit">
+                        <div class="benefit-icon bi-teal">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#2ab5d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2" />
+                            </svg>
+                        </div>
+                        <div class="benefit-title">Instant &amp; Easy</div>
+                        <div class="benefit-desc">Book in under 60 seconds.</div>
+                    </div>
+
+                    <div class="benefit">
+                        <div class="benefit-icon bi-purple">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#7c5cbf" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0110 0v4" />
+                            </svg>
+                        </div>
+                        <div class="benefit-title">Secure &amp; Private</div>
+                        <div class="benefit-desc">Your data is safe with us.</div>
+                    </div>
+
+                    <div class="benefit">
+                        <div class="benefit-icon bi-peach">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#e07a3a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+                                <path d="M9 12l2 2 4-4" />
+                            </svg>
+                        </div>
+                        <div class="benefit-title">Trusted Clinics</div>
+                        <div class="benefit-desc">Verified doctors and trusted by thousands.</div>
+                    </div>
+
+                </div><!-- /benefits -->
+
+            </div><!-- /steps-col -->
+
+            <!-- ── Phones ── -->
+            <div class="phones-col">
+
+                <img src="/assets/img/logos/remove-bg.png" alt="Doctor" style="width: 100%; height: 100%; object-fit: contain;">
+
+            </div>
+            <!-- /phones-col -->
+        </div><!-- /body -->
+
+        <!-- ── CTA ── -->
+        <div class="cta-wrap">
+            <a href="/find-a-doctor" class="btn btn-primary btn-lg">
+                Find your doctor
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12,5 19,12 12,19" />
+                </svg>
+            </a>
         </div>
     </div>
 </section>
@@ -725,52 +882,292 @@ require __DIR__ . '/partials/header.php';
 </section>
 
 <!-- ============ PRICING TEASER (single plan, real facts) ============ -->
-<section class="hp-pricing" id="pricing">
-    <div class="wrap">
-        <div class="section-head reveal">
-            <span class="eyebrow">Pricing</span>
-            <h2 class="h-section">One plan. Everything to run your clinic.</h2>
-            <p class="hp-sub">No tiers, no per-seat games, no surprise upsells. Try free for 30 days — no card.</p>
+<section>
+    <div class="page-wrap">
+
+        <div class="heroo">
+            <div class="hero-eyebroww">All-in-one Clinic Management Software</div>
+            <h1 class="hero-titlee">One plan. Everything to run<br>your clinic.</h1>
+            <p class="hero-subb">No tiers, no per-seat games, no surprise upsells.<br>
+                Try free for <strong>30 days</strong> — <strong>no card.</strong></p>
         </div>
 
-        <div class="hp-plan-single reveal">
-            <div class="hp-plan-head">
-                <span class="hp-plan-name">Standard — everything included</span>
-                <div class="hp-plan-price">₹16,000<span class="per">/year</span></div>
-                <div class="hp-plan-yearly">
-                    <span class="hp-fc-strike">₹17,988</span>
-                    <span class="hp-plan-badge">Save 10%</span>
-                    <span class="hp-plan-gst">+ 18% GST at checkout</span>
+        <!-- <div class="pills-row">
+            <div class="pill">
+                <div class="pill-icon">
+                    <svg viewBox="0 0 24 24">
+                        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                        <path d="M12 8v8M8 12h8"></path>
+                    </svg>
+                </div>
+                <div>
+                    <div class="pill-title">Patient Records</div>
+                    <div class="pill-sub">Store &amp; manage everything securely</div>
+                </div>
+            </div>
+            <div class="pill">
+                <div class="pill-icon">
+                    <svg viewBox="0 0 24 24">
+                        <rect x="3" y="4" width="18" height="18" rx="2" />
+                        <path d="M16 2v4M8 2v4M3 10h18" />
+                        <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
+                    </svg>
+                </div>
+                <div>
+                    <div class="pill-title">Appointments</div>
+                    <div class="pill-sub">Walk-in, bookings &amp; smart scheduling</div>
+                </div>
+            </div>
+            <div class="pill">
+                <div class="pill-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21" />
+                        <path d="M9 10h.01M12 10h.01M15 10h.01" />
+                    </svg>
+                </div>
+                <div>
+                    <div class="pill-title">WhatsApp Alerts</div>
+                    <div class="pill-sub">Automated reminders &amp; follow-ups</div>
+                </div>
+            </div>
+            <div class="pill">
+                <div class="pill-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <path d="M14 2v6h6M8 13h8M8 17h5" />
+                    </svg>
+                </div>
+                <div>
+                    <div class="pill-title">GST Billing</div>
+                    <div class="pill-sub">GST-ready invoicing &amp; reports</div>
+                </div>
+            </div>
+        </div> -->
+
+        <div class="main-grid">
+
+            <!-- LEFT: STATS -->
+            <div class="side-col">
+                <div class="right-card">
+                    <div class="right-icon">
+                        <svg viewBox="0 0 24 24" fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round">
+
+                            <!-- Building -->
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+
+                            <!-- Door -->
+                            <path d="M9 21v-6h6v6"></path>
+
+                            <!-- Medical Cross -->
+                            <path d="M12 7v4"></path>
+                            <path d="M10 9h4"></path>
+
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="right-title">500+ Clinics Using</div>
+                        <div class="right-desc">Trusted by clinics across India</div>
+                    </div>
+                </div>
+
+                <div class="right-card">
+                    <div class="right-icon">
+                        <!-- <svg viewBox="0 0 24 24">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            <polyline points="9,12 11,14 15,10" />
+                        </svg> -->
+
+                        <!-- <div class="stat-icon"> -->
+                        <svg viewBox="0 0 24 24">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                        <!-- </div> -->
+                    </div>
+                    <div>
+                        <div class="right-title">50,000+ Patients Managed</div>
+                        <div class="right-desc">Manage patient data with complete ease</div>
+                    </div>
+                </div>
+
+                <div class="right-card">
+                    <div class="right-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            <polyline points="9,12 11,14 15,10" />
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="right-title">99.9% Uptime</div>
+                        <div class="right-desc">Reliable, secure &amp; always available </div>
+                    </div>
+                </div>
+
+                <div class="right-card">
+                    <div class="right-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <path d="M14 2v6h6M8 13h8M8 17h5"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="right-title">GST Billing</div>
+                        <div class="right-desc">GST-ready invoicing & reports</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT: FEATURE CARDS -->
+            <div class="side-col right-col">
+
+                <div class="right-card">
+                    <div class="pill-icon">
+                        <svg viewBox="0 0 24 24">
+                            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                            <path d="M12 8v8M8 12h8"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="right-title">Patient Records</div>
+                        <div class="right-desc">Store & manage everything securely</div>
+                    </div>
+                </div>
+
+                <div class="right-card">
+                    <div class="right-icon">
+                        <svg viewBox="0 0 24 24">
+                            <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                            <path d="M16 2v4M8 2v4M3 10h18"></path>
+                            <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="right-title">Appointments</div>
+                        <div class="right-desc">Walk-in, bookings & smart scheduling</div>
+                    </div>
+                </div>
+
+                <div class="right-card">
+                    <div class="right-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21" />
+                            <path d="M9 10h.01M12 10h.01M15 10h.01" />
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="right-title">WhatsApp Reminders</div>
+                        <div class="right-desc">Automated alerts reduce no-shows</div>
+                    </div>
+                </div>
+
+                <div class="right-card">
+                    <div class="right-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            <polyline points="9,12 11,14 15,10" />
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="right-title">100% GST Ready</div>
+                        <div class="right-desc">Compliant billing, invoices &amp; reports</div>
+                    </div>
+                </div>
+
+
+
+            </div>
+
+            <!-- CENTER: PRICING CARD -->
+            <div class="pricing-card">
+                <div class="pricing-top">
+                    <div class="pricing-top-label">Standard — Everything Included</div>
+                </div>
+                <div class="pricing-body">
+                    <div class="price-main">
+                        <span class="price-sym">₹</span><span class="price-num">16,000</span><span class="price-yr">/year</span>
+                    </div>
+                    <div class="price-meta">
+                        <span class="price-original">₹17,988</span>
+                        <span class="save-tag">SAVE 10%</span>
+                        <span class="gst-txt">+ 18% GST at checkout</span>
+                    </div>
+
+                    <div class="feat-grid">
+                        <div class="feat-item">
+                            <div class="feat-check"><svg viewBox="0 0 12 12">
+                                    <polyline points="2,6 5,9 10,3" />
+                                </svg></div>
+                            <span class="feat-txt">Patient records, visits &amp; prescriptions</span>
+                        </div>
+                        <div class="feat-item">
+                            <div class="feat-check"><svg viewBox="0 0 12 12">
+                                    <polyline points="2,6 5,9 10,3" />
+                                </svg></div>
+                            <span class="feat-txt">Appointments &amp; walk-in queue</span>
+                        </div>
+                        <div class="feat-item">
+                            <div class="feat-check"><svg viewBox="0 0 12 12">
+                                    <polyline points="2,6 5,9 10,3" />
+                                </svg></div>
+                            <span class="feat-txt">Billing &amp; invoicing (GST-ready)</span>
+                        </div>
+                        <div class="feat-item">
+                            <div class="feat-check"><svg viewBox="0 0 12 12">
+                                    <polyline points="2,6 5,9 10,3" />
+                                </svg></div>
+                            <span class="feat-txt">WhatsApp + SMS messaging built in</span>
+                        </div>
+                        <div class="feat-item">
+                            <div class="feat-check"><svg viewBox="0 0 12 12">
+                                    <polyline points="2,6 5,9 10,3" />
+                                </svg></div>
+                            <span class="feat-txt">Specialty-aware forms (50+ specialties)</span>
+                        </div>
+                        <div class="feat-item">
+                            <div class="feat-check"><svg viewBox="0 0 12 12">
+                                    <polyline points="2,6 5,9 10,3" />
+                                </svg></div>
+                            <span class="feat-txt">Public doctor profile on eclinicpro.com</span>
+                        </div>
+                        <div class="feat-item">
+                            <div class="feat-check"><svg viewBox="0 0 12 12">
+                                    <polyline points="2,6 5,9 10,3" />
+                                </svg></div>
+                            <span class="feat-txt">Unlimited patients &amp; staff users</span>
+                        </div>
+                        <div class="feat-item">
+                            <div class="feat-check"><svg viewBox="0 0 12 12">
+                                    <polyline points="2,6 5,9 10,3" />
+                                </svg></div>
+                            <span class="feat-txt">Reports, follow-ups &amp; analytics</span>
+                        </div>
+                    </div>
+
+                    <a href="https://app.eclinicpro.com/register" class="cta-btn">Start 30-day free trial</a>
+                    <div class="trust-row">
+                        <span class="trust-item"><svg viewBox="0 0 14 14">
+                                <polyline points="2,7 5,10 12,3" />
+                            </svg> No credit card</span>
+                        <span class="trust-item"><svg viewBox="0 0 14 14">
+                                <polyline points="2,7 5,10 12,3" />
+                            </svg> Cancel anytime</span>
+                        <span class="trust-item"><svg viewBox="0 0 14 14">
+                                <polyline points="2,7 5,10 12,3" />
+                            </svg> Setup in minutes</span>
+                    </div>
+                    <a href="#" class="see-link">See full pricing &amp; FAQ →</a>
                 </div>
             </div>
 
-            <div class="hp-plan-body">
-                <ul class="hp-plan-feats">
-                    <?php foreach (
-                        [
-                            'Patient records, visits & prescriptions',
-                            'Appointments & walk-in queue',
-                            'Billing & invoicing (GST-ready)',
-                            'WhatsApp + SMS messaging built in',
-                            'Specialty-aware forms (50+ specialties)',
-                            'Public doctor profile on eclinicpro.com',
-                            'Unlimited patients & staff users',
-                            'Reports, follow-ups & analytics',
-                        ] as $f
-                    ): ?>
-                        <li><span class="tick">✓</span><span><?= e($f) ?></span></li>
-                    <?php endforeach; ?>
-                </ul>
 
-                <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg btn-block">Start 30-day free trial</a>
 
-                <ul class="hp-plan-trust">
-                    <li>No credit card</li>
-                    <li>Cancel anytime</li>
-                    <li>Setup in minutes</li>
-                </ul>
-                <p class="hp-plan-link"><a href="/features#pricing">See full pricing &amp; FAQ →</a></p>
-            </div>
         </div>
     </div>
 </section>
@@ -968,6 +1365,15 @@ $faqDoctors = [
        INIT — first render
     ───────────────────────────────────────── */
     render(true);
+</script>
+
+<script>
+    // Generate dot grid
+    const grid = document.getElementById('dotGrid');
+    for (let i = 0; i < 48; i++) {
+        const s = document.createElement('span');
+        grid.appendChild(s);
+    }
 </script>
 
 <?php require __DIR__ . '/partials/footer.php'; ?>
