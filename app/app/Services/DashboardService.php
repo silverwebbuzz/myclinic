@@ -104,10 +104,12 @@ final class DashboardService
         $pendingStmt->execute([$clinicId, $dayStart, $dayEnd]);
         $pending = (int) ($pendingStmt->fetch()['c'] ?? 0);
 
+        // Revenue = money actually received today (payments table), not the
+        // face value of invoices touched today — a partial payment used to
+        // count the whole invoice total.
         $revenueStmt = $pdo->prepare(
-            "SELECT COALESCE(SUM(total), 0) AS s FROM invoices
-             WHERE clinic_id = ? AND status IN ('paid', 'partial')
-             AND COALESCE(paid_at, created_at) >= ? AND COALESCE(paid_at, created_at) < ?",
+            'SELECT COALESCE(SUM(amount), 0) AS s FROM payments
+             WHERE clinic_id = ? AND paid_at >= ? AND paid_at < ?',
         );
         $revenueStmt->execute([$clinicId, $dayStart, $dayEnd]);
         $revenue = (float) ($revenueStmt->fetch()['s'] ?? 0);

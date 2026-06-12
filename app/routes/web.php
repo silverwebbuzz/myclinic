@@ -171,6 +171,7 @@ return static function (RouteRegistrar $router): void {
         $app->get('/billing/{id}/pdf', [BillingController::class, 'downloadPdf']);
         $app->post('/billing/{id}', [BillingController::class, 'update']);
         $app->post('/billing/{id}/pay-cash', [BillingController::class, 'payCash']);
+        $app->post('/billing/{id}/payment', [BillingController::class, 'recordPayment']);
 
         $app->get('/appointments', [AppointmentController::class, 'index']);
         $app->get('/appointments/new', [AppointmentController::class, 'create']);

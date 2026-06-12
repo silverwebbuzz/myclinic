@@ -39,16 +39,33 @@ final class ClinicSettingsService
             }
         }
 
-        QueryBuilder::table('tenants')->where('id', '=', $clinicId)->update($tenantUpdate);
+        try {
+            QueryBuilder::table('tenants')->where('id', '=', $clinicId)->update(array_merge($tenantUpdate, [
+                'registration_number' => trim($post['registration_number'] ?? '') ?: null,
+            ]));
+        } catch (\Throwable $e) {
+            // registration_number column missing (migration 024 not applied).
+            QueryBuilder::table('tenants')->where('id', '=', $clinicId)->update($tenantUpdate);
+        }
 
         self::ensureSpecialtyConfigRow($clinicId);
-        QueryBuilder::table('specialty_configs')->where('clinic_id', '=', $clinicId)->update([
+        $configUpdate = [
             'uhid_prefix' => $uhidPrefix,
             'invoice_prefix' => strtoupper(substr($post['invoice_prefix'] ?? 'INV', 0, 10)),
             'consultation_fee' => (float) ($post['consultation_fee'] ?? 0),
             'invoice_tax_label' => $post['invoice_tax_label'] ?? OnboardingService::taxLabelForCountry($country),
             'invoice_tax_percent' => (float) ($post['invoice_tax_percent'] ?? 0),
-        ]);
+        ];
+
+        try {
+            QueryBuilder::table('specialty_configs')->where('clinic_id', '=', $clinicId)->update(array_merge($configUpdate, [
+                'rx_header_text' => trim((string) ($post['rx_header_text'] ?? '')) ?: null,
+                'rx_footer_text' => trim((string) ($post['rx_footer_text'] ?? '')) ?: null,
+            ]));
+        } catch (\Throwable $e) {
+            // rx_* columns missing (migration 024 not applied) — save the rest.
+            QueryBuilder::table('specialty_configs')->where('clinic_id', '=', $clinicId)->update($configUpdate);
+        }
 
         OnboardingService::refreshClinicContext($clinicId);
         DashboardService::invalidateStats($clinicId);

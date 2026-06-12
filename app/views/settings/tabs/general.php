@@ -173,6 +173,28 @@ $qrSrc       = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=
             <label class="ui-label mb-1 block">Logo</label>
             <input name="logo" type="file" accept="image/png,image/jpeg" class="ui-input file:mr-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-0.5 file:text-xs">
         </div>
+        <div>
+            <label class="ui-label mb-1 block">Registration number</label>
+            <input name="registration_number" value="<?= htmlspecialchars($clinic['registration_number'] ?? '') ?>"
+                   placeholder="e.g. medical council reg. no." class="ui-input">
+            <p class="mt-0.5 text-[11px] text-slate-400">Printed on prescriptions and invoices.</p>
+        </div>
+        <div class="sm:col-span-2 lg:col-span-3 grid gap-x-4 gap-y-3 sm:grid-cols-2">
+            <div>
+                <label class="ui-label mb-1 block">Prescription header note</label>
+                <input name="rx_header_text" maxlength="255"
+                       value="<?= htmlspecialchars($config['rx_header_text'] ?? '') ?>"
+                       placeholder="e.g. Dr A. Sharma · MBBS, MD · Mon–Sat 9am–1pm" class="ui-input">
+                <p class="mt-0.5 text-[11px] text-slate-400">Shown under the clinic name on the printed Rx pad.</p>
+            </div>
+            <div>
+                <label class="ui-label mb-1 block">Prescription footer note</label>
+                <input name="rx_footer_text" maxlength="255"
+                       value="<?= htmlspecialchars($config['rx_footer_text'] ?? '') ?>"
+                       placeholder="e.g. Not valid for medico-legal purposes" class="ui-input">
+                <p class="mt-0.5 text-[11px] text-slate-400">Shown at the bottom of the printed Rx pad.</p>
+            </div>
+        </div>
     </div>
     <button type="submit" class="ui-btn ui-btn-primary">Save general</button>
 </form>

@@ -100,24 +100,37 @@ final class InvoiceService
     {
         $config = OnboardingService::specialtyConfig($clinicId) ?? [];
         $prefix = $config['invoice_prefix'] ?? 'INV';
-        $number = self::nextInvoiceNumber($clinicId, $prefix);
 
-        $id = QueryBuilder::table('invoices')->insert([
-            'clinic_id' => $clinicId,
-            'patient_id' => (int) $data['patient_id'],
-            'visit_id' => $data['visit_id'] ?? null,
-            'attributed_doctor_id' => $data['attributed_doctor_id'] ?? null,
-            'invoice_number' => $number,
-            'currency' => $data['currency'] ?? 'INR',
-            'subtotal' => 0,
-            'discount_amount' => 0,
-            'tax_label' => $data['tax_label'] ?? ($config['invoice_tax_label'] ?? 'GST'),
-            'tax_percent' => (float) ($data['tax_percent'] ?? ($config['invoice_tax_percent'] ?? 0)),
-            'tax_amount' => 0,
-            'total' => 0,
-            'status' => $data['status'] ?? 'draft',
-            'notes' => $data['notes'] ?? null,
-        ]);
+        // Retry on uq_inv_num collisions: two concurrent invoices can compute
+        // the same next number; the unique key rejects one, we renumber it.
+        $id = 0;
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            $number = self::nextInvoiceNumber($clinicId, $prefix);
+            try {
+                $id = QueryBuilder::table('invoices')->insert([
+                    'clinic_id' => $clinicId,
+                    'patient_id' => (int) $data['patient_id'],
+                    'visit_id' => $data['visit_id'] ?? null,
+                    'attributed_doctor_id' => $data['attributed_doctor_id'] ?? null,
+                    'invoice_number' => $number,
+                    'currency' => $data['currency'] ?? 'INR',
+                    'subtotal' => 0,
+                    'discount_amount' => 0,
+                    'tax_label' => $data['tax_label'] ?? ($config['invoice_tax_label'] ?? 'GST'),
+                    'tax_percent' => (float) ($data['tax_percent'] ?? ($config['invoice_tax_percent'] ?? 0)),
+                    'tax_amount' => 0,
+                    'total' => 0,
+                    'status' => $data['status'] ?? 'draft',
+                    'notes' => $data['notes'] ?? null,
+                ]);
+                break;
+            } catch (\PDOException $e) {
+                if ($attempt < 2 && str_contains($e->getMessage(), 'uq_inv_num')) {
+                    continue;
+                }
+                throw $e;
+            }
+        }
 
         foreach ($data['items'] ?? [] as $item) {
             self::addItem($id, $item);
@@ -220,40 +233,81 @@ final class InvoiceService
 
     public static function markPaid(int $clinicId, int $invoiceId, string $method, ?string $gatewayRef = null): array
     {
+        return self::recordPayment($clinicId, $invoiceId, null, $method, $gatewayRef);
+    }
+
+    /**
+     * Record a (possibly partial) payment. $amount null = settle the balance.
+     * Status becomes 'partial' until the balance reaches zero, then 'paid'.
+     */
+    public static function recordPayment(int $clinicId, int $invoiceId, ?float $amount, string $method, ?string $gatewayRef = null): array
+    {
         $invoice = self::findDetailed($clinicId, $invoiceId);
         if ($invoice === null) {
             throw new \RuntimeException('Invoice not found');
         }
 
-        $amount = (float) $invoice['total'] - (float) ($invoice['advance_paid'] ?? 0);
-        if ($amount < 0) {
-            $amount = 0;
+        $alreadyPaid = (float) ($invoice['amount_paid'] ?? 0);
+        $due = round((float) $invoice['total'] - (float) ($invoice['advance_paid'] ?? 0) - $alreadyPaid, 2);
+        if ($due <= 0) {
+            throw new \RuntimeException('This invoice has no balance due.');
         }
+
+        $amount = $amount === null ? $due : round($amount, 2);
+        if ($amount <= 0) {
+            throw new \InvalidArgumentException('Payment amount must be positive.');
+        }
+        if ($amount > $due) {
+            throw new \InvalidArgumentException(
+                'Payment exceeds the balance due (' . number_format($due, 2) . '). Record an advance instead.',
+            );
+        }
+
+        $method = in_array($method, ['cash', 'upi', 'card', 'online', 'insurance', 'bank_transfer'], true) ? $method : 'cash';
 
         $user = RequestContext::user();
         QueryBuilder::table('payments')->insert([
             'clinic_id' => $clinicId,
             'invoice_id' => $invoiceId,
             'amount' => $amount,
-            'method' => match ($method) {
-                'upi', 'card', 'online' => $method,
-                default => 'cash',
-            },
+            'method' => $method,
             'gateway_ref' => $gatewayRef,
             'recorded_by' => $user['id'] ?? null,
         ]);
 
-        QueryBuilder::table('invoices')
-            ->forClinic($clinicId)
-            ->where('id', '=', $invoiceId)
-            ->update([
-                'status' => 'paid',
-                'payment_mode' => $method === 'upi' ? 'upi' : ($method === 'card' ? 'card' : ($method === 'online' ? 'online' : 'cash')),
-                'paid_at' => date('Y-m-d H:i:s'),
-            ]);
+        $newPaid = round($alreadyPaid + $amount, 2);
+        $settled = $newPaid + (float) ($invoice['advance_paid'] ?? 0) >= (float) $invoice['total'] - 0.005;
+
+        $update = [
+            'status' => $settled ? 'paid' : 'partial',
+            'payment_mode' => in_array($method, ['cash', 'upi', 'card', 'online', 'insurance'], true) ? $method : 'cash',
+        ];
+        if ($settled) {
+            $update['paid_at'] = date('Y-m-d H:i:s');
+        }
+
+        try {
+            QueryBuilder::table('invoices')
+                ->forClinic($clinicId)
+                ->where('id', '=', $invoiceId)
+                ->update(array_merge($update, ['amount_paid' => $newPaid]));
+        } catch (\Throwable $e) {
+            // amount_paid column missing (migration 023 not applied yet) —
+            // keep the legacy behaviour: full payments only.
+            QueryBuilder::table('invoices')
+                ->forClinic($clinicId)
+                ->where('id', '=', $invoiceId)
+                ->update($update);
+        }
+
+        if (!$settled) {
+            DashboardService::invalidateStats($clinicId);
+
+            return self::findDetailed($clinicId, $invoiceId) ?? [];
+        }
 
         $invoice = self::findDetailed($clinicId, $invoiceId);
-        $patient = PatientService::find($clinicId, (int) $invoice['patient_id']);
+        $patient = $invoice !== null ? PatientService::find($clinicId, (int) $invoice['patient_id']) : null;
         $clinic = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first();
 
         if ($invoice !== null && $patient !== null && $clinic !== null) {
@@ -379,10 +433,67 @@ final class InvoiceService
         return $stmt->fetchAll() ?: [];
     }
 
+    /**
+     * @param array<string, mixed> $filters
+     * @return array{rows: list<array<string, mixed>>, total: int, page: int, per_page: int}
+     */
+    public static function listPaginated(int $clinicId, array $filters = [], int $page = 1, int $perPage = 20): array
+    {
+        if (!Database::ping()) {
+            return ['rows' => [], 'total' => 0, 'page' => $page, 'per_page' => $perPage];
+        }
+
+        $page = max(1, $page);
+        $where = 'i.clinic_id = ?';
+        $params = [$clinicId];
+        if (!empty($filters['status'])) {
+            $where .= ' AND i.status = ?';
+            $params[] = $filters['status'];
+        }
+        if (!empty($filters['q'])) {
+            $where .= ' AND (p.name LIKE ? OR i.invoice_number LIKE ? OR p.uhid LIKE ?)';
+            $like = '%' . $filters['q'] . '%';
+            array_push($params, $like, $like, $like);
+        }
+
+        $pdo = Database::connection();
+        $countStmt = $pdo->prepare(
+            "SELECT COUNT(*) AS c FROM invoices i INNER JOIN patients p ON p.id = i.patient_id WHERE {$where}",
+        );
+        $countStmt->execute($params);
+        $total = (int) ($countStmt->fetch()['c'] ?? 0);
+
+        $offset = ($page - 1) * $perPage;
+        $stmt = $pdo->prepare(
+            "SELECT i.*, p.name AS patient_name, p.uhid
+             FROM invoices i INNER JOIN patients p ON p.id = i.patient_id
+             WHERE {$where}
+             ORDER BY i.created_at DESC, i.id DESC
+             LIMIT {$perPage} OFFSET {$offset}",
+        );
+        $stmt->execute($params);
+
+        return [
+            'rows' => $stmt->fetchAll() ?: [],
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $perPage,
+        ];
+    }
+
     private static function nextInvoiceNumber(int $clinicId, string $prefix): string
     {
-        $count = QueryBuilder::table('invoices')->forClinic($clinicId)->count();
+        // COUNT(*)+1 repeats numbers as soon as any invoice is deleted —
+        // duplicate invoice numbers are a GST-compliance violation. Use the
+        // highest existing sequence instead; uq_inv_num + the create() retry
+        // loop cover the concurrent case.
+        $stmt = Database::connection()->prepare(
+            "SELECT COALESCE(MAX(CAST(SUBSTRING_INDEX(invoice_number, '-', -1) AS UNSIGNED)), 0) + 1 AS n
+             FROM invoices WHERE clinic_id = ?",
+        );
+        $stmt->execute([$clinicId]);
+        $next = (int) ($stmt->fetch()['n'] ?? 1);
 
-        return $prefix . '-' . str_pad((string) ($count + 1), 5, '0', STR_PAD_LEFT);
+        return $prefix . '-' . str_pad((string) $next, 5, '0', STR_PAD_LEFT);
     }
 }

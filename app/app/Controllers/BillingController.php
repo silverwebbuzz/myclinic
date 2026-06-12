@@ -27,9 +27,14 @@ final class BillingController
             'status' => $request->query['status'] ?? '',
             'q' => $request->query['q'] ?? '',
         ];
+        $page = max(1, (int) ($request->query['page'] ?? 1));
+        $result = InvoiceService::listPaginated($clinicId, $filters, $page);
 
         return Response::html(Layout::page('billing/index', [
-            'invoices' => InvoiceService::list($clinicId, $filters),
+            'invoices' => $result['rows'],
+            'total' => $result['total'],
+            'page' => $result['page'],
+            'perPage' => $result['per_page'],
             'filters' => $filters,
         ], 'Billing'));
     }
@@ -130,10 +135,41 @@ final class BillingController
         }
 
         $clinicId = (int) RequestContext::clinicId();
-        InvoiceService::markPaid($clinicId, (int) $id, 'cash');
+        try {
+            InvoiceService::markPaid($clinicId, (int) $id, 'cash');
+        } catch (\Throwable $e) {
+            return Response::redirect('/billing/' . $id . '?error=' . urlencode($e->getMessage()));
+        }
         AuditService::log($request, 'UPDATE', 'invoices', (int) $id);
 
         return Response::redirect('/billing/' . $id . '?message=paid');
+    }
+
+    /**
+     * POST /billing/{id}/payment — record a full or partial payment in any
+     * mode (cash / UPI / card / insurance). Empty amount = settle the balance.
+     */
+    public function recordPayment(Request $request, string $id): Response
+    {
+        if ($denied = $this->requireModule()) {
+            return $denied;
+        }
+
+        $clinicId = (int) RequestContext::clinicId();
+        $amountRaw = trim((string) ($request->post['amount'] ?? ''));
+        $amount = $amountRaw === '' ? null : (float) $amountRaw;
+        $method = (string) ($request->post['method'] ?? 'cash');
+
+        try {
+            $invoice = InvoiceService::recordPayment($clinicId, (int) $id, $amount, $method);
+        } catch (\Throwable $e) {
+            return Response::redirect('/billing/' . $id . '?error=' . urlencode($e->getMessage()));
+        }
+
+        AuditService::log($request, 'UPDATE', 'invoices', (int) $id);
+        $msg = ($invoice['status'] ?? '') === 'paid' ? 'paid' : 'partial';
+
+        return Response::redirect('/billing/' . $id . '?message=' . $msg);
     }
 
     public function exportExcel(Request $request): Response
