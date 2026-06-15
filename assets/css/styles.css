@@ -8127,3 +8127,192 @@ body {
   }
 
 }
+/* =====================================================================
+   FIND A DOCTOR — mobile/tablet redesign (≤1024px).
+   Presentation only: a compact search bar + bottom-sheet filters + a
+   reflowed result card. Desktop (≥1025px) is untouched. All controls bind
+   to the same Alpine state as the desktop hero/filters.
+   ===================================================================== */
+
+/* Visibility gates */
+.fd-mobile-only { display: none; }
+@media (max-width: 1024px) {
+  .fd-desktop-only { display: none !important; }
+  .fd-mobile-only { display: block; }
+}
+
+@media (max-width: 1024px) {
+  /* The main results section sits right under the sticky site header.
+     Remove the big hero gap. */
+  .fd-main { padding-top: 14px; }
+  .fd-main > .wrap-wide { padding-left: 14px; padding-right: 14px; }
+
+  /* ---------- Compact search bar ---------- */
+  .fd-mbar { margin: 6px 0 14px; }
+  .fd-mbar-row { display: flex; align-items: center; gap: 10px; }
+
+  .fd-mbar-search {
+    flex: 1; display: flex; align-items: center; gap: 8px;
+    background: var(--bg-2); border: 1px solid var(--line);
+    border-radius: 12px; padding: 0 12px; height: 46px;
+    transition: border-color .15s, background .15s;
+  }
+  .fd-mbar-search:focus-within { background: #fff; border-color: var(--teal-600, #0F9B6E); }
+  .fd-mbar-search .ico { font-size: 15px; opacity: .55; }
+  .fd-mbar-search input {
+    flex: 1; border: 0; background: transparent; outline: none;
+    font-size: 16px; color: var(--ink); min-width: 0;   /* 16px = no iOS zoom */
+  }
+  .fd-mbar-search input::placeholder { color: var(--mute); }
+
+  .fd-mbar-icon {
+    position: relative; flex-shrink: 0;
+    width: 46px; height: 46px; border-radius: 12px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #fff; border: 1px solid var(--line);
+    color: var(--ink-2); font-size: 17px; cursor: pointer;
+    transition: border-color .15s, background .15s, color .15s;
+  }
+  .fd-mbar-icon:active { background: var(--bg-2); }
+  .fd-mbar-icon.on {
+    border-color: var(--teal-600, #0F9B6E);
+    background: rgba(15,155,110,.08);
+    color: var(--teal-600, #0F9B6E);
+  }
+  .fd-mbar-badge {
+    position: absolute; top: -5px; right: -5px;
+    min-width: 17px; height: 17px; padding: 0 4px;
+    border-radius: 9px; background: var(--teal-600, #0F9B6E); color: #fff;
+    font-size: 11px; font-weight: 700; line-height: 17px; text-align: center;
+  }
+
+  /* Location field revealed by the pin */
+  .fd-mbar-loc {
+    display: flex; align-items: center; gap: 8px; margin-top: 10px;
+    background: #fff; border: 1px solid var(--teal-600, #0F9B6E);
+    border-radius: 12px; padding: 0 12px; height: 46px;
+  }
+  .fd-mbar-loc .ico { font-size: 15px; opacity: .55; }
+  .fd-mbar-loc input { flex: 1; border: 0; background: transparent; outline: none; font-size: 16px; min-width: 0; }
+  .fd-mbar-loc-clear { border: 0; background: transparent; color: var(--mute); font-size: 14px; cursor: pointer; padding: 4px; }
+  .fd-mbar-loc .fd-ac { top: 52px; }
+
+  .fd-mbar-count { margin-top: 12px; font-size: 14px; color: var(--mute); }
+  .fd-mbar-count strong { color: var(--ink); font-weight: 700; }
+
+  /* ---------- Result cards — reflow to the mockup ---------- */
+  .fd-grid { gap: 0; }
+  .fd-card {
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    grid-template-areas:
+      "avatar identity"
+      "book   book";
+    column-gap: 12px; row-gap: 0;
+    padding: 16px 4px;
+    border: 0; border-bottom: 1px solid var(--line);
+    border-radius: 0; box-shadow: none;
+    align-items: start;
+  }
+  .fd-card:hover { box-shadow: none; transform: none; }
+  .fd-avatar { grid-area: avatar; width: 52px; height: 52px; font-size: 18px; }
+  .fd-identity { grid-area: identity; padding-right: 30px; }
+
+  .fd-name { font-size: 16px; font-weight: 700; }
+  .fd-qual { font-size: 13.5px; color: var(--mute); margin-top: 1px; }
+
+  /* Specialty + rating on one tight row */
+  .fd-spec-row { gap: 8px; margin-top: 5px; align-items: center; }
+  .fd-pill { font-size: 12px; padding: 2px 9px; }
+  .fd-rating { font-size: 13px; }
+
+  /* Favorite heart pinned top-right of the card */
+  .fd-fav {
+    grid-area: identity; position: absolute; top: 16px; right: 4px;
+    width: 30px; height: 30px;
+  }
+  .fd-card { position: relative; }
+
+  /* Booking row: availability slot + distance left, fee right */
+  .fd-book {
+    grid-area: book; flex-direction: row; flex-wrap: wrap;
+    align-items: center; justify-content: space-between;
+    width: 100%; margin-top: 12px; padding: 12px 0 0;
+    border-top: 1px dashed var(--line); border-left: 0; gap: 10px;
+  }
+  .fd-slot { font-size: 13px; }
+  .fd-price { text-align: right; font-size: 13px; color: var(--mute); }
+  .fd-price strong { display: block; font-size: 16px; color: var(--teal-600, #0F9B6E); }
+
+  .fd-actions { width: 100%; flex-direction: row; gap: 8px; margin-top: 4px; }
+  .fd-actions .fd-btn { flex: 1; justify-content: center; }
+
+  /* ---------- Bottom-sheet filter panel ---------- */
+  .fd-sheet-overlay {
+    position: fixed; inset: 0; z-index: 1200;
+    background: rgba(0,0,0,.4);
+  }
+  .fd-sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 1201;
+    background: #fff; border-radius: 20px 20px 0 0;
+    box-shadow: 0 -8px 40px rgba(0,0,0,.18);
+    transform: translateY(100%);
+    transition: transform .25s cubic-bezier(.4,0,.2,1);
+    max-height: 88vh; display: flex; flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .fd-sheet.is-open { transform: translateY(0); }
+  .fd-sheet-grip {
+    width: 40px; height: 5px; border-radius: 3px; background: var(--line);
+    margin: 10px auto 4px; cursor: pointer;
+  }
+  .fd-sheet-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 20px 14px; border-bottom: 1px solid var(--line);
+  }
+  .fd-sheet-head h3 { font-size: 19px; font-weight: 700; margin: 0; }
+  .fd-sheet-close {
+    width: 32px; height: 32px; border-radius: 8px; border: 0;
+    background: var(--bg-2); color: var(--ink-2); font-size: 15px; cursor: pointer;
+  }
+  .fd-sheet-body { padding: 18px 20px; overflow-y: auto; }
+  .fd-sheet-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  }
+  .fd-sheet-field {
+    display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto;
+    align-items: center; column-gap: 8px;
+    border: 1px solid var(--line); border-radius: 12px; padding: 12px;
+  }
+  .fd-sheet-ico { grid-row: 1 / 3; font-size: 18px; }
+  .fd-sheet-lbl { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .fd-sheet-select {
+    grid-column: 2; border: 0; background: transparent; outline: none;
+    font-size: 13px; color: var(--mute); padding: 2px 0; width: 100%;
+    -webkit-appearance: none; appearance: none; cursor: pointer;
+  }
+  .fd-sheet-locbtn {
+    grid-column: 2; border: 0; background: transparent; text-align: left;
+    font-size: 13px; color: var(--teal-600, #0F9B6E); font-weight: 600; cursor: pointer; padding: 2px 0;
+  }
+  .fd-sheet-foot {
+    display: flex; gap: 12px; padding: 14px 20px 18px;
+    border-top: 1px solid var(--line);
+  }
+  .fd-sheet-reset {
+    flex: 1; height: 48px; border-radius: 12px;
+    border: 1px solid var(--line); background: #fff;
+    font-size: 15px; font-weight: 600; color: var(--ink-2); cursor: pointer;
+  }
+  .fd-sheet-apply {
+    flex: 2; height: 48px; border-radius: 12px; border: 0;
+    background: var(--teal-600, #0F9B6E); color: #fff;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+  }
+  .fd-sheet-apply:active { background: #0c8a61; }
+
+  /* Single column on very narrow phones */
+}
+@media (max-width: 380px) {
+  .fd-sheet-grid { grid-template-columns: 1fr; }
+}

@@ -308,7 +308,7 @@ require __DIR__ . '/partials/header.php';
             </div>
         </section>
     <?php else: ?>
-        <section class="fd-hero">
+        <section class="fd-hero fd-desktop-only">
             <div class="wrap-wide">
                 <h1>Find a doctor you can <span class="grad">actually trust.</span></h1>
                 <p class="lede">Search <?= ecp_num($totalDoctors) ?>+ verified clinicians across India, the US, UK and more — see real availability, fees and ratings before you book.</p>
@@ -437,8 +437,72 @@ require __DIR__ . '/partials/header.php';
     <section class="fd-main">
         <div class="wrap-wide">
 
+            <!-- ============================================================
+                 MOBILE / TABLET (≤1024px) — compact search bar.
+                 Binds to the SAME Alpine state as the desktop hero; this is a
+                 presentation-only reflow shown by CSS below 1024px.
+                 ============================================================ -->
+            <div class="fd-mbar fd-mobile-only">
+                <div class="fd-mbar-row">
+                    <label class="fd-mbar-search">
+                        <span class="ico" aria-hidden="true">🔍</span>
+                        <input type="text" x-model="q" placeholder="Search doctor, hospital or specialty">
+                    </label>
+                    <button type="button" class="fd-mbar-icon" :class="(loc || mLocOpen) ? 'on' : ''"
+                        @click="mLocOpen = !mLocOpen; if (mLocOpen) { acOpen = true; fetchLocations(); }"
+                        aria-label="Set location">📍</button>
+                    <button type="button" class="fd-mbar-icon" :class="activeFilterCount() > 0 ? 'on' : ''"
+                        @click="mFilterOpen = true" aria-label="Filters">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+                        <template x-if="activeFilterCount() > 0">
+                            <span class="fd-mbar-badge" x-text="activeFilterCount()"></span>
+                        </template>
+                    </button>
+                </div>
+
+                <!-- Location field — revealed by the pin button (reuses /api/locations) -->
+                <div class="fd-mbar-loc" x-show="mLocOpen" x-transition.opacity @click.outside="acOpen = false" style="position: relative;">
+                    <span class="ico" aria-hidden="true">📍</span>
+                    <input type="text" x-model="loc"
+                        @input="acOpen = true"
+                        @focus="acOpen = true; fetchLocations()"
+                        placeholder="Area, city, state or country…">
+                    <button type="button" class="fd-mbar-loc-clear" x-show="loc" @click="loc = ''; locValue = null" aria-label="Clear location">✕</button>
+
+                    <div class="fd-ac" x-show="acOpen" @mousedown.prevent x-transition.opacity>
+                        <div class="fd-ac-item use-loc" @click="loc = ''; locValue = null; acOpen = false; mLocOpen = true">
+                            <div class="ic">📌</div>
+                            <div><div class="nm">Use my precise location</div><div class="sb">Allow browser to share where you are</div></div>
+                        </div>
+                        <template x-if="filteredLocations().length === 0">
+                            <div class="fd-ac-item" style="color: var(--mute);">
+                                <div class="ic">·</div>
+                                <div><div class="nm">No matches</div><div class="sb">Try a city or area name</div></div>
+                            </div>
+                        </template>
+                        <template x-for="(item, i) in filteredLocations()" :key="i">
+                            <div class="fd-ac-item"
+                                @click="loc = item.label; locValue = item.value; if (item.value.country && item.value.country !== country) { country = item.value.country; } acOpen = false">
+                                <div class="ic" x-text="item.flag"></div>
+                                <div>
+                                    <div class="nm" x-text="item.label"></div>
+                                    <template x-if="item.sub"><div class="sb" x-text="item.sub"></div></template>
+                                </div>
+                                <span class="kind" x-text="item.type"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="fd-mbar-count">
+                    <strong x-text="filteredResults().length.toLocaleString()"></strong>
+                    <span x-text="filteredResults().length === 1 ? 'doctor' : 'doctors'"></span>
+                    in <span x-text="currentCountry().name"></span>
+                </div>
+            </div>
+
             <!-- Result count + sort -->
-            <div class="fd-bar">
+            <div class="fd-bar fd-desktop-only">
                 <div class="fd-count">
                     <strong x-text="filteredResults().length.toLocaleString()"></strong>
                     <span x-text="filteredResults().length === 1 ? 'doctor' : 'doctors'"></span>
@@ -479,7 +543,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <!-- Filter chips row -->
-            <div class="fd-filters" style="margin-bottom: 18px;">
+            <div class="fd-filters fd-desktop-only" style="margin-bottom: 18px;">
 
                 <!-- Availability -->
                 <div style="position: relative;">
@@ -812,6 +876,134 @@ require __DIR__ . '/partials/header.php';
                 of <strong x-text="filteredResults().length.toLocaleString()"></strong>
             </div>
 
+            <!-- ============================================================
+                 MOBILE / TABLET (≤1024px) — filter bottom sheet.
+                 Every control binds to the existing filter state; no new logic.
+                 ============================================================ -->
+            <div class="fd-sheet-overlay fd-mobile-only" x-show="mFilterOpen" x-transition.opacity
+                 @click="mFilterOpen = false" x-cloak></div>
+            <div class="fd-sheet fd-mobile-only" :class="mFilterOpen ? 'is-open' : ''" x-cloak>
+                <div class="fd-sheet-grip" @click="mFilterOpen = false"></div>
+                <div class="fd-sheet-head">
+                    <h3>Filters</h3>
+                    <button type="button" class="fd-sheet-close" @click="mFilterOpen = false" aria-label="Close">✕</button>
+                </div>
+
+                <div class="fd-sheet-body">
+                    <div class="fd-sheet-grid">
+                        <!-- Specialty -->
+                        <label class="fd-sheet-field">
+                            <span class="fd-sheet-ico">🩺</span>
+                            <span class="fd-sheet-lbl">Specialty</span>
+                            <select x-model="spec" class="fd-sheet-select">
+                                <option value="all">All</option>
+                                <template x-for="s in specialties" :key="s.id">
+                                    <option :value="s.id" x-text="s.label"></option>
+                                </template>
+                            </select>
+                        </label>
+
+                        <!-- Availability -->
+                        <label class="fd-sheet-field">
+                            <span class="fd-sheet-ico">📅</span>
+                            <span class="fd-sheet-lbl">Availability</span>
+                            <select x-model="avail" class="fd-sheet-select">
+                                <option value="any">Any</option>
+                                <option value="today">Today</option>
+                                <option value="tomorrow">Today or tomorrow</option>
+                                <option value="week">Within a week</option>
+                            </select>
+                        </label>
+
+                        <!-- Video consult -->
+                        <label class="fd-sheet-field">
+                            <span class="fd-sheet-ico">🎥</span>
+                            <span class="fd-sheet-lbl">Video consult</span>
+                            <select class="fd-sheet-select"
+                                @change="video = ($event.target.value === 'yes')"
+                                x-effect="$el.value = video ? 'yes' : 'any'">
+                                <option value="any">Any</option>
+                                <option value="yes">Video available</option>
+                            </select>
+                        </label>
+
+                        <!-- Gender -->
+                        <label class="fd-sheet-field">
+                            <span class="fd-sheet-ico">⚧</span>
+                            <span class="fd-sheet-lbl">Gender</span>
+                            <select x-model="gender" class="fd-sheet-select">
+                                <option value="any">Any</option>
+                                <option value="F">Female</option>
+                                <option value="M">Male</option>
+                            </select>
+                        </label>
+
+                        <!-- Rating -->
+                        <label class="fd-sheet-field">
+                            <span class="fd-sheet-ico">⭐</span>
+                            <span class="fd-sheet-lbl">Rating</span>
+                            <select class="fd-sheet-select"
+                                @change="minRating = Number($event.target.value)"
+                                x-effect="$el.value = String(minRating)">
+                                <option value="0">Any</option>
+                                <option value="4">4.0+ stars</option>
+                                <option value="4.5">4.5+ stars</option>
+                                <option value="4.8">4.8+ stars</option>
+                            </select>
+                        </label>
+
+                        <!-- Distance -->
+                        <label class="fd-sheet-field">
+                            <span class="fd-sheet-ico">📍</span>
+                            <span class="fd-sheet-lbl">Distance</span>
+                            <template x-if="userLoc">
+                                <select class="fd-sheet-select"
+                                    @change="maxDistanceKm = Number($event.target.value)"
+                                    x-effect="$el.value = String(maxDistanceKm)">
+                                    <option value="0">Any</option>
+                                    <option value="5">Within 5 km</option>
+                                    <option value="10">Within 10 km</option>
+                                    <option value="25">Within 25 km</option>
+                                    <option value="50">Within 50 km</option>
+                                    <option value="100">Within 100 km</option>
+                                </select>
+                            </template>
+                            <template x-if="!userLoc">
+                                <button type="button" class="fd-sheet-locbtn" @click="requestLocation()">Use my location</button>
+                            </template>
+                        </label>
+
+                        <!-- Language -->
+                        <label class="fd-sheet-field">
+                            <span class="fd-sheet-ico">🗣️</span>
+                            <span class="fd-sheet-lbl">Language</span>
+                            <select x-model="lang" class="fd-sheet-select">
+                                <option value="any">Any</option>
+                                <template x-for="l in currentCountry().langs" :key="l">
+                                    <option :value="l" x-text="l"></option>
+                                </template>
+                            </select>
+                        </label>
+
+                        <!-- Sort -->
+                        <label class="fd-sheet-field">
+                            <span class="fd-sheet-ico">↕️</span>
+                            <span class="fd-sheet-lbl">Sort by</span>
+                            <select x-model="sort" class="fd-sheet-select">
+                                <template x-for="opt in sortOptions" :key="opt[0]">
+                                    <option :value="opt[0]" x-text="opt[1]"></option>
+                                </template>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="fd-sheet-foot">
+                    <button type="button" class="fd-sheet-reset" @click="clearFilters()">Reset</button>
+                    <button type="button" class="fd-sheet-apply" @click="mFilterOpen = false">Apply Filters</button>
+                </div>
+            </div>
+
             <?php if ($seoMeta): ?>
                 <?php
                 // Build "Also browse" suggestions for SEO internal linking.
@@ -948,6 +1140,10 @@ require __DIR__ . '/partials/header.php';
             page: 1,
             favs: [],
             hoursOpen: {},
+            // Mobile-only UI state (≤1024px). Presentation flags only — the
+            // bottom-sheet filter panel binds to the SAME filter state above.
+            mFilterOpen: false,   // filter bottom sheet
+            mLocOpen: false,      // location field revealed by the pin button
             // Geolocation
             userLoc: null,
             maxDistanceKm: 0,
