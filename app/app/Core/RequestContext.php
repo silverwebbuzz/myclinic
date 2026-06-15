@@ -22,6 +22,17 @@ final class RequestContext
 
     private static ?array $impersonation = null;
 
+    /**
+     * A JWT that RefreshTokenMiddleware minted DURING this request (because
+     * the cookie one had expired). setcookie() only affects the NEXT request,
+     * so later middleware (tenant, auth) can't see the new token via $_COOKIE.
+     * They read this payload instead so a mid-request refresh doesn't surface
+     * as "Clinic not found" / 401 on the very request that refreshed.
+     *
+     * @var array{user: array<string, mixed>, payload: array<string, mixed>}|null
+     */
+    private static ?array $refreshedAuth = null;
+
     /** @param ClinicRow $clinic */
     public static function setClinic(array $clinic): void
     {
@@ -113,6 +124,21 @@ final class RequestContext
         return self::$impersonation;
     }
 
+    /**
+     * @param array<string, mixed> $user
+     * @param array<string, mixed> $payload decoded JWT claims (sub, clinic_id, role)
+     */
+    public static function setRefreshedAuth(array $user, array $payload): void
+    {
+        self::$refreshedAuth = ['user' => $user, 'payload' => $payload];
+    }
+
+    /** @return array{user: array<string, mixed>, payload: array<string, mixed>}|null */
+    public static function refreshedAuth(): ?array
+    {
+        return self::$refreshedAuth;
+    }
+
     public static function reset(): void
     {
         self::$clinic = null;
@@ -121,5 +147,6 @@ final class RequestContext
         self::$superAdmin = null;
         self::$apiAuth = null;
         self::$impersonation = null;
+        self::$refreshedAuth = null;
     }
 }

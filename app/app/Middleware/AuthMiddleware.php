@@ -32,7 +32,17 @@ final class AuthMiddleware implements MiddlewareInterface
             return $next();
         }
 
-        $token = $request->cookies['mc_token'] ?? null;
+        // If RefreshTokenMiddleware just minted a token this request, the cookie
+        // captured at boot is still the expired one — trust the fresh identity.
+        $refreshed = RequestContext::refreshedAuth();
+        if ($refreshed !== null && (int) ($refreshed['user']['is_active'] ?? 0)) {
+            RequestContext::setUser($refreshed['user']);
+
+            return $next();
+        }
+
+        // $_COOKIE (not $request->cookies) so an in-request refresh is visible.
+        $token = $_COOKIE['mc_token'] ?? $request->cookies['mc_token'] ?? null;
         if ($token === null) {
             return $this->unauthorized($request);
         }

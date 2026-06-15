@@ -17,31 +17,46 @@ final class RemedyService
             return [];
         }
 
-        $pdo = Database::connection();
+        // Ranked queries need the Phase-3 `usage_count` column / catalog
+        // columns, which may be missing on older live DBs. Try the rich query;
+        // on ANY SQL error fall back to a minimal, schema-safe query so the
+        // autocomplete returns results instead of "Remedy search failed".
+        try {
+            return self::runSearch($q, $limit, true);
+        } catch (\Throwable $e) {
+            error_log('[RemedyService::search] ranked query failed, using safe fallback: ' . $e->getMessage());
 
-        // Phase 3: empty query → top-N by usage_count.
+            try {
+                return self::runSearch($q, $limit, false);
+            } catch (\Throwable $e2) {
+                error_log('[RemedyService::search] safe fallback also failed: ' . $e2->getMessage());
+
+                return [];
+            }
+        }
+    }
+
+    /** @return list<array<string, mixed>> */
+    private static function runSearch(string $q, int $limit, bool $ranked): array
+    {
+        $pdo = Database::connection();
+        $cols = $ranked ? 'id, name, abbreviation, antidotes, dietary_restrictions' : 'id, name';
+        $order = $ranked ? 'usage_count DESC, name ASC' : 'name ASC';
+
         if ($q === '') {
-            $stmt = $pdo->prepare(
-                'SELECT id, name, abbreviation, antidotes, dietary_restrictions
-                 FROM remedies WHERE is_active = 1
-                 ORDER BY usage_count DESC, name ASC
-                 LIMIT :lim',
-            );
+            $stmt = $pdo->prepare("SELECT {$cols} FROM remedies WHERE is_active = 1 ORDER BY {$order} LIMIT :lim");
             $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
             $stmt->execute();
+
             return $stmt->fetchAll() ?: [];
         }
 
-        // Prefix match — fast and what doctors actually expect.
-        $prefix = $q . '%';
         $stmt = $pdo->prepare(
-            'SELECT id, name, abbreviation, antidotes, dietary_restrictions
-             FROM remedies
+            "SELECT {$cols} FROM remedies
              WHERE is_active = 1 AND (name LIKE :p OR abbreviation LIKE :p)
-             ORDER BY usage_count DESC, name ASC
-             LIMIT :lim',
+             ORDER BY {$order} LIMIT :lim",
         );
-        $stmt->bindValue(':p', $prefix);
+        $stmt->bindValue(':p', $q . '%');
         $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
         $stmt->execute();
         $rows = $stmt->fetchAll() ?: [];
@@ -49,41 +64,16 @@ final class RemedyService
             return $rows;
         }
 
-        // Fulltext fallback for substring matches against key_indications.
-        // Wrapped — the FULLTEXT index isn't present on every install; if it
-        // doesn't exist we skip straight to the LIKE fallback below instead
-        // of 500'ing the request.
-        try {
-            $stmt = $pdo->prepare(
-                'SELECT id, name, abbreviation, antidotes, dietary_restrictions
-                 FROM remedies
-                 WHERE is_active = 1
-                 AND MATCH(name, abbreviation, key_indications) AGAINST(:q IN BOOLEAN MODE)
-                 ORDER BY usage_count DESC
-                 LIMIT :lim',
-            );
-            $term = '+' . implode('* +', array_filter(explode(' ', $q))) . '*';
-            $stmt->bindValue(':q', $term);
-            $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
-            $stmt->execute();
-            $rows = $stmt->fetchAll() ?: [];
-            if ($rows !== []) {
-                return $rows;
-            }
-        } catch (\Throwable $e) {
-            // No FULLTEXT index on remedies — fall through to LIKE.
-        }
-
-        // Final fallback: contains LIKE.
-        $like = '%' . $q . '%';
-        $fallback = $pdo->prepare(
-            'SELECT id, name, abbreviation, antidotes, dietary_restrictions
-             FROM remedies WHERE is_active = 1 AND (name LIKE ? OR abbreviation LIKE ?)
-             ORDER BY usage_count DESC, name ASC LIMIT ?',
+        $stmt = $pdo->prepare(
+            "SELECT {$cols} FROM remedies
+             WHERE is_active = 1 AND (name LIKE :p OR abbreviation LIKE :p)
+             ORDER BY {$order} LIMIT :lim",
         );
-        $fallback->execute([$like, $like, $limit]);
+        $stmt->bindValue(':p', '%' . $q . '%');
+        $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
+        $stmt->execute();
 
-        return $fallback->fetchAll() ?: [];
+        return $stmt->fetchAll() ?: [];
     }
 
     public static function find(int $id): ?array

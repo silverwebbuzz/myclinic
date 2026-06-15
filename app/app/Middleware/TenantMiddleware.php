@@ -138,11 +138,19 @@ final class TenantMiddleware implements MiddlewareInterface
 
     private function resolveFromAuth(Request $request): ?array
     {
-        $token = $_COOKIE['mc_token'] ?? null;
-        if ($token === null) {
-            return null;
+        // Prefer a token refreshed earlier in THIS request (setcookie() won't
+        // have updated $_COOKIE yet), then fall back to the cookie.
+        $refreshed = RequestContext::refreshedAuth();
+        $payload = $refreshed['payload'] ?? null;
+
+        if (empty($payload['clinic_id'])) {
+            $token = $_COOKIE['mc_token'] ?? null;
+            if ($token === null) {
+                return null;
+            }
+            $payload = JwtService::decode($token);
         }
-        $payload = JwtService::decode($token);
+
         if (empty($payload['clinic_id'])) {
             return null;
         }

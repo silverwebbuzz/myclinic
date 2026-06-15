@@ -15,33 +15,55 @@ final class DrugService
         if (!Database::ping()) {
             return [];
         }
+
+        // Ranked queries depend on the Phase-3 `usage_count` column. On older
+        // live DBs that column (or one of the catalog columns in the SELECT)
+        // may be missing, which would 500 the autocomplete. Try the rich query
+        // first; on ANY SQL error fall back to a minimal, schema-safe query so
+        // the doctor still gets results instead of "Drug search failed".
+        try {
+            return self::runSearch($q, $limit, true);
+        } catch (\Throwable $e) {
+            error_log('[DrugService::search] ranked query failed, using safe fallback: ' . $e->getMessage());
+
+            try {
+                return self::runSearch($q, $limit, false);
+            } catch (\Throwable $e2) {
+                error_log('[DrugService::search] safe fallback also failed: ' . $e2->getMessage());
+
+                return [];
+            }
+        }
+    }
+
+    /**
+     * @param bool $ranked true = select catalog columns + ORDER BY usage_count
+     *                      (needs Phase-3 schema); false = id/name only, name order.
+     * @return list<array<string, mixed>>
+     */
+    private static function runSearch(string $q, int $limit, bool $ranked): array
+    {
+        $pdo = Database::connection();
+        $cols = $ranked
+            ? 'id, name, generic_name, strength, form, interactions, contraindications'
+            : 'id, name';
+        $order = $ranked ? 'usage_count DESC, name ASC' : 'name ASC';
+
         if ($q === '') {
-            $pdo = Database::connection();
-            // Phase 3: rank by usage_count when available. Old rows have 0 →
-            // alphabetical order kicks in as the tiebreaker.
-            $stmt = $pdo->prepare(
-                'SELECT id, name, generic_name, strength, form, interactions, contraindications
-                 FROM drugs WHERE is_active = 1
-                 ORDER BY usage_count DESC, name ASC
-                 LIMIT :lim',
-            );
-            $stmt->bindValue('lim', $limit, \PDO::PARAM_INT);
+            $stmt = $pdo->prepare("SELECT {$cols} FROM drugs WHERE is_active = 1 ORDER BY {$order} LIMIT :lim");
+            $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
             $stmt->execute();
+
             return $stmt->fetchAll() ?: [];
         }
 
-        $pdo = Database::connection();
-        // Phase 3: prefix LIKE first (fast on idx_drugs_usage), fall back to
-        // fulltext if needed. Prefix is what doctors expect for autocomplete.
-        $prefix = $q . '%';
+        // Prefix match — fast and what doctors expect for autocomplete.
         $stmt = $pdo->prepare(
-            'SELECT id, name, generic_name, strength, form, interactions, contraindications
-             FROM drugs
+            "SELECT {$cols} FROM drugs
              WHERE is_active = 1 AND (name LIKE :p OR generic_name LIKE :p)
-             ORDER BY usage_count DESC, name ASC
-             LIMIT :lim',
+             ORDER BY {$order} LIMIT :lim",
         );
-        $stmt->bindValue(':p', $prefix);
+        $stmt->bindValue(':p', $q . '%');
         $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
         $stmt->execute();
         $rows = $stmt->fetchAll() ?: [];
@@ -49,39 +71,18 @@ final class DrugService
             return $rows;
         }
 
-        // Fulltext fallback for multi-word / substring matches. Wrapped so
-        // a missing FULLTEXT index falls through to LIKE instead of 500'ing.
-        try {
-            $stmt = $pdo->prepare(
-                'SELECT id, name, generic_name, strength, form, interactions, contraindications
-                 FROM drugs
-                 WHERE is_active = 1
-                 AND MATCH(name, generic_name) AGAINST(:q IN BOOLEAN MODE)
-                 ORDER BY usage_count DESC
-                 LIMIT :lim',
-            );
-            $term = '+' . implode('* +', array_filter(explode(' ', $q))) . '*';
-            $stmt->bindValue(':q', $term);
-            $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
-            $stmt->execute();
-            $rows = $stmt->fetchAll() ?: [];
-            if ($rows !== []) {
-                return $rows;
-            }
-        } catch (\Throwable $e) {
-            // No FULLTEXT index — fall through to LIKE below.
-        }
-
-        // Final fallback: contains LIKE.
+        // Contains-LIKE fallback for substring matches.
         $like = '%' . $q . '%';
-        $fallback = $pdo->prepare(
-            'SELECT id, name, generic_name, strength, form, interactions, contraindications
-             FROM drugs WHERE is_active = 1 AND (name LIKE ? OR generic_name LIKE ?)
-             ORDER BY usage_count DESC, name ASC LIMIT ?',
+        $stmt = $pdo->prepare(
+            "SELECT {$cols} FROM drugs
+             WHERE is_active = 1 AND (name LIKE :p OR generic_name LIKE :p)
+             ORDER BY {$order} LIMIT :lim",
         );
-        $fallback->execute([$like, $like, $limit]);
+        $stmt->bindValue(':p', $like);
+        $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
+        $stmt->execute();
 
-        return $fallback->fetchAll() ?: [];
+        return $stmt->fetchAll() ?: [];
     }
 
     public static function find(int $id): ?array

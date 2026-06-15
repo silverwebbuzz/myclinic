@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Middleware;
 
 use App\Core\QueryBuilder;
+use App\Core\RequestContext;
 use App\Http\Request;
 use App\Http\Response;
 use App\Services\AuthService;
@@ -63,6 +64,16 @@ final class RefreshTokenMiddleware implements MiddlewareInterface
 
         $jwt = JwtService::issue($user, (int) $user['clinic_id']);
         JwtService::setAuthCookies($jwt, $newRefresh);
+
+        // setcookie() only takes effect on the NEXT request — the tenant/auth
+        // middleware that run AFTER this one would still read the expired
+        // cookie token and fail with "Clinic not found" / 401. Hand them the
+        // fresh identity in-request via RequestContext + the live superglobal.
+        $payload = JwtService::decode($jwt);
+        if ($payload !== null) {
+            RequestContext::setRefreshedAuth($user, $payload);
+            $_COOKIE['mc_token'] = $jwt;
+        }
 
         return $next();
     }

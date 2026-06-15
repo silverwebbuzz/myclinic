@@ -27,15 +27,38 @@ final class SessionService
         ]);
     }
 
+    /**
+     * How long a just-rotated refresh token stays valid so parallel requests
+     * that raced past the access-token expiry can still authenticate.
+     */
+    private const ROTATION_GRACE_SECONDS = 30;
+
     public static function findByRefreshToken(string $refreshToken): ?array
     {
         $hash = hash('sha256', $refreshToken);
+        $now = date('Y-m-d H:i:s');
+
         $row = QueryBuilder::table('user_sessions')
             ->where('refresh_token_hash', '=', $hash)
-            ->where('expires_at', '>', date('Y-m-d H:i:s'))
+            ->where('expires_at', '>', $now)
             ->first();
+        if ($row !== null) {
+            return $row;
+        }
 
-        return $row ?: null;
+        // Grace match: this token was rotated moments ago by a concurrent
+        // request. Accept it for a short window so the user isn't logged out
+        // mid-burst. Guarded — the prev_* columns require migration 025.
+        try {
+            $grace = QueryBuilder::table('user_sessions')
+                ->where('prev_refresh_token_hash', '=', $hash)
+                ->where('prev_token_expires_at', '>', $now)
+                ->first();
+
+            return $grace ?: null;
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     public static function touch(int $sessionId): void
@@ -48,11 +71,27 @@ final class SessionService
     public static function rotateRefreshToken(int $sessionId, string $newToken): void
     {
         $days = (int) ($_ENV['JWT_REFRESH_TTL_DAYS'] ?? 30);
-        QueryBuilder::table('user_sessions')->where('id', '=', $sessionId)->update([
+
+        $update = [
             'refresh_token_hash' => hash('sha256', $newToken),
             'last_active_at' => date('Y-m-d H:i:s'),
             'expires_at' => date('Y-m-d H:i:s', time() + ($days * 86400)),
-        ]);
+        ];
+
+        // Stash the outgoing token as the grace token (valid a few more seconds)
+        // so concurrent requests still authenticate. Guarded for pre-025 DBs.
+        try {
+            $current = QueryBuilder::table('user_sessions')->where('id', '=', $sessionId)->first();
+            if ($current !== null && !empty($current['refresh_token_hash'])) {
+                $update['prev_refresh_token_hash'] = $current['refresh_token_hash'];
+                $update['prev_token_expires_at'] = date('Y-m-d H:i:s', time() + self::ROTATION_GRACE_SECONDS);
+            }
+            QueryBuilder::table('user_sessions')->where('id', '=', $sessionId)->update($update);
+        } catch (\Throwable $e) {
+            // prev_* columns missing (migration 025 not applied) — rotate plainly.
+            unset($update['prev_refresh_token_hash'], $update['prev_token_expires_at']);
+            QueryBuilder::table('user_sessions')->where('id', '=', $sessionId)->update($update);
+        }
     }
 
     /** @return list<array<string, mixed>> */
