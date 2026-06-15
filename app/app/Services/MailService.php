@@ -9,22 +9,91 @@ use App\Core\QueryBuilder;
 
 final class MailService
 {
+    /**
+     * Per-purpose sender mailboxes. Each template routes to the inbox that
+     * owns that kind of message, with a friendly display name.
+     * Override any address via env (WECARE_FROM / HELP_FROM / …).
+     *
+     * @return array{0: string, 1: string} [email, displayName]
+     */
+    private static function fromFor(string $template): array
+    {
+        // Support & account/system flows.
+        $support = [
+            $_ENV['HELP_FROM'] ?? 'help@eclinicpro.com',
+            'eClinicPro Support',
+        ];
+        $notify = [
+            $_ENV['NOREPLY_FROM'] ?? 'noreply@eclinicpro.com',
+            'eClinicPro Notifications',
+        ];
+        $care = [
+            $_ENV['WECARE_FROM'] ?? 'wecare@eclinicpro.com',
+            'eClinicPro Care Team',
+        ];
+        $healthTips = [
+            $_ENV['HEALTHTIPS_FROM'] ?? 'healthtips@eclinicpro.com',
+            'eClinicPro Health Tips',
+        ];
+
+        return match ($template) {
+            // Automated/system mail → noreply
+            'password_reset',
+            'welcome',
+            'telemedicine_link',
+            'appointment_reminder',
+            'appointment_notification',
+            'invoice_paid',
+            'prescription_ready' => $notify,
+
+            // Human, relationship mail → care team
+            'staff_invite',
+            'churn_outreach' => $care,
+
+            // Newsletters / health content → health tips
+            'health_tip',
+            'newsletter' => $healthTips,
+
+            // Anything support-flavoured → help
+            'support',
+            'billing_question' => $support,
+
+            // Safe default: noreply (system).
+            default => $notify,
+        };
+    }
+
     /** @param array<string, mixed> $payload */
     public static function send(string $toEmail, string $template, array $payload, ?int $clinicId = null): void
     {
+        // Email is optional across the app (patients/staff may have none).
+        // Never attempt to send to a blank/invalid address — silently skip so
+        // callers don't have to guard, and we don't log noisy failures.
+        $toEmail = trim($toEmail);
+        if ($toEmail === '' || !filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
+            return;
+        }
+
         if (!Database::ping()) {
             self::logToFile($toEmail, $template, $payload);
 
             return;
         }
 
+        $clinicName = (string) ($payload['clinic_name'] ?? 'your clinic');
         $subject = match ($template) {
-            'password_reset' => 'Reset your ManageClinic password',
-            'welcome' => 'Welcome to ManageClinic',
+            'password_reset' => 'Reset your eClinicPro password',
+            'welcome' => 'Welcome to eClinicPro',
             'staff_invite' => 'You are invited to join ' . ($payload['clinic_name'] ?? 'a clinic'),
             'churn_outreach' => 'We are here to help — ' . ($payload['clinic_name'] ?? 'your clinic'),
-            default => 'ManageClinic notification',
+            'appointment_reminder' => 'Appointment reminder — ' . $clinicName,
+            'appointment_cancelled' => 'Appointment cancelled — ' . $clinicName,
+            'telemedicine_link' => 'Your online consultation link — ' . $clinicName,
+            'invoice_paid' => 'Payment received — ' . $clinicName,
+            default => 'eClinicPro notification',
         };
+
+        [$fromEmail, $fromName] = self::fromFor($template);
 
         $body = self::renderTemplate($template, $payload);
 
@@ -45,9 +114,9 @@ final class MailService
         ]);
 
         if (!empty($_ENV['MAILGUN_API_KEY']) && !empty($_ENV['MAILGUN_DOMAIN'])) {
-            self::sendViaMailgun($toEmail, $subject, $body);
+            self::sendViaMailgun($toEmail, $subject, $body, $fromEmail, $fromName);
         } else {
-            self::logToFile($toEmail, $template, $payload + ['subject' => $subject, 'body' => $body]);
+            self::logToFile($toEmail, $template, $payload + ['subject' => $subject, 'body' => $body, 'from' => $fromEmail]);
         }
     }
 
@@ -67,23 +136,47 @@ final class MailService
             'churn_outreach' => "Hello,\n\nWe noticed: " . ($payload['reason'] ?? 'lower activity on your account') . ".\n\n"
                 . "Log in to keep your clinic running smoothly:\n" . ($payload['support_url'] ?? '') . "\n\n"
                 . "Reply to this email if you need help from our team.",
+            'appointment_reminder' => "Hello " . ($payload['patient_name'] ?? '') . ",\n\n"
+                . "This is a reminder of your appointment at " . ($payload['clinic_name'] ?? 'the clinic')
+                . " on " . ($payload['scheduled_at'] ?? '') . ".\n\n"
+                . "Please arrive a few minutes early. To reschedule, contact the clinic.",
+            'appointment_cancelled' => "Hello " . ($payload['patient_name'] ?? '') . ",\n\n"
+                . "Your appointment at " . ($payload['clinic_name'] ?? 'the clinic')
+                . " on " . ($payload['scheduled_at'] ?? '') . " has been cancelled.\n\n"
+                . "Please contact the clinic to book a new time.",
+            'invoice_paid' => "Hello " . ($payload['patient_name'] ?? '') . ",\n\n"
+                . "We've received your payment at " . ($payload['clinic_name'] ?? 'the clinic')
+                . ". Invoice " . ($payload['invoice_number'] ?? '') . " — total "
+                . ($payload['total'] ?? '') . ".\n\nThank you.",
             default => json_encode($payload),
         };
     }
 
-    private static function sendViaMailgun(string $to, string $subject, string $text): void
-    {
+    private static function sendViaMailgun(
+        string $to,
+        string $subject,
+        string $text,
+        ?string $fromEmail = null,
+        ?string $fromName = null,
+    ): void {
         $domain = $_ENV['MAILGUN_DOMAIN'];
+        $fromEmail ??= ($_ENV['MAILGUN_FROM'] ?? "noreply@{$domain}");
+        $from = $fromName !== null && $fromName !== ''
+            ? sprintf('%s <%s>', $fromName, $fromEmail)
+            : $fromEmail;
+
         $ch = curl_init("https://api.mailgun.net/v3/{$domain}/messages");
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
             CURLOPT_USERPWD => 'api:' . $_ENV['MAILGUN_API_KEY'],
             CURLOPT_POSTFIELDS => [
-                'from' => $_ENV['MAILGUN_FROM'] ?? "noreply@{$domain}",
+                'from' => $from,
                 'to' => $to,
                 'subject' => $subject,
                 'text' => $text,
+                // Replies go to the care team rather than an unwatched noreply box.
+                'h:Reply-To' => $_ENV['WECARE_FROM'] ?? 'wecare@eclinicpro.com',
             ],
         ]);
         curl_exec($ch);

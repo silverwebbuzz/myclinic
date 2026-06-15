@@ -34,6 +34,41 @@ final class NotificationService
         ]);
     }
 
+    /**
+     * Queue an email notification — ONLY when a real address is supplied.
+     * Email is optional throughout the app, so a null/blank/invalid address is
+     * a silent no-op (no error, no queued row, no failed-send noise).
+     *
+     * @param array<string, mixed> $payload
+     */
+    public static function queueEmail(
+        int $clinicId,
+        ?int $patientId,
+        ?string $email,
+        string $template,
+        array $payload,
+        string $scheduledAt,
+    ): void {
+        $email = trim((string) $email);
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return;
+        }
+        if (!Database::ping()) {
+            return;
+        }
+
+        QueryBuilder::table('notifications')->insert([
+            'clinic_id' => $clinicId,
+            'patient_id' => $patientId,
+            'channel' => 'email',
+            'template' => $template,
+            'to_email' => $email,
+            'payload' => json_encode($payload),
+            'status' => 'queued',
+            'scheduled_at' => $scheduledAt,
+        ]);
+    }
+
     /** @param array<string, mixed> $appointment @param array<string, mixed> $patient @param array<string, mixed> $clinic */
     public static function queueAppointmentReminder(
         array $appointment,
@@ -53,18 +88,31 @@ final class NotificationService
             return;
         }
 
+        $reminderPayload = [
+            'patient_name' => $patient['name'],
+            'clinic_name' => $clinic['name'],
+            'scheduled_at' => $appointment['scheduled_at'],
+            'hours_before' => $hoursBefore,
+        ];
+        $remindAtStr = date('Y-m-d H:i:s', $remindAt);
+
         self::queueWhatsApp(
             (int) $clinic['id'],
             (int) $patient['id'],
             (string) $patient['phone'],
             'appointment_reminder',
-            [
-                'patient_name' => $patient['name'],
-                'clinic_name' => $clinic['name'],
-                'scheduled_at' => $appointment['scheduled_at'],
-                'hours_before' => $hoursBefore,
-            ],
-            date('Y-m-d H:i:s', $remindAt),
+            $reminderPayload,
+            $remindAtStr,
+        );
+
+        // Also email the patient when we have an address on file (optional).
+        self::queueEmail(
+            (int) $clinic['id'],
+            (int) $patient['id'],
+            $patient['email'] ?? null,
+            'appointment_reminder',
+            $reminderPayload,
+            $remindAtStr,
         );
     }
 
@@ -145,17 +193,29 @@ final class NotificationService
     /** @param array<string, mixed> $appointment @param array<string, mixed> $patient @param array<string, mixed> $clinic */
     public static function queueCancellationNotice(array $appointment, array $patient, array $clinic): void
     {
+        $payload = [
+            'patient_name' => $patient['name'],
+            'clinic_name' => $clinic['name'],
+            'scheduled_at' => $appointment['scheduled_at'],
+        ];
+        $when = date('Y-m-d H:i:s', time() + 60);
+
         self::queueWhatsApp(
             (int) $clinic['id'],
             (int) $patient['id'],
             (string) $patient['phone'],
             'appointment_cancelled',
-            [
-                'patient_name' => $patient['name'],
-                'clinic_name' => $clinic['name'],
-                'scheduled_at' => $appointment['scheduled_at'],
-            ],
-            date('Y-m-d H:i:s', time() + 60),
+            $payload,
+            $when,
+        );
+
+        self::queueEmail(
+            (int) $clinic['id'],
+            (int) $patient['id'],
+            $patient['email'] ?? null,
+            'appointment_cancelled',
+            $payload,
+            $when,
         );
     }
 

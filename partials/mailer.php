@@ -62,8 +62,8 @@ function ecp_send_mail(string $toEmail, string $subject, string $htmlBody, ?stri
     $secure = strtolower($cfg['SMTP_SECURE'] ?? 'ssl');     // ssl | tls
     $user = $cfg['SMTP_USERNAME'] ?? '';
     $pass = $cfg['SMTP_PASSWORD'] ?? '';
-    $fromEmail = $cfg['SMTP_FROM_EMAIL'] ?? ($user ?: 'hello@eclinicpro.com');
-    $fromName = $cfg['SMTP_FROM_NAME'] ?? 'eClinicPro';
+    $fromEmail = $cfg['SMTP_FROM_EMAIL'] ?? ($user ?: 'wecare@eclinicpro.com');
+    $fromName = $cfg['SMTP_FROM_NAME'] ?? 'eClinicPro Care Team';
 
     if ($host === '' || $user === '' || $pass === '') {
         error_log('[mailer] SMTP not configured (missing host/username/password in app/.env)');
@@ -236,7 +236,7 @@ function ecp_email_template(string $heading, string $bodyHtml): string
             <td style="padding:24px 32px; border-top:1px solid rgba(0,0,0,0.06); color:#6e6e73; font-size:12px; line-height:1.6;">
               eClinicPro — a brand of Silver Webbuzz Pvt Ltd<br>
               Need help? Just reply to this email or write to
-              <a href="mailto:hello@eclinicpro.com" style="color:#0F9B6E; text-decoration:none;">hello@eclinicpro.com</a>.<br>
+              <a href="mailto:wecare@eclinicpro.com" style="color:#0F9B6E; text-decoration:none;">wecare@eclinicpro.com</a>.<br>
               <span style="color:#9a9aa0;">&copy; {$year} eClinicPro. All rights reserved.</span>
             </td>
           </tr>

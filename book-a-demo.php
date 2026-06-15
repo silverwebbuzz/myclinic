@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // already saved, so the visitor still sees the thank-you screen.
         ecp_demo_emails($form);
     } else {
-        $formError = 'Something went wrong saving your request. Email us at hello@eclinicpro.com instead.';
+        $formError = 'Something went wrong saving your request. Email us at wecare@eclinicpro.com instead.';
     }
 }
 
@@ -56,7 +56,7 @@ function ecp_demo_emails(array $form): void
 
     $e = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
     $cfg = ecp_smtp_config();
-    $inbox = $cfg['SMTP_TO_EMAIL'] ?? 'hello@eclinicpro.com';
+    $inbox = $cfg['SMTP_TO_EMAIL'] ?? 'wecare@eclinicpro.com';
 
     // 1) Confirmation to the visitor.
     $visitorBody = '<p style="margin:0 0 16px; font-size:15px; line-height:1.65; color:#1c1c1e;">'

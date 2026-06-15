@@ -317,19 +317,32 @@ final class InvoiceService
                 ->where('id', '=', $invoiceId)
                 ->update(['pdf_path' => $pdfPath]);
 
+            $paidPayload = [
+                'patient_name' => $patient['name'],
+                'clinic_name' => $clinic['name'],
+                'invoice_number' => $invoice['invoice_number'],
+                'total' => $invoice['total'],
+                'pdf_url' => $pdfPath,
+            ];
+            $paidAt = date('Y-m-d H:i:s', time() + 60);
+
             NotificationService::queueWhatsApp(
                 $clinicId,
                 (int) $patient['id'],
                 (string) $patient['phone'],
                 'invoice_paid',
-                [
-                    'patient_name' => $patient['name'],
-                    'clinic_name' => $clinic['name'],
-                    'invoice_number' => $invoice['invoice_number'],
-                    'total' => $invoice['total'],
-                    'pdf_url' => $pdfPath,
-                ],
-                date('Y-m-d H:i:s', time() + 60),
+                $paidPayload,
+                $paidAt,
+            );
+
+            // Email the receipt too, when the patient has an address on file.
+            NotificationService::queueEmail(
+                $clinicId,
+                (int) $patient['id'],
+                $patient['email'] ?? null,
+                'invoice_paid',
+                $paidPayload,
+                $paidAt,
             );
 
             EventBus::fire('invoice.paid', [
