@@ -93,45 +93,54 @@ final class DoctorClaimService
         $db = self::pdo();
         $db->beginTransaction();
         try {
-            // 1) Create the tenant (clinic).
-            $clinicSlug = self::makeUniqueSlug((string) $req['clinic_name'], 'tenants', 'slug');
-            $addrLine   = trim(($req['city'] ?? '') . ($req['state'] ? ', ' . $req['state'] : ''));
-            $tenantStmt = $db->prepare(
-                'INSERT INTO tenants (name, slug, country_code, address, phone, email, is_active, created_at)
-                 VALUES (:n, :s, "IN", :addr, :phone, :email, 1, NOW())'
-            );
-            $tenantStmt->execute([
-                'n'     => $req['clinic_name'],
-                's'     => $clinicSlug,
-                'addr'  => $addrLine ?: null,
-                'phone' => $req['phone'],
-                'email' => $req['email'],
-            ]);
-            $tenantId = (int) $db->lastInsertId();
+            // Reuse an existing portal account when the doctor already signed up
+            // (e.g. /register trial, then "get listed" from the dashboard). Only
+            // marketing-site applicants with no account get a fresh tenant + user.
+            $existing = self::findExistingDoctorAccount($db, $req);
+            if ($existing !== null) {
+                $tenantId = $existing['tenant_id'];
+                $userId   = $existing['user_id'];
+            } else {
+                // 1) Create the tenant (clinic).
+                $clinicSlug = self::makeUniqueSlug((string) $req['clinic_name'], 'tenants', 'slug');
+                $addrLine   = trim(($req['city'] ?? '') . ($req['state'] ? ', ' . $req['state'] : ''));
+                $tenantStmt = $db->prepare(
+                    'INSERT INTO tenants (name, slug, country_code, address, phone, email, is_active, created_at)
+                     VALUES (:n, :s, "IN", :addr, :phone, :email, 1, NOW())'
+                );
+                $tenantStmt->execute([
+                    'n'     => $req['clinic_name'],
+                    's'     => $clinicSlug,
+                    'addr'  => $addrLine ?: null,
+                    'phone' => $req['phone'],
+                    'email' => $req['email'],
+                ]);
+                $tenantId = (int) $db->lastInsertId();
 
-            // 2) Create the doctor user. Email is required + unique, but we
-            // don't have one — use a placeholder. Password_hash is NOT NULL
-            // but we set an unusable bcrypt hash since auth is via OTP.
-            $placeholderEmail = $req['email'] ?: ('doctor+' . $tenantId . '@eclinicpro.placeholder');
-            $unusableHash     = '!disabled:' . bin2hex(random_bytes(8));   // never matches a valid bcrypt
-            $userStmt = $db->prepare(
-                'INSERT INTO users
-                    (clinic_id, name, email, phone, password_hash, role, is_owner,
-                     specialization, qualification, is_active, created_at)
-                 VALUES
-                    (:cid, :name, :email, :phone, :pwd, "doctor", 1,
-                     :spec, :qual, 1, NOW())'
-            );
-            $userStmt->execute([
-                'cid'   => $tenantId,
-                'name'  => $req['full_name'],
-                'email' => $placeholderEmail,
-                'phone' => $req['phone'],
-                'pwd'   => $unusableHash,
-                'spec'  => $req['specialty'],
-                'qual'  => trim(($req['reg_council'] ? $req['reg_council'] . ' ' : '') . ($req['reg_number'] ?: '')) ?: null,
-            ]);
-            $userId = (int) $db->lastInsertId();
+                // 2) Create the doctor user. Email is required + unique, but we
+                // don't have one — use a placeholder. Password_hash is NOT NULL
+                // but we set an unusable bcrypt hash since auth is via OTP.
+                $placeholderEmail = $req['email'] ?: ('doctor+' . $tenantId . '@eclinicpro.placeholder');
+                $unusableHash     = '!disabled:' . bin2hex(random_bytes(8));   // never matches a valid bcrypt
+                $userStmt = $db->prepare(
+                    'INSERT INTO users
+                        (clinic_id, name, email, phone, password_hash, role, is_owner,
+                         specialization, qualification, is_active, created_at)
+                     VALUES
+                        (:cid, :name, :email, :phone, :pwd, "doctor", 1,
+                         :spec, :qual, 1, NOW())'
+                );
+                $userStmt->execute([
+                    'cid'   => $tenantId,
+                    'name'  => $req['full_name'],
+                    'email' => $placeholderEmail,
+                    'phone' => $req['phone'],
+                    'pwd'   => $unusableHash,
+                    'spec'  => $req['specialty'],
+                    'qual'  => trim(($req['reg_council'] ? $req['reg_council'] . ' ' : '') . ($req['reg_number'] ?: '')) ?: null,
+                ]);
+                $userId = (int) $db->lastInsertId();
+            }
 
             // 3) Directory listing.
             //    - For 'claim' requests: link to the existing row.
@@ -185,8 +194,10 @@ final class DoctorClaimService
 
             return $userId;
         } catch (\Throwable $e) {
-            $db->rollBack();
-            error_log('[DoctorClaimService::approve] ' . $e->getMessage());
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            error_log('[DoctorClaimService::approve] request=' . $requestId . ' ' . $e->getMessage());
             return null;
         }
     }
@@ -422,6 +433,51 @@ final class DoctorClaimService
             'homeopathy'        => 'homeo',
         ];
         return $slugToDb[$value] ?? 'gp';
+    }
+
+    /**
+     * If the doctor already has a portal account (same verified phone or email),
+     * return their tenant + user ids so approval only adds the directory row.
+     *
+     * @return array{tenant_id: int, user_id: int}|null
+     */
+    private static function findExistingDoctorAccount(PDO $db, array $req): ?array
+    {
+        $phone = DoctorOtpService::normalizePhone((string) ($req['phone'] ?? ''));
+        if ($phone !== '') {
+            $stmt = $db->prepare(
+                'SELECT id, clinic_id FROM users
+                 WHERE phone = :p AND role = "doctor" AND is_active = 1
+                 LIMIT 1'
+            );
+            $stmt->execute(['p' => $phone]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                return [
+                    'tenant_id' => (int) $row['clinic_id'],
+                    'user_id'   => (int) $row['id'],
+                ];
+            }
+        }
+
+        $email = trim((string) ($req['email'] ?? ''));
+        if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $stmt = $db->prepare(
+                'SELECT id, clinic_id FROM users
+                 WHERE email = :e AND role = "doctor" AND is_active = 1
+                 LIMIT 1'
+            );
+            $stmt->execute(['e' => $email]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                return [
+                    'tenant_id' => (int) $row['clinic_id'],
+                    'user_id'   => (int) $row['id'],
+                ];
+            }
+        }
+
+        return null;
     }
 
     private static function makeUniqueSlug(string $base, string $table, string $col): string

@@ -49,7 +49,8 @@ final class MailService
 
             // Human, relationship mail → care team
             'staff_invite',
-            'churn_outreach' => $care,
+            'churn_outreach',
+            'doctor_approved' => $care,
 
             // Newsletters / health content → health tips
             'health_tip',
@@ -92,6 +93,7 @@ final class MailService
             'telemedicine_link' => 'Your online consultation link — ' . $clinicName,
             'invoice_paid' => 'Payment received — ' . $clinicName,
             'subscription_invoice' => 'Your eClinicPro invoice ' . (string) ($payload['invoice_no'] ?? ''),
+            'doctor_approved' => 'Your clinic is now listed on eClinicPro',
             default => 'eClinicPro notification',
         };
 
@@ -157,6 +159,15 @@ final class MailService
                 . ($payload['currency'] ?? 'INR') . ' ' . ($payload['amount'] ?? '')
                 . " (tax invoice attached/available in your billing page).\n\n"
                 . "— Team eClinicPro, SILVER WEBBUZZ PRIVATE LIMITED",
+            'doctor_approved' => "Hello " . ($payload['doctor_name'] ?? 'Doctor') . ",\n\n"
+                . "Good news — your listing request for "
+                . ($payload['clinic_name'] ?? 'your clinic')
+                . " has been approved.\n\n"
+                . "You can sign in to your clinic portal with your verified phone number ("
+                . ($payload['phone'] ?? '') . "):\n"
+                . ($payload['login_url'] ?? '') . "\n\n"
+                . "No password is needed — we'll send you a one-time code by SMS.\n\n"
+                . "— Team eClinicPro",
             default => json_encode($payload),
         };
     }
