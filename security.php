@@ -139,7 +139,7 @@ require __DIR__ . '/partials/header.php';
     </div>
 </section>
 
-<section>
+<section style="padding: 80px 0;">
     <div class="wrap">
         <div class="section-head reveal">
             <span class="eyebrow">Documents you can download</span>

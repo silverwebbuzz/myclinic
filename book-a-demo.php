@@ -54,7 +54,7 @@ function ecp_demo_emails(array $form): void
     $specialty = $form['specialty'] ?? '';
     $message = $form['message'] ?? '';
 
-    $e = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+    $e = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
     $cfg = ecp_smtp_config();
     $inbox = $cfg['SMTP_TO_EMAIL'] ?? 'wecare@eclinicpro.com';
 
@@ -100,7 +100,7 @@ function ecp_demo_emails(array $form): void
 require __DIR__ . '/partials/header.php';
 ?>
 
-<section style="padding: 140px 0 100px;">
+<section style="padding: 140px 0 100px; background-image: url('/assets/img/logos/book-a-demo-bg.png'); background-size: cover; background-position: center;">
     <div class="wrap">
         <div style="display: grid; grid-template-columns: 1fr 1.05fr; gap: 80px; align-items: start;" class="demo-grid">
 
@@ -108,13 +108,13 @@ require __DIR__ . '/partials/header.php';
             <div class="reveal">
                 <span class="eyebrow">15-minute demo</span>
                 <h1 class="h-display" style="font-size: 42px; letter-spacing: -1.2px; margin-top: 14px; margin-bottom: 18px;">
-                    A 15-minute look at your clinic on eClinicPro.
+                    <b>A 15-minute look at your clinic on <span style="color: var(--teal-700); font-weight: 700;">eClinicPro.</span></b>
                 </h1>
                 <p class="lede" style="font-size: 17px; margin-bottom: 28px;">
                     Tell us about your clinic. We'll set up a tailored demo using your specialty's templates and walk you through it live.
                 </p>
 
-                <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 32px;">
+                <!-- <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 32px;">
                     <?php
                     $points = [
                         ['✓', 'Tailored to your specialty', 'GP, dental, homeo, derma, peds, physio — we configure the demo to match.'],
@@ -132,6 +132,84 @@ require __DIR__ . '/partials/header.php';
                             <div style="font-size: 13.5px; color: var(--mute); margin-top: 2px; line-height: 1.55;"><?= e($d) ?></div>
                         </div>
                     </div>
+                    <?php endforeach; ?>
+                </div> -->
+
+                <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 32px;">
+                    <?php
+                    $points = [
+                        [
+                            // Check icon
+                            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+            <path d="M8 12.5l2.5 2.5L16 9.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>',
+                            'Tailored to your specialty',
+                            'GP, dental, homeo, derma, peds, physio — we configure the demo to match.',
+                            '#dcfce7',
+                            '#15803d'
+                        ],
+                        [
+                            // User icon
+                            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/>
+            <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="currentColor" stroke-width="2"/>
+        </svg>',
+                            'Live walk-through',
+                            'Real screens, real workflow. Bring your hardest question.',
+                            '#f3e8ff',
+                            '#7e22ce'
+                        ],
+                        [
+                            // Clipboard icon
+                            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <rect x="6" y="4" width="12" height="16" rx="2" stroke="currentColor" stroke-width="2"/>
+            <path d="M9 4h6v3H9z" stroke="currentColor" stroke-width="2"/>
+        </svg>',
+                            'Migration plan',
+                            "We'll show you exactly how to move your existing records.",
+                            '#ffedd5',
+                            '#c2410c'
+                        ],
+                        [
+                            // Shield icon
+                            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M12 3l7 3v6c0 5-3.5 7.5-7 9-3.5-1.5-7-4-7-9V6l7-3z"
+                  stroke="currentColor" stroke-width="2"/>
+        </svg>',
+                            'No pressure',
+                            'No sales pitch. No follow-up calls unless you ask for them.',
+                            '#dbeafe',
+                            '#1d4ed8'
+                        ],
+                    ];
+
+                    foreach ($points as [$ic, $t, $d, $bg, $color]): ?>
+
+                        <div style="display: flex; gap: 14px; align-items: flex-start;">
+                            <div style="
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background: <?= $bg ?>;
+        color: <?= $color ?>;
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+    ">
+                                <?= str_replace('<svg', '<svg style="stroke:currentColor"', $ic) ?>
+                                <!-- <?= $ic ?> -->
+                            </div>
+
+                            <div>
+                                <div style="font-size: 15px; font-weight: 500;">
+                                    <?= e($t) ?>
+                                </div>
+                                <div style="font-size: 13.5px; color: var(--mute); margin-top: 2px; line-height: 1.55;">
+                                    <?= e($d) ?>
+                                </div>
+                            </div>
+                        </div>
                     <?php endforeach; ?>
                 </div>
 
@@ -153,94 +231,96 @@ require __DIR__ . '/partials/header.php';
             <div class="reveal">
                 <?php if ($submitted): ?>
 
-                <div style="background: #fff; border-radius: 18px; border: 0.5px solid var(--line); padding: 56px; text-align: center;">
-                    <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--teal-50); color: var(--teal-700); display: grid; place-items: center; margin: 0 auto 22px; font-size: 28px;">✓</div>
-                    <h2 style="font-size: 28px; font-weight: 300; letter-spacing: -0.6px; margin-bottom: 12px;">Request received.</h2>
-                    <p style="font-size: 15px; color: var(--mute); max-width: 380px; margin: 0 auto 24px; line-height: 1.6;">
-                        Thanks, <strong style="color: var(--ink);"><?= e($form['name']) ?></strong>. We'll email
-                        <strong style="color: var(--ink);"><?= e($form['email']) ?></strong> within 24 hours with available demo times.
-                    </p>
-                    <p style="font-size: 13px; color: var(--mute); margin-bottom: 28px;">
-                        In the meantime, feel free to <a href="<?= e(ecp_portal_url('/register')) ?>" style="color: var(--teal-600);">start a free account</a> and explore.
-                    </p>
-                    <a href="/" class="btn btn-dark">Back to home</a>
-                </div>
+                    <div style="background: #fff; border-radius: 18px; border: 0.5px solid var(--line); padding: 56px; text-align: center;">
+                        <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--teal-50); color: var(--teal-700); display: grid; place-items: center; margin: 0 auto 22px; font-size: 28px;">✓</div>
+                        <h2 style="font-size: 28px; font-weight: 300; letter-spacing: -0.6px; margin-bottom: 12px;">Request received.</h2>
+                        <p style="font-size: 15px; color: var(--mute); max-width: 380px; margin: 0 auto 24px; line-height: 1.6;">
+                            Thanks, <strong style="color: var(--ink);"><?= e($form['name']) ?></strong>. We'll email
+                            <strong style="color: var(--ink);"><?= e($form['email']) ?></strong> within 24 hours with available demo times.
+                        </p>
+                        <p style="font-size: 13px; color: var(--mute); margin-bottom: 28px;">
+                            In the meantime, feel free to <a href="<?= e(ecp_portal_url('/register')) ?>" style="color: var(--teal-600);">start a free account</a> and explore.
+                        </p>
+                        <a href="/" class="btn btn-dark">Back to home</a>
+                    </div>
 
                 <?php else: ?>
 
-                <div style="background: #fff; border-radius: 18px; border: 0.5px solid var(--line); padding: 32px;">
-                    <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 0.5px solid var(--line);">
-                        <div style="font-size: 12px; color: var(--mute); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500;">Request a demo</div>
-                        <div style="font-size: 18px; font-weight: 500; margin-top: 4px;">Tell us about your clinic</div>
-                        <div style="font-size: 13px; color: var(--mute); margin-top: 2px;">We'll reply within a working day with available times.</div>
-                    </div>
-
-                    <?php if ($formError): ?>
-                    <div style="margin-bottom: 18px; padding: 12px 14px; background: #fee; border: 1px solid #fcc; border-radius: 10px; color: #b00; font-size: 13.5px;">
-                        ⚠️ <?= e($formError) ?>
-                    </div>
-                    <?php endif; ?>
-
-                    <form method="post" action="/book-a-demo">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;" class="demo-fields">
-                            <div>
-                                <label style="font-size: 12px; font-weight: 500; color: var(--ink-2); display: block; margin-bottom: 6px;">
-                                    Your name <span style="color: var(--red, #c00);">*</span>
-                                </label>
-                                <input type="text" name="name" required value="<?= e($form['name']) ?>" placeholder="Dr. Jane Patel"
-                                       style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 0.5px solid var(--line); font-family: inherit; font-size: 14px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 12px; font-weight: 500; color: var(--ink-2); display: block; margin-bottom: 6px;">
-                                    Work email <span style="color: var(--red, #c00);">*</span>
-                                </label>
-                                <input type="email" name="email" required value="<?= e($form['email']) ?>" placeholder="jane@clinic.com"
-                                       style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 0.5px solid var(--line); font-family: inherit; font-size: 14px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 12px; font-weight: 500; color: var(--ink-2); display: block; margin-bottom: 6px;">Phone <span style="color: var(--mute); font-weight: 400;">(optional)</span></label>
-                                <input type="tel" name="phone" value="<?= e($form['phone']) ?>" placeholder="+91 ..."
-                                       style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 0.5px solid var(--line); font-family: inherit; font-size: 14px;">
-                            </div>
-                            <div>
-                                <label style="font-size: 12px; font-weight: 500; color: var(--ink-2); display: block; margin-bottom: 6px;">Clinic name</label>
-                                <input type="text" name="clinic_name" value="<?= e($form['clinic_name']) ?>" placeholder="Patel Family Care"
-                                       style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 0.5px solid var(--line); font-family: inherit; font-size: 14px;">
-                            </div>
-                            <div style="grid-column: span 2;">
-                                <label style="font-size: 12px; font-weight: 500; color: var(--ink-2); display: block; margin-bottom: 6px;">Specialty</label>
-                                <select name="specialty" style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 0.5px solid var(--line); font-family: inherit; font-size: 14px; background: #fff;">
-                                    <?php foreach ([
-                                        'gp' => 'General practice',
-                                        'dental' => 'Dental',
-                                        'homeopathy' => 'Homeopathy',
-                                        'derma' => 'Dermatology',
-                                        'peds' => 'Pediatrics',
-                                        'physio' => 'Physiotherapy',
-                                        'other' => 'Other',
-                                    ] as $v => $l): ?>
-                                    <option value="<?= $v ?>" <?= $form['specialty'] === $v ? 'selected' : '' ?>><?= e($l) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
+                    <div style="background: #fff; border-radius: 18px; border: 0.5px solid var(--line); padding: 32px;">
+                        <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 0.5px solid var(--line);">
+                            <div style="font-size: 16px;color: #0b7f5a;text-transform: uppercase;letter-spacing: 0.05em;font-weight: 700;">Request a demo</div>
+                            <div style="font-size: 20px;font-weight: 700;margin-top: 4px;">Tell us about your clinic</div>
+                            <div style="font-size: 13px; color: var(--mute); margin-top: 2px;">We'll reply within a working day with available times.</div>
                         </div>
 
-                        <div style="margin-top: 14px;">
-                            <label style="font-size: 12px; font-weight: 500; color: var(--ink-2); display: block; margin-bottom: 6px;">
-                                Anything we should prepare for? <span style="color: var(--mute); font-weight: 400;">(optional)</span>
-                            </label>
-                            <textarea name="message" rows="3" placeholder="Currently on Practo, moving 2,000 records. Want to focus on dental charting and recall."
-                                      style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 0.5px solid var(--line); font-family: inherit; font-size: 14px; resize: vertical;"><?= e($form['message']) ?></textarea>
-                        </div>
+                        <?php if ($formError): ?>
+                            <div style="margin-bottom: 18px; padding: 12px 14px; background: #fee; border: 1px solid #fcc; border-radius: 10px; color: #b00; font-size: 13.5px;">
+                                ⚠️ <?= e($formError) ?>
+                            </div>
+                        <?php endif; ?>
 
-                        <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 22px;">
-                            Request demo →
-                        </button>
-                        <p style="font-size: 12px; color: var(--mute); text-align: center; margin-top: 14px;">
-                            By submitting you agree to be contacted about your demo. We won't sell your info to anyone — ever.
-                        </p>
-                    </form>
-                </div>
+                        <form method="post" action="/book-a-demo">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;" class="demo-fields">
+                                <div>
+                                    <label style="font-size: 12px; font-weight: 500; color: var(--ink-2); display: block; margin-bottom: 6px;">
+                                        Your name <span style="color: var(--red, #c00);">*</span>
+                                    </label>
+                                    <input type="text" name="name" required value="<?= e($form['name']) ?>" placeholder="Dr. Jane Patel"
+                                        style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 0.5px solid var(--line); font-family: inherit; font-size: 14px;">
+                                </div>
+                                <div>
+                                    <label style="font-size: 12px; font-weight: 500; color: var(--ink-2); display: block; margin-bottom: 6px;">
+                                        Work email <span style="color: var(--red, #c00);">*</span>
+                                    </label>
+                                    <input type="email" name="email" required value="<?= e($form['email']) ?>" placeholder="jane@clinic.com"
+                                        style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 0.5px solid var(--line); font-family: inherit; font-size: 14px;">
+                                </div>
+                                <div>
+                                    <label style="font-size: 12px; font-weight: 500; color: var(--ink-2); display: block; margin-bottom: 6px;">Phone <span style="color: var(--mute); font-weight: 400;">(optional)</span></label>
+                                    <input type="tel" name="phone" value="<?= e($form['phone']) ?>" placeholder="+91 ..."
+                                        style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 0.5px solid var(--line); font-family: inherit; font-size: 14px;">
+                                </div>
+                                <div>
+                                    <label style="font-size: 12px; font-weight: 500; color: var(--ink-2); display: block; margin-bottom: 6px;">Clinic name</label>
+                                    <input type="text" name="clinic_name" value="<?= e($form['clinic_name']) ?>" placeholder="Patel Family Care"
+                                        style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 0.5px solid var(--line); font-family: inherit; font-size: 14px;">
+                                </div>
+                                <div style="grid-column: span 2;">
+                                    <label style="font-size: 12px; font-weight: 500; color: var(--ink-2); display: block; margin-bottom: 6px;">Specialty</label>
+                                    <select name="specialty" style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 0.5px solid var(--line); font-family: inherit; font-size: 14px; background: #fff;">
+                                        <?php foreach (
+                                            [
+                                                'gp' => 'General practice',
+                                                'dental' => 'Dental',
+                                                'homeopathy' => 'Homeopathy',
+                                                'derma' => 'Dermatology',
+                                                'peds' => 'Pediatrics',
+                                                'physio' => 'Physiotherapy',
+                                                'other' => 'Other',
+                                            ] as $v => $l
+                                        ): ?>
+                                            <option value="<?= $v ?>" <?= $form['specialty'] === $v ? 'selected' : '' ?>><?= e($l) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 14px;">
+                                <label style="font-size: 12px; font-weight: 500; color: var(--ink-2); display: block; margin-bottom: 6px;">
+                                    Anything we should prepare for? <span style="color: var(--mute); font-weight: 400;">(optional)</span>
+                                </label>
+                                <textarea name="message" rows="3" placeholder="Currently on Practo, moving 2,000 records. Want to focus on dental charting and recall."
+                                    style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 0.5px solid var(--line); font-family: inherit; font-size: 14px; resize: vertical;"><?= e($form['message']) ?></textarea>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 22px;">
+                                Request demo →
+                            </button>
+                            <p style="font-size: 12px; color: var(--mute); text-align: center; margin-top: 14px;">
+                                By submitting you agree to be contacted about your demo. We won't sell your info to anyone — ever.
+                            </p>
+                        </form>
+                    </div>
 
                 <?php endif; ?>
             </div>
@@ -258,17 +338,23 @@ require __DIR__ . '/partials/header.php';
             <?php
             $list = ['Sunrise Family · IN', 'Whitfield Dental · CA', 'PediaCare · NG', 'Skin & Co · ES', 'Riverside Physio · UK', 'Iyer Homeopathy · IN'];
             foreach ($list as $i => $c): ?>
-            <span style="font-size: 13px; color: var(--mute); font-weight: 500;"><?= e($c) ?><?= $i < count($list) - 1 ? ' ·' : '' ?></span>
+                <span style="font-size: 13px; color: var(--mute); font-weight: 500;"><?= e($c) ?><?= $i < count($list) - 1 ? ' ·' : '' ?></span>
             <?php endforeach; ?>
         </div>
     </div>
 </section>
 
 <style>
-@media (max-width: 800px) {
-    .demo-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
-    .demo-fields { grid-template-columns: 1fr !important; }
-}
+    @media (max-width: 800px) {
+        .demo-grid {
+            grid-template-columns: 1fr !important;
+            gap: 40px !important;
+        }
+
+        .demo-fields {
+            grid-template-columns: 1fr !important;
+        }
+    }
 </style>
 
 <?php
