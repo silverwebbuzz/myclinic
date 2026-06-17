@@ -28,10 +28,9 @@ final class DoctorClaimController
         ]));
     }
 
-    public function show(Request $request): Response
+    public function show(Request $request, string $id): Response
     {
-        $id = (int) ($request->route['id'] ?? 0);
-        $claim = DoctorClaimService::find($id);
+        $claim = DoctorClaimService::find((int) $id);
         if ($claim === null) {
             return Response::redirect('/admin/claims?message=not_found');
         }
