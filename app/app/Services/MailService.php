@@ -120,8 +120,30 @@ final class MailService
         if (!empty($_ENV['MAILGUN_API_KEY']) && !empty($_ENV['MAILGUN_DOMAIN'])) {
             self::sendViaMailgun($toEmail, $subject, $body, $fromEmail, $fromName);
         } else {
-            self::logToFile($toEmail, $template, $payload + ['subject' => $subject, 'body' => $body, 'from' => $fromEmail]);
+            $logPayload = $payload + ['subject' => $subject, 'body' => $body, 'from' => $fromEmail];
+            $archive = self::archiveBcc($toEmail);
+            if ($archive !== null) {
+                $logPayload['archive_bcc'] = $archive;
+            }
+            self::logToFile($toEmail, $template, $logPayload);
         }
+    }
+
+    /**
+     * Optional archive copy of every outbound email (BCC).
+     * Set MAIL_ARCHIVE_BCC in app/.env; leave blank to disable.
+     */
+    private static function archiveBcc(?string $primaryTo = null): ?string
+    {
+        $archive = trim((string) ($_ENV['MAIL_ARCHIVE_BCC'] ?? 'eclinicpro.com@gmail.com'));
+        if ($archive === '' || !filter_var($archive, FILTER_VALIDATE_EMAIL)) {
+            return null;
+        }
+        if ($primaryTo !== null && strcasecmp(trim($primaryTo), $archive) === 0) {
+            return null;
+        }
+
+        return $archive;
     }
 
     /** @param array<string, mixed> $payload */
@@ -186,18 +208,23 @@ final class MailService
             : $fromEmail;
 
         $ch = curl_init("https://api.mailgun.net/v3/{$domain}/messages");
+        $fields = [
+            'from' => $from,
+            'to' => $to,
+            'subject' => $subject,
+            'text' => $text,
+            // Replies go to the care team rather than an unwatched noreply box.
+            'h:Reply-To' => $_ENV['WECARE_FROM'] ?? 'wecare@eclinicpro.com',
+        ];
+        $archive = self::archiveBcc($to);
+        if ($archive !== null) {
+            $fields['bcc'] = $archive;
+        }
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
             CURLOPT_USERPWD => 'api:' . $_ENV['MAILGUN_API_KEY'],
-            CURLOPT_POSTFIELDS => [
-                'from' => $from,
-                'to' => $to,
-                'subject' => $subject,
-                'text' => $text,
-                // Replies go to the care team rather than an unwatched noreply box.
-                'h:Reply-To' => $_ENV['WECARE_FROM'] ?? 'wecare@eclinicpro.com',
-            ],
+            CURLOPT_POSTFIELDS => $fields,
         ]);
         curl_exec($ch);
         curl_close($ch);

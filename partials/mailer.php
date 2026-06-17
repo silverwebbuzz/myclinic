@@ -154,6 +154,13 @@ function ecp_send_mail(string $toEmail, string $subject, string $htmlBody, ?stri
     if (!$ok($cmd('RCPT TO:<' . $toEmail . '>'), '250')) {
         return $fail('RCPT TO rejected');
     }
+    $archiveBcc = trim($cfg['MAIL_ARCHIVE_BCC'] ?? 'eclinicpro.com@gmail.com');
+    if ($archiveBcc !== ''
+        && filter_var($archiveBcc, FILTER_VALIDATE_EMAIL)
+        && strcasecmp($archiveBcc, $toEmail) !== 0
+        && !$ok($cmd('RCPT TO:<' . $archiveBcc . '>'), '250')) {
+        return $fail('archive BCC RCPT TO rejected');
+    }
     if (!$ok($cmd('DATA'), '354')) {
         return $fail('DATA rejected');
     }
