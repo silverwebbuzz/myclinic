@@ -177,11 +177,44 @@ final class DoctorClaimService
             ]);
 
             $db->commit();
+
+            // Notify the doctor that they're approved — best-effort, AFTER the
+            // commit so a mail problem never rolls back the account. Guarded:
+            // only sends when an email is on file (it's optional on a claim).
+            self::sendApprovalEmail($req, $tenantId);
+
             return $userId;
         } catch (\Throwable $e) {
             $db->rollBack();
             error_log('[DoctorClaimService::approve] ' . $e->getMessage());
             return null;
+        }
+    }
+
+    /**
+     * Approval notification to the doctor. Login is passwordless (phone OTP),
+     * so the email points them to the doctor login page to sign in with their
+     * verified number — no password is sent. No-op when there's no email.
+     *
+     * @param array<string, mixed> $req the claim request row
+     */
+    private static function sendApprovalEmail(array $req, int $tenantId): void
+    {
+        $email = trim((string) ($req['email'] ?? ''));
+        if ($email === '') {
+            return; // email is optional — nothing to notify
+        }
+
+        try {
+            $base = rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/');
+            MailService::send($email, 'doctor_approved', [
+                'doctor_name' => $req['full_name'] ?? 'Doctor',
+                'clinic_name' => $req['clinic_name'] ?? '',
+                'phone' => $req['phone'] ?? '',
+                'login_url' => $base . '/doctor/login',
+            ], $tenantId);
+        } catch (\Throwable $e) {
+            error_log('[DoctorClaimService::sendApprovalEmail] ' . $e->getMessage());
         }
     }
 
