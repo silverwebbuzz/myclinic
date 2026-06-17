@@ -44,6 +44,7 @@ final class MailService
             'appointment_reminder',
             'appointment_notification',
             'invoice_paid',
+            'subscription_invoice',
             'prescription_ready' => $notify,
 
             // Human, relationship mail → care team
@@ -90,6 +91,7 @@ final class MailService
             'appointment_cancelled' => 'Appointment cancelled — ' . $clinicName,
             'telemedicine_link' => 'Your online consultation link — ' . $clinicName,
             'invoice_paid' => 'Payment received — ' . $clinicName,
+            'subscription_invoice' => 'Your eClinicPro invoice ' . (string) ($payload['invoice_no'] ?? ''),
             default => 'eClinicPro notification',
         };
 
@@ -148,6 +150,13 @@ final class MailService
                 . "We've received your payment at " . ($payload['clinic_name'] ?? 'the clinic')
                 . ". Invoice " . ($payload['invoice_number'] ?? '') . " — total "
                 . ($payload['total'] ?? '') . ".\n\nThank you.",
+            'subscription_invoice' => "Hello " . ($payload['clinic_name'] ?? '') . ",\n\n"
+                . "Thank you for subscribing to eClinicPro "
+                . ucfirst((string) ($payload['plan_id'] ?? '')) . ".\n\n"
+                . "Invoice " . ($payload['invoice_no'] ?? '') . " — "
+                . ($payload['currency'] ?? 'INR') . ' ' . ($payload['amount'] ?? '')
+                . " (tax invoice attached/available in your billing page).\n\n"
+                . "— Team eClinicPro, SILVER WEBBUZZ PRIVATE LIMITED",
             default => json_encode($payload),
         };
     }

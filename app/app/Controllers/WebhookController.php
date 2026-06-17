@@ -70,6 +70,19 @@ final class WebhookController
         return Response::json(['received' => true]);
     }
 
+    public function cashfree(Request $request): Response
+    {
+        $payload = $request->rawBody ?? '';
+        $signature = $request->header('x-webhook-signature');
+        $timestamp = $request->header('x-webhook-timestamp');
+
+        if (!BillingGatewayService::handleCashfreeWebhook($payload, $signature, $timestamp)) {
+            return Response::json(['error' => 'Invalid signature'], 400);
+        }
+
+        return Response::json(['received' => true]);
+    }
+
     public function photoPublished(Request $request): Response
     {
         $payload = json_decode($request->rawBody ?? '{}', true);

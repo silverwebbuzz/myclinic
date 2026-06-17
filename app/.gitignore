@@ -14,3 +14,5 @@ document/private-*
 
 # Generated prescription PDFs (private; streamed via controller)
 /storage/prescriptions/*
+/storage/saas_invoices/*
+!/storage/saas_invoices/.gitkeep

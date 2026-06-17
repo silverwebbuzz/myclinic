@@ -36,26 +36,45 @@ final class OnboardingController
             return Response::redirect('/dashboard');
         }
 
+        // Show the plan screen: subscribe now (Cashfree) or start the free
+        // 30-day trial. The standard plan + trial is applied so the clinic has
+        // full access during onboarding; paying converts it from the Settings/
+        // checkout flow. applyPlanToTenant only SETS a trial when none exists,
+        // so the registration clock is preserved.
         if ($step <= 1) {
-            // Auto-apply the standard plan only for fresh onboarding tenants.
-            // This avoids resetting established tenants back to step 2.
-            // withTrial=true is safe: applyPlanToTenant only SETS a trial when
-            // one doesn't already exist, so the 30-day clock from registration
-            // is preserved (never reset/extended here).
             PlanService::applyPlanToTenant($clinicId, 'standard', true);
             OnboardingService::advanceTo($clinicId, 2);
         }
 
-        return Response::redirect('/onboarding/clinic-setup');
+        $cycle = ($request->query['cycle'] ?? 'yearly') === 'monthly' ? 'monthly' : 'yearly';
+
+        return $this->page('onboarding/plan-selection', [
+            'csrf' => CsrfService::token(),
+            'plans' => PlanService::all(),
+            'yearly' => $cycle === 'yearly',
+            'simulated' => $request->query['simulated'] ?? null,
+            'cancelled' => $request->query['cancelled'] ?? null,
+            'error' => $request->query['error'] ?? null,
+        ]);
     }
 
     /**
-     * POST endpoint preserved for any in-flight requests; same behavior
-     * as planSelection() now — no plan choice exists to make.
+     * POST without going through the gateway = "continue with trial" / free.
+     * Paid plans post to /subscription/checkout instead.
      */
     public function selectPlan(Request $request): Response
     {
-        return $this->planSelection($request);
+        $clinicId = RequestContext::clinicId();
+        if ($clinicId === null) {
+            return Response::redirect('/login');
+        }
+
+        $plan = (string) ($request->post['plan'] ?? 'free');
+        if ($plan === 'free') {
+            PlanService::applyPlanToTenant($clinicId, 'free', false);
+        }
+
+        return Response::redirect('/onboarding/clinic-setup');
     }
 
     public function billingSuccess(Request $request): Response
@@ -65,6 +84,25 @@ final class OnboardingController
         PlanService::applyPlanToTenant($clinicId, $planId, true);
 
         return Response::redirect('/onboarding/clinic-setup');
+    }
+
+    /**
+     * Cashfree redirects the doctor here after payment (?order_id=...). We
+     * verify the order with Cashfree's API and activate the plan — this is the
+     * safety net for a missed/late webhook (verify is idempotent).
+     */
+    public function cashfreeReturn(Request $request): Response
+    {
+        $orderId = (string) ($request->query['order_id'] ?? '');
+        $paid = $orderId !== '' && BillingGatewayService::verifyCashfreeOrder($orderId);
+
+        if ($paid) {
+            return Response::redirect('/onboarding/clinic-setup?paid=1');
+        }
+
+        // Not (yet) confirmed — the webhook may still arrive. Send them on with
+        // a soft notice rather than blocking onboarding.
+        return Response::redirect('/onboarding/clinic-setup?payment=pending');
     }
 
     public function clinicSetup(Request $request): Response

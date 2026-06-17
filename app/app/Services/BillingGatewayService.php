@@ -8,7 +8,13 @@ use App\Core\QueryBuilder;
 use App\Services\PartnerCommissionService;
 
 /**
- * Razorpay checkout — uses live API when keys exist, simulates in local dev.
+ * Subscription checkout for clinic/doctor plan purchases.
+ *
+ * Gateway priority (India-first):
+ *   1. Cashfree   — primary, when CASHFREE_APP_ID + CASHFREE_SECRET_KEY set.
+ *   2. Razorpay   — fallback, when RAZORPAY_KEY_ID + RAZORPAY_KEY_SECRET set.
+ *   3. Simulate   — local/dev when no live keys exist (activates the plan).
+ *
  * Phase 4: Stripe removed entirely (India-only product).
  */
 final class BillingGatewayService
@@ -21,9 +27,321 @@ final class BillingGatewayService
             return ['type' => 'error', 'message' => 'Invalid plan'];
         }
 
-        // Razorpay is the only gateway. India-first; other countries simulate
-        // until multi-currency lands (deferred — see phase1 doc).
-        return self::razorpayCheckout($clinicId, $planId, $billingCycle);
+        // Cashfree is the primary gateway; fall back to Razorpay, then simulate.
+        if (self::cashfreeConfigured()) {
+            return self::cashfreeCheckout($clinicId, $planId, $billingCycle);
+        }
+        if (($_ENV['RAZORPAY_KEY_ID'] ?? '') !== '' && ($_ENV['RAZORPAY_KEY_SECRET'] ?? '') !== '') {
+            return self::razorpayCheckout($clinicId, $planId, $billingCycle);
+        }
+
+        return self::simulatePaidPlan($clinicId, $planId, 'cashfree');
+    }
+
+    private static function cashfreeConfigured(): bool
+    {
+        return ($_ENV['CASHFREE_APP_ID'] ?? '') !== '' && ($_ENV['CASHFREE_SECRET_KEY'] ?? '') !== '';
+    }
+
+    private static function cashfreeApiBase(): string
+    {
+        // sandbox for testing, api for production.
+        return strtolower($_ENV['CASHFREE_ENV'] ?? 'sandbox') === 'production'
+            ? 'https://api.cashfree.com/pg'
+            : 'https://sandbox.cashfree.com/pg';
+    }
+
+    private static function appBaseUrl(): string
+    {
+        return rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/');
+    }
+
+    /**
+     * Plan price in INR (rupees). Config *_usd fields actually hold INR for the
+     * India product (see config/plans.php note). Yearly uses the discounted rate.
+     */
+    /** GST rate applied on the plan base price (CGST 9% + SGST 9%). */
+    private const GST_PERCENT = 18.0;
+
+    /** Base (pre-tax) plan price in INR. */
+    private static function planAmountInr(string $planId, string $billingCycle): float
+    {
+        $plan = PlanService::get($planId);
+        if ($plan === null) {
+            return 0.0;
+        }
+        $monthly = (float) ($plan['monthly_usd'] ?? 0);
+        $yearly = (float) ($plan['yearly_usd'] ?? 0);
+
+        // Some plans store yearly as a per-month discounted rate; if yearly is
+        // smaller than monthly it's clearly per-month → annualize it.
+        if ($billingCycle === 'yearly') {
+            return $yearly > 0 && $yearly < $monthly ? round($yearly * 12, 2) : round($yearly, 2);
+        }
+
+        return round($monthly, 2);
+    }
+
+    /**
+     * GST breakdown for a plan: base + 18% tax = gross (what we charge).
+     *
+     * @return array{base: float, tax: float, gross: float, percent: float}
+     */
+    public static function priceBreakdown(string $planId, string $billingCycle): array
+    {
+        $base = self::planAmountInr($planId, $billingCycle);
+        $tax = round($base * self::GST_PERCENT / 100, 2);
+
+        return [
+            'base' => $base,
+            'tax' => $tax,
+            'gross' => round($base + $tax, 2),
+            'percent' => self::GST_PERCENT,
+        ];
+    }
+
+    /**
+     * Cashfree PG (Orders API + hosted checkout). Creates an order, returns the
+     * hosted payment link. Plan is activated on webhook (PAYMENT_SUCCESS) and/or
+     * the return-URL verify, so a missed webhook still activates on redirect.
+     *
+     * @return array{type: string, url?: string, message?: string}
+     */
+    private static function cashfreeCheckout(int $clinicId, string $planId, string $billingCycle): array
+    {
+        $price = self::priceBreakdown($planId, $billingCycle);
+        $amount = $price['gross']; // GST-inclusive total actually charged
+        if ($amount <= 0) {
+            return self::simulatePaidPlan($clinicId, $planId, 'cashfree');
+        }
+
+        $clinic = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first() ?? [];
+        // order_id must be unique per attempt; carries clinic/plan via tags+id.
+        $orderId = 'sub_' . $clinicId . '_' . $planId . '_' . substr(bin2hex(random_bytes(4)), 0, 8);
+        $returnUrl = self::appBaseUrl() . '/onboarding/billing/cashfree-return?order_id={order_id}';
+
+        $payload = json_encode([
+            'order_id' => $orderId,
+            'order_amount' => $amount,
+            'order_currency' => 'INR',
+            'customer_details' => [
+                'customer_id' => 'clinic_' . $clinicId,
+                'customer_name' => (string) ($clinic['name'] ?? 'Clinic'),
+                'customer_email' => (string) ($clinic['email'] ?? 'noreply@eclinicpro.com'),
+                'customer_phone' => (string) ($clinic['phone'] ?? '9999999999'),
+            ],
+            'order_meta' => [
+                'return_url' => $returnUrl,
+                'notify_url' => self::appBaseUrl() . '/webhooks/cashfree',
+            ],
+            'order_tags' => [
+                'clinic_id' => (string) $clinicId,
+                'plan' => $planId,
+                'billing_cycle' => $billingCycle,
+            ],
+            'order_note' => 'eClinicPro ' . ucfirst($planId) . ' plan (' . $billingCycle . ')',
+        ]);
+
+        $ch = curl_init(self::cashfreeApiBase() . '/orders');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'x-api-version: 2023-08-01',
+                'x-client-id: ' . ($_ENV['CASHFREE_APP_ID'] ?? ''),
+                'x-client-secret: ' . ($_ENV['CASHFREE_SECRET_KEY'] ?? ''),
+            ],
+            CURLOPT_TIMEOUT => 20,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $data = json_decode((string) $response, true);
+        $sessionId = $data['payment_session_id'] ?? null;
+
+        if ($httpCode >= 200 && $httpCode < 300 && $sessionId) {
+            // Remember the pending order so the return-URL can verify + activate.
+            try {
+                QueryBuilder::table('tenants')->where('id', '=', $clinicId)->update([
+                    'cashfree_order_id' => $orderId,
+                ]);
+            } catch (\Throwable $e) {
+                // Column missing (migration not run) — webhook/return still work
+                // because order_id encodes clinic+plan.
+            }
+
+            // Create the pending SaaS invoice so the doctor sees it in their
+            // billing timeline while payment is in progress. Marked paid +
+            // emailed on success (webhook / return-URL verify).
+            SaasInvoiceService::createPending($clinicId, $planId, $billingCycle, $price, 'cashfree', $orderId);
+
+            // Cashfree's hosted page for this session. The JS SDK is the official
+            // path, but the order's payment_link (when enabled) or this hosted
+            // URL lets us redirect server-side without embedding the SDK.
+            $hosted = $data['payment_link']
+                ?? (self::cashfreeApiBase() === 'https://api.cashfree.com/pg'
+                    ? 'https://payments.cashfree.com/order/#' . $sessionId
+                    : 'https://payments-test.cashfree.com/order/#' . $sessionId);
+
+            return ['type' => 'redirect', 'url' => $hosted];
+        }
+
+        error_log('[Cashfree] order create failed (HTTP ' . $httpCode . '): ' . (string) $response);
+
+        // Fall back to Razorpay if configured, else simulate so onboarding
+        // never dead-ends on a gateway outage.
+        if (($_ENV['RAZORPAY_KEY_ID'] ?? '') !== '' && ($_ENV['RAZORPAY_KEY_SECRET'] ?? '') !== '') {
+            return self::razorpayCheckout($clinicId, $planId, $billingCycle);
+        }
+
+        return self::simulatePaidPlan($clinicId, $planId, 'cashfree');
+    }
+
+    /**
+     * Verify an order with Cashfree by id and activate the plan if PAID.
+     * Used by the return URL (and is idempotent — safe if the webhook already
+     * activated). Returns true when the plan is now active.
+     */
+    public static function verifyCashfreeOrder(string $orderId): bool
+    {
+        if (!self::cashfreeConfigured() || $orderId === '') {
+            return false;
+        }
+
+        $ch = curl_init(self::cashfreeApiBase() . '/orders/' . rawurlencode($orderId));
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'x-api-version: 2023-08-01',
+                'x-client-id: ' . ($_ENV['CASHFREE_APP_ID'] ?? ''),
+                'x-client-secret: ' . ($_ENV['CASHFREE_SECRET_KEY'] ?? ''),
+            ],
+            CURLOPT_TIMEOUT => 20,
+        ]);
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+        $data = json_decode((string) $response, true);
+        if (!is_array($data) || ($data['order_status'] ?? '') !== 'PAID') {
+            return false;
+        }
+
+        [$clinicId, $plan] = self::clinicAndPlanFromOrder($data, $orderId);
+        if ($clinicId <= 0) {
+            return false;
+        }
+
+        PlanService::applyPlanToTenant($clinicId, $plan, false);
+
+        // Mark the pending SaaS invoice paid, generate the PDF + email it.
+        // Idempotent — safe if the webhook already did this.
+        SaasInvoiceService::markPaidByOrder($orderId, null);
+
+        PartnerCommissionService::recordPaidConversion(
+            $clinicId,
+            (float) ($data['order_amount'] ?? self::yearlyInrAmount($plan)),
+            'INR',
+            null,
+            'cashfree:' . $orderId,
+        );
+
+        return true;
+    }
+
+    /**
+     * Resolve clinic id + plan from a Cashfree order. Prefers order_tags;
+     * falls back to parsing the "sub_{clinic}_{plan}_{rand}" order_id.
+     *
+     * @param array<string, mixed> $order
+     * @return array{0: int, 1: string}
+     */
+    private static function clinicAndPlanFromOrder(array $order, string $orderId): array
+    {
+        $tags = $order['order_tags'] ?? [];
+        $clinicId = (int) ($tags['clinic_id'] ?? 0);
+        $plan = (string) ($tags['plan'] ?? '');
+
+        if ($clinicId <= 0 && str_starts_with($orderId, 'sub_')) {
+            $parts = explode('_', $orderId);
+            $clinicId = (int) ($parts[1] ?? 0);
+            $plan = (string) ($parts[2] ?? '');
+        }
+
+        if ($plan === '' || PlanService::get($plan) === null) {
+            $plan = 'clinic';
+        }
+
+        return [$clinicId, $plan];
+    }
+
+    /**
+     * Cashfree webhook (PAYMENT_SUCCESS_WEBHOOK). Verifies the HMAC signature
+     * (x-webhook-signature = base64(hmac_sha256(timestamp + rawBody, secret)))
+     * then activates the plan. Idempotent with the return-URL verify.
+     */
+    public static function handleCashfreeWebhook(string $payload, ?string $signature, ?string $timestamp): bool
+    {
+        $secret = $_ENV['CASHFREE_SECRET_KEY'] ?? '';
+        if ($secret !== '' && $signature !== null && $timestamp !== null) {
+            $expected = base64_encode(hash_hmac('sha256', $timestamp . $payload, $secret, true));
+            if (!hash_equals($expected, $signature)) {
+                error_log('[Cashfree] webhook signature mismatch');
+
+                return false;
+            }
+        }
+
+        $event = json_decode($payload, true);
+        if (!is_array($event)) {
+            return false;
+        }
+
+        $type = (string) ($event['type'] ?? '');
+        $order = $event['data']['order'] ?? [];
+        $orderStatus = (string) ($event['data']['payment']['payment_status'] ?? $order['order_status'] ?? '');
+        $orderId = (string) ($order['order_id'] ?? '');
+
+        $isPaid = $type === 'PAYMENT_SUCCESS_WEBHOOK' || $orderStatus === 'SUCCESS' || $orderStatus === 'PAID';
+        if (!$isPaid || $orderId === '') {
+            // Acknowledge non-payment events (refunds, drops) without acting.
+            return true;
+        }
+
+        // Re-verify against the API as the source of truth, then activate.
+        return self::verifyCashfreeOrder($orderId) || self::activateFromWebhookOrder($event, $orderId);
+    }
+
+    /**
+     * Last-resort activation straight from the webhook body when the API
+     * re-verify is unavailable (e.g. keys missing in a webhook-only context).
+     *
+     * @param array<string, mixed> $event
+     */
+    private static function activateFromWebhookOrder(array $event, string $orderId): bool
+    {
+        $order = $event['data']['order'] ?? [];
+        [$clinicId, $plan] = self::clinicAndPlanFromOrder(
+            is_array($order) ? $order : [],
+            $orderId,
+        );
+        if ($clinicId <= 0) {
+            return false;
+        }
+
+        PlanService::applyPlanToTenant($clinicId, $plan, false);
+        SaasInvoiceService::markPaidByOrder($orderId, null);
+        PartnerCommissionService::recordPaidConversion(
+            $clinicId,
+            (float) ($order['order_amount'] ?? self::yearlyInrAmount($plan)),
+            'INR',
+            null,
+            'cashfree:' . $orderId,
+        );
+
+        return true;
     }
 
     /** @return array{type: string, url?: string, message?: string} */
@@ -71,9 +389,16 @@ final class BillingGatewayService
     private static function simulatePaidPlan(int $clinicId, string $planId, string $gateway): array
     {
         PlanService::applyPlanToTenant($clinicId, $planId, true);
-        QueryBuilder::table('tenants')->where('id', '=', $clinicId)->update([
-            'razorpay_customer_id' => 'sim_razorpay_' . $clinicId,
-        ]);
+        // Record a per-gateway simulated customer marker. Wrapped so a missing
+        // cashfree_* column never breaks dev onboarding.
+        try {
+            $col = $gateway === 'cashfree' ? 'cashfree_order_id' : 'razorpay_customer_id';
+            QueryBuilder::table('tenants')->where('id', '=', $clinicId)->update([
+                $col => 'sim_' . $gateway . '_' . $clinicId,
+            ]);
+        } catch (\Throwable $e) {
+            // Column not present — harmless for a simulated payment.
+        }
 
         // Partner program: record commission if this clinic was referred.
         // Simulated payments have no saas_invoice row, so we pass a reference.

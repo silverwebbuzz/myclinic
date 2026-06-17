@@ -14,6 +14,7 @@ use App\Controllers\QueueController;
 use App\Controllers\DashboardController;
 use App\Controllers\HealthController;
 use App\Controllers\OnboardingController;
+use App\Controllers\SubscriptionController;
 use App\Controllers\PatientController;
 use App\Controllers\PortalController;
 use App\Controllers\PrescriptionController;
@@ -80,6 +81,7 @@ return static function (RouteRegistrar $router): void {
 
     $router->post('/webhooks/stripe', [WebhookController::class, 'stripe']);
     $router->post('/webhooks/razorpay', [WebhookController::class, 'razorpay']);
+    $router->post('/webhooks/cashfree', [WebhookController::class, 'cashfree']);
     $router->post('/webhooks/photo-published', [WebhookController::class, 'photoPublished']);
     // Meta WhatsApp: GET = verify handshake, POST = delivery/inbound events.
     $router->get('/webhooks/whatsapp', [WebhookController::class, 'whatsapp']);
@@ -116,6 +118,7 @@ return static function (RouteRegistrar $router): void {
         $app->post('/settings/api/keys', [ClinicSettingsController::class, 'createApiKey']);
         $app->post('/settings/api/keys/{id}/revoke', [ClinicSettingsController::class, 'revokeApiKey']);
         $app->post('/settings/branding', [ClinicSettingsController::class, 'saveBranding']);
+        $app->get('/settings/invoices/{id}/pdf', [ClinicSettingsController::class, 'downloadSaasInvoice']);
         $app->post('/settings/branding/domain', [ClinicSettingsController::class, 'startDomainVerify']);
         $app->post('/settings/branding/domain/check', [ClinicSettingsController::class, 'checkDomainVerify']);
         $app->post('/impersonate/exit', [ImpersonateController::class, 'exit']);
@@ -207,7 +210,10 @@ return static function (RouteRegistrar $router): void {
 
         $app->get('/onboarding/plan-selection', [OnboardingController::class, 'planSelection']);
         $app->post('/onboarding/plan-selection', [OnboardingController::class, 'selectPlan']);
+        // Real gateway checkout (Cashfree) — used by onboarding + Settings.
+        $app->post('/subscription/checkout', [SubscriptionController::class, 'checkout']);
         $app->get('/onboarding/billing/success', [OnboardingController::class, 'billingSuccess']);
+        $app->get('/onboarding/billing/cashfree-return', [OnboardingController::class, 'cashfreeReturn']);
         $app->get('/onboarding/clinic-setup', [OnboardingController::class, 'clinicSetup']);
         $app->post('/onboarding/clinic-setup', [OnboardingController::class, 'saveClinicSetup']);
         $app->get('/onboarding/specialty-config', [OnboardingController::class, 'specialtyConfig']);

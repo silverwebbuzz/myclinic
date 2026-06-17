@@ -89,7 +89,7 @@ final class ClinicSettingsController
             'countries' => $this->countries(),
             'plans' => PlanService::all(),
             'modules' => ClinicSettingsService::activeModulesDetail($clinicId),
-            'invoices' => ClinicSettingsService::saasInvoices($clinicId),
+            'invoices' => \App\Services\SaasInvoiceService::forClinic($clinicId),
             'staffCount' => QueryBuilder::table('users')->forClinic($clinicId)->where('is_active', '=', 1)->count(),
             'doctors' => $doctors,
             'doctorId' => $doctorId,
@@ -460,6 +460,39 @@ final class ClinicSettingsController
             'follow_up_reminder' => true,
             'whatsapp_mode' => 'shared',
         ];
+    }
+
+    /**
+     * Download a SaaS (subscription) invoice PDF — clinic-scoped, streamed
+     * from private storage. Generates on first access if not yet rendered.
+     */
+    public function downloadSaasInvoice(Request $request, string $id): Response
+    {
+        $clinicId = (int) RequestContext::clinicId();
+        $invoice = QueryBuilder::table('saas_invoices')
+            ->forClinic($clinicId)
+            ->where('id', '=', (int) $id)
+            ->first();
+
+        if ($invoice === null) {
+            return Response::html('Invoice not found', 404);
+        }
+
+        $abs = $invoice['pdf_path'] ?? null;
+        if (empty($abs) || !is_file((string) $abs)) {
+            // Render on demand (also persists pdf_path).
+            \App\Services\SaasInvoiceService::generateAndEmail((int) $invoice['id']);
+            $invoice = QueryBuilder::table('saas_invoices')->where('id', '=', (int) $id)->first();
+            $abs = $invoice['pdf_path'] ?? null;
+        }
+
+        if (empty($abs) || !is_file((string) $abs)) {
+            return Response::redirect('/settings?tab=subscription&error=' . urlencode('Invoice PDF unavailable'));
+        }
+
+        return Response::download((string) $abs, 'eclinicpro-invoice-' . ($invoice['invoice_no'] ?? $id) . '.pdf')
+            ->withHeader('Content-Type', 'application/pdf')
+            ->withHeader('Content-Disposition', 'inline; filename="eclinicpro-invoice-' . ($invoice['invoice_no'] ?? $id) . '.pdf"');
     }
 
     /** @return array<string, string> */

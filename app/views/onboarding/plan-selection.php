@@ -28,8 +28,11 @@ $yearly = $yearly ?? true;
 </div>
 
 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-    <?php foreach ($plans as $planId => $plan): ?>
-    <form method="post" action="/onboarding/plan-selection" class="flex flex-col rounded-xl border <?= !empty($plan['featured']) ? 'border-emerald-500 ring-2 ring-emerald-500' : 'border-slate-200' ?> bg-white p-5 shadow-sm">
+    <?php foreach ($plans as $planId => $plan):
+        // Paid plans go to the real gateway checkout; Free continues onboarding.
+        $action = $planId === 'free' ? '/onboarding/plan-selection' : '/subscription/checkout';
+    ?>
+    <form method="post" action="<?= $action ?>" class="flex flex-col rounded-xl border <?= !empty($plan['featured']) ? 'border-emerald-500 ring-2 ring-emerald-500' : 'border-slate-200' ?> bg-white p-5 shadow-sm">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
         <input type="hidden" name="plan" value="<?= htmlspecialchars($planId) ?>">
         <input type="hidden" name="billing_cycle" value="<?= $yearly ? 'yearly' : 'monthly' ?>">
@@ -45,9 +48,12 @@ $yearly = $yearly ?? true;
             <?php if ($planId === 'free'): ?>
             <span class="text-3xl font-bold">₹0</span>
             <span class="text-sm text-slate-500">/forever</span>
-            <?php else: ?>
-            <span class="text-3xl font-bold">₹<?= number_format($yearly ? (int) $plan['yearly_usd'] : (int) $plan['monthly_usd']) ?></span>
+            <?php else:
+                $planBase = (int) ($yearly ? $plan['yearly_usd'] : $plan['monthly_usd']);
+            ?>
+            <span class="text-3xl font-bold">₹<?= number_format($planBase) ?></span>
             <span class="text-sm text-slate-500">/<?= $yearly ? 'year' : 'month' ?></span>
+            <span class="mt-0.5 block text-xs text-slate-400">+ 18% GST · ₹<?= number_format(round($planBase * 1.18)) ?> total</span>
             <?php endif; ?>
         </div>
 
@@ -61,7 +67,7 @@ $yearly = $yearly ?? true;
         </ul>
 
         <button type="submit" class="w-full rounded-lg py-2 text-sm font-medium <?= !empty($plan['featured']) ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'border border-slate-300 text-slate-700 hover:bg-slate-50' ?>">
-            <?= $planId === 'free' ? 'Continue with Free' : 'Start ' . htmlspecialchars($plan['name']) . ' — 30-day trial' ?>
+            <?= $planId === 'free' ? 'Continue with Free' : 'Subscribe to ' . htmlspecialchars($plan['name']) ?>
         </button>
     </form>
     <?php endforeach; ?>
