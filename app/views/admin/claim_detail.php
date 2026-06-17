@@ -31,6 +31,14 @@
         <h1 class="mt-2 text-2xl font-semibold"><?= htmlspecialchars((string) $claim['full_name']) ?></h1>
         <p class="text-slate-600"><?= htmlspecialchars((string) ($claim['clinic_name'] ?? '')) ?></p>
 
+        <?php if (!empty($error)): ?>
+            <div class="mt-4 rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+                <div class="font-semibold">Approval failed</div>
+                <p class="mt-2 font-mono text-xs leading-relaxed break-words whitespace-pre-wrap"><?= htmlspecialchars((string) $error) ?></p>
+                <p class="mt-3 text-xs text-rose-700">Copy this message when reporting the issue. After fixing the database or account conflict, try Approve again.</p>
+            </div>
+        <?php endif; ?>
+
         <div class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
             <!-- Submitted info -->
             <div class="rounded-xl border bg-white p-5">

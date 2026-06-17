@@ -21,7 +21,7 @@
                 'approved'       => ['ok', 'Request approved. Clinic + doctor user created.'],
                 'rejected'       => ['ok', 'Request rejected.'],
                 'duplicate'      => ['ok', 'Marked as duplicate.'],
-                'approve_failed' => ['err', 'Approval failed. Check the error log.'],
+                'approve_failed' => ['err', 'Approval failed. Open the claim to see the error details.'],
                 'invalid'        => ['err', 'Invalid request.'],
                 'not_found'      => ['err', 'Request not found.'],
             ][$message] ?? null;
@@ -31,6 +31,13 @@
                     <?= htmlspecialchars($msgLabel[1]) ?>
                 </div>
             <?php endif; ?>
+        <?php endif; ?>
+
+        <?php if (!empty($error)): ?>
+            <div class="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+                <div class="font-semibold">Approval error</div>
+                <p class="mt-1 font-mono text-xs break-words whitespace-pre-wrap"><?= htmlspecialchars((string) $error) ?></p>
+            </div>
         <?php endif; ?>
 
         <div class="mt-6 space-y-3">

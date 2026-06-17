@@ -25,6 +25,7 @@ final class DoctorClaimController
             'claims'            => DoctorClaimService::pending(),
             'pendingClaimCount' => DoctorClaimService::pendingCount(),
             'message'           => $request->query['message'] ?? null,
+            'error'             => $request->query['error'] ?? null,
         ]));
     }
 
@@ -40,6 +41,7 @@ final class DoctorClaimController
             'csrf'              => CsrfService::token(),
             'claim'             => $claim,
             'pendingClaimCount' => DoctorClaimService::pendingCount(),
+            'error'             => $request->query['error'] ?? null,
         ]));
     }
 
@@ -51,9 +53,12 @@ final class DoctorClaimController
         if ($admin === null || $id <= 0) {
             return Response::redirect('/admin/claims?message=invalid');
         }
-        $userId = DoctorClaimService::approve($id, (int) $admin['id'], $notes);
-        $msg = $userId !== null ? 'approved' : 'approve_failed';
-        return Response::redirect('/admin/claims?message=' . $msg);
+        $result = DoctorClaimService::approve($id, (int) $admin['id'], $notes);
+        if ($result['ok']) {
+            return Response::redirect('/admin/claims?message=approved');
+        }
+        $error = $result['error'] ?? 'Approval failed for an unknown reason.';
+        return Response::redirect('/admin/claims/' . $id . '?error=' . rawurlencode($error));
     }
 
     public function reject(Request $request): Response

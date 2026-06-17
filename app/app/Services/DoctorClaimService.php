@@ -81,16 +81,31 @@ final class DoctorClaimService
     }
 
     /**
-     * Approve a request. Creates clinic + doctor user, links the directory
-     * listing if it was a claim. Returns the created user_id or null on failure.
+     * Approve a request. Creates clinic + doctor user (or reuses existing),
+     * links the directory listing if it was a claim.
+     *
+     * @return array{ok: true, user_id: int}|array{ok: false, error: string, step?: string}
      */
-    public static function approve(int $requestId, int $reviewerId, ?string $notes = null): ?int
+    public static function approve(int $requestId, int $reviewerId, ?string $notes = null): array
     {
         $req = self::find($requestId);
-        if ($req === null) return null;
-        if (in_array($req['status'], ['approved', 'rejected'], true)) return null;
+        if ($req === null) {
+            return ['ok' => false, 'error' => 'Claim request #' . $requestId . ' was not found.', 'step' => 'load'];
+        }
+        if (in_array($req['status'], ['approved', 'rejected'], true)) {
+            return [
+                'ok'    => false,
+                'error' => 'This request is already marked as "' . $req['status'] . '". Refresh the page.',
+                'step'  => 'status',
+            ];
+        }
 
         $db = self::pdo();
+        $schemaError = self::preflightApprovalSchema($db);
+        if ($schemaError !== null) {
+            return ['ok' => false, 'error' => $schemaError, 'step' => 'schema'];
+        }
+
         $db->beginTransaction();
         try {
             // Reuse an existing portal account when the doctor already signed up
@@ -120,8 +135,8 @@ final class DoctorClaimService
                 // 2) Create the doctor user. Email is required + unique, but we
                 // don't have one — use a placeholder. Password_hash is NOT NULL
                 // but we set an unusable bcrypt hash since auth is via OTP.
-                $placeholderEmail = $req['email'] ?: ('doctor+' . $tenantId . '@eclinicpro.placeholder');
-                $unusableHash     = '!disabled:' . bin2hex(random_bytes(8));   // never matches a valid bcrypt
+                $userEmail = self::resolveDoctorUserEmail($db, $req, $tenantId);
+                $unusableHash = '!disabled:' . bin2hex(random_bytes(8));   // never matches a valid bcrypt
                 $userStmt = $db->prepare(
                     'INSERT INTO users
                         (clinic_id, name, email, phone, password_hash, role, is_owner,
@@ -133,8 +148,8 @@ final class DoctorClaimService
                 $userStmt->execute([
                     'cid'   => $tenantId,
                     'name'  => $req['full_name'],
-                    'email' => $placeholderEmail,
-                    'phone' => $req['phone'],
+                    'email' => $userEmail,
+                    'phone' => DoctorOtpService::normalizePhone((string) ($req['phone'] ?? '')) ?: $req['phone'],
                     'pwd'   => $unusableHash,
                     'spec'  => $req['specialty'],
                     'qual'  => trim(($req['reg_council'] ? $req['reg_council'] . ' ' : '') . ($req['reg_number'] ?: '')) ?: null,
@@ -147,7 +162,14 @@ final class DoctorClaimService
             //    - For 'new_listing' requests: create a new row so the
             //      clinic appears on /find-a-doctor immediately.
             $directoryId = null;
-            if (!empty($req['directory_doctor_id'])) {
+            $tenantDir = $db->prepare(
+                'SELECT directory_doctor_id FROM tenants WHERE id = :id LIMIT 1'
+            );
+            $tenantDir->execute(['id' => $tenantId]);
+            $existingDirId = $tenantDir->fetchColumn();
+            if (!empty($existingDirId)) {
+                $directoryId = (int) $existingDirId;
+            } elseif (!empty($req['directory_doctor_id'])) {
                 $directoryId = (int) $req['directory_doctor_id'];
                 $db->prepare(
                     'UPDATE directory_doctors
@@ -192,13 +214,14 @@ final class DoctorClaimService
             // only sends when an email is on file (it's optional on a claim).
             self::sendApprovalEmail($req, $tenantId);
 
-            return $userId;
+            return ['ok' => true, 'user_id' => $userId];
         } catch (\Throwable $e) {
             if ($db->inTransaction()) {
                 $db->rollBack();
             }
+            $human = self::humanizeApprovalError($e);
             error_log('[DoctorClaimService::approve] request=' . $requestId . ' ' . $e->getMessage());
-            return null;
+            return ['ok' => false, 'error' => $human, 'step' => 'database'];
         }
     }
 
@@ -443,41 +466,179 @@ final class DoctorClaimService
      */
     private static function findExistingDoctorAccount(PDO $db, array $req): ?array
     {
-        $phone = DoctorOtpService::normalizePhone((string) ($req['phone'] ?? ''));
-        if ($phone !== '') {
+        foreach (self::phoneLookupVariants((string) ($req['phone'] ?? '')) as $variant) {
             $stmt = $db->prepare(
-                'SELECT id, clinic_id FROM users
-                 WHERE phone = :p AND role = "doctor" AND is_active = 1
+                'SELECT id, clinic_id, role, phone FROM users
+                 WHERE phone = :p AND is_active = 1
+                 ORDER BY is_owner DESC, id ASC
                  LIMIT 1'
             );
-            $stmt->execute(['p' => $phone]);
+            $stmt->execute(['p' => $variant]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($row) {
-                return [
-                    'tenant_id' => (int) $row['clinic_id'],
-                    'user_id'   => (int) $row['id'],
-                ];
+                return self::finalizeExistingAccount($db, $row, $req);
             }
         }
 
         $email = trim((string) ($req['email'] ?? ''));
         if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $stmt = $db->prepare(
-                'SELECT id, clinic_id FROM users
-                 WHERE email = :e AND role = "doctor" AND is_active = 1
+                'SELECT id, clinic_id, role, phone FROM users
+                 WHERE email = :e AND is_active = 1
+                 ORDER BY is_owner DESC, id ASC
                  LIMIT 1'
             );
             $stmt->execute(['e' => $email]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($row) {
-                return [
-                    'tenant_id' => (int) $row['clinic_id'],
-                    'user_id'   => (int) $row['id'],
-                ];
+                return self::finalizeExistingAccount($db, $row, $req);
+            }
+
+            // Owner may have registered with clinic email on the tenant row only.
+            $tenant = $db->prepare(
+                'SELECT id FROM tenants WHERE email = :e AND is_active = 1 LIMIT 1'
+            );
+            $tenant->execute(['e' => $email]);
+            $tenantId = $tenant->fetchColumn();
+            if ($tenantId) {
+                $owner = $db->prepare(
+                    'SELECT id, clinic_id, role, phone FROM users
+                     WHERE clinic_id = :cid AND is_owner = 1 AND is_active = 1
+                     LIMIT 1'
+                );
+                $owner->execute(['cid' => (int) $tenantId]);
+                $row = $owner->fetch(PDO::FETCH_ASSOC);
+                if ($row) {
+                    return self::finalizeExistingAccount($db, $row, $req);
+                }
             }
         }
 
         return null;
+    }
+
+    /**
+     * Ensure an existing portal user can log in as a doctor after approval.
+     *
+     * @param array<string, mixed> $row
+     * @return array{tenant_id: int, user_id: int}
+     */
+    private static function finalizeExistingAccount(PDO $db, array $row, array $req): array
+    {
+        $userId   = (int) $row['id'];
+        $tenantId = (int) $row['clinic_id'];
+        $phone    = DoctorOtpService::normalizePhone((string) ($req['phone'] ?? '')) ?: ($row['phone'] ?? null);
+
+        $needsUpdate = ($row['role'] ?? '') !== 'doctor'
+            || ($phone !== null && ($row['phone'] ?? '') !== $phone);
+        if ($needsUpdate) {
+            $db->prepare(
+                'UPDATE users
+                 SET role = "doctor", phone = COALESCE(:phone, phone), is_owner = 1
+                 WHERE id = :id'
+            )->execute([
+                'phone' => $phone,
+                'id'    => $userId,
+            ]);
+        }
+
+        return ['tenant_id' => $tenantId, 'user_id' => $userId];
+    }
+
+    /** @return list<string> */
+    private static function phoneLookupVariants(string $raw): array
+    {
+        $normalized = DoctorOtpService::normalizePhone($raw);
+        $digits     = preg_replace('/\D/', '', $normalized) ?? '';
+        $variants   = array_filter([$raw, $normalized, $digits]);
+        if (strlen($digits) === 10) {
+            $variants[] = '+91' . $digits;
+            $variants[] = '91' . $digits;
+            $variants[] = '0' . $digits;
+        }
+        if (strlen($digits) === 12 && str_starts_with($digits, '91')) {
+            $variants[] = '+' . $digits;
+        }
+
+        return array_values(array_unique($variants));
+    }
+
+    private static function resolveDoctorUserEmail(PDO $db, array $req, int $tenantId): string
+    {
+        $email = trim((string) ($req['email'] ?? ''));
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return 'doctor+' . $tenantId . '@eclinicpro.placeholder';
+        }
+
+        $stmt = $db->prepare('SELECT 1 FROM users WHERE email = :e LIMIT 1');
+        $stmt->execute(['e' => $email]);
+        if ($stmt->fetchColumn()) {
+            return 'doctor+' . $tenantId . '@eclinicpro.placeholder';
+        }
+
+        return $email;
+    }
+
+    private static function preflightApprovalSchema(PDO $db): ?string
+    {
+        $missing = [];
+        foreach (['is_directory_listed', 'directory_doctor_id'] as $col) {
+            $stmt = $db->prepare(
+                'SELECT 1 FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND TABLE_NAME = "tenants"
+                   AND COLUMN_NAME = :col
+                 LIMIT 1'
+            );
+            $stmt->execute(['col' => $col]);
+            if (!$stmt->fetchColumn()) {
+                $missing[] = 'tenants.' . $col;
+            }
+        }
+        if ($missing !== []) {
+            return 'Database migration not applied. Missing: ' . implode(', ', $missing)
+                . '. Run app/database/migrations/028_tenant_directory_listing.sql in phpMyAdmin.';
+        }
+
+        try {
+            $db->query('SELECT 1 FROM directory_doctors LIMIT 1');
+        } catch (\Throwable) {
+            return 'Table directory_doctors does not exist on this database. Run fetch_doctor/migration.sql first.';
+        }
+
+        return null;
+    }
+
+    private static function humanizeApprovalError(\Throwable $e): string
+    {
+        $msg = $e->getMessage();
+
+        if (str_contains($msg, 'Duplicate entry') && str_contains($msg, 'uq_email')) {
+            return 'Duplicate email: ' . $msg
+                . ' — this doctor may already have a portal account with that email.';
+        }
+        if (str_contains($msg, 'Duplicate entry') && str_contains($msg, 'uq_place')) {
+            return 'Duplicate directory listing (place_id already exists): ' . $msg;
+        }
+        if (str_contains($msg, 'Duplicate entry') && str_contains($msg, 'uq_slug')) {
+            return 'Clinic slug collision: ' . $msg;
+        }
+        if (str_contains($msg, 'Unknown column') && str_contains($msg, 'is_directory_listed')) {
+            return 'Missing column tenants.is_directory_listed — run migration 028_tenant_directory_listing.sql';
+        }
+        if (str_contains($msg, 'directory_doctors') && str_contains($msg, "doesn't exist")) {
+            return 'Table directory_doctors is missing — run fetch_doctor/migration.sql';
+        }
+        if (str_contains($msg, 'Data truncated') || str_contains($msg, 'Incorrect enum value')) {
+            if (str_contains($msg, 'source')) {
+                return 'directory_doctors.source must allow value "self". Update the ENUM on directory_doctors.source.';
+            }
+        }
+        if (str_contains($msg, 'Data too long')) {
+            return 'A field value is too long for the database column: ' . $msg;
+        }
+
+        return $msg;
     }
 
     private static function makeUniqueSlug(string $base, string $table, string $col): string
