@@ -1,4 +1,8 @@
 <?php
+// TEMP DEBUG — surface the real 500 in the browser. REMOVE after diagnosing.
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+error_reporting(E_ALL);
 // =====================================================================
 // index.php — eClinicPro homepage (dual-path: patients + doctors)
 //
