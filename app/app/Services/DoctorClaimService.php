@@ -209,6 +209,10 @@ final class DoctorClaimService
 
             $db->commit();
 
+            // Portal bootstrap: trial plan, modules, specialty config, skip
+            // onboarding wizard — claim approval already collected clinic info.
+            self::bootstrapApprovedTenant($tenantId, $req);
+
             // Notify the doctor that they're approved — best-effort, AFTER the
             // commit so a mail problem never rolls back the account. Guarded:
             // only sends when an email is on file (it's optional on a claim).
@@ -222,6 +226,45 @@ final class DoctorClaimService
             $human = self::humanizeApprovalError($e);
             error_log('[DoctorClaimService::approve] request=' . $requestId . ' ' . $e->getMessage());
             return ['ok' => false, 'error' => $human, 'step' => 'database'];
+        }
+    }
+
+    /**
+     * Ready an approved doctor's clinic for day-one use. Without this, the
+     * tenant stays at onboarding_step=1 and every login lands on plan-selection.
+     *
+     * @param array<string, mixed> $req
+     */
+    private static function bootstrapApprovedTenant(int $tenantId, array $req): void
+    {
+        try {
+            $spec = self::resolveSpecialtyDbValue((string) ($req['specialty'] ?? ''));
+
+            \App\Core\QueryBuilder::table('tenants')->where('id', '=', $tenantId)->update([
+                'specialty' => $spec,
+            ]);
+
+            $tenant = \App\Core\QueryBuilder::table('tenants')->where('id', '=', $tenantId)->first();
+            if ($tenant === null) {
+                return;
+            }
+
+            $config = \App\Core\QueryBuilder::table('specialty_configs')
+                ->where('clinic_id', '=', $tenantId)
+                ->first();
+            if ($config === null) {
+                $slug = (string) ($tenant['slug'] ?? 'clinic');
+                \App\Core\QueryBuilder::table('specialty_configs')->insert([
+                    'clinic_id'     => $tenantId,
+                    'uhid_prefix'   => strtoupper(substr(preg_replace('/[^a-z]/', '', strtolower($slug)), 0, 6) ?: 'MC'),
+                    'working_hours' => json_encode(OnboardingService::defaultWorkingHours()),
+                ]);
+            }
+
+            PlanService::applyPlanToTenant($tenantId, 'standard', true);
+            OnboardingService::complete($tenantId);
+        } catch (\Throwable $e) {
+            error_log('[DoctorClaimService::bootstrapApprovedTenant] tenant=' . $tenantId . ' ' . $e->getMessage());
         }
     }
 
