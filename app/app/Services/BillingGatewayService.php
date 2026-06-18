@@ -147,6 +147,18 @@ final class BillingGatewayService
         $orderId = 'sub_' . $clinicId . '_' . $planId . '_' . substr(bin2hex(random_bytes(4)), 0, 8);
         $returnUrl = self::appBaseUrl() . '/onboarding/billing/cashfree-return?order_id={order_id}';
 
+        // Cashfree validates customer_phone/email. Normalise: strip +91/spaces to
+        // a bare 10-digit number; fall back to a valid placeholder if missing.
+        $rawPhone = preg_replace('/\D+/', '', (string) ($clinic['phone'] ?? '')) ?? '';
+        if (strlen($rawPhone) > 10) {
+            $rawPhone = substr($rawPhone, -10); // drop country code (e.g. 91…)
+        }
+        $phone = strlen($rawPhone) === 10 ? $rawPhone : '9999999999';
+        $email = (string) ($clinic['email'] ?? '');
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $email = 'billing@eclinicpro.com';
+        }
+
         $payload = json_encode([
             'order_id' => $orderId,
             'order_amount' => $amount,
@@ -154,8 +166,8 @@ final class BillingGatewayService
             'customer_details' => [
                 'customer_id' => 'clinic_' . $clinicId,
                 'customer_name' => (string) ($clinic['name'] ?? 'Clinic'),
-                'customer_email' => (string) ($clinic['email'] ?? 'noreply@eclinicpro.com'),
-                'customer_phone' => (string) ($clinic['phone'] ?? '9999999999'),
+                'customer_email' => $email,
+                'customer_phone' => $phone,
             ],
             'order_meta' => [
                 'return_url' => $returnUrl,
@@ -218,13 +230,19 @@ final class BillingGatewayService
 
         error_log('[Cashfree] order create failed (HTTP ' . $httpCode . '): ' . (string) $response);
 
-        // Fall back to Razorpay if configured, else simulate so onboarding
-        // never dead-ends on a gateway outage.
+        // Fall back to Razorpay if configured.
         if (($_ENV['RAZORPAY_KEY_ID'] ?? '') !== '' && ($_ENV['RAZORPAY_KEY_SECRET'] ?? '') !== '') {
             return self::razorpayCheckout($clinicId, $planId, $billingCycle);
         }
 
-        return self::simulatePaidPlan($clinicId, $planId, 'cashfree');
+        // Cashfree IS configured but the order failed — surface the real reason
+        // instead of silently "simulating" a paid plan (which would mark the
+        // clinic paid without payment). Only simulate when NO gateway is set up.
+        $cfMessage = is_array($data) ? ($data['message'] ?? $data['error']['message'] ?? null) : null;
+        $msg = 'Payment could not be started (Cashfree HTTP ' . $httpCode . ')'
+             . ($cfMessage ? ': ' . $cfMessage : '. Check gateway keys / sandbox mode.');
+
+        return ['type' => 'error', 'message' => $msg];
     }
 
     /**
