@@ -160,6 +160,6 @@ $categories = [
             </table>
         </div>
     </main>
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
+    <?php /* Alpine is loaded globally by admin/_nav.php */ ?>
 </body>
 </html>

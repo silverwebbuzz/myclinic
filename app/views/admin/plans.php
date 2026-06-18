@@ -25,7 +25,7 @@ $modulesSummary = static function ($raw): string {
     <meta charset="UTF-8">
     <title>Plans — Super Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+    <?php /* Alpine is loaded globally by admin/_nav.php */ ?>
 </head>
 <body class="min-h-screen bg-slate-100" x-data="{ editing: null }">
     <?php require __DIR__ . '/_nav.php'; ?>

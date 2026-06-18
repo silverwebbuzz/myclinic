@@ -30,7 +30,7 @@ if ($rowsJson === []) {
     <meta charset="UTF-8">
     <title><?= $isEdit ? 'Edit' : 'New' ?> Rx Template — Super Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+    <?php /* Alpine is loaded globally by admin/_nav.php */ ?>
 </head>
 <body class="min-h-screen bg-slate-100">
     <?php require __DIR__ . '/_nav.php'; ?>

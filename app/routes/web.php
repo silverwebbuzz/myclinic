@@ -393,6 +393,9 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/feature-flags', [SuperAdminController::class, 'featureFlags']);
         $admin->post('/feature-flags/{key}', [SuperAdminController::class, 'updateFeatureFlag']);
 
+        // Read-only subscription payment gateway status (keys live in .env)
+        $admin->get('/payment-gateway', [SuperAdminController::class, 'paymentGateway']);
+
         // Phase 3: symptom promotions queue
         $admin->get('/symptom-promotions', [SymptomsController::class, 'promotionsIndex']);
         $admin->post('/symptom-promotions/promote', [SymptomsController::class, 'promote']);

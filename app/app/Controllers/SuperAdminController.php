@@ -304,6 +304,19 @@ final class SuperAdminController
         ]));
     }
 
+    /**
+     * GET /admin/payment-gateway — read-only status of the subscription payment
+     * gateway. Keys live in .env (never edited here); this just surfaces which
+     * gateway is active, the mode, and whether keys are configured.
+     */
+    public function paymentGateway(Request $request): Response
+    {
+        return Response::html(View::render('admin/payment_gateway', [
+            'admin' => RequestContext::superAdmin(),
+            'gateway' => \App\Services\BillingGatewayService::status(),
+        ]));
+    }
+
     /** POST /admin/feature-flags/{key} */
     public function updateFeatureFlag(Request $request, string $key): Response
     {
