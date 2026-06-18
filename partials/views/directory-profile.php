@@ -25,7 +25,7 @@ $specFindUrl = !empty($p['specialty_url_slug']) && !empty($p['city_slug'])
                         <?php if ($primaryImage): ?>
                             <img src="<?= e($primaryImage) ?>" alt="<?= e($p['display_name'] ?? '') ?>" class="dp-hero-img" loading="eager" x-show="!heroBroken" @error="heroBroken = true">
                         <?php endif; ?>
-                        <div class="dp-hero-avatar g<?= $gradient ?>" x-show="<?= $primaryImage ? 'heroBroken' : 'true' ?>" <?= $primaryImage ? 'x-cloak' : '' ?>><?= e($initials) ?></div>
+                        <div class="dp-hero-avatar g<?= $gradient ?>" x-show="<?= $primaryImage ? 'heroBroken' : 'true' ?>" <?= $primaryImage ? 'x-cloak' : '' ?>><img class="dp-hero-avatar-default" src="<?= e(ecp_default_doctor_avatar()) ?>" alt="<?= e($p['display_name'] ?? '') ?>"></div>
                     </div>
                     <div class="dp-hero-body">
                         <div class="dp-hero-top">

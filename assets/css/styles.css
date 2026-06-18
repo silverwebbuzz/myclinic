@@ -7713,12 +7713,21 @@ body {
   width: 200px;
   height: 200px;
   border-radius: 12px;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 48px;
   font-weight: 700;
   color: #fff;
+}
+
+/* Neutral default doctor icon fills the hero avatar box. */
+.dp-hero-avatar-default {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .dp-hero-avatar.g1 {

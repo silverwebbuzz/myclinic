@@ -405,6 +405,25 @@ function ecp_doctor_photo_url(?string $photoRef, int $maxWidth = 400): ?string
 }
 
 /** @return array{url: ?string, initials: string, gradient: int} */
+/**
+ * Neutral default doctor avatar as an inline SVG data URI. Used when a doctor
+ * has no Google photo and no uploaded clinic logo, so the listing and profile
+ * pages show the same icon instead of bare initials.
+ */
+function ecp_default_doctor_avatar(): string
+{
+    $svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>"
+        . "<rect width='100' height='100' fill='%23EAF2F1'/>"
+        . "<path d='M30 28c0-12 8-20 20-20s20 8 20 20v6H30z' fill='%232B2622'/>"
+        . "<circle cx='50' cy='40' r='17' fill='%23E8B894'/>"
+        . "<path d='M22 92c0-16 12-26 28-26s28 10 28 26z' fill='%23FFFFFF'/>"
+        . "<path d='M44 67l6 9 6-9' fill='none' stroke='%23CBD5D3' stroke-width='3'/>"
+        . "<circle cx='50' cy='84' r='4' fill='%231FA8A0'/>"
+        . "</svg>";
+
+    return 'data:image/svg+xml;charset=utf-8,' . $svg;
+}
+
 function ecp_directory_avatar(array $row, int $photoWidth = 400): array
 {
     $clinicName = (string) ($row['name'] ?? '');
@@ -419,7 +438,9 @@ function ecp_directory_avatar(array $row, int $photoWidth = 400): array
     // (lives on the portal domain) → none (caller shows a default avatar).
     $url = ecp_doctor_photo_url($row['photo_reference'] ?? null, $photoWidth);
     if ($url === null || $url === '') {
-        $logo = trim((string) ($row['clinic_logo_path'] ?? ''));
+        // Accept either alias: the listing query selects `clinic_logo_path`,
+        // the profile query selects plain `logo_path`.
+        $logo = trim((string) ($row['clinic_logo_path'] ?? $row['logo_path'] ?? ''));
         if ($logo !== '') {
             $url = str_starts_with($logo, 'http') ? $logo : ecp_portal_url('/' . ltrim($logo, '/'));
         }
