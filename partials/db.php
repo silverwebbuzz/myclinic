@@ -55,6 +55,23 @@ function ecp_base_url(): string
     return $base = $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'eclinicpro.com');
 }
 
+/**
+ * Base URL of the portal app (app.eclinicpro.com) where uploaded assets like
+ * clinic logos live. logo_path is stored relative to the portal's public dir
+ * (e.g. /uploads/logos/x.png), so directory pages on the marketing domain must
+ * prefix it with the portal host to resolve.
+ */
+function ecp_portal_url(): string
+{
+    static $url = null;
+    if ($url !== null) {
+        return $url;
+    }
+    $configured = ecp_env('PORTAL_URL') ?: ecp_env('APP_URL');
+
+    return $url = $configured !== '' ? rtrim($configured, '/') : 'https://app.eclinicpro.com';
+}
+
 function ecp_google_maps_api_key(): string
 {
     return ecp_env('GOOGLE_MAPS_API_KEY');
@@ -415,8 +432,18 @@ function ecp_directory_avatar(array $row, int $photoWidth = 400): array
     $first = mb_substr($parts[0] ?? '', 0, 1) ?: 'D';
     $last = count($parts) > 1 ? mb_substr($parts[count($parts) - 1], 0, 1) : '';
 
+    // Photo priority: Google Places photo → claimed clinic's uploaded logo
+    // (lives on the portal domain) → none (caller shows a default avatar).
+    $url = ecp_doctor_photo_url($row['photo_reference'] ?? null, $photoWidth);
+    if ($url === null || $url === '') {
+        $logo = trim((string) ($row['clinic_logo_path'] ?? ''));
+        if ($logo !== '') {
+            $url = str_starts_with($logo, 'http') ? $logo : ecp_portal_url() . '/' . ltrim($logo, '/');
+        }
+    }
+
     return [
-        'url'      => ecp_doctor_photo_url($row['photo_reference'] ?? null, $photoWidth),
+        'url'      => $url,
         'initials' => strtoupper($first . $last),
         'gradient' => 1 + ((int) ($row['id'] ?? 0) % 6),
     ];

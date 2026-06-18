@@ -2867,19 +2867,28 @@ footer.foot {
 }
 
 .fd-avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
+  width: 88px;
+  height: 88px;
+  border-radius: 14px;
+  overflow: hidden;
   background: linear-gradient(135deg, var(--teal-100), var(--teal-400));
   display: grid;
   place-items: center;
   color: #fff;
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 600;
   letter-spacing: -0.5px;
   flex-shrink: 0;
   align-self: start;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Default doctor icon (no photo / no logo) fills the square avatar. */
+.fd-avatar-default {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .fd-avatar.g2 {
@@ -4026,9 +4035,10 @@ footer.foot {
   }
 
   .fd-avatar {
-    width: 56px;
-    height: 56px;
-    font-size: 19px;
+    width: 72px;
+    height: 72px;
+    border-radius: 12px;
+    font-size: 22px;
     grid-area: avatar;
   }
 
@@ -4237,9 +4247,10 @@ footer.foot {
   }
 
   .fd-avatar {
-    width: 52px;
-    height: 52px;
-    font-size: 17px;
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    font-size: 20px;
     grid-area: avatar;
   }
 

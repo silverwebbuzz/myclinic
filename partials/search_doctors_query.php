@@ -130,7 +130,8 @@ function ecp_search_doctors(array $filters): array {
                    dd.lat, dd.lng, dd.phone, dd.website, dd.gmaps_url, dd.rating, dd.reviews,
                    dd.opening_hours, dd.photo_reference, dd.types,
                    dd.consultation_fee, dd.consultation_fee_currency,
-                   dd.is_claimed, dd.quality_score, t.slug AS clinic_slug";
+                   dd.is_claimed, dd.quality_score, t.slug AS clinic_slug,
+                   t.logo_path AS clinic_logo_path";
     if ($selectDistance !== null) {
         $selectCols .= ",\n                   " . $selectDistance;
     }

@@ -702,8 +702,12 @@ require __DIR__ . '/partials/header.php';
                     <div class="fd-card">
                         <div class="fd-avatar" :class="'g' + (d.avatar_gradient || (1 + (d.id % 6)))"
                             :style="avatarBg(d)"
-                            x-init="checkPhoto(d)"
-                            x-text="(!d.photo_url || d._photoBroken) ? (d.firstInitial + d.lastInitial) : ''"></div>
+                            x-init="checkPhoto(d)">
+                            <!-- No photo/logo → gender-based default doctor icon -->
+                            <template x-if="!d.photo_url || d._photoBroken">
+                                <img class="fd-avatar-default" :src="defaultAvatar(d)" :alt="d.name" loading="lazy">
+                            </template>
+                        </div>
 
                         
 
@@ -1649,6 +1653,21 @@ require __DIR__ . '/partials/header.php';
                     return 'background-image:url(' + d.photo_url + ');background-size:cover;background-position:center;color:transparent';
                 }
                 return '';
+            },
+
+            // Neutral default doctor avatar (inline SVG data URI) used when a
+            // doctor has no Google photo and no uploaded clinic logo.
+            defaultAvatar(d) {
+                const svg =
+                    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>" +
+                    "<rect width='100' height='100' fill='%23EAF2F1'/>" +
+                    "<path d='M30 28c0-12 8-20 20-20s20 8 20 20v6H30z' fill='%232B2622'/>" +
+                    "<circle cx='50' cy='40' r='17' fill='%23E8B894'/>" +
+                    "<path d='M22 92c0-16 12-26 28-26s28 10 28 26z' fill='%23FFFFFF'/>" +
+                    "<path d='M44 67l6 9 6-9' fill='none' stroke='%23CBD5D3' stroke-width='3'/>" +
+                    "<circle cx='50' cy='84' r='4' fill='%231FA8A0'/>" +
+                    "</svg>";
+                return "data:image/svg+xml;charset=utf-8," + svg;
             },
 
             checkPhoto(d) {
