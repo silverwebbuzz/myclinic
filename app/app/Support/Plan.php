@@ -68,17 +68,6 @@ final class Plan
         return max(0, (int) ceil($diff));
     }
 
-    public static function isFoundingClinic(array $tenant): bool
-    {
-        if (empty($tenant['is_founding_clinic'])) {
-            return false;
-        }
-        // Founding price locks for 24 months; after that, standard price applies.
-        $until = $tenant['founding_clinic_locked_until'] ?? null;
-
-        return $until === null || $until >= date('Y-m-d');
-    }
-
     /**
      * Does this clinic currently have an active add-on?
      * Reads clinic_modules: is_active=1 AND not expired.

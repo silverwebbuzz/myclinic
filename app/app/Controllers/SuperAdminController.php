@@ -147,8 +147,8 @@ final class SuperAdminController
     }
 
     /**
-     * Per-clinic detail page: trial extension, founding clinic toggle,
-     * add-on management, feature flag overrides.
+     * Per-clinic detail page: trial extension, add-on management,
+     * feature flag overrides.
      */
     public function clinicDetail(Request $request, string $id): Response
     {
@@ -247,33 +247,6 @@ final class SuperAdminController
         return Response::redirect('/admin/clinics/' . $clinicId . '?message=trial_extended');
     }
 
-    /** POST /admin/clinics/{id}/founding — toggle founding clinic status */
-    public function toggleFounding(Request $request, string $id): Response
-    {
-        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
-            return Response::redirect('/admin/clinics/' . (int) $id);
-        }
-        $clinicId = (int) $id;
-        $enable = !empty($request->post['enable']);
-        $until = trim((string) ($request->post['locked_until'] ?? ''));
-
-        if ($enable) {
-            $lockedUntil = $until !== '' ? $until : date('Y-m-d', strtotime('+24 months'));
-            QueryBuilder::table('tenants')->where('id', '=', $clinicId)->update([
-                'is_founding_clinic' => 1,
-                'founding_clinic_locked_at' => date('Y-m-d H:i:s'),
-                'founding_clinic_locked_until' => $lockedUntil,
-            ]);
-        } else {
-            QueryBuilder::table('tenants')->where('id', '=', $clinicId)->update([
-                'is_founding_clinic' => 0,
-                'founding_clinic_locked_until' => null,
-            ]);
-        }
-
-        return Response::redirect('/admin/clinics/' . $clinicId . '?message=founding_updated');
-    }
-
     /** POST /admin/clinics/{id}/addon — manually activate or deactivate an addon */
     public function toggleAddon(Request $request, string $id): Response
     {
@@ -368,57 +341,4 @@ final class SuperAdminController
         return Response::redirect('/admin/feature-flags?message=updated');
     }
 
-    /** GET /admin/founding-clinics */
-    public function foundingClinics(Request $request): Response
-    {
-        $pdo = Database::connection();
-        $state = ['cap' => 100, 'claimed' => 0, 'closed_at' => null];
-        $clinics = [];
-        try {
-            $row = $pdo->query('SELECT cap, claimed, closed_at FROM founding_clinic_state WHERE id = 1')
-                ->fetch(PDO::FETCH_ASSOC);
-            if ($row) $state = $row;
-
-            $clinics = $pdo->query(
-                "SELECT id, name, slug, founding_clinic_locked_at, founding_clinic_locked_until,
-                        DATEDIFF(founding_clinic_locked_until, CURDATE()) AS days_left
-                   FROM tenants
-                  WHERE is_founding_clinic = 1
-                  ORDER BY founding_clinic_locked_until ASC"
-            )->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\Throwable $e) {
-            // tables don't exist yet
-        }
-
-        return Response::html(View::render('admin/founding_clinics', [
-            'admin' => RequestContext::superAdmin(),
-            'csrf' => CsrfService::token(),
-            'state' => $state,
-            'clinics' => $clinics,
-            'message' => $request->query['message'] ?? null,
-        ]));
-    }
-
-    /** POST /admin/founding-clinics — adjust cap */
-    public function updateFoundingState(Request $request): Response
-    {
-        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
-            return Response::redirect('/admin/founding-clinics');
-        }
-        $cap = max(0, (int) ($request->post['cap'] ?? 100));
-        $close = !empty($request->post['close']);
-
-        $pdo = Database::connection();
-        $stmt = $pdo->prepare(
-            'UPDATE founding_clinic_state
-                SET cap = :cap, closed_at = :closed
-              WHERE id = 1'
-        );
-        $stmt->execute([
-            ':cap' => $cap,
-            ':closed' => $close ? date('Y-m-d H:i:s') : null,
-        ]);
-
-        return Response::redirect('/admin/founding-clinics?message=updated');
-    }
 }

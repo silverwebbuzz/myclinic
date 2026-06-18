@@ -22,7 +22,6 @@ require_once dirname(__DIR__) . '/components/ui.php';
         <nav class="flex gap-4 text-sm">
             <a href="/admin/dashboard" class="hover:underline">Dashboard</a>
             <a href="/admin/clinics" class="hover:underline">Clinics</a>
-            <a href="/admin/founding-clinics" class="hover:underline">Founding</a>
             <a href="/admin/feature-flags" class="hover:underline">Flags</a>
             <a href="/admin/symptom-promotions" class="hover:underline">Symptoms</a>
             <a href="/admin/specialties" class="hover:underline">Specialties</a>

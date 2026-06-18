@@ -44,16 +44,6 @@
                         <?= empty($tenant['trial_extension_granted']) ? 'No' : 'Yes ('. htmlspecialchars($tenant['trial_extension_granted_at'] ?? '') .')' ?>
                     </div>
                 </div>
-                <div>
-                    <div class="text-xs text-slate-500">Founding clinic</div>
-                    <div class="font-medium">
-                        <?php if (!empty($tenant['is_founding_clinic'])): ?>
-                            ₹999 locked until <?= htmlspecialchars($tenant['founding_clinic_locked_until'] ?? '—') ?>
-                        <?php else: ?>
-                            <span class="text-slate-400">No</span>
-                        <?php endif; ?>
-                    </div>
-                </div>
             </div>
 
             <?php if (empty($tenant['trial_extension_granted']) && !empty($tenant['trial_ends_at'])): ?>
@@ -64,31 +54,6 @@
                 </button>
             </form>
             <?php endif; ?>
-        </section>
-
-        <!-- ====== Founding clinic toggle ====== -->
-        <section class="rounded-xl border bg-white p-5">
-            <h2 class="text-sm font-semibold">Founding clinic status</h2>
-            <form method="post" action="/admin/clinics/<?= (int) $tenant['id'] ?>/founding" class="mt-3 space-y-3">
-                <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
-                <?php if (empty($tenant['is_founding_clinic'])): ?>
-                    <input type="hidden" name="enable" value="1">
-                    <label class="block text-xs text-slate-500">Locked until (default 24 months from today)</label>
-                    <input type="date" name="locked_until" value="<?= date('Y-m-d', strtotime('+24 months')) ?>"
-                           class="rounded border px-2 py-1 text-sm">
-                    <button type="submit" class="rounded bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-600">
-                        Grant founding clinic rate
-                    </button>
-                <?php else: ?>
-                    <p class="text-xs text-slate-500">
-                        Currently founding. Locked until
-                        <strong><?= htmlspecialchars($tenant['founding_clinic_locked_until'] ?? '—') ?></strong>.
-                    </p>
-                    <button type="submit" class="rounded border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50">
-                        Revoke founding status
-                    </button>
-                <?php endif; ?>
-            </form>
         </section>
 
         <!-- ====== Add-ons ====== -->

@@ -271,7 +271,10 @@ final class BillingGatewayService
         }
 
         if ($plan === '' || PlanService::get($plan) === null) {
-            $plan = 'clinic';
+            // Fall back to the paid plan that actually exists in the catalog
+            // ('standard' is the Clinic plan). Must be a real plan_id — a
+            // foreign key (fk_tenants_plan) rejects anything else.
+            $plan = 'standard';
         }
 
         return [$clinicId, $plan];

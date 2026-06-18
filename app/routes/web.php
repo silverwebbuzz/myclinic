@@ -383,19 +383,14 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/reviews/reject', [SuperAdminController::class, 'rejectReview']);
         $admin->post('/churn/run', [SuperAdminController::class, 'runChurn']);
 
-        // Phase 1: tenant detail page + trial / founding / addon controls
+        // Phase 1: tenant detail page + trial / addon controls
         $admin->get('/clinics/{id}', [SuperAdminController::class, 'clinicDetail']);
         $admin->post('/clinics/{id}/extend-trial', [SuperAdminController::class, 'extendTrial']);
-        $admin->post('/clinics/{id}/founding', [SuperAdminController::class, 'toggleFounding']);
         $admin->post('/clinics/{id}/addon', [SuperAdminController::class, 'toggleAddon']);
 
         // Phase 1: feature flag management
         $admin->get('/feature-flags', [SuperAdminController::class, 'featureFlags']);
         $admin->post('/feature-flags/{key}', [SuperAdminController::class, 'updateFeatureFlag']);
-
-        // Phase 1: founding clinic state + roster
-        $admin->get('/founding-clinics', [SuperAdminController::class, 'foundingClinics']);
-        $admin->post('/founding-clinics', [SuperAdminController::class, 'updateFoundingState']);
 
         // Phase 3: symptom promotions queue
         $admin->get('/symptom-promotions', [SymptomsController::class, 'promotionsIndex']);

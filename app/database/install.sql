@@ -2805,9 +2805,6 @@ ALTER TABLE tenants
   MODIFY COLUMN plan ENUM('standard') NOT NULL DEFAULT 'standard';
 
 ALTER TABLE tenants
-  ADD COLUMN is_founding_clinic TINYINT(1) NOT NULL DEFAULT 0 AFTER plan,
-  ADD COLUMN founding_clinic_locked_at TIMESTAMP NULL DEFAULT NULL AFTER is_founding_clinic,
-  ADD COLUMN founding_clinic_locked_until DATE NULL DEFAULT NULL AFTER founding_clinic_locked_at,
   ADD COLUMN trial_extension_granted TINYINT(1) NOT NULL DEFAULT 0 AFTER trial_ends_at,
   ADD COLUMN trial_extension_granted_at TIMESTAMP NULL DEFAULT NULL AFTER trial_extension_granted,
   ADD COLUMN trial_extension_granted_by BIGINT(20) UNSIGNED NULL AFTER trial_extension_granted_at;
@@ -2815,7 +2812,6 @@ ALTER TABLE tenants
 ALTER TABLE tenants MODIFY COLUMN specialty VARCHAR(40) DEFAULT 'gp';
 
 ALTER TABLE tenants
-  ADD INDEX idx_tenants_founding (is_founding_clinic),
   ADD INDEX idx_tenants_trial_ends (trial_ends_at);
 
 CREATE TABLE clinic_settings (
@@ -2851,15 +2847,6 @@ INSERT INTO feature_flags (flag_key, is_enabled, scope, description) VALUES
   ('custom_branding',0,'beta','White-label branding'),
   ('docs_vault',0,'beta','Document vault'),
   ('teleconsult',1,'all','Teleconsultation — included in base plan');
-
-CREATE TABLE founding_clinic_state (
-  id TINYINT NOT NULL PRIMARY KEY DEFAULT 1,
-  cap INT NOT NULL DEFAULT 100,
-  claimed INT NOT NULL DEFAULT 0,
-  closed_at TIMESTAMP NULL DEFAULT NULL,
-  CONSTRAINT chk_founding_only_one_row CHECK (id = 1)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-INSERT INTO founding_clinic_state (id, cap, claimed) VALUES (1, 100, 0);
 
 -- ---- Phase 2: visit screen ----
 ALTER TABLE visits

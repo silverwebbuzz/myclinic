@@ -180,6 +180,14 @@ final class PlanService
 
     public static function applyPlanToTenant(int $clinicId, string $planId, bool $withTrial = false): void
     {
+        // tenants.plan has a foreign key to plans.plan_id (fk_tenants_plan), so
+        // it can only hold a plan_id that exists in the catalog. Guard against a
+        // stale/retired id from an old call site by falling back to the paid
+        // plan rather than letting the write throw a constraint error.
+        if (self::get($planId) === null) {
+            $planId = 'standard';
+        }
+
         // tenants.seat_limit is TINYINT UNSIGNED (max 255). Config uses 999 to
         // mean "unlimited in practice" — cap it so the value fits the column and
         // doesn't overflow under MySQL strict mode (which aborts the write).
