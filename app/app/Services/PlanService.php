@@ -4,15 +4,106 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Core\Database;
 use App\Core\QueryBuilder;
 use App\Gates\ModuleGate;
+use PDO;
+use Throwable;
 
 final class PlanService
 {
-    /** @return array<string, array<string, mixed>> */
+    /** Request-scoped cache so we don't re-query/re-decode per call. */
+    private static ?array $cache = null;
+
+    /**
+     * All plans, keyed by plan_id.
+     *
+     * Source of truth is the `plans` table (managed at /admin/plans). If the
+     * table is missing or empty (fresh deploy before migration, or someone
+     * deactivated everything), fall back to config/plans.php so onboarding and
+     * checkout never break.
+     *
+     * @return array<string, array<string, mixed>>
+     */
     public static function all(): array
     {
+        if (self::$cache !== null) {
+            return self::$cache;
+        }
+
+        $fromDb = self::fromTable();
+
+        return self::$cache = $fromDb !== [] ? $fromDb : self::fromConfig();
+    }
+
+    /** @return array<string, array<string, mixed>> */
+    private static function fromConfig(): array
+    {
         return require dirname(__DIR__, 2) . '/config/plans.php';
+    }
+
+    /**
+     * Read the plans table and map rows back to the legacy array shape that
+     * downstream code (OnboardingController, SubscriptionController, etc.)
+     * expects — including the historical *_usd keys (which hold INR).
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private static function fromTable(): array
+    {
+        try {
+            $rows = Database::connection()
+                ->query('SELECT * FROM plans WHERE is_active = 1 ORDER BY sort_order ASC, name ASC')
+                ->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            return []; // table not migrated yet → caller falls back to config
+        }
+
+        $plans = [];
+        foreach ($rows as $r) {
+            $modules = self::decodeModules($r['modules'] ?? null);
+            $plans[(string) $r['plan_id']] = [
+                'name' => (string) $r['name'],
+                'tagline' => (string) ($r['tagline'] ?? ''),
+                // Legacy key names; values are INR.
+                'monthly_usd' => (float) $r['monthly_inr'],
+                'yearly_usd' => (float) $r['yearly_inr'],
+                'seat_limit' => (int) $r['seat_limit'],
+                'patient_limit' => $r['patient_limit'] !== null ? (int) $r['patient_limit'] : null,
+                'featured' => (bool) $r['featured'],
+                'trial_days' => (int) $r['trial_days'],
+                'modules' => $modules,
+                'highlights' => self::decodeJsonList($r['highlights'] ?? null),
+                'limits' => self::decodeJsonList($r['limits'] ?? null),
+            ];
+        }
+
+        return $plans;
+    }
+
+    /** modules is either the string "all_paid" or a JSON array of module ids. */
+    private static function decodeModules(?string $raw): array|string
+    {
+        $decoded = $raw !== null && $raw !== '' ? json_decode($raw, true) : null;
+        if ($decoded === 'all_paid') {
+            return 'all_paid';
+        }
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /** @return list<string> */
+    private static function decodeJsonList(?string $raw): array
+    {
+        $decoded = $raw !== null && $raw !== '' ? json_decode($raw, true) : null;
+
+        return is_array($decoded) ? array_values($decoded) : [];
+    }
+
+    /** Test/admin seam — drop the request cache after an edit. */
+    public static function flushCache(): void
+    {
+        self::$cache = null;
     }
 
     public static function get(string $planId): ?array

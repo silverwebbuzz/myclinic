@@ -419,6 +419,12 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/specialties', [SpecialtyAdminController::class, 'save']);
         $admin->post('/specialties/{id}/toggle', [SpecialtyAdminController::class, 'toggle']);
 
+        // Plan catalog (source of truth for pricing / onboarding / checkout)
+        $admin->get('/plans', [\App\Controllers\PlanAdminController::class, 'index']);
+        $admin->post('/plans', [\App\Controllers\PlanAdminController::class, 'save']);
+        $admin->post('/plans/{id}/toggle', [\App\Controllers\PlanAdminController::class, 'toggle']);
+        $admin->post('/plans/{id}/delete', [\App\Controllers\PlanAdminController::class, 'delete']);
+
         // Master prescription templates (system-provided per specialty)
         $admin->get('/rx-templates', [\App\Controllers\MasterTemplateAdminController::class, 'index']);
         $admin->get('/rx-templates/new', [\App\Controllers\MasterTemplateAdminController::class, 'create']);

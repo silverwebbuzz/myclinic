@@ -4,8 +4,11 @@ $planKey = $clinic['plan'] ?? 'standard';
 $plan = $plans[$planKey] ?? ($plans['standard'] ?? reset($plans));
 $seatLimit = (int) ($clinic['seat_limit'] ?? 2) + (int) ($clinic['extra_seats_purchased'] ?? 0);
 
-// Live price breakdown for the Standard annual plan (base + 18% GST).
-$base = (float) ($plans['standard']['yearly_usd'] ?? 16000);
+// Single-plan model: the one purchasable plan is 'standard'. Pricing is read
+// from the plans table (PlanService::all()), so admin edits at /admin/plans
+// flow through here — nothing about the price is hardcoded.
+$standard = $plans['standard'] ?? reset($plans) ?: [];
+$base = (float) ($standard['yearly_usd'] ?? 16000);
 $taxPct = 18.0;
 $tax = round($base * $taxPct / 100, 2);
 $gross = round($base + $tax, 2);
@@ -31,8 +34,8 @@ $onTrial = !empty($clinic['trial_ends_at']) && strtotime((string) $clinic['trial
         <?php if (!$isPaid): ?>
         <!-- Subscribe / upgrade — triggers real Cashfree checkout -->
         <div class="mt-4 rounded-xl border border-slate-200 p-4" style="max-width:380px;">
-            <p class="text-sm font-semibold text-slate-800">eClinicPro Standard — Annual</p>
-            <p class="text-xs text-slate-500">Everything to run your clinic · unlimited patients &amp; users</p>
+            <p class="text-sm font-semibold text-slate-800"><?= htmlspecialchars((string) ($standard['name'] ?? 'Standard')) ?> — Annual</p>
+            <p class="text-xs text-slate-500"><?= htmlspecialchars((string) ($standard['tagline'] ?? 'Everything to run your clinic · unlimited patients & users')) ?></p>
             <dl class="mt-3 space-y-1 text-sm">
                 <div class="flex justify-between"><dt class="text-slate-500">Plan price</dt><dd class="text-slate-800">₹<?= number_format($base, 2) ?></dd></div>
                 <div class="flex justify-between"><dt class="text-slate-500">GST (18%)</dt><dd class="text-slate-800">₹<?= number_format($tax, 2) ?></dd></div>

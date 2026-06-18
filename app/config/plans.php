@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 return [
     'standard' => [
-        'name' => 'Standard',
+        'name' => 'Clinic',
         'tagline' => 'Everything to run your clinic',
         // NOTE: fields are named *_usd for legacy reasons but hold INR amounts.
         // Single annual plan: ₹16,000/year (10% off ₹17,988; GST added at checkout).
