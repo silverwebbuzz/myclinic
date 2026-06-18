@@ -43,6 +43,33 @@ final class BillingGatewayService
         return ($_ENV['CASHFREE_APP_ID'] ?? '') !== '' && ($_ENV['CASHFREE_SECRET_KEY'] ?? '') !== '';
     }
 
+    /**
+     * Read-only gateway status for the admin Payment Gateway page. Never returns
+     * secret values — only whether each key is set, plus the resolved mode and
+     * which gateway checkout() would actually use. Keys live in .env.
+     *
+     * @return array<string, mixed>
+     */
+    public static function status(): array
+    {
+        $cashfree = self::cashfreeConfigured();
+        $razorpay = ($_ENV['RAZORPAY_KEY_ID'] ?? '') !== '' && ($_ENV['RAZORPAY_KEY_SECRET'] ?? '') !== '';
+
+        // Mirrors the fallback order in startCheckout().
+        $active = $cashfree ? 'cashfree' : ($razorpay ? 'razorpay' : 'simulate');
+
+        return [
+            'active'            => $active,
+            'cashfree_set'      => $cashfree,
+            'razorpay_set'      => $razorpay,
+            'cashfree_mode'     => strtolower($_ENV['CASHFREE_ENV'] ?? 'sandbox') === 'production' ? 'production' : 'sandbox',
+            'cashfree_api_base' => self::cashfreeApiBase(),
+            'app_base_url'      => self::appBaseUrl(),
+            'cashfree_webhook'  => self::appBaseUrl() . '/webhooks/cashfree',
+            'razorpay_webhook'  => self::appBaseUrl() . '/webhooks/razorpay',
+        ];
+    }
+
     private static function cashfreeApiBase(): string
     {
         // sandbox for testing, api for production.

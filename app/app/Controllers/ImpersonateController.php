@@ -14,6 +14,10 @@ final class ImpersonateController
 {
     public function enter(Request $request, string $token): Response
     {
+        if ($token === 'exit' || !preg_match('/^[a-f0-9]{64}$/', $token)) {
+            return Response::redirect('/impersonate/exit');
+        }
+
         $result = ImpersonationService::consume($token);
         if ($result === null) {
             return Response::html('<p class="p-8 font-sans text-red-600">Impersonation link expired or invalid.</p>', 410);
@@ -43,8 +47,18 @@ final class ImpersonateController
     public function exit(Request $request): Response
     {
         JwtService::clearAuthCookies();
-        setcookie('mc_impersonate', '', ['expires' => time() - 3600, 'path' => '/']);
+        $secure = ($_ENV['APP_ENV'] ?? 'local') !== 'local';
+        setcookie('mc_impersonate', '', [
+            'expires'  => time() - 3600,
+            'path'     => '/',
+            'secure'   => $secure,
+            'httponly' => false,
+            'samesite' => 'Strict',
+        ]);
 
-        return Response::redirect('/admin/clinics');
+        // Superadmin session (mc_sa_token) is kept on a separate cookie path.
+        $returnTo = !empty($_COOKIE['mc_sa_token']) ? '/admin/clinics' : '/admin/login';
+
+        return Response::redirect($returnTo);
     }
 }

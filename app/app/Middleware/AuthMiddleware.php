@@ -78,6 +78,7 @@ final class AuthMiddleware implements MiddlewareInterface
             || str_starts_with($uri, '/book/')
             || str_starts_with($uri, '/portal/')
             || str_starts_with($uri, '/accept-invite/')
+            || $uri === '/impersonate/exit'
             || preg_match('#^/impersonate/[a-f0-9]{64}$#', $uri) === 1;
     }
 

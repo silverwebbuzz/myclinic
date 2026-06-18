@@ -332,6 +332,7 @@ return static function (RouteRegistrar $router): void {
         $portal->get('/discharge/{token}', [PortalController::class, 'discharge']);
     });
 
+    $router->get('/impersonate/exit', [ImpersonateController::class, 'exit']);
     $router->get('/impersonate/{token}', [ImpersonateController::class, 'enter']);
 
     $router->group(['middleware' => ['rate']], static function (GroupedRouteRegistrar $docs): void {

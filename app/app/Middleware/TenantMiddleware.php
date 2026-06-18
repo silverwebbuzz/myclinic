@@ -171,6 +171,7 @@ final class TenantMiddleware implements MiddlewareInterface
             || str_starts_with($uri, '/doctor/login')      // doctor OTP login (no tenant ctx yet)
             || str_starts_with($uri, '/doctors')
             || str_starts_with($uri, '/docs')
+            || $uri === '/impersonate/exit'
             || preg_match('#^/impersonate/[a-f0-9]{64}$#', $uri) === 1
             || in_array($uri, ['/login', '/register', '/forgot-password'], true)
             || str_starts_with($uri, '/accept-invite/')
