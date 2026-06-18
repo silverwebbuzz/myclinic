@@ -101,9 +101,7 @@ $specFindUrl = !empty($p['specialty_url_slug']) && !empty($p['city_slug'])
                     <?php endif; ?>
                     <?php if (!empty($p['directions_url'])): ?><a href="<?= e($p['directions_url']) ?>" target="_blank" rel="noopener" class="dp-btn dp-btn-ghost">🧭 Directions</a><?php endif; ?>
                 </div>
-                <!-- <?php if (!empty($p['related'])): ?>
-                    <div class="dp-side-card"><h3>Related in <?= e($p['city'] ?? '') ?></h3><ul class="dp-related"><?php foreach ($p['related'] as $rel): ?><li><a href="<?= e($rel['profile_url'] ?? '#') ?>"><?= e($rel['name'] ?? '') ?></a></li><?php endforeach; ?></ul></div>
-                <?php endif; ?> -->
+                <!-- "Related in {city}" sidebar card intentionally removed -->
             </aside>
         </div>
     </div>
