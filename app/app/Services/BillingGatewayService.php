@@ -228,21 +228,22 @@ final class BillingGatewayService
             return ['type' => 'redirect', 'url' => $hosted];
         }
 
-        error_log('[Cashfree] order create failed (HTTP ' . $httpCode . '): ' . (string) $response);
+        // Log the real Cashfree reason for us (server log only) — never shown
+        // to the customer, as it's internal infra detail (e.g. IP allowlist,
+        // auth, key/mode mismatch).
+        $cfMessage = is_array($data) ? ($data['message'] ?? $data['error']['message'] ?? null) : null;
+        error_log('[Cashfree] order create failed (HTTP ' . $httpCode . '): '
+            . ($cfMessage ?: (string) $response));
 
         // Fall back to Razorpay if configured.
         if (($_ENV['RAZORPAY_KEY_ID'] ?? '') !== '' && ($_ENV['RAZORPAY_KEY_SECRET'] ?? '') !== '') {
             return self::razorpayCheckout($clinicId, $planId, $billingCycle);
         }
 
-        // Cashfree IS configured but the order failed — surface the real reason
-        // instead of silently "simulating" a paid plan (which would mark the
-        // clinic paid without payment). Only simulate when NO gateway is set up.
-        $cfMessage = is_array($data) ? ($data['message'] ?? $data['error']['message'] ?? null) : null;
-        $msg = 'Payment could not be started (Cashfree HTTP ' . $httpCode . ')'
-             . ($cfMessage ? ': ' . $cfMessage : '. Check gateway keys / sandbox mode.');
-
-        return ['type' => 'error', 'message' => $msg];
+        // Cashfree IS configured but the order failed. Do NOT silently simulate
+        // (that would mark the clinic paid without payment). Show the customer a
+        // friendly, generic message; the technical reason is in the log above.
+        return ['type' => 'error', 'message' => 'We couldn\'t start the payment right now. Please try again in a few minutes, or contact support if it keeps happening.'];
     }
 
     /**
