@@ -30,7 +30,10 @@ $meta = [
 $openByDefault = 'general';
 
 // Render order — single column, general first.
-$order = ['general', 'hours', 'specialty', 'notifications', 'leaves', 'subscription', 'team', 'branding', 'consent-forms'];
+// 'notifications' and 'consent-forms' are intentionally omitted — those
+// sections are not currently needed, so they are hidden from Settings.
+// Re-add them to this array to bring them back.
+$order = ['general', 'hours', 'specialty', 'leaves', 'subscription', 'team', 'branding'];
 ?>
 <?php if (!empty($message)): ?>
 <div class="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Settings saved.</div>

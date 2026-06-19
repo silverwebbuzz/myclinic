@@ -26,7 +26,9 @@ $visibleCount = count($visibleModules);
 $canUnlock = !empty($canUnlock);
 
 // Ghost-link list: every optional section NOT in visible_modules.
-$optionalModules = ['vitals', 'labs', 'photos', 'diet', 'consent', 'case_specialty'];
+// 'labs', 'photos' and 'consent' are intentionally omitted — those sections are
+// not currently in use, so they should not appear as re-addable ghost chips.
+$optionalModules = ['vitals', 'diet', 'case_specialty'];
 $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !in_array($m, $visibleModules, true)));
 ?>
 
@@ -726,7 +728,8 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 </details>
             <?php endif; ?>
 
-            <?php if ($has('labs') && !empty($hasLab)): ?>
+            <?php /* Lab orders — hidden, not currently in use. Re-enable by changing `false` to `$has('labs') && !empty($hasLab)`. */ ?>
+            <?php if (false): ?>
                 <details class="rounded-lg border border-slate-200 bg-slate-50/50"
                          @toggle="recordSection('labs', $event.target.open)">
                     <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Lab orders</summary>
@@ -736,7 +739,8 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 </details>
             <?php endif; ?>
 
-            <?php if ($has('photos') && !empty($hasPhotos)): ?>
+            <?php /* Photos — hidden, not currently in use. Re-enable by changing `false` to `$has('photos') && !empty($hasPhotos)`. */ ?>
+            <?php if (false): ?>
                 <details class="rounded-lg border border-slate-200 bg-slate-50/50"
                          @toggle="recordSection('photos', $event.target.open)">
                     <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Photos</summary>
@@ -756,7 +760,8 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 </details>
             <?php endif; ?>
 
-            <?php if ($has('consent') && !empty($hasConsent)): ?>
+            <?php /* Consent — hidden, not currently in use. Re-enable by changing `false` to `$has('consent') && !empty($hasConsent)`. */ ?>
+            <?php if (false): ?>
                 <details class="rounded-lg border border-slate-200 bg-slate-50/50"
                          @toggle="recordSection('consent', $event.target.open)">
                     <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Consent</summary>
@@ -766,7 +771,8 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 </details>
             <?php endif; ?>
 
-            <?php if (!empty($hasDischargeSection)): ?>
+            <?php /* Discharge summary — hidden, not currently in use. Re-enable by changing `false` to `!empty($hasDischargeSection)`. */ ?>
+            <?php if (false): ?>
                 <details class="rounded-lg border border-slate-200 bg-slate-50/50">
                     <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Discharge summary</summary>
                     <div class="px-4 pb-4 pt-2">
