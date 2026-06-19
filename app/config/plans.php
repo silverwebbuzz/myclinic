@@ -61,7 +61,6 @@ return [
         'modules' => [
             'patients', 'appointments_basic', 'invoicing_basic',
             'vitals', 'prescription', 'emr', 'billing_pro', 'whatsapp',
-            'discharge', 'incentives',
         ],
         'highlights' => [
             'All 9 core clinical modules',
@@ -83,12 +82,11 @@ return [
         'modules' => [
             'patients', 'appointments_basic', 'invoicing_basic',
             'vitals', 'prescription', 'emr', 'billing_pro', 'whatsapp',
-            'discharge', 'incentives',
-            'lab', 'pharmacy', 'analytics', 'staff', 'crm',
+            'analytics', 'staff',
         ],
         'highlights' => [
             'Everything in Clinic',
-            'Lab, Pharmacy, Analytics, CRM',
+            'Analytics & staff',
             '8 team seats',
         ],
         'limits' => [],

@@ -51,7 +51,7 @@ $CLINICS = [
         'sub_doctors' => [],
         'receptionists' => [['name' => 'Anjali Verma']],
         'patient_count' => 250, 'appts_per_doc_per_day' => [6, 14],
-        'modules' => ['patients', 'appointments_basic', 'invoicing_basic', 'vitals', 'prescription', 'emr', 'billing_pro', 'whatsapp', 'discharge', 'incentives'],
+        'modules' => ['patients', 'appointments_basic', 'invoicing_basic', 'vitals', 'prescription', 'emr', 'billing_pro', 'whatsapp'],
         'uhid_prefix' => 'CP', 'invoice_prefix' => 'CP',
     ],
     [
@@ -68,7 +68,7 @@ $CLINICS = [
         ],
         'receptionists' => [['name' => 'Neha Kapoor']],
         'patient_count' => 600, 'appts_per_doc_per_day' => [5, 12],
-        'modules' => ['patients', 'appointments_basic', 'invoicing_basic', 'vitals', 'prescription', 'emr', 'billing_pro', 'whatsapp', 'discharge', 'incentives', 'lab', 'pharmacy', 'analytics', 'staff', 'crm'],
+        'modules' => ['patients', 'appointments_basic', 'invoicing_basic', 'vitals', 'prescription', 'emr', 'billing_pro', 'whatsapp', 'analytics', 'staff'],
         'uhid_prefix' => 'WMS', 'invoice_prefix' => 'WMS',
     ],
     [
@@ -101,14 +101,12 @@ if ($WIPE) {
             continue;
         }
         // Child rows in tables without clinic_id — delete via parent FK first.
-        $pdo->exec("DELETE lr FROM lab_results lr JOIN lab_orders lo ON lo.id=lr.lab_order_id WHERE lo.clinic_id={$tid}");
         $pdo->exec("DELETE ii FROM invoice_items ii JOIN invoices i ON i.id=ii.invoice_id WHERE i.clinic_id={$tid}");
         $pdo->exec("DELETE dl FROM doctor_locations dl JOIN doctor_profiles dp ON dp.id=dl.doctor_id WHERE dp.clinic_id={$tid}");
 
         $tables = [
-            'doctor_incentives', 'expenses', 'crm_leads', 'staff_leaves', 'staff_attendance',
-            'diet_plans', 'patient_photos', 'discharge_summaries',
-            'lab_orders', 'lab_tests_catalog', 'pharmacy_inventory',
+            'expenses', 'staff_leaves', 'staff_attendance',
+            'diet_plans',
             'payments', 'invoices', 'prescriptions', 'vitals', 'visits',
             'appointments', 'doctor_leaves', 'doctor_schedules',
             'patient_allergies', 'notifications', 'analytics_snapshots', 'events',
@@ -334,14 +332,8 @@ foreach ($CLINICS as $C) {
 
     $hasEMR = in_array('emr', $modules, true);
     $hasBillingPro = in_array('billing_pro', $modules, true) || in_array('invoicing_basic', $modules, true);
-    $hasLab = in_array('lab', $modules, true);
-    $hasPharmacy = in_array('pharmacy', $modules, true);
-    $hasCRM = in_array('crm', $modules, true);
     $hasStaff = in_array('staff', $modules, true);
-    $hasIncentives = in_array('incentives', $modules, true);
-    $hasDischarge = in_array('discharge', $modules, true);
     $hasPortal = in_array('patient_portal', $modules, true);
-    $hasPhotos = in_array('before_after', $modules, true);
     $hasDiet = in_array('diet', $modules, true);
 
     $invoiceCounter = 0;
@@ -483,88 +475,6 @@ foreach ($CLINICS as $C) {
         }
     }
 
-    if ($hasLab && $patientIds) {
-        $labCat = $pdo->prepare(
-            'INSERT INTO lab_tests_catalog (clinic_id, test_code, test_name, category, parameters, sample_type, tat_hours, rate, is_panel, is_active)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 1)'
-        );
-        $tests = [
-            ['CBC', 'Complete Blood Count', 'haematology', 'blood', 24, 350],
-            ['LFT', 'Liver Function Test', 'biochemistry', 'blood', 24, 800],
-            ['KFT', 'Kidney Function Test', 'biochemistry', 'blood', 24, 750],
-            ['HBA1C', 'HbA1c', 'biochemistry', 'blood', 24, 500],
-            ['TSH', 'Thyroid TSH', 'biochemistry', 'blood', 24, 400],
-        ];
-        $testIds = [];
-        foreach ($tests as $t) {
-            $labCat->execute([$clinicId, $t[0], $t[1], $t[2], json_encode([['name' => $t[1], 'unit' => '', 'range' => '']]), $t[3], $t[4], $t[5]]);
-            $testIds[] = (int) $pdo->lastInsertId();
-        }
-        $labOrdIns = $pdo->prepare(
-            'INSERT INTO lab_orders (clinic_id, patient_id, ordered_by, test_id, barcode, status, ordered_at, resulted_at, share_token)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        );
-        foreach ($days as $day) {
-            if (mt_rand(0, 1) === 0) {
-                continue;
-            }
-            $orders = randInRange(2, 4);
-            for ($i = 0; $i < $orders; $i++) {
-                $orderedAt = $day->setTime(randInRange(9, 16), randInRange(0, 59));
-                $resulted = $orderedAt < $END_DATE->modify('-1 day');
-                $status = $resulted ? 'resulted' : 'ordered';
-                $labOrdIns->execute([
-                    $clinicId, $patientIds[array_rand($patientIds)], $doctorIds[0]['id'],
-                    $testIds[array_rand($testIds)], 'BC' . str_pad((string) randInRange(10000, 99999), 6, '0', STR_PAD_LEFT),
-                    $status, $orderedAt->format('Y-m-d H:i:s'),
-                    $resulted ? $orderedAt->modify('+1 day')->format('Y-m-d H:i:s') : null,
-                    bin2hex(random_bytes(16)),
-                ]);
-            }
-        }
-    }
-
-    if ($hasPharmacy && $drugIds) {
-        $phIns = $pdo->prepare(
-            'INSERT INTO pharmacy_inventory (clinic_id, drug_id, batch_number, quantity, low_stock_threshold, expiry_date, purchase_price, selling_price, supplier, added_at)
-             VALUES (?, ?, ?, ?, 10, ?, ?, ?, ?, ?)'
-        );
-        foreach (pickN($drugIds, 25) as $drugId) {
-            $batch = 'B' . randInRange(100, 999);
-            $qty = randInRange(20, 200);
-            $expiry = (new DateTimeImmutable('today'))->modify('+' . randInRange(30, 540) . ' days')->format('Y-m-d');
-            $pp = randInRange(20, 200);
-            $phIns->execute([
-                $clinicId, $drugId, $batch, $qty, $expiry, $pp, round($pp * 1.4),
-                'MediSupply Pvt Ltd', $START_DATE->format('Y-m-d H:i:s'),
-            ]);
-        }
-    }
-
-    if ($hasCRM) {
-        $crmIns = $pdo->prepare(
-            'INSERT INTO crm_leads (clinic_id, name, phone, email, inquiry_about, source, assigned_to, status, converted_patient_id, follow_up_date, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        );
-        foreach ($days as $day) {
-            $leads = randInRange(0, 3);
-            for ($i = 0; $i < $leads; $i++) {
-                $name = fakeName(mt_rand(0, 1) ? 'M' : 'F');
-                $src = ['website', 'google_ads', 'instagram', 'facebook', 'walk_in', 'referral'][mt_rand(0, 5)];
-                $roll = mt_rand(1, 100);
-                $status = $roll <= 30 ? 'converted' : ($roll <= 55 ? 'follow_up' : ($roll <= 75 ? 'contacted' : ($roll <= 90 ? 'new' : 'lost')));
-                $converted = $status === 'converted' ? $patientIds[array_rand($patientIds)] : null;
-                $crmIns->execute([
-                    $clinicId, $name, phone(),
-                    mt_rand(0, 1) ? strtolower(str_replace(' ', '.', $name)) . '@test.local' : null,
-                    'Inquiry about treatment options', $src, $receptionistIds[0], $status, $converted,
-                    $day->modify('+' . randInRange(1, 7) . ' days')->format('Y-m-d'),
-                    $day->setTime(randInRange(10, 17), 0)->format('Y-m-d H:i:s'),
-                ]);
-            }
-        }
-    }
-
     if ($hasStaff) {
         $attIns = $pdo->prepare(
             'INSERT IGNORE INTO staff_attendance (clinic_id, user_id, date, clock_in, clock_out, status) VALUES (?, ?, ?, ?, ?, ?)'
@@ -594,33 +504,6 @@ foreach ($CLINICS as $C) {
         }
     }
 
-    if ($hasIncentives) {
-        $incIns = $pdo->prepare(
-            'INSERT INTO doctor_incentives (clinic_id, doctor_id, period_month, revenue_generated, incentive_percent, flat_fee, tds_amount, net_payable, payment_status, paid_at)
-             VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)'
-        );
-        $months = ['2026-01', '2026-02', '2026-03', '2026-04'];
-        foreach ($doctorIds as $D) {
-            if ($D['incentive'] <= 0) {
-                continue;
-            }
-            foreach ($months as $m) {
-                $revStmt = $pdo->prepare(
-                    "SELECT COALESCE(SUM(total),0) FROM invoices WHERE clinic_id=? AND attributed_doctor_id=? AND DATE_FORMAT(created_at,'%Y-%m')=? AND status IN ('paid','partial')"
-                );
-                $revStmt->execute([$clinicId, $D['id'], $m]);
-                $rev = (float) $revStmt->fetchColumn();
-                $gross = round($rev * $D['incentive'] / 100, 2);
-                $tds = round($gross * 0.1, 2);
-                $net = $gross - $tds;
-                $incIns->execute([
-                    $clinicId, $D['id'], $m, $rev, $D['incentive'], $tds, $net,
-                    'paid', (new DateTimeImmutable($m . '-05'))->format('Y-m-d 10:00:00'),
-                ]);
-            }
-        }
-    }
-
     $expIns = $pdo->prepare(
         'INSERT INTO expenses (clinic_id, category, description, amount, currency, expense_date, paid_via, entered_by, created_at)
          VALUES (?, ?, ?, ?, "INR", ?, ?, ?, ?)'
@@ -631,28 +514,6 @@ foreach ($CLINICS as $C) {
         $expIns->execute([$clinicId, 'utilities', 'Electricity + Internet', randInRange(4000, 9000), $monthsCur->format('Y-m-05'), 'upi', $ownerId, $monthsCur->format('Y-m-05 10:00:00')]);
         $expIns->execute([$clinicId, 'consumables', 'Medical supplies', randInRange(8000, 22000), $monthsCur->format('Y-m-10'), 'bank', $ownerId, $monthsCur->format('Y-m-10 10:00:00')]);
         $monthsCur = $monthsCur->modify('+1 month');
-    }
-
-    if ($hasDischarge) {
-        $dsIns = $pdo->prepare(
-            'INSERT INTO discharge_summaries (clinic_id, patient_id, visit_id, final_diagnosis, condition_at_discharge, follow_up_instructions, status, finalized_at, created_at)
-             VALUES (?, ?, ?, ?, "improved", "Follow up in 7 days", "finalized", ?, ?)'
-        );
-        $someVisits = $pdo->query("SELECT id, patient_id, diagnosis, visited_at FROM visits WHERE clinic_id={$clinicId} ORDER BY RAND() LIMIT 15")->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($someVisits as $v) {
-            $dsIns->execute([$clinicId, $v['patient_id'], $v['id'], $v['diagnosis'] ?: 'Resolved', $v['visited_at'], $v['visited_at']]);
-        }
-    }
-
-    if ($hasPhotos) {
-        $phIns2 = $pdo->prepare(
-            'INSERT INTO patient_photos (clinic_id, patient_id, type, photo_path, condition_label, uploaded_at) VALUES (?, ?, ?, ?, ?, ?)'
-        );
-        $samplePatients = array_slice($patientIds, 0, 10);
-        foreach ($samplePatients as $pid) {
-            $phIns2->execute([$clinicId, $pid, 'before', 'demo/placeholder_before.jpg', 'Treatment start', $START_DATE->format('Y-m-d 10:00:00')]);
-            $phIns2->execute([$clinicId, $pid, 'after', 'demo/placeholder_after.jpg', 'After 3 months', $START_DATE->modify('+90 days')->format('Y-m-d 10:00:00')]);
-        }
     }
 
     if ($hasDiet) {

@@ -113,11 +113,7 @@ final class PatientController
             'prescriptions' => PatientService::prescriptions($clinicId, (int) $id),
             'invoices' => PatientService::invoices($clinicId, (int) $id),
             'documents' => PatientService::documents($clinicId, (int) $id),
-            'hasLab' => ModuleGate::check('lab'),
-            'hasRadiology' => ModuleGate::check('radiology'),
             'hasVitals' => ModuleGate::check('vitals'),
-            'hasPhotos' => ModuleGate::check('before_after'),
-            'photos' => ModuleGate::check('before_after') ? \App\Services\PatientPhotoService::forPatient($clinicId, (int) $id) : [],
             'created' => $request->query['created'] ?? null,
         ], $patient['name']));
     }

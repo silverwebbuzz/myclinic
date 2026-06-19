@@ -13,8 +13,6 @@ declare(strict_types=1);
  *
  * Available module keys:
  *   vitals
- *   labs
- *   photos
  *   diet
  *   case_specialty    (the per-specialty case form partial)
  *
@@ -27,7 +25,7 @@ declare(strict_types=1);
  */
 
 return [
-    // -- Pure-consultation specialties (no vitals, no labs by default) --
+    // -- Pure-consultation specialties (no vitals by default) --
     'homeopathy'        => ['case_specialty'],
     'ayurveda'          => ['case_specialty'],
     'siddha'            => ['case_specialty'],
@@ -43,33 +41,31 @@ return [
     'ent'               => ['case_specialty'],
     'sexology'          => ['case_specialty'],
 
-    // -- Visual / photo-first specialties --
-    'derma'             => ['photos', 'case_specialty'],
-    'trichology'        => ['photos', 'case_specialty'],
-
-    // -- Procedure specialties --
-    'cosmetology'       => ['photos', 'case_specialty'],
-    'plastic_surgery'   => ['photos', 'case_specialty'],
+    // -- Visual / procedure specialties --
+    'derma'             => ['case_specialty'],
+    'trichology'        => ['case_specialty'],
+    'cosmetology'       => ['case_specialty'],
+    'plastic_surgery'   => ['case_specialty'],
 
     // -- Dental family --
-    'dental'            => ['photos', 'case_specialty'],
-    'orthodontist'      => ['photos', 'case_specialty'],
-    'endodontist'       => ['photos', 'case_specialty'],
-    'implantologist'    => ['photos', 'case_specialty'],
-    'prosthodontist'    => ['photos', 'case_specialty'],
-    'pediatric_dentist' => ['photos', 'case_specialty'],
+    'dental'            => ['case_specialty'],
+    'orthodontist'      => ['case_specialty'],
+    'endodontist'       => ['case_specialty'],
+    'implantologist'    => ['case_specialty'],
+    'prosthodontist'    => ['case_specialty'],
+    'pediatric_dentist' => ['case_specialty'],
 
-    // -- Vitals + labs heavy (cardio family) --
-    'cardio'            => ['vitals', 'labs', 'case_specialty'],
-    'endocrinology'     => ['vitals', 'labs', 'case_specialty'],
-    'nephrology'        => ['vitals', 'labs', 'case_specialty'],
-    'hepatology'        => ['vitals', 'labs', 'case_specialty'],
-    'pulmonology'       => ['vitals', 'labs', 'case_specialty'],
-    'hematology'        => ['vitals', 'labs', 'case_specialty'],
-    'oncology'          => ['vitals', 'labs', 'case_specialty'],
+    // -- Vitals-heavy (cardio family) --
+    'cardio'            => ['vitals', 'case_specialty'],
+    'endocrinology'     => ['vitals', 'case_specialty'],
+    'nephrology'        => ['vitals', 'case_specialty'],
+    'hepatology'        => ['vitals', 'case_specialty'],
+    'pulmonology'       => ['vitals', 'case_specialty'],
+    'hematology'        => ['vitals', 'case_specialty'],
+    'oncology'          => ['vitals', 'case_specialty'],
 
-    // -- Diabetes — everything including diet --
-    'diabetology'       => ['vitals', 'labs', 'diet', 'case_specialty'],
+    // -- Diabetes — vitals + diet --
+    'diabetology'       => ['vitals', 'diet', 'case_specialty'],
 
     // -- Surgery family --
     'general_surgery'   => ['vitals', 'case_specialty'],
@@ -82,18 +78,18 @@ return [
     'fertility'         => ['vitals', 'case_specialty'],
     'andrology'         => ['vitals', 'case_specialty'],
 
-    // -- Ortho / pain (photos + vitals) --
-    'ortho'             => ['vitals', 'photos', 'case_specialty'],
-    'sports_medicine'   => ['vitals', 'photos', 'case_specialty'],
-    'pain_management'   => ['vitals', 'photos', 'case_specialty'],
-    'rheumatology'      => ['vitals', 'photos', 'case_specialty'],
+    // -- Ortho / pain --
+    'ortho'             => ['vitals', 'case_specialty'],
+    'sports_medicine'   => ['vitals', 'case_specialty'],
+    'pain_management'   => ['vitals', 'case_specialty'],
+    'rheumatology'      => ['vitals', 'case_specialty'],
 
     // -- Diet / nutrition --
     'dietitian'         => ['vitals', 'diet'],
 
-    // -- Critical care / radiology --
-    'critical_care'     => ['vitals', 'labs', 'case_specialty'],
-    'radiology'         => ['vitals', 'labs', 'case_specialty'],
+    // -- Critical care --
+    'critical_care'     => ['vitals', 'case_specialty'],
+    'radiology'         => ['vitals', 'case_specialty'],
 
     // -- Fallback for unmapped specialties (gp, peds, gyno, family_medicine,
     //    gastro, allergy, neuro, etc.) --

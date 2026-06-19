@@ -36,12 +36,12 @@ final class ModuleGateTest extends DatabaseTestCase
 
         QueryBuilder::table('clinic_modules')
             ->forClinic($clinic['clinic_id'])
-            ->where('module_id', '=', 'pharmacy')
+            ->where('module_id', '=', 'staff')
             ->update(['is_active' => 0]);
 
         ModuleGate::invalidateCache($clinic['clinic_id']);
 
-        $this->assertFalse(ModuleGate::check('pharmacy'));
+        $this->assertFalse(ModuleGate::check('staff'));
     }
 
     public function testRequireReturns402WhenInactive(): void

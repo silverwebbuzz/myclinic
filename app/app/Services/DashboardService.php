@@ -6,7 +6,6 @@ namespace App\Services;
 
 use App\Core\Database;
 use App\Core\QueryBuilder;
-use App\Gates\ModuleGate;
 
 final class DashboardService
 {
@@ -32,30 +31,6 @@ final class DashboardService
     public static function invalidateStats(int $clinicId): void
     {
         RedisClient::del("dashboard:stats:{$clinicId}");
-    }
-
-    /** @return list<array<string, mixed>> */
-    public static function lowStockItems(int $clinicId, int $limit = 8): array
-    {
-        if (!ModuleGate::check('pharmacy') || !Database::ping()) {
-            return [];
-        }
-
-        $rows = QueryBuilder::table('pharmacy_inventory')
-            ->forClinic($clinicId)
-            ->get();
-
-        $low = [];
-        foreach ($rows as $row) {
-            if ((int) $row['quantity'] <= (int) ($row['low_stock_threshold'] ?? 10)) {
-                $drug = QueryBuilder::table('drugs')->where('id', '=', (int) $row['drug_id'])->first();
-                $low[] = array_merge($row, ['drug_name' => $drug['name'] ?? 'Unknown']);
-            }
-        }
-
-        usort($low, static fn ($a, $b) => (int) $a['quantity'] <=> (int) $b['quantity']);
-
-        return array_slice($low, 0, $limit);
     }
 
     /** @return array<string, int|float> */

@@ -30,7 +30,6 @@ $photoUrl = !empty($patient['photo_path']) ? '/' . ltrim($patient['photo_path'],
     $jump[] = ['prescriptions', 'Prescriptions'];
     $jump[] = ['invoices', 'Invoices'];
     $jump[] = ['documents', 'Documents'];
-    if (!empty($hasPhotos)) $jump[] = ['photos', 'Photos'];
     ?>
     <nav class="sticky top-16 z-20 -mx-1 flex flex-wrap gap-1 border-b border-slate-200 bg-slate-50/95 px-1 py-2 text-sm backdrop-blur">
         <?php foreach ($jump as [$anchor, $label]): ?>
@@ -308,26 +307,4 @@ $photoUrl = !empty($patient['photo_path']) ? '/' . ltrim($patient['photo_path'],
         </ul>
         <?php endif; ?>
     </section>
-
-    <?php if (!empty($hasPhotos)): ?>
-    <!-- ============ PHOTOS ============ -->
-    <section id="sec-photos" class="scroll-mt-28 ui-card p-6" x-data="{ lightbox: null }">
-        <h2 class="mb-4 ui-section-title">Photos</h2>
-        <?php if ($photos === []): ?>
-        <p class="text-sm text-slate-500">No photos yet. Upload from a visit.</p>
-        <?php else: ?>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <?php foreach ($photos as $ph): ?>
-            <button type="button" @click="lightbox = '<?= htmlspecialchars($ph['photo_path'], ENT_QUOTES) ?>'" class="rounded-lg border overflow-hidden text-left">
-                <img src="<?= htmlspecialchars($ph['photo_path']) ?>" alt="" class="h-28 w-full object-cover">
-                <p class="p-2 text-xs capitalize"><?= htmlspecialchars($ph['type'] ?? '') ?></p>
-            </button>
-            <?php endforeach; ?>
-        </div>
-        <div x-show="lightbox" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" @click="lightbox = null" @keydown.escape.window="lightbox = null">
-            <img :src="lightbox" class="max-h-full max-w-full rounded-lg" @click.stop>
-        </div>
-        <?php endif; ?>
-    </section>
-    <?php endif; ?>
 </div>

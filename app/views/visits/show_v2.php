@@ -3,9 +3,9 @@
  * visits/show_v2.php — Phase 2 single-screen visit layout.
  *
  * No tabs. The 4 fundamentals (Symptoms / Diagnosis / Prescription / Notes)
- * are always visible. Optional sections (Vitals, Labs, Photos, Diet,
- * Case form) render based on $visibleModules. Hidden sections live as
- * ghost-link chips at the bottom — tap to reveal for this visit only.
+ * are always visible. Optional sections (Vitals, Diet, Case form) render
+ * based on $visibleModules. Hidden sections live as ghost-link chips at
+ * the bottom — tap to reveal for this visit only.
  *
  * Ships behind ?new=1 until the default is flipped in VisitController::show().
  */
@@ -25,9 +25,7 @@ $visitId = (int) $visit['id'];
 $visibleCount = count($visibleModules);
 $canUnlock = !empty($canUnlock);
 
-// Ghost-link list: every optional section NOT in visible_modules.
-// 'labs' and 'photos' are intentionally omitted — those sections are
-// not currently in use, so they should not appear as re-addable ghost chips.
+// Ghost-link list: every optional section NOT in visible_modules (see VisitView::OPTIONAL).
 $optionalModules = ['vitals', 'diet', 'case_specialty'];
 $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !in_array($m, $visibleModules, true)));
 ?>
@@ -728,44 +726,12 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 </details>
             <?php endif; ?>
 
-            <?php /* Lab orders — hidden, not currently in use. Re-enable by changing `false` to `$has('labs') && !empty($hasLab)`. */ ?>
-            <?php if (false): ?>
-                <details class="rounded-lg border border-slate-200 bg-slate-50/50"
-                         @toggle="recordSection('labs', $event.target.open)">
-                    <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Lab orders</summary>
-                    <div class="px-4 pb-4 pt-2">
-                        <?php require __DIR__ . '/partials/lab.php'; ?>
-                    </div>
-                </details>
-            <?php endif; ?>
-
-            <?php /* Photos — hidden, not currently in use. Re-enable by changing `false` to `$has('photos') && !empty($hasPhotos)`. */ ?>
-            <?php if (false): ?>
-                <details class="rounded-lg border border-slate-200 bg-slate-50/50"
-                         @toggle="recordSection('photos', $event.target.open)">
-                    <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Photos</summary>
-                    <div class="px-4 pb-4 pt-2">
-                        <?php require __DIR__ . '/partials/photos.php'; ?>
-                    </div>
-                </details>
-            <?php endif; ?>
-
             <?php if ($has('diet') && !empty($hasDiet)): ?>
                 <details class="rounded-lg border border-slate-200 bg-slate-50/50"
                          @toggle="recordSection('diet', $event.target.open)">
                     <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Diet plan</summary>
                     <div class="px-4 pb-4 pt-2">
                         <?php require __DIR__ . '/partials/diet.php'; ?>
-                    </div>
-                </details>
-            <?php endif; ?>
-
-            <?php /* Discharge summary — hidden, not currently in use. Re-enable by changing `false` to `!empty($hasDischargeSection)`. */ ?>
-            <?php if (false): ?>
-                <details class="rounded-lg border border-slate-200 bg-slate-50/50">
-                    <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Discharge summary</summary>
-                    <div class="px-4 pb-4 pt-2">
-                        <?php require __DIR__ . '/partials/discharge.php'; ?>
                     </div>
                 </details>
             <?php endif; ?>
@@ -777,8 +743,6 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                     <?php foreach ($ghostModules as $g):
                         $label = match ($g) {
                             'vitals' => 'Vitals',
-                            'labs' => 'Labs',
-                            'photos' => 'Photos',
                             'diet' => 'Diet plan',
                             'case_specialty' => 'Case taking',
                             default => ucfirst($g),

@@ -19,7 +19,6 @@ final class PortalDashboardService
 
         $visits = self::visits($clinicId, $patientId);
         $invoices = self::invoices($clinicId, $patientId);
-        $labs = self::labOrders($clinicId, $patientId);
         $appointments = self::appointments($clinicId, $patientId);
         $clinic = \App\Core\QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first();
 
@@ -27,7 +26,6 @@ final class PortalDashboardService
             'patient' => $patient,
             'visits' => $visits,
             'invoices' => $invoices,
-            'labs' => $labs,
             'appointments' => $appointments,
             'canBook' => ModuleGate::check('appointments_basic'),
             'bookUrl' => '/book/' . ($clinic['slug'] ?? 'demo'),
@@ -63,31 +61,6 @@ final class PortalDashboardService
         foreach ($rows as &$row) {
             if (!empty($row['pdf_path'])) {
                 $row['download_token'] = SignedDownloadService::create($clinicId, $patientId, 'invoice', (int) $row['id']);
-            }
-        }
-
-        return $rows;
-    }
-
-    /** @return list<array<string, mixed>> */
-    private static function labOrders(int $clinicId, int $patientId): array
-    {
-        if (!Database::ping() || !ModuleGate::check('lab')) {
-            return [];
-        }
-
-        $stmt = Database::connection()->prepare(
-            "SELECT lo.id, lo.status, lo.report_path, ltc.test_name, lo.ordered_at
-             FROM lab_orders lo
-             INNER JOIN lab_tests_catalog ltc ON ltc.id = lo.test_id
-             WHERE lo.clinic_id = ? AND lo.patient_id = ? AND lo.status = 'shared'
-             ORDER BY lo.ordered_at DESC LIMIT 20",
-        );
-        $stmt->execute([$clinicId, $patientId]);
-        $rows = $stmt->fetchAll() ?: [];
-        foreach ($rows as &$row) {
-            if (!empty($row['report_path'])) {
-                $row['download_token'] = SignedDownloadService::create($clinicId, $patientId, 'lab', (int) $row['id']);
             }
         }
 

@@ -49,21 +49,6 @@
     </section>
 
     <section class="rounded-xl border bg-white p-4">
-        <h2 class="text-sm font-semibold">Lab reports</h2>
-        <ul class="mt-2 divide-y text-sm">
-            <?php if ($labs === []): ?><li class="py-2 text-slate-500">No shared reports yet.</li><?php endif; ?>
-            <?php foreach ($labs as $l): ?>
-            <li class="py-2 flex justify-between">
-                <span><?= htmlspecialchars($l['test_name'] ?? '') ?></span>
-                <?php if (!empty($l['download_token'])): ?>
-                <a href="/portal/download/<?= urlencode($l['download_token']) ?>" class="text-emerald-600 text-xs">Download</a>
-                <?php endif; ?>
-            </li>
-            <?php endforeach; ?>
-        </ul>
-    </section>
-
-    <section class="rounded-xl border bg-white p-4">
         <h2 class="text-sm font-semibold">Invoices</h2>
         <ul class="mt-2 divide-y text-sm">
             <?php foreach ($invoices as $inv): ?>

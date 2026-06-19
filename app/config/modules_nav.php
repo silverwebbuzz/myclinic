@@ -22,12 +22,6 @@ return [
             'emr' => ['label' => 'Visits / EMR', 'icon' => '📋', 'href' => '/visits'],
             'prescription' => ['label' => 'Prescriptions', 'icon' => '💊', 'href' => '/prescriptions'],
             'vitals' => ['label' => 'Vitals', 'icon' => '❤️', 'href' => '/vitals'],
-            'lab' => ['label' => 'Lab', 'icon' => '🔬', 'href' => '/lab/catalog',
-                'feature_flag' => 'lab_module'],
-            'radiology' => ['label' => 'Radiology', 'icon' => '🩻', 'href' => '/radiology',
-                'feature_flag' => 'radiology_module'],
-            'pharmacy' => ['label' => 'Pharmacy', 'icon' => '🏪', 'href' => '/pharmacy/pos',
-                'feature_flag' => 'pharmacy_module'],
         ],
     ],
     'operations' => [
@@ -42,10 +36,7 @@ return [
         'items' => [
             'analytics' => ['label' => 'Analytics', 'icon' => '📊', 'href' => '/analytics',
                 'feature_flag' => 'advanced_analytics'],
-            'crm' => ['label' => 'CRM & Leads', 'icon' => '🎯', 'href' => '/crm',
-                'feature_flag' => 'crm_module'],
-            'staff' => ['label' => 'Staff', 'icon' => '👥', 'href' => '/staff/attendance',
-                'feature_flag' => 'incentive_module'],
+            'staff' => ['label' => 'Staff', 'icon' => '👥', 'href' => '/staff/attendance'],
         ],
     ],
 ];

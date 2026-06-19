@@ -94,8 +94,6 @@ $has = static fn (string $m) => in_array($m, $visibleModules ?? [], true);
                     (<?php
                         $opt = [];
                         if ($has('vitals')) $opt[] = 'Vitals';
-                        if ($has('labs')) $opt[] = 'Labs';
-                        if ($has('photos')) $opt[] = 'Photos';
                         if ($has('diet')) $opt[] = 'Diet';
                         if ($has('case_specialty')) $opt[] = 'Case taking';
                         echo htmlspecialchars(implode(', ', $opt) ?: 'none for your specialty');

@@ -9,9 +9,8 @@ use App\Http\Response;
 use App\Support\Plan;
 
 /**
- * FeatureGate — Bucket-3 features (Lab, Pharmacy, Radiology, CRM,
- * Incentive, AdvancedAnalytics, AI transcription, Custom branding,
- * Docs vault) are coded but not on the pricing page at launch.
+ * FeatureGate — Bucket-3 features (AdvancedAnalytics, AI transcription,
+ * Custom branding, Docs vault) are coded but not on the pricing page at launch.
  *
  * Controllers call FeatureGate::require('lab_module') at the top of
  * any action that exposes a hidden feature. Returns a 402/403 Response

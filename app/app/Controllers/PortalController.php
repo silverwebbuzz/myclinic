@@ -9,7 +9,6 @@ use App\Gates\ModuleGate;
 use App\Http\Request;
 use App\Http\Response;
 use App\Services\CsrfService;
-use App\Services\DischargeService;
 use App\Services\PortalAuthService;
 use App\Services\PortalDashboardService;
 use App\Services\SignedDownloadService;
@@ -123,23 +122,6 @@ final class PortalController
         PortalAuthService::clearPortalCookie();
 
         return Response::redirect('/portal/login?message=logged_out');
-    }
-
-    public function discharge(Request $request, string $token): Response
-    {
-        $summary = DischargeService::findByShareToken($token);
-        if ($summary === null) {
-            return Response::html('Discharge summary not found', 404);
-        }
-
-        if (!empty($summary['pdf_path'])) {
-            return Response::redirect($summary['pdf_path']);
-        }
-
-        return Response::html(Layout::portal('portal/discharge', [
-            'summary' => $summary,
-            'clinic' => RequestContext::clinic(),
-        ], 'Discharge summary'));
     }
 
     private function portalModuleActive(): bool

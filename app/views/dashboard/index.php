@@ -117,21 +117,6 @@
             </div>
             <?php endif; ?>
 
-            <?php if (!empty($hasPharmacy)): ?>
-            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                <h2 class="text-sm font-semibold text-amber-900">Low stock</h2>
-                <?php if ($lowStock === []): ?>
-                <p class="mt-2 text-xs text-amber-800">All items above threshold.</p>
-                <?php else: ?>
-                <ul class="mt-2 space-y-1 text-xs text-amber-900">
-                    <?php foreach ($lowStock as $item): ?>
-                    <li><?= htmlspecialchars($item['drug_name'] ?? '') ?> — <?= (int) ($item['quantity'] ?? 0) ?> left</li>
-                    <?php endforeach; ?>
-                </ul>
-                <?php endif; ?>
-            </div>
-            <?php endif; ?>
-
             <?php if (!empty($checklist) && empty($checklist['dismissed']) && ($checklist['percent'] ?? 0) < 100): ?>
             <div class="ui-card ui-card-pad bg-brand-light" style="border-color: var(--brand-light);">
                 <div class="flex items-center justify-between">

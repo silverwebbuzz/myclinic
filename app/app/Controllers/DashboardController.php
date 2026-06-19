@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\RequestContext;
-use App\Gates\ModuleGate;
 use App\Http\Request;
 use App\Http\Response;
 use App\Services\AppointmentService;
@@ -27,9 +26,7 @@ final class DashboardController
         $config = OnboardingService::specialtyConfig($clinicId) ?? [];
         $stats = DashboardService::stats($clinicId);
         $today = self::todayAppointments($clinicId);
-        $lowStock = DashboardService::lowStockItems($clinicId);
         $checklist = ChecklistService::progress($clinicId, $clinic, $config);
-        $hasPharmacy = ModuleGate::check('pharmacy');
 
         // Phase 4: follow-up widget. Best-effort — empty before Phase 4 SQL.
         $followUps = ['overdue' => [], 'overdue_count' => 0, 'due_week' => 0, 'done_month' => 0];
@@ -44,9 +41,7 @@ final class DashboardController
             'todayAppointments' => $today['appointments'],
             'todayCounts' => $today['counts'],
             'todayDate' => $today['date'],
-            'lowStock' => $lowStock,
             'checklist' => $checklist,
-            'hasPharmacy' => $hasPharmacy,
             'currency' => $clinic['currency'] ?? 'INR',
             'clinic' => $clinic,
             'isDirectoryListed' => (bool) ($clinic['is_directory_listed'] ?? false),

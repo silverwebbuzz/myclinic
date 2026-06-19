@@ -72,8 +72,6 @@ final class AuthMiddleware implements MiddlewareInterface
 
         return str_starts_with($uri, '/reset-password')
             || str_starts_with($uri, '/queue/display')
-            || str_starts_with($uri, '/lab/report/')
-            || str_starts_with($uri, '/portal/discharge/')
             || str_starts_with($uri, '/book/')
             || str_starts_with($uri, '/portal/')
             || str_starts_with($uri, '/accept-invite/')

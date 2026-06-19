@@ -60,37 +60,21 @@ php -S localhost:8080 -t public
 3. Point `yourdomain.com` to your app server; use **Caddy** or **certbot** for Let's Encrypt HTTPS.
 4. `TenantMiddleware` resolves the clinic via `tenants.custom_domain`.
 
-## Patient portal, telemedicine, diet & photos (Sprint 10)
+## Patient portal, telemedicine & diet (Sprint 10)
 
 - `/portal/login` — phone OTP (Twilio or dev log); no self-registration
-- `/portal/dashboard` — visits, Rx/lab/invoice downloads (72h signed URLs), book link
+- `/portal/dashboard` — visits, Rx/invoice downloads (72h signed URLs), book link
 - Online appointments → Google Meet link stub + WhatsApp + email
 - Visit **Diet** tab — 7-day plan, homeo antidote warnings, PDF + WhatsApp
-- Visit **Photos** tab + patient **Photos** timeline with lightbox
-- `POST /webhooks/photo-published` — inbound stub for public photos
 - Run migration `009_sprint10_portal.sql`
 
-## Analytics, CRM & staff (Sprint 9)
+## Analytics & staff (Sprint 9)
 
 - `/analytics` — revenue/expense charts, P&amp;L, doctor performance, expense entry
-- `/crm` — leads kanban, convert to patient, source Chart.js report
 - `/staff/attendance`, `/staff/leaves` — clock in/out, leave approve/reject
-- `/billing/incentives` — doctor % / flat config, monthly calculation, payslip PDF
 - `/book/{clinic-slug}` — public online booking (no login)
 - `php workers/analytics_snapshot.php` — nightly metrics (cron 2 AM)
-- `php workers/crm_followups.php` — daily CRM follow-ups (cron 9 AM)
-- `php workers/doctor_incentives.php` — monthly incentive run (1st of month)
 - Run migration `008_sprint9_ops.sql`
-
-## Lab, pharmacy & discharge (Sprint 8)
-
-- `/lab/catalog`, `/lab/orders` — LIS workflow, barcodes, critical alerts, 24h report share
-- `/lab/report/{token}` — public patient report link (no login)
-- `/pharmacy/pos`, `/pharmacy/inventory`, `/pharmacy/narcotic` — FIFO POS, batches, H/H1 register
-- Visit tabs: Lab orders, Discharge (draft → finalize)
-- `/portal/discharge/{token}` — patient portal stub
-- `php workers/pharmacy_alerts.php` — daily low-stock / expiry alerts (cron 8 AM)
-- Run migration `007_lab_pharmacy_consent.sql` (pharmacy; consent removed in `033_drop_consent.sql`)
 
 ## Billing, notifications & team (Sprint 7)
 
@@ -128,7 +112,7 @@ php -S localhost:8080 -t public
 ## Dashboard & settings (Sprint 3)
 
 - Authenticated app shell: sidebar (modules from Redis), topbar, toast/modal Alpine components
-- `/dashboard` — stat tiles (Redis cache 5 min), today's queue (60s refresh), low stock if pharmacy module, getting-started checklist
+- `/dashboard` — stat tiles (Redis cache 5 min), today's queue (60s refresh), getting-started checklist
 - `/settings` — tabs: General, Working hours, Specialty, Doctor leaves, Notifications, Subscription, Team (placeholder)
 - `/portal/` — minimal patient-facing layout stub
 

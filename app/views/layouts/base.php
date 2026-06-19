@@ -130,9 +130,9 @@
             // names for the enterprise look, without changing the config shape.
             $emojiToIcon = [
                 '🏠' => 'dashboard', '👤' => 'patients', '📋' => 'emr', '💊' => 'prescription',
-                '❤️' => 'vitals', '🔬' => 'lab', '🩻' => 'radiology', '🏪' => 'pharmacy',
+                '❤️' => 'vitals',
                 '📅' => 'appointments', '🧾' => 'billing', '💬' => 'whatsapp',
-                '📊' => 'analytics', '🎯' => 'crm', '👥' => 'staff',
+                '📊' => 'analytics', '👥' => 'staff',
             ];
             $navIcon = static function (string $raw) use ($emojiToIcon): string {
                 // Already an SVG name in the registry? use as-is; else map emoji.

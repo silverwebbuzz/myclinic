@@ -58,7 +58,6 @@ final class SignedDownloadService
         return match ($type) {
             'rx' => self::visitRx($clinicId, $id),
             'invoice' => self::invoicePdf($clinicId, $id),
-            'lab' => self::labReport($clinicId, $id),
             'diet' => self::dietPdf($clinicId, $id),
             default => null,
         };
@@ -84,17 +83,6 @@ final class SignedDownloadService
         }
 
         return ['path' => $inv['pdf_path']];
-    }
-
-    /** @return array{path: string}|null */
-    private static function labReport(int $clinicId, int $orderId): ?array
-    {
-        $order = LabOrderService::findDetailed($clinicId, $orderId);
-        if ($order === null || empty($order['report_path'])) {
-            return null;
-        }
-
-        return ['path' => $order['report_path']];
     }
 
     /** @return array{path: string}|null */

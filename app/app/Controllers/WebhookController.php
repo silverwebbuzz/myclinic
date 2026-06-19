@@ -82,16 +82,4 @@ final class WebhookController
 
         return Response::json(['received' => true]);
     }
-
-    public function photoPublished(Request $request): Response
-    {
-        $payload = json_decode($request->rawBody ?? '{}', true);
-        $dir = dirname(__DIR__, 2) . '/storage/logs';
-        if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
-        }
-        file_put_contents($dir . '/photo_webhook.log', date('c') . ' inbound: ' . ($request->rawBody ?? '') . "\n", FILE_APPEND);
-
-        return Response::json(['received' => true, 'clinic_id' => $payload['clinic_id'] ?? null]);
-    }
 }

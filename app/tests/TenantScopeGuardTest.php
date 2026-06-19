@@ -42,10 +42,9 @@ final class TenantScopeGuardTest extends TestCase
     /** Tables that carry a clinic_id and MUST be clinic-scoped on every access. */
     private const TENANT_TABLES = [
         'patients', 'visits', 'prescriptions', 'invoices', 'invoice_items',
-        'vitals', 'lab_orders', 'lab_results', 'appointments',
-        'discharge_summaries', 'diet_plans', 'patient_photos',
+        'vitals', 'appointments',
+        'diet_plans',
         'doctor_schedules', 'doctor_leaves', 'staff_attendance', 'staff_leaves',
-        'pharmacy_inventory', 'pharmacy_sales', 'doctor_incentives',
         'notifications',
     ];
 
@@ -56,8 +55,8 @@ final class TenantScopeGuardTest extends TestCase
      * tenant table broadly.
      */
     private const SAFE_KEYS = [
-        "'id'", "'invoice_id'", "'lab_order_id'", "'visit_id'", "'patient_id'",
-        "'order_id'", "'appointment_id'", "'share_token'",
+        "'id'", "'invoice_id'", "'visit_id'", "'patient_id'",
+        "'order_id'", "'appointment_id'",
     ];
 
     /**
@@ -65,11 +64,6 @@ final class TenantScopeGuardTest extends TestCase
      * substrings so line drift never breaks them. Each entry is a reason.
      */
     private const ALLOWED_CROSS_CLINIC = [
-        // Public lab-result share links: gated by unguessable share_token +
-        // expiry, then re-derive clinic_id before loading detail.
-        'LabOrderService.php::findByShareToken',
-        // Public discharge-summary share links: same token+expiry pattern.
-        'DischargeService.php::findByShareToken',
         // Global patient-identity prefill: deliberately cross-clinic, returns
         // only patient-owned fields, documented in PatientService docblock.
         'PatientService.php::findOrPreFillByPhone',

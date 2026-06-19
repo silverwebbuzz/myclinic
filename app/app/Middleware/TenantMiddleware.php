@@ -44,34 +44,6 @@ final class TenantMiddleware implements MiddlewareInterface
             return Response::html('Clinic not found. Add ?clinic=your-slug on localhost.', 404);
         }
 
-        if (preg_match('#^/lab/report/([a-f0-9]+)$#', $request->uri, $m)) {
-            $order = \App\Services\LabOrderService::findByShareToken($m[1]);
-            if ($order !== null) {
-                $clinic = QueryBuilder::table('tenants')->where('id', '=', (int) $order['clinic_id'])->first();
-                if ($clinic !== null) {
-                    RequestContext::setClinic($clinic);
-
-                    return $next();
-                }
-            }
-
-            return Response::html('Report link expired or invalid', 404);
-        }
-
-        if (preg_match('#^/portal/discharge/([a-f0-9]+)$#', $request->uri, $m)) {
-            $summary = \App\Services\DischargeService::findByShareToken($m[1]);
-            if ($summary !== null) {
-                $clinic = QueryBuilder::table('tenants')->where('id', '=', (int) $summary['clinic_id'])->first();
-                if ($clinic !== null) {
-                    RequestContext::setClinic($clinic);
-
-                    return $next();
-                }
-            }
-
-            return Response::html('Discharge summary not found', 404);
-        }
-
         $authClinic = $this->resolveFromAuth($request);
         if ($authClinic !== null) {
             if (!(int) ($authClinic['is_active'] ?? 0)) {

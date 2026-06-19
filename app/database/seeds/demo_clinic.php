@@ -49,8 +49,8 @@ $pdo->prepare(
 
 $freeModules = [
     'patients', 'appointments_basic', 'invoicing_basic', 'billing_pro', 'emr', 'vitals', 'prescription', 'whatsapp',
-    'lab', 'pharmacy', 'discharge', 'analytics', 'crm', 'staff', 'incentives',
-    'patient_portal', 'telemedicine', 'diet', 'before_after',
+    'analytics', 'staff',
+    'patient_portal', 'telemedicine', 'diet',
 ];
 $ins = $pdo->prepare(
     'INSERT INTO clinic_modules (clinic_id, module_id, billing_cycle, is_active) VALUES (?, ?, ?, 1)',

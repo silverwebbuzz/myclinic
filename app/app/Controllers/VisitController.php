@@ -10,11 +10,7 @@ use App\Http\Request;
 use App\Http\Response;
 use App\Services\AuditService;
 use App\Services\DietService;
-use App\Services\DischargeService;
-use App\Services\PatientPhotoService;
 use App\Services\DrugService;
-use App\Services\LabCatalogService;
-use App\Services\LabOrderService;
 use App\Services\Icd10Service;
 use App\Services\PatientService;
 use App\Services\PrescriptionService;
@@ -90,7 +86,6 @@ final class VisitController
         $user = RequestContext::user();
         $clinic = RequestContext::clinic() ?? [];
         $visibleModules = VisitView::visibleModules($clinicId, (string) ($clinic['specialty'] ?? ''));
-        $discharge = DischargeService::forVisit($clinicId, (int) $id);
         $editable = VisitService::isEditable($visit);
         $vitalsData = is_array($vitals)
             ? self::mergeFormDefaults(self::defaultVitalsData(), $vitals)
@@ -112,9 +107,6 @@ final class VisitController
 
         $caseTaking = VisitService::extractCaseTaking($visit);
         $visit['specialty_data'] = array_merge($visit['specialty_data'] ?? [], ['case_taking' => $caseTaking]);
-        $dischargeData = is_array($discharge)
-            ? self::mergeFormDefaults(self::defaultDischargeData(), $discharge)
-            : self::defaultDischargeData();
 
         $viewData = [
             'visit' => $visit,
@@ -133,16 +125,8 @@ final class VisitController
             'vitalsWarnings' => $vitals ? VitalsService::rangeWarnings($vitals) : [],
             'chartSeries' => VitalsService::chartSeries($clinicId, (int) $patient['id']),
             'completed' => $request->query['completed'] ?? null,
-            'hasLab' => ModuleGate::check('lab'),
-            'hasDischarge' => ModuleGate::check('discharge'),
-            'labOrders' => ModuleGate::check('lab') ? LabOrderService::forVisit($clinicId, (int) $id) : [],
-            'labTests' => ModuleGate::check('lab') ? LabCatalogService::listForClinic($clinicId) : [],
-            'discharge' => $dischargeData,
-            'hasDischargeSection' => $editable || ModuleGate::check('discharge') || $discharge !== null,
             'hasDiet' => ModuleGate::check('diet'),
-            'hasPhotos' => ModuleGate::check('before_after'),
             'dietPlan' => ModuleGate::check('diet') ? DietService::forVisit($clinicId, (int) $id) : null,
-            'visitPhotos' => ModuleGate::check('before_after') ? PatientPhotoService::forVisit($clinicId, (int) $id) : [],
             'defaultDietWeek' => DietService::defaultWeekPlan(),
             'visibleModules' => $visibleModules,
             'clinic' => $clinic,
@@ -190,72 +174,6 @@ final class VisitController
         DietService::share($clinicId, (int) $plan['id']);
 
         return Response::redirect('/visits/' . $id . '?diet_shared=1');
-    }
-
-    public function uploadPhoto(Request $request, string $id): Response
-    {
-        if ($denied = ModuleGate::require('before_after')) {
-            return $denied;
-        }
-
-        $clinicId = (int) RequestContext::clinicId();
-        $visit = VisitService::find($clinicId, (int) $id);
-        if ($visit === null) {
-            return Response::html('Not found', 404);
-        }
-
-        $file = $_FILES['photo'] ?? null;
-        if (!is_array($file)) {
-            return Response::redirect('/visits/' . $id . '?photo_error=1');
-        }
-
-        PatientPhotoService::upload(
-            $clinicId,
-            (int) $visit['patient_id'],
-            (int) $id,
-            $file,
-            $request->post['type'] ?? 'progress',
-            $request->post['condition_label'] ?? null,
-            !empty($request->post['is_public']),
-        );
-
-        return Response::redirect('/visits/' . $id . '?photo_uploaded=1');
-    }
-
-    public function saveDischarge(Request $request, string $id): Response
-    {
-        if ($denied = $this->requireModule()) {
-            return $denied;
-        }
-        if ($denied = ModuleGate::require('discharge')) {
-            return $denied;
-        }
-
-        $clinicId = (int) RequestContext::clinicId();
-        $visit = VisitService::find($clinicId, (int) $id);
-        if ($visit === null) {
-            return Response::html('Visit not found', 404);
-        }
-
-        DischargeService::saveDraft($clinicId, (int) $id, (int) $visit['patient_id'], $request->post);
-
-        return Response::redirect('/visits/' . $id . '?discharge_saved=1');
-    }
-
-    public function finalizeDischarge(Request $request, string $id): Response
-    {
-        if ($denied = $this->requireModule()) {
-            return $denied;
-        }
-        if ($denied = ModuleGate::require('discharge')) {
-            return $denied;
-        }
-
-        $clinicId = (int) RequestContext::clinicId();
-        DischargeService::finalize($clinicId, (int) $id, $request->post['signature'] ?? null);
-        AuditService::log($request, 'UPDATE', 'discharge_summaries', (int) $id);
-
-        return Response::redirect('/visits/' . $id . '?discharge_finalized=1');
     }
 
     public function complete(Request $request, string $id): Response
@@ -774,20 +692,6 @@ final class VisitController
             'temperature' => null,
             'spo2' => null,
             'pulse_rate' => null,
-        ];
-    }
-
-    /** @return array<string,mixed> */
-    private static function defaultDischargeData(): array
-    {
-        return [
-            'final_diagnosis' => '',
-            'procedures_done' => '',
-            'treatment_summary' => '',
-            'follow_up_instructions' => '',
-            'diet_at_discharge' => '',
-            'condition_at_discharge' => 'stable',
-            'status' => 'draft',
         ];
     }
 
