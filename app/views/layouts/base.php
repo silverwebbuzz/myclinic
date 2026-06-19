@@ -104,6 +104,8 @@
         }
         .nav-item-active svg { color: #fff; }
         .nav-item-active:hover { background-color: var(--brand-dark); }
+        /* Hide Alpine-controlled overlays until JS boots (prevents flash on navigation). */
+        [x-cloak] { display: none !important; }
     </style>
     <?php require dirname(__DIR__) . '/components/ui_tokens.php'; ?>
 </head>
@@ -111,7 +113,7 @@
     <?php require dirname(__DIR__) . '/components/impersonation-banner.php'; ?>
     <div class="flex min-h-screen" @keydown.escape.window="sidebarOpen = false">
         <!-- Sidebar overlay (tablet/mobile) -->
-        <div x-show="sidebarOpen" x-transition.opacity class="fixed inset-0 z-40 bg-black/40 lg:hidden" @click="sidebarOpen = false"></div>
+        <div x-show="sidebarOpen" x-cloak x-transition.opacity class="fixed inset-0 z-40 bg-black/40 lg:hidden" @click="sidebarOpen = false"></div>
 
         <?php
             $currentUri = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
@@ -242,7 +244,7 @@
                                 <?= htmlspecialchars(mb_substr($user['name'] ?? 'U', 0, 1)) ?>
                             </span>
                         </button>
-                        <div x-show="open" @click.outside="open = false" x-transition
+                        <div x-show="open" x-cloak @click.outside="open = false" x-transition
                              class="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
                             <div class="border-b border-slate-100 px-4 py-3">
                                 <p class="truncate text-sm font-semibold text-slate-900"><?= htmlspecialchars($user['name'] ?? '') ?></p>

@@ -1,6 +1,6 @@
 <!-- Global modal slot — parent may set modalOpen, modalTitle, modalBody via Alpine -->
 <template x-teleport="body">
-    <div x-show="typeof modalOpen !== 'undefined' && modalOpen" x-transition.opacity
+    <div x-show="typeof modalOpen !== 'undefined' && modalOpen" x-cloak x-transition.opacity
          class="fixed inset-0 z-[90] flex items-center justify-center bg-black/40 p-4"
          @keydown.escape.window="modalOpen = false">
         <div @click.outside="modalOpen = false" class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
