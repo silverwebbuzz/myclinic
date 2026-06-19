@@ -33,6 +33,7 @@ final class SmtpMailService
             'mailgun_set' => $mailgun,
             'smtp_set' => $smtp,
             'smtp_host' => trim((string) ($_ENV['SMTP_HOST'] ?? '')),
+            'smtp_peer_name' => trim((string) ($_ENV['SMTP_PEER_NAME'] ?? '')),
             'smtp_port' => (int) ($_ENV['SMTP_PORT'] ?? 465),
             'smtp_secure' => strtolower((string) ($_ENV['SMTP_SECURE'] ?? 'ssl')),
             'smtp_username' => trim((string) ($_ENV['SMTP_USERNAME'] ?? '')),
@@ -97,11 +98,10 @@ final class SmtpMailService
         $fromName = trim($fromName ?? (string) ($_ENV['SMTP_FROM_NAME'] ?? 'eClinicPro'));
 
         $remote = ($secure === 'ssl' ? 'ssl://' : 'tcp://') . $host . ':' . $port;
-        $steps[] = "Connect {$remote} (secure={$secure})";
+        $peerName = trim((string) ($_ENV['SMTP_PEER_NAME'] ?? '')) ?: $host;
+        $steps[] = "Connect {$remote} (secure={$secure}, peer={$peerName})";
 
-        $ctx = stream_context_create([
-            'ssl' => ['verify_peer' => true, 'verify_peer_name' => true, 'SNI_enabled' => true],
-        ]);
+        $ctx = stream_context_create(['ssl' => self::sslContextOptions($peerName)]);
 
         $errno = 0;
         $errstr = '';
@@ -157,11 +157,20 @@ final class SmtpMailService
 
                 return ['ok' => false, 'error' => 'STARTTLS rejected', 'steps' => $steps];
             }
-            if (!@stream_socket_enable_crypto($fp, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+            self::applyStreamSslOptions($fp, $peerName);
+            if (!stream_socket_enable_crypto($fp, true, self::tlsClientMethod())) {
+                $detail = self::openSslErrorDetail();
                 fclose($fp);
 
-                return ['ok' => false, 'error' => 'TLS handshake failed', 'steps' => $steps];
+                return [
+                    'ok' => false,
+                    'error' => 'TLS handshake failed' . ($detail !== '' ? ": {$detail}" : '')
+                        . '. If the 220 banner shows a different hostname, set SMTP_PEER_NAME in .env'
+                        . ' (e.g. mail.silverwebbuzz.in). Or try port 465 with SMTP_SECURE=ssl.',
+                    'steps' => $steps,
+                ];
             }
+            $steps[] = 'TLS session established';
             if (!$ok($cmd('EHLO ' . $ehloHost), '250')) {
                 fclose($fp);
 
@@ -249,5 +258,46 @@ final class SmtpMailService
         $steps[] = 'Done — message accepted';
 
         return ['ok' => true, 'error' => null, 'steps' => $steps];
+    }
+
+    /** @return array<string, bool|string> */
+    private static function sslContextOptions(string $peerName): array
+    {
+        $verify = !in_array(strtolower((string) ($_ENV['SMTP_VERIFY_PEER'] ?? '1')), ['0', 'false', 'no'], true);
+
+        return [
+            'verify_peer' => $verify,
+            'verify_peer_name' => $verify,
+            'allow_self_signed' => !$verify,
+            'peer_name' => $peerName,
+            'SNI_enabled' => true,
+        ];
+    }
+
+    private static function tlsClientMethod(): int
+    {
+        $method = STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT;
+        if (defined('STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT')) {
+            $method |= STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT;
+        }
+
+        return $method;
+    }
+
+    private static function applyStreamSslOptions($fp, string $peerName): void
+    {
+        foreach (self::sslContextOptions($peerName) as $key => $value) {
+            stream_context_set_option($fp, 'ssl', (string) $key, $value);
+        }
+    }
+
+    private static function openSslErrorDetail(): string
+    {
+        $messages = [];
+        while (($msg = openssl_error_string()) !== false) {
+            $messages[] = $msg;
+        }
+
+        return $messages === [] ? '' : implode('; ', $messages);
     }
 }

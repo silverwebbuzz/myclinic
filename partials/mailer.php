@@ -60,6 +60,8 @@ function ecp_send_mail(string $toEmail, string $subject, string $htmlBody, ?stri
     $host = $cfg['SMTP_HOST'] ?? '';
     $port = (int) ($cfg['SMTP_PORT'] ?? 465);
     $secure = strtolower($cfg['SMTP_SECURE'] ?? 'ssl');     // ssl | tls
+    $peerName = trim($cfg['SMTP_PEER_NAME'] ?? '') ?: $host;
+    $verify = !in_array(strtolower($cfg['SMTP_VERIFY_PEER'] ?? '1'), ['0', 'false', 'no'], true);
     $user = $cfg['SMTP_USERNAME'] ?? '';
     $pass = $cfg['SMTP_PASSWORD'] ?? '';
     $fromEmail = $cfg['SMTP_FROM_EMAIL'] ?? ($user ?: 'wecare@eclinicpro.com');
@@ -77,7 +79,13 @@ function ecp_send_mail(string $toEmail, string $subject, string $htmlBody, ?stri
 
     $remote = ($secure === 'ssl' ? 'ssl://' : 'tcp://') . $host . ':' . $port;
     $ctx = stream_context_create([
-        'ssl' => ['verify_peer' => true, 'verify_peer_name' => true, 'SNI_enabled' => true],
+        'ssl' => [
+            'verify_peer' => $verify,
+            'verify_peer_name' => $verify,
+            'allow_self_signed' => !$verify,
+            'peer_name' => $peerName,
+            'SNI_enabled' => true,
+        ],
     ]);
 
     $errno = 0;
@@ -128,8 +136,21 @@ function ecp_send_mail(string $toEmail, string $subject, string $htmlBody, ?stri
         if (!$ok($cmd('STARTTLS'), '220')) {
             return $fail('STARTTLS rejected');
         }
-        if (!@stream_socket_enable_crypto($fp, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
-            return $fail('TLS handshake failed');
+        foreach ([
+            'verify_peer' => $verify,
+            'verify_peer_name' => $verify,
+            'allow_self_signed' => !$verify,
+            'peer_name' => $peerName,
+            'SNI_enabled' => true,
+        ] as $k => $v) {
+            stream_context_set_option($fp, 'ssl', $k, $v);
+        }
+        $tlsMethod = STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT;
+        if (defined('STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT')) {
+            $tlsMethod |= STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT;
+        }
+        if (!stream_socket_enable_crypto($fp, true, $tlsMethod)) {
+            return $fail('TLS handshake failed (try SMTP_PEER_NAME=hostname from 220 banner, or port 465 + ssl)');
         }
         if (!$ok($cmd('EHLO ' . $ehloHost), '250')) {
             return $fail('EHLO after STARTTLS rejected');

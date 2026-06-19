@@ -60,6 +60,7 @@ $activeClass = match ($e['active'] ?? 'log') {
             <dl class="grid gap-2 text-sm sm:grid-cols-2">
                 <div><dt class="text-slate-500">Host</dt><dd class="font-mono text-slate-800"><?= htmlspecialchars((string) $e['smtp_host']) ?>:<?= (int) $e['smtp_port'] ?></dd></div>
                 <div><dt class="text-slate-500">Security</dt><dd class="font-mono text-slate-800"><?= htmlspecialchars((string) $e['smtp_secure']) ?></dd></div>
+                <div><dt class="text-slate-500">TLS peer name</dt><dd class="font-mono text-slate-800"><?= htmlspecialchars((string) (($e['smtp_peer_name'] ?? '') !== '' ? $e['smtp_peer_name'] : $e['smtp_host'] . ' (defaults to host)')) ?></dd></div>
                 <div><dt class="text-slate-500">Username</dt><dd class="font-mono text-slate-800"><?= htmlspecialchars((string) $e['smtp_username']) ?></dd></div>
                 <div><dt class="text-slate-500">From</dt><dd class="font-mono text-slate-800"><?= htmlspecialchars((string) $e['smtp_from_name']) ?> &lt;<?= htmlspecialchars((string) $e['smtp_from_email']) ?>&gt;</dd></div>
             </dl>
@@ -130,6 +131,8 @@ $activeClass = match ($e['active'] ?? 'log') {
             <p class="font-semibold text-slate-700">Troubleshooting</p>
             <ul class="list-disc pl-4 space-y-1">
                 <li>Port <strong>465</strong> → <code>SMTP_SECURE=ssl</code>. Port <strong>587</strong> → <code>SMTP_SECURE=tls</code>.</li>
+                <li>If the SMTP banner shows <code>mail.silverwebbuzz.in</code> but you connect to <code>mail.eclinicpro.com</code>, set <code>SMTP_PEER_NAME=mail.silverwebbuzz.in</code> (TLS certificate hostname).</li>
+                <li>Or use port <strong>465</strong> + <code>SMTP_SECURE=ssl</code> — often more reliable on cPanel/Exim hosts.</li>
                 <li><code>SMTP_FROM_EMAIL</code> must usually match the authenticated mailbox.</li>
                 <li>If Mailgun keys are still in <code>.env</code>, they take priority over SMTP — clear them to use SMTP.</li>
                 <li>Check spam folder; verify DNS (SPF/DKIM) on your mail host.</li>
