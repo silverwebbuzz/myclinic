@@ -122,6 +122,7 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
             <label class="block text-sm">
                 <span class="text-slate-600">Date</span>
                 <input type="date" name="scheduled_date" x-model="date" @change="loadSlots()" required
+                       min="<?= htmlspecialchars((new \DateTime('now', new \DateTimeZone('Asia/Kolkata')))->format('Y-m-d')) ?>"
                        class="ui-input">
             </label>
         </div>

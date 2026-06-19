@@ -240,7 +240,7 @@ final class SlotService
         return false;
     }
 
-    private static function clinicTimezone(int $clinicId): string
+    public static function clinicTimezone(int $clinicId): string
     {
         $row = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first();
         $tz = $row['timezone'] ?? 'Asia/Kolkata';

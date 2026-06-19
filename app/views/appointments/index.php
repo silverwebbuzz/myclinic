@@ -392,7 +392,9 @@ $statusBadge = static fn (string $status): string => match ($status) {
                     </label>
                     <label class="block text-sm">
                         <span class="ui-label mb-1 block">Date</span>
-                        <input type="date" name="scheduled_date" x-model="form.date" @change="loadSlots()" required class="ui-input">
+                        <input type="date" name="scheduled_date" x-model="form.date" @change="loadSlots()" required
+                               min="<?= htmlspecialchars((new \DateTime('now', new \DateTimeZone('Asia/Kolkata')))->format('Y-m-d')) ?>"
+                               class="ui-input">
                     </label>
                 </div>
 

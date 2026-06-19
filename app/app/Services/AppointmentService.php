@@ -57,6 +57,13 @@ final class AppointmentService
         if ($scheduledTs === false) {
             throw new \RuntimeException('Invalid appointment date or time.');
         }
+
+        // Reject appointments in the past, measured in the clinic's local time
+        // (IST by default). The slot picker already hides past slots for today,
+        // but walk-ins, manual time entry, no-working-hours days, and direct
+        // POSTs bypass that — so this is the authoritative server-side guard.
+        self::assertNotInPast($clinicId, $scheduledAt);
+
         $scheduledDate = date('Y-m-d', $scheduledTs);
 
         $source = (string) ($data['source'] ?? 'reception');
@@ -177,6 +184,15 @@ final class AppointmentService
             $targetType = (string) ($update['type'] ?? $existing['type'] ?? 'prebooked');
             $changed = $targetAt !== (string) $existing['scheduled_at']
                 || $targetDoctor !== (int) $existing['doctor_id'];
+
+            // Block rescheduling to a past date/time (clinic-local). Only when the
+            // time actually moves — editing notes on a past appointment is fine.
+            if (isset($update['scheduled_at']) && $targetAt !== (string) $existing['scheduled_at']) {
+                if (strtotime($targetAt) === false) {
+                    throw new \RuntimeException('Invalid appointment date or time.');
+                }
+                self::assertNotInPast($clinicId, $targetAt);
+            }
 
             if ($changed && $targetType !== 'walkin') {
                 $stmt = Database::connection()->prepare(
@@ -518,6 +534,50 @@ final class AppointmentService
             return ModuleGate::check('advanced_scheduling');
         } catch (\Throwable $e) {
             return false;
+        }
+    }
+
+    /**
+     * Throw if the appointment's wall-clock time is before the current
+     * clinic-local minute.
+     *
+     * Both the scheduled time and "now" are interpreted in the clinic's
+     * timezone (Asia/Kolkata by default). `scheduled_at` is a naive wall-clock
+     * string (e.g. "2026-06-19 16:15:00") with no offset, so we attach the
+     * clinic tz when parsing it — this keeps the comparison correct regardless
+     * of the server's php.ini default timezone.
+     *
+     * Comparison is against the start of the current minute, so a "book now"
+     * walk-in isn't rejected just because a few seconds elapsed since the form
+     * rendered. So at 4:15 PM IST, the 4:15 slot and later are allowed; 4:14
+     * and earlier (and any past date) are rejected.
+     */
+    private static function assertNotInPast(int $clinicId, string $scheduledAt): void
+    {
+        $tz = 'Asia/Kolkata';
+        try {
+            $tz = SlotService::clinicTimezone($clinicId);
+        } catch (\Throwable $e) {
+            // Fall back to IST if the tenant row/timezone can't be read.
+        }
+
+        try {
+            $zone = new \DateTimeZone($tz);
+        } catch (\Throwable $e) {
+            $zone = new \DateTimeZone('Asia/Kolkata');
+        }
+
+        $scheduled = \DateTime::createFromFormat('Y-m-d H:i:s', date('Y-m-d H:i:s', (int) strtotime($scheduledAt)), $zone);
+        if ($scheduled === false) {
+            throw new \RuntimeException('Invalid appointment date or time.');
+        }
+
+        $now = new \DateTime('now', $zone);
+        // Start of the current minute, clinic-local.
+        $nowMinuteTs = $now->getTimestamp() - (int) $now->format('s');
+
+        if ($scheduled->getTimestamp() < $nowMinuteTs) {
+            throw new \RuntimeException('Appointments cannot be booked in the past. Please choose the current time or a later slot.');
         }
     }
 }
