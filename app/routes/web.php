@@ -114,7 +114,6 @@ return static function (RouteRegistrar $router): void {
         $app->post('/settings/team/invite', [ClinicSettingsController::class, 'inviteStaff']);
         $app->post('/settings/team/invites/{id}/revoke', [ClinicSettingsController::class, 'revokeInvite']);
         $app->post('/settings/team/{id}', [ClinicSettingsController::class, 'updateStaff']);
-        $app->post('/settings/consent-forms', [ClinicSettingsController::class, 'saveConsentForm']);
         $app->post('/settings/api/keys', [ClinicSettingsController::class, 'createApiKey']);
         $app->post('/settings/api/keys/{id}/revoke', [ClinicSettingsController::class, 'revokeApiKey']);
         $app->post('/settings/branding', [ClinicSettingsController::class, 'saveBranding']);
@@ -195,7 +194,6 @@ return static function (RouteRegistrar $router): void {
         $app->post('/visits/{id}/complete', [VisitController::class, 'complete']);
         $app->get('/visits/{id}/unlock', [VisitController::class, 'unlockGet']);
         $app->post('/visits/{id}/unlock', [VisitController::class, 'unlock']);
-        $app->post('/visits/{id}/consent', [VisitController::class, 'signConsent']);
         $app->post('/visits/{id}/discharge', [VisitController::class, 'saveDischarge']);
         $app->post('/visits/{id}/discharge/finalize', [VisitController::class, 'finalizeDischarge']);
         $app->post('/visits/{id}/diet', [VisitController::class, 'saveDiet']);

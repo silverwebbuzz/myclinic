@@ -30,7 +30,7 @@ final class VisitView
     public const ALWAYS_ON = ['symptoms', 'diagnosis', 'prescription', 'notes'];
 
     /** Modules controllable by specialty defaults / per-clinic toggles. */
-    public const OPTIONAL = ['vitals', 'labs', 'photos', 'diet', 'consent', 'case_specialty'];
+    public const OPTIONAL = ['vitals', 'labs', 'photos', 'diet', 'case_specialty'];
 
     /** Per-request memoization. */
     private static array $modulesCache = [];

@@ -9,8 +9,6 @@ use App\Gates\ModuleGate;
 use App\Http\Request;
 use App\Http\Response;
 use App\Services\AuditService;
-use App\Services\ConsentService;
-use App\Services\ConsentTemplateService;
 use App\Services\DietService;
 use App\Services\DischargeService;
 use App\Services\PatientPhotoService;
@@ -136,12 +134,9 @@ final class VisitController
             'chartSeries' => VitalsService::chartSeries($clinicId, (int) $patient['id']),
             'completed' => $request->query['completed'] ?? null,
             'hasLab' => ModuleGate::check('lab'),
-            'hasConsent' => ModuleGate::check('consent'),
             'hasDischarge' => ModuleGate::check('discharge'),
             'labOrders' => ModuleGate::check('lab') ? LabOrderService::forVisit($clinicId, (int) $id) : [],
             'labTests' => ModuleGate::check('lab') ? LabCatalogService::listForClinic($clinicId) : [],
-            'consent' => ModuleGate::check('consent') ? ConsentService::forVisit($clinicId, (int) $id) : null,
-            'consentTemplates' => ModuleGate::check('consent') ? ConsentTemplateService::list($clinicId) : [],
             'discharge' => $dischargeData,
             'hasDischargeSection' => $editable || ModuleGate::check('discharge') || $discharge !== null,
             'hasDiet' => ModuleGate::check('diet'),
@@ -225,32 +220,6 @@ final class VisitController
         );
 
         return Response::redirect('/visits/' . $id . '?photo_uploaded=1');
-    }
-
-    public function signConsent(Request $request, string $id): Response
-    {
-        if ($denied = $this->requireModule()) {
-            return $denied;
-        }
-        if ($denied = ModuleGate::require('consent')) {
-            return $denied;
-        }
-
-        $clinicId = (int) RequestContext::clinicId();
-        $visit = VisitService::find($clinicId, (int) $id);
-        if ($visit === null) {
-            return Response::html('Visit not found', 404);
-        }
-
-        $sig = (string) ($request->post['signature'] ?? '');
-        if ($sig === '') {
-            return Response::redirect('/visits/' . $id . '?consent_error=1');
-        }
-
-        ConsentService::sign($clinicId, (int) $id, (int) $visit['patient_id'], $request->post, $sig);
-        AuditService::log($request, 'INSERT', 'consent_forms', (int) $id);
-
-        return Response::redirect('/visits/' . $id . '?consent_signed=1');
     }
 
     public function saveDischarge(Request $request, string $id): Response

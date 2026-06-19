@@ -3,7 +3,7 @@
  * visits/show_v2.php — Phase 2 single-screen visit layout.
  *
  * No tabs. The 4 fundamentals (Symptoms / Diagnosis / Prescription / Notes)
- * are always visible. Optional sections (Vitals, Labs, Photos, Diet, Consent,
+ * are always visible. Optional sections (Vitals, Labs, Photos, Diet,
  * Case form) render based on $visibleModules. Hidden sections live as
  * ghost-link chips at the bottom — tap to reveal for this visit only.
  *
@@ -26,7 +26,7 @@ $visibleCount = count($visibleModules);
 $canUnlock = !empty($canUnlock);
 
 // Ghost-link list: every optional section NOT in visible_modules.
-// 'labs', 'photos' and 'consent' are intentionally omitted — those sections are
+// 'labs' and 'photos' are intentionally omitted — those sections are
 // not currently in use, so they should not appear as re-addable ghost chips.
 $optionalModules = ['vitals', 'diet', 'case_specialty'];
 $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !in_array($m, $visibleModules, true)));
@@ -760,17 +760,6 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 </details>
             <?php endif; ?>
 
-            <?php /* Consent — hidden, not currently in use. Re-enable by changing `false` to `$has('consent') && !empty($hasConsent)`. */ ?>
-            <?php if (false): ?>
-                <details class="rounded-lg border border-slate-200 bg-slate-50/50"
-                         @toggle="recordSection('consent', $event.target.open)">
-                    <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Consent</summary>
-                    <div class="px-4 pb-4 pt-2">
-                        <?php require __DIR__ . '/partials/consent.php'; ?>
-                    </div>
-                </details>
-            <?php endif; ?>
-
             <?php /* Discharge summary — hidden, not currently in use. Re-enable by changing `false` to `!empty($hasDischargeSection)`. */ ?>
             <?php if (false): ?>
                 <details class="rounded-lg border border-slate-200 bg-slate-50/50">
@@ -791,7 +780,6 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                             'labs' => 'Labs',
                             'photos' => 'Photos',
                             'diet' => 'Diet plan',
-                            'consent' => 'Consent',
                             'case_specialty' => 'Case taking',
                             default => ucfirst($g),
                         };

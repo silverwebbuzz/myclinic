@@ -43,7 +43,7 @@ final class TenantScopeGuardTest extends TestCase
     private const TENANT_TABLES = [
         'patients', 'visits', 'prescriptions', 'invoices', 'invoice_items',
         'vitals', 'lab_orders', 'lab_results', 'appointments',
-        'discharge_summaries', 'diet_plans', 'patient_photos', 'consent_forms',
+        'discharge_summaries', 'diet_plans', 'patient_photos',
         'doctor_schedules', 'doctor_leaves', 'staff_attendance', 'staff_leaves',
         'pharmacy_inventory', 'pharmacy_sales', 'doctor_incentives',
         'waiting_list', 'notifications',

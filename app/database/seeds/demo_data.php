@@ -51,7 +51,7 @@ $CLINICS = [
         'sub_doctors' => [],
         'receptionists' => [['name' => 'Anjali Verma']],
         'patient_count' => 250, 'appts_per_doc_per_day' => [6, 14],
-        'modules' => ['patients', 'appointments_basic', 'invoicing_basic', 'vitals', 'prescription', 'emr', 'billing_pro', 'whatsapp', 'qr', 'consent', 'discharge', 'incentives'],
+        'modules' => ['patients', 'appointments_basic', 'invoicing_basic', 'vitals', 'prescription', 'emr', 'billing_pro', 'whatsapp', 'qr', 'discharge', 'incentives'],
         'uhid_prefix' => 'CP', 'invoice_prefix' => 'CP',
     ],
     [
@@ -68,7 +68,7 @@ $CLINICS = [
         ],
         'receptionists' => [['name' => 'Neha Kapoor']],
         'patient_count' => 600, 'appts_per_doc_per_day' => [5, 12],
-        'modules' => ['patients', 'appointments_basic', 'invoicing_basic', 'vitals', 'prescription', 'emr', 'billing_pro', 'whatsapp', 'qr', 'consent', 'discharge', 'incentives', 'advanced_scheduling', 'lab', 'pharmacy', 'analytics', 'staff', 'crm'],
+        'modules' => ['patients', 'appointments_basic', 'invoicing_basic', 'vitals', 'prescription', 'emr', 'billing_pro', 'whatsapp', 'qr', 'discharge', 'incentives', 'advanced_scheduling', 'lab', 'pharmacy', 'analytics', 'staff', 'crm'],
         'uhid_prefix' => 'WMS', 'invoice_prefix' => 'WMS',
     ],
     [
@@ -107,7 +107,7 @@ if ($WIPE) {
 
         $tables = [
             'doctor_incentives', 'expenses', 'crm_leads', 'staff_leaves', 'staff_attendance',
-            'diet_plans', 'patient_photos', 'discharge_summaries', 'consent_forms',
+            'diet_plans', 'patient_photos', 'discharge_summaries',
             'lab_orders', 'lab_tests_catalog', 'pharmacy_inventory',
             'payments', 'invoices', 'prescriptions', 'vitals', 'visits',
             'appointments', 'doctor_leaves', 'doctor_schedules', 'waiting_list',
@@ -340,7 +340,6 @@ foreach ($CLINICS as $C) {
     $hasCRM = in_array('crm', $modules, true);
     $hasStaff = in_array('staff', $modules, true);
     $hasIncentives = in_array('incentives', $modules, true);
-    $hasConsent = in_array('consent', $modules, true);
     $hasDischarge = in_array('discharge', $modules, true);
     $hasPortal = in_array('patient_portal', $modules, true);
     $hasPhotos = in_array('before_after', $modules, true);
@@ -633,21 +632,6 @@ foreach ($CLINICS as $C) {
         $expIns->execute([$clinicId, 'utilities', 'Electricity + Internet', randInRange(4000, 9000), $monthsCur->format('Y-m-05'), 'upi', $ownerId, $monthsCur->format('Y-m-05 10:00:00')]);
         $expIns->execute([$clinicId, 'consumables', 'Medical supplies', randInRange(8000, 22000), $monthsCur->format('Y-m-10'), 'bank', $ownerId, $monthsCur->format('Y-m-10 10:00:00')]);
         $monthsCur = $monthsCur->modify('+1 month');
-    }
-
-    if ($hasConsent && $visitCount > 0) {
-        $consIns = $pdo->prepare(
-            'INSERT INTO consent_forms (clinic_id, patient_id, visit_id, form_type, form_version, form_content, signed_by_name, relationship, content_hash, signed_at)
-             VALUES (?, ?, ?, ?, "v1", ?, ?, "self", ?, ?)'
-        );
-        $someVisits = $pdo->query("SELECT v.id, v.patient_id, p.name, v.visited_at FROM visits v JOIN patients p ON p.id=v.patient_id WHERE v.clinic_id={$clinicId} ORDER BY RAND() LIMIT 20")->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($someVisits as $v) {
-            $content = 'I consent to the procedure as explained.';
-            $consIns->execute([
-                $clinicId, $v['patient_id'], $v['id'], 'general', $content, $v['name'],
-                hash('sha256', $content), $v['visited_at'],
-            ]);
-        }
     }
 
     if ($hasDischarge) {

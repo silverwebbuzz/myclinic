@@ -10,9 +10,7 @@ use App\Http\Request;
 use App\Http\Response;
 use App\Services\AppointmentService;
 use App\Services\AuditService;
-use App\Gates\ModuleGate;
 use App\Services\ClinicSettingsService;
-use App\Services\ConsentTemplateService;
 use App\Services\LeaveService;
 use App\Services\OnboardingService;
 use App\Services\PlanService;
@@ -26,15 +24,12 @@ use App\Support\VisitView;
 
 final class ClinicSettingsController
 {
-    private const TABS = ['general', 'hours', 'specialty', 'leaves', 'notifications', 'subscription', 'team', 'branding', 'consent-forms'];
+    private const TABS = ['general', 'hours', 'specialty', 'leaves', 'notifications', 'subscription', 'team', 'branding'];
 
     public function index(Request $request): Response
     {
         $clinic = RequestContext::clinic() ?? [];
         $tabs = self::TABS;
-        if (!ModuleGate::check('consent')) {
-            $tabs = array_values(array_filter($tabs, static fn (string $t) => $t !== 'consent-forms'));
-        }
         if (!WhiteLabelService::isEnterprise($clinic)) {
             $tabs = array_values(array_filter($tabs, static fn (string $t) => $t !== 'branding'));
         }
@@ -101,7 +96,6 @@ final class ClinicSettingsController
             'staff' => StaffInvitationService::staffList($clinicId),
             'invitations' => StaffInvitationService::listForClinic($clinicId),
             'seatUsage' => SeatService::getSeatUsage($clinicId),
-            'consentTemplates' => ModuleGate::check('consent') ? ConsentTemplateService::list($clinicId) : [],
             'apiKeys' => ApiKeyService::listForClinic($clinicId),
             'apiScopes' => ApiKeyService::SCOPES,
             'newApiKey' => $request->query['new_key'] ?? null,
@@ -339,23 +333,6 @@ final class ClinicSettingsController
         $ok = WhiteLabelService::verifyDomain($clinicId);
 
         return Response::redirect('/settings?tab=branding&message=' . ($ok ? 'domain_verified' : 'domain_pending'));
-    }
-
-    public function saveConsentForm(Request $request): Response
-    {
-        $clinicId = RequestContext::clinicId();
-        if ($clinicId === null) {
-            return Response::redirect('/login');
-        }
-        if (!ModuleGate::check('consent')) {
-            return Response::redirect('/settings?tab=general&error=' . urlencode('Consent module not active'));
-        }
-
-        $templateId = !empty($request->post['template_id']) ? (int) $request->post['template_id'] : null;
-        ConsentTemplateService::save($clinicId, $templateId, $request->post);
-        AuditService::log($request, $templateId ? 'UPDATE' : 'INSERT', 'consent_templates', $templateId ?? 0);
-
-        return Response::redirect('/settings?tab=consent-forms&message=saved');
     }
 
     public function testWhatsApp(Request $request): Response

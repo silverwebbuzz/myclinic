@@ -16,7 +16,6 @@ declare(strict_types=1);
  *   labs
  *   photos
  *   diet
- *   consent
  *   case_specialty    (the per-specialty case form partial)
  *
  * symptoms, diagnosis, prescription, notes are ALWAYS visible regardless
@@ -48,17 +47,17 @@ return [
     'derma'             => ['photos', 'case_specialty'],
     'trichology'        => ['photos', 'case_specialty'],
 
-    // -- Procedure specialties (photos + consent) --
-    'cosmetology'       => ['photos', 'consent', 'case_specialty'],
-    'plastic_surgery'   => ['photos', 'consent', 'case_specialty'],
+    // -- Procedure specialties --
+    'cosmetology'       => ['photos', 'case_specialty'],
+    'plastic_surgery'   => ['photos', 'case_specialty'],
 
     // -- Dental family --
-    'dental'            => ['photos', 'consent', 'case_specialty'],
-    'orthodontist'      => ['photos', 'consent', 'case_specialty'],
-    'endodontist'       => ['photos', 'consent', 'case_specialty'],
-    'implantologist'    => ['photos', 'consent', 'case_specialty'],
-    'prosthodontist'    => ['photos', 'consent', 'case_specialty'],
-    'pediatric_dentist' => ['photos', 'consent', 'case_specialty'],
+    'dental'            => ['photos', 'case_specialty'],
+    'orthodontist'      => ['photos', 'case_specialty'],
+    'endodontist'       => ['photos', 'case_specialty'],
+    'implantologist'    => ['photos', 'case_specialty'],
+    'prosthodontist'    => ['photos', 'case_specialty'],
+    'pediatric_dentist' => ['photos', 'case_specialty'],
 
     // -- Vitals + labs heavy (cardio family) --
     'cardio'            => ['vitals', 'labs', 'case_specialty'],
@@ -72,16 +71,16 @@ return [
     // -- Diabetes — everything including diet --
     'diabetology'       => ['vitals', 'labs', 'diet', 'case_specialty'],
 
-    // -- Surgery family (vitals + consent) --
-    'general_surgery'   => ['vitals', 'consent', 'case_specialty'],
-    'neurosurgery'      => ['vitals', 'consent', 'case_specialty'],
-    'gi_surgery'        => ['vitals', 'consent', 'case_specialty'],
-    'bariatric'         => ['vitals', 'consent', 'case_specialty'],
-    'vascular'          => ['vitals', 'consent', 'case_specialty'],
-    'spine'             => ['vitals', 'consent', 'case_specialty'],
-    'urologist'         => ['vitals', 'consent', 'case_specialty'],
-    'fertility'         => ['vitals', 'consent', 'case_specialty'],
-    'andrology'         => ['vitals', 'consent', 'case_specialty'],
+    // -- Surgery family --
+    'general_surgery'   => ['vitals', 'case_specialty'],
+    'neurosurgery'      => ['vitals', 'case_specialty'],
+    'gi_surgery'        => ['vitals', 'case_specialty'],
+    'bariatric'         => ['vitals', 'case_specialty'],
+    'vascular'          => ['vitals', 'case_specialty'],
+    'spine'             => ['vitals', 'case_specialty'],
+    'urologist'         => ['vitals', 'case_specialty'],
+    'fertility'         => ['vitals', 'case_specialty'],
+    'andrology'         => ['vitals', 'case_specialty'],
 
     // -- Ortho / pain (photos + vitals) --
     'ortho'             => ['vitals', 'photos', 'case_specialty'],

@@ -83,16 +83,15 @@ php -S localhost:8080 -t public
 - `php workers/doctor_incentives.php` — monthly incentive run (1st of month)
 - Run migration `008_sprint9_ops.sql`
 
-## Lab, pharmacy, consent & discharge (Sprint 8)
+## Lab, pharmacy & discharge (Sprint 8)
 
 - `/lab/catalog`, `/lab/orders` — LIS workflow, barcodes, critical alerts, 24h report share
 - `/lab/report/{token}` — public patient report link (no login)
 - `/pharmacy/pos`, `/pharmacy/inventory`, `/pharmacy/narcotic` — FIFO POS, batches, H/H1 register
-- `/settings?tab=consent-forms` — consent templates with merge fields
-- Visit tabs: Lab orders, Consent (canvas + SHA-256 PDF), Discharge (draft → finalize)
+- Visit tabs: Lab orders, Discharge (draft → finalize)
 - `/portal/discharge/{token}` — patient portal stub
 - `php workers/pharmacy_alerts.php` — daily low-stock / expiry alerts (cron 8 AM)
-- Run migration `007_lab_pharmacy_consent.sql`
+- Run migration `007_lab_pharmacy_consent.sql` (pharmacy; consent removed in `033_drop_consent.sql`)
 
 ## Billing, notifications & team (Sprint 7)
 

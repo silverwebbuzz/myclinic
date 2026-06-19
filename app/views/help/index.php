@@ -97,7 +97,6 @@ $has = static fn (string $m) => in_array($m, $visibleModules ?? [], true);
                         if ($has('labs')) $opt[] = 'Labs';
                         if ($has('photos')) $opt[] = 'Photos';
                         if ($has('diet')) $opt[] = 'Diet';
-                        if ($has('consent')) $opt[] = 'Consent';
                         if ($has('case_specialty')) $opt[] = 'Case taking';
                         echo htmlspecialchars(implode(', ', $opt) ?: 'none for your specialty');
                     ?>) appear based on your specialty. The form <strong>auto-saves</strong> every

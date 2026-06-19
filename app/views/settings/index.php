@@ -23,16 +23,13 @@ $meta = [
     'subscription'  => ['Subscription & billing', 'Your plan, seats, and billing details.', 'M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
     'team'          => ['Team & seats', 'Invite staff and manage seat usage.', 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 00-3-3.87'],
     'branding'      => ['White-label branding', 'Custom domain, logo, and brand color (Enterprise).', 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h10a2 2 0 012 2v6M7 21h10a2 2 0 002-2v-5M7 21v-5a2 2 0 012-2h2'],
-    'consent-forms' => ['Consent form templates', 'Reusable consent templates with merge fields.', 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
 ];
 
 // 'general' opens by default; everything else starts collapsed.
 $openByDefault = 'general';
 
 // Render order — single column, general first.
-// 'notifications' and 'consent-forms' are intentionally omitted — those
-// sections are not currently needed, so they are hidden from Settings.
-// Re-add them to this array to bring them back.
+// 'notifications' is intentionally omitted — not currently needed in Settings.
 $order = ['general', 'hours', 'specialty', 'leaves', 'subscription', 'team', 'branding'];
 ?>
 <?php if (!empty($message)): ?>
