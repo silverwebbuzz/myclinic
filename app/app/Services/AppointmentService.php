@@ -567,7 +567,10 @@ final class AppointmentService
             $zone = new \DateTimeZone('Asia/Kolkata');
         }
 
-        $scheduled = \DateTime::createFromFormat('Y-m-d H:i:s', date('Y-m-d H:i:s', (int) strtotime($scheduledAt)), $zone);
+        $scheduled = \DateTime::createFromFormat('Y-m-d H:i:s', $scheduledAt, $zone);
+        if ($scheduled === false) {
+            $scheduled = \DateTime::createFromFormat('Y-m-d H:i', substr($scheduledAt, 0, 16), $zone);
+        }
         if ($scheduled === false) {
             throw new \RuntimeException('Invalid appointment date or time.');
         }

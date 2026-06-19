@@ -101,10 +101,17 @@ final class AppointmentController
         }
 
         $clinicId = (int) RequestContext::clinicId();
+        $tz = SlotService::clinicTimezone($clinicId);
+        try {
+            $todayLocal = (new \DateTime('now', new \DateTimeZone($tz)))->format('Y-m-d');
+        } catch (\Throwable) {
+            $todayLocal = date('Y-m-d');
+        }
+
         $prefill = [
             'patient_id' => $request->query['patient_id'] ?? '',
             'doctor_id' => $request->query['doctor_id'] ?? '',
-            'date' => $request->query['date'] ?? date('Y-m-d'),
+            'date' => $request->query['date'] ?? $todayLocal,
             'time' => $request->query['time'] ?? '',
             'type' => $request->query['type'] ?? 'prebooked',
             'is_followup' => !empty($request->query['followup']),
@@ -122,6 +129,8 @@ final class AppointmentController
             'patientHint' => $patientHint,
             'error' => null,
             'hasTelemedicine' => ModuleGate::check('telemedicine'),
+            'clinicTimezone' => $tz,
+            'todayLocal' => $todayLocal,
         ], 'Book appointment'));
     }
 
@@ -310,13 +319,19 @@ final class AppointmentController
 
         $clinicId = (int) RequestContext::clinicId();
         $doctorId = (int) ($request->query['doctor_id'] ?? 0);
-        $date = self::normalizeDate((string) ($request->query['date'] ?? ''));
+        $tz = SlotService::clinicTimezone($clinicId);
+        $date = self::normalizeDate((string) ($request->query['date'] ?? ''), $tz);
 
         if ($doctorId < 1) {
             return Response::json(['slots' => []]);
         }
 
         $slots = SlotService::available($clinicId, $doctorId, $date, true);
+        try {
+            $todayLocal = (new \DateTime('now', new \DateTimeZone($tz)))->format('Y-m-d');
+        } catch (\Throwable) {
+            $todayLocal = date('Y-m-d');
+        }
 
         return Response::json([
             'slots' => $slots,
@@ -326,11 +341,13 @@ final class AppointmentController
                 'doctor_id' => $doctorId,
                 'date' => $date,
                 'count' => count($slots),
+                'timezone' => $tz,
+                'today' => $todayLocal,
             ],
         ]);
     }
 
-    private static function normalizeDate(string $date): string
+    private static function normalizeDate(string $date, ?string $tz = null): string
     {
         $date = trim($date);
         if ($date !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1) {
@@ -341,6 +358,13 @@ final class AppointmentController
             $ts = strtotime($date);
             if ($ts !== false) {
                 return date('Y-m-d', $ts);
+            }
+        }
+
+        if ($tz !== null && $tz !== '') {
+            try {
+                return (new \DateTime('now', new \DateTimeZone($tz)))->format('Y-m-d');
+            } catch (\Throwable) {
             }
         }
 

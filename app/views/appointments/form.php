@@ -1,9 +1,15 @@
 <?php
 $isEdit = $appointment !== null;
 $action = $isEdit ? '/appointments/' . (int) $appointment['id'] : '/appointments/new';
+$clinicTz = $clinicTimezone ?? 'Asia/Kolkata';
+try {
+    $todayLocal = $todayLocal ?? (new \DateTime('now', new \DateTimeZone($clinicTz)))->format('Y-m-d');
+} catch (\Throwable) {
+    $todayLocal = date('Y-m-d');
+}
 $scheduledAt = $isEdit ? ($appointment['scheduled_at'] ?? '') : '';
 $scheduledTs = $scheduledAt !== '' ? strtotime($scheduledAt) : false;
-$dateVal = ($isEdit && $scheduledTs) ? date('Y-m-d', $scheduledTs) : ($prefill['date'] ?? date('Y-m-d'));
+$dateVal = ($isEdit && $scheduledTs) ? date('Y-m-d', $scheduledTs) : ($prefill['date'] ?? $todayLocal);
 $timeVal = ($isEdit && $scheduledTs) ? date('H:i', $scheduledTs) : (string) ($prefill['time'] ?? '');
 
 $patientId = 0;
@@ -129,7 +135,7 @@ if (!$isEdit && $doctorId === 0 && count($doctors) === 1) {
             <label class="block text-sm">
                 <span class="text-slate-600">Date</span>
                 <input type="date" name="scheduled_date" x-model="date" @change="loadSlots()" required
-                       min="<?= htmlspecialchars((new \DateTime('now', new \DateTimeZone('Asia/Kolkata')))->format('Y-m-d')) ?>"
+                       min="<?= htmlspecialchars($todayLocal) ?>"
                        class="ui-input">
             </label>
         </div>
@@ -197,14 +203,15 @@ if (!$isEdit && $doctorId === 0 && count($doctors) === 1) {
                         <button type="button"
                                 :disabled="!slot.available"
                                 @click="selectedTime = slot.time"
-                                :title="slot.blocked ? 'Doctor on leave' : (slot.extended ? 'Extended hours (staff booking)' : '')"
+                                :title="slot.past ? 'This time has passed' : (slot.blocked ? 'Doctor on leave' : (slot.extended ? 'Extended hours (staff booking)' : ''))"
                                 :class="selectedTime === slot.time
                                     ? 'bg-emerald-600 text-white shadow'
+                                    : (slot.past ? 'border bg-slate-100 text-slate-400 cursor-not-allowed line-through'
                                     : (slot.blocked ? 'border bg-amber-100 text-amber-800 cursor-not-allowed'
                                         : (!slot.available ? 'border bg-slate-100 text-slate-400 cursor-not-allowed line-through'
-                                            : (slot.extended ? 'border-2 border-red-300 bg-red-50 text-red-700 hover:bg-red-100' : 'border bg-white hover:bg-emerald-50')))"
+                                            : (slot.extended ? 'border-2 border-red-300 bg-red-50 text-red-700 hover:bg-red-100' : 'border bg-white hover:bg-emerald-50'))))"
                                 class="rounded-lg px-2 py-2 text-xs font-medium"
-                                x-text="slot.blocked ? slot.label + ' · leave' : (slot.extended ? '🚨 ' + slot.label : slot.label)"></button>
+                                x-text="slot.past ? slot.label + ' · past' : (slot.blocked ? slot.label + ' · leave' : (slot.extended ? '🚨 ' + slot.label : slot.label))"></button>
                     </template>
                 </div>
             </div>
@@ -216,14 +223,15 @@ if (!$isEdit && $doctorId === 0 && count($doctors) === 1) {
                         <button type="button"
                                 :disabled="!slot.available"
                                 @click="selectedTime = slot.time"
-                                :title="slot.blocked ? 'Doctor on leave' : (slot.extended ? 'Extended hours (staff booking)' : '')"
+                                :title="slot.past ? 'This time has passed' : (slot.blocked ? 'Doctor on leave' : (slot.extended ? 'Extended hours (staff booking)' : ''))"
                                 :class="selectedTime === slot.time
                                     ? 'bg-emerald-600 text-white shadow'
+                                    : (slot.past ? 'border bg-slate-100 text-slate-400 cursor-not-allowed line-through'
                                     : (slot.blocked ? 'border bg-amber-100 text-amber-800 cursor-not-allowed'
                                         : (!slot.available ? 'border bg-slate-100 text-slate-400 cursor-not-allowed line-through'
-                                            : (slot.extended ? 'border-2 border-red-300 bg-red-50 text-red-700 hover:bg-red-100' : 'border bg-white hover:bg-emerald-50')))"
+                                            : (slot.extended ? 'border-2 border-red-300 bg-red-50 text-red-700 hover:bg-red-100' : 'border bg-white hover:bg-emerald-50'))))"
                                 class="rounded-lg px-2 py-2 text-xs font-medium"
-                                x-text="slot.blocked ? slot.label + ' · leave' : (slot.extended ? '🚨 ' + slot.label : slot.label)"></button>
+                                x-text="slot.past ? slot.label + ' · past' : (slot.blocked ? slot.label + ' · leave' : (slot.extended ? '🚨 ' + slot.label : slot.label))"></button>
                     </template>
                 </div>
             </div>
@@ -348,6 +356,10 @@ function bookAppointment(cfg) {
                 this.allSlots = all;
                 this.morningSlots = all.filter(s => s.hour < 13);
                 this.eveningSlots = all.filter(s => s.hour >= 13);
+                if (this.selectedTime) {
+                    const picked = all.find(s => s.time === this.selectedTime);
+                    if (!picked || !picked.available) this.selectedTime = '';
+                }
                 if (data.meta) {
                     console.debug('[slots]', data.meta, 'first=', all[0]?.time, 'last=', all[all.length - 1]?.time);
                 }

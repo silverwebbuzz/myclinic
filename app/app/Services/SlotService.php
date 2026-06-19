@@ -17,10 +17,10 @@ final class SlotService
      */
     public static function available(int $clinicId, int $doctorId, string $date, bool $includeExtended = false): array
     {
-        $date = self::normalizeDate($date);
+        $tz = self::clinicTimezone($clinicId);
+        $date = self::normalizeDate($date, $tz);
 
         // Today's slot list changes minute-by-minute (past slots drop off), so skip Redis cache for today.
-        $tz = self::clinicTimezone($clinicId);
         try {
             $todayLocal = (new \DateTime('now', new \DateTimeZone($tz)))->format('Y-m-d');
         } catch (\Throwable $e) {
@@ -87,7 +87,8 @@ final class SlotService
             return [];
         }
 
-        $dayOfWeek = (int) date('w', strtotime($date));
+        $tz = self::clinicTimezone($clinicId);
+        $dayOfWeek = self::dayOfWeekForDate($date, $tz);
         $schedules = QueryBuilder::table('doctor_schedules')
             ->forClinic($clinicId)
             ->where('doctor_id', '=', $doctorId)
@@ -109,17 +110,22 @@ final class SlotService
 
         $booked = self::bookedTimes($clinicId, $doctorId, $date);
 
-        // Clinic-local "now" for hiding past slots on today.
-        $tz = self::clinicTimezone($clinicId);
+        // Clinic-local "now" for disabling past slots on today.
         try {
             $nowLocal = new \DateTime('now', new \DateTimeZone($tz));
             $todayLocal = $nowLocal->format('Y-m-d');
-            $nowTs = $nowLocal->getTimestamp();
         } catch (\Throwable $e) {
-            $nowTs = time();
-            $todayLocal = date('Y-m-d');
+            $nowLocal = new \DateTime('now', new \DateTimeZone('Asia/Kolkata'));
+            $todayLocal = $nowLocal->format('Y-m-d');
         }
         $isToday = $date === $todayLocal;
+
+        // No bookings on past calendar days (clinic-local).
+        if ($date < $todayLocal) {
+            return [];
+        }
+
+        $nowMinuteTs = $nowLocal->getTimestamp() - (int) $nowLocal->format('s');
 
         $slots = [];
         foreach ($schedules as $sched) {
@@ -128,28 +134,24 @@ final class SlotService
                 $duration = 15;
             }
 
-            $start = self::timeOnDate($date, (string) ($sched['start_time'] ?? ''));
-            $normalEnd = self::timeOnDate($date, (string) ($sched['end_time'] ?? ''));
+            $start = self::timeOnDate($date, (string) ($sched['start_time'] ?? ''), $tz);
+            $normalEnd = self::timeOnDate($date, (string) ($sched['end_time'] ?? ''), $tz);
             if ($start === null || $normalEnd === null || $normalEnd <= $start) {
                 continue;
             }
 
             $hardEnd = $normalEnd;
             if ($includeExtended && !empty($sched['extended_end_time'])) {
-                $extTs = self::timeOnDate($date, (string) $sched['extended_end_time']);
+                $extTs = self::timeOnDate($date, (string) $sched['extended_end_time'], $tz);
                 if ($extTs !== null && $extTs > $normalEnd) {
                     $hardEnd = $extTs;
                 }
             }
 
             for ($t = $start; $t + ($duration * 60) <= $hardEnd; $t += $duration * 60) {
-                $time = date('H:i', $t);
-                $datetime = date('Y-m-d H:i:s', $t);
-
-                // Skip slots that have already started on today.
-                if ($isToday && $t <= $nowTs) {
-                    continue;
-                }
+                $time = self::formatTime($t, $tz);
+                $datetime = self::formatDatetime($t, $tz);
+                $isPast = $isToday && $t < $nowMinuteTs;
 
                 // Leave-blocked slots used to be silently dropped, which made
                 // "doctor on leave" look identical to "no schedule". Keep them
@@ -159,8 +161,9 @@ final class SlotService
                 $slots[] = [
                     'time' => $time,
                     'datetime' => $datetime,
-                    'available' => !$blocked && !isset($booked[$datetime]),
+                    'available' => !$blocked && !isset($booked[$datetime]) && !$isPast,
                     'blocked' => $blocked,
+                    'past' => $isPast,
                     'extended' => $t >= $normalEnd,
                 ];
             }
@@ -173,7 +176,7 @@ final class SlotService
         return $slots;
     }
 
-    private static function timeOnDate(string $date, string $time): ?int
+    private static function timeOnDate(string $date, string $time, string $tz): ?int
     {
         $normalized = DoctorScheduleService::normalizeTime($time);
         if ($normalized === null) {
@@ -183,9 +186,37 @@ final class SlotService
             return null;
         }
 
-        $ts = strtotime($date . ' ' . substr($normalized, 0, 5));
+        try {
+            $zone = new \DateTimeZone($tz);
+            $dt = \DateTime::createFromFormat('Y-m-d H:i', $date . ' ' . substr($normalized, 0, 5), $zone);
+            return $dt !== false ? $dt->getTimestamp() : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
 
-        return $ts !== false ? $ts : null;
+    private static function formatTime(int $timestamp, string $tz): string
+    {
+        return (new \DateTime('@' . $timestamp))
+            ->setTimezone(new \DateTimeZone($tz))
+            ->format('H:i');
+    }
+
+    private static function formatDatetime(int $timestamp, string $tz): string
+    {
+        return (new \DateTime('@' . $timestamp))
+            ->setTimezone(new \DateTimeZone($tz))
+            ->format('Y-m-d H:i:s');
+    }
+
+    private static function dayOfWeekForDate(string $date, string $tz): int
+    {
+        try {
+            $dt = new \DateTime($date . ' 12:00:00', new \DateTimeZone($tz));
+            return (int) $dt->format('w');
+        } catch (\Throwable) {
+            return (int) date('w', strtotime($date));
+        }
     }
 
     /**
@@ -247,7 +278,7 @@ final class SlotService
         return is_string($tz) && $tz !== '' ? $tz : 'Asia/Kolkata';
     }
 
-    private static function normalizeDate(string $date): string
+    private static function normalizeDate(string $date, ?string $tz = null): string
     {
         $date = trim($date);
         if ($date !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1) {
@@ -258,6 +289,13 @@ final class SlotService
             $ts = strtotime($date);
             if ($ts !== false) {
                 return date('Y-m-d', $ts);
+            }
+        }
+
+        if ($tz !== null && $tz !== '') {
+            try {
+                return (new \DateTime('now', new \DateTimeZone($tz)))->format('Y-m-d');
+            } catch (\Throwable) {
             }
         }
 
