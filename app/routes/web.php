@@ -387,6 +387,7 @@ return static function (RouteRegistrar $router): void {
         // Phase 1: tenant detail page + trial / addon controls
         $admin->get('/clinics/{id}', [SuperAdminController::class, 'clinicDetail']);
         $admin->post('/clinics/{id}/extend-trial', [SuperAdminController::class, 'extendTrial']);
+        $admin->post('/clinics/{id}/plan', [SuperAdminController::class, 'setPlan']);
         $admin->post('/clinics/{id}/addon', [SuperAdminController::class, 'toggleAddon']);
 
         // Phase 1: feature flag management

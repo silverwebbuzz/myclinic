@@ -36,31 +36,13 @@ final class OnboardingController
             return Response::redirect('/dashboard');
         }
 
-        // Show the plan screen: subscribe now (Cashfree) or start the free
-        // 30-day trial. The standard plan + trial is applied so the clinic has
-        // full access during onboarding; paying converts it from the Settings/
-        // checkout flow. applyPlanToTenant only SETS a trial when none exists,
-        // so the registration clock is preserved.
-        if ($step <= 1) {
-            PlanService::applyPlanToTenant($clinicId, 'standard', true);
-            OnboardingService::advanceTo($clinicId, 2);
-        }
+        OnboardingService::ensureStandardTrialStarted($clinicId);
 
-        $cycle = ($request->query['cycle'] ?? 'yearly') === 'monthly' ? 'monthly' : 'yearly';
-
-        return $this->page('onboarding/plan-selection', [
-            'csrf' => CsrfService::token(),
-            'plans' => PlanService::all(),
-            'yearly' => $cycle === 'yearly',
-            'simulated' => $request->query['simulated'] ?? null,
-            'cancelled' => $request->query['cancelled'] ?? null,
-            'error' => $request->query['error'] ?? null,
-        ]);
+        return Response::redirect('/onboarding/clinic-setup');
     }
 
     /**
-     * POST without going through the gateway = "continue with trial" / free.
-     * Paid plans post to /subscription/checkout instead.
+     * Legacy POST from the old plan picker — always continues with Standard trial.
      */
     public function selectPlan(Request $request): Response
     {
@@ -69,10 +51,7 @@ final class OnboardingController
             return Response::redirect('/login');
         }
 
-        $plan = (string) ($request->post['plan'] ?? 'free');
-        if ($plan === 'free') {
-            PlanService::applyPlanToTenant($clinicId, 'free', false);
-        }
+        OnboardingService::ensureStandardTrialStarted($clinicId);
 
         return Response::redirect('/onboarding/clinic-setup');
     }
@@ -382,6 +361,11 @@ final class OnboardingController
             return Response::redirect('/login');
         }
 
+        $clinicId = RequestContext::clinicId();
+        if ($clinicId !== null && $expectedStep === 2) {
+            OnboardingService::ensureStandardTrialStarted($clinicId);
+        }
+
         $step = OnboardingService::currentStep();
         if ($step >= 5) {
             return Response::redirect('/dashboard');
@@ -396,10 +380,7 @@ final class OnboardingController
     private function routeForStep(int $step): string
     {
         return match ($step) {
-            // Step 1 (plan selection) is auto-handled in planSelection() —
-            // it always advances to step 2 (clinic-setup). Kept in the map
-            // for any tenant still stuck on step 1 from before Phase 1.
-            1 => '/onboarding/plan-selection',
+            1 => '/onboarding/clinic-setup',
             2 => '/onboarding/clinic-setup',
             3 => '/onboarding/specialty-config',
             4 => '/onboarding/notifications',

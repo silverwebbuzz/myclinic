@@ -231,7 +231,7 @@ final class DoctorClaimService
 
     /**
      * Ready an approved doctor's clinic for day-one use. Without this, the
-     * tenant stays at onboarding_step=1 and every login lands on plan-selection.
+     * tenant stays at onboarding_step=1 and every login lands on clinic setup.
      *
      * @param array<string, mixed> $req
      */

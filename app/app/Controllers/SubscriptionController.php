@@ -33,11 +33,9 @@ final class SubscriptionController
         $planId = (string) ($request->post['plan'] ?? 'standard');
         $cycle = ($request->post['billing_cycle'] ?? 'yearly') === 'monthly' ? 'monthly' : 'yearly';
 
-        // 'free' = no payment; just continue (used by the onboarding screen).
+        // Free plan is admin-assigned only — not self-serve.
         if ($planId === 'free') {
-            PlanService::applyPlanToTenant($clinicId, 'free', false);
-
-            return Response::redirect('/onboarding/clinic-setup');
+            return Response::redirect('/settings?tab=subscription&error=' . urlencode('Free plan is assigned by support only. Please contact us if you need it.'));
         }
 
         if (PlanService::get($planId) === null) {

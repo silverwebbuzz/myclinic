@@ -207,7 +207,7 @@ final class PlanService
                 ->where('id', '=', $clinicId)
                 ->first();
             if (empty($existing['trial_ends_at'])) {
-                $data['trial_ends_at'] = date('Y-m-d', strtotime('+30 days'));
+                $data['trial_ends_at'] = date('Y-m-d', strtotime('+1 month'));
             }
         }
 

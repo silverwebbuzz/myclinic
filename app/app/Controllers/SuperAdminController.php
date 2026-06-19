@@ -10,11 +10,12 @@ use App\Core\RequestContext;
 use App\Http\Request;
 use App\Http\Response;
 use App\Services\ChurnOutreachService;
+use App\Services\CsrfService;
 use App\Services\ImpersonationService;
+use App\Services\PlanService;
 use App\Services\SuperAdminAuthService;
 use App\Services\SuperAdminJwtService;
 use App\Services\SuperAdminMetricsService;
-use App\Services\CsrfService;
 use App\Support\View;
 use PDO;
 
@@ -245,6 +246,29 @@ final class SuperAdminController
         ]);
 
         return Response::redirect('/admin/clinics/' . $clinicId . '?message=trial_extended');
+    }
+
+    /** POST /admin/clinics/{id}/plan — assign free or standard (admin only). */
+    public function setPlan(Request $request, string $id): Response
+    {
+        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
+            return Response::redirect('/admin/clinics/' . (int) $id);
+        }
+
+        $clinicId = (int) $id;
+        $planId = (string) ($request->post['plan'] ?? 'standard');
+        if (!in_array($planId, ['free', 'standard'], true)) {
+            return Response::redirect('/admin/clinics/' . $clinicId . '?message=invalid_plan');
+        }
+
+        $exists = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->count() > 0;
+        if (!$exists) {
+            return Response::redirect('/admin/clinics?error=not_found');
+        }
+
+        PlanService::applyPlanToTenant($clinicId, $planId, false);
+
+        return Response::redirect('/admin/clinics/' . $clinicId . '?message=plan_updated');
     }
 
     /** POST /admin/clinics/{id}/addon — manually activate or deactivate an addon */

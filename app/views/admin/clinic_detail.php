@@ -54,6 +54,20 @@
                 </button>
             </form>
             <?php endif; ?>
+
+            <form method="post" action="/admin/clinics/<?= (int) $tenant['id'] ?>/plan" class="mt-4 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4">
+                <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+                <div>
+                    <label class="block text-xs text-slate-500 mb-1">Assign plan</label>
+                    <select name="plan" class="rounded border border-slate-300 px-2 py-1.5 text-sm">
+                        <option value="standard" <?= ($tenant['plan'] ?? '') === 'standard' ? 'selected' : '' ?>>Standard (full trial / paid)</option>
+                        <option value="free" <?= ($tenant['plan'] ?? '') === 'free' ? 'selected' : '' ?>>Free (limited — admin only)</option>
+                    </select>
+                </div>
+                <button type="submit" class="rounded bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-900">
+                    Update plan
+                </button>
+            </form>
         </section>
 
         <!-- ====== Add-ons ====== -->

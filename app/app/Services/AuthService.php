@@ -30,36 +30,19 @@ final class AuthService
         $pdo = Database::connection();
         $pdo->beginTransaction();
         try {
-            // New clinics start a 30-day trial of the full Standard plan
-            // (matches the "30-day free trial — full product" marketing).
-            // The trial clock starts here at registration and is NOT reset
-            // later during onboarding. See PlanService::applyPlanToTenant().
-            // seat_limit is TINYINT UNSIGNED (max 255) — 255 = "unlimited in
-            // practice". Do NOT use 999 here: it overflows the column and, under
-            // MySQL strict mode (cPanel default), aborts the whole registration.
+            // Trial clock starts at registration; PlanService::applyPlanToTenant()
+            // only sets trial_ends_at when empty (never extends mid-onboarding).
             $tenantId = QueryBuilder::table('tenants')->insert([
                 'name' => $clinicName,
                 'slug' => $slug,
                 'email' => $email,
-                'plan' => 'standard',
-                'seat_limit' => 255,
-                'trial_ends_at' => date('Y-m-d', strtotime('+30 days')),
-                'onboarding_step' => 1,
+                'trial_ends_at' => date('Y-m-d', strtotime('+1 month')),
             ]);
 
             QueryBuilder::table('specialty_configs')->insert([
                 'clinic_id' => $tenantId,
                 'uhid_prefix' => strtoupper(substr(preg_replace('/[^a-z]/', '', strtolower($slug)), 0, 6) ?: 'MC'),
             ]);
-
-            foreach (['patients', 'appointments_basic', 'invoicing_basic'] as $mod) {
-                QueryBuilder::table('clinic_modules')->insert([
-                    'clinic_id' => $tenantId,
-                    'module_id' => $mod,
-                    'billing_cycle' => 'free',
-                    'is_active' => 1,
-                ]);
-            }
 
             $userData = [
                 'clinic_id' => $tenantId,
@@ -85,6 +68,8 @@ final class AuthService
         // Outside the transaction try/catch: the clinic + user are committed.
         // A broken SMTP/Mailgun config must not 500 the registration (and the
         // old rollBack() after commit threw its own exception on top).
+        PlanService::applyPlanToTenant($tenantId, 'standard', true);
+
         try {
             MailService::send($email, 'welcome', ['clinic_name' => $clinicName], $tenantId);
         } catch (\Throwable $e) {

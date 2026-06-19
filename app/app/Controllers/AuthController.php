@@ -13,6 +13,7 @@ use App\Services\AuthService;
 use App\Services\CsrfService;
 use App\Services\GoogleOAuthService;
 use App\Services\JwtService;
+use App\Services\OnboardingService;
 use App\Services\PartnerReferralService;
 use App\Services\PasswordResetService;
 use App\Services\SessionService;
@@ -107,7 +108,7 @@ final class AuthController
 
         AuditService::log($request, 'INSERT', 'users', $result['user_id']);
 
-        return Response::redirect('/onboarding/plan-selection');
+        return Response::redirect('/onboarding/clinic-setup');
     }
 
     public function showLogin(Request $request): Response
@@ -418,14 +419,7 @@ final class AuthController
         if ($tenant === null) {
             return '/dashboard';
         }
-        $step = (int) ($tenant['onboarding_step'] ?? 5);
-        if ($step < 2) {
-            return '/onboarding/plan-selection';
-        }
-        if ($step < 5) {
-            return '/onboarding/clinic-setup';
-        }
 
-        return '/dashboard';
+        return OnboardingService::resumeUrl((int) $tenant['id']);
     }
 }

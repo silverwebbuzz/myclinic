@@ -33,6 +33,42 @@ final class OnboardingService
         self::refreshClinicContext($clinicId);
     }
 
+    /**
+     * New signups skip plan selection: assign Standard + trial and advance
+     * to clinic setup. Safe to call repeatedly (no-op once step > 1).
+     */
+    public static function ensureStandardTrialStarted(int $clinicId): void
+    {
+        $tenant = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first();
+        if ($tenant === null) {
+            return;
+        }
+
+        $step = (int) ($tenant['onboarding_step'] ?? 1);
+        if ($step > 1) {
+            return;
+        }
+
+        PlanService::applyPlanToTenant($clinicId, 'standard', true);
+        self::refreshClinicContext($clinicId);
+    }
+
+    /** URL for the next onboarding screen (bootstraps Standard trial if needed). */
+    public static function resumeUrl(int $clinicId): string
+    {
+        self::ensureStandardTrialStarted($clinicId);
+
+        $tenant = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first();
+        $step = (int) ($tenant['onboarding_step'] ?? 2);
+
+        return match (true) {
+            $step >= 5 => '/dashboard',
+            $step === 4 => '/onboarding/notifications',
+            $step === 3 => '/onboarding/specialty-config',
+            default => '/onboarding/clinic-setup',
+        };
+    }
+
     public static function refreshClinicContext(int $clinicId): void
     {
         $clinic = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first();

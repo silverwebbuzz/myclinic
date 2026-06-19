@@ -20,9 +20,8 @@ final class DashboardController
     {
         $clinic = RequestContext::clinic();
         $clinicId = (int) $clinic['id'];
-        $step = (int) ($clinic['onboarding_step'] ?? 1);
-        if ($step < 5) {
-            return Response::redirect('/onboarding/plan-selection');
+        if ((int) ($clinic['onboarding_step'] ?? 1) < 5) {
+            return Response::redirect(OnboardingService::resumeUrl($clinicId));
         }
 
         $config = OnboardingService::specialtyConfig($clinicId) ?? [];
