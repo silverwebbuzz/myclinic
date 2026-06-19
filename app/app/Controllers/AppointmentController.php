@@ -105,6 +105,7 @@ final class AppointmentController
             'patient_id' => $request->query['patient_id'] ?? '',
             'doctor_id' => $request->query['doctor_id'] ?? '',
             'date' => $request->query['date'] ?? date('Y-m-d'),
+            'time' => $request->query['time'] ?? '',
             'type' => $request->query['type'] ?? 'prebooked',
             'is_followup' => !empty($request->query['followup']),
         ];

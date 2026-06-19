@@ -35,19 +35,6 @@ final class DashboardService
     }
 
     /** @return list<array<string, mixed>> */
-    public static function todayQueue(int $clinicId): array
-    {
-        // Single source of truth for queue contents/ordering (tokens first,
-        // then slot time) — the dashboard widget just hides no-shows.
-        $queue = array_values(array_filter(
-            AppointmentService::todayQueue($clinicId),
-            static fn (array $row): bool => ($row['status'] ?? '') !== 'no_show',
-        ));
-
-        return array_slice($queue, 0, 50);
-    }
-
-    /** @return list<array<string, mixed>> */
     public static function lowStockItems(int $clinicId, int $limit = 8): array
     {
         if (!ModuleGate::check('pharmacy') || !Database::ping()) {

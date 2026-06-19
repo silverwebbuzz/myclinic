@@ -4,7 +4,7 @@ $action = $isEdit ? '/appointments/' . (int) $appointment['id'] : '/appointments
 $scheduledAt = $isEdit ? ($appointment['scheduled_at'] ?? '') : '';
 $scheduledTs = $scheduledAt !== '' ? strtotime($scheduledAt) : false;
 $dateVal = ($isEdit && $scheduledTs) ? date('Y-m-d', $scheduledTs) : ($prefill['date'] ?? date('Y-m-d'));
-$timeVal = ($isEdit && $scheduledTs) ? date('H:i', $scheduledTs) : '';
+$timeVal = ($isEdit && $scheduledTs) ? date('H:i', $scheduledTs) : (string) ($prefill['time'] ?? '');
 
 $patientId = 0;
 $patientLabel = '';
@@ -25,6 +25,12 @@ $doctorId = $isEdit ? (int) $appointment['doctor_id'] : (int) ($prefill['doctor_
 $type = $isEdit ? ($appointment['type'] ?? 'prebooked') : ($prefill['type'] ?? 'prebooked');
 $complaint = $isEdit ? ($appointment['chief_complaint'] ?? '') : ($prefill['chief_complaint'] ?? '');
 $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followup']);
+
+// When the clinic has exactly one doctor, preselect it so slots load
+// immediately (the single-doctor simplicity of the reference app).
+if (!$isEdit && $doctorId === 0 && count($doctors) === 1) {
+    $doctorId = (int) ($doctors[0]['id'] ?? 0);
+}
 ?>
 <div class="mx-auto max-w-3xl space-y-4" x-data="bookAppointment(<?= htmlspecialchars(json_encode([
     'patientId' => $patientId,
@@ -33,7 +39,8 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
     'doctorId' => $doctorId,
     'date' => $dateVal,
     'selectedTime' => $timeVal,
-    'apptType' => $type,
+    'visitType' => $isFollowup ? 'followup' : 'new',
+    'isOnline' => $type === 'online',
     'isEdit' => $isEdit,
 ]), ENT_QUOTES) ?>)">
     <div class="flex flex-wrap items-center justify-between gap-2">
@@ -127,27 +134,41 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
             </label>
         </div>
 
-        <!-- Type -->
-        <label class="block text-sm">
-            <span class="text-slate-600">Type</span>
-            <select name="type" x-model="apptType" class="ui-input">
-                <?php foreach (['prebooked' => 'Pre-booked', 'walkin' => 'Walk-in', 'online' => 'Online (telemedicine)', 'followup' => 'Follow-up'] as $v => $l): ?>
-                <option value="<?= $v ?>" <?= $type === $v ? 'selected' : '' ?>><?= $l ?></option>
-                <?php endforeach; ?>
-            </select>
+        <!-- Visit type + Online toggle. The stored appointment "type"
+             (walkin / prebooked / online) is DERIVED, not chosen directly:
+               · Online toggle on  → online
+               · a slot is picked  → prebooked
+               · no slot picked    → walkin (joins the queue)
+             so staff just pick a slot (or not) without juggling a type field. -->
+        <input type="hidden" name="type" :value="computedType">
+
+        <div class="grid gap-3 sm:grid-cols-2">
+            <label class="block text-sm">
+                <span class="text-slate-600">Visit type</span>
+                <select x-model="visitType" class="ui-input">
+                    <option value="new">New patient / New case</option>
+                    <option value="followup">Follow-up</option>
+                </select>
+            </label>
             <?php if (!empty($hasTelemedicine)): ?>
-            <p class="mt-1 text-xs text-slate-500">Online appointments receive a Google Meet link (stub) via WhatsApp and email when booked or confirmed.</p>
+            <label class="flex items-end gap-2 text-sm">
+                <span class="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 w-full">
+                    <input type="checkbox" class="ui-checkbox" x-model="isOnline">
+                    <span class="text-slate-700">Online (telemedicine)</span>
+                </span>
+            </label>
             <?php endif; ?>
-        </label>
+        </div>
+        <?php if (!empty($hasTelemedicine)): ?>
+        <p x-show="isOnline" x-cloak class="text-xs text-slate-500">Online appointments receive a Google Meet link (stub) via WhatsApp and email when booked or confirmed.</p>
+        <?php endif; ?>
 
         <!-- Time slot grid -->
         <div>
             <div class="flex items-center justify-between">
                 <span class="text-sm font-medium text-slate-700">
                     Time slot
-                    <span class="ml-1 text-xs font-normal text-slate-500">
-                        (<span x-show="apptType === 'walkin'">optional — assign to avoid overlap</span><span x-show="apptType !== 'walkin'">required</span>)
-                    </span>
+                    <span class="ml-1 text-xs font-normal text-slate-500">(optional — leave empty for a walk-in token)</span>
                 </span>
                 <span x-show="slotsLoading" class="text-xs text-slate-500">Loading…</span>
             </div>
@@ -207,27 +228,23 @@ $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followu
                 </div>
             </div>
 
-            <p x-show="apptType === 'walkin' && (morningSlots.length || eveningSlots.length)" class="mt-3 text-xs text-slate-500">
-                Walk-ins without a slot join the queue after pre-booked patients for that time.
+            <p x-show="!selectedTime && (morningSlots.length || eveningSlots.length)" class="mt-3 text-xs text-slate-500">
+                No slot selected — this becomes a walk-in and joins the queue after pre-booked patients.
             </p>
         </div>
 
-        <!-- Complaint + follow-up -->
+        <!-- Chief complaint. Follow-up is driven by the Visit type dropdown above. -->
+        <input type="hidden" name="is_followup" :value="visitType === 'followup' ? '1' : ''">
         <label class="block text-sm">
             <span class="text-slate-600">Chief complaint</span>
             <textarea name="chief_complaint" rows="2" placeholder="Reason for visit"
                       class="ui-input"><?= htmlspecialchars($complaint) ?></textarea>
         </label>
 
-        <label class="flex items-center gap-2 text-sm">
-            <input class="ui-checkbox" type="checkbox" name="is_followup" value="1" <?= $isFollowup ? 'checked' : '' ?>>
-            Follow-up visit
-        </label>
-
         <!-- Submit -->
         <div class="flex flex-wrap gap-3 border-t pt-4">
             <button type="submit" class="ui-btn ui-btn-primary">
-                <?= $isEdit ? 'Save changes' : (($type === 'walkin') ? 'Generate token' : 'Book appointment') ?>
+                <?php if ($isEdit): ?>Save changes<?php else: ?><span x-text="selectedTime ? 'Book appointment' : 'Generate walk-in token'"></span><?php endif; ?>
             </button>
             <a href="/appointments" class="ui-btn ui-btn-secondary">Cancel</a>
         </div>
@@ -256,7 +273,8 @@ function bookAppointment(cfg) {
         doctorId: cfg.doctorId ? String(cfg.doctorId) : '',
         date: cfg.date || '',
         selectedTime: cfg.selectedTime || '',
-        apptType: cfg.apptType || 'prebooked',
+        visitType: cfg.visitType || 'new',
+        isOnline: !!cfg.isOnline,
         slots: [],
         allSlots: [],
         morningSlots: [],
@@ -264,21 +282,19 @@ function bookAppointment(cfg) {
         slotsLoading: false,
         slotError: '',
         slotTimer: null,
+        // Derived appointment type sent to the server:
+        //   online toggle  → 'online'
+        //   slot picked     → 'prebooked'
+        //   no slot         → 'walkin' (joins the queue)
+        get computedType() {
+            if (this.isOnline) return 'online';
+            return this.selectedTime ? 'prebooked' : 'walkin';
+        },
         init() {
-            if (this.apptType === 'walkin' && !this.selectedTime) {
-                this.selectedTime = this._nowTime();
-            }
-            this.$watch('apptType', (val) => {
-                if (val === 'walkin' && !this.selectedTime) {
-                    this.selectedTime = this._nowTime();
-                }
-            });
+            // Doctor may be preselected (single-doctor clinic or prefill) — load
+            // its slots straight away so the picker isn't empty on arrival.
             if (this.doctorId && this.date) this.loadSlots();
             this.slotTimer = setInterval(() => this.loadSlots(), 60000);
-        },
-        _nowTime() {
-            const n = new Date();
-            return String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0');
         },
         async searchPatients() {
             if (this.patientQuery.length < 2) { this.suggestions = []; return; }

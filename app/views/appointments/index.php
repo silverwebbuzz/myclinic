@@ -21,10 +21,19 @@ $statusBadge = static fn (string $status): string => match ($status) {
     default => 'bg-slate-100 text-slate-700',
 };
 ?>
-<div class="space-y-4" x-data="quickAdd(<?= htmlspecialchars(json_encode([
-    'doctorId' => $doctorId ?? 0,
-    'date' => $date,
-], JSON_THROW_ON_ERROR), ENT_QUOTES) ?>)">
+<?php
+// Build a prefill URL for the single booking form (/appointments/new). Every
+// "Book" trigger on this page links here so there's one booking code path.
+$bookUrl = static function (?string $d = null, ?string $time = null) use ($date, $doctorId): string {
+    $params = array_filter([
+        'date' => $d ?? $date,
+        'doctor_id' => $doctorId,
+        'time' => $time,
+    ], static fn ($v) => $v !== null && $v !== '');
+    return '/appointments/new' . ($params ? '?' . http_build_query($params) : '');
+};
+?>
+<div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
             <h2 class="flex items-center gap-2 ui-page-title">
@@ -67,7 +76,7 @@ $statusBadge = static fn (string $status): string => match ($status) {
                    class="ui-btn ui-btn-secondary ui-btn-sm" aria-label="Next <?= $view ?>">›</a>
             </div>
 
-            <button type="button" @click="open()" class="ui-btn ui-btn-primary">+ Book</button>
+            <a href="<?= htmlspecialchars($bookUrl()) ?>" class="ui-btn ui-btn-primary">+ Book</a>
         </div>
     </div>
 
@@ -148,10 +157,10 @@ $statusBadge = static fn (string $status): string => match ($status) {
                         <?php endif; ?>
                     </a>
                     <?php endforeach; ?>
-                    <button type="button" @click="open('<?= $colDate ?>')"
-                            class="block w-full rounded border border-dashed border-slate-200 px-1.5 py-1 text-center text-[11px] text-slate-400 hover:border-brand hover:text-brand">
+                    <a href="<?= htmlspecialchars($bookUrl($colDate)) ?>"
+                       class="block w-full rounded border border-dashed border-slate-200 px-1.5 py-1 text-center text-[11px] text-slate-400 hover:border-brand hover:text-brand">
                         + Add
-                    </button>
+                    </a>
                 </div>
             </div>
             <?php endfor; ?>
@@ -187,11 +196,11 @@ $statusBadge = static fn (string $status): string => match ($status) {
                 <?php elseif (empty($slot['available'])): ?>
                 <span class="cursor-not-allowed rounded-lg bg-slate-200 px-2 py-1.5 text-xs text-slate-500 line-through" title="Booked"><?= $time12 ?></span>
                 <?php else: ?>
-                <button type="button" @click="open('<?= htmlspecialchars($date) ?>', '<?= htmlspecialchars((string) $slot['time']) ?>')"
-                        class="rounded-lg border px-2 py-1.5 text-xs font-medium hover:bg-emerald-50 <?= !empty($slot['extended']) ? 'border-red-300 bg-red-50 text-red-700' : 'border-emerald-300 bg-white text-emerald-800' ?>"
-                        title="<?= !empty($slot['extended']) ? 'Extended hours — book' : 'Book this slot' ?>">
+                <a href="<?= htmlspecialchars($bookUrl($date, (string) $slot['time'])) ?>"
+                   class="rounded-lg border px-2 py-1.5 text-xs font-medium hover:bg-emerald-50 <?= !empty($slot['extended']) ? 'border-red-300 bg-red-50 text-red-700' : 'border-emerald-300 bg-white text-emerald-800' ?>"
+                   title="<?= !empty($slot['extended']) ? 'Extended hours — book' : 'Book this slot' ?>">
                     <?= $time12 ?>
-                </button>
+                </a>
                 <?php endif; ?>
             <?php endforeach; ?>
         </div>
@@ -326,189 +335,9 @@ $statusBadge = static fn (string $status): string => match ($status) {
             <p class="mb-3 flex justify-center text-slate-300"><?= ui_icon('appointments', 40) ?></p>
             <p class="text-sm font-medium text-slate-700">No appointments<?= $statusFilter !== 'all' ? ' in this status' : '' ?> on <?= htmlspecialchars($displayDate) ?></p>
             <p class="mt-1 text-xs text-slate-500">Try another date or status, or book a new appointment.</p>
-            <button type="button" @click="open()" class="mt-4 inline-block ui-btn ui-btn-primary">+ Book appointment</button>
+            <a href="<?= htmlspecialchars($bookUrl()) ?>" class="mt-4 inline-block ui-btn ui-btn-primary">+ Book appointment</a>
         </div>
         <?php endif; ?>
     </div>
     <?php endif; ?>
-
-    <!-- ============ QUICK-ADD MODAL — book without leaving the calendar ============ -->
-    <div x-show="isOpen" x-cloak
-         @keydown.escape.window="close()"
-         class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:items-center">
-        <div @click.outside="close()" class="my-4 w-full max-w-lg rounded-xl bg-white shadow-xl">
-            <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                <h3 class="ui-section-title">Book appointment</h3>
-                <a :href="'/appointments/new?date=' + form.date + (form.doctorId ? '&doctor_id=' + form.doctorId : '')"
-                   class="text-xs text-slate-500 hover:text-brand hover:underline">Open full form →</a>
-            </div>
-
-            <form method="post" action="/appointments/new" class="space-y-3 px-4 py-4"
-                  @submit="$event.target.querySelector('button[type=submit]').disabled = true">
-                <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf ?? '') ?>">
-                <input type="hidden" name="patient_id" :value="patientId">
-                <input type="hidden" name="type" value="prebooked">
-
-                <!-- Patient -->
-                <div>
-                    <label class="ui-label mb-1 block">Patient</label>
-                    <div class="relative" x-show="patientId === 0">
-                        <input type="search" x-model="patientQuery" @input.debounce.300ms="searchPatients()"
-                               placeholder="Search name, phone, UHID…" class="ui-input">
-                        <ul x-show="suggestions.length" x-cloak
-                            class="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border bg-white shadow-lg">
-                            <template x-for="p in suggestions" :key="p.id">
-                                <li>
-                                    <button type="button" @click="pickPatient(p)"
-                                            class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-emerald-50">
-                                        <span><span class="font-medium" x-text="p.name"></span> <span class="text-slate-500" x-text="p.phone"></span></span>
-                                        <span class="font-mono text-xs text-slate-400" x-text="p.uhid"></span>
-                                    </button>
-                                </li>
-                            </template>
-                        </ul>
-                        <div class="mt-2 grid gap-2 sm:grid-cols-2">
-                            <input type="text" name="new_patient_name" x-model="newName" placeholder="…or new patient name" class="ui-input">
-                            <input type="tel" name="new_patient_phone" x-model="newPhone" placeholder="Phone" class="ui-input">
-                        </div>
-                        <p class="mt-1 text-[11px] text-slate-400">Pick an existing patient, or fill name + phone to register a new one.</p>
-                    </div>
-                    <div x-show="patientId > 0" x-cloak class="flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2 text-sm">
-                        <span class="font-medium text-emerald-900" x-text="patientLabel"></span>
-                        <button type="button" @click="clearPatient()" class="text-xs text-emerald-700 underline">Change</button>
-                    </div>
-                </div>
-
-                <!-- Doctor + date -->
-                <div class="grid gap-2 sm:grid-cols-2">
-                    <label class="block text-sm">
-                        <span class="ui-label mb-1 block">Doctor</span>
-                        <select name="doctor_id" x-model="form.doctorId" @change="loadSlots()" required class="ui-input">
-                            <option value="">Select doctor</option>
-                            <?php foreach ($doctors as $doc): ?>
-                            <option value="<?= (int) $doc['id'] ?>"><?= htmlspecialchars($doc['name']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </label>
-                    <label class="block text-sm">
-                        <span class="ui-label mb-1 block">Date</span>
-                        <input type="date" name="scheduled_date" x-model="form.date" @change="loadSlots()" required
-                               min="<?= htmlspecialchars((new \DateTime('now', new \DateTimeZone('Asia/Kolkata')))->format('Y-m-d')) ?>"
-                               class="ui-input">
-                    </label>
-                </div>
-
-                <!-- Slots -->
-                <div>
-                    <div class="flex items-center justify-between">
-                        <span class="ui-label">Time slot</span>
-                        <span x-show="slotsLoading" class="text-xs text-slate-400">Loading…</span>
-                    </div>
-                    <input type="hidden" name="scheduled_time" :value="form.time">
-                    <p x-show="!form.doctorId" class="mt-1 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">Select a doctor to load slots.</p>
-                    <p x-show="form.doctorId && !slotsLoading && slots.length === 0" x-cloak
-                       class="mt-1 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                        No working hours for this day — enter a time manually:
-                        <input type="time" x-model="form.time" class="ui-input mt-1 w-32">
-                    </p>
-                    <div x-show="slots.length" x-cloak class="mt-2 grid max-h-40 grid-cols-4 gap-1.5 overflow-y-auto sm:grid-cols-5">
-                        <template x-for="s in slots" :key="s.datetime">
-                            <button type="button" :disabled="!s.available" @click="form.time = s.time"
-                                    :title="s.blocked ? 'Doctor on leave' : (s.extended ? 'Extended hours' : '')"
-                                    :class="form.time === s.time ? 'bg-emerald-600 text-white'
-                                        : (s.blocked ? 'bg-amber-100 text-amber-800 cursor-not-allowed'
-                                            : (!s.available ? 'bg-slate-100 text-slate-400 line-through cursor-not-allowed'
-                                                : (s.extended ? 'border border-red-300 bg-red-50 text-red-700' : 'border bg-white hover:bg-emerald-50')))"
-                                    class="rounded px-1.5 py-1.5 text-xs font-medium"
-                                    x-text="s.label"></button>
-                        </template>
-                    </div>
-                </div>
-
-                <label class="block text-sm">
-                    <span class="ui-label mb-1 block">Chief complaint <span class="font-normal text-slate-400">(optional)</span></span>
-                    <input type="text" name="chief_complaint" placeholder="Reason for visit" class="ui-input">
-                </label>
-
-                <div class="flex justify-end gap-2 border-t border-slate-100 pt-3">
-                    <button type="button" @click="close()" class="ui-btn ui-btn-secondary">Cancel</button>
-                    <button type="submit" class="ui-btn ui-btn-primary" :disabled="!form.time || (!patientId && (!newName || !newPhone))">
-                        Book appointment
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
 </div>
-
-<script>
-function quickAdd(cfg) {
-    return {
-        isOpen: false,
-        patientId: 0,
-        patientLabel: '',
-        patientQuery: '',
-        suggestions: [],
-        newName: '',
-        newPhone: '',
-        slots: [],
-        slotsLoading: false,
-        form: {
-            doctorId: cfg.doctorId ? String(cfg.doctorId) : '',
-            date: cfg.date || '',
-            time: '',
-        },
-        open(date, time) {
-            if (date) this.form.date = date;
-            if (time) this.form.time = time;
-            this.isOpen = true;
-            if (this.form.doctorId) this.loadSlots();
-        },
-        close() { this.isOpen = false; },
-        async searchPatients() {
-            if (this.patientQuery.length < 2) { this.suggestions = []; return; }
-            try {
-                const r = await fetch('/api/v1/patients/search?q=' + encodeURIComponent(this.patientQuery), { credentials: 'same-origin' });
-                if (!r.ok) { this.suggestions = []; return; }
-                const data = await r.json();
-                this.suggestions = (data.rows || []).slice(0, 8);
-            } catch (e) { this.suggestions = []; }
-        },
-        pickPatient(p) {
-            this.patientId = p.id;
-            this.patientLabel = p.name + ' · ' + (p.uhid || '');
-            this.patientQuery = '';
-            this.suggestions = [];
-            this.newName = '';
-            this.newPhone = '';
-        },
-        clearPatient() {
-            this.patientId = 0;
-            this.patientLabel = '';
-        },
-        async loadSlots() {
-            if (!this.form.doctorId || !this.form.date) { this.slots = []; return; }
-            this.slotsLoading = true;
-            try {
-                const r = await fetch('/api/v1/slots?doctor_id=' + this.form.doctorId + '&date=' + this.form.date, { credentials: 'same-origin' });
-                const data = r.ok ? await r.json() : { slots: [] };
-                this.slots = (data.slots || []).map(s => ({ ...s, label: this._fmt(s.time) }));
-                // Keep a preselected slot only if it's still bookable.
-                if (this.form.time && !this.slots.some(s => s.time === this.form.time && s.available) && this.slots.length) {
-                    this.form.time = '';
-                }
-            } catch (e) {
-                this.slots = [];
-            } finally {
-                this.slotsLoading = false;
-            }
-        },
-        _fmt(hhmm) {
-            const [h, m] = hhmm.split(':').map(n => parseInt(n, 10));
-            const period = h >= 12 ? 'PM' : 'AM';
-            const h12 = h === 0 ? 12 : (h > 12 ? h - 12 : h);
-            return h12 + ':' + String(m).padStart(2, '0') + ' ' + period;
-        },
-    };
-}
-</script>
