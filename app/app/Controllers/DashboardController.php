@@ -8,6 +8,7 @@ use App\Core\RequestContext;
 use App\Gates\ModuleGate;
 use App\Http\Request;
 use App\Http\Response;
+use App\Services\AppointmentService;
 use App\Services\ChecklistService;
 use App\Services\DashboardService;
 use App\Services\OnboardingService;
@@ -26,7 +27,7 @@ final class DashboardController
 
         $config = OnboardingService::specialtyConfig($clinicId) ?? [];
         $stats = DashboardService::stats($clinicId);
-        $queue = DashboardService::todayQueue($clinicId);
+        $today = self::todayAppointments($clinicId);
         $lowStock = DashboardService::lowStockItems($clinicId);
         $checklist = ChecklistService::progress($clinicId, $clinic, $config);
         $hasPharmacy = ModuleGate::check('pharmacy');
@@ -41,7 +42,9 @@ final class DashboardController
 
         return Response::html(Layout::page('dashboard/index', [
             'stats' => $stats,
-            'queue' => $queue,
+            'todayAppointments' => $today['appointments'],
+            'todayCounts' => $today['counts'],
+            'todayDate' => $today['date'],
             'lowStock' => $lowStock,
             'checklist' => $checklist,
             'hasPharmacy' => $hasPharmacy,
@@ -59,14 +62,49 @@ final class DashboardController
             return Response::json(['error' => 'Unauthorized'], 401);
         }
 
-        $queue = DashboardService::todayQueue($clinicId);
+        $today = self::todayAppointments((int) $clinicId);
 
         return Response::json([
-            'queue' => $queue,
-            'queue_html' => \App\Support\View::render('dashboard/_queue_rows', ['queue' => $queue]),
+            'queue_html' => \App\Support\View::render('appointments/_today_panel', [
+                'appointments' => $today['appointments'],
+                'counts' => $today['counts'],
+                'date' => $today['date'],
+                'csrf' => \App\Services\CsrfService::token(),
+            ]),
             'stats' => DashboardService::stats($clinicId),
             'refreshed_at' => date('c'),
         ]);
+    }
+
+    /**
+     * Today's appointments (all statuses) + per-status counts, scoped to the
+     * clinic. Mirrors AppointmentController::index so the dashboard panel shows
+     * the same data as the Appointments page, locked to today.
+     *
+     * @return array{appointments: array<int, array<string, mixed>>, counts: array<string, int>, date: string}
+     */
+    private static function todayAppointments(int $clinicId): array
+    {
+        $date = date('Y-m-d');
+        $appointments = AppointmentService::forDate($clinicId, $date, null);
+
+        $counts = [
+            'all' => count($appointments),
+            'scheduled' => 0,
+            'confirmed' => 0,
+            'in_progress' => 0,
+            'completed' => 0,
+            'no_show' => 0,
+            'cancelled' => 0,
+        ];
+        foreach ($appointments as $a) {
+            $s = (string) ($a['status'] ?? 'scheduled');
+            if (isset($counts[$s])) {
+                $counts[$s]++;
+            }
+        }
+
+        return ['appointments' => $appointments, 'counts' => $counts, 'date' => $date];
     }
 
     public function dismissChecklist(Request $request): Response

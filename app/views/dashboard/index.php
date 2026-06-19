@@ -45,6 +45,21 @@
     </div>
     <?php endif; ?>
 
+    <!-- ============ Today's Appointments (full-width primary panel) ============
+         Same facilities as the /appointments page (status tiles, filter tabs,
+         table, row actions), locked to today. Auto-refreshes every 60s via the
+         dashboard queue API (id="queue-body" is swapped in place). -->
+    <div id="queue-body">
+        <?php
+        // Map dashboard vars onto the names the shared panel expects.
+        $appointments = $todayAppointments ?? [];
+        $counts = $todayCounts ?? [];
+        $date = $todayDate ?? date('Y-m-d');
+        require __DIR__ . '/../appointments/_today_panel.php';
+        ?>
+    </div>
+    <p class="text-right ui-help" x-text="lastRefresh ? 'Updated ' + lastRefresh : ''"></p>
+
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <?php
         $tiles = [
@@ -71,21 +86,8 @@
         <?php endforeach; ?>
     </div>
 
-    <div class="grid gap-6 lg:grid-cols-3">
-        <div class="lg:col-span-2 ui-card">
-            <div class="ui-card-header">
-                <h2 class="ui-section-title">Today's queue</h2>
-                <div class="flex items-center gap-3">
-                    <span class="ui-help" x-text="lastRefresh ? 'Updated ' + lastRefresh : ''"></span>
-                    <a href="/queue" class="text-xs font-medium text-brand hover:underline">Open queue →</a>
-                </div>
-            </div>
-            <div id="queue-body" class="divide-y divide-slate-100 max-h-96 overflow-y-auto">
-                <?php require __DIR__ . '/_queue_rows.php'; ?>
-            </div>
-        </div>
-
-        <div class="space-y-6">
+    <div class="grid items-start gap-6 lg:grid-cols-3">
+        <div class="space-y-6 lg:col-span-3 lg:grid lg:grid-cols-3 lg:gap-6 lg:space-y-0">
             <?php if (!empty($followUps['overdue_count']) || !empty($followUps['due_week'])): ?>
             <!-- ============ Follow-ups widget (Phase 4) ============ -->
             <div class="ui-card ui-card-pad">
@@ -192,7 +194,17 @@ function dashboardPage() {
                         follow_ups_dueDisplay: String(data.stats.follow_ups_due),
                     });
                 }
-                if (data.queue_html) document.getElementById('queue-body').innerHTML = data.queue_html;
+                if (data.queue_html) {
+                    // Don't yank the panel out from under an open cancel-confirm
+                    // or while the user is mid-interaction with a control inside it.
+                    const body = document.getElementById('queue-body');
+                    if (body && !body.contains(document.activeElement)) {
+                        body.innerHTML = data.queue_html;
+                        // Re-init Alpine on the swapped subtree so the tile/tab
+                        // filtering (apptPanel) keeps working after refresh.
+                        if (window.Alpine && Alpine.initTree) Alpine.initTree(body);
+                    }
+                }
                 this.lastRefresh = new Date().toLocaleTimeString();
             } catch (e) {}
         }
