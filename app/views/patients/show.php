@@ -1,13 +1,9 @@
 <?php
 $photoUrl = !empty($patient['photo_path']) ? '/' . ltrim($patient['photo_path'], '/') : null;
-$qrCard = $patient['qr_card_path'] ?? null;
 ?>
 <div class="space-y-6">
     <?php if (!empty($created)): ?>
     <div class="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Patient registered successfully.</div>
-    <?php endif; ?>
-    <?php if (!empty($_GET['qr']) && $_GET['qr'] === 'regenerated'): ?>
-    <div class="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">QR token regenerated.</div>
     <?php endif; ?>
     <?php if (!empty($_GET['error'])): ?>
     <div class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800"><?= htmlspecialchars((string) $_GET['error']) ?></div>
@@ -19,13 +15,6 @@ $qrCard = $patient['qr_card_path'] ?? null;
     ?>
     <div class="flex flex-wrap gap-2 -mt-2">
         <a href="/patients/<?= (int) $patient['id'] ?>/edit" class="ui-btn ui-btn-secondary ui-btn-sm">Edit</a>
-        <?php if ($qrCard): ?>
-        <a href="/patients/<?= (int) $patient['id'] ?>/qr-card" target="_blank" class="ui-btn ui-btn-secondary ui-btn-sm">Print QR</a>
-        <?php endif; ?>
-        <form method="post" action="/patients/<?= (int) $patient['id'] ?>/regenerate-qr" onsubmit="return confirm('Regenerate QR? Old codes will stop working.');">
-            <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
-            <button type="submit" class="ui-btn ui-btn-secondary ui-btn-sm text-amber-700">Regenerate QR</button>
-        </form>
         <a href="/appointments/new?patient_id=<?= (int) $patient['id'] ?>" class="ui-btn ui-btn-secondary ui-btn-sm">Book</a>
         <a href="/visits/new?patient_id=<?= (int) $patient['id'] ?>" class="ui-btn ui-btn-primary ui-btn-sm"><?= ui_icon('plus', 16) ?><span>Start visit</span></a>
     </div>

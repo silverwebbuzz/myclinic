@@ -61,7 +61,7 @@ return [
         'modules' => [
             'patients', 'appointments_basic', 'invoicing_basic',
             'vitals', 'prescription', 'emr', 'billing_pro', 'whatsapp',
-            'qr', 'discharge', 'incentives',
+            'discharge', 'incentives',
         ],
         'highlights' => [
             'All 9 core clinical modules',
@@ -83,7 +83,7 @@ return [
         'modules' => [
             'patients', 'appointments_basic', 'invoicing_basic',
             'vitals', 'prescription', 'emr', 'billing_pro', 'whatsapp',
-            'qr', 'discharge', 'incentives',
+            'discharge', 'incentives',
             'lab', 'pharmacy', 'analytics', 'staff', 'crm',
         ],
         'highlights' => [

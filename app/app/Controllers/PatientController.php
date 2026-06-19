@@ -169,52 +169,6 @@ final class PatientController
         }
     }
 
-    public function regenerateQr(Request $request, string $id): Response
-    {
-        if ($denied = ModuleGate::require('patients')) {
-            return $denied;
-        }
-
-        $clinicId = (int) RequestContext::clinicId();
-        try {
-            PatientService::regenerateQrToken($clinicId, (int) $id);
-            AuditService::log($request, 'UPDATE', 'patients', (int) $id);
-
-            return Response::redirect('/patients/' . $id . '?tab=overview&qr=regenerated');
-        } catch (\Throwable $e) {
-            error_log('[patients/regenerateQr id=' . $id . '] ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
-
-            return Response::redirect('/patients/' . $id . '?tab=overview&error=' . urlencode('Could not regenerate QR: ' . $e->getMessage()));
-        }
-    }
-
-    public function qrCard(Request $request, string $id): Response
-    {
-        if ($denied = ModuleGate::require('patients')) {
-            return $denied;
-        }
-
-        $clinicId = (int) RequestContext::clinicId();
-        $patient = PatientService::find($clinicId, (int) $id);
-        if ($patient === null) {
-            return Response::html('Not found', 404);
-        }
-
-        $path = $patient['qr_card_path'] ?? null;
-        if ($path === null || !is_file(dirname(__DIR__, 2) . '/public' . $path)) {
-            $clinic = RequestContext::clinic();
-            if ($clinic !== null) {
-                $path = \App\Services\QrCardService::generateForPatient($patient, $clinic);
-            }
-        }
-
-        if ($path === null) {
-            return Response::html('QR card not available', 404);
-        }
-
-        return Response::redirect($path);
-    }
-
     public function recordAdvance(Request $request, string $id): Response
     {
         if ($denied = ModuleGate::require('patients')) {
@@ -257,9 +211,7 @@ final class PatientController
 
         $result = PatientService::search($clinicId, $filters, $page, $sort, $dir);
 
-        // Whitelist columns: the raw rows carry qr_token (a bearer credential
-        // for the public /qr/{token} page) plus the whole chart. Consumers
-        // (header quick-search, appointment patient picker) only need these.
+        // Whitelist columns exposed to quick-search / patient picker consumers.
         $result['rows'] = array_map(static fn (array $p): array => [
             'id' => (int) $p['id'],
             'uhid' => $p['uhid'] ?? '',

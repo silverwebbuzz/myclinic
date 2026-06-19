@@ -21,14 +21,6 @@ final class PatientService
             ->first();
     }
 
-    public static function findByQrToken(string $token): ?array
-    {
-        return QueryBuilder::table('patients')
-            ->where('qr_token', '=', $token)
-            ->where('is_active', '=', 1)
-            ->first();
-    }
-
     public static function findByPhone(int $clinicId, string $phone): ?array
     {
         $normalized = self::normalizePhone($phone);
@@ -258,14 +250,12 @@ final class PatientService
             $prefix = strtoupper($config['uhid_prefix'] ?? 'MC');
             [$uhid, $seq] = self::allocateUhid($clinicId, $prefix, $pdo);
 
-            $qrToken = bin2hex(random_bytes(32));
             $data = self::mapPayload($payload);
             self::assertValid($data);
             $patientId = QueryBuilder::table('patients')->insert(array_merge($data, [
                 'clinic_id' => $clinicId,
                 'uhid' => $uhid,
                 'uhid_seq' => $seq,
-                'qr_token' => $qrToken,
             ]));
 
             if ($photoFile !== null) {
@@ -277,11 +267,6 @@ final class PatientService
 
             $patient = QueryBuilder::table('patients')->where('id', '=', $patientId)->first();
             $pdo->commit();
-
-            $clinic = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first();
-            if ($patient !== null && $clinic !== null) {
-                QrCardService::generateForPatient($patient, $clinic);
-            }
 
             ModuleGate::invalidateCache($clinicId);
             DashboardService::invalidateStats($clinicId);
@@ -327,35 +312,6 @@ final class PatientService
             ->update($data);
 
         return QueryBuilder::table('patients')->where('id', '=', $patientId)->first() ?? [];
-    }
-
-    public static function regenerateQrToken(int $clinicId, int $patientId): array
-    {
-        $patient = self::find($clinicId, $patientId);
-        if ($patient === null) {
-            throw new \RuntimeException('Patient not found');
-        }
-
-        $newToken = bin2hex(random_bytes(32));
-        QueryBuilder::table('patients')
-            ->forClinic($clinicId)
-            ->where('id', '=', $patientId)
-            ->update([
-                'qr_token' => $newToken,
-                'qr_card_path' => null,
-            ]);
-
-        $patient = QueryBuilder::table('patients')->where('id', '=', $patientId)->first();
-        $clinic = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first();
-        if ($patient !== null && $clinic !== null) {
-            try {
-                QrCardService::generateForPatient($patient, $clinic);
-            } catch (\Throwable $e) {
-                error_log('[QrCardService] regen failed for patient ' . $patientId . ': ' . $e->getMessage());
-            }
-        }
-
-        return $patient ?? [];
     }
 
     /** @return list<array<string, mixed>> */

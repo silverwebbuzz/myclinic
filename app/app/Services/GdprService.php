@@ -92,8 +92,6 @@ final class GdprService
     /** @param array<string, mixed> $patient @return array<string, mixed> */
     private static function redactForExport(array $patient): array
     {
-        unset($patient['qr_token']);
-
         return $patient;
     }
 }

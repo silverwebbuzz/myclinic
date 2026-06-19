@@ -18,7 +18,6 @@ use App\Controllers\SubscriptionController;
 use App\Controllers\PatientController;
 use App\Controllers\PortalController;
 use App\Controllers\PrescriptionController;
-use App\Controllers\QrController;
 use App\Controllers\RadiologyController;
 use App\Controllers\SettingsController;
 use App\Controllers\VisitController;
@@ -226,8 +225,6 @@ return static function (RouteRegistrar $router): void {
         $app->get('/patients/{id}', [PatientController::class, 'show']);
         $app->get('/patients/{id}/edit', [PatientController::class, 'edit']);
         $app->post('/patients/{id}', [PatientController::class, 'update']);
-        $app->post('/patients/{id}/regenerate-qr', [PatientController::class, 'regenerateQr']);
-        $app->get('/patients/{id}/qr-card', [PatientController::class, 'qrCard']);
         $app->post('/patients/{id}/advance', [PatientController::class, 'recordAdvance']);
         $app->get('/patients/{id}/gdpr/export', [PatientController::class, 'exportGdpr']);
         $app->post('/patients/{id}/gdpr/anonymize', [PatientController::class, 'anonymizeGdpr']);
@@ -477,12 +474,5 @@ return static function (RouteRegistrar $router): void {
         $partner->post('/payout-details', [PartnerDashboardController::class, 'savePayoutDetails']);
         $partner->get('/documents', [PartnerDashboardController::class, 'documents']);
         $partner->post('/documents/upload', [PartnerDashboardController::class, 'uploadDocument']);
-    });
-
-    $router->group([
-        'prefix' => '/qr',
-        'middleware' => ['tenant', 'rate'],
-    ], static function (GroupedRouteRegistrar $qr): void {
-        $qr->get('/{token}', [QrController::class, 'resolve']);
     });
 };

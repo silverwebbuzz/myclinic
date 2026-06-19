@@ -21,11 +21,10 @@ $sortIcon = static function (string $col) use ($sort, $dir): string {
     return $dir === 'asc' ? ' ↑' : ' ↓';
 };
 ?>
-<div class="space-y-4" x-data="patientScanner()">
+<div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <h2 class="ui-page-title">Patients <span class="ml-1 text-sm font-normal text-slate-500">(<?= (int) $total ?>)</span></h2>
         <div class="flex flex-wrap gap-2">
-            <button type="button" @click="startScanner()" class="ui-btn ui-btn-secondary ui-btn-sm"><?= ui_icon('qr', 16) ?><span>Scan QR</span></button>
             <a href="/patients/new" class="ui-btn ui-btn-primary"><?= ui_icon('plus', 16) ?><span>New patient</span></a>
         </div>
     </div>
@@ -150,61 +149,4 @@ $sortIcon = static function (string $col) use ($sort, $dir): string {
         <?php endif; ?>
     </div>
     <?php endif; ?>
-
-    <template x-if="openScanner">
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div class="w-full max-w-md rounded-xl bg-white p-4">
-                <h3 class="font-semibold">Scan patient QR</h3>
-                <video id="qr-video" class="mt-3 w-full rounded-lg bg-black" autoplay playsinline></video>
-                <p class="mt-2 text-xs text-slate-500">Point camera at patient QR code</p>
-                <button type="button" @click="closeScanner()" class="mt-3 w-full rounded-lg border py-2 text-sm">Close</button>
-            </div>
-        </div>
-    </template>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-<script>
-function patientScanner() {
-    return {
-        openScanner: false,
-        async startScanner() {
-            this.openScanner = true;
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                const video = document.getElementById('qr-video');
-                video.srcObject = stream;
-                this._scanLoop(video, stream);
-            } catch (e) {
-                this.openScanner = false;
-                alert('Camera access denied or unavailable.');
-            }
-        },
-        closeScanner() {
-            this.openScanner = false;
-            const video = document.getElementById('qr-video');
-            if (video?.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
-        },
-        _scanLoop(video, stream) {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const tick = () => {
-                if (!this.openScanner) return;
-                if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    ctx.drawImage(video, 0, 0);
-                    const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    const code = jsQR(img.data, img.width, img.height);
-                    if (code) {
-                        const m = code.data.match(/\/qr\/([a-f0-9]{64})/);
-                        if (m) { window.location.href = '/qr/' + m[1]; return; }
-                    }
-                }
-                requestAnimationFrame(tick);
-            };
-            tick();
-        }
-    };
-}
-</script>

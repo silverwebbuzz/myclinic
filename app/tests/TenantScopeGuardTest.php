@@ -27,7 +27,7 @@ use PHPUnit\Framework\TestCase;
  *                              already-clinic-scoped parent, so it is
  *                              transitively scoped.
  *
- * Genuinely cross-clinic queries (public share-token / qr-token lookups, the
+ * Genuinely cross-clinic queries (public share-token lookups, the
  * global patient-identity prefill, public phone lookups that return only
  * patient-owned fields) are explicitly allow-listed below with a reason.
  * Adding to that list is a deliberate, reviewable act — which is the point.
@@ -57,7 +57,7 @@ final class TenantScopeGuardTest extends TestCase
      */
     private const SAFE_KEYS = [
         "'id'", "'invoice_id'", "'lab_order_id'", "'visit_id'", "'patient_id'",
-        "'order_id'", "'appointment_id'", "'share_token'", "'qr_token'",
+        "'order_id'", "'appointment_id'", "'share_token'",
     ];
 
     /**
@@ -76,9 +76,6 @@ final class TenantScopeGuardTest extends TestCase
         // Public booking phone lookup: cross-clinic by design, returns only
         // name + a source label, never any clinic-private chart data.
         'PublicBookingService.php::findByPhonePublic',
-        // QR-token patient lookups: scoped by the unguessable qr_token itself.
-        'QrCardService.php::',
-        'PatientService.php::findByQrToken',
     ];
 
     public function testEveryTenantTableQueryIsClinicScoped(): void

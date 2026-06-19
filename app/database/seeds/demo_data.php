@@ -51,7 +51,7 @@ $CLINICS = [
         'sub_doctors' => [],
         'receptionists' => [['name' => 'Anjali Verma']],
         'patient_count' => 250, 'appts_per_doc_per_day' => [6, 14],
-        'modules' => ['patients', 'appointments_basic', 'invoicing_basic', 'vitals', 'prescription', 'emr', 'billing_pro', 'whatsapp', 'qr', 'discharge', 'incentives'],
+        'modules' => ['patients', 'appointments_basic', 'invoicing_basic', 'vitals', 'prescription', 'emr', 'billing_pro', 'whatsapp', 'discharge', 'incentives'],
         'uhid_prefix' => 'CP', 'invoice_prefix' => 'CP',
     ],
     [
@@ -68,7 +68,7 @@ $CLINICS = [
         ],
         'receptionists' => [['name' => 'Neha Kapoor']],
         'patient_count' => 600, 'appts_per_doc_per_day' => [5, 12],
-        'modules' => ['patients', 'appointments_basic', 'invoicing_basic', 'vitals', 'prescription', 'emr', 'billing_pro', 'whatsapp', 'qr', 'discharge', 'incentives', 'lab', 'pharmacy', 'analytics', 'staff', 'crm'],
+        'modules' => ['patients', 'appointments_basic', 'invoicing_basic', 'vitals', 'prescription', 'emr', 'billing_pro', 'whatsapp', 'discharge', 'incentives', 'lab', 'pharmacy', 'analytics', 'staff', 'crm'],
         'uhid_prefix' => 'WMS', 'invoice_prefix' => 'WMS',
     ],
     [
@@ -280,8 +280,8 @@ foreach ($CLINICS as $C) {
     }
 
     $patientIns = $pdo->prepare(
-        'INSERT INTO patients (clinic_id, uhid_seq, uhid, name, dob, gender, phone, email, blood_group, qr_token, source, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO patients (clinic_id, uhid_seq, uhid, name, dob, gender, phone, email, blood_group, source, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
     $patientIds = [];
     for ($p = 1; $p <= $C['patient_count']; $p++) {
@@ -297,11 +297,10 @@ foreach ($CLINICS as $C) {
         $regAt = $days[$offset]->setTime(randInRange(9, 17), randInRange(0, 59))->format('Y-m-d H:i:s');
 
         $uhid = $C['uhid_prefix'] . str_pad((string) $p, 5, '0', STR_PAD_LEFT);
-        $qr = bin2hex(random_bytes(16));
         $patientIns->execute([
             $clinicId, $p, $uhid, $name, $dob, $gender, phone(),
             mt_rand(0, 1) ? strtolower(str_replace(' ', '.', $name)) . '@test.local' : null,
-            $blood, $qr, $source, $regAt,
+            $blood, $source, $regAt,
         ]);
         $patientIds[] = (int) $pdo->lastInsertId();
     }

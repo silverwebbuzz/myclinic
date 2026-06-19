@@ -72,18 +72,6 @@ final class TenantMiddleware implements MiddlewareInterface
             return Response::html('Discharge summary not found', 404);
         }
 
-        if (preg_match('#^/qr/([a-f0-9]{64})$#', $request->uri, $m)) {
-            $patient = \App\Services\PatientService::findByQrToken($m[1]);
-            if ($patient !== null) {
-                $clinic = QueryBuilder::table('tenants')->where('id', '=', (int) $patient['clinic_id'])->first();
-                if ($clinic !== null) {
-                    RequestContext::setClinic($clinic);
-
-                    return $next();
-                }
-            }
-        }
-
         $authClinic = $this->resolveFromAuth($request);
         if ($authClinic !== null) {
             if (!(int) ($authClinic['is_active'] ?? 0)) {

@@ -132,7 +132,7 @@
                 '🏠' => 'dashboard', '👤' => 'patients', '📋' => 'emr', '💊' => 'prescription',
                 '❤️' => 'vitals', '🔬' => 'lab', '🩻' => 'radiology', '🏪' => 'pharmacy',
                 '📅' => 'appointments', '🧾' => 'billing', '💬' => 'whatsapp',
-                '📱' => 'qr', '📊' => 'analytics', '🎯' => 'crm', '👥' => 'staff',
+                '📊' => 'analytics', '🎯' => 'crm', '👥' => 'staff',
             ];
             $navIcon = static function (string $raw) use ($emojiToIcon): string {
                 // Already an SVG name in the registry? use as-is; else map emoji.

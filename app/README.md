@@ -120,11 +120,10 @@ php -S localhost:8080 -t public
 
 ## Patients (Sprint 4)
 
-- `/patients` — list, search, filters, QR scanner
+- `/patients` — list, search, filters
 - `/patients/new` — 3-step wizard (personal → medical → specialty)
 - `/patients/{id}` — profile with tabs
-- `/qr/{token}` — tenant-scoped patient lookup
-- Run migration `004_patients_qr_documents.sql`
+- Run migration `004_patients_qr_documents.sql` (documents only; patient QR removed in `035_drop_qr.sql`)
 
 ## Dashboard & settings (Sprint 3)
 
