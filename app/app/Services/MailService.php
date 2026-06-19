@@ -101,32 +101,120 @@ final class MailService
 
         $body = self::renderTemplate($template, $payload);
 
-        if ($clinicId === null || $clinicId < 1) {
-            self::logToFile($toEmail, $template, $payload);
+        if ($clinicId !== null && $clinicId > 0) {
+            QueryBuilder::table('notifications')->insert([
+                'clinic_id' => $clinicId,
+                'channel' => 'email',
+                'template' => $template,
+                'to_email' => $toEmail,
+                'payload' => json_encode(array_merge($payload, ['subject' => $subject, 'body' => $body])),
+                'status' => 'queued',
+                'scheduled_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        self::dispatch($toEmail, $subject, $body, $fromEmail, $fromName, $template);
+    }
+
+    private static function dispatch(
+        string $toEmail,
+        string $subject,
+        string $body,
+        string $fromEmail,
+        string $fromName,
+        string $template,
+    ): void {
+        if (!empty($_ENV['MAILGUN_API_KEY']) && !empty($_ENV['MAILGUN_DOMAIN'])) {
+            self::sendViaMailgun($toEmail, $subject, $body, $fromEmail, $fromName);
 
             return;
         }
 
-        QueryBuilder::table('notifications')->insert([
-            'clinic_id' => $clinicId,
-            'channel' => 'email',
-            'template' => $template,
-            'to_email' => $toEmail,
-            'payload' => json_encode(array_merge($payload, ['subject' => $subject, 'body' => $body])),
-            'status' => 'queued',
-            'scheduled_at' => date('Y-m-d H:i:s'),
-        ]);
+        if (SmtpMailService::isConfigured()) {
+            $replyTo = $_ENV['WECARE_FROM'] ?? 'wecare@eclinicpro.com';
+            $result = SmtpMailService::send($toEmail, $subject, $body, $fromEmail, $fromName, $replyTo, false);
+            if (!$result['ok']) {
+                error_log('[MailService] SMTP failed (' . $template . '): ' . ($result['error'] ?? 'unknown'));
+                self::logToFile($toEmail, $template . '_smtp_failed', [
+                    'error' => $result['error'] ?? 'unknown',
+                    'subject' => $subject,
+                    'steps' => $result['steps'] ?? [],
+                ]);
+            }
+
+            return;
+        }
+
+        $logPayload = ['subject' => $subject, 'body' => $body, 'from' => $fromEmail];
+        $archive = self::archiveBcc($toEmail);
+        if ($archive !== null) {
+            $logPayload['archive_bcc'] = $archive;
+        }
+        self::logToFile($toEmail, $template, $logPayload);
+    }
+
+    /** Send a test message using the same routing as production (for admin diagnostics). */
+    public static function sendTest(string $toEmail, string $template = 'welcome'): array
+    {
+        $toEmail = trim($toEmail);
+        if ($toEmail === '' || !filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
+            return ['ok' => false, 'error' => 'Enter a valid email address', 'steps' => [], 'provider' => 'none'];
+        }
+
+        $payload = match ($template) {
+            'password_reset' => [
+                'reset_url' => rtrim($_ENV['APP_URL'] ?? 'http://localhost:8080', '/') . '/reset-password/test-token',
+            ],
+            'staff_invite' => [
+                'name' => 'Test User',
+                'clinic_name' => 'Test Clinic',
+                'role' => 'receptionist',
+                'accept_url' => rtrim($_ENV['APP_URL'] ?? 'http://localhost:8080', '/') . '/accept-invite/test',
+            ],
+            default => ['clinic_name' => 'Test Clinic'],
+        };
 
         if (!empty($_ENV['MAILGUN_API_KEY']) && !empty($_ENV['MAILGUN_DOMAIN'])) {
+            $subject = match ($template) {
+                'password_reset' => 'Reset your eClinicPro password',
+                'welcome' => 'Welcome to eClinicPro',
+                'staff_invite' => 'You are invited to join ' . ($payload['clinic_name'] ?? 'a clinic'),
+                default => 'eClinicPro test email',
+            };
+            [$fromEmail, $fromName] = self::fromFor($template);
+            $body = self::renderTemplate($template, $payload);
             self::sendViaMailgun($toEmail, $subject, $body, $fromEmail, $fromName);
-        } else {
-            $logPayload = $payload + ['subject' => $subject, 'body' => $body, 'from' => $fromEmail];
-            $archive = self::archiveBcc($toEmail);
-            if ($archive !== null) {
-                $logPayload['archive_bcc'] = $archive;
-            }
-            self::logToFile($toEmail, $template, $logPayload);
+
+            return [
+                'ok' => true,
+                'error' => null,
+                'steps' => ['Sent via Mailgun API'],
+                'provider' => 'mailgun',
+            ];
         }
+
+        if (SmtpMailService::isConfigured()) {
+            $subject = match ($template) {
+                'password_reset' => 'Reset your eClinicPro password',
+                'welcome' => 'Welcome to eClinicPro',
+                'staff_invite' => 'You are invited to join ' . ($payload['clinic_name'] ?? 'a clinic'),
+                default => 'eClinicPro test email',
+            };
+            [$fromEmail, $fromName] = self::fromFor($template);
+            $body = self::renderTemplate($template, $payload);
+            $replyTo = $_ENV['WECARE_FROM'] ?? 'wecare@eclinicpro.com';
+            $result = SmtpMailService::send($toEmail, $subject, $body, $fromEmail, $fromName, $replyTo, false);
+            $result['provider'] = 'smtp';
+
+            return $result;
+        }
+
+        return [
+            'ok' => false,
+            'error' => 'No mail provider configured. Set SMTP_* or MAILGUN_* in app/.env — otherwise emails only go to storage/logs/mail.log',
+            'steps' => [],
+            'provider' => 'log',
+        ];
     }
 
     /**

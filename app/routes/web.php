@@ -344,6 +344,8 @@ return static function (RouteRegistrar $router): void {
 
         // Read-only subscription payment gateway status (keys live in .env)
         $admin->get('/payment-gateway', [SuperAdminController::class, 'paymentGateway']);
+        $admin->get('/email', [SuperAdminController::class, 'email']);
+        $admin->post('/email/test', [SuperAdminController::class, 'testEmail']);
 
         // Phase 3: symptom promotions queue
         $admin->get('/symptom-promotions', [SymptomsController::class, 'promotionsIndex']);

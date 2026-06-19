@@ -378,4 +378,42 @@ final class SuperAdminController
         return Response::redirect('/admin/feature-flags?message=updated');
     }
 
+    /** GET /admin/email — SMTP / Mailgun status + test sender. */
+    public function email(Request $request): Response
+    {
+        return Response::html(View::render('admin/email', [
+            'admin' => RequestContext::superAdmin(),
+            'email' => \App\Services\SmtpMailService::status(),
+            'logLines' => \App\Services\SmtpMailService::recentLogLines(30),
+            'testResult' => null,
+            'csrf' => CsrfService::token(),
+        ]));
+    }
+
+    /** POST /admin/email/test — send a diagnostic test email. */
+    public function testEmail(Request $request): Response
+    {
+        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
+            return Response::redirect('/admin/email');
+        }
+
+        $to = trim((string) ($request->post['test_to'] ?? ''));
+        $template = trim((string) ($request->post['test_template'] ?? 'welcome'));
+        if (!in_array($template, ['welcome', 'password_reset', 'staff_invite'], true)) {
+            $template = 'welcome';
+        }
+
+        $result = \App\Services\MailService::sendTest($to, $template);
+
+        return Response::html(View::render('admin/email', [
+            'admin' => RequestContext::superAdmin(),
+            'email' => \App\Services\SmtpMailService::status(),
+            'logLines' => \App\Services\SmtpMailService::recentLogLines(30),
+            'testResult' => $result,
+            'testTo' => $to,
+            'testTemplate' => $template,
+            'csrf' => CsrfService::token(),
+        ]));
+    }
+
 }

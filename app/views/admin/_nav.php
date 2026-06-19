@@ -47,6 +47,7 @@ $navGroups = [
     'System' => [
         ['/admin/feature-flags', 'Feature Flags', 'M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7'],
         ['/admin/messaging', 'Messaging', 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z'],
+        ['/admin/email', 'Email', 'M4 4h16v16H4zM4 8l8 5 8-5'],
         ['/admin/payment-gateway', 'Payment Gateway', 'M1 4h22v16H1zM1 10h22'],
     ],
 ];
