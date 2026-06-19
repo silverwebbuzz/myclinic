@@ -131,7 +131,7 @@
             $emojiToIcon = [
                 '🏠' => 'dashboard', '👤' => 'patients', '📋' => 'emr', '💊' => 'prescription',
                 '❤️' => 'vitals', '🔬' => 'lab', '🩻' => 'radiology', '🏪' => 'pharmacy',
-                '📅' => 'appointments', '🗓️' => 'scheduling', '🧾' => 'billing', '💬' => 'whatsapp',
+                '📅' => 'appointments', '🧾' => 'billing', '💬' => 'whatsapp',
                 '📱' => 'qr', '📊' => 'analytics', '🎯' => 'crm', '👥' => 'staff',
             ];
             $navIcon = static function (string $raw) use ($emojiToIcon): string {

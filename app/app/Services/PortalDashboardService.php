@@ -29,7 +29,7 @@ final class PortalDashboardService
             'invoices' => $invoices,
             'labs' => $labs,
             'appointments' => $appointments,
-            'canBook' => ModuleGate::check('advanced_scheduling') || ModuleGate::check('appointments_basic'),
+            'canBook' => ModuleGate::check('appointments_basic'),
             'bookUrl' => '/book/' . ($clinic['slug'] ?? 'demo'),
         ];
     }

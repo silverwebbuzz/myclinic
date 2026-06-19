@@ -184,7 +184,7 @@ $bookUrl = static function (?string $d = null, ?string $time = null) use ($date,
         <?php if ($daySlots === []): ?>
         <p class="mt-3 text-xs text-slate-500">
             No working hours configured for this day.
-            <a href="/scheduling" class="text-brand hover:underline">Set up the schedule →</a>
+            <a href="/settings?tab=hours" class="text-brand hover:underline">Set working hours in Settings →</a>
         </p>
         <?php else: ?>
         <div class="mt-3 flex flex-wrap gap-1.5">

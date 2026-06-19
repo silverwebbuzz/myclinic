@@ -68,7 +68,7 @@ $CLINICS = [
         ],
         'receptionists' => [['name' => 'Neha Kapoor']],
         'patient_count' => 600, 'appts_per_doc_per_day' => [5, 12],
-        'modules' => ['patients', 'appointments_basic', 'invoicing_basic', 'vitals', 'prescription', 'emr', 'billing_pro', 'whatsapp', 'qr', 'discharge', 'incentives', 'advanced_scheduling', 'lab', 'pharmacy', 'analytics', 'staff', 'crm'],
+        'modules' => ['patients', 'appointments_basic', 'invoicing_basic', 'vitals', 'prescription', 'emr', 'billing_pro', 'whatsapp', 'qr', 'discharge', 'incentives', 'lab', 'pharmacy', 'analytics', 'staff', 'crm'],
         'uhid_prefix' => 'WMS', 'invoice_prefix' => 'WMS',
     ],
     [
@@ -110,7 +110,7 @@ if ($WIPE) {
             'diet_plans', 'patient_photos', 'discharge_summaries',
             'lab_orders', 'lab_tests_catalog', 'pharmacy_inventory',
             'payments', 'invoices', 'prescriptions', 'vitals', 'visits',
-            'appointments', 'doctor_leaves', 'doctor_schedules', 'waiting_list',
+            'appointments', 'doctor_leaves', 'doctor_schedules',
             'patient_allergies', 'notifications', 'analytics_snapshots', 'events',
             'audit_log', 'api_keys', 'doctor_profiles',
             'patients', 'staff_invitations', 'users', 'clinic_modules', 'specialty_configs',

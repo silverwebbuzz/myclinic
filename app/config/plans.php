@@ -84,12 +84,11 @@ return [
             'patients', 'appointments_basic', 'invoicing_basic',
             'vitals', 'prescription', 'emr', 'billing_pro', 'whatsapp',
             'qr', 'discharge', 'incentives',
-            'advanced_scheduling', 'lab', 'pharmacy', 'analytics', 'staff', 'crm',
+            'lab', 'pharmacy', 'analytics', 'staff', 'crm',
         ],
         'highlights' => [
             'Everything in Clinic',
             'Lab, Pharmacy, Analytics, CRM',
-            'Advanced scheduling',
             '8 team seats',
         ],
         'limits' => [],

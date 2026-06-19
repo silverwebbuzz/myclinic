@@ -188,7 +188,7 @@ if (!$isEdit && $doctorId === 0 && count($doctors) === 1) {
                  class="mt-2 rounded-lg bg-amber-50 p-3">
                 <p class="text-xs text-amber-900">
                     No working hours configured for this doctor on the selected day.
-                    Set hours in <a href="/scheduling" class="underline">Scheduling</a> first, or enter a manual time below.
+                    Set hours in <a href="/settings?tab=hours" class="underline">Settings → Working hours</a> first, or enter a manual time below.
                 </p>
                 <input type="time" x-model="selectedTime"
                        class="mt-2 w-full max-w-[200px] ui-input">

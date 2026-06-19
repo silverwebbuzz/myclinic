@@ -34,7 +34,6 @@ return [
         'label' => 'Operations',
         'items' => [
             'appointments_basic' => ['label' => 'Appointments', 'icon' => '📅', 'href' => '/appointments'],
-            'advanced_scheduling' => ['label' => 'Scheduling', 'icon' => '🗓️', 'href' => '/scheduling'],
             'invoicing_basic' => ['label' => 'Billing', 'icon' => '🧾', 'href' => '/billing', 'any_of' => ['invoicing_basic', 'billing_pro']],
         ],
     ],

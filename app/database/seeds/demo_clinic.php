@@ -49,7 +49,7 @@ $pdo->prepare(
 
 $freeModules = [
     'patients', 'appointments_basic', 'invoicing_basic', 'billing_pro', 'emr', 'vitals', 'prescription', 'whatsapp',
-    'lab', 'pharmacy', 'discharge', 'analytics', 'crm', 'staff', 'incentives', 'advanced_scheduling',
+    'lab', 'pharmacy', 'discharge', 'analytics', 'crm', 'staff', 'incentives',
     'patient_portal', 'telemedicine', 'diet', 'before_after',
 ];
 $ins = $pdo->prepare(

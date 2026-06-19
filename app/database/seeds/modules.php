@@ -19,7 +19,6 @@ $modules = [
     ['id' => 'qr', 'name' => 'QR Patient Card', 'category' => 'core', 'price' => 0, 'plans' => '["clinic","practice","enterprise"]', 'sort' => 15],
     ['id' => 'discharge', 'name' => 'Discharge Summary', 'category' => 'core', 'price' => 0, 'plans' => '["clinic","practice","enterprise"]', 'sort' => 17],
     ['id' => 'incentives', 'name' => 'Doctor Incentive Calculator', 'category' => 'core', 'price' => 0, 'plans' => '["clinic","practice","enterprise"]', 'sort' => 18],
-    ['id' => 'advanced_scheduling', 'name' => 'Advanced Scheduling', 'category' => 'addon', 'price' => 12, 'plans' => '["practice","enterprise"]', 'sort' => 30],
     ['id' => 'lab', 'name' => 'Lab Module (LIS)', 'category' => 'addon', 'price' => 12, 'plans' => '["practice","enterprise"]', 'sort' => 31],
     ['id' => 'pharmacy', 'name' => 'Pharmacy POS', 'category' => 'addon', 'price' => 12, 'plans' => '["practice","enterprise"]', 'sort' => 32],
     ['id' => 'analytics', 'name' => 'Analytics Dashboard', 'category' => 'addon', 'price' => 15, 'plans' => '["practice","enterprise"]', 'sort' => 33],

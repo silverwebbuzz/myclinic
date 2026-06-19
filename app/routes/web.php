@@ -26,7 +26,6 @@ use App\Controllers\AnalyticsController;
 use App\Controllers\BookController;
 use App\Controllers\CrmController;
 use App\Controllers\IncentiveController;
-use App\Controllers\SchedulingController;
 use App\Controllers\StaffController;
 use App\Controllers\ApiV1Controller;
 use App\Controllers\DirectoryController;
@@ -156,10 +155,6 @@ return static function (RouteRegistrar $router): void {
         $app->post('/staff/leaves', [StaffController::class, 'requestLeave']);
         $app->post('/staff/leaves/{id}/approve', [StaffController::class, 'approveLeave']);
         $app->post('/staff/leaves/{id}/reject', [StaffController::class, 'rejectLeave']);
-
-        $app->get('/scheduling', [SchedulingController::class, 'index']);
-        $app->post('/scheduling/schedules', [SchedulingController::class, 'saveSchedule']);
-        $app->post('/scheduling/sync-hours', [SchedulingController::class, 'syncFromHours']);
 
         $app->get('/billing/incentives', [IncentiveController::class, 'index']);
         $app->post('/billing/incentives/config', [IncentiveController::class, 'saveConfig']);

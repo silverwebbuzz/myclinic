@@ -70,13 +70,12 @@ php -S localhost:8080 -t public
 - `POST /webhooks/photo-published` — inbound stub for public photos
 - Run migration `009_sprint10_portal.sql`
 
-## Analytics, CRM, staff & scheduling (Sprint 9)
+## Analytics, CRM & staff (Sprint 9)
 
 - `/analytics` — revenue/expense charts, P&amp;L, doctor performance, expense entry
 - `/crm` — leads kanban, convert to patient, source Chart.js report
 - `/staff/attendance`, `/staff/leaves` — clock in/out, leave approve/reject
 - `/billing/incentives` — doctor % / flat config, monthly calculation, payslip PDF
-- `/scheduling` — per-doctor schedule blocks, waiting list, Google Calendar stub
 - `/book/{clinic-slug}` — public online booking (no login)
 - `php workers/analytics_snapshot.php` — nightly metrics (cron 2 AM)
 - `php workers/crm_followups.php` — daily CRM follow-ups (cron 9 AM)

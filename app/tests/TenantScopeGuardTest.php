@@ -46,7 +46,7 @@ final class TenantScopeGuardTest extends TestCase
         'discharge_summaries', 'diet_plans', 'patient_photos',
         'doctor_schedules', 'doctor_leaves', 'staff_attendance', 'staff_leaves',
         'pharmacy_inventory', 'pharmacy_sales', 'doctor_incentives',
-        'waiting_list', 'notifications',
+        'notifications',
     ];
 
     /**
