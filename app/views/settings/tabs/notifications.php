@@ -1,10 +1,4 @@
 <form method="post" action="/settings/notifications" class="ui-card">
-    <div class="ui-card-header">
-        <div>
-            <h2 class="ui-section-title">Notifications</h2>
-            <p class="ui-section-sub mt-0.5">Configure patient messaging channels and reminders.</p>
-        </div>
-    </div>
     <div class="ui-card-pad space-y-4">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
 

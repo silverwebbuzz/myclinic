@@ -1,7 +1,4 @@
 <div class="space-y-4 ui-card ui-card-pad">
-    <h2 class="ui-section-title">White-label branding</h2>
-    <p class="text-sm text-slate-600">Enterprise: custom domain, logo, and brand color. “Powered by ManageClinic” is hidden on your plan.</p>
-
     <form method="post" action="/settings/branding" enctype="multipart/form-data" class="space-y-4">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
         <label class="block text-sm">

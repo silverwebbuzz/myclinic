@@ -21,12 +21,6 @@ $timeField = static function (string $name, string $label, string $value): strin
 };
 ?>
 <form method="post" action="/settings/hours" class="ui-card">
-    <div class="ui-card-header">
-        <div>
-            <h2 class="ui-section-title">Working hours</h2>
-            <p class="ui-section-sub mt-0.5">Set consultation sessions, slot length and how far ahead patients can book.</p>
-        </div>
-    </div>
     <div class="ui-card-pad">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
 

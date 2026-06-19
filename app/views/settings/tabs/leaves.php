@@ -5,11 +5,6 @@ foreach ($leaves as $lv) {
 }
 ?>
 <div class="ui-card ui-card-pad space-y-4">
-    <div>
-        <h2 class="ui-section-title">Doctor leaves</h2>
-        <p class="ui-section-sub mt-0.5">Mark full or half-day leave. Conflicting appointments are warned before save.</p>
-    </div>
-
     <?php if (!empty($warning)): ?>
     <p class="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900"><?= htmlspecialchars($warning) ?></p>
     <?php endif; ?>

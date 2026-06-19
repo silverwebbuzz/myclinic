@@ -19,8 +19,7 @@ $onTrial = !empty($clinic['trial_ends_at']) && strtotime((string) $clinic['trial
 ?>
 <div class="space-y-4">
     <section class="ui-card ui-card-pad">
-        <h2 class="ui-section-title">Subscription</h2>
-        <p class="mt-2 text-sm text-slate-600">
+        <p class="text-sm text-slate-600">
             Plan: <strong><?= htmlspecialchars($plan['name'] ?? 'Free') ?></strong>
             · Seats: <?= (int) ($staffCount ?? 1) ?> / <?= $seatLimit ?>
             <?php if ($isPaid): ?>

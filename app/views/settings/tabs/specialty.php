@@ -12,8 +12,7 @@ $currentLabel = $specialties[$specialty]['label'] ?? ucfirst((string) $specialty
 <div class="ui-card ui-card-pad" x-data="{ specialtyModal: false }">
     <div class="flex items-start justify-between gap-3">
         <div>
-            <h2 class="ui-section-title">Specialty</h2>
-            <p class="ui-section-sub mt-0.5">Current: <span class="font-medium text-slate-700"><?= htmlspecialchars($currentLabel) ?></span></p>
+            <p class="ui-section-sub">Current: <span class="font-medium text-slate-700"><?= htmlspecialchars($currentLabel) ?></span></p>
         </div>
         <button type="button" @click="specialtyModal = true" class="ui-btn ui-btn-secondary ui-btn-sm">Change specialty</button>
     </div>

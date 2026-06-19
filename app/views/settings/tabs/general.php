@@ -107,7 +107,6 @@ $qrSrc       = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=
 
 <form method="post" action="/settings/general" enctype="multipart/form-data" class="space-y-4 ui-card ui-card-pad">
     <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
-    <h2 class="ui-section-title">General</h2>
     <div class="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
         <div class="lg:col-span-2">
             <label class="ui-label mb-1 block">Clinic name</label>

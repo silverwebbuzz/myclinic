@@ -1,8 +1,7 @@
 <?php $seats = $seatUsage ?? ['used' => 0, 'limit' => 2, 'available' => 0]; ?>
 <div class="space-y-4">
     <div class="ui-card ui-card-pad">
-        <h2 class="ui-section-title">Team & seats</h2>
-        <p class="mt-1 text-sm text-slate-500">
+        <p class="text-sm text-slate-500">
             <?= (int) $seats['used'] ?> of <?= (int) $seats['limit'] ?> seats used
             (<?= (int) $seats['available'] ?> available)
         </p>
