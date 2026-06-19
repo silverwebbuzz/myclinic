@@ -20,6 +20,7 @@ $statusColors = [
                 <?= htmlspecialchars($pStatus) ?>
             </span>
             <form method="post" action="/partner/logout" class="inline">
+                <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf ?? \App\Services\CsrfService::token()) ?>">
                 <button type="submit" class="hover:underline">Log out</button>
             </form>
         </nav>
