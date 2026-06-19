@@ -111,6 +111,9 @@ $activeClass = match ($e['active'] ?? 'log') {
                         <option value="welcome" <?= ($testTemplate ?? 'welcome') === 'welcome' ? 'selected' : '' ?>>Welcome</option>
                         <option value="password_reset" <?= ($testTemplate ?? '') === 'password_reset' ? 'selected' : '' ?>>Password reset</option>
                         <option value="staff_invite" <?= ($testTemplate ?? '') === 'staff_invite' ? 'selected' : '' ?>>Staff invite</option>
+                        <option value="appointment_reminder" <?= ($testTemplate ?? '') === 'appointment_reminder' ? 'selected' : '' ?>>Appointment reminder</option>
+                        <option value="rx_delivery" <?= ($testTemplate ?? '') === 'rx_delivery' ? 'selected' : '' ?>>Prescription ready</option>
+                        <option value="invoice_paid" <?= ($testTemplate ?? '') === 'invoice_paid' ? 'selected' : '' ?>>Invoice paid</option>
                     </select>
                 </label>
                 <button type="submit" class="rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">Send test</button>

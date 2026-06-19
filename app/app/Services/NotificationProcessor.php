@@ -125,7 +125,11 @@ final class NotificationProcessor
             }
 
             if ($channel === 'email') {
-                MailService::send((string) ($row['to_email'] ?? ''), $template, $payload, $clinicId);
+                $ok = MailService::deliver((string) ($row['to_email'] ?? ''), $template, $payload);
+                if (!$ok) {
+                    self::markFailed($id, 'email delivery failed (check SMTP / recipient address)');
+                    return false;
+                }
                 QueryBuilder::table('notifications')
                     ->where('id', '=', $id)
                     ->update([
@@ -264,7 +268,7 @@ final class NotificationProcessor
         $count = 0;
         $pdo = Database::connection();
 
-        $sql = "SELECT a.*, p.name AS patient_name, p.phone, t.name AS clinic_name
+        $sql = "SELECT a.*, p.name AS patient_name, p.phone, p.email AS patient_email, t.name AS clinic_name
                 FROM appointments a
                 INNER JOIN patients p ON p.id = a.patient_id
                 INNER JOIN tenants t ON t.id = a.clinic_id
@@ -277,40 +281,60 @@ final class NotificationProcessor
         $appointments = $pdo->query($sql)->fetchAll() ?: [];
         foreach ($appointments as $appt) {
             $hours = (strtotime($appt['scheduled_at']) - time()) / 3600;
-            $template = $hours > 2 ? 'appointment_reminder' : 'appointment_reminder';
+            $template = 'appointment_reminder';
+            $reminderPayload = [
+                'patient_name' => $appt['patient_name'],
+                'clinic_name' => $appt['clinic_name'],
+                'scheduled_at' => $appt['scheduled_at'],
+                'hours_before' => $hours > 2 ? 24 : 1,
+            ];
+            $when = date('Y-m-d H:i:s');
             NotificationService::queueWhatsApp(
                 (int) $appt['clinic_id'],
                 (int) $appt['patient_id'],
                 (string) $appt['phone'],
                 $template,
-                [
-                    'patient_name' => $appt['patient_name'],
-                    'clinic_name' => $appt['clinic_name'],
-                    'scheduled_at' => $appt['scheduled_at'],
-                    'hours_before' => $hours > 2 ? 24 : 1,
-                ],
-                date('Y-m-d H:i:s'),
+                $reminderPayload,
+                $when,
+            );
+            NotificationService::queueEmail(
+                (int) $appt['clinic_id'],
+                (int) $appt['patient_id'],
+                $appt['patient_email'] ?? null,
+                $template,
+                $reminderPayload,
+                $when,
             );
             $count++;
         }
 
-        $followSql = "SELECT v.*, p.name AS patient_name, p.phone, t.name AS clinic_name
+        $followSql = "SELECT v.*, p.name AS patient_name, p.phone, p.email AS patient_email, t.name AS clinic_name
                       FROM visits v
                       INNER JOIN patients p ON p.id = v.patient_id
                       INNER JOIN tenants t ON t.id = v.clinic_id
                       WHERE v.follow_up_date = CURDATE() AND v.status = 'completed'";
         $followups = $pdo->query($followSql)->fetchAll() ?: [];
         foreach ($followups as $v) {
+            $payload = [
+                'patient_name' => $v['patient_name'],
+                'clinic_name' => $v['clinic_name'],
+            ];
+            $when = date('Y-m-d') . ' 07:00:00';
             NotificationService::queueWhatsApp(
                 (int) $v['clinic_id'],
                 (int) $v['patient_id'],
                 (string) $v['phone'],
                 'follow_up_reminder',
-                [
-                    'patient_name' => $v['patient_name'],
-                    'clinic_name' => $v['clinic_name'],
-                ],
-                date('Y-m-d') . ' 07:00:00',
+                $payload,
+                $when,
+            );
+            NotificationService::queueEmail(
+                (int) $v['clinic_id'],
+                (int) $v['patient_id'],
+                $v['patient_email'] ?? null,
+                'follow_up_reminder',
+                $payload,
+                $when,
             );
             $count++;
         }

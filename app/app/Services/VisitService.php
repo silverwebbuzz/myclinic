@@ -466,17 +466,31 @@ final class VisitService
                     $prefs = json_decode($prefs, true);
                 }
                 if (is_array($prefs) && ($prefs['rx_delivery'] ?? true)) {
+                    $rxUrl = $rxPath;
+                    if ($rxUrl !== null && $rxUrl !== '' && str_starts_with($rxUrl, '/')) {
+                        $rxUrl = rtrim($_ENV['APP_URL'] ?? '', '/') . $rxUrl;
+                    }
+                    $rxPayload = [
+                        'patient_name' => $patient['name'],
+                        'clinic_name' => $clinic['name'],
+                        'rx_url' => $rxUrl,
+                    ];
+                    $deliverAt = date('Y-m-d H:i:s', time() + 120);
                     NotificationService::queueWhatsApp(
                         $clinicId,
                         (int) $patient['id'],
                         (string) $patient['phone'],
                         'rx_delivery',
-                        [
-                            'patient_name' => $patient['name'],
-                            'clinic_name' => $clinic['name'],
-                            'rx_url' => $rxPath,
-                        ],
-                        date('Y-m-d H:i:s', time() + 120),
+                        $rxPayload,
+                        $deliverAt,
+                    );
+                    NotificationService::queueEmail(
+                        $clinicId,
+                        (int) $patient['id'],
+                        $patient['email'] ?? null,
+                        'rx_delivery',
+                        $rxPayload,
+                        $deliverAt,
                     );
                 }
             } catch (\Throwable $e) {

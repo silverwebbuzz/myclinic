@@ -129,6 +129,18 @@ final class DietService
                 'pdf_path' => $pdfPath,
             ]);
 
+        $pdfUrl = $pdfPath;
+        if ($pdfUrl !== '' && str_starts_with($pdfUrl, '/')) {
+            $pdfUrl = rtrim($_ENV['APP_URL'] ?? '', '/') . $pdfUrl;
+        }
+
+        $sharePayload = [
+            'patient_name' => $patient['name'],
+            'clinic_name' => $clinic['name'],
+            'pdf_url' => $pdfUrl,
+        ];
+        $deliverAt = date('Y-m-d H:i:s', time() + 120);
+
         NotificationService::queueWhatsApp(
             $clinicId,
             (int) $patient['id'],
@@ -137,9 +149,18 @@ final class DietService
             [
                 'patient_name' => $patient['name'],
                 'clinic_name' => $clinic['name'],
-                'rx_url' => $pdfPath,
+                'rx_url' => $pdfUrl,
             ],
-            date('Y-m-d H:i:s', time() + 120),
+            $deliverAt,
+        );
+
+        NotificationService::queueEmail(
+            $clinicId,
+            (int) $patient['id'],
+            $patient['email'] ?? null,
+            'diet_plan_shared',
+            $sharePayload,
+            $deliverAt,
         );
 
         return self::find($clinicId, $planId) ?? [];

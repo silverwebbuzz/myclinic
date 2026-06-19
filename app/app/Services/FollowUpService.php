@@ -264,9 +264,11 @@ final class FollowUpService
         $pdo = Database::connection();
         $rows = $pdo->query(
             "SELECT f.id, f.clinic_id, f.patient_id, f.due_date, f.reason,
-                    p.name AS patient_name, p.phone AS patient_phone
+                    p.name AS patient_name, p.phone AS patient_phone, p.email AS patient_email,
+                    t.name AS clinic_name
                FROM follow_ups f
                JOIN patients p ON p.id = f.patient_id
+               JOIN tenants t ON t.id = f.clinic_id
               WHERE f.status = 'pending'
                 AND f.due_date IN (CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 DAY))
                 AND f.reminder_count < 3
@@ -281,17 +283,30 @@ final class FollowUpService
                 continue;
             }
 
+            $reminderPayload = [
+                'patient_name' => $row['patient_name'],
+                'clinic_name' => $row['clinic_name'],
+                'due_date' => $row['due_date'],
+                'reason' => $row['reason'],
+            ];
+            $when = date('Y-m-d H:i:s');
+
             NotificationService::queueWhatsApp(
                 $clinicId,
                 (int) $row['patient_id'],
                 (string) $row['patient_phone'],
                 'follow_up_reminder',
-                [
-                    'patient_name' => $row['patient_name'],
-                    'due_date' => $row['due_date'],
-                    'reason' => $row['reason'],
-                ],
-                date('Y-m-d H:i:s')
+                $reminderPayload,
+                $when,
+            );
+
+            NotificationService::queueEmail(
+                $clinicId,
+                (int) $row['patient_id'],
+                $row['patient_email'] ?? null,
+                'follow_up_reminder',
+                $reminderPayload,
+                $when,
             );
 
             $pdo->prepare(

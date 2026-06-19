@@ -12,13 +12,11 @@ final class MailService
     /**
      * Per-purpose sender mailboxes. Each template routes to the inbox that
      * owns that kind of message, with a friendly display name.
-     * Override any address via env (WECARE_FROM / HELP_FROM / …).
      *
      * @return array{0: string, 1: string} [email, displayName]
      */
     private static function fromFor(string $template): array
     {
-        // Support & account/system flows.
         $support = [
             $_ENV['HELP_FROM'] ?? 'help@eclinicpro.com',
             'eClinicPro Support',
@@ -37,40 +35,41 @@ final class MailService
         ];
 
         return match ($template) {
-            // Automated/system mail → noreply
             'password_reset',
             'welcome',
             'telemedicine_link',
             'appointment_reminder',
+            'appointment_cancelled',
             'appointment_notification',
             'invoice_paid',
             'subscription_invoice',
-            'prescription_ready' => $notify,
+            'prescription_ready',
+            'rx_delivery',
+            'follow_up_reminder',
+            'diet_plan_shared' => $notify,
 
-            // Human, relationship mail → care team
             'staff_invite',
             'churn_outreach',
             'doctor_approved' => $care,
 
-            // Newsletters / health content → health tips
             'health_tip',
             'newsletter' => $healthTips,
 
-            // Anything support-flavoured → help
             'support',
             'billing_question' => $support,
 
-            // Safe default: noreply (system).
             default => $notify,
         };
     }
 
-    /** @param array<string, mixed> $payload */
+    /**
+     * Send immediately (registration, password reset, staff invite, etc.).
+     * Optionally writes an audit row on the clinic's notifications table.
+     *
+     * @param array<string, mixed> $payload
+     */
     public static function send(string $toEmail, string $template, array $payload, ?int $clinicId = null): void
     {
-        // Email is optional across the app (patients/staff may have none).
-        // Never attempt to send to a blank/invalid address — silently skip so
-        // callers don't have to guard, and we don't log noisy failures.
         $toEmail = trim($toEmail);
         if ($toEmail === '' || !filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
             return;
@@ -82,6 +81,54 @@ final class MailService
             return;
         }
 
+        $ok = self::deliver($toEmail, $template, $payload);
+
+        if ($clinicId !== null && $clinicId > 0) {
+            $composed = self::compose($template, $payload);
+            QueryBuilder::table('notifications')->insert([
+                'clinic_id' => $clinicId,
+                'channel' => 'email',
+                'template' => $template,
+                'to_email' => $toEmail,
+                'payload' => json_encode(array_merge($payload, [
+                    'subject' => $composed['subject'],
+                    'body' => $composed['body'],
+                ])),
+                'status' => $ok ? 'sent' : 'failed',
+                'sent_at' => $ok ? date('Y-m-d H:i:s') : null,
+                'scheduled_at' => date('Y-m-d H:i:s'),
+                'error_log' => $ok ? null : 'smtp_delivery_failed',
+            ]);
+        }
+    }
+
+    /**
+     * Render + deliver one email. Used by the notification worker for queued rows.
+     *
+     * @param array<string, mixed> $payload
+     */
+    public static function deliver(string $toEmail, string $template, array $payload): bool
+    {
+        $toEmail = trim($toEmail);
+        if ($toEmail === '' || !filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+
+        $composed = self::compose($template, $payload);
+
+        return self::dispatch(
+            $toEmail,
+            $composed['subject'],
+            $composed['body'],
+            $composed['fromEmail'],
+            $composed['fromName'],
+            $template,
+        );
+    }
+
+    /** @param array<string, mixed> $payload @return array{subject: string, body: string, fromEmail: string, fromName: string} */
+    private static function compose(string $template, array $payload): array
+    {
         $clinicName = (string) ($payload['clinic_name'] ?? 'your clinic');
         $subject = match ($template) {
             'password_reset' => 'Reset your eClinicPro password',
@@ -90,67 +137,25 @@ final class MailService
             'churn_outreach' => 'We are here to help — ' . ($payload['clinic_name'] ?? 'your clinic'),
             'appointment_reminder' => 'Appointment reminder — ' . $clinicName,
             'appointment_cancelled' => 'Appointment cancelled — ' . $clinicName,
+            'appointment_notification' => 'Appointment request received — ' . $clinicName,
             'telemedicine_link' => 'Your online consultation link — ' . $clinicName,
             'invoice_paid' => 'Payment received — ' . $clinicName,
             'subscription_invoice' => 'Your eClinicPro invoice ' . (string) ($payload['invoice_no'] ?? ''),
             'doctor_approved' => 'Your clinic is now listed on eClinicPro',
+            'rx_delivery', 'prescription_ready' => 'Your prescription from ' . $clinicName,
+            'follow_up_reminder' => 'Follow-up reminder — ' . $clinicName,
+            'diet_plan_shared' => 'Your diet plan from ' . $clinicName,
             default => 'eClinicPro notification',
         };
 
         [$fromEmail, $fromName] = self::fromFor($template);
 
-        $body = self::renderTemplate($template, $payload);
-
-        if ($clinicId !== null && $clinicId > 0) {
-            QueryBuilder::table('notifications')->insert([
-                'clinic_id' => $clinicId,
-                'channel' => 'email',
-                'template' => $template,
-                'to_email' => $toEmail,
-                'payload' => json_encode(array_merge($payload, ['subject' => $subject, 'body' => $body])),
-                'status' => 'queued',
-                'scheduled_at' => date('Y-m-d H:i:s'),
-            ]);
-        }
-
-        self::dispatch($toEmail, $subject, $body, $fromEmail, $fromName, $template);
-    }
-
-    private static function dispatch(
-        string $toEmail,
-        string $subject,
-        string $body,
-        string $fromEmail,
-        string $fromName,
-        string $template,
-    ): void {
-        if (!empty($_ENV['MAILGUN_API_KEY']) && !empty($_ENV['MAILGUN_DOMAIN'])) {
-            self::sendViaMailgun($toEmail, $subject, $body, $fromEmail, $fromName);
-
-            return;
-        }
-
-        if (SmtpMailService::isConfigured()) {
-            $replyTo = $_ENV['WECARE_FROM'] ?? 'wecare@eclinicpro.com';
-            $result = SmtpMailService::send($toEmail, $subject, $body, $fromEmail, $fromName, $replyTo, false);
-            if (!$result['ok']) {
-                error_log('[MailService] SMTP failed (' . $template . '): ' . ($result['error'] ?? 'unknown'));
-                self::logToFile($toEmail, $template . '_smtp_failed', [
-                    'error' => $result['error'] ?? 'unknown',
-                    'subject' => $subject,
-                    'steps' => $result['steps'] ?? [],
-                ]);
-            }
-
-            return;
-        }
-
-        $logPayload = ['subject' => $subject, 'body' => $body, 'from' => $fromEmail];
-        $archive = self::archiveBcc($toEmail);
-        if ($archive !== null) {
-            $logPayload['archive_bcc'] = $archive;
-        }
-        self::logToFile($toEmail, $template, $logPayload);
+        return [
+            'subject' => $subject,
+            'body' => self::renderTemplate($template, $payload),
+            'fromEmail' => $fromEmail,
+            'fromName' => $fromName,
+        ];
     }
 
     /** Send a test message using the same routing as production (for admin diagnostics). */
@@ -171,19 +176,28 @@ final class MailService
                 'role' => 'receptionist',
                 'accept_url' => rtrim($_ENV['APP_URL'] ?? 'http://localhost:8080', '/') . '/accept-invite/test',
             ],
+            'appointment_reminder' => [
+                'patient_name' => 'Test Patient',
+                'clinic_name' => 'Test Clinic',
+                'scheduled_at' => date('Y-m-d H:i'),
+            ],
+            'rx_delivery' => [
+                'patient_name' => 'Test Patient',
+                'clinic_name' => 'Test Clinic',
+                'rx_url' => rtrim($_ENV['APP_URL'] ?? 'http://localhost:8080', '/') . '/uploads/rx/test.pdf',
+            ],
+            'invoice_paid' => [
+                'patient_name' => 'Test Patient',
+                'clinic_name' => 'Test Clinic',
+                'invoice_number' => 'INV-TEST-001',
+                'total' => '500.00',
+            ],
             default => ['clinic_name' => 'Test Clinic'],
         };
 
         if (!empty($_ENV['MAILGUN_API_KEY']) && !empty($_ENV['MAILGUN_DOMAIN'])) {
-            $subject = match ($template) {
-                'password_reset' => 'Reset your eClinicPro password',
-                'welcome' => 'Welcome to eClinicPro',
-                'staff_invite' => 'You are invited to join ' . ($payload['clinic_name'] ?? 'a clinic'),
-                default => 'eClinicPro test email',
-            };
-            [$fromEmail, $fromName] = self::fromFor($template);
-            $body = self::renderTemplate($template, $payload);
-            self::sendViaMailgun($toEmail, $subject, $body, $fromEmail, $fromName);
+            $composed = self::compose($template, $payload);
+            self::sendViaMailgun($toEmail, $composed['subject'], $composed['body'], $composed['fromEmail'], $composed['fromName']);
 
             return [
                 'ok' => true,
@@ -194,16 +208,17 @@ final class MailService
         }
 
         if (SmtpMailService::isConfigured()) {
-            $subject = match ($template) {
-                'password_reset' => 'Reset your eClinicPro password',
-                'welcome' => 'Welcome to eClinicPro',
-                'staff_invite' => 'You are invited to join ' . ($payload['clinic_name'] ?? 'a clinic'),
-                default => 'eClinicPro test email',
-            };
-            [$fromEmail, $fromName] = self::fromFor($template);
-            $body = self::renderTemplate($template, $payload);
+            $composed = self::compose($template, $payload);
             $replyTo = $_ENV['WECARE_FROM'] ?? 'wecare@eclinicpro.com';
-            $result = SmtpMailService::send($toEmail, $subject, $body, $fromEmail, $fromName, $replyTo, false);
+            $result = SmtpMailService::send(
+                $toEmail,
+                $composed['subject'],
+                $composed['body'],
+                $composed['fromEmail'],
+                $composed['fromName'],
+                $replyTo,
+                false,
+            );
             $result['provider'] = 'smtp';
 
             return $result;
@@ -217,10 +232,45 @@ final class MailService
         ];
     }
 
-    /**
-     * Optional archive copy of every outbound email (BCC).
-     * Set MAIL_ARCHIVE_BCC in app/.env; leave blank to disable.
-     */
+    private static function dispatch(
+        string $toEmail,
+        string $subject,
+        string $body,
+        string $fromEmail,
+        string $fromName,
+        string $template,
+    ): bool {
+        if (!empty($_ENV['MAILGUN_API_KEY']) && !empty($_ENV['MAILGUN_DOMAIN'])) {
+            self::sendViaMailgun($toEmail, $subject, $body, $fromEmail, $fromName);
+
+            return true;
+        }
+
+        if (SmtpMailService::isConfigured()) {
+            $replyTo = $_ENV['WECARE_FROM'] ?? 'wecare@eclinicpro.com';
+            $result = SmtpMailService::send($toEmail, $subject, $body, $fromEmail, $fromName, $replyTo, false);
+            if (!$result['ok']) {
+                error_log('[MailService] SMTP failed (' . $template . '): ' . ($result['error'] ?? 'unknown'));
+                self::logToFile($toEmail, $template . '_smtp_failed', [
+                    'error' => $result['error'] ?? 'unknown',
+                    'subject' => $subject,
+                    'steps' => $result['steps'] ?? [],
+                ]);
+            }
+
+            return (bool) ($result['ok'] ?? false);
+        }
+
+        $logPayload = ['subject' => $subject, 'body' => $body, 'from' => $fromEmail];
+        $archive = self::archiveBcc($toEmail);
+        if ($archive !== null) {
+            $logPayload['archive_bcc'] = $archive;
+        }
+        self::logToFile($toEmail, $template, $logPayload);
+
+        return false;
+    }
+
     private static function archiveBcc(?string $primaryTo = null): ?string
     {
         $archive = trim((string) ($_ENV['MAIL_ARCHIVE_BCC'] ?? 'eclinicpro.com@gmail.com'));
@@ -237,10 +287,14 @@ final class MailService
     /** @param array<string, mixed> $payload */
     private static function renderTemplate(string $template, array $payload): string
     {
+        $appUrl = rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/');
+
         return match ($template) {
             'password_reset' => "Hello,\n\nReset your password using this link (valid 1 hour):\n"
                 . ($payload['reset_url'] ?? '') . "\n\nIf you did not request this, ignore this email.",
-            'welcome' => 'Welcome to ManageClinic, ' . ($payload['clinic_name'] ?? '') . '!',
+            'welcome' => "Hello,\n\nWelcome to eClinicPro — your clinic \""
+                . ($payload['clinic_name'] ?? '') . "\" is ready.\n\n"
+                . "Log in anytime at {$appUrl}/login\n\n— Team eClinicPro",
             'staff_invite' => "Hello {$payload['name']},\n\n"
                 . ($payload['clinic_name'] ?? 'A clinic') . " invited you as {$payload['role']}.\n\n"
                 . "Accept invitation:\n" . ($payload['accept_url'] ?? '') . "\n\nExpires in 7 days.",
@@ -258,16 +312,25 @@ final class MailService
                 . "Your appointment at " . ($payload['clinic_name'] ?? 'the clinic')
                 . " on " . ($payload['scheduled_at'] ?? '') . " has been cancelled.\n\n"
                 . "Please contact the clinic to book a new time.",
+            'appointment_notification' => "Hello " . ($payload['patient_name'] ?? '') . ",\n\n"
+                . "We've received your appointment request with "
+                . ($payload['doctor_name'] ?? 'the doctor') . " at "
+                . ($payload['clinic_name'] ?? 'the clinic')
+                . " for " . ($payload['scheduled_at'] ?? 'your chosen time') . ".\n\n"
+                . "The clinic will confirm shortly. For urgent questions, call "
+                . ($payload['clinic_phone'] ?? 'the clinic') . ".\n",
             'invoice_paid' => "Hello " . ($payload['patient_name'] ?? '') . ",\n\n"
                 . "We've received your payment at " . ($payload['clinic_name'] ?? 'the clinic')
                 . ". Invoice " . ($payload['invoice_number'] ?? '') . " — total "
-                . ($payload['total'] ?? '') . ".\n\nThank you.",
+                . ($payload['total'] ?? '') . ".\n\n"
+                . (!empty($payload['pdf_url']) ? "Receipt: " . $payload['pdf_url'] . "\n\n" : '')
+                . "Thank you.",
             'subscription_invoice' => "Hello " . ($payload['clinic_name'] ?? '') . ",\n\n"
                 . "Thank you for subscribing to eClinicPro "
                 . ucfirst((string) ($payload['plan_id'] ?? '')) . ".\n\n"
                 . "Invoice " . ($payload['invoice_no'] ?? '') . " — "
                 . ($payload['currency'] ?? 'INR') . ' ' . ($payload['amount'] ?? '')
-                . " (tax invoice attached/available in your billing page).\n\n"
+                . " (tax invoice available in Settings → Subscription).\n\n"
                 . "— Team eClinicPro, SILVER WEBBUZZ PRIVATE LIMITED",
             'doctor_approved' => "Hello " . ($payload['doctor_name'] ?? 'Doctor') . ",\n\n"
                 . "Good news — your listing request for "
@@ -278,7 +341,20 @@ final class MailService
                 . ($payload['login_url'] ?? '') . "\n\n"
                 . "No password is needed — we'll send you a one-time code by SMS.\n\n"
                 . "— Team eClinicPro",
-            default => json_encode($payload),
+            'rx_delivery', 'prescription_ready' => "Hello " . ($payload['patient_name'] ?? '') . ",\n\n"
+                . "Your prescription from " . ($payload['clinic_name'] ?? 'the clinic') . " is ready.\n\n"
+                . (!empty($payload['rx_url']) ? "Download: " . $payload['rx_url'] . "\n" : ''),
+            'follow_up_reminder' => "Hello " . ($payload['patient_name'] ?? '') . ",\n\n"
+                . "This is a reminder from " . ($payload['clinic_name'] ?? 'your clinic')
+                . " to schedule your follow-up"
+                . (!empty($payload['due_date']) ? ' (due ' . $payload['due_date'] . ')' : '')
+                . ".\n\n"
+                . (!empty($payload['reason']) ? "Reason: {$payload['reason']}\n\n" : '')
+                . "Please contact the clinic to book your visit.",
+            'diet_plan_shared' => "Hello " . ($payload['patient_name'] ?? '') . ",\n\n"
+                . "Your diet plan from " . ($payload['clinic_name'] ?? 'the clinic') . " is ready.\n\n"
+                . (!empty($payload['pdf_url']) ? "Download: " . $payload['pdf_url'] . "\n" : ''),
+            default => json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?: '',
         };
     }
 
@@ -301,7 +377,6 @@ final class MailService
             'to' => $to,
             'subject' => $subject,
             'text' => $text,
-            // Replies go to the care team rather than an unwatched noreply box.
             'h:Reply-To' => $_ENV['WECARE_FROM'] ?? 'wecare@eclinicpro.com',
         ];
         $archive = self::archiveBcc($to);

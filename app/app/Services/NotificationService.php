@@ -188,6 +188,24 @@ final class NotificationService
                 $now,
             );
         }
+
+        $patientEmail = trim((string) ($patient['email'] ?? ''));
+        if ($patientEmail !== '' && filter_var($patientEmail, FILTER_VALIDATE_EMAIL)) {
+            self::queueEmail(
+                (int) $clinic['id'],
+                (int) $patient['id'],
+                $patientEmail,
+                'appointment_notification',
+                [
+                    'patient_name' => $patient['name'] ?? 'Patient',
+                    'doctor_name' => $doctor['name'] ?? 'the doctor',
+                    'clinic_name' => $clinic['name'] ?? 'the clinic',
+                    'scheduled_at' => $when,
+                    'clinic_phone' => $clinicPhone,
+                ],
+                $now,
+            );
+        }
     }
 
     /** @param array<string, mixed> $appointment @param array<string, mixed> $patient @param array<string, mixed> $clinic */

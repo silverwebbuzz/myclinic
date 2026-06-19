@@ -317,12 +317,17 @@ final class InvoiceService
                 ->where('id', '=', $invoiceId)
                 ->update(['pdf_path' => $pdfPath]);
 
+            $pdfUrl = $pdfPath;
+            if ($pdfUrl !== '' && str_starts_with($pdfUrl, '/')) {
+                $pdfUrl = rtrim($_ENV['APP_URL'] ?? '', '/') . $pdfUrl;
+            }
+
             $paidPayload = [
                 'patient_name' => $patient['name'],
                 'clinic_name' => $clinic['name'],
                 'invoice_number' => $invoice['invoice_number'],
                 'total' => $invoice['total'],
-                'pdf_url' => $pdfPath,
+                'pdf_url' => $pdfUrl,
             ];
             $paidAt = date('Y-m-d H:i:s', time() + 60);
 

@@ -399,7 +399,7 @@ final class SuperAdminController
 
         $to = trim((string) ($request->post['test_to'] ?? ''));
         $template = trim((string) ($request->post['test_template'] ?? 'welcome'));
-        if (!in_array($template, ['welcome', 'password_reset', 'staff_invite'], true)) {
+        if (!in_array($template, ['welcome', 'password_reset', 'staff_invite', 'appointment_reminder', 'rx_delivery', 'invoice_paid'], true)) {
             $template = 'welcome';
         }
 
