@@ -36,8 +36,6 @@ return [
             'appointments_basic' => ['label' => 'Appointments', 'icon' => '📅', 'href' => '/appointments'],
             'advanced_scheduling' => ['label' => 'Scheduling', 'icon' => '🗓️', 'href' => '/scheduling'],
             'invoicing_basic' => ['label' => 'Billing', 'icon' => '🧾', 'href' => '/billing', 'any_of' => ['invoicing_basic', 'billing_pro']],
-            'whatsapp' => ['label' => 'WhatsApp', 'icon' => '💬', 'href' => '/settings?tab=notifications'],
-            'qr' => ['label' => 'QR Cards', 'icon' => '📱', 'href' => '/patients'],
         ],
     ],
     'reports' => [
