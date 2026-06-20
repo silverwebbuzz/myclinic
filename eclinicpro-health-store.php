@@ -12,12 +12,10 @@
 // the existing assets/css/styles.css design tokens (.store-* block).
 // =====================================================================
 
-require_once __DIR__ . '/partials/request_router.php';
-$__ecpPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-if (ecp_dispatch_clean_url($_SERVER['REQUEST_URI'] ?? '/')) {
-    return;
-}
-
+// NOTE: do NOT require/run the clean-URL router here. This page IS a target
+// the router dispatches to (/eclinicpro-health-store -> this file). Calling
+// the router again would re-require this file and recurse → HTTP 500.
+// Pages like features.php / find-a-doctor.php render directly, same as here.
 require_once __DIR__ . '/partials/helpers.php';
 
 $pageTitle  = 'eClinicPro Health Store — Doctor-Recommended Wellness & Care';
