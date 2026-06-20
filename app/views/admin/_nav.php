@@ -30,6 +30,7 @@ $navGroups = [
     ],
     'Clinics & Users' => [
         ['/admin/clinics', 'Clinics', 'M3 21V8l9-5 9 5v13M9 21v-6h6v6'],
+        ['/admin/patients', 'Patients', 'M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M12 3a4 4 0 100 8 4 4 0 000-8z'],
         ['/admin/claims', 'Claims', 'M9 12l2 2 4-4M7 3h10l2 4v13H5V7z', (int) ($pendingClaimCount ?? 0)],
         ['/admin/leads', 'Leads', 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100 8 4 4 0 000-8z'],
     ],

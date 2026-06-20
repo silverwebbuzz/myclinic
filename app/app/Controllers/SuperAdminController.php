@@ -77,6 +77,39 @@ final class SuperAdminController
         ]));
     }
 
+    /** GET /admin/patients — onboarded patients across every clinic. */
+    public function patients(Request $request): Response
+    {
+        $search = trim((string) ($request->query['q'] ?? ''));
+        $data = \App\Services\PatientAdminService::patientsList($search);
+
+        return Response::html(View::render('admin/patients', [
+            'admin' => RequestContext::superAdmin(),
+            'csrf' => CsrfService::token(),
+            'patients' => $data['patients'],
+            'total' => $data['total'],
+            'search' => $search,
+        ]));
+    }
+
+    /** GET /admin/patients/{id} — one patient's history and activity. */
+    public function patientDetail(Request $request, string $id): Response
+    {
+        $data = \App\Services\PatientAdminService::patientDetail((int) $id);
+        if ($data === null) {
+            return Response::redirect('/admin/patients?error=not_found');
+        }
+
+        return Response::html(View::render('admin/patient_detail', [
+            'admin' => RequestContext::superAdmin(),
+            'csrf' => CsrfService::token(),
+            'patient' => $data['patient'],
+            'visits' => $data['visits'],
+            'appointments' => $data['appointments'],
+            'activity' => $data['activity'],
+        ]));
+    }
+
     public function impersonate(Request $request): Response
     {
         $clinicId = (int) ($request->post['clinic_id'] ?? 0);

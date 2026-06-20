@@ -325,6 +325,8 @@ return static function (RouteRegistrar $router): void {
     ], static function (GroupedRouteRegistrar $admin): void {
         $admin->get('/dashboard', [SuperAdminController::class, 'dashboard']);
         $admin->get('/clinics', [SuperAdminController::class, 'clinics']);
+        $admin->get('/patients', [SuperAdminController::class, 'patients']);
+        $admin->get('/patients/{id}', [SuperAdminController::class, 'patientDetail']);
         $admin->post('/impersonate', [SuperAdminController::class, 'impersonate']);
         $admin->post('/logout', [SuperAdminController::class, 'logout']);
         $admin->get('/reviews', [SuperAdminController::class, 'reviews']);
