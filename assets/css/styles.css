@@ -8750,6 +8750,17 @@ li {
 .store-grid { display: grid; gap: 16px; }
 .store-link { color: var(--teal-600); font-weight: 500; font-size: 14px; }
 
+/* Store card — own class (NOT the global .card, which is position:absolute
+   later in this file for the homepage hero mockup and would collapse the
+   grid). Keep this self-contained so no global rule can hijack it. */
+.store-card {
+  position: relative;
+  background: #fff;
+  border-radius: 16px;
+  border: 0.5px solid var(--line);
+  transition: all .2s ease;
+}
+
 /* Gradient icon tiles (shared) */
 .store-tile {
   display: inline-flex;

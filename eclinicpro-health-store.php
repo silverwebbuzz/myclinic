@@ -215,7 +215,7 @@ require __DIR__ . '/partials/header.php';
         </header>
         <div class="store-grid store-grid-cat">
             <?php foreach ($categories as [$ico, $name, $g, $subs]): ?>
-            <article class="store-cat card">
+            <article class="store-cat store-card">
                 <span class="store-tile <?= $g ?>"><?= $ico ?></span>
                 <h3><?= e($name) ?></h3>
                 <ul class="store-sublist">
@@ -237,7 +237,7 @@ require __DIR__ . '/partials/header.php';
     </header>
     <div class="store-grid store-grid-spec">
         <?php foreach ($specialists as [$ico, $label]): ?>
-        <a href="#" class="store-spec card" data-soon>
+        <a href="#" class="store-spec store-card" data-soon>
             <span class="store-spec-ico"><?= $ico ?></span>
             <span><?= e($label) ?></span>
         </a>
@@ -254,7 +254,7 @@ require __DIR__ . '/partials/header.php';
         </header>
         <div class="store-grid store-grid-coll">
             <?php foreach ($collections as [$ico, $name, $blurb, $g]): ?>
-            <a href="#" class="store-coll card" data-soon>
+            <a href="#" class="store-coll store-card" data-soon>
                 <span class="store-tile <?= $g ?>"><?= $ico ?></span>
                 <h3><?= e($name) ?></h3>
                 <p><?= e($blurb) ?></p>
@@ -273,7 +273,7 @@ require __DIR__ . '/partials/header.php';
     </header>
     <div class="store-grid store-grid-concern">
         <?php foreach ($concerns as [$label, $count]): ?>
-        <a href="#" class="store-concern card" data-soon>
+        <a href="#" class="store-concern store-card" data-soon>
             <span class="store-concern-count"><?= e($count) ?></span>
             <span class="store-concern-label"><?= e($label) ?></span>
             <span class="store-concern-meta">products</span>
@@ -291,7 +291,7 @@ require __DIR__ . '/partials/header.php';
         </header>
         <div class="store-grid store-grid-prod">
             <?php foreach ($products as [$brand, $name, $ico, $price, $mrp, $off, $g]): ?>
-            <article class="store-prod card">
+            <article class="store-prod store-card">
                 <span class="store-prod-fav" data-soon title="Wishlist">♡</span>
                 <span class="store-prod-img <?= $g ?>"><?= $ico ?></span>
                 <span class="store-prod-brand"><?= e($brand) ?></span>
@@ -316,7 +316,7 @@ require __DIR__ . '/partials/header.php';
     </header>
     <div class="store-grid store-grid-brand">
         <?php foreach ($brands as $brand): ?>
-        <a href="#" class="store-brand card" data-soon>
+        <a href="#" class="store-brand store-card" data-soon>
             <span class="store-brand-mark"><?= e(mb_substr($brand, 0, 1)) ?></span>
             <span class="store-brand-name"><?= e($brand) ?></span>
         </a>
@@ -349,7 +349,7 @@ require __DIR__ . '/partials/header.php';
     </header>
     <div class="store-grid store-grid-article">
         <?php foreach ($articles as [$ico, $title, $blurb]): ?>
-        <a href="#" class="store-article card" data-soon>
+        <a href="#" class="store-article store-card" data-soon>
             <span class="store-article-ico"><?= $ico ?></span>
             <h3><?= e($title) ?></h3>
             <p><?= e($blurb) ?></p>
@@ -383,7 +383,7 @@ require __DIR__ . '/partials/header.php';
 
 <!-- Newsletter ---------------------------------------------------------- -->
 <section class="store-section wrap">
-    <div class="store-newsletter card">
+    <div class="store-newsletter store-card">
         <h2>Stay Healthy. Stay Updated.</h2>
         <p>Get doctor-backed wellness tips and launch news in your inbox.</p>
         <form class="store-news-form" data-soon onsubmit="return false">
