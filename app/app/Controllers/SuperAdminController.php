@@ -77,18 +77,58 @@ final class SuperAdminController
         ]));
     }
 
-    /** GET /admin/patients — onboarded patients across every clinic. */
+    /** GET /admin/patients — onboarded clinic patients across every clinic. */
     public function patients(Request $request): Response
     {
         $search = trim((string) ($request->query['q'] ?? ''));
-        $data = \App\Services\PatientAdminService::patientsList($search);
+        $page = max(1, (int) ($request->query['page'] ?? 1));
+        $data = \App\Services\PatientAdminService::patientsList($search, $page);
 
         return Response::html(View::render('admin/patients', [
             'admin' => RequestContext::superAdmin(),
             'csrf' => CsrfService::token(),
             'patients' => $data['patients'],
             'total' => $data['total'],
+            'page' => $data['page'],
+            'pages' => $data['pages'],
             'search' => $search,
+        ]));
+    }
+
+    /** GET /admin/signups — people who signed up from the public site. */
+    public function signups(Request $request): Response
+    {
+        $search = trim((string) ($request->query['q'] ?? ''));
+        $page = max(1, (int) ($request->query['page'] ?? 1));
+        $data = \App\Services\PatientAdminService::signupsList($search, $page);
+
+        return Response::html(View::render('admin/signups', [
+            'admin' => RequestContext::superAdmin(),
+            'csrf' => CsrfService::token(),
+            'signups' => $data['signups'],
+            'total' => $data['total'],
+            'page' => $data['page'],
+            'pages' => $data['pages'],
+            'search' => $search,
+        ]));
+    }
+
+    /** GET /admin/signups/{id} — one signup's cross-clinic activity. */
+    public function signupDetail(Request $request, string $id): Response
+    {
+        $data = \App\Services\PatientAdminService::signupDetail((int) $id);
+        if ($data === null) {
+            return Response::redirect('/admin/signups?error=not_found');
+        }
+
+        return Response::html(View::render('admin/signup_detail', [
+            'admin' => RequestContext::superAdmin(),
+            'csrf' => CsrfService::token(),
+            'identity' => $data['identity'],
+            'charts' => $data['charts'],
+            'appointments' => $data['appointments'],
+            'sessions' => $data['sessions'],
+            'wishlist' => $data['wishlist'],
         ]));
     }
 

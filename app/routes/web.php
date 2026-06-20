@@ -327,6 +327,8 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/clinics', [SuperAdminController::class, 'clinics']);
         $admin->get('/patients', [SuperAdminController::class, 'patients']);
         $admin->get('/patients/{id}', [SuperAdminController::class, 'patientDetail']);
+        $admin->get('/signups', [SuperAdminController::class, 'signups']);
+        $admin->get('/signups/{id}', [SuperAdminController::class, 'signupDetail']);
         $admin->post('/impersonate', [SuperAdminController::class, 'impersonate']);
         $admin->post('/logout', [SuperAdminController::class, 'logout']);
         $admin->get('/reviews', [SuperAdminController::class, 'reviews']);
