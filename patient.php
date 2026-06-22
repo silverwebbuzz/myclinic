@@ -280,7 +280,7 @@ require __DIR__ . '/partials/header.php';
 .patient-page {
   background: var(--bg-3, #fafafa);
   min-height: calc(100vh - 80px);
-  padding: 40px 0 80px;
+  padding: 120px 0 80px;
 }
 .pt-hero .wrap, .pt-main .wrap { max-width: 980px; margin: 0 auto; padding: 0 24px; }
 
