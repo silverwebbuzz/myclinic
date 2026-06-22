@@ -192,6 +192,12 @@ final class MailService
                 'invoice_number' => 'INV-TEST-001',
                 'total' => '500.00',
             ],
+            'doctor_approved' => [
+                'doctor_name' => 'Dr Test Doctor',
+                'clinic_name' => 'Test Clinic',
+                'phone' => '+91 99999 99999',
+                'login_url' => rtrim($_ENV['APP_URL'] ?? 'http://localhost:8080', '/') . '/doctor/login',
+            ],
             default => ['clinic_name' => 'Test Clinic'],
         };
 
@@ -217,7 +223,7 @@ final class MailService
                 $composed['fromEmail'],
                 $composed['fromName'],
                 $replyTo,
-                false,
+                true,
             );
             $result['provider'] = 'smtp';
 
@@ -248,7 +254,7 @@ final class MailService
 
         if (SmtpMailService::isConfigured()) {
             $replyTo = $_ENV['WECARE_FROM'] ?? 'wecare@eclinicpro.com';
-            $result = SmtpMailService::send($toEmail, $subject, $body, $fromEmail, $fromName, $replyTo, false);
+            $result = SmtpMailService::send($toEmail, $subject, $body, $fromEmail, $fromName, $replyTo, true);
             if (!$result['ok']) {
                 error_log('[MailService] SMTP failed (' . $template . '): ' . ($result['error'] ?? 'unknown'));
                 self::logToFile($toEmail, $template . '_smtp_failed', [
@@ -284,8 +290,192 @@ final class MailService
         return $archive;
     }
 
+    /**
+     * Branded HTML email layout (matches the eClinicPro look: centered card,
+     * green wordmark header, body content, optional CTA button + bullet list,
+     * muted footer). Every outbound email is wrapped in this so messages look
+     * finished instead of blank plain text.
+     *
+     * @param array<string, mixed> $content {
+     *   greeting?: string, paragraphs?: list<string>, bullets?: list<string>,
+     *   bullets_intro?: string, cta?: array{label: string, url: string},
+     *   sign_off?: string, raw?: string
+     * }
+     */
+    private static function htmlLayout(array $content): string
+    {
+        $brand = 'eClinicPro';
+        $year = date('Y');
+        $support = $_ENV['HELP_FROM'] ?? 'help@eclinicpro.com';
+        $sales = $_ENV['WECARE_FROM'] ?? 'wecare@eclinicpro.com';
+        $esc = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+
+        // Convert URLs in free text into links and preserve line breaks.
+        $linkify = static function (string $s) use ($esc): string {
+            $s = $esc($s);
+            $s = preg_replace(
+                '~(https?://[^\s<]+)~',
+                '<a href="$1" style="color:#15803d;text-decoration:underline;">$1</a>',
+                $s,
+            ) ?? $s;
+
+            return nl2br($s);
+        };
+
+        $body = '';
+
+        if (!empty($content['greeting'])) {
+            $body .= '<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#111827;">'
+                . $linkify((string) $content['greeting']) . '</p>';
+        }
+
+        foreach (($content['paragraphs'] ?? []) as $p) {
+            $p = (string) $p;
+            if ($p === '') {
+                continue;
+            }
+            $body .= '<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#111827;">'
+                . $linkify($p) . '</p>';
+        }
+
+        if (!empty($content['bullets_intro'])) {
+            $body .= '<p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#111827;">'
+                . $linkify((string) $content['bullets_intro']) . '</p>';
+        }
+        if (!empty($content['bullets'])) {
+            $body .= '<ul style="margin:0 0 16px;padding-left:20px;font-size:15px;line-height:1.7;color:#111827;">';
+            foreach ($content['bullets'] as $li) {
+                $body .= '<li style="margin:0 0 4px;">' . $linkify((string) $li) . '</li>';
+            }
+            $body .= '</ul>';
+        }
+
+        if (!empty($content['cta']['url']) && !empty($content['cta']['label'])) {
+            $url = (string) $content['cta']['url'];
+            $label = $esc((string) $content['cta']['label']);
+            $body .= '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px auto;">'
+                . '<tr><td style="border-radius:8px;background:#16a34a;">'
+                . '<a href="' . $esc($url) . '" target="_blank" '
+                . 'style="display:inline-block;padding:13px 30px;font-size:15px;font-weight:700;'
+                . 'color:#ffffff;text-decoration:none;border-radius:8px;">' . $label . '</a>'
+                . '</td></tr></table>';
+        }
+
+        if (!empty($content['sign_off'])) {
+            $body .= '<p style="margin:24px 0 0;font-size:15px;line-height:1.6;color:#111827;">'
+                . $linkify((string) $content['sign_off']) . '</p>';
+        }
+
+        // Fallback: raw text only (templates not yet structured).
+        if ($body === '' && !empty($content['raw'])) {
+            $body = '<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#111827;">'
+                . $linkify((string) $content['raw']) . '</p>';
+        }
+
+        return '<!DOCTYPE html><html lang="en"><head>'
+            . '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+            . '</head>'
+            . '<body style="margin:0;padding:0;background:#f3f4f6;">'
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:24px 0;">'
+            . '<tr><td align="center">'
+            . '<table role="presentation" width="600" cellpadding="0" cellspacing="0" '
+            . 'style="max-width:600px;width:100%;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;">'
+            // Header
+            . '<tr><td style="padding:24px;text-align:center;border-bottom:1px solid #eef0f2;">'
+            . '<span style="font-size:20px;font-weight:700;color:#16a34a;letter-spacing:-0.3px;">' . $brand . '</span>'
+            . '</td></tr>'
+            // Body
+            . '<tr><td style="padding:32px;">' . $body . '</td></tr>'
+            // Footer
+            . '<tr><td style="padding:20px 24px;border-top:1px solid #eef0f2;text-align:center;">'
+            . '<p style="margin:0 0 6px;font-size:12px;color:#9ca3af;line-height:1.5;">This is an automated message from ' . $brand . '.</p>'
+            . '<p style="margin:0 0 6px;font-size:12px;color:#9ca3af;line-height:1.5;">Need help? '
+            . '<a href="mailto:' . $esc($support) . '" style="color:#9ca3af;">' . $esc($support) . '</a> · Sales: '
+            . '<a href="mailto:' . $esc($sales) . '" style="color:#9ca3af;">' . $esc($sales) . '</a></p>'
+            . '<p style="margin:0;font-size:12px;color:#9ca3af;">© ' . $year . ' ' . $brand . '</p>'
+            . '</td></tr>'
+            . '</table></td></tr></table></body></html>';
+    }
+
+    /**
+     * Structured content for templates that benefit from buttons/bullets.
+     * Returns null for templates that should just flow their plain text.
+     *
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>|null
+     */
+    private static function structuredContent(string $template, array $payload): ?array
+    {
+        $appUrl = rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/');
+
+        return match ($template) {
+            'welcome' => [
+                'greeting' => 'Hello,',
+                'paragraphs' => [
+                    'Welcome to eClinicPro — your clinic "' . ($payload['clinic_name'] ?? '') . '" is ready.',
+                    'Manage appointments, prescriptions, patient records and billing — all from your dashboard.',
+                ],
+                'cta' => ['label' => 'Open dashboard', 'url' => $appUrl . '/login'],
+                'sign_off' => "Best regards,\nThe eClinicPro Team",
+            ],
+            'doctor_approved' => [
+                'greeting' => 'Hello ' . ($payload['doctor_name'] ?? 'Doctor') . ',',
+                'paragraphs' => [
+                    'Your eClinicPro account has been successfully approved and activated.',
+                    'You can sign in to your clinic portal with your verified phone number ('
+                        . ($payload['phone'] ?? '') . '). No password is needed — we\'ll send you a one-time code by SMS.',
+                    'We would be happy to provide a personalized demo of the platform and help you get started with features such as:',
+                ],
+                'bullets' => [
+                    'Online Appointment Management',
+                    'Digital Prescriptions',
+                    'Electronic Medical Records (EMR)',
+                    'Patient Management',
+                    'Clinic Profile & Online Presence',
+                ],
+                'cta' => ['label' => 'Sign in to your portal', 'url' => (string) ($payload['login_url'] ?? $appUrl . '/doctor/login')],
+                'sign_off' => "Please let us know your preferred date and time for a short demo session, and our team will arrange it accordingly. "
+                    . "We look forward to supporting your practice.\n\n"
+                    . "You can connect with us on WhatsApp or call: +91 9998010029\n\n"
+                    . "Best regards,\nThe eClinicPro Team",
+            ],
+            'password_reset' => [
+                'greeting' => 'Hello,',
+                'paragraphs' => ['Use the button below to reset your password. This link is valid for 1 hour.'],
+                'cta' => ['label' => 'Reset password', 'url' => (string) ($payload['reset_url'] ?? '')],
+                'sign_off' => "If you didn't request this, you can safely ignore this email.\n\n— The eClinicPro Team",
+            ],
+            'staff_invite' => [
+                'greeting' => 'Hello ' . ($payload['name'] ?? '') . ',',
+                'paragraphs' => [
+                    ($payload['clinic_name'] ?? 'A clinic') . ' has invited you to join as '
+                        . ($payload['role'] ?? 'a team member') . ' on eClinicPro.',
+                    'This invitation expires in 7 days.',
+                ],
+                'cta' => ['label' => 'Accept invitation', 'url' => (string) ($payload['accept_url'] ?? '')],
+                'sign_off' => "Best regards,\nThe eClinicPro Team",
+            ],
+            default => null,
+        };
+    }
+
     /** @param array<string, mixed> $payload */
     private static function renderTemplate(string $template, array $payload): string
+    {
+        // Templates with rich structure (buttons, bullets) get a tailored layout.
+        $structured = self::structuredContent($template, $payload);
+        if ($structured !== null) {
+            return self::htmlLayout($structured);
+        }
+
+        // Everything else: flow its existing plain text into the branded layout.
+        $text = self::renderPlainText($template, $payload);
+
+        return self::htmlLayout(['raw' => $text]);
+    }
+
+    /** @param array<string, mixed> $payload */
+    private static function renderPlainText(string $template, array $payload): string
     {
         $appUrl = rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/');
 
@@ -371,14 +561,24 @@ final class MailService
             ? sprintf('%s <%s>', $fromName, $fromEmail)
             : $fromEmail;
 
+        // $text is our branded HTML body. Send it as html, with a plain-text
+        // fallback (tags stripped) for clients that don't render HTML.
+        $isHtml = stripos($text, '<html') !== false || stripos($text, '<table') !== false;
         $ch = curl_init("https://api.mailgun.net/v3/{$domain}/messages");
         $fields = [
             'from' => $from,
             'to' => $to,
             'subject' => $subject,
-            'text' => $text,
             'h:Reply-To' => $_ENV['WECARE_FROM'] ?? 'wecare@eclinicpro.com',
         ];
+        if ($isHtml) {
+            $fields['html'] = $text;
+            $fields['text'] = trim(html_entity_decode(strip_tags(
+                preg_replace('~<br\s*/?>~i', "\n", $text) ?? $text,
+            ), ENT_QUOTES, 'UTF-8'));
+        } else {
+            $fields['text'] = $text;
+        }
         $archive = self::archiveBcc($to);
         if ($archive !== null) {
             $fields['bcc'] = $archive;

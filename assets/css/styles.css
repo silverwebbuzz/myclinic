@@ -9093,11 +9093,212 @@ li {
 .lab-step h3 { font-size: 16px; color: var(--ink); margin: 0 0 6px; }
 .lab-step p { font-size: 13px; color: var(--mute); line-height: 1.5; margin: 0; }
 
+/* =====================================================================
+   HEALTH INSURANCE PAGE (health-insurance.php) — quote form, plan cards,
+   FAQ accordion. Layered on the .store-* shell. (Reuses lab-grid-steps,
+   store-grid-spec, store-grid-why for the other sections.)
+   ===================================================================== */
+.ins-grid-plan { grid-template-columns: repeat(3, 1fr); }
+
+/* ---- Quick quote form ---- */
+.ins-quote {
+  max-width: 880px;
+  margin: 24px auto 0;
+  padding: 18px;
+  text-align: left;
+}
+.ins-quote-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+.ins-field { display: flex; flex-direction: column; gap: 5px; }
+.ins-field > span { font-size: 12px; font-weight: 600; color: var(--mute); }
+.ins-field select,
+.ins-field input {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: #fff;
+  outline: none;
+  width: 100%;
+}
+.ins-field select:focus,
+.ins-field input:focus { border-color: var(--teal-400, #4FC79E); }
+.ins-quote-row .btn { padding: 11px 18px; white-space: nowrap; }
+.ins-quote-note { margin: 12px 0 0; font-size: 12.5px; color: var(--mute); }
+
+/* ---- Plan card ---- */
+.ins-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+}
+.ins-plan:hover { transform: translateY(-3px); box-shadow: 0 16px 36px rgba(15, 155, 110, 0.10); }
+.ins-plan-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: var(--teal-600, #0F9B6E);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 980px;
+}
+.ins-plan-top { display: flex; align-items: flex-start; gap: 12px; }
+.ins-plan-top .store-tile { flex: 0 0 auto; }
+.ins-plan-name { font-size: 17px; color: var(--ink); margin: 0 0 3px; line-height: 1.25; }
+.ins-plan-blurb { font-size: 13px; color: var(--mute); margin: 0; line-height: 1.45; }
+.ins-plan-points {
+  list-style: none;
+  margin: 0;
+  padding: 14px 0;
+  border-top: 0.5px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+.ins-plan-points li {
+  position: relative;
+  padding-left: 22px;
+  font-size: 13.5px;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.ins-plan-points li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--teal-600, #0F9B6E);
+  font-weight: 700;
+}
+.ins-plan .btn { width: 100%; }
+
+/* ---- FAQ accordion ---- */
+.ins-faq { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+.ins-faq-item {
+  background: #fff;
+  border: 0.5px solid var(--line);
+  border-radius: 12px;
+  padding: 4px 18px;
+}
+.ins-faq-item summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 14px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  position: relative;
+  padding-right: 28px;
+}
+.ins-faq-item summary::-webkit-details-marker { display: none; }
+.ins-faq-item summary::after {
+  content: "+";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  color: var(--teal-600, #0F9B6E);
+  font-weight: 400;
+}
+.ins-faq-item[open] summary::after { content: "−"; }
+.ins-faq-item p {
+  margin: 0;
+  padding: 0 0 16px;
+  font-size: 14px;
+  color: var(--mute);
+  line-height: 1.6;
+}
+
+/* ---- "What is health insurance" + tax band (wide explainer cards) ---- */
+.ins-define,
+.ins-tax {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 26px 28px;
+}
+.ins-define .store-tile,
+.ins-tax .store-tile { flex: 0 0 auto; }
+.ins-define h2,
+.ins-tax h2 { margin: 2px 0 8px; font-size: clamp(20px, 2.6vw, 26px); }
+.ins-define p,
+.ins-tax p { margin: 0; color: var(--ink-2, #4a4a4a); line-height: 1.65; font-size: 15px; }
+.ins-tax strong { color: var(--teal-700, #0B7A57); }
+
+/* ---- Reason / add-on cards ---- */
+.ins-grid-reason { grid-template-columns: repeat(4, 1fr); }
+.ins-reason { padding: 22px 20px; }
+.ins-reason .store-tile { margin-bottom: 12px; }
+.ins-reason h3 { font-size: 16px; color: var(--ink); margin: 0 0 6px; }
+.ins-reason p { font-size: 13.5px; color: var(--mute); line-height: 1.55; margin: 0; }
+
+/* ---- Life-stage guide cards ---- */
+.ins-grid-guide { grid-template-columns: repeat(4, 1fr); }
+.ins-guide { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.ins-guide-top { display: flex; align-items: flex-start; gap: 12px; }
+.ins-guide-top .store-tile { flex: 0 0 auto; }
+.ins-guide-top h3 { font-size: 15.5px; color: var(--ink); margin: 0 0 3px; line-height: 1.25; }
+.ins-guide-cover { font-size: 12.5px; color: var(--mute); }
+.ins-guide-cover strong { color: var(--teal-700, #0B7A57); }
+.ins-guide .ins-plan-points { padding-top: 12px; }
+
+/* ---- Glossary / price-factor cards ---- */
+.ins-grid-gloss { grid-template-columns: repeat(3, 1fr); }
+.ins-gloss { padding: 18px 20px; }
+.ins-gloss h3 {
+  font-size: 15px; color: var(--ink); margin: 0 0 6px;
+  display: flex; align-items: center; gap: 7px;
+}
+.ins-gloss-ico { font-size: 17px; }
+.ins-gloss p { font-size: 13.5px; color: var(--mute); line-height: 1.55; margin: 0; }
+
+/* ---- Covered / not-covered & claim split (two columns) ---- */
+.ins-cover-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.ins-cover-col { padding: 22px 24px; }
+.ins-cover-col h3 { font-size: 17px; margin: 0 0 14px; color: var(--ink); }
+.ins-cover-col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ins-cover-col li {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 14px; color: var(--ink);
+}
+.ins-cover-col li span { font-size: 18px; width: 24px; text-align: center; flex: 0 0 auto; }
+.ins-cover-yes { border-top: 3px solid var(--teal-600, #0F9B6E); }
+.ins-cover-no  { border-top: 3px solid #FF6F61; }
+
+.ins-claim { padding: 24px; }
+.ins-claim .store-tile { margin-bottom: 12px; }
+.ins-claim h3 { font-size: 17px; color: var(--ink); margin: 0 0 8px; }
+.ins-claim p { font-size: 14px; color: var(--mute); line-height: 1.6; margin: 0; }
+
 /* ---- Responsive ---- */
 @media (max-width: 1024px) {
   .lab-grid-pkg   { grid-template-columns: repeat(2, 1fr); }
   .lab-grid-organ { grid-template-columns: repeat(4, 1fr); }
   .lab-grid-steps { grid-template-columns: repeat(2, 1fr); }
+  .ins-grid-plan  { grid-template-columns: repeat(2, 1fr); }
+  .ins-grid-reason,
+  .ins-grid-guide { grid-template-columns: repeat(2, 1fr); }
+  .ins-grid-gloss { grid-template-columns: repeat(2, 1fr); }
+  .ins-quote-row  { grid-template-columns: 1fr 1fr; }
+  .ins-quote-row .btn { grid-column: 1 / -1; }
   .store-grid-cond,
   .store-grid-cat,
   .store-grid-spec,
@@ -9114,6 +9315,14 @@ li {
   .lab-grid-pkg,
   .lab-grid-steps { grid-template-columns: 1fr; }
   .lab-grid-organ { grid-template-columns: repeat(3, 1fr); }
+  .ins-grid-plan  { grid-template-columns: 1fr; }
+  .ins-grid-reason,
+  .ins-grid-guide,
+  .ins-grid-gloss { grid-template-columns: 1fr; }
+  .ins-cover-split { grid-template-columns: 1fr; }
+  .ins-define,
+  .ins-tax { flex-direction: column; gap: 12px; }
+  .ins-quote-row  { grid-template-columns: 1fr; }
   .store-grid-cond,
   .store-grid-cat,
   .store-grid-spec,

@@ -22,6 +22,8 @@ $pageTitle  = 'eClinicPro Health Store — Doctor-Recommended Wellness & Care';
 $metaDesc   = 'Trusted health, wellness & care products recommended by healthcare professionals — supplements, devices, baby care, Ayurveda and more. Launching soon.';
 $activePage = 'store';
 $hideFinalCta = true; // this page renders its own footer CTA banner
+$noindex = true; // keep out of Google until the store is live —
+                 // URL stays shareable for partner demos.
 
 // ---------------------------------------------------------------------
 // TAXONOMY (all hardcoded — this is a Shopify blueprint, not live data)

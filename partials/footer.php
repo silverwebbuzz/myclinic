@@ -80,10 +80,12 @@ try {
                 <h5>Product</h5>
                 <ul>
                     <li><a href="/find-a-doctor">Find a doctor</a></li>
+                    <li><a href="/eclinicpro-health-store">Health Store</a></li>
+                    <li><a href="/lab">Lab Tests</a></li>
+                    <li><a href="/health-insurance">Health Insurance</a></li>
                     <li><a href="/features">For doctors</a></li>
                     <li><a href="/product-tour">Product tour</a></li>
                     <li><a href="/features#pricing">Pricing</a></li>
-                    <li><a href="/#specialties">Specialties</a></li>
                 </ul>
             </div>
             <div class="foot-col">
