@@ -111,6 +111,7 @@ $activeClass = match ($e['active'] ?? 'log') {
                         <option value="welcome" <?= ($testTemplate ?? 'welcome') === 'welcome' ? 'selected' : '' ?>>Welcome</option>
                         <option value="password_reset" <?= ($testTemplate ?? '') === 'password_reset' ? 'selected' : '' ?>>Password reset</option>
                         <option value="staff_invite" <?= ($testTemplate ?? '') === 'staff_invite' ? 'selected' : '' ?>>Staff invite</option>
+                        <option value="doctor_approved" <?= ($testTemplate ?? '') === 'doctor_approved' ? 'selected' : '' ?>>Doctor approved</option>
                         <option value="appointment_reminder" <?= ($testTemplate ?? '') === 'appointment_reminder' ? 'selected' : '' ?>>Appointment reminder</option>
                         <option value="rx_delivery" <?= ($testTemplate ?? '') === 'rx_delivery' ? 'selected' : '' ?>>Prescription ready</option>
                         <option value="invoice_paid" <?= ($testTemplate ?? '') === 'invoice_paid' ? 'selected' : '' ?>>Invoice paid</option>

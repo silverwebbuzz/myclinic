@@ -192,6 +192,12 @@ final class MailService
                 'invoice_number' => 'INV-TEST-001',
                 'total' => '500.00',
             ],
+            'doctor_approved' => [
+                'doctor_name' => 'Dr Test Doctor',
+                'clinic_name' => 'Test Clinic',
+                'phone' => '+91 99999 99999',
+                'login_url' => rtrim($_ENV['APP_URL'] ?? 'http://localhost:8080', '/') . '/doctor/login',
+            ],
             default => ['clinic_name' => 'Test Clinic'],
         };
 
