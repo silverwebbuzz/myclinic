@@ -308,6 +308,9 @@ final class MailService
         $year = date('Y');
         $support = $_ENV['HELP_FROM'] ?? 'help@eclinicpro.com';
         $sales = $_ENV['WECARE_FROM'] ?? 'wecare@eclinicpro.com';
+        // Email clients can't render SVG and need an absolute URL (the message
+        // is opened off-site), so use the PNG logo on the public marketing site.
+        $logoUrl = $_ENV['EMAIL_LOGO_URL'] ?? 'https://eclinicpro.com/assets/img/logos/logo.png';
         $esc = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 
         // Convert URLs in free text into links and preserve line breaks.
@@ -380,9 +383,10 @@ final class MailService
             . '<tr><td align="center">'
             . '<table role="presentation" width="600" cellpadding="0" cellspacing="0" '
             . 'style="max-width:600px;width:100%;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;">'
-            // Header
+            // Header (logo image; falls back to alt text if it can't load)
             . '<tr><td style="padding:24px;text-align:center;border-bottom:1px solid #eef0f2;">'
-            . '<span style="font-size:20px;font-weight:700;color:#16a34a;letter-spacing:-0.3px;">' . $brand . '</span>'
+            . '<img src="' . $esc($logoUrl) . '" alt="' . $brand . '" height="40" '
+            . 'style="height:40px;width:auto;max-width:200px;display:inline-block;border:0;outline:none;text-decoration:none;">'
             . '</td></tr>'
             // Body
             . '<tr><td style="padding:32px;">' . $body . '</td></tr>'
