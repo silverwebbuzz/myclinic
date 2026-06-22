@@ -424,15 +424,28 @@ final class DoctorClaimService
         // DB value. Falls back to 'gp' if we can't recognize it.
         $specDb = self::resolveSpecialtyDbValue((string) ($req['specialty'] ?? ''));
 
+        // Carry over the rest of the submitted contact + about info so the
+        // public profile page isn't half-empty after approval:
+        //   - intl_phone: canonical (+CC) form of the verified phone.
+        //   - address:    no dedicated address field is collected today, so
+        //                 fall back to "City, State" (same as the tenant row).
+        //   - bio:        the doctor's free-text "message" from the request —
+        //                 shown as the "About" section on the front-end profile.
+        $intlPhone = DoctorOtpService::normalizePhone((string) ($req['phone'] ?? '')) ?: null;
+        $address   = trim(((string) ($req['city'] ?? '')) . ($req['state'] ? ', ' . $req['state'] : '')) ?: null;
+        $bio       = trim((string) ($req['message'] ?? '')) ?: null;
+
         $stmt = $db->prepare(
             'INSERT INTO directory_doctors
                 (place_id, source, is_claimed, claimed_tenant_id,
                  name, doctor_name, specialty, country, state, city,
-                 phone, status, is_active, fetched_at, refreshed_at)
+                 address, phone, intl_phone, bio,
+                 status, is_active, fetched_at, refreshed_at)
              VALUES
                 (:pid, "self", 1, :tid,
                  :name, :doctor_name, :spec, "IN", :state, :city,
-                 :phone, "OPERATIONAL", 1, NOW(), NOW())'
+                 :address, :phone, :intl_phone, :bio,
+                 "OPERATIONAL", 1, NOW(), NOW())'
         );
         $stmt->execute([
             'pid'         => $placeId,
@@ -442,7 +455,10 @@ final class DoctorClaimService
             'spec'        => $specDb,
             'state'       => $req['state'] ?: null,
             'city'        => $req['city'] ?: '',
+            'address'     => $address,
             'phone'       => $req['phone'],
+            'intl_phone'  => $intlPhone,
+            'bio'         => $bio,
         ]);
         return (int) $db->lastInsertId();
     }
