@@ -23,6 +23,8 @@ $pageTitle  = 'Lab Tests & Health Packages — Book Online | eClinicPro';
 $metaDesc   = 'Book diagnostic lab tests & full-body health packages online. NABL-accredited labs, free home sample collection, digital reports and doctor consults. Launching soon.';
 $activePage = 'lab';
 $hideFinalCta = true; // renders its own footer CTA banner
+$noindex = true; // keep out of Google until bookings/partners are live —
+                 // URL stays shareable for partner demos.
 
 // ---------------------------------------------------------------------
 // PLACEHOLDER DATA (hardcoded — swap for Sun Pathology's real list)
