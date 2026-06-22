@@ -9219,12 +9219,84 @@ li {
   line-height: 1.6;
 }
 
+/* ---- "What is health insurance" + tax band (wide explainer cards) ---- */
+.ins-define,
+.ins-tax {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 26px 28px;
+}
+.ins-define .store-tile,
+.ins-tax .store-tile { flex: 0 0 auto; }
+.ins-define h2,
+.ins-tax h2 { margin: 2px 0 8px; font-size: clamp(20px, 2.6vw, 26px); }
+.ins-define p,
+.ins-tax p { margin: 0; color: var(--ink-2, #4a4a4a); line-height: 1.65; font-size: 15px; }
+.ins-tax strong { color: var(--teal-700, #0B7A57); }
+
+/* ---- Reason / add-on cards ---- */
+.ins-grid-reason { grid-template-columns: repeat(4, 1fr); }
+.ins-reason { padding: 22px 20px; }
+.ins-reason .store-tile { margin-bottom: 12px; }
+.ins-reason h3 { font-size: 16px; color: var(--ink); margin: 0 0 6px; }
+.ins-reason p { font-size: 13.5px; color: var(--mute); line-height: 1.55; margin: 0; }
+
+/* ---- Life-stage guide cards ---- */
+.ins-grid-guide { grid-template-columns: repeat(4, 1fr); }
+.ins-guide { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.ins-guide-top { display: flex; align-items: flex-start; gap: 12px; }
+.ins-guide-top .store-tile { flex: 0 0 auto; }
+.ins-guide-top h3 { font-size: 15.5px; color: var(--ink); margin: 0 0 3px; line-height: 1.25; }
+.ins-guide-cover { font-size: 12.5px; color: var(--mute); }
+.ins-guide-cover strong { color: var(--teal-700, #0B7A57); }
+.ins-guide .ins-plan-points { padding-top: 12px; }
+
+/* ---- Glossary / price-factor cards ---- */
+.ins-grid-gloss { grid-template-columns: repeat(3, 1fr); }
+.ins-gloss { padding: 18px 20px; }
+.ins-gloss h3 {
+  font-size: 15px; color: var(--ink); margin: 0 0 6px;
+  display: flex; align-items: center; gap: 7px;
+}
+.ins-gloss-ico { font-size: 17px; }
+.ins-gloss p { font-size: 13.5px; color: var(--mute); line-height: 1.55; margin: 0; }
+
+/* ---- Covered / not-covered & claim split (two columns) ---- */
+.ins-cover-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.ins-cover-col { padding: 22px 24px; }
+.ins-cover-col h3 { font-size: 17px; margin: 0 0 14px; color: var(--ink); }
+.ins-cover-col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ins-cover-col li {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 14px; color: var(--ink);
+}
+.ins-cover-col li span { font-size: 18px; width: 24px; text-align: center; flex: 0 0 auto; }
+.ins-cover-yes { border-top: 3px solid var(--teal-600, #0F9B6E); }
+.ins-cover-no  { border-top: 3px solid #FF6F61; }
+
+.ins-claim { padding: 24px; }
+.ins-claim .store-tile { margin-bottom: 12px; }
+.ins-claim h3 { font-size: 17px; color: var(--ink); margin: 0 0 8px; }
+.ins-claim p { font-size: 14px; color: var(--mute); line-height: 1.6; margin: 0; }
+
 /* ---- Responsive ---- */
 @media (max-width: 1024px) {
   .lab-grid-pkg   { grid-template-columns: repeat(2, 1fr); }
   .lab-grid-organ { grid-template-columns: repeat(4, 1fr); }
   .lab-grid-steps { grid-template-columns: repeat(2, 1fr); }
   .ins-grid-plan  { grid-template-columns: repeat(2, 1fr); }
+  .ins-grid-reason,
+  .ins-grid-guide { grid-template-columns: repeat(2, 1fr); }
+  .ins-grid-gloss { grid-template-columns: repeat(2, 1fr); }
   .ins-quote-row  { grid-template-columns: 1fr 1fr; }
   .ins-quote-row .btn { grid-column: 1 / -1; }
   .store-grid-cond,
@@ -9244,6 +9316,12 @@ li {
   .lab-grid-steps { grid-template-columns: 1fr; }
   .lab-grid-organ { grid-template-columns: repeat(3, 1fr); }
   .ins-grid-plan  { grid-template-columns: 1fr; }
+  .ins-grid-reason,
+  .ins-grid-guide,
+  .ins-grid-gloss { grid-template-columns: 1fr; }
+  .ins-cover-split { grid-template-columns: 1fr; }
+  .ins-define,
+  .ins-tax { flex-direction: column; gap: 12px; }
   .ins-quote-row  { grid-template-columns: 1fr; }
   .store-grid-cond,
   .store-grid-cat,
