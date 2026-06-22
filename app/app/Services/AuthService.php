@@ -71,7 +71,10 @@ final class AuthService
         PlanService::applyPlanToTenant($tenantId, 'standard', true);
 
         try {
-            MailService::send($email, 'welcome', ['clinic_name' => $clinicName], $tenantId);
+            MailService::send($email, 'welcome', [
+                'clinic_name' => $clinicName,
+                'login_url' => rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/') . '/login',
+            ], $tenantId);
         } catch (\Throwable $e) {
             error_log('[registerClinic] welcome mail failed: ' . $e->getMessage());
         }

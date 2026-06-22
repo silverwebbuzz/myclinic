@@ -148,6 +148,12 @@ final class MailService
             default => 'eClinicPro notification',
         };
 
+        // Admin-edited subject (from email_templates) overrides the default.
+        $subjectOverride = EmailTemplateService::subject($template, $payload);
+        if ($subjectOverride !== null && trim($subjectOverride) !== '') {
+            $subject = $subjectOverride;
+        }
+
         [$fromEmail, $fromName] = self::fromFor($template);
 
         return [
@@ -167,14 +173,18 @@ final class MailService
         }
 
         $payload = match ($template) {
+            'welcome' => [
+                'clinic_name' => 'Test Clinic',
+                'login_url' => rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/') . '/login',
+            ],
             'password_reset' => [
-                'reset_url' => rtrim($_ENV['APP_URL'] ?? 'http://localhost:8080', '/') . '/reset-password/test-token',
+                'reset_url' => rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/') . '/reset-password/test-token',
             ],
             'staff_invite' => [
                 'name' => 'Test User',
                 'clinic_name' => 'Test Clinic',
                 'role' => 'receptionist',
-                'accept_url' => rtrim($_ENV['APP_URL'] ?? 'http://localhost:8080', '/') . '/accept-invite/test',
+                'accept_url' => rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/') . '/accept-invite/test',
             ],
             'appointment_reminder' => [
                 'patient_name' => 'Test Patient',
@@ -184,7 +194,7 @@ final class MailService
             'rx_delivery' => [
                 'patient_name' => 'Test Patient',
                 'clinic_name' => 'Test Clinic',
-                'rx_url' => rtrim($_ENV['APP_URL'] ?? 'http://localhost:8080', '/') . '/uploads/rx/test.pdf',
+                'rx_url' => rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/') . '/uploads/rx/test.pdf',
             ],
             'invoice_paid' => [
                 'patient_name' => 'Test Patient',
@@ -196,7 +206,7 @@ final class MailService
                 'doctor_name' => 'Dr Test Doctor',
                 'clinic_name' => 'Test Clinic',
                 'phone' => '+91 99999 99999',
-                'login_url' => rtrim($_ENV['APP_URL'] ?? 'http://localhost:8080', '/') . '/doctor/login',
+                'login_url' => rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/') . '/doctor/login',
             ],
             default => ['clinic_name' => 'Test Clinic'],
         };
@@ -413,6 +423,13 @@ final class MailService
     private static function structuredContent(string $template, array $payload): ?array
     {
         $appUrl = rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/');
+
+        // Admin override from the email_templates table takes precedence over
+        // the code default below. Empty/absent => fall through to code.
+        $override = EmailTemplateService::override($template);
+        if ($override !== null) {
+            return EmailTemplateService::toStructured($override, $payload);
+        }
 
         return match ($template) {
             'welcome' => [

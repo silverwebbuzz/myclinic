@@ -33,6 +33,7 @@ use App\Controllers\FollowUpController;
 use App\Controllers\DietTemplateController;
 use App\Controllers\HelpController;
 use App\Controllers\MessagingAdminController;
+use App\Controllers\EmailTemplateAdminController;
 use App\Controllers\SpecialtyAdminController;
 use App\Controllers\VitalsController;
 use App\Controllers\WebhookController;
@@ -350,6 +351,12 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/payment-gateway', [SuperAdminController::class, 'paymentGateway']);
         $admin->get('/email', [SuperAdminController::class, 'email']);
         $admin->post('/email/test', [SuperAdminController::class, 'testEmail']);
+
+        // Admin-editable email template content
+        $admin->get('/email-templates', [EmailTemplateAdminController::class, 'index']);
+        $admin->post('/email-templates/test', [EmailTemplateAdminController::class, 'test']);
+        $admin->post('/email-templates/{key}/reset', [EmailTemplateAdminController::class, 'reset']);
+        $admin->post('/email-templates/{key}', [EmailTemplateAdminController::class, 'save']);
 
         // Phase 3: symptom promotions queue
         $admin->get('/symptom-promotions', [SymptomsController::class, 'promotionsIndex']);
