@@ -121,7 +121,7 @@ try {
             </div>
         </div>
         <div class="foot-bottom">
-            <div>© <?= date('Y') ?> eClinicPro — a brand of Silver Webbuzz Pvt Ltd · Made with care for clinics across India 🌿</div>
+            <div>© <?= date('Y') ?> eClinicPro — a brand of <a href="https://silverwebbuzz.com" target="_blank" rel="noopener">Silver Webbuzz Pvt Ltd</a> · Made with care for clinics across India 🌿</div>
             <div class="links">
                 <a href="/privacy-policy">Privacy</a>
                 <a href="/terms">Terms</a>

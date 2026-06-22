@@ -270,7 +270,7 @@
             if (!$hidePoweredBy):
             ?>
             <footer class="border-t px-4 py-3 text-center text-xs text-slate-400">
-                Powered by <a href="https://eclinicpro.com" class="hover:text-slate-600">eClinicPro</a>
+                © <?= date('Y') ?> eClinicPro — a brand of <a href="https://silverwebbuzz.com" target="_blank" rel="noopener" class="hover:text-slate-600">Silver Webbuzz Pvt Ltd</a> · Made with care for clinics across India 🌿
             </footer>
             <?php endif; ?>
         </div>

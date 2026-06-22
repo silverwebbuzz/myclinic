@@ -213,7 +213,7 @@
     <!-- Footer -->
     <footer class="border-t border-slate-200 bg-white">
         <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-6 text-sm text-slate-500">
-            <div>© <?= date('Y') ?> eClinicPro · Made in India</div>
+            <div>© <?= date('Y') ?> eClinicPro — a brand of <a href="https://silverwebbuzz.com" target="_blank" rel="noopener" class="hover:text-slate-700 underline">Silver Webbuzz Pvt Ltd</a> · Made with care for clinics across India 🌿</div>
             <div class="flex gap-4">
                 <a href="https://eclinicpro.com/security" class="hover:text-slate-900">Security</a>
                 <a href="https://eclinicpro.com/find-a-doctor" class="hover:text-slate-900">Find a doctor</a>

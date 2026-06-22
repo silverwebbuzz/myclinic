@@ -396,7 +396,9 @@ final class MailService
             . '<p style="margin:0 0 6px;font-size:12px;color:#9ca3af;line-height:1.5;">Need help? '
             . '<a href="mailto:' . $esc($support) . '" style="color:#9ca3af;">' . $esc($support) . '</a> · Sales: '
             . '<a href="mailto:' . $esc($sales) . '" style="color:#9ca3af;">' . $esc($sales) . '</a></p>'
-            . '<p style="margin:0;font-size:12px;color:#9ca3af;">© ' . $year . ' ' . $brand . '</p>'
+            . '<p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.5;">© ' . $year . ' ' . $brand
+            . ' — a brand of <a href="https://silverwebbuzz.com" target="_blank" rel="noopener" style="color:#9ca3af;">Silver Webbuzz Pvt Ltd</a>'
+            . ' · Made with care for clinics across India 🌿</p>'
             . '</td></tr>'
             . '</table></td></tr></table></body></html>';
     }
