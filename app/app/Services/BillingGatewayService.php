@@ -19,7 +19,7 @@ use App\Services\PartnerCommissionService;
  */
 final class BillingGatewayService
 {
-    /** @return array{type: string, url?: string, message?: string} */
+    /** @return array{type: string, url?: string, payment_session_id?: string, mode?: string, message?: string} */
     public static function startCheckout(int $clinicId, string $planId, string $billingCycle, string $countryCode): array
     {
         $plan = PlanService::get($planId);
@@ -76,6 +76,13 @@ final class BillingGatewayService
         return strtolower($_ENV['CASHFREE_ENV'] ?? 'sandbox') === 'production'
             ? 'https://api.cashfree.com/pg'
             : 'https://sandbox.cashfree.com/pg';
+    }
+
+    private static function cashfreeCheckoutMode(): string
+    {
+        return strtolower($_ENV['CASHFREE_ENV'] ?? 'sandbox') === 'production'
+            ? 'production'
+            : 'sandbox';
     }
 
     private static function appBaseUrl(): string
@@ -145,7 +152,7 @@ final class BillingGatewayService
         $clinic = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first() ?? [];
         // order_id must be unique per attempt; carries clinic/plan via tags+id.
         $orderId = 'sub_' . $clinicId . '_' . $planId . '_' . substr(bin2hex(random_bytes(4)), 0, 8);
-        $returnUrl = self::appBaseUrl() . '/onboarding/billing/cashfree-return?order_id={order_id}';
+        $returnUrl = self::appBaseUrl() . '/settings';
 
         // Cashfree validates customer_phone/email. Normalise: strip +91/spaces to
         // a bare 10-digit number; fall back to a valid placeholder if missing.
@@ -200,12 +207,13 @@ final class BillingGatewayService
 
         $data = json_decode((string) $response, true);
         $sessionId = $data['payment_session_id'] ?? null;
+        $cfOrderId = (string) ($data['order_id'] ?? $orderId);
 
         if ($httpCode >= 200 && $httpCode < 300 && $sessionId) {
             // Remember the pending order so the return-URL can verify + activate.
             try {
                 QueryBuilder::table('tenants')->where('id', '=', $clinicId)->update([
-                    'cashfree_order_id' => $orderId,
+                    'cashfree_order_id' => $cfOrderId,
                 ]);
             } catch (\Throwable $e) {
                 // Column missing (migration not run) — webhook/return still work
@@ -215,17 +223,16 @@ final class BillingGatewayService
             // Create the pending SaaS invoice so the doctor sees it in their
             // billing timeline while payment is in progress. Marked paid +
             // emailed on success (webhook / return-URL verify).
-            SaasInvoiceService::createPending($clinicId, $planId, $billingCycle, $price, 'cashfree', $orderId);
+            SaasInvoiceService::createPending($clinicId, $planId, $billingCycle, $price, 'cashfree', $cfOrderId);
 
-            // Cashfree's hosted page for this session. The JS SDK is the official
-            // path, but the order's payment_link (when enabled) or this hosted
-            // URL lets us redirect server-side without embedding the SDK.
-            $hosted = $data['payment_link']
-                ?? (self::cashfreeApiBase() === 'https://api.cashfree.com/pg'
-                    ? 'https://payments.cashfree.com/order/#' . $sessionId
-                    : 'https://payments-test.cashfree.com/order/#' . $sessionId);
-
-            return ['type' => 'redirect', 'url' => $hosted];
+            // Cashfree requires the v3 JS SDK to open checkout (domain must be
+            // whitelisted in the merchant dashboard). Server-side URL redirects
+            // to payments-test.cashfree.com produce "client session is invalid".
+            return [
+                'type' => 'cashfree',
+                'payment_session_id' => $sessionId,
+                'mode' => self::cashfreeCheckoutMode(),
+            ];
         }
 
         // Log the real Cashfree reason for us (server log only) — never shown

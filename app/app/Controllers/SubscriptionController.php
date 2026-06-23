@@ -10,7 +10,9 @@ use App\Http\Response;
 use App\Services\AuditService;
 use App\Services\BillingGatewayService;
 use App\Services\CsrfService;
+use App\Services\OnboardingService;
 use App\Services\PlanService;
+use App\Support\View;
 
 /**
  * Subscription checkout — turns a plan choice into a real gateway payment.
@@ -26,8 +28,18 @@ final class SubscriptionController
         if ($clinicId === null) {
             return Response::redirect('/login');
         }
+
+        $onboarded = OnboardingService::currentStep() >= 5;
+        $returnUrl = static function (string $msg) use ($onboarded): Response {
+            if ($onboarded) {
+                return Response::redirect('/settings?tab=subscription&error=' . urlencode($msg));
+            }
+
+            return Response::redirect('/onboarding/clinic-setup?error=' . urlencode($msg));
+        };
+
         if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
-            return Response::redirect('/settings?tab=subscription&error=' . urlencode('Security token expired, please try again.'));
+            return $returnUrl('Security token expired, please try again.');
         }
 
         $planId = (string) ($request->post['plan'] ?? 'standard');
@@ -35,11 +47,11 @@ final class SubscriptionController
 
         // Free plan is admin-assigned only — not self-serve.
         if ($planId === 'free') {
-            return Response::redirect('/settings?tab=subscription&error=' . urlencode('Free plan is assigned by support only. Please contact us if you need it.'));
+            return $returnUrl('Free plan is assigned by support only. Please contact us if you need it.');
         }
 
         if (PlanService::get($planId) === null) {
-            return Response::redirect('/settings?tab=subscription&error=' . urlencode('Unknown plan.'));
+            return $returnUrl('Unknown plan.');
         }
 
         $clinic = RequestContext::clinic() ?? [];
@@ -48,13 +60,22 @@ final class SubscriptionController
         $result = BillingGatewayService::startCheckout($clinicId, $planId, $cycle, $country);
         AuditService::log($request, 'INSERT', 'saas_invoices', $clinicId);
 
+        $cancelUrl = $onboarded ? '/settings?tab=subscription' : '/onboarding/clinic-setup';
+
+        if (($result['type'] ?? '') === 'cashfree' && !empty($result['payment_session_id'])) {
+            return Response::html(View::render('subscription/cashfree-checkout', [
+                'payment_session_id' => $result['payment_session_id'],
+                'mode' => $result['mode'] ?? 'sandbox',
+                'cancel_url' => $cancelUrl,
+            ]));
+        }
+
         if (($result['type'] ?? '') === 'redirect' && !empty($result['url'])) {
             return Response::redirect($result['url']);
         }
 
-        // Gateway returned an error (no plan, etc.). Send back with a message.
         $msg = $result['message'] ?? 'Could not start checkout. Please try again.';
 
-        return Response::redirect('/settings?tab=subscription&error=' . urlencode($msg));
+        return $returnUrl($msg);
     }
 }
