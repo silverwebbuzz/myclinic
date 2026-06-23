@@ -12,6 +12,7 @@ use App\Services\ChecklistService;
 use App\Services\DashboardService;
 use App\Services\OnboardingService;
 use App\Services\RoleAccessService;
+use App\Services\VisitService;
 use App\Support\ClinicTime;
 use App\Support\Layout;
 
@@ -29,6 +30,7 @@ final class DashboardController
         $config = OnboardingService::specialtyConfig($clinicId) ?? [];
         $stats = DashboardService::stats($clinicId);
         $today = self::todayAppointments($clinicId, $user);
+        $visitedToday = self::todayVisited($clinicId, $user);
         $checklist = ChecklistService::progress($clinicId, $clinic, $config);
 
         // Phase 4: follow-up widget. Best-effort — empty before Phase 4 SQL.
@@ -44,6 +46,9 @@ final class DashboardController
             'todayAppointments' => $today['appointments'],
             'todayCounts' => $today['counts'],
             'todayDate' => $today['date'],
+            'visitedToday' => $visitedToday['visits'],
+            'visitedTodayCount' => $visitedToday['count'],
+            'visitedTodayDate' => $visitedToday['date'],
             'checklist' => $checklist,
             'currency' => $clinic['currency'] ?? 'INR',
             'clinic' => $clinic,
@@ -105,6 +110,21 @@ final class DashboardController
         }
 
         return ['appointments' => $appointments, 'counts' => $counts, 'date' => $date];
+    }
+
+    /**
+     * Today's completed visits for the dashboard "Latest visits" panel.
+     *
+     * @return array{visits: list<array<string, mixed>>, count: int, date: string}
+     */
+    /** @param array<string, mixed> $user */
+    private static function todayVisited(int $clinicId, array $user = []): array
+    {
+        $date = ClinicTime::today();
+        $doctorId = RoleAccessService::resolveAppointmentDoctorId($user, null);
+        $visits = VisitService::listCompletedForDate($clinicId, $date, $doctorId);
+
+        return ['visits' => $visits, 'count' => count($visits), 'date' => $date];
     }
 
     public function dismissChecklist(Request $request): Response

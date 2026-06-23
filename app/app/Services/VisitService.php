@@ -655,6 +655,37 @@ final class VisitService
     }
 
     /** @return list<array<string, mixed>> */
+    public static function listCompletedForDate(int $clinicId, string $date, ?int $doctorId = null, int $limit = 50): array
+    {
+        if (!Database::ping()) {
+            return [];
+        }
+
+        $sql = 'SELECT v.*, p.name AS patient_name, p.uhid, p.phone AS patient_phone,
+                       u.name AS doctor_name
+                FROM visits v
+                INNER JOIN patients p ON p.id = v.patient_id
+                INNER JOIN users u ON u.id = v.doctor_id
+                WHERE v.clinic_id = ? AND v.status = \'completed\'
+                  AND DATE(v.visited_at) = ?';
+        $params = [$clinicId, $date];
+        if ($doctorId !== null) {
+            $sql .= ' AND v.doctor_id = ?';
+            $params[] = $doctorId;
+        }
+        $sql .= ' ORDER BY v.visited_at DESC LIMIT ?';
+        $params[] = $limit;
+
+        $stmt = Database::connection()->prepare($sql);
+        foreach ($params as $i => $param) {
+            $stmt->bindValue($i + 1, $param, is_int($param) ? \PDO::PARAM_INT : \PDO::PARAM_STR);
+        }
+        $stmt->execute();
+
+        return array_map([self::class, 'hydrate'], $stmt->fetchAll() ?: []);
+    }
+
+    /** @return list<array<string, mixed>> */
     public static function listRecent(int $clinicId, int $limit = 30): array
     {
         if (!Database::ping()) {

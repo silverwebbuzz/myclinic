@@ -27,6 +27,12 @@
     </div>
     <?php endif; ?>
 
+    <?php if (!empty($_GET['visit_completed'])): ?>
+    <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        ✓ Visit completed successfully.
+    </div>
+    <?php endif; ?>
+
     <?php if (!empty($_GET['error'])): ?>
     <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
         <?= htmlspecialchars((string) $_GET['error']) ?>
@@ -83,6 +89,16 @@
         ?>
     </div>
     <p class="text-right ui-help" x-text="lastRefresh ? 'Updated ' + lastRefresh : ''"></p>
+
+    <!-- ============ Today's visited patients (completed EMR) ============ -->
+    <div>
+        <?php
+        $visits = $visitedToday ?? [];
+        $visitedTodayCount = $visitedTodayCount ?? count($visits);
+        $date = $visitedTodayDate ?? ($todayDate ?? date('Y-m-d'));
+        require __DIR__ . '/../visits/_visited_today_panel.php';
+        ?>
+    </div>
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <?php

@@ -69,7 +69,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         'symptoms' => $visitSymptoms ?? [],   // hydrated by symptomPicker on mount
         'charges' => $charges ?? [],   // existing invoice line items {description, amount}
     ], JSON_THROW_ON_ERROR), ENT_QUOTES) ?>)"
-     x-init="initAutosave()">
+     x-init="initVisitScreen()">
 
     <!-- ====== Patient header (sticky on scroll) ====== -->
     <div class="sticky top-0 z-30 -mx-4 bg-slate-50/95 px-4 pb-2 pt-2 backdrop-blur md:mx-0 md:rounded-xl md:bg-transparent md:px-0">
@@ -952,19 +952,19 @@ function visitScreenV2(cfg) {
         vitals,
         charges,
         saveStatus: 'idle',
-        saveLabel: 'Auto-save on',
+        saveLabel: 'Use Save to keep changes',
         icdResults: [],
         vitalsWarnings: [],
         lastVisitNote: '',
         autosaveTimer: null,
-        dirty: false,   // becomes true only when the doctor actually edits
+        dirty: false,
         peek: null,         // loaded summary of the currently-expanded past visit
         peekId: null,       // which history row is expanded (accordion)
         peekLoading: false,
         chargesStatus: 'idle',
         chargesLabel: '',
 
-        // Call on any user edit so autosave knows there's something to save.
+        // Call on any user edit so manual save / complete knows there's something to persist.
         markDirty() { this.dirty = true; },
 
         // ---- Charges (visit invoice line items) ----
@@ -995,7 +995,7 @@ function visitScreenV2(cfg) {
         },
 
         // Block completing a visit while charges are unsaved; flush symptoms
-        // + autosave first so nothing entered just before is lost.
+        // + draft save first so nothing entered just before is lost.
         async confirmComplete(ev) {
             ev.preventDefault();
             if (this.chargesDirty && this.charges.length) {
@@ -1054,29 +1054,17 @@ function visitScreenV2(cfg) {
         },
 
         _saveDebounce: null,
-        initAutosave() {
+        initVisitScreen() {
             // Expose the canonical visit scope so inner panels (prescription,
-            // symptom) can reach data Alpine's $root cannot — $root would
-            // resolve to appShell on <html>, which doesn't own visit state.
+            // symptom) can reach data Alpine's $root cannot.
             window.__visit = this;
             if (!this.editable) return;
-            // Periodic safety save.
-            this.autosaveTimer = setInterval(() => { if (this.dirty) this.save(); }, 30000);
-            // Save when the tab loses focus too.
-            document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'hidden') { this.save(); this.persistSymptomsNow(); }
-            });
-            // Any edit inside the form marks dirty + schedules a debounced save
-            // (2s after the doctor stops typing) — so changes persist quickly
-            // without waiting for the 30s tick. Attached to the component root el.
             this.$el.addEventListener('input', () => this.onFormEdit());
             this.$el.addEventListener('change', () => this.onFormEdit());
         },
 
         onFormEdit() {
-            this.dirty = true;
-            clearTimeout(this._saveDebounce);
-            this._saveDebounce = setTimeout(() => this.save(), 2000);
+            this.markDirty();
         },
 
         // ---- Voice dictation (Web Speech API, browser-native) ----
@@ -1109,7 +1097,7 @@ function visitScreenV2(cfg) {
                 this[field] = existing ? (existing + ' ' + text) : text;
             };
             rec.onerror = () => { this.listening = null; };
-            rec.onend = () => { this.listening = null; this._recognition = null; this.save(); };
+            rec.onend = () => { this.listening = null; this._recognition = null; this.markDirty(); };
             try { rec.start(); } catch (e) { this.listening = null; }
         },
 
@@ -1159,8 +1147,7 @@ function visitScreenV2(cfg) {
         },
 
         async save() {
-            // Never autosave a read-only visit, and never re-save one the
-            // doctor only viewed (no edits) — prevents touching old visits.
+            // Only save when the doctor explicitly requests it (or before complete).
             if (!this.editable || !this.dirty) return;
             this.saveStatus = 'saving';
             this.saveLabel = 'Saving…';

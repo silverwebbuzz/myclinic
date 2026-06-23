@@ -186,10 +186,7 @@ final class VisitController
         VisitService::complete($clinicId, (int) $id);
         AuditService::log($request, 'UPDATE', 'visits', (int) $id);
 
-        // Stay on the visit: this is the moment the doctor prints the Rx or
-        // shares it on WhatsApp. The old redirect to the patient profile was
-        // a dead end (dead ?tab= param, no print/share, no success message).
-        return Response::redirect('/visits/' . (int) $id . '?completed=1');
+        return Response::redirect('/dashboard?visit_completed=1');
     }
 
     public function unlock(Request $request, string $id): Response
