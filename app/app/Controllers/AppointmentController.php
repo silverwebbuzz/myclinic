@@ -257,17 +257,13 @@ final class AppointmentController
             return $denied;
         }
 
-        if ($denied = $this->requireBookForAll()) {
-            return $denied;
-        }
-
         return Response::html(Layout::page('appointments/form', [
             'appointment' => $appointment,
             'doctors' => AppointmentService::doctorsForClinic($clinicId),
             'prefill' => [],
             'error' => null,
             'hasTelemedicine' => ModuleGate::check('telemedicine'),
-            'canBookForAll' => RoleAccessService::canBookAppointmentsForAllDoctors(RequestContext::user() ?? []),
+            'lockDoctorId' => RoleAccessService::appointmentDoctorScope(RequestContext::user() ?? []),
         ], 'Edit appointment'));
     }
 
@@ -285,7 +281,7 @@ final class AppointmentController
         if ($denied = $this->requireAppointmentAccess($existing)) {
             return $denied;
         }
-        if ($denied = $this->requireBookForAll()) {
+        if ($denied = $this->requireManageAppointment($existing)) {
             return $denied;
         }
 
@@ -303,6 +299,8 @@ final class AppointmentController
                 'doctors' => AppointmentService::doctorsForClinic($clinicId),
                 'prefill' => [],
                 'error' => $e->getMessage(),
+                'hasTelemedicine' => ModuleGate::check('telemedicine'),
+                'lockDoctorId' => RoleAccessService::appointmentDoctorScope(RequestContext::user() ?? []),
             ], 'Edit appointment'), 422);
         }
     }
@@ -318,7 +316,7 @@ final class AppointmentController
         if ($existing !== null && ($denied = $this->requireAppointmentAccess($existing))) {
             return $denied;
         }
-        if ($denied = $this->requireBookForAll()) {
+        if ($existing !== null && ($denied = $this->requireManageAppointment($existing))) {
             return $denied;
         }
 
@@ -520,9 +518,16 @@ final class AppointmentController
             $time = $type === 'walkin' ? date('H:i') : '09:00';
         }
 
+        $user = RequestContext::user() ?? [];
+        $doctorId = (int) ($request->post['doctor_id'] ?? 0);
+        $scope = RoleAccessService::appointmentDoctorScope($user);
+        if ($scope !== null) {
+            $doctorId = $scope;
+        }
+
         return [
             'patient_id' => (int) ($request->post['patient_id'] ?? 0),
-            'doctor_id' => (int) ($request->post['doctor_id'] ?? 0),
+            'doctor_id' => $doctorId,
             'scheduled_at' => $date . ' ' . $time . ':00',
             'type' => $type,
             'chief_complaint' => $request->post['chief_complaint'] ?? '',
@@ -550,6 +555,17 @@ final class AppointmentController
         $user = RequestContext::user() ?? [];
         if (!RoleAccessService::canAccessAppointment($user, $appointment)) {
             return Response::redirect('/appointments?error=' . urlencode('You can only view your own appointments.'));
+        }
+
+        return null;
+    }
+
+    /** @param array<string, mixed> $appointment */
+    private function requireManageAppointment(array $appointment): ?Response
+    {
+        $user = RequestContext::user() ?? [];
+        if (!RoleAccessService::canManageAppointment($user, $appointment)) {
+            return Response::redirect('/appointments?error=' . urlencode('You can only edit your own appointments.'));
         }
 
         return null;

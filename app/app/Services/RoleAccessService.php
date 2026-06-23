@@ -79,6 +79,24 @@ final class RoleAccessService
         return true;
     }
 
+    /** Admin and receptionist can book for any doctor; doctors may edit only their own. */
+    public static function canManageAppointment(array $user, array $appointment): bool
+    {
+        if (self::canBookAppointmentsForAllDoctors($user)) {
+            return true;
+        }
+
+        $scope = self::appointmentDoctorScope($user);
+
+        return $scope !== null && (int) ($appointment['doctor_id'] ?? 0) === $scope;
+    }
+
+    /** @param array<string, mixed> $user */
+    public static function canManageOwnSchedule(array $user): bool
+    {
+        return self::appointmentDoctorScope($user) !== null;
+    }
+
     /** @param array<string, mixed> $user */
     public static function canAccessPath(array $user, string $method, string $path): bool
     {
@@ -115,6 +133,7 @@ final class RoleAccessService
             'doctor' => self::pathIn($path, [
                 '/dashboard', '/patients', '/visits', '/prescriptions', '/vitals',
                 '/appointments', '/queue', '/billing', '/follow-ups', '/help', '/staff/attendance',
+                '/doctor/schedule',
             ]),
             'nurse' => self::pathIn($path, [
                 '/dashboard', '/patients', '/visits', '/vitals',
@@ -180,6 +199,7 @@ final class RoleAccessService
             '/prescriptions',
             '/vitals',
             '/staff/leaves',
+            '/doctor/schedule',
             '/api/v1/visits',
             '/api/v1/symptoms',
             '/api/v1/prescriptions',

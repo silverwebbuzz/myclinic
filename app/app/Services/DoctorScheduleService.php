@@ -90,6 +90,67 @@ final class DoctorScheduleService
         SlotService::invalidateForClinic($clinicId, $doctorIds);
     }
 
+    /** Apply working hours to a single doctor (does not touch other doctors). */
+    public static function syncForDoctor(int $clinicId, int $doctorId, array $workingHours, int $slotDuration = 15): void
+    {
+        self::syncFromWorkingHours($clinicId, $workingHours, [$doctorId], $slotDuration);
+    }
+
+    /** @return array<string, mixed> */
+    public static function workingHoursForDoctor(int $clinicId, int $doctorId): array
+    {
+        $rows = QueryBuilder::table('doctor_schedules')
+            ->forClinic($clinicId)
+            ->where('doctor_id', '=', $doctorId)
+            ->where('is_active', '=', 1)
+            ->orderBy('day_of_week', 'ASC')
+            ->orderBy('start_time', 'ASC')
+            ->get();
+
+        if ($rows === []) {
+            $config = OnboardingService::specialtyConfig($clinicId) ?? [];
+            $wh = $config['working_hours'] ?? null;
+            if (is_string($wh)) {
+                $wh = json_decode($wh, true);
+            }
+
+            return is_array($wh) ? $wh : OnboardingService::defaultWorkingHours();
+        }
+
+        $dayKeys = [0 => 'sun', 1 => 'mon', 2 => 'tue', 3 => 'wed', 4 => 'thu', 5 => 'fri', 6 => 'sat'];
+        $hours = OnboardingService::defaultWorkingHours();
+        foreach ($hours as $key => $cfg) {
+            $hours[$key] = ['enabled' => false, 'sessions' => []];
+        }
+
+        foreach ($rows as $row) {
+            $dow = (int) ($row['day_of_week'] ?? -1);
+            $key = $dayKeys[$dow] ?? null;
+            if ($key === null) {
+                continue;
+            }
+            $hours[$key]['enabled'] = true;
+            $session = [
+                'start' => substr((string) ($row['start_time'] ?? '09:00'), 0, 5),
+                'end' => substr((string) ($row['end_time'] ?? '17:00'), 0, 5),
+            ];
+            if (!empty($row['extended_end_time'])) {
+                $session['extended_end'] = substr((string) $row['extended_end_time'], 0, 5);
+            }
+            $hours[$key]['sessions'][] = $session;
+        }
+
+        return $hours;
+    }
+
+    public static function slotDurationForClinic(int $clinicId): int
+    {
+        $config = OnboardingService::specialtyConfig($clinicId) ?? [];
+        $slot = (int) ($config['slot_duration_min'] ?? 15);
+
+        return in_array($slot, [15, 30], true) ? $slot : 15;
+    }
+
     /** Normalize HH:MM or HH:MM:SS to HH:MM:SS for MySQL TIME columns. */
     public static function normalizeTime(string $time): ?string
     {

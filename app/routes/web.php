@@ -31,6 +31,7 @@ use App\Controllers\PartnerDashboardController;
 use App\Controllers\TeamSettingsController;
 use App\Controllers\FollowUpController;
 use App\Controllers\DietTemplateController;
+use App\Controllers\DoctorScheduleController;
 use App\Controllers\HelpController;
 use App\Controllers\MessagingAdminController;
 use App\Controllers\EmailTemplateAdminController;
@@ -148,6 +149,11 @@ return static function (RouteRegistrar $router): void {
         $app->post('/appointments/{id}', [AppointmentController::class, 'update']);
         $app->post('/appointments/{id}/cancel', [AppointmentController::class, 'cancel']);
         $app->get('/appointments/{id}/slip', [AppointmentController::class, 'slip']);
+
+        $app->get('/doctor/schedule', [DoctorScheduleController::class, 'index']);
+        $app->post('/doctor/schedule/hours', [DoctorScheduleController::class, 'saveHours']);
+        $app->post('/doctor/schedule/leaves', [DoctorScheduleController::class, 'saveLeave']);
+        $app->post('/doctor/schedule/leaves/{id}/remove', [DoctorScheduleController::class, 'removeLeave']);
 
         $app->get('/queue', [QueueController::class, 'index']);
         $app->post('/queue/{id}/status', [QueueController::class, 'updateStatus']);

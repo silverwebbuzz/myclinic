@@ -190,6 +190,12 @@
                     <?= ui_icon('bell', 18, 'shrink-0') ?><span>Follow-ups</span>
                 </a>
                 <?php endif; ?>
+                <?php if (\App\Services\RoleAccessService::canManageOwnSchedule($user ?? [])): ?>
+                <a href="/doctor/schedule"
+                   class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/doctor/schedule') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
+                    <?= ui_icon('appointments', 18, 'shrink-0') ?><span>My schedule</span>
+                </a>
+                <?php endif; ?>
                 <?php if (\App\Services\RoleAccessService::isClinicAdmin($user ?? [])): ?>
                 <a href="/settings"
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/settings') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">

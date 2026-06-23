@@ -166,21 +166,32 @@ $bookUrl = static function (?string $d = null, ?string $time = null) use ($date,
                     <span class="block font-normal text-slate-400"><?= count($dayAppts) ?> appt<?= count($dayAppts) === 1 ? '' : 's' ?></span>
                 </a>
                 <div class="space-y-1 p-1.5">
-                    <?php foreach ($dayAppts as $a): ?>
+                    <?php foreach ($dayAppts as $a):
+                        $rowUser = \App\Core\RequestContext::user() ?? [];
+                        $canManageRow = \App\Services\RoleAccessService::canManageAppointment($rowUser, $a);
+                        $rowTitle = htmlspecialchars(($a['patient_name'] ?? '') . ' · ' . ($a['doctor_name'] ?? '') . ' · ' . str_replace('_', ' ', (string) ($a['status'] ?? '')));
+                        $rowClass = 'block rounded px-1.5 py-1 text-xs leading-tight ' . $statusBadge((string) ($a['status'] ?? ''));
+                    ?>
+                    <?php if ($canManageRow): ?>
                     <a href="/appointments/<?= (int) $a['id'] ?>/edit"
-                       class="block rounded px-1.5 py-1 text-xs leading-tight hover:opacity-80 <?= $statusBadge((string) ($a['status'] ?? '')) ?>"
-                       title="<?= htmlspecialchars(($a['patient_name'] ?? '') . ' · ' . ($a['doctor_name'] ?? '') . ' · ' . str_replace('_', ' ', (string) ($a['status'] ?? ''))) ?>">
+                       class="<?= $rowClass ?> hover:opacity-80"
+                       title="<?= $rowTitle ?>">
+                    <?php else: ?>
+                    <div class="<?= $rowClass ?> opacity-90" title="<?= $rowTitle ?>">
+                    <?php endif; ?>
                         <span class="font-mono"><?= date('H:i', strtotime((string) $a['scheduled_at'])) ?></span>
                         <span class="font-medium"><?= htmlspecialchars((string) ($a['patient_name'] ?? '')) ?></span>
                         <?php if ($doctorId === null): ?>
                         <span class="block truncate text-[10px] opacity-70"><?= htmlspecialchars((string) ($a['doctor_name'] ?? '')) ?></span>
                         <?php endif; ?>
-                    </a>
+                    <?php if ($canManageRow): ?></a><?php else: ?></div><?php endif; ?>
                     <?php endforeach; ?>
+                    <?php if (!empty($canBookForAll)): ?>
                     <a href="<?= htmlspecialchars($bookUrl($colDate)) ?>"
                        class="block w-full rounded border border-dashed border-slate-200 px-1.5 py-1 text-center text-[11px] text-slate-400 hover:border-brand hover:text-brand">
                         + Add
                     </a>
+                    <?php endif; ?>
                 </div>
             </div>
             <?php endfor; ?>
@@ -204,7 +215,11 @@ $bookUrl = static function (?string $d = null, ?string $time = null) use ($date,
         <?php if ($daySlots === []): ?>
         <p class="mt-3 text-xs text-slate-500">
             No working hours configured for this day.
+            <?php if (!empty($canBookForAll)): ?>
             <a href="/settings?tab=hours" class="text-brand hover:underline">Set working hours in Settings →</a>
+            <?php else: ?>
+            <a href="/doctor/schedule" class="text-brand hover:underline">Set your hours in My schedule →</a>
+            <?php endif; ?>
         </p>
         <?php else: ?>
         <div class="mt-3 flex flex-wrap gap-1.5">
@@ -215,12 +230,14 @@ $bookUrl = static function (?string $d = null, ?string $time = null) use ($date,
                 <span class="cursor-not-allowed rounded-lg bg-amber-100 px-2 py-1.5 text-xs text-amber-800" title="Doctor on leave"><?= $time12 ?></span>
                 <?php elseif (empty($slot['available'])): ?>
                 <span class="cursor-not-allowed rounded-lg bg-slate-200 px-2 py-1.5 text-xs text-slate-500 line-through" title="Booked"><?= $time12 ?></span>
-                <?php else: ?>
+                <?php elseif (!empty($canBookForAll)): ?>
                 <a href="<?= htmlspecialchars($bookUrl($date, (string) $slot['time'])) ?>"
                    class="rounded-lg border px-2 py-1.5 text-xs font-medium hover:bg-emerald-50 <?= !empty($slot['extended']) ? 'border-red-300 bg-red-50 text-red-700' : 'border-emerald-300 bg-white text-emerald-800' ?>"
                    title="<?= !empty($slot['extended']) ? 'Extended hours — book' : 'Book this slot' ?>">
                     <?= $time12 ?>
                 </a>
+                <?php else: ?>
+                <span class="rounded-lg border border-emerald-300 bg-white px-2 py-1.5 text-xs text-emerald-800"><?= $time12 ?></span>
                 <?php endif; ?>
             <?php endforeach; ?>
         </div>

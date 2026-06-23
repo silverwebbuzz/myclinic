@@ -139,6 +139,11 @@ $cards = [
                             </span>
                         </td>
                         <td class="px-4 py-3">
+                            <?php
+                                $rowUser = \App\Core\RequestContext::user() ?? [];
+                                $canManageRow = \App\Services\RoleAccessService::canManageAppointment($rowUser, $a);
+                            ?>
+                            <?php if ($canManageRow): ?>
                             <div class="flex justify-end gap-1">
                                 <a href="/appointments/<?= (int) $a['id'] ?>/edit"
                                    class="rounded border px-2 py-1 text-xs hover:bg-slate-50">Edit</a>
@@ -150,6 +155,9 @@ $cards = [
                                 </form>
                                 <?php endif; ?>
                             </div>
+                            <?php else: ?>
+                            <span class="block text-right text-xs text-slate-400">—</span>
+                            <?php endif; ?>
                         </td>
                     </tr>
                     <?php endforeach; ?>

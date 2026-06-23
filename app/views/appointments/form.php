@@ -122,6 +122,22 @@ if (!$isEdit && $doctorId === 0 && count($doctors) === 1) {
 
         <!-- Doctor + Date row -->
         <div class="grid gap-3 sm:grid-cols-2">
+            <?php if (!empty($lockDoctorId)): ?>
+            <?php
+                $lockedName = '';
+                foreach ($doctors as $doc) {
+                    if ((int) $doc['id'] === (int) $lockDoctorId) {
+                        $lockedName = (string) $doc['name'];
+                        break;
+                    }
+                }
+            ?>
+            <div>
+                <p class="text-sm text-slate-600">Doctor</p>
+                <p class="mt-1 font-medium text-slate-900"><?= htmlspecialchars($lockedName) ?></p>
+                <input type="hidden" name="doctor_id" value="<?= (int) $lockDoctorId ?>">
+            </div>
+            <?php else: ?>
             <label class="block text-sm">
                 <span class="text-slate-600">Doctor</span>
                 <select name="doctor_id" x-model="doctorId" @change="loadSlots()" required
@@ -132,6 +148,7 @@ if (!$isEdit && $doctorId === 0 && count($doctors) === 1) {
                     <?php endforeach; ?>
                 </select>
             </label>
+            <?php endif; ?>
             <label class="block text-sm">
                 <span class="text-slate-600">Date</span>
                 <input type="date" name="scheduled_date" x-model="date" @change="loadSlots()" required
