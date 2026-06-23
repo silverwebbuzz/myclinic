@@ -1,6 +1,24 @@
 <div x-data="dashboardPage()" x-init="startRefresh()" class="space-y-6">
 
     <?php
+    // "Expiring soon" warning — heads-up before the hard block kicks in.
+    $subStatus = \App\Services\SubscriptionStatus::forClinic();
+    if (($subStatus['state'] ?? '') === 'expiring_soon'):
+        $daysLeft = (int) ($subStatus['days_left'] ?? 0);
+    ?>
+    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <span>
+            ⏳ Your <?= ($subStatus['reason'] ?? 'plan') === 'trial' ? 'free trial' : 'plan' ?>
+            ends in <strong><?= $daysLeft ?> day<?= $daysLeft === 1 ? '' : 's' ?></strong>.
+            Renew now to avoid any interruption.
+        </span>
+        <a href="/settings?tab=subscription" class="shrink-0 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
+            Renew now →
+        </a>
+    </div>
+    <?php endif; ?>
+
+    <?php
     $flash = $_GET['message'] ?? null;
     if ($flash === 'already_listed'): ?>
     <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">

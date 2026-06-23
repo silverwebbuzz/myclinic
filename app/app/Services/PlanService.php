@@ -211,6 +211,16 @@ final class PlanService
             }
         }
 
+        // PAID activation ($withTrial = false comes from payment success —
+        // simulatePaidPlan / activateFromWebhookOrder / verify). Push the paid
+        // expiry forward so the subscription is valid again, and clear any
+        // past trial date so it doesn't keep the clinic blocked after paying.
+        // (See SubscriptionStatus: a date that exists and is in the past blocks.)
+        if (!$withTrial && $planId !== 'free') {
+            $data['plan_expires_at'] = date('Y-m-d', strtotime('+1 year'));
+            $data['trial_ends_at'] = null;
+        }
+
         QueryBuilder::table('tenants')->where('id', '=', $clinicId)->update($data);
         self::activatePlanModules($clinicId, $planId);
     }

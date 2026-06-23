@@ -28,7 +28,8 @@ final class SubscriptionMiddleware implements MiddlewareInterface
      */
     private const ALLOW_PREFIXES = [
         '/subscription-expired',               // the block screen itself
-        '/settings',                           // subscription/renew lives here
+        '/settings',                           // subscription/renew page lives here
+        '/subscription/checkout',              // the renew/pay POST (Cashfree)
         '/onboarding/billing/cashfree-return', // payment completion redirect
         '/logout',
         '/impersonate/exit',                   // super-admin can always step out

@@ -22,6 +22,28 @@ use App\Support\View;
  */
 final class SubscriptionController
 {
+    /**
+     * The hard-block "Plan expired" screen. SubscriptionMiddleware redirects
+     * every panel page here once the trial/plan is expired. From here the only
+     * ways forward are renew (→ /settings?tab=subscription), contact support,
+     * or sign out — so an expired clinic can't keep using the panel for free.
+     */
+    public function expired(Request $request): Response
+    {
+        // If they renewed (no longer expired), don't trap them here.
+        if (!\App\Services\SubscriptionStatus::isExpired()) {
+            return Response::redirect('/dashboard');
+        }
+
+        $status = \App\Services\SubscriptionStatus::forClinic();
+
+        return Response::html(View::render('subscription/expired', [
+            'csrf'    => CsrfService::token(),
+            'reason'  => $status['reason'],
+            'endsOn'  => $status['ends_on'],
+        ]));
+    }
+
     public function checkout(Request $request): Response
     {
         $clinicId = RequestContext::clinicId();
