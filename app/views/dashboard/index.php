@@ -75,8 +75,19 @@
     </div>
     <?php endif; ?>
 
-    <!-- ============ Today's completed visits (primary dashboard panel) ============ -->
+    <!-- ============ Today's Appointments ============ -->
     <div id="queue-body">
+        <?php
+        $appointments = $todayAppointments ?? [];
+        $counts = $todayCounts ?? [];
+        $date = $todayDate ?? date('Y-m-d');
+        require __DIR__ . '/../appointments/_today_panel.php';
+        ?>
+    </div>
+    <p class="text-right ui-help" x-text="lastRefresh ? 'Updated ' + lastRefresh : ''"></p>
+
+    <!-- ============ Today's Completed visit ============ -->
+    <div id="visited-body">
         <?php
         $visits = $visitedToday ?? [];
         $visitedTodayCount = $visitedTodayCount ?? count($visits);
@@ -85,7 +96,6 @@
         require __DIR__ . '/../visits/_visited_today_panel.php';
         ?>
     </div>
-    <p class="text-right ui-help" x-text="lastRefresh ? 'Updated ' + lastRefresh : ''"></p>
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <?php
@@ -230,14 +240,16 @@ function dashboardPage() {
                     });
                 }
                 if (data.queue_html) {
-                    // Don't yank the panel out from under an open cancel-confirm
-                    // or while the user is mid-interaction with a control inside it.
                     const body = document.getElementById('queue-body');
                     if (body && !body.contains(document.activeElement)) {
                         body.innerHTML = data.queue_html;
-                        // Re-init Alpine on the swapped subtree so the tile/tab
-                        // filtering (apptPanel) keeps working after refresh.
                         if (window.Alpine && Alpine.initTree) Alpine.initTree(body);
+                    }
+                }
+                if (data.visited_html) {
+                    const visited = document.getElementById('visited-body');
+                    if (visited && !visited.contains(document.activeElement)) {
+                        visited.innerHTML = data.visited_html;
                     }
                 }
                 this.lastRefresh = new Date().toLocaleTimeString();
