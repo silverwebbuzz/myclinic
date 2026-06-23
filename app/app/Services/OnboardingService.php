@@ -49,8 +49,13 @@ final class OnboardingService
             return;
         }
 
+        // Start the Standard trial AND advance step 1 → 2 (the clinic-setup
+        // step). applyPlanToTenant no longer sets onboarding_step itself, and
+        // a fresh tenant defaults to step 1 — without this advance, guardStep(2)
+        // on /onboarding/clinic-setup would keep redirecting step-1 clinics back
+        // to clinic-setup (routeForStep(1)) forever (ERR_TOO_MANY_REDIRECTS).
         PlanService::applyPlanToTenant($clinicId, 'standard', true);
-        self::refreshClinicContext($clinicId);
+        self::advanceTo($clinicId, 2); // also refreshes the cached clinic context
     }
 
     /** URL for the next onboarding screen (bootstraps Standard trial if needed). */

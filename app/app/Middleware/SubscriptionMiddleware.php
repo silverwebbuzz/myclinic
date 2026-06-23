@@ -30,7 +30,8 @@ final class SubscriptionMiddleware implements MiddlewareInterface
         '/subscription-expired',               // the block screen itself
         '/settings',                           // subscription/renew page lives here
         '/subscription/checkout',              // the renew/pay POST (Cashfree)
-        '/onboarding/billing/cashfree-return', // payment completion redirect
+        '/onboarding',                         // never gate onboarding (avoids a
+                                               // redirect loop before setup is done)
         '/logout',
         '/impersonate/exit',                   // super-admin can always step out
         '/help',
