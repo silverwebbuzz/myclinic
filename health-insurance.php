@@ -19,6 +19,111 @@
 // NOTE: do NOT require/run the clean-URL router here — this page IS a
 // dispatch target (/health-insurance -> this file).
 require_once __DIR__ . '/partials/helpers.php';
+require_once __DIR__ . '/partials/db.php';
+require_once __DIR__ . '/partials/mailer.php';
+
+// ---------------------------------------------------------------------
+// LEAD CAPTURE — AJAX endpoint (POST). The quote/advisor CTAs submit here
+// via fetch; we save to insurance_leads + email the inbox, then reply JSON.
+// No login required (phone-first): we just need a number to call back.
+// ---------------------------------------------------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['ins_lead'] ?? '') === '1') {
+    header('Content-Type: application/json');
+
+    $lead = [
+        'name'          => trim((string) ($_POST['name'] ?? '')),
+        'phone'         => trim((string) ($_POST['phone'] ?? '')),
+        'email'         => trim((string) ($_POST['email'] ?? '')),
+        'gender'        => trim((string) ($_POST['gender'] ?? '')),
+        'cover_for'     => trim((string) ($_POST['cover_for'] ?? '')),
+        'age_band'      => trim((string) ($_POST['age_band'] ?? '')),
+        'children_ages' => trim((string) ($_POST['children_ages'] ?? '')),
+        'city'          => trim((string) ($_POST['city'] ?? '')),
+        'call_time'     => trim((string) ($_POST['call_time'] ?? '')),
+        'plan_interest' => trim((string) ($_POST['plan_interest'] ?? '')),
+    ];
+
+    // Minimum viable lead: a name and a phone we can call back on.
+    $digits = preg_replace('/\D+/', '', $lead['phone']);
+    if ($lead['name'] === '' || strlen($digits) < 7) {
+        http_response_code(422);
+        echo json_encode(['ok' => false, 'error' => 'Please share your name and a valid phone number.']);
+        return;
+    }
+    if ($lead['email'] !== '' && !filter_var($lead['email'], FILTER_VALIDATE_EMAIL)) {
+        $lead['email'] = ''; // ignore a malformed optional email rather than reject the lead
+    }
+
+    $saved = ecp_save_insurance_lead($lead);
+    // Email is best-effort and must not change the success state once saved.
+    ecp_insurance_lead_emails($lead);
+
+    if (!$saved) {
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'error' => 'Something went wrong. Please call us at wecare@eclinicpro.com.']);
+        return;
+    }
+    echo json_encode(['ok' => true]);
+    return;
+}
+
+/**
+ * Send insurance-lead emails: an internal notification to the eClinicPro inbox
+ * and (if the lead gave an email) a branded confirmation to the lead.
+ *
+ * @param array<string,string> $lead
+ */
+function ecp_insurance_lead_emails(array $lead): void
+{
+    $e = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+    $cfg = ecp_smtp_config();
+    $inbox = $cfg['SMTP_TO_EMAIL'] ?? 'wecare@eclinicpro.com';
+
+    $rows = [
+        'Name'           => $lead['name'] ?: '—',
+        'Phone'          => $lead['phone'] ?: '—',
+        'Email'          => $lead['email'] ?: '—',
+        'Gender'         => $lead['gender'] ?: '—',
+        'Cover for'      => $lead['cover_for'] ?: '—',
+        'Eldest age'     => $lead['age_band'] ?: '—',
+        'Children ages'  => $lead['children_ages'] ?: '—',
+        'City'           => $lead['city'] ?: '—',
+        'Best call time' => $lead['call_time'] ?: '—',
+        'Interested in'  => $lead['plan_interest'] ?: '—',
+    ];
+    $table = '<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px; color:#1c1c1e;">';
+    foreach ($rows as $label => $val) {
+        $table .= '<tr><td style="padding:3px 12px 3px 0; color:#6e6e73;">' . $e($label) . '</td><td>' . $e($val) . '</td></tr>';
+    }
+    $table .= '</table>';
+
+    // 1) Internal notification.
+    ecp_send_mail(
+        $inbox,
+        'New insurance lead: ' . $lead['name'],
+        ecp_email_template('New insurance lead 🛡️',
+            '<p style="margin:0 0 16px; font-size:15px; line-height:1.65;">A visitor requested an insurance call-back:</p>' . $table),
+        'eClinicPro',
+        $lead['email'] !== '' ? $lead['email'] : null
+    );
+
+    // 2) Confirmation to the lead (only if they gave an email).
+    if ($lead['email'] !== '') {
+        $body = '<p style="margin:0 0 16px; font-size:15px; line-height:1.65; color:#1c1c1e;">Hi ' . $e($lead['name']) . ',</p>'
+            . '<p style="margin:0 0 16px; font-size:15px; line-height:1.65; color:#1c1c1e;">'
+            . 'Thanks for your interest in health insurance through eClinicPro. One of our advisors will call you'
+            . ($lead['call_time'] !== '' ? ' (' . $e($lead['call_time']) . ')' : '')
+            . ' to help you find the right cover — no obligation.</p>'
+            . '<p style="margin:0 0 8px; font-size:13px; color:#6e6e73;">What you shared with us:</p>' . $table;
+        ecp_send_mail(
+            $lead['email'],
+            'We received your insurance request',
+            ecp_email_template('Your insurance request is in 🛡️', $body),
+            $lead['name'],
+            $inbox
+        );
+    }
+}
 
 $pageTitle  = 'Health Insurance Plans — Compare & Buy Online | eClinicPro';
 $metaDesc   = 'Compare health insurance plans for individuals, families & seniors. Cashless hospitalisation, tax savings and expert advisor support. Get a free quote — launching soon.';
@@ -181,33 +286,93 @@ require __DIR__ . '/partials/header.php';
         <h1>Health Insurance, Made Simple</h1>
         <p class="store-sub">Compare plans for you, your family and your parents — with cashless hospitalisation, tax savings and a free expert advisor.</p>
 
-        <!-- Quick quote form (login-gated on submit) -->
-        <form class="ins-quote store-card" data-quote onsubmit="return false">
-            <div class="ins-quote-row">
-                <label class="ins-field">
-                    <span>Who to cover</span>
-                    <select aria-label="Who to cover">
-                        <option>Myself</option>
-                        <option>Myself &amp; Family</option>
-                        <option>Parents / Seniors</option>
-                    </select>
-                </label>
-                <label class="ins-field">
-                    <span>Eldest member age</span>
-                    <select aria-label="Eldest member age">
-                        <option>18–35</option>
-                        <option>36–45</option>
-                        <option>46–60</option>
-                        <option>60+</option>
-                    </select>
-                </label>
-                <label class="ins-field">
-                    <span>City</span>
-                    <input type="text" placeholder="e.g. Mumbai" aria-label="City">
-                </label>
-                <button type="button" class="btn btn-primary ins-lead" data-lead="Insurance Quote">Get Free Quote</button>
+        <!-- Quick quote form — captures lead details, then a phone to call back -->
+        <form class="ins-quote store-card" id="insQuoteForm" novalidate>
+            <input type="hidden" name="ins_lead" value="1">
+            <input type="hidden" name="plan_interest" id="insPlanInterest" value="">
+
+            <!-- Step 1: who & where -->
+            <div class="ins-quote-step" data-step="1">
+                <div class="ins-field-block">
+                    <span class="ins-field-label">Select your gender</span>
+                    <div class="ins-seg" role="radiogroup" aria-label="Gender">
+                        <button type="button" class="ins-seg-btn is-on" data-gender="Male">Male</button>
+                        <button type="button" class="ins-seg-btn" data-gender="Female">Female</button>
+                        <button type="button" class="ins-seg-btn" data-gender="Other">Other</button>
+                    </div>
+                    <input type="hidden" name="gender" id="insGender" value="Male">
+                </div>
+
+                <div class="ins-field-block">
+                    <span class="ins-field-label">Select members to cover</span>
+                    <div class="ins-chips" id="insMembers">
+                        <button type="button" class="ins-chip is-on" data-member="Self">👤 Self</button>
+                        <button type="button" class="ins-chip" data-member="Spouse">💑 Spouse</button>
+                        <button type="button" class="ins-chip" data-member="Mother">👩 Mother</button>
+                        <button type="button" class="ins-chip" data-member="Father">👨 Father</button>
+                        <button type="button" class="ins-chip" data-member="Son">👦 Son</button>
+                        <button type="button" class="ins-chip" data-member="Daughter">👧 Daughter</button>
+                    </div>
+                    <input type="hidden" name="cover_for" id="insCoverFor" value="Self">
+                </div>
+
+                <!-- Children ages (max 4) — shown only when Son/Daughter picked -->
+                <div class="ins-field-block ins-kids" id="insKidsBlock" hidden>
+                    <span class="ins-field-label">Children's ages (max 4)</span>
+                    <div class="ins-kids-row" id="insKidsRow"></div>
+                    <input type="hidden" name="children_ages" id="insChildrenAges" value="">
+                </div>
+
+                <div class="ins-quote-row">
+                    <label class="ins-field">
+                        <span>Eldest member age</span>
+                        <select name="age_band" aria-label="Eldest member age">
+                            <option value="18–35">18–35</option>
+                            <option value="36–45">36–45</option>
+                            <option value="46–60">46–60</option>
+                            <option value="60+">60+</option>
+                        </select>
+                    </label>
+                    <label class="ins-field">
+                        <span>City</span>
+                        <input type="text" name="city" placeholder="e.g. Mumbai" aria-label="City">
+                    </label>
+                    <button type="button" class="btn btn-primary ins-next" data-next>View Plans →</button>
+                </div>
             </div>
-            <p class="ins-quote-note">🔒 Free, no-obligation. An advisor will call to help you choose.</p>
+
+            <!-- Step 2: contact (no plans yet → take a number to call back) -->
+            <div class="ins-quote-step" data-step="2" hidden>
+                <p class="ins-step2-lead">Almost there — leave your number and a free advisor will call with matched plans &amp; prices.</p>
+                <div class="ins-quote-row ins-quote-row-contact">
+                    <label class="ins-field">
+                        <span>Your name</span>
+                        <input type="text" name="name" id="insName" placeholder="Full name" autocomplete="name">
+                    </label>
+                    <label class="ins-field">
+                        <span>Mobile number</span>
+                        <input type="tel" name="phone" id="insPhone" placeholder="10-digit mobile" autocomplete="tel" inputmode="numeric">
+                    </label>
+                    <label class="ins-field">
+                        <span>Email <em>(optional)</em></span>
+                        <input type="email" name="email" placeholder="you@email.com" autocomplete="email">
+                    </label>
+                    <label class="ins-field">
+                        <span>Best time to call</span>
+                        <select name="call_time" aria-label="Best time to call">
+                            <option value="Anytime">Anytime</option>
+                            <option value="Morning (9–12)">Morning (9–12)</option>
+                            <option value="Afternoon (12–4)">Afternoon (12–4)</option>
+                            <option value="Evening (4–8)">Evening (4–8)</option>
+                        </select>
+                    </label>
+                    <button type="submit" class="btn btn-primary ins-submit">Get a Free Call →</button>
+                </div>
+                <p class="ins-quote-err" id="insErr" role="alert" hidden></p>
+                <button type="button" class="ins-back" data-back>← Back to details</button>
+            </div>
+
+            <p class="ins-quote-note">🔒 Free, no-obligation. By clicking you agree to our <a href="/privacy-policy">Privacy Policy</a> &amp; Terms.</p>
         </form>
 
         <ul class="store-trust">
@@ -513,32 +678,104 @@ require __DIR__ . '/partials/header.php';
         timer = setTimeout(function () { toast.classList.remove('is-on'); }, 2800);
     }
 
-    // Login-gated lead capture: quote / advisor CTAs require a registered
-    // patient, so every insurance lead lives under the patient's account.
+    var form     = document.getElementById('insQuoteForm');
+    var step1    = form.querySelector('[data-step="1"]');
+    var step2    = form.querySelector('[data-step="2"]');
+    var errBox   = document.getElementById('insErr');
+    var planFld  = document.getElementById('insPlanInterest');
+
+    // --- Gender segmented control ---
+    form.querySelector('.ins-seg').addEventListener('click', function (ev) {
+        var b = ev.target.closest('.ins-seg-btn'); if (!b) return;
+        this.querySelectorAll('.ins-seg-btn').forEach(function (x) { x.classList.remove('is-on'); });
+        b.classList.add('is-on');
+        document.getElementById('insGender').value = b.getAttribute('data-gender');
+    });
+
+    // --- Members multi-select (chips) + children-age rows ---
+    var kidsBlock = document.getElementById('insKidsBlock');
+    var kidsRow   = document.getElementById('insKidsRow');
+    function syncMembers() {
+        var picked = [].slice.call(form.querySelectorAll('.ins-chip.is-on'))
+            .map(function (c) { return c.getAttribute('data-member'); });
+        document.getElementById('insCoverFor').value = picked.join(', ');
+        var kidCount = picked.filter(function (m) { return m === 'Son' || m === 'Daughter'; }).length;
+        // up to 4 child-age selectors when Son/Daughter chosen
+        var slots = kidCount ? Math.min(4, Math.max(kidCount, kidsRow.children.length)) : 0;
+        if (!slots) { kidsBlock.hidden = true; kidsRow.innerHTML = ''; document.getElementById('insChildrenAges').value = ''; return; }
+        kidsBlock.hidden = false;
+        while (kidsRow.children.length < slots) {
+            var sel = document.createElement('select');
+            sel.className = 'ins-kid-age'; sel.setAttribute('aria-label', 'Child age');
+            sel.innerHTML = '<option value="">Child age</option><option><1</option>' +
+                Array.from({length: 18}, function (_, i) { return '<option>' + (i + 1) + '</option>'; }).join('');
+            sel.addEventListener('change', syncKidAges);
+            kidsRow.appendChild(sel);
+        }
+        while (kidsRow.children.length > slots) kidsRow.removeChild(kidsRow.lastChild);
+        syncKidAges();
+    }
+    function syncKidAges() {
+        document.getElementById('insChildrenAges').value =
+            [].slice.call(kidsRow.querySelectorAll('.ins-kid-age'))
+              .map(function (s) { return s.value; }).filter(Boolean).join(', ');
+    }
+    document.getElementById('insMembers').addEventListener('click', function (ev) {
+        var c = ev.target.closest('.ins-chip'); if (!c) return;
+        if (c.getAttribute('data-member') === 'Self') return; // Self always on
+        c.classList.toggle('is-on');
+        syncMembers();
+    });
+
+    // --- Plan/advisor CTAs elsewhere on the page: jump to the form ---
     document.addEventListener('click', function (ev) {
         var lead = ev.target.closest('[data-lead]');
         if (lead) {
             ev.preventDefault();
-            var plan = lead.getAttribute('data-lead') || 'Health Insurance';
-            if (window.ecpAuth && typeof window.ecpAuth.require === 'function') {
-                window.ecpAuth.require('insurance_lead', function () {
-                    // Patient is logged in here. No insurance backend yet —
-                    // confirm the lead; swap for the real advisor flow later.
-                    showToast('Thanks — you’re signed in. An advisor will reach out about “' + plan + '”. 🛡️');
-                });
-            } else {
-                showToast('Coming soon — insurance plans are launching shortly. 🛡️');
-            }
-            return;
+            planFld.value = lead.getAttribute('data-lead') || '';
+            form.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
+    });
 
-        // Quote form submit (button inside it is data-lead, handled above).
-        // Any other data-quote interaction falls through to no-op.
-        var soon = ev.target.closest('[data-soon]');
-        if (soon) {
-            ev.preventDefault();
-            showToast('Coming soon 🛡️');
+    // --- Step 1 → Step 2 ---
+    form.querySelector('[data-next]').addEventListener('click', function () {
+        step1.hidden = true; step2.hidden = false;
+        document.getElementById('insName').focus();
+    });
+    form.querySelector('[data-back]').addEventListener('click', function () {
+        step2.hidden = true; step1.hidden = false;
+    });
+
+    // --- Submit (AJAX) ---
+    form.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        errBox.hidden = true;
+        var name  = document.getElementById('insName').value.trim();
+        var phone = document.getElementById('insPhone').value.replace(/\D+/g, '');
+        if (!name || phone.length < 7) {
+            errBox.textContent = 'Please enter your name and a valid mobile number.';
+            errBox.hidden = false; return;
         }
+        var btn = form.querySelector('.ins-submit');
+        btn.disabled = true; var label = btn.textContent; btn.textContent = 'Sending…';
+        fetch(window.location.pathname, { method: 'POST', body: new FormData(form), headers: { 'X-Requested-With': 'fetch' } })
+            .then(function (r) { return r.json().catch(function () { return { ok: r.ok }; }); })
+            .then(function (d) {
+                if (d && d.ok) {
+                    form.innerHTML = '<div class="ins-quote-done">' +
+                        '<span class="ins-quote-done-ico">✅</span>' +
+                        '<h3>Thank you, ' + (name.split(' ')[0] || 'there') + '!</h3>' +
+                        '<p>A free advisor will call you shortly to walk you through matched plans &amp; prices.</p></div>';
+                    showToast('Got it — an advisor will call you soon. 🛡️');
+                } else {
+                    errBox.textContent = (d && d.error) || 'Something went wrong. Please try again.';
+                    errBox.hidden = false; btn.disabled = false; btn.textContent = label;
+                }
+            })
+            .catch(function () {
+                errBox.textContent = 'Network error — please try again.';
+                errBox.hidden = false; btn.disabled = false; btn.textContent = label;
+            });
     });
 })();
 </script>

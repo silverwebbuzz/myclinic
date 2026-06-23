@@ -239,6 +239,42 @@ function ecp_save_demo_request(array $data): bool
 }
 
 /**
+ * Logs a health-insurance lead. Creates the table on first use so we don't
+ * need a migration (same pattern as ecp_save_demo_request).
+ *
+ * @param array<string,mixed> $data
+ */
+function ecp_save_insurance_lead(array $data): bool
+{
+    $db = ecp_db();
+    if (!$db) return false;
+    try {
+        // Schema lives in migration 038_insurance_leads.sql — run on deploy.
+        $stmt = $db->prepare(
+            'INSERT INTO insurance_leads
+                (name, phone, email, gender, cover_for, age_band, children_ages, city, call_time, plan_interest)
+             VALUES
+                (:name, :phone, :email, :gender, :cover_for, :age_band, :children_ages, :city, :call_time, :plan_interest)'
+        );
+        return $stmt->execute([
+            'name' => $data['name'] ?? '',
+            'phone' => $data['phone'] ?? '',
+            'email' => ($data['email'] ?? '') !== '' ? $data['email'] : null,
+            'gender' => $data['gender'] ?? null,
+            'cover_for' => $data['cover_for'] ?? null,
+            'age_band' => $data['age_band'] ?? null,
+            'children_ages' => ($data['children_ages'] ?? '') !== '' ? $data['children_ages'] : null,
+            'city' => $data['city'] ?? null,
+            'call_time' => $data['call_time'] ?? null,
+            'plan_interest' => ($data['plan_interest'] ?? '') !== '' ? $data['plan_interest'] : null,
+        ]);
+    } catch (Throwable $e) {
+        error_log('[marketing insurance] ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
  * Returns the total count of active directory doctors (optionally per country),
  * unaffected by the LIMIT on ecp_directory_doctors(). Used by hero copy
  * ("Search 2,789 verified clinicians…") so the displayed number is honest.

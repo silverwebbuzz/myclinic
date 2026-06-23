@@ -9131,6 +9131,45 @@ li {
 .ins-field input:focus { border-color: var(--teal-400, #4FC79E); }
 .ins-quote-row .btn { padding: 11px 18px; white-space: nowrap; }
 .ins-quote-note { margin: 12px 0 0; font-size: 12.5px; color: var(--mute); }
+.ins-quote-note a { color: var(--teal-700); text-decoration: none; font-weight: 600; }
+
+/* ---- Quote form: multi-step lead capture ---- */
+.ins-field-block { margin-bottom: 16px; }
+.ins-field-label { display: block; font-size: 12px; font-weight: 600; color: var(--mute); margin-bottom: 7px; }
+
+/* Gender segmented control */
+.ins-seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fff; }
+.ins-seg-btn { padding: 9px 20px; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: transparent; border: 0; cursor: pointer; transition: background .15s, color .15s; }
+.ins-seg-btn + .ins-seg-btn { border-left: 1px solid var(--line); }
+.ins-seg-btn.is-on { background: var(--ink, #1c1c1e); color: #fff; }
+
+/* Member chips */
+.ins-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.ins-chip { padding: 8px 14px; font: inherit; font-size: 13.5px; font-weight: 500; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; transition: border-color .15s, background .15s, color .15s; }
+.ins-chip.is-on { border-color: var(--teal-600, #2f9e76); background: var(--teal-50, #effaf4); color: var(--teal-800, #1f6f52); font-weight: 600; }
+.ins-chip[data-member="Self"] { cursor: default; }
+
+/* Children ages */
+.ins-kids-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.ins-kid-age { border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; font: inherit; font-size: 14px; color: var(--ink); background: #fff; min-width: 110px; }
+
+/* Step 2 contact */
+.ins-step2-lead { margin: 0 0 14px; font-size: 15px; color: var(--ink); font-weight: 500; }
+.ins-quote-row-contact { grid-template-columns: 1fr 1fr 1fr 1fr auto; }
+.ins-quote-err { margin: 10px 0 0; font-size: 13px; color: #c0392b; font-weight: 500; }
+.ins-back { margin: 12px 0 0; background: none; border: 0; padding: 0; font: inherit; font-size: 13px; color: var(--mute); cursor: pointer; }
+.ins-back:hover { color: var(--ink); }
+
+/* Success state */
+.ins-quote-done { text-align: center; padding: 26px 12px; }
+.ins-quote-done-ico { font-size: 40px; display: block; margin-bottom: 10px; }
+.ins-quote-done h3 { margin: 0 0 8px; font-size: 22px; color: var(--ink); }
+.ins-quote-done p { margin: 0; color: var(--mute); font-size: 15px; }
+
+@media (max-width: 760px) {
+  .ins-quote-row-contact { grid-template-columns: 1fr 1fr; }
+  .ins-quote-row-contact .btn { grid-column: 1 / -1; }
+}
 
 /* ---- Plan card ---- */
 .ins-plan {
