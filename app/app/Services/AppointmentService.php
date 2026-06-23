@@ -280,14 +280,20 @@ final class AppointmentService
         // appointments listing — confirmed → "In Clinic" (arrived_at),
         // in_progress → "In" (consult_started_at), completed → "Out". See
         // migration 041_appointment_flow_times.sql.
+        //
+        // GUARD: only write a column if it actually exists on the row (i.e. the
+        // migration has run). array_key_exists is true even when the value is
+        // NULL, but false when the column is absent — so the status change keeps
+        // working on a DB where 041 hasn't been applied yet (no "unknown column"
+        // error, which previously surfaced as a JSON 500 on Arrived/etc.).
         $now = date('Y-m-d H:i:s');
-        if ($status === 'confirmed' && empty($existing['arrived_at'])) {
+        if ($status === 'confirmed' && array_key_exists('arrived_at', $existing) && empty($existing['arrived_at'])) {
             $update['arrived_at'] = $now;
         }
-        if ($status === 'in_progress' && empty($existing['consult_started_at'])) {
+        if ($status === 'in_progress' && array_key_exists('consult_started_at', $existing) && empty($existing['consult_started_at'])) {
             $update['consult_started_at'] = $now;
         }
-        if ($status === 'completed' && empty($existing['completed_at'])) {
+        if ($status === 'completed' && array_key_exists('completed_at', $existing) && empty($existing['completed_at'])) {
             $update['completed_at'] = $now;
         }
 
