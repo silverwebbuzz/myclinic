@@ -153,6 +153,8 @@ function ecp_patient_verify_otp(string $rawPhone, string $code, ?string $name = 
        ->execute(['id' => $row['id']]);
 
     // Get-or-create identity.
+    // (Family members live in patient_family_members, never here, so a member
+    // record can't be matched as a login — no special guard needed.)
     $find = $db->prepare('SELECT * FROM patient_identities WHERE phone = :p LIMIT 1');
     $find->execute(['p' => $phone]);
     $identity = $find->fetch(PDO::FETCH_ASSOC);
