@@ -98,10 +98,30 @@ final class AuthService
             return self::findUserByEmail($login);
         }
 
-        return QueryBuilder::table('users')
+        $user = QueryBuilder::table('users')
             ->where('username', '=', $login)
             ->where('is_active', '=', 1)
             ->first();
+
+        if ($user !== null) {
+            return $user;
+        }
+
+        $digits = preg_replace('/\D/', '', $login) ?? '';
+        if (strlen($digits) === 12 && str_starts_with($digits, '91')) {
+            $digits = substr($digits, 2);
+        }
+        if (strlen($digits) === 11 && $digits[0] === '0') {
+            $digits = substr($digits, 1);
+        }
+        if (strlen($digits) === 10) {
+            return QueryBuilder::table('users')
+                ->where('username', '=', $digits)
+                ->where('is_active', '=', 1)
+                ->first();
+        }
+
+        return null;
     }
 
     public static function failedLoginCount(string $email): int

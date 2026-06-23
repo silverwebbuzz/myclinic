@@ -154,8 +154,8 @@ final class StaffInvitationService
         }
     }
 
-    /** @return array{user_id: int, username: string, password: string, name: string} */
-    public static function createAccount(int $clinicId, string $name, ?string $username, string $role): array
+    /** @return array{user_id: int, username: string, password: string, name: string, phone: ?string} */
+    public static function createAccount(int $clinicId, string $name, ?string $loginId, string $role): array
     {
         if (!SeatService::canAddStaff($clinicId)) {
             throw new \RuntimeException('Seat limit reached. Upgrade your plan or purchase extra seats.');
@@ -167,10 +167,9 @@ final class StaffInvitationService
         }
 
         $role = in_array($role, ['doctor', 'nurse', 'receptionist', 'labtech'], true) ? $role : 'receptionist';
-        $baseUsername = $username !== null && trim($username) !== ''
-            ? self::normalizeUsername($username)
-            : self::suggestUsername($name);
-        $finalUsername = self::uniqueUsername($baseUsername);
+        $resolved = self::resolveLoginId($loginId, $name);
+        $finalUsername = $resolved['username'];
+        $phone = $resolved['phone'];
         $password = self::generateTempPassword();
 
         $userId = QueryBuilder::table('users')->insert([
@@ -178,6 +177,7 @@ final class StaffInvitationService
             'name' => $name,
             'email' => null,
             'username' => $finalUsername,
+            'phone' => $phone,
             'password_hash' => password_hash($password, PASSWORD_BCRYPT),
             'role' => $role,
             'is_active' => 1,
@@ -189,6 +189,7 @@ final class StaffInvitationService
             'username' => $finalUsername,
             'password' => $password,
             'name' => $name,
+            'phone' => $phone,
         ];
     }
 
@@ -234,6 +235,49 @@ final class StaffInvitationService
         return substr($base, 0, 26);
     }
 
+    /** @return array{username: string, phone: ?string} */
+    private static function resolveLoginId(?string $loginId, string $name): array
+    {
+        $raw = trim((string) $loginId);
+        if ($raw === '') {
+            return [
+                'username' => self::uniqueUsername(self::suggestUsername($name)),
+                'phone' => null,
+            ];
+        }
+
+        if (self::looksLikePhone($raw)) {
+            $phone = DoctorOtpService::normalizePhone($raw);
+            $local = preg_replace('/\D/', '', $phone) ?? '';
+            if (str_starts_with($local, '91') && strlen($local) === 12) {
+                $local = substr($local, 2);
+            }
+            if (strlen($local) !== 10) {
+                throw new \RuntimeException('Enter a valid 10-digit mobile number.');
+            }
+            if (QueryBuilder::table('users')->where('username', '=', $local)->first() !== null) {
+                throw new \RuntimeException('This mobile number is already registered.');
+            }
+
+            return ['username' => $local, 'phone' => $phone];
+        }
+
+        return [
+            'username' => self::uniqueUsername(self::normalizeUsername($raw)),
+            'phone' => null,
+        ];
+    }
+
+    private static function looksLikePhone(string $raw): bool
+    {
+        $digits = preg_replace('/\D/', '', $raw) ?? '';
+        if ($digits === '') {
+            return false;
+        }
+
+        return strlen($digits) >= 10 && preg_match('/^[\d\s\+\-\(\)]+$/', $raw) === 1;
+    }
+
     private static function normalizeUsername(string $username): string
     {
         $username = strtolower(trim($username));
@@ -247,8 +291,8 @@ final class StaffInvitationService
         if (strlen($username) > 30) {
             $username = substr($username, 0, 30);
         }
-        if (!preg_match('/^[a-z][a-z0-9_]*$/', $username)) {
-            throw new \RuntimeException('Username must start with a letter and use only lowercase letters, numbers, and underscores.');
+        if (!preg_match('/^[a-z][a-z0-9_]*$/', $username) && !preg_match('/^\d{10}$/', $username)) {
+            throw new \RuntimeException('Use a 10-digit mobile number or a username starting with a letter (letters, numbers, underscore).');
         }
 
         return $username;

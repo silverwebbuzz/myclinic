@@ -2,15 +2,18 @@
 $seats = $seatUsage ?? ['used' => 0, 'limit' => 2, 'available' => 0];
 $teamMessages = [
     'invited' => 'Invitation email sent.',
-    'created' => 'Staff account created. Copy the credentials below and share them securely.',
-    'password_reset' => 'Password reset. Share the new temporary password below.',
+    'created' => 'Staff account created.',
+    'password_reset' => 'Password reset.',
     'updated' => 'Team member updated.',
     'revoked' => 'Invitation revoked.',
 ];
-$creds = is_array($staffCredentials ?? null) ? $staffCredentials : null;
+$flashUserId = is_array($passwordFlash ?? null) ? (int) ($passwordFlash['user_id'] ?? 0) : 0;
+$flashPassword = is_array($passwordFlash ?? null) ? (string) ($passwordFlash['password'] ?? '') : '';
 $loginUrl = $loginUrl ?? 'https://app.eclinicpro.com/login';
 ?>
-<div class="space-y-4">
+<?= ui_page_header('Team', 'Invite staff, create logins, and manage seats.') ?>
+
+<div class="mx-auto max-w-4xl space-y-4">
     <div class="ui-card ui-card-pad">
         <p class="text-sm text-slate-500">
             <?= (int) $seats['used'] ?> of <?= (int) $seats['limit'] ?> seats used
@@ -29,55 +32,6 @@ $loginUrl = $loginUrl ?? 'https://app.eclinicpro.com/login';
         <p class="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800"><?= htmlspecialchars($teamMessages[$message]) ?></p>
         <?php endif; ?>
     </div>
-
-    <?php if ($creds !== null): ?>
-    <div class="ui-card ui-card-pad border-amber-200 bg-amber-50" x-data="{ copied: '' }">
-        <h3 class="ui-section-title text-amber-900">Share these login details now</h3>
-        <p class="mt-1 text-sm text-amber-800">
-            This password is shown only once. <?= htmlspecialchars($creds['name'] ?? 'Staff') ?> must change it on first login.
-        </p>
-        <dl class="mt-4 space-y-3 text-sm">
-            <div>
-                <dt class="text-xs font-medium uppercase tracking-wide text-amber-700">Login URL</dt>
-                <dd class="mt-1 flex flex-wrap items-center gap-2">
-                    <code class="break-all rounded bg-white px-2 py-1 font-mono text-xs"><?= htmlspecialchars($creds['login_url'] ?? $loginUrl) ?></code>
-                    <button type="button" class="text-xs font-medium text-amber-900 underline"
-                            @click="navigator.clipboard.writeText(<?= json_encode($creds['login_url'] ?? $loginUrl) ?>); copied='url'">
-                        Copy
-                    </button>
-                </dd>
-            </div>
-            <?php if (!empty($creds['username'])): ?>
-            <div>
-                <dt class="text-xs font-medium uppercase tracking-wide text-amber-700">Username</dt>
-                <dd class="mt-1 flex flex-wrap items-center gap-2">
-                    <code class="rounded bg-white px-2 py-1 font-mono text-sm"><?= htmlspecialchars($creds['username']) ?></code>
-                    <button type="button" class="text-xs font-medium text-amber-900 underline"
-                            @click="navigator.clipboard.writeText(<?= json_encode($creds['username']) ?>); copied='user'">
-                        Copy
-                    </button>
-                </dd>
-            </div>
-            <?php elseif (!empty($creds['email'])): ?>
-            <div>
-                <dt class="text-xs font-medium uppercase tracking-wide text-amber-700">Email</dt>
-                <dd class="mt-1 font-mono text-sm"><?= htmlspecialchars($creds['email']) ?></dd>
-            </div>
-            <?php endif; ?>
-            <div>
-                <dt class="text-xs font-medium uppercase tracking-wide text-amber-700">Temporary password</dt>
-                <dd class="mt-1 flex flex-wrap items-center gap-2">
-                    <code class="rounded bg-white px-2 py-1 font-mono text-sm tracking-wide"><?= htmlspecialchars($creds['password'] ?? '') ?></code>
-                    <button type="button" class="text-xs font-medium text-amber-900 underline"
-                            @click="navigator.clipboard.writeText(<?= json_encode($creds['password'] ?? '') ?>); copied='pass'">
-                        Copy
-                    </button>
-                </dd>
-            </div>
-        </dl>
-        <p x-show="copied" x-transition class="mt-3 text-xs text-amber-800">Copied to clipboard.</p>
-    </div>
-    <?php endif; ?>
 
     <div class="grid gap-4 lg:grid-cols-2">
         <div class="ui-card ui-card-pad" x-data="{ open: false }">
@@ -110,7 +64,7 @@ $loginUrl = $loginUrl ?? 'https://app.eclinicpro.com/login';
             <div class="flex items-center justify-between">
                 <div>
                     <h3 class="ui-section-title">Create account</h3>
-                    <p class="mt-1 text-xs text-slate-500">No email needed — you share username &amp; password manually.</p>
+                    <p class="mt-1 text-xs text-slate-500">No email — use mobile or username as login ID.</p>
                 </div>
                 <button type="button" @click="open = !open" class="ui-btn ui-btn-secondary ui-btn-sm" :disabled="<?= ($seats['available'] ?? 0) <= 0 ? 'true' : 'false' ?>">
                     <?= ui_icon('plus', 14) ?><span>Create</span>
@@ -120,9 +74,9 @@ $loginUrl = $loginUrl ?? 'https://app.eclinicpro.com/login';
                 <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
                 <label class="text-sm">Name <input name="name" required class="ui-input" placeholder="Priya Sharma"></label>
                 <label class="text-sm">
-                    Username <span class="text-slate-400">(optional)</span>
-                    <input name="username" pattern="[a-z][a-z0-9_]{2,29}" class="ui-input" placeholder="priya">
-                    <span class="mt-1 block text-xs text-slate-400">Lowercase letters, numbers, underscore. Auto-generated if blank.</span>
+                    Mobile or username <span class="text-slate-400">(optional)</span>
+                    <input name="login_id" class="ui-input" placeholder="9876543210 or priya" inputmode="text" autocomplete="off">
+                    <span class="mt-1 block text-xs text-slate-400">10-digit mobile is easiest for login. Auto-generated from name if blank.</span>
                 </label>
                 <label class="text-sm">Role
                     <select name="role" class="ui-input">
@@ -132,7 +86,7 @@ $loginUrl = $loginUrl ?? 'https://app.eclinicpro.com/login';
                         <option value="labtech">Lab tech</option>
                     </select>
                 </label>
-                <button type="submit" class="ui-btn ui-btn-primary">Create &amp; show password</button>
+                <button type="submit" class="ui-btn ui-btn-primary">Create account</button>
             </form>
         </div>
     </div>
@@ -141,23 +95,40 @@ $loginUrl = $loginUrl ?? 'https://app.eclinicpro.com/login';
         <h3 class="ui-section-title">Active staff</h3>
         <ul class="mt-2 divide-y divide-slate-100">
             <?php foreach ($staff ?? [] as $member): ?>
-            <li class="py-2">
-                <div class="flex flex-wrap items-center gap-3">
+            <?php
+                $memberId = (int) $member['id'];
+                $loginId = !empty($member['username'])
+                    ? (string) $member['username']
+                    : (!empty($member['email']) ? (string) $member['email'] : '');
+                $showPassword = $flashUserId === $memberId && $flashPassword !== '';
+            ?>
+            <li class="py-3">
+                <div class="flex flex-wrap items-start gap-3">
                     <div class="min-w-0 flex-1">
-                        <p class="truncate text-sm font-medium text-slate-800"><?= htmlspecialchars($member['name']) ?></p>
-                        <p class="truncate text-xs text-slate-400">
-                            <?php if (!empty($member['username'])): ?>
-                                @<?= htmlspecialchars($member['username']) ?>
-                            <?php endif; ?>
-                            <?php if (!empty($member['email'])): ?>
-                                <?= !empty($member['username']) ? ' · ' : '' ?><?= htmlspecialchars($member['email']) ?>
-                            <?php endif; ?>
-                            <?php if (empty($member['username']) && empty($member['email'])): ?>
-                                No login email
+                        <p class="text-sm font-medium text-slate-800"><?= htmlspecialchars($member['name']) ?></p>
+                        <?php if ($loginId !== ''): ?>
+                        <p class="mt-0.5 text-xs text-slate-500">
+                            Login: <span class="font-mono text-slate-700"><?= htmlspecialchars($loginId) ?></span>
+                            <?php if (preg_match('/^\d{10}$/', $loginId)): ?>
+                            <span class="text-slate-400">(mobile)</span>
                             <?php endif; ?>
                         </p>
+                        <?php elseif (!empty($member['email'])): ?>
+                        <p class="mt-0.5 text-xs text-slate-500">Login: <?= htmlspecialchars($member['email']) ?></p>
+                        <?php endif; ?>
+                        <?php if ($showPassword): ?>
+                        <p class="mt-1 text-xs text-amber-800" x-data="{ copied: false }">
+                            Password: <code class="rounded bg-amber-50 px-1.5 py-0.5 font-mono text-sm tracking-wide"><?= htmlspecialchars($flashPassword) ?></code>
+                            <button type="button" class="ml-1 font-medium underline"
+                                    @click="navigator.clipboard.writeText(<?= json_encode($flashPassword) ?>); copied=true">
+                                Copy
+                            </button>
+                            <span x-show="copied" x-cloak class="ml-1 text-amber-700">Copied</span>
+                            <span class="block text-amber-700/80">Shown once — share now. Staff must change on first login.</span>
+                        </p>
+                        <?php endif; ?>
                     </div>
-                    <form method="post" action="/settings/team/<?= (int) $member['id'] ?>" class="flex flex-wrap items-center gap-3">
+                    <form method="post" action="/settings/team/<?= $memberId ?>" class="flex flex-wrap items-center gap-3">
                         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
                         <select name="role" class="ui-input w-32 shrink-0" <?= !empty($member['is_owner']) ? 'disabled' : '' ?>>
                             <?php foreach (['admin','doctor','nurse','receptionist','labtech'] as $r): ?>
@@ -175,7 +146,7 @@ $loginUrl = $loginUrl ?? 'https://app.eclinicpro.com/login';
                         <?php endif; ?>
                     </form>
                     <?php if (empty($member['is_owner'])): ?>
-                    <form method="post" action="/settings/team/<?= (int) $member['id'] ?>/reset-password"
+                    <form method="post" action="/settings/team/<?= $memberId ?>/reset-password"
                           onsubmit="return confirm('Generate a new temporary password for <?= htmlspecialchars(addslashes($member['name'])) ?>?');">
                         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
                         <button type="submit" class="shrink-0 text-xs text-amber-700 hover:underline">Reset password</button>
@@ -185,6 +156,7 @@ $loginUrl = $loginUrl ?? 'https://app.eclinicpro.com/login';
             </li>
             <?php endforeach; ?>
         </ul>
+        <p class="mt-3 text-xs text-slate-400">Login URL: <span class="font-mono"><?= htmlspecialchars($loginUrl) ?></span></p>
     </div>
 
     <?php if (!empty($invitations)): ?>

@@ -21,7 +21,6 @@ $meta = [
     'leaves'        => ['Leaves & holidays', 'Block dates when the clinic is closed.', 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'],
     'notifications' => ['Notifications & messaging', 'WhatsApp, automated patient reminders, and payments.', 'M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 00-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9'],
     'subscription'  => ['Subscription & billing', 'Your plan, seats, and billing details.', 'M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
-    'team'          => ['Team & seats', 'Invite staff and manage seat usage.', 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 00-3-3.87'],
     'branding'      => ['White-label branding', 'Custom domain, logo, and brand color (Enterprise).', 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h10a2 2 0 012 2v6M7 21h10a2 2 0 002-2v-5M7 21v-5a2 2 0 012-2h2'],
 ];
 
@@ -30,7 +29,7 @@ $openByDefault = 'general';
 
 // Render order — single column, general first.
 // 'notifications' is intentionally omitted — not currently needed in Settings.
-$order = ['general', 'hours', 'specialty', 'leaves', 'subscription', 'team', 'branding'];
+$order = ['general', 'hours', 'specialty', 'leaves', 'subscription', 'branding'];
 ?>
 <?php if (!empty($message)): ?>
 <div class="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Settings saved.</div>

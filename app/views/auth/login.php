@@ -16,6 +16,7 @@ ob_start();
         <div>
             <label class="block text-xs font-medium text-slate-600">Email or username</label>
             <input name="login" type="text" required autocomplete="username"
+                   placeholder="Email or mobile number"
                    class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
         </div>
 

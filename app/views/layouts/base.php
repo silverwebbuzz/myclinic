@@ -122,6 +122,8 @@
                 if ($hrefPath === '' || $hrefPath === '/') return $currentUri === '/';
                 // Dashboard matches only on /dashboard exactly.
                 if ($hrefPath === '/dashboard') return $currentUri === '/dashboard';
+                // Clinic settings — exact path only (not /settings/team, /settings/password, etc.).
+                if ($hrefPath === '/settings') return $currentUri === '/settings';
                 // Other items active when path begins with the href path segment.
                 return $currentUri === $hrefPath || str_starts_with($currentUri, $hrefPath . '/');
             };
@@ -187,6 +189,10 @@
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/settings') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
                     <?= ui_icon('settings', 18, 'shrink-0') ?><span>Settings</span>
                 </a>
+                <a href="/settings/team"
+                   class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/settings/team') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
+                    <?= ui_icon('staff', 18, 'shrink-0') ?><span>Team</span>
+                </a>
                 <a href="/help"
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/help') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
                     <?= ui_icon('help', 18, 'shrink-0') ?><span>Help &amp; Guide</span>
@@ -251,6 +257,7 @@
                                 <p class="truncate text-xs text-slate-500"><?= htmlspecialchars($user['email'] ?? '') ?></p>
                             </div>
                             <a href="/settings?tab=general" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Clinic settings</a>
+                            <a href="/settings/team" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Team</a>
                             <a href="/settings/password" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Password</a>
                             <a href="/settings/sessions" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Sessions</a>
                             <form method="post" action="/logout" class="border-t border-slate-100">
