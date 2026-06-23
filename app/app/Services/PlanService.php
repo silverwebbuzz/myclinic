@@ -195,7 +195,7 @@ final class PlanService
         $data = [
             'plan' => $planId,
             'seat_limit' => $seatLimit,
-            'onboarding_step' => 2,
+            // 'onboarding_step' => 2,
         ];
 
         // After Phase 1: 30-day trial for all new tenants (was 14).
