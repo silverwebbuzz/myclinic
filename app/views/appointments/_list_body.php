@@ -170,7 +170,12 @@ $cards = [
             <p class="mb-3 flex justify-center text-slate-300"><?= ui_icon('appointments', 40) ?></p>
             <p class="text-sm font-medium text-slate-700">No appointments<?= $statusFilter !== 'all' ? ' in this status' : '' ?> on <?= htmlspecialchars($displayDate) ?></p>
             <p class="mt-1 text-xs text-slate-500">Try another date or status, or book a new appointment.</p>
+            <?php
+                $canBookAppointments = \App\Services\RoleAccessService::canBookAppointments(\App\Core\RequestContext::user() ?? []);
+            ?>
+            <?php if ($canBookAppointments): ?>
             <a href="<?= htmlspecialchars($bookUrl()) ?>" class="mt-4 inline-block ui-btn ui-btn-primary">+ Book appointment</a>
+            <?php endif; ?>
         </div>
         <?php endif; ?>
     </div>

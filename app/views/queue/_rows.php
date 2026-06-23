@@ -8,11 +8,16 @@ $statusStyles = [
     'cancelled' => 'bg-slate-100 text-slate-400 line-through',
 ];
 ?>
+<?php
+$canBookAppointments = \App\Services\RoleAccessService::canBookAppointments(\App\Core\RequestContext::user() ?? []);
+?>
 <?php if ($queue === []): ?>
 <div class="p-8 text-center">
     <p class="text-sm font-medium text-slate-600">No appointments in today's queue</p>
     <p class="mt-1 text-xs text-slate-400">Walk-ins and bookings for today will appear here automatically.</p>
+    <?php if ($canBookAppointments): ?>
     <a href="/appointments/new" class="ui-btn ui-btn-primary mt-4 inline-flex">+ Book appointment</a>
+    <?php endif; ?>
 </div>
 <?php else: ?>
 <?php foreach ($queue as $row): ?>

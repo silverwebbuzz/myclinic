@@ -22,7 +22,7 @@ if ($toast === null && isset($errorToasts[$_GET['error'] ?? ''])) {
         <h2 class="ui-section-title">Today's queue</h2>
         <div class="flex flex-wrap gap-2">
             <a href="/appointments" class="ui-btn ui-btn-secondary">Calendar</a>
-            <?php if (!empty($canBookForAll)): ?>
+            <?php if (!empty($canBookAppointments)): ?>
             <a href="/appointments/new" class="ui-btn ui-btn-secondary">+ Book appointment</a>
             <?php endif; ?>
             <form method="post" action="/queue/call-next"

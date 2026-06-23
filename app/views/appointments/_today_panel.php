@@ -17,6 +17,7 @@
  *   $statusFilter  — initial active filter (default 'all')
  *   $panelTitle    — heading text (default 'Today's Appointments')
  */
+$canBookAppointments = \App\Services\RoleAccessService::canBookAppointments(\App\Core\RequestContext::user() ?? []);
 $statusFilter = $statusFilter ?? 'all';
 $panelTitle   = $panelTitle ?? "Today's Appointments";
 $displayDate  = date('d M Y', strtotime($date));
@@ -59,7 +60,9 @@ $tabs = [
         </div>
         <div class="flex flex-wrap gap-2">
             <a href="/appointments" class="ui-btn ui-btn-secondary ui-btn-sm">Calendar</a>
+            <?php if ($canBookAppointments): ?>
             <a href="/appointments/new?date=<?= htmlspecialchars($date) ?>" class="ui-btn ui-btn-primary ui-btn-sm">+ Book</a>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -178,7 +181,9 @@ $tabs = [
             <p class="mb-3 flex justify-center text-slate-300"><?= ui_icon('appointments', 40) ?></p>
             <p class="text-sm font-medium text-slate-700">No appointments on <?= htmlspecialchars($displayDate) ?></p>
             <p class="mt-1 text-xs text-slate-500">New bookings and walk-ins will show up here as they come in.</p>
+            <?php if ($canBookAppointments): ?>
             <a href="/appointments/new?date=<?= htmlspecialchars($date) ?>" class="mt-4 inline-block ui-btn ui-btn-primary">+ Book appointment</a>
+            <?php endif; ?>
         </div>
         <?php else: ?>
         <!-- Empty-for-this-filter notice (all rows hidden by the active tab) -->

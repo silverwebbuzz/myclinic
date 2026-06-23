@@ -47,6 +47,7 @@ final class QueueController
             'doctorId' => $doctorId,
             'followUpFlags' => $followUpFlags,
             'canBookForAll' => RoleAccessService::canBookAppointmentsForAllDoctors($user),
+            'canBookAppointments' => RoleAccessService::canBookAppointments($user),
             'isDoctorScoped' => RoleAccessService::appointmentDoctorScope($user) !== null,
         ], 'Today\'s queue'));
     }

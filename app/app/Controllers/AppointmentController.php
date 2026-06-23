@@ -31,6 +31,7 @@ final class AppointmentController
             !empty($request->query['doctor_id']) ? (int) $request->query['doctor_id'] : null,
         );
         $canBookForAll = RoleAccessService::canBookAppointmentsForAllDoctors($user);
+        $canBookAppointments = RoleAccessService::canBookAppointments($user);
         $isDoctorScoped = RoleAccessService::appointmentDoctorScope($user) !== null;
 
         $dateRaw = $request->query['date'] ?? date('Y-m-d');
@@ -99,6 +100,7 @@ final class AppointmentController
             'weekAppointments' => $weekAppointments,
             'daySlots' => $daySlots,
             'canBookForAll' => $canBookForAll,
+            'canBookAppointments' => $canBookAppointments,
             'isDoctorScoped' => $isDoctorScoped,
         ], 'Appointments'));
     }
@@ -109,11 +111,13 @@ final class AppointmentController
             return $denied;
         }
 
-        if ($denied = $this->requireBookForAll()) {
+        if ($denied = $this->requireBookAccess()) {
             return $denied;
         }
 
         $clinicId = (int) RequestContext::clinicId();
+        $user = RequestContext::user() ?? [];
+        $doctorScope = RoleAccessService::appointmentDoctorScope($user);
         $tz = SlotService::clinicTimezone($clinicId);
         try {
             $todayLocal = (new \DateTime('now', new \DateTimeZone($tz)))->format('Y-m-d');
@@ -129,6 +133,9 @@ final class AppointmentController
             'type' => $request->query['type'] ?? 'prebooked',
             'is_followup' => !empty($request->query['followup']),
         ];
+        if ($doctorScope !== null) {
+            $prefill['doctor_id'] = $doctorScope;
+        }
 
         $patientHint = null;
         if (!empty($prefill['patient_id'])) {
@@ -144,6 +151,7 @@ final class AppointmentController
             'hasTelemedicine' => ModuleGate::check('telemedicine'),
             'clinicTimezone' => $tz,
             'todayLocal' => $todayLocal,
+            'lockDoctorId' => $doctorScope,
         ], 'Book appointment'));
     }
 
@@ -153,11 +161,12 @@ final class AppointmentController
             return $denied;
         }
 
-        if ($denied = $this->requireBookForAll()) {
+        if ($denied = $this->requireBookAccess()) {
             return $denied;
         }
 
         $clinicId = (int) RequestContext::clinicId();
+        $doctorScope = RoleAccessService::appointmentDoctorScope(RequestContext::user() ?? []);
 
         try {
             $patientId = $this->resolvePatientId($clinicId, $request);
@@ -190,6 +199,7 @@ final class AppointmentController
                     'patientHint' => null,
                     'error' => $e->getMessage(),
                     'hasTelemedicine' => ModuleGate::check('telemedicine'),
+                    'lockDoctorId' => $doctorScope,
                 ], 'Book appointment'), 422);
             } catch (\Throwable $renderError) {
                 // The error re-render itself crashed — fall back to a plain debug page so we can see what's wrong.
@@ -571,11 +581,11 @@ final class AppointmentController
         return null;
     }
 
-    private function requireBookForAll(): ?Response
+    private function requireBookAccess(): ?Response
     {
         $user = RequestContext::user() ?? [];
-        if (!RoleAccessService::canBookAppointmentsForAllDoctors($user)) {
-            return Response::redirect('/appointments?error=' . urlencode('Only clinic admin and reception can book or change appointments for all doctors.'));
+        if (!RoleAccessService::canBookAppointments($user)) {
+            return Response::redirect('/appointments?error=' . urlencode('You do not have permission to book appointments.'));
         }
 
         return null;

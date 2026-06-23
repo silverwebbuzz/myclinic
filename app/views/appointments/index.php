@@ -76,7 +76,7 @@ $bookUrl = static function (?string $d = null, ?string $time = null) use ($date,
                    class="ui-btn ui-btn-secondary ui-btn-sm" aria-label="Next <?= $view ?>">›</a>
             </div>
 
-            <?php if (!empty($canBookForAll)): ?>
+            <?php if (!empty($canBookAppointments)): ?>
             <a href="<?= htmlspecialchars($bookUrl()) ?>" class="ui-btn ui-btn-primary">+ Book</a>
             <?php endif; ?>
         </div>
@@ -186,7 +186,7 @@ $bookUrl = static function (?string $d = null, ?string $time = null) use ($date,
                         <?php endif; ?>
                     <?php if ($canManageRow): ?></a><?php else: ?></div><?php endif; ?>
                     <?php endforeach; ?>
-                    <?php if (!empty($canBookForAll)): ?>
+                    <?php if (!empty($canBookAppointments)): ?>
                     <a href="<?= htmlspecialchars($bookUrl($colDate)) ?>"
                        class="block w-full rounded border border-dashed border-slate-200 px-1.5 py-1 text-center text-[11px] text-slate-400 hover:border-brand hover:text-brand">
                         + Add
@@ -230,7 +230,7 @@ $bookUrl = static function (?string $d = null, ?string $time = null) use ($date,
                 <span class="cursor-not-allowed rounded-lg bg-amber-100 px-2 py-1.5 text-xs text-amber-800" title="Doctor on leave"><?= $time12 ?></span>
                 <?php elseif (empty($slot['available'])): ?>
                 <span class="cursor-not-allowed rounded-lg bg-slate-200 px-2 py-1.5 text-xs text-slate-500 line-through" title="Booked"><?= $time12 ?></span>
-                <?php elseif (!empty($canBookForAll)): ?>
+                <?php elseif (!empty($canBookAppointments)): ?>
                 <a href="<?= htmlspecialchars($bookUrl($date, (string) $slot['time'])) ?>"
                    class="rounded-lg border px-2 py-1.5 text-xs font-medium hover:bg-emerald-50 <?= !empty($slot['extended']) ? 'border-red-300 bg-red-50 text-red-700' : 'border-emerald-300 bg-white text-emerald-800' ?>"
                    title="<?= !empty($slot['extended']) ? 'Extended hours — book' : 'Book this slot' ?>">

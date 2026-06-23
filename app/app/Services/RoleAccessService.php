@@ -42,6 +42,13 @@ final class RoleAccessService
         return ($user['role'] ?? '') === 'receptionist';
     }
 
+    /** Admin, receptionist, or a logged-in doctor (own patients only). */
+    public static function canBookAppointments(array $user): bool
+    {
+        return self::canBookAppointmentsForAllDoctors($user)
+            || self::appointmentDoctorScope($user) !== null;
+    }
+
     /** Logged-in doctor id when appointments must be scoped to self; null otherwise. */
     public static function appointmentDoctorScope(array $user): ?int
     {
@@ -79,7 +86,7 @@ final class RoleAccessService
         return true;
     }
 
-    /** Admin and receptionist can book for any doctor; doctors may edit only their own. */
+    /** Admin and receptionist can manage any appointment; doctors may book/edit their own only. */
     public static function canManageAppointment(array $user, array $appointment): bool
     {
         if (self::canBookAppointmentsForAllDoctors($user)) {
