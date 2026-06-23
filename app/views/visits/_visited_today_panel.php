@@ -9,7 +9,7 @@ use App\Support\ClinicTime;
 
 $visits = $visits ?? [];
 $date = $date ?? ClinicTime::today();
-$panelTitle = $panelTitle ?? "Today's Visited Patients";
+$panelTitle = $panelTitle ?? "Today's Completed visit";
 $displayDate = date('d M Y', strtotime($date));
 $total = (int) ($visitedTodayCount ?? count($visits));
 ?>

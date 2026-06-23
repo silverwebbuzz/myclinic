@@ -12,6 +12,12 @@ ob_start();
         </div>
     <?php endif; ?>
 
+    <?php if (!empty($_GET['rate_limited'])): ?>
+        <div class="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Too many reset attempts from your network. Please wait up to an hour and try again.
+        </div>
+    <?php endif; ?>
+
     <form method="post" action="/forgot-password" class="mt-6 space-y-4">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
 

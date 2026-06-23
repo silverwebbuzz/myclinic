@@ -75,30 +75,17 @@
     </div>
     <?php endif; ?>
 
-    <!-- ============ Today's Appointments (full-width primary panel) ============
-         Same facilities as the /appointments page (status tiles, filter tabs,
-         table, row actions), locked to today. Auto-refreshes every 60s via the
-         dashboard queue API (id="queue-body" is swapped in place). -->
+    <!-- ============ Today's completed visits (primary dashboard panel) ============ -->
     <div id="queue-body">
-        <?php
-        // Map dashboard vars onto the names the shared panel expects.
-        $appointments = $todayAppointments ?? [];
-        $counts = $todayCounts ?? [];
-        $date = $todayDate ?? date('Y-m-d');
-        require __DIR__ . '/../appointments/_today_panel.php';
-        ?>
-    </div>
-    <p class="text-right ui-help" x-text="lastRefresh ? 'Updated ' + lastRefresh : ''"></p>
-
-    <!-- ============ Today's visited patients (completed EMR) ============ -->
-    <div>
         <?php
         $visits = $visitedToday ?? [];
         $visitedTodayCount = $visitedTodayCount ?? count($visits);
         $date = $visitedTodayDate ?? ($todayDate ?? date('Y-m-d'));
+        $panelTitle = "Today's Completed visit";
         require __DIR__ . '/../visits/_visited_today_panel.php';
         ?>
     </div>
+    <p class="text-right ui-help" x-text="lastRefresh ? 'Updated ' + lastRefresh : ''"></p>
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <?php
