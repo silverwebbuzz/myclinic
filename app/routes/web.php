@@ -358,6 +358,7 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/clinics/{id}/extend-trial', [SuperAdminController::class, 'extendTrial']);
         $admin->post('/clinics/{id}/plan', [SuperAdminController::class, 'setPlan']);
         $admin->post('/clinics/{id}/addon', [SuperAdminController::class, 'toggleAddon']);
+        $admin->post('/clinics/{id}/delete', [SuperAdminController::class, 'deleteClinic']);
 
         // Phase 1: feature flag management
         $admin->get('/feature-flags', [SuperAdminController::class, 'featureFlags']);

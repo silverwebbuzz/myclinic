@@ -9,15 +9,20 @@
     <?php require __DIR__ . '/_nav.php'; ?>
     <main class="mx-auto max-w-6xl p-6">
         <h1 class="text-xl font-semibold">All clinics</h1>
-        <?php if (!empty($_GET['error'])): ?>
-        <p class="mt-2 text-sm text-red-600"><?= htmlspecialchars($_GET['error']) ?></p>
+        <?php if (!empty($_GET['message']) && $_GET['message'] === 'clinic_deleted'): ?>
+        <p class="mt-2 text-sm text-emerald-700">Clinic and all related data were deleted.</p>
         <?php endif; ?>
+        <?php if (!empty($_GET['error'])): ?>
+        <p class="mt-2 text-sm text-red-600"><?= htmlspecialchars((string) $_GET['error']) ?></p>
+        <?php endif; ?>
+        <p class="mt-1 text-xs text-slate-500">MRR shows monthly revenue from <strong>paid</strong> subscriptions only (₹/mo). Trials and free plans count as ₹0.</p>
         <div class="mt-4 overflow-x-auto ui-card">
             <table class="w-full text-left text-sm">
                 <thead class="border-b bg-slate-50 text-xs uppercase text-slate-500">
                     <tr>
                         <th class="px-4 py-3">Clinic</th>
                         <th class="px-4 py-3">Plan</th>
+                        <th class="px-4 py-3">Status</th>
                         <th class="px-4 py-3">MRR</th>
                         <th class="px-4 py-3">Churn</th>
                         <th class="px-4 py-3"></th>
@@ -31,7 +36,20 @@
                             <span class="block text-xs text-slate-500"><?= htmlspecialchars($c['slug'] ?? '') ?></span>
                         </td>
                         <td class="px-4 py-3"><?= htmlspecialchars($c['plan_label'] ?? '') ?></td>
-                        <td class="px-4 py-3">$<?= number_format((float) ($c['mrr_usd'] ?? 0), 0) ?></td>
+                        <td class="px-4 py-3">
+                            <?php
+                            $status = $c['billing_status'] ?? '—';
+                            $statusClass = match ($status) {
+                                'Paid' => 'bg-emerald-100 text-emerald-800',
+                                'Trial' => 'bg-sky-100 text-sky-800',
+                                'Free' => 'bg-slate-100 text-slate-600',
+                                'Expired' => 'bg-rose-100 text-rose-800',
+                                default => 'bg-slate-100 text-slate-600',
+                            };
+                            ?>
+                            <span class="rounded px-2 py-0.5 text-xs font-medium <?= $statusClass ?>"><?= htmlspecialchars($status) ?></span>
+                        </td>
+                        <td class="px-4 py-3">₹<?= number_format((float) ($c['mrr_inr'] ?? 0), 0) ?></td>
                         <td class="px-4 py-3">
                             <?php if (!empty($c['churn_flag'])): ?>
                             <span class="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800" title="<?= htmlspecialchars($c['churn_risk_reason'] ?? '') ?>">
@@ -41,7 +59,7 @@
                             <span class="text-slate-400">—</span>
                             <?php endif; ?>
                         </td>
-                        <td class="px-4 py-3 space-x-3">
+                        <td class="px-4 py-3 space-x-3 whitespace-nowrap">
                             <a href="/admin/clinics/<?= (int) ($c['id'] ?? 0) ?>" class="text-slate-700 hover:underline">Manage</a>
                             <form method="post" action="/admin/impersonate" class="inline">
                                 <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf ?? '') ?>">

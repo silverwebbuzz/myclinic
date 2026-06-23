@@ -15,7 +15,9 @@ use App\Services\ImpersonationService;
 use App\Services\PlanService;
 use App\Services\SuperAdminAuthService;
 use App\Services\SuperAdminJwtService;
+use App\Services\SuperAdminClinicService;
 use App\Services\SuperAdminMetricsService;
+use App\Services\TenantDeletionService;
 use App\Support\View;
 use PDO;
 
@@ -276,11 +278,44 @@ final class SuperAdminController
             'admin' => RequestContext::superAdmin(),
             'csrf' => CsrfService::token(),
             'tenant' => $tenant,
+            'overview' => SuperAdminClinicService::overview($clinicId),
+            'planLabel' => PlanService::get((string) ($tenant['plan'] ?? 'standard'))['name'] ?? ucfirst((string) ($tenant['plan'] ?? '')),
+            'billingStatus' => SuperAdminMetricsService::billingStatus($tenant),
+            'specialties' => \App\Support\SpecialtyCatalog::all(),
             'modules' => $modules,
             'available' => $available,
             'flags' => $flags,
             'message' => $request->query['message'] ?? null,
+            'error' => $request->query['error'] ?? null,
         ]));
+    }
+
+    /** POST /admin/clinics/{id}/delete — permanently remove clinic and all data. */
+    public function deleteClinic(Request $request, string $id): Response
+    {
+        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
+            return Response::redirect('/admin/clinics/' . (int) $id);
+        }
+
+        $clinicId = (int) $id;
+        $confirm = trim((string) ($request->post['confirm_slug'] ?? ''));
+
+        $tenant = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first();
+        if ($tenant === null) {
+            return Response::redirect('/admin/clinics?error=not_found');
+        }
+
+        if ($confirm !== (string) ($tenant['slug'] ?? '')) {
+            return Response::redirect('/admin/clinics/' . $clinicId . '?error=confirm_slug');
+        }
+
+        try {
+            TenantDeletionService::delete($clinicId);
+        } catch (\Throwable $e) {
+            return Response::redirect('/admin/clinics/' . $clinicId . '?error=delete_failed');
+        }
+
+        return Response::redirect('/admin/clinics?message=clinic_deleted');
     }
 
     /** POST /admin/clinics/{id}/extend-trial */

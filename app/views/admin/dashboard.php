@@ -14,12 +14,12 @@
         <?php endif; ?>
         <div class="grid gap-4 sm:grid-cols-4">
             <div class="ui-card p-4">
-                <p class="text-xs text-slate-500">MRR</p>
-                <p class="text-2xl font-bold">$<?= number_format($metrics['mrr'] ?? 0, 0) ?></p>
+                <p class="text-xs text-slate-500">MRR (paid only)</p>
+                <p class="text-2xl font-bold">₹<?= number_format($metrics['mrr'] ?? 0, 0) ?></p>
             </div>
             <div class="ui-card p-4">
-                <p class="text-xs text-slate-500">ARR</p>
-                <p class="text-2xl font-bold">$<?= number_format($metrics['arr'] ?? 0, 0) ?></p>
+                <p class="text-xs text-slate-500">ARR (paid only)</p>
+                <p class="text-2xl font-bold">₹<?= number_format($metrics['arr'] ?? 0, 0) ?></p>
             </div>
             <div class="ui-card p-4">
                 <p class="text-xs text-slate-500">Clinics</p>
@@ -51,7 +51,7 @@
         type: 'line',
         data: {
             labels: trend.map(r => r.month),
-            datasets: [{ label: 'MRR (USD)', data: trend.map(r => r.mrr), borderColor: '#0F766E', fill: false }]
+            datasets: [{ label: 'MRR (₹)', data: trend.map(r => r.mrr), borderColor: '#0F766E', fill: false }]
         },
         options: { responsive: true, plugins: { legend: { display: false } } }
     });
