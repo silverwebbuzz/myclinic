@@ -11,6 +11,7 @@ use App\Http\Response;
 use App\Services\AppointmentService;
 use App\Services\AppointmentSlipService;
 use App\Services\AuditService;
+use App\Services\RoleAccessService;
 use App\Services\SlotService;
 use App\Support\Layout;
 
@@ -23,8 +24,14 @@ final class AppointmentController
         }
 
         $clinicId = (int) RequestContext::clinicId();
+        $user = RequestContext::user() ?? [];
         $doctors = AppointmentService::doctorsForClinic($clinicId);
-        $doctorId = !empty($request->query['doctor_id']) ? (int) $request->query['doctor_id'] : null;
+        $doctorId = RoleAccessService::resolveAppointmentDoctorId(
+            $user,
+            !empty($request->query['doctor_id']) ? (int) $request->query['doctor_id'] : null,
+        );
+        $canBookForAll = RoleAccessService::canBookAppointmentsForAllDoctors($user);
+        $isDoctorScoped = RoleAccessService::appointmentDoctorScope($user) !== null;
 
         $dateRaw = $request->query['date'] ?? date('Y-m-d');
         $ts = strtotime((string) $dateRaw);
@@ -91,12 +98,18 @@ final class AppointmentController
             'weekStart' => $weekStart,
             'weekAppointments' => $weekAppointments,
             'daySlots' => $daySlots,
+            'canBookForAll' => $canBookForAll,
+            'isDoctorScoped' => $isDoctorScoped,
         ], 'Appointments'));
     }
 
     public function create(Request $request): Response
     {
         if ($denied = $this->requireModule()) {
+            return $denied;
+        }
+
+        if ($denied = $this->requireBookForAll()) {
             return $denied;
         }
 
@@ -137,6 +150,10 @@ final class AppointmentController
     public function store(Request $request): Response
     {
         if ($denied = $this->requireModule()) {
+            return $denied;
+        }
+
+        if ($denied = $this->requireBookForAll()) {
             return $denied;
         }
 
@@ -236,12 +253,21 @@ final class AppointmentController
             return Response::html('Appointment not found', 404);
         }
 
+        if ($denied = $this->requireAppointmentAccess($appointment)) {
+            return $denied;
+        }
+
+        if ($denied = $this->requireBookForAll()) {
+            return $denied;
+        }
+
         return Response::html(Layout::page('appointments/form', [
             'appointment' => $appointment,
             'doctors' => AppointmentService::doctorsForClinic($clinicId),
             'prefill' => [],
             'error' => null,
             'hasTelemedicine' => ModuleGate::check('telemedicine'),
+            'canBookForAll' => RoleAccessService::canBookAppointmentsForAllDoctors(RequestContext::user() ?? []),
         ], 'Edit appointment'));
     }
 
@@ -252,6 +278,17 @@ final class AppointmentController
         }
 
         $clinicId = (int) RequestContext::clinicId();
+        $existing = AppointmentService::find($clinicId, (int) $id);
+        if ($existing === null) {
+            return Response::html('Appointment not found', 404);
+        }
+        if ($denied = $this->requireAppointmentAccess($existing)) {
+            return $denied;
+        }
+        if ($denied = $this->requireBookForAll()) {
+            return $denied;
+        }
+
         try {
             $data = $this->dataFromRequest($request);
             AppointmentService::update($clinicId, (int) $id, $data);
@@ -277,6 +314,14 @@ final class AppointmentController
         }
 
         $clinicId = (int) RequestContext::clinicId();
+        $existing = AppointmentService::find($clinicId, (int) $id);
+        if ($existing !== null && ($denied = $this->requireAppointmentAccess($existing))) {
+            return $denied;
+        }
+        if ($denied = $this->requireBookForAll()) {
+            return $denied;
+        }
+
         AppointmentService::cancel($clinicId, (int) $id);
         AuditService::log($request, 'UPDATE', 'appointments', (int) $id);
 
@@ -293,6 +338,10 @@ final class AppointmentController
         $appointment = AppointmentService::findDetailed($clinicId, (int) $id);
         if ($appointment === null) {
             return Response::html('Not found', 404);
+        }
+
+        if ($denied = $this->requireAppointmentAccess($appointment)) {
+            return $denied;
         }
 
         $clinic = RequestContext::clinic();
@@ -330,7 +379,11 @@ final class AppointmentController
         }
 
         $clinicId = (int) RequestContext::clinicId();
-        $doctorId = !empty($request->query['doctor_id']) ? (int) $request->query['doctor_id'] : null;
+        $user = RequestContext::user() ?? [];
+        $doctorId = RoleAccessService::resolveAppointmentDoctorId(
+            $user,
+            !empty($request->query['doctor_id']) ? (int) $request->query['doctor_id'] : null,
+        );
 
         $ts = strtotime((string) ($request->query['date'] ?? date('Y-m-d')));
         $date = $ts ? date('Y-m-d', $ts) : date('Y-m-d');
@@ -381,7 +434,8 @@ final class AppointmentController
         }
 
         $clinicId = (int) RequestContext::clinicId();
-        $doctorId = (int) ($request->query['doctor_id'] ?? 0);
+        $user = RequestContext::user() ?? [];
+        $doctorId = RoleAccessService::resolveAppointmentDoctorId($user, (int) ($request->query['doctor_id'] ?? 0)) ?? 0;
         $tz = SlotService::clinicTimezone($clinicId);
         $date = self::normalizeDate((string) ($request->query['date'] ?? ''), $tz);
 
@@ -443,7 +497,11 @@ final class AppointmentController
         $clinicId = (int) RequestContext::clinicId();
         $start = $request->query['start'] ?? date('Y-m-01');
         $end = $request->query['end'] ?? date('Y-m-t 23:59:59');
-        $doctorId = !empty($request->query['doctor_id']) ? (int) $request->query['doctor_id'] : null;
+        $user = RequestContext::user() ?? [];
+        $doctorId = RoleAccessService::resolveAppointmentDoctorId(
+            $user,
+            !empty($request->query['doctor_id']) ? (int) $request->query['doctor_id'] : null,
+        );
 
         return Response::json(AppointmentService::calendarEvents($clinicId, $start, $end, $doctorId));
     }
@@ -481,6 +539,27 @@ final class AppointmentController
                 'module' => 'appointments_basic',
                 'label' => 'Appointments',
             ], 'Module inactive'), 402);
+        }
+
+        return null;
+    }
+
+  /** @param array<string, mixed> $appointment */
+    private function requireAppointmentAccess(array $appointment): ?Response
+    {
+        $user = RequestContext::user() ?? [];
+        if (!RoleAccessService::canAccessAppointment($user, $appointment)) {
+            return Response::redirect('/appointments?error=' . urlencode('You can only view your own appointments.'));
+        }
+
+        return null;
+    }
+
+    private function requireBookForAll(): ?Response
+    {
+        $user = RequestContext::user() ?? [];
+        if (!RoleAccessService::canBookAppointmentsForAllDoctors($user)) {
+            return Response::redirect('/appointments?error=' . urlencode('Only clinic admin and reception can book or change appointments for all doctors.'));
         }
 
         return null;

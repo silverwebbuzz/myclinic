@@ -17,6 +17,69 @@ final class RoleAccessService
     }
 
     /** @param array<string, mixed> $user */
+    public static function panelRoleLabel(array $user): string
+    {
+        if (self::isClinicAdmin($user)) {
+            return 'Clinic admin';
+        }
+
+        return match ((string) ($user['role'] ?? '')) {
+            'doctor' => 'Clinic doctor',
+            'receptionist' => 'Receptionist',
+            'nurse' => 'Nurse',
+            'labtech' => 'Lab technician',
+            default => 'Staff',
+        };
+    }
+
+    /** Admin and receptionist can book and manage appointments for any doctor. */
+    public static function canBookAppointmentsForAllDoctors(array $user): bool
+    {
+        if (self::isClinicAdmin($user)) {
+            return true;
+        }
+
+        return ($user['role'] ?? '') === 'receptionist';
+    }
+
+    /** Logged-in doctor id when appointments must be scoped to self; null otherwise. */
+    public static function appointmentDoctorScope(array $user): ?int
+    {
+        if (($user['role'] ?? '') !== 'doctor') {
+            return null;
+        }
+
+        $id = (int) ($user['id'] ?? 0);
+
+        return $id > 0 ? $id : null;
+    }
+
+    public static function resolveAppointmentDoctorId(array $user, ?int $requested): ?int
+    {
+        $scope = self::appointmentDoctorScope($user);
+        if ($scope !== null) {
+            return $scope;
+        }
+
+        return $requested;
+    }
+
+    /** @param array<string, mixed> $user @param array<string, mixed> $appointment */
+    public static function canAccessAppointment(array $user, array $appointment): bool
+    {
+        if (self::canBookAppointmentsForAllDoctors($user)) {
+            return true;
+        }
+
+        $scope = self::appointmentDoctorScope($user);
+        if ($scope !== null) {
+            return (int) ($appointment['doctor_id'] ?? 0) === $scope;
+        }
+
+        return true;
+    }
+
+    /** @param array<string, mixed> $user */
     public static function canAccessPath(array $user, string $method, string $path): bool
     {
         if (self::isClinicAdmin($user)) {
@@ -51,7 +114,7 @@ final class RoleAccessService
         return match ($role) {
             'doctor' => self::pathIn($path, [
                 '/dashboard', '/patients', '/visits', '/prescriptions', '/vitals',
-                '/appointments', '/billing', '/follow-ups', '/help', '/staff/attendance',
+                '/appointments', '/queue', '/billing', '/follow-ups', '/help', '/staff/attendance',
             ]),
             'nurse' => self::pathIn($path, [
                 '/dashboard', '/patients', '/visits', '/vitals',

@@ -6,6 +6,7 @@ namespace App\Support;
 
 use App\Core\RequestContext;
 use App\Services\CsrfService;
+use App\Services\RoleAccessService;
 use App\Services\SidebarService;
 
 final class Layout
@@ -24,6 +25,7 @@ final class Layout
         $data['user'] = $user;
         $data['csrf'] = CsrfService::token();
         $data['nav'] = SidebarService::build();
+        $data['panelRoleLabel'] = RoleAccessService::panelRoleLabel($user);
         $data['brandColor'] = $clinic['brand_color'] ?? '#0F766E';
         $data['logoUrl'] = !empty($clinic['logo_path'])
             ? '/' . ltrim((string) $clinic['logo_path'], '/')

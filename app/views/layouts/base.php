@@ -154,7 +154,7 @@
                 <?php endif; ?>
                 <div class="min-w-0">
                     <p class="truncate text-sm font-semibold text-slate-900"><?= htmlspecialchars($clinic['name'] ?? 'Clinic') ?></p>
-                    <p class="text-[10px] uppercase tracking-wide text-slate-400">Clinic admin</p>
+                    <p class="text-[10px] uppercase tracking-wide text-slate-400"><?= htmlspecialchars($panelRoleLabel ?? \App\Services\RoleAccessService::panelRoleLabel($user ?? [])) ?></p>
                 </div>
             </div>
             <nav class="flex-1 overflow-y-auto px-3 py-4 text-sm">

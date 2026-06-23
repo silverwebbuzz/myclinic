@@ -22,7 +22,9 @@ if ($toast === null && isset($errorToasts[$_GET['error'] ?? ''])) {
         <h2 class="ui-section-title">Today's queue</h2>
         <div class="flex flex-wrap gap-2">
             <a href="/appointments" class="ui-btn ui-btn-secondary">Calendar</a>
+            <?php if (!empty($canBookForAll)): ?>
             <a href="/appointments/new" class="ui-btn ui-btn-secondary">+ Book appointment</a>
+            <?php endif; ?>
             <form method="post" action="/queue/call-next"
                   @submit="$event.target.querySelector('button[type=submit]').disabled = true">
                 <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf ?? '') ?>">
@@ -32,6 +34,7 @@ if ($toast === null && isset($errorToasts[$_GET['error'] ?? ''])) {
         </div>
     </div>
 
+    <?php if (empty($isDoctorScoped)): ?>
     <form method="get" class="flex items-center gap-2">
         <label for="queue-doctor-filter" class="text-xs font-medium text-slate-500">Doctor</label>
         <select id="queue-doctor-filter" name="doctor_id" class="ui-input" onchange="this.form.submit()">
@@ -43,6 +46,18 @@ if ($toast === null && isset($errorToasts[$_GET['error'] ?? ''])) {
             <?php endforeach; ?>
         </select>
     </form>
+    <?php elseif (!empty($doctorId)): ?>
+    <?php
+        $scopedDoctorName = '';
+        foreach ($doctors as $doc) {
+            if ((int) $doc['id'] === (int) $doctorId) {
+                $scopedDoctorName = (string) $doc['name'];
+                break;
+            }
+        }
+    ?>
+    <p class="text-sm text-slate-600"><span class="font-medium">Doctor:</span> <?= htmlspecialchars($scopedDoctorName) ?></p>
+    <?php endif; ?>
 
     <div id="queue-rows" class="divide-y ui-card">
         <?php require __DIR__ . '/_rows.php'; ?>

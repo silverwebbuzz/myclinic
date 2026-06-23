@@ -76,10 +76,15 @@ $bookUrl = static function (?string $d = null, ?string $time = null) use ($date,
                    class="ui-btn ui-btn-secondary ui-btn-sm" aria-label="Next <?= $view ?>">›</a>
             </div>
 
+            <?php if (!empty($canBookForAll)): ?>
             <a href="<?= htmlspecialchars($bookUrl()) ?>" class="ui-btn ui-btn-primary">+ Book</a>
+            <?php endif; ?>
         </div>
     </div>
 
+    <?php if (!empty($_GET['error'])): ?>
+    <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800"><?= htmlspecialchars((string) $_GET['error']) ?></p>
+    <?php endif; ?>
     <?php if (!empty($_GET['updated'])): ?>
     <p class="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Appointment updated.</p>
     <?php endif; ?>
@@ -108,6 +113,11 @@ $bookUrl = static function (?string $d = null, ?string $time = null) use ($date,
     }
     ?>
     <div class="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-3">
+        <?php if (!empty($isDoctorScoped) && $selectedDoctorName): ?>
+        <p class="text-sm text-slate-600">
+            <span class="font-medium text-slate-800">Doctor:</span> <?= htmlspecialchars($selectedDoctorName) ?>
+        </p>
+        <?php else: ?>
         <form method="get" class="contents">
             <input type="hidden" name="date" value="<?= htmlspecialchars($date) ?>">
             <input type="hidden" name="status" value="<?= htmlspecialchars($statusFilter) ?>">
@@ -125,7 +135,8 @@ $bookUrl = static function (?string $d = null, ?string $time = null) use ($date,
                 </select>
             </label>
         </form>
-        <?php if ($selectedDoctorName !== null): ?>
+        <?php endif; ?>
+        <?php if ($selectedDoctorName !== null && empty($isDoctorScoped)): ?>
             <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800">
                 Filtered: <?= htmlspecialchars($selectedDoctorName) ?>
                 <a href="?<?= htmlspecialchars($qs(['doctor_id' => null])) ?>"

@@ -11,6 +11,7 @@ use App\Services\AppointmentService;
 use App\Services\ChecklistService;
 use App\Services\DashboardService;
 use App\Services\OnboardingService;
+use App\Services\RoleAccessService;
 use App\Support\Layout;
 
 final class DashboardController
@@ -19,13 +20,14 @@ final class DashboardController
     {
         $clinic = RequestContext::clinic();
         $clinicId = (int) $clinic['id'];
-        if ((int) ($clinic['onboarding_step'] ?? 1) < 5) {
+        $user = RequestContext::user() ?? [];
+        if ((int) ($clinic['onboarding_step'] ?? 1) < 5 && RoleAccessService::isClinicAdmin($user)) {
             return Response::redirect(OnboardingService::resumeUrl($clinicId));
         }
 
         $config = OnboardingService::specialtyConfig($clinicId) ?? [];
         $stats = DashboardService::stats($clinicId);
-        $today = self::todayAppointments($clinicId);
+        $today = self::todayAppointments($clinicId, $user);
         $checklist = ChecklistService::progress($clinicId, $clinic, $config);
 
         // Phase 4: follow-up widget. Best-effort — empty before Phase 4 SQL.
@@ -56,7 +58,8 @@ final class DashboardController
             return Response::json(['error' => 'Unauthorized'], 401);
         }
 
-        $today = self::todayAppointments((int) $clinicId);
+        $user = RequestContext::user() ?? [];
+        $today = self::todayAppointments((int) $clinicId, $user);
 
         return Response::json([
             'queue_html' => \App\Support\View::render('appointments/_today_panel', [
@@ -77,10 +80,12 @@ final class DashboardController
      *
      * @return array{appointments: array<int, array<string, mixed>>, counts: array<string, int>, date: string}
      */
-    private static function todayAppointments(int $clinicId): array
+    /** @param array<string, mixed> $user */
+    private static function todayAppointments(int $clinicId, array $user = []): array
     {
         $date = date('Y-m-d');
-        $appointments = AppointmentService::forDate($clinicId, $date, null);
+        $doctorId = RoleAccessService::resolveAppointmentDoctorId($user, null);
+        $appointments = AppointmentService::forDate($clinicId, $date, $doctorId);
 
         $counts = [
             'all' => count($appointments),

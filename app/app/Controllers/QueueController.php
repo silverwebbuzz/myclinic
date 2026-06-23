@@ -11,6 +11,7 @@ use App\Http\Response;
 use App\Services\AppointmentService;
 use App\Services\AuditService;
 use App\Services\CsrfService;
+use App\Services\RoleAccessService;
 use App\Support\Layout;
 use App\Support\View;
 
@@ -23,7 +24,11 @@ final class QueueController
         }
 
         $clinicId = (int) RequestContext::clinicId();
-        $doctorId = !empty($request->query['doctor_id']) ? (int) $request->query['doctor_id'] : null;
+        $user = RequestContext::user() ?? [];
+        $doctorId = RoleAccessService::resolveAppointmentDoctorId(
+            $user,
+            !empty($request->query['doctor_id']) ? (int) $request->query['doctor_id'] : null,
+        );
         $queue = AppointmentService::todayQueue($clinicId, $doctorId);
 
         // Phase 4: flag patients in the queue who have a pending follow-up
@@ -41,6 +46,8 @@ final class QueueController
             'doctors' => AppointmentService::doctorsForClinic($clinicId),
             'doctorId' => $doctorId,
             'followUpFlags' => $followUpFlags,
+            'canBookForAll' => RoleAccessService::canBookAppointmentsForAllDoctors($user),
+            'isDoctorScoped' => RoleAccessService::appointmentDoctorScope($user) !== null,
         ], 'Today\'s queue'));
     }
 
@@ -51,6 +58,12 @@ final class QueueController
         }
 
         $clinicId = (int) RequestContext::clinicId();
+        $user = RequestContext::user() ?? [];
+        $existing = AppointmentService::find($clinicId, (int) $id);
+        if ($existing !== null && !RoleAccessService::canAccessAppointment($user, $existing)) {
+            return Response::redirect(self::queueUrl($request) . (str_contains(self::queueUrl($request), '?') ? '&' : '?') . 'error=not_found');
+        }
+
         $status = (string) ($request->post['status'] ?? '');
         $back = self::queueUrl($request);
 
@@ -74,7 +87,11 @@ final class QueueController
         }
 
         $clinicId = (int) RequestContext::clinicId();
-        $doctorId = !empty($request->post['doctor_id']) ? (int) $request->post['doctor_id'] : null;
+        $user = RequestContext::user() ?? [];
+        $doctorId = RoleAccessService::resolveAppointmentDoctorId(
+            $user,
+            !empty($request->post['doctor_id']) ? (int) $request->post['doctor_id'] : null,
+        );
         $next = AppointmentService::callNext($clinicId, $doctorId);
         $back = self::queueUrl($request);
 
@@ -102,7 +119,11 @@ final class QueueController
         }
 
         $clinicId = (int) RequestContext::clinicId();
-        $doctorId = !empty($request->query['doctor_id']) ? (int) $request->query['doctor_id'] : null;
+        $user = RequestContext::user() ?? [];
+        $doctorId = RoleAccessService::resolveAppointmentDoctorId(
+            $user,
+            !empty($request->query['doctor_id']) ? (int) $request->query['doctor_id'] : null,
+        );
         $queue = AppointmentService::todayQueue($clinicId, $doctorId);
 
         // Same follow-up flags as the initial page load, so the badges don't
