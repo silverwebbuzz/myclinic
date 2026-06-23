@@ -6,6 +6,7 @@ namespace App\Core;
 
 use App\Http\Request;
 use App\Http\Response;
+use App\Support\ClinicTime;
 use Dotenv\Dotenv;
 
 final class Application
@@ -46,5 +47,7 @@ final class Application
         if (is_file($this->basePath . '/.env')) {
             Dotenv::createImmutable($this->basePath)->safeLoad();
         }
+
+        ClinicTime::bootstrap();
     }
 }

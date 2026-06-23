@@ -5,12 +5,15 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 use App\Core\Database;
+use App\Support\ClinicTime;
 use Dotenv\Dotenv;
 
 $base = dirname(__DIR__);
 if (is_file($base . '/.env')) {
     Dotenv::createImmutable($base)->safeLoad();
 }
+
+ClinicTime::bootstrap();
 
 $pdo = Database::connection();
 

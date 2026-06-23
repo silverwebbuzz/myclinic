@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Support\ClinicTime;
 use PDO;
 use PDOException;
 
@@ -14,6 +15,8 @@ final class Database
     public static function connection(): PDO
     {
         if (self::$pdo === null) {
+            ClinicTime::bootstrap();
+
             $dsn = sprintf(
                 'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
                 $_ENV['DB_HOST'] ?? '127.0.0.1',
@@ -31,6 +34,8 @@ final class Database
                     PDO::ATTR_EMULATE_PREPARES => false,
                 ],
             );
+
+            ClinicTime::applyMysqlSession(self::$pdo);
         }
 
         return self::$pdo;

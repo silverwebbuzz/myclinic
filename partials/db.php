@@ -94,6 +94,11 @@ function ecp_db(): ?PDO
     }
 
     try {
+        $appTz = $env['APP_TIMEZONE'] ?? 'Asia/Kolkata';
+        if (@date_default_timezone_set($appTz) === false) {
+            date_default_timezone_set('Asia/Kolkata');
+        }
+
         $pdo = new PDO(
             "mysql:host={$host};dbname={$name};charset=utf8mb4",
             $user,
@@ -104,6 +109,13 @@ function ecp_db(): ?PDO
                 PDO::ATTR_EMULATE_PREPARES => false,
             ]
         );
+        try {
+            $offset = (new DateTime('now', new DateTimeZone($appTz)))->format('P');
+            $pdo->exec('SET time_zone = ' . $pdo->quote($offset));
+        } catch (Throwable) {
+            // Non-fatal — SELECT queries still work; NOW() may stay on server default.
+        }
+
         return $pdo;
     } catch (Throwable $e) {
         error_log('[marketing db] connection failed: ' . $e->getMessage());

@@ -7,27 +7,30 @@ namespace App\Services;
 use App\Core\Database;
 use App\Core\QueryBuilder;
 use App\Core\RequestContext;
+use App\Support\ClinicTime;
 
 final class StaffAttendanceService
 {
     public static function clockIn(int $clinicId, int $userId): array
     {
-        $today = date('Y-m-d');
+        $today = ClinicTime::today();
         $row = self::forDate($clinicId, $userId, $today);
         if ($row !== null && !empty($row['clock_in'])) {
             return $row;
         }
 
+        $now = ClinicTime::time();
+
         if ($row !== null) {
             QueryBuilder::table('staff_attendance')
                 ->where('id', '=', (int) $row['id'])
-                ->update(['clock_in' => date('H:i:s'), 'status' => 'present']);
+                ->update(['clock_in' => $now, 'status' => 'present']);
         } else {
             QueryBuilder::table('staff_attendance')->insert([
                 'clinic_id' => $clinicId,
                 'user_id' => $userId,
                 'date' => $today,
-                'clock_in' => date('H:i:s'),
+                'clock_in' => $now,
                 'status' => 'present',
             ]);
         }
@@ -37,7 +40,7 @@ final class StaffAttendanceService
 
     public static function clockOut(int $clinicId, int $userId): array
     {
-        $today = date('Y-m-d');
+        $today = ClinicTime::today();
         $row = self::forDate($clinicId, $userId, $today);
         if ($row === null) {
             throw new \RuntimeException('No clock-in found for today');
@@ -45,7 +48,7 @@ final class StaffAttendanceService
 
         QueryBuilder::table('staff_attendance')
             ->where('id', '=', (int) $row['id'])
-            ->update(['clock_out' => date('H:i:s')]);
+            ->update(['clock_out' => ClinicTime::time()]);
 
         return self::forDate($clinicId, $userId, $today) ?? [];
     }
@@ -89,6 +92,6 @@ final class StaffAttendanceService
         }
         $uid = $userId ?? (int) $user['id'];
 
-        return self::forDate((int) $clinicId, $uid, date('Y-m-d'));
+        return self::forDate((int) $clinicId, $uid, ClinicTime::today());
     }
 }

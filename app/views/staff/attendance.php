@@ -1,9 +1,11 @@
 <?php
+use App\Support\ClinicTime;
+
 // ----- Aggregate the flat $report into per-staff summary + today's roll-call -----
 $today = $today ?? null;
 $report = $report ?? [];
 
-$todayStr = date('Y-m-d');
+$todayStr = ClinicTime::today();
 $summary = []; // staff_name => [present, absent, leave, half, late, lastIn, lastOut, todayStatus]
 $todayRows = [];
 foreach ($report as $row) {
@@ -19,9 +21,9 @@ foreach ($report as $row) {
     elseif ($s === 'late') $summary[$name]['late']++;
 
     if (!empty($row['clock_in']) && !empty($row['clock_out'])) {
-        $in = strtotime((string) $row['clock_in']);
-        $out = strtotime((string) $row['clock_out']);
-        if ($in && $out && $out > $in) {
+        $in = ClinicTime::timeToSeconds((string) $row['clock_in']);
+        $out = ClinicTime::timeToSeconds((string) $row['clock_out']);
+        if ($in > 0 && $out > $in) {
             $summary[$name]['totalHours'] += ($out - $in) / 3600;
         }
     }
@@ -84,8 +86,8 @@ $statusBadge = static function (string $s): array {
                 </p>
                 <?php if ($today): ?>
                 <p class="mt-1 text-xs text-slate-500">
-                    In: <span class="font-mono"><?= !empty($today['clock_in']) ? htmlspecialchars(substr((string) $today['clock_in'], 11, 5)) : '—' ?></span>
-                    · Out: <span class="font-mono"><?= !empty($today['clock_out']) ? htmlspecialchars(substr((string) $today['clock_out'], 11, 5)) : '—' ?></span>
+                    In: <span class="font-mono"><?= ClinicTime::formatTime12($today['clock_in'] ?? null) ?></span>
+                    · Out: <span class="font-mono"><?= ClinicTime::formatTime12($today['clock_out'] ?? null) ?></span>
                 </p>
                 <?php endif; ?>
             </div>
@@ -111,7 +113,7 @@ $statusBadge = static function (string $s): array {
     <!-- ===== Today's roll-call ===== -->
     <div class="ui-card">
         <div class="flex items-center justify-between border-b px-5 py-3">
-            <h3 class="text-sm font-semibold">Today — <?= htmlspecialchars(date('D, j M')) ?></h3>
+            <h3 class="text-sm font-semibold">Today — <?= htmlspecialchars(ClinicTime::now()->format('D, j M')) ?></h3>
             <p class="text-xs text-slate-500"><?= count($todayRows) ?> entries</p>
         </div>
         <?php if ($todayRows === []): ?>
@@ -129,11 +131,11 @@ $statusBadge = static function (string $s): array {
                 <div class="mt-2 grid grid-cols-2 gap-2 text-xs">
                     <div>
                         <span class="text-slate-500">In</span>
-                        <p class="font-mono"><?= !empty($row['clock_in']) ? htmlspecialchars(substr((string) $row['clock_in'], 11, 5)) : '—' ?></p>
+                        <p class="font-mono"><?= htmlspecialchars(ClinicTime::formatTime12($row['clock_in'] ?? null)) ?></p>
                     </div>
                     <div>
                         <span class="text-slate-500">Out</span>
-                        <p class="font-mono"><?= !empty($row['clock_out']) ? htmlspecialchars(substr((string) $row['clock_out'], 11, 5)) : '—' ?></p>
+                        <p class="font-mono"><?= htmlspecialchars(ClinicTime::formatTime12($row['clock_out'] ?? null)) ?></p>
                     </div>
                 </div>
             </div>
@@ -218,9 +220,9 @@ $statusBadge = static function (string $s): array {
                         [$badgeClass, $badgeText] = $statusBadge((string) ($row['status'] ?? ''));
                         $hours = '';
                         if (!empty($row['clock_in']) && !empty($row['clock_out'])) {
-                            $in = strtotime((string) $row['clock_in']);
-                            $out = strtotime((string) $row['clock_out']);
-                            if ($in && $out && $out > $in) {
+                            $in = ClinicTime::timeToSeconds((string) $row['clock_in']);
+                            $out = ClinicTime::timeToSeconds((string) $row['clock_out']);
+                            if ($in > 0 && $out > $in) {
                                 $hours = number_format(($out - $in) / 3600, 1) . 'h';
                             }
                         }
@@ -228,8 +230,8 @@ $statusBadge = static function (string $s): array {
                     <tr>
                         <td class="px-4 py-3"><?= htmlspecialchars((string) ($row['staff_name'] ?? '')) ?></td>
                         <td class="px-4 py-3 text-xs"><?= htmlspecialchars((string) ($row['date'] ?? '')) ?></td>
-                        <td class="px-4 py-3 font-mono text-xs"><?= !empty($row['clock_in']) ? htmlspecialchars(substr((string) $row['clock_in'], 11, 5)) : '—' ?></td>
-                        <td class="px-4 py-3 font-mono text-xs"><?= !empty($row['clock_out']) ? htmlspecialchars(substr((string) $row['clock_out'], 11, 5)) : '—' ?></td>
+                        <td class="px-4 py-3 font-mono text-xs"><?= htmlspecialchars(ClinicTime::formatTime12($row['clock_in'] ?? null)) ?></td>
+                        <td class="px-4 py-3 font-mono text-xs"><?= htmlspecialchars(ClinicTime::formatTime12($row['clock_out'] ?? null)) ?></td>
                         <td class="px-4 py-3 font-mono text-xs"><?= htmlspecialchars($hours ?: '—') ?></td>
                         <td class="px-4 py-3">
                             <span class="rounded px-2 py-0.5 text-xs font-medium <?= $badgeClass ?>"><?= htmlspecialchars($badgeText) ?></span>

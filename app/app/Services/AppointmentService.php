@@ -564,17 +564,17 @@ final class AppointmentService
      */
     private static function assertNotInPast(int $clinicId, string $scheduledAt): void
     {
-        $tz = 'Asia/Kolkata';
+        $tz = \App\Support\ClinicTime::zone();
         try {
             $tz = SlotService::clinicTimezone($clinicId);
         } catch (\Throwable $e) {
-            // Fall back to IST if the tenant row/timezone can't be read.
+            // Fall back to app default if the tenant row/timezone can't be read.
         }
 
         try {
             $zone = new \DateTimeZone($tz);
         } catch (\Throwable $e) {
-            $zone = new \DateTimeZone('Asia/Kolkata');
+            $zone = new \DateTimeZone(\App\Support\ClinicTime::zone());
         }
 
         $scheduled = \DateTime::createFromFormat('Y-m-d H:i:s', $scheduledAt, $zone);

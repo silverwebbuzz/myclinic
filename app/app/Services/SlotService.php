@@ -115,7 +115,7 @@ final class SlotService
             $nowLocal = new \DateTime('now', new \DateTimeZone($tz));
             $todayLocal = $nowLocal->format('Y-m-d');
         } catch (\Throwable $e) {
-            $nowLocal = new \DateTime('now', new \DateTimeZone('Asia/Kolkata'));
+            $nowLocal = new \DateTime('now', new \DateTimeZone(\App\Support\ClinicTime::zone()));
             $todayLocal = $nowLocal->format('Y-m-d');
         }
         $isToday = $date === $todayLocal;
@@ -274,8 +274,8 @@ final class SlotService
     public static function clinicTimezone(int $clinicId): string
     {
         $row = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first();
-        $tz = $row['timezone'] ?? 'Asia/Kolkata';
-        return is_string($tz) && $tz !== '' ? $tz : 'Asia/Kolkata';
+        $tz = $row['timezone'] ?? \App\Support\ClinicTime::zone();
+        return is_string($tz) && $tz !== '' ? $tz : \App\Support\ClinicTime::zone();
     }
 
     private static function normalizeDate(string $date, ?string $tz = null): string

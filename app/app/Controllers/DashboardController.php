@@ -12,6 +12,7 @@ use App\Services\ChecklistService;
 use App\Services\DashboardService;
 use App\Services\OnboardingService;
 use App\Services\RoleAccessService;
+use App\Support\ClinicTime;
 use App\Support\Layout;
 
 final class DashboardController
@@ -83,7 +84,7 @@ final class DashboardController
     /** @param array<string, mixed> $user */
     private static function todayAppointments(int $clinicId, array $user = []): array
     {
-        $date = date('Y-m-d');
+        $date = ClinicTime::today();
         $doctorId = RoleAccessService::resolveAppointmentDoctorId($user, null);
         $appointments = AppointmentService::forDate($clinicId, $date, $doctorId);
 
