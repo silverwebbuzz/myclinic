@@ -110,9 +110,9 @@ $cards = [
                             default => 'bg-indigo-50 text-indigo-700',
                         };
                     ?>
-                    <tr class="hover:bg-slate-50">
+                    <tr class="hover:bg-slate-50 <?= in_array($status, ['completed','cancelled','no_show'], true) ? 'opacity-60' : '' ?>">
                         <td class="px-4 py-3">
-                            <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-xs font-semibold text-white">
+                            <span class="inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white <?= in_array($status, ['completed','cancelled','no_show'], true) ? 'bg-slate-400' : 'bg-emerald-600' ?>">
                                 <?= $i + 1 ?>
                             </span>
                         </td>

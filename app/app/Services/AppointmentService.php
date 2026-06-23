@@ -372,7 +372,18 @@ final class AppointmentService
             $sql .= ' AND a.doctor_id = ?';
             $params[] = $doctorId;
         }
-        $sql .= ' ORDER BY a.scheduled_at ASC, a.id ASC';
+        // Active/upcoming first, finished last. Within each group, earliest slot
+        // first — so the doctor's next turn is at the top and completed/cancelled
+        // (and no-shows) sink to the bottom.
+        $sql .= " ORDER BY CASE a.status
+                    WHEN 'in_progress' THEN 0
+                    WHEN 'confirmed'   THEN 1
+                    WHEN 'scheduled'   THEN 2
+                    WHEN 'completed'   THEN 3
+                    WHEN 'no_show'     THEN 4
+                    WHEN 'cancelled'   THEN 5
+                    ELSE 6 END ASC,
+                  a.scheduled_at ASC, a.id ASC";
 
         $stmt = Database::connection()->prepare($sql);
         $stmt->execute($params);
