@@ -75,6 +75,18 @@ final class OnboardingController
         $orderId = (string) ($request->query['order_id'] ?? '');
         $paid = $orderId !== '' && BillingGatewayService::verifyCashfreeOrder($orderId);
 
+        // A doctor who has already finished onboarding (step >= 5) is paying a
+        // RENEWAL/UPGRADE from Settings — they must NOT be dropped back into the
+        // first-time clinic-setup wizard. Only a first-time payer continues into
+        // onboarding. (Cashfree's return_url is shared for both flows, so we
+        // branch here on onboarding state.)
+        $onboarded = OnboardingService::currentStep() >= 5;
+
+        if ($onboarded) {
+            $flag = $paid ? 'paid=1' : 'payment=pending';
+            return Response::redirect('/settings?tab=subscription&' . $flag);
+        }
+
         if ($paid) {
             return Response::redirect('/onboarding/clinic-setup?paid=1');
         }
