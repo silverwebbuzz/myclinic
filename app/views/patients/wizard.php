@@ -28,11 +28,22 @@ $sp = is_array($p['specialty_data'] ?? null) ? $p['specialty_data'] : [];
                 <input name="name" x-model="form.name" required class="ui-input">
             </div>
             <div>
-                <label class="text-xs font-medium">Phone *</label>
-                <!-- Duplicate check runs quietly on blur (this clinic only). -->
+                <label class="text-xs font-medium">
+                    Phone <span x-show="!noPhone">*</span>
+                    <span x-show="noPhone" x-cloak class="font-normal text-slate-400">(none)</span>
+                </label>
+                <!-- Duplicate check runs quietly on blur (this clinic only).
+                     Phone is required unless "no phone" is ticked, so reception
+                     can add elderly/phoneless patients without a fake number. -->
                 <input name="phone" type="tel" inputmode="numeric" x-model="form.phone"
-                       @blur="checkPhone()" required
-                       class="mt-1 w-full rounded-lg border bg-slate-50 px-3 py-2 text-sm">
+                       @blur="checkPhone()" :required="!noPhone" :disabled="noPhone"
+                       :placeholder="noPhone ? 'No phone on file' : ''"
+                       class="mt-1 w-full rounded-lg border bg-slate-50 px-3 py-2 text-sm disabled:opacity-60">
+                <label class="mt-1.5 flex items-center gap-2 text-[11px] text-slate-500">
+                    <input type="checkbox" x-model="noPhone" @change="onNoPhoneToggle()"
+                           class="h-3.5 w-3.5 rounded border-slate-300">
+                    Patient has no phone number
+                </label>
             </div>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -171,6 +182,17 @@ function patientWizard(initial, editId) {
         duplicateModal: !!serverDup,
         duplicatePatient: serverDup,
         forceDuplicate: false,
+        // "Patient has no phone" — on by default when editing a chart that
+        // already has no number, so the optional state is preserved.
+        noPhone: !!(editId && !(initial && initial.phone)),
+
+        // Clearing/restoring the phone field when the no-phone box is toggled.
+        onNoPhoneToggle() {
+            if (this.noPhone) {
+                this.form.phone = '';
+                this.duplicateModal = false; // a blank phone can't be a duplicate
+            }
+        },
 
         startDraftTimer() {
             const saved = localStorage.getItem(key);

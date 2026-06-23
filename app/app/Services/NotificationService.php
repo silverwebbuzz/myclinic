@@ -18,6 +18,14 @@ final class NotificationService
         array $payload,
         string $scheduledAt,
     ): void {
+        // Phone is optional (some patients have no number) — a blank or
+        // too-short number is a silent no-op, mirroring queueEmail(). This
+        // keeps phoneless patients from queuing un-sendable WhatsApp rows.
+        $digits = preg_replace('/[^0-9]/', '', $phone) ?? '';
+        if (strlen($digits) < 7) {
+            return;
+        }
+
         if (!Database::ping()) {
             return;
         }

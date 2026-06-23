@@ -462,9 +462,13 @@ final class PatientService
         if (trim((string) ($data['name'] ?? '')) === '') {
             throw new \RuntimeException('Patient name is required.');
         }
+        // Phone is OPTIONAL — some patients (elderly, infants, dependents)
+        // genuinely have no number. A BLANK phone is allowed. But a phone that
+        // is present yet too short is almost always a typo, so still reject
+        // a partial number (1–6 digits).
         $digits = preg_replace('/[^0-9]/', '', (string) ($data['phone'] ?? '')) ?? '';
-        if (strlen($digits) < 7) {
-            throw new \RuntimeException('A valid phone number (at least 7 digits) is required.');
+        if ($digits !== '' && strlen($digits) < 7) {
+            throw new \RuntimeException('That phone number looks incomplete. Leave it blank if the patient has no phone.');
         }
     }
 
