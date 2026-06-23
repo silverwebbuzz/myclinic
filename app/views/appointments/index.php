@@ -86,6 +86,15 @@ $bookUrl = static function (?string $d = null, ?string $time = null) use ($date,
     <?php if (!empty($_GET['cancelled'])): ?>
     <p class="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">Appointment cancelled.</p>
     <?php endif; ?>
+    <?php if (!empty($_GET['booked'])): ?>
+    <p class="flex items-center justify-between gap-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <span>✓ Booking added.</span>
+        <?php if (!empty($_GET['new_id'])): ?>
+        <a href="/appointments/<?= (int) $_GET['new_id'] ?>/slip"
+           class="font-medium text-emerald-700 underline hover:text-emerald-900">Download slip</a>
+        <?php endif; ?>
+    </p>
+    <?php endif; ?>
 
     <?php
     $selectedDoctorName = null;
@@ -212,132 +221,79 @@ $bookUrl = static function (?string $d = null, ?string $time = null) use ($date,
     </p>
     <?php endif; ?>
 
-    <?php
-    $cards = [
-        ['key' => 'all', 'label' => 'Total', 'color' => 'border-slate-300', 'text' => 'text-slate-800'],
-        ['key' => 'scheduled', 'label' => 'Waiting', 'color' => 'border-amber-400', 'text' => 'text-amber-600'],
-        ['key' => 'confirmed', 'label' => 'Confirmed', 'color' => 'border-blue-400', 'text' => 'text-blue-600'],
-        ['key' => 'in_progress', 'label' => 'In Consult', 'color' => 'border-indigo-400', 'text' => 'text-indigo-600'],
-        ['key' => 'completed', 'label' => 'Completed', 'color' => 'border-emerald-400', 'text' => 'text-emerald-600'],
-    ];
-    ?>
-    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <?php foreach ($cards as $card): ?>
-        <a href="?<?= htmlspecialchars($qs(['status' => $card['key']])) ?>"
-           class="rounded-xl border-2 bg-white p-4 transition hover:shadow-sm <?= $card['color'] ?> <?= $statusFilter === $card['key'] ? 'ring-2 ring-offset-1 ring-emerald-500' : '' ?>">
-            <p class="text-2xl font-bold <?= $card['text'] ?>"><?= (int) ($counts[$card['key']] ?? 0) ?></p>
-            <p class="text-xs uppercase tracking-wide text-slate-500"><?= htmlspecialchars($card['label']) ?></p>
-        </a>
-        <?php endforeach; ?>
-    </div>
-
-    <div class="overflow-hidden ui-card">
-        <div class="flex flex-wrap gap-1 border-b px-2 py-2 text-sm">
-            <?php
-            $tabs = [
-                'all' => 'All',
-                'scheduled' => 'Waiting',
-                'confirmed' => 'Confirmed',
-                'in_progress' => 'In Consult',
-                'completed' => 'Completed',
-                'no_show' => 'Not Arrived',
-                'cancelled' => 'Cancelled',
-            ];
-            foreach ($tabs as $key => $label):
-                $active = $statusFilter === $key;
-            ?>
-            <a href="?<?= htmlspecialchars($qs(['status' => $key])) ?>"
-               class="rounded-lg px-3 py-1.5 <?= $active ? 'bg-emerald-50 font-medium text-emerald-700' : 'text-slate-600 hover:bg-slate-50' ?>">
-                <?= htmlspecialchars($label) ?>
-                <span class="ml-1 text-xs text-slate-400">(<?= (int) ($counts[$key] ?? 0) ?>)</span>
-            </a>
-            <?php endforeach; ?>
-        </div>
-
-        <div class="overflow-x-auto">
-            <table class="w-full min-w-[900px] text-sm">
-                <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                    <tr>
-                        <th class="px-4 py-3">#</th>
-                        <th class="px-4 py-3">Patient</th>
-                        <th class="px-4 py-3">Phone</th>
-                        <th class="px-4 py-3">Type</th>
-                        <th class="px-4 py-3">Slot</th>
-                        <th class="px-4 py-3">Doctor</th>
-                        <th class="px-4 py-3">Complaint</th>
-                        <th class="px-4 py-3">Status</th>
-                        <th class="px-4 py-3 text-right">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y">
-                    <?php foreach ($appointments as $i => $a): ?>
-                    <?php
-                        $status = (string) ($a['status'] ?? 'scheduled');
-                        $type = (string) ($a['type'] ?? 'prebooked');
-                        $typeBadge = match ($type) {
-                            'walkin' => 'bg-slate-100 text-slate-700',
-                            'online' => 'bg-cyan-100 text-cyan-800',
-                            'followup' => 'bg-purple-100 text-purple-800',
-                            default => 'bg-indigo-50 text-indigo-700',
-                        };
-                    ?>
-                    <tr class="hover:bg-slate-50">
-                        <td class="px-4 py-3">
-                            <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-xs font-semibold text-white">
-                                <?= $i + 1 ?>
-                            </span>
-                        </td>
-                        <td class="px-4 py-3">
-                            <a href="/patients/<?= (int) $a['patient_id'] ?>" class="font-medium text-emerald-700 hover:underline">
-                                <?= htmlspecialchars((string) ($a['patient_name'] ?? '')) ?>
-                            </a>
-                            <div class="font-mono text-xs text-slate-500"><?= htmlspecialchars((string) ($a['uhid'] ?? '')) ?></div>
-                        </td>
-                        <td class="px-4 py-3 text-xs"><?= htmlspecialchars((string) ($a['patient_phone'] ?? '—')) ?></td>
-                        <td class="px-4 py-3">
-                            <span class="rounded px-2 py-0.5 text-xs <?= $typeBadge ?>">
-                                <?= $type === 'walkin' ? 'Walk-in' : ($type === 'online' ? 'Online' : ($type === 'followup' ? 'Follow-up' : 'Booked')) ?>
-                            </span>
-                        </td>
-                        <td class="px-4 py-3 font-medium">
-                            <?= htmlspecialchars(date('h:i A', strtotime((string) $a['scheduled_at']))) ?>
-                        </td>
-                        <td class="px-4 py-3 text-xs text-slate-600"><?= htmlspecialchars((string) ($a['doctor_name'] ?? '')) ?></td>
-                        <td class="px-4 py-3 text-xs text-slate-600 max-w-[200px] truncate" title="<?= htmlspecialchars((string) ($a['chief_complaint'] ?? '')) ?>">
-                            <?= htmlspecialchars((string) ($a['chief_complaint'] ?? '—')) ?>
-                        </td>
-                        <td class="px-4 py-3">
-                            <span class="rounded px-2 py-0.5 text-xs font-medium <?= $statusBadge($status) ?>">
-                                <?= htmlspecialchars(str_replace('_', ' ', $status)) ?>
-                            </span>
-                        </td>
-                        <td class="px-4 py-3">
-                            <div class="flex justify-end gap-1">
-                                <a href="/appointments/<?= (int) $a['id'] ?>/edit"
-                                   class="rounded border px-2 py-1 text-xs hover:bg-slate-50">Edit</a>
-                                <?php if ($status !== 'cancelled' && $status !== 'completed'): ?>
-                                <form method="post" action="/appointments/<?= (int) $a['id'] ?>/cancel" class="inline"
-                                      onsubmit="return confirm('Cancel this appointment?')">
-                                    <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf ?? '') ?>">
-                                    <button type="submit" class="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50">✕</button>
-                                </form>
-                                <?php endif; ?>
-                            </div>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-
-        <?php if (empty($appointments)): ?>
-        <div class="p-12 text-center">
-            <p class="mb-3 flex justify-center text-slate-300"><?= ui_icon('appointments', 40) ?></p>
-            <p class="text-sm font-medium text-slate-700">No appointments<?= $statusFilter !== 'all' ? ' in this status' : '' ?> on <?= htmlspecialchars($displayDate) ?></p>
-            <p class="mt-1 text-xs text-slate-500">Try another date or status, or book a new appointment.</p>
-            <a href="<?= htmlspecialchars($bookUrl()) ?>" class="mt-4 inline-block ui-btn ui-btn-primary">+ Book appointment</a>
-        </div>
-        <?php endif; ?>
+    <!-- Live-refreshing results region (count cards + tabs + table). Polled
+         every 15s so a booking added by the receptionist on another PC shows
+         up here without a manual reload. See the script at the bottom. -->
+    <div id="appts-list-body"
+         data-appts-poll
+         data-date="<?= htmlspecialchars($date) ?>"
+         data-doctor-id="<?= htmlspecialchars((string) ($doctorId ?? '')) ?>"
+         data-status="<?= htmlspecialchars($statusFilter) ?>">
+        <?php require __DIR__ . '/_list_body.php'; ?>
     </div>
     <?php endif; ?>
 </div>
+
+<!-- Toast for "new booking" notice (doctor-friendly nudge) -->
+<div id="appts-toast"
+     class="pointer-events-none fixed bottom-5 left-1/2 z-50 -translate-x-1/2 translate-y-4 rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white opacity-0 shadow-lg transition-all duration-300"
+     role="status" aria-live="polite">🔔 New booking added</div>
+
+<script>
+(function () {
+    var box = document.getElementById('appts-list-body');
+    if (!box || !box.hasAttribute('data-appts-poll')) return; // week view: no poll
+
+    var toast = document.getElementById('appts-toast');
+    var POLL_MS = 15000;
+    function currentTotal() {
+        var el = box.querySelector('[data-appt-total]');
+        return el ? (parseInt(el.getAttribute('data-appt-total'), 10) || 0) : 0;
+    }
+    var lastTotal = currentTotal();
+
+    function showToast(msg) {
+        if (!toast) return;
+        toast.textContent = msg;
+        toast.classList.remove('opacity-0', 'translate-y-4');
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(function () {
+            toast.classList.add('opacity-0', 'translate-y-4');
+        }, 3500);
+    }
+
+    function buildUrl() {
+        var p = new URLSearchParams();
+        p.set('date', box.getAttribute('data-date') || '');
+        if (box.getAttribute('data-doctor-id')) p.set('doctor_id', box.getAttribute('data-doctor-id'));
+        if (box.getAttribute('data-status')) p.set('status', box.getAttribute('data-status'));
+        return '/api/v1/appointments/list?' + p.toString();
+    }
+
+    async function refresh() {
+        // Don't yank the list while the user is interacting with something
+        // inside it (e.g. mid-click on a cancel-confirm).
+        if (box.contains(document.activeElement)) return;
+        try {
+            var r = await fetch(buildUrl(), {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' },
+            });
+            if (!r.ok) return;
+            var data = await r.json();
+            if (!data.html) return;
+            box.innerHTML = data.html;
+
+            var newTotal = parseInt(data.total != null ? data.total : '0', 10) || 0;
+            if (newTotal > lastTotal) {
+                var added = newTotal - lastTotal;
+                showToast('🔔 ' + added + ' new booking' + (added === 1 ? '' : 's') + ' added');
+                document.title = '(' + newTotal + ') Appointments';
+            }
+            lastTotal = newTotal;
+        } catch (e) { /* offline / transient — try again next tick */ }
+    }
+
+    setInterval(refresh, POLL_MS);
+})();
+</script>

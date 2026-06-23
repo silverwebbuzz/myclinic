@@ -231,41 +231,32 @@ final class PatientController
         $phone     = (string) ($request->query['phone'] ?? '');
         $excludeId = (int) ($request->query['exclude_id'] ?? 0);
 
-        // Smart lookup — checks this clinic first, then global identity,
-        // then other clinics. See PatientService::findOrPreFillByPhone()
-        // for the matrix of return shapes.
-        $res = PatientService::findOrPreFillByPhone($clinicId, $phone);
+        // DUPLICATE CHECK ONLY — scoped to THIS clinic's own records.
+        //
+        // We deliberately do NOT read or pre-fill from frontend patient
+        // identities (patient_identities) here. A clinic's chart and the
+        // platform directory carry different consent bases, so mixing them
+        // into the doctor's add-patient form blurs that legal boundary. The
+        // clinic enters its patient's data with its own consent.
+        $existing = PatientService::findByPhone($clinicId, $phone);
 
-        // If we're editing an existing patient and the chart we found IS
-        // the one being edited, treat as not-found (no duplicate warning).
-        if ($res['status'] === 'existing_chart'
+        // When editing, finding the very chart being edited is not a duplicate.
+        if ($existing !== null
             && $excludeId > 0
-            && (int) ($res['patient']['id'] ?? 0) === $excludeId
+            && (int) ($existing['id'] ?? 0) === $excludeId
         ) {
-            $res = ['status' => 'unknown'];
+            $existing = null;
         }
 
-        if ($res['status'] === 'existing_chart') {
-            $p = $res['patient'];
+        if ($existing !== null) {
             return Response::json([
                 'status'  => 'existing_chart',
-                'exists'  => true,                  // backward-compat with old UI
+                'exists'  => true,
                 'patient' => [
-                    'id'   => $p['id'],
-                    'name' => $p['name'],
-                    'uhid' => $p['uhid'],
+                    'id'   => $existing['id'],
+                    'name' => $existing['name'],
+                    'uhid' => $existing['uhid'],
                 ],
-            ]);
-        }
-
-        if ($res['status'] === 'identity_only') {
-            // Pre-filled new-patient form data. UI shows a banner like:
-            // "This person is registered on eClinicPro — we've pre-filled their basic info."
-            return Response::json([
-                'status'  => 'identity_only',
-                'exists'  => false,
-                'prefill' => $res['prefill'],
-                'source'  => $res['prefill']['_source'] ?? 'identity',
             ]);
         }
 

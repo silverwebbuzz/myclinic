@@ -158,7 +158,11 @@ final class AppointmentController
             $appointment = AppointmentService::create($clinicId, $data);
             AuditService::log($request, 'INSERT', 'appointments', (int) $appointment['id']);
 
-            return Response::redirect('/appointments/' . $appointment['id'] . '/slip?booked=1');
+            // Back to the listing (on the booking's own date) with a "Booking
+            // added" flash — no interstitial thanks page. The id lets the flash
+            // offer a one-click slip download.
+            $bookedDate = date('Y-m-d', strtotime((string) $appointment['scheduled_at']));
+            return Response::redirect('/appointments?booked=1&new_id=' . (int) $appointment['id'] . '&date=' . $bookedDate);
         } catch (\Throwable $e) {
             error_log('[appointments/store] ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
             try {
@@ -309,6 +313,65 @@ final class AppointmentController
         }
 
         return Response::redirect($path);
+    }
+
+    /**
+     * JSON endpoint that re-renders just the day-view results region (count
+     * cards + status tabs + table) so the appointments page can poll for new
+     * bookings without a full reload. Mirrors DashboardController::queueApi.
+     *
+     * Returns { html, total, refreshed_at }. `total` lets the client detect a
+     * count increase and show a "new booking" toast.
+     */
+    public function listApi(Request $request): Response
+    {
+        if ($denied = ModuleGate::require('appointments_basic')) {
+            return $denied;
+        }
+
+        $clinicId = (int) RequestContext::clinicId();
+        $doctorId = !empty($request->query['doctor_id']) ? (int) $request->query['doctor_id'] : null;
+
+        $ts = strtotime((string) ($request->query['date'] ?? date('Y-m-d')));
+        $date = $ts ? date('Y-m-d', $ts) : date('Y-m-d');
+
+        $statusFilter = $request->query['status'] ?? 'all';
+        $appointments = AppointmentService::forDate($clinicId, $date, $doctorId);
+
+        $counts = [
+            'all' => count($appointments), 'scheduled' => 0, 'confirmed' => 0,
+            'in_progress' => 0, 'completed' => 0, 'no_show' => 0, 'cancelled' => 0,
+        ];
+        foreach ($appointments as $a) {
+            $s = (string) ($a['status'] ?? 'scheduled');
+            if (isset($counts[$s])) {
+                $counts[$s]++;
+            }
+        }
+        $total = $counts['all'];
+
+        if ($statusFilter !== 'all') {
+            $appointments = array_values(array_filter(
+                $appointments,
+                static fn (array $a) => ($a['status'] ?? '') === $statusFilter,
+            ));
+        }
+
+        $html = \App\Support\View::render('appointments/_list_body', [
+            'appointments' => $appointments,
+            'counts' => $counts,
+            'statusFilter' => $statusFilter,
+            'date' => $date,
+            'displayDate' => date('d M Y', strtotime($date)),
+            'doctorId' => $doctorId,
+            'csrf' => \App\Services\CsrfService::token(),
+        ]);
+
+        return Response::json([
+            'html' => $html,
+            'total' => $total,
+            'refreshed_at' => date('c'),
+        ]);
     }
 
     public function slotsApi(Request $request): Response
