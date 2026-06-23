@@ -79,7 +79,8 @@ return static function (RouteRegistrar $router): void {
     $router->get('/webhooks/whatsapp', [WebhookController::class, 'whatsapp']);
     $router->post('/webhooks/whatsapp', [WebhookController::class, 'whatsapp']);
 
-    $router->group(['middleware' => ['refresh', 'tenant', 'auth', 'csrf', 'rbac', 'rate']], static function (GroupedRouteRegistrar $app): void {
+    $router->group(['middleware' => ['refresh', 'tenant', 'auth', 'subscription', 'csrf', 'rbac', 'rate']], static function (GroupedRouteRegistrar $app): void {
+        $app->get('/subscription-expired', [SubscriptionController::class, 'expired']);
         $app->get('/dashboard', [DashboardController::class, 'index']);
         $app->post('/dashboard/checklist/dismiss', [DashboardController::class, 'dismissChecklist']);
 

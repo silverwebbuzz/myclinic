@@ -10,6 +10,7 @@ use App\Middleware\PartnerAuthMiddleware;
 use App\Middleware\RateLimitMiddleware;
 use App\Middleware\RbacMiddleware;
 use App\Middleware\RefreshTokenMiddleware;
+use App\Middleware\SubscriptionMiddleware;
 use App\Middleware\SuperAdminAuthMiddleware;
 use App\Middleware\TenantMiddleware;
 
@@ -17,6 +18,7 @@ return [
     'refresh' => RefreshTokenMiddleware::class,
     'tenant' => TenantMiddleware::class,
     'auth' => AuthMiddleware::class,
+    'subscription' => SubscriptionMiddleware::class,
     'rbac' => RbacMiddleware::class,
     'module' => ModuleGateMiddleware::class,
     'csrf' => CsrfMiddleware::class,
