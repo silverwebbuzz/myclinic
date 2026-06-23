@@ -161,13 +161,36 @@ function dashboardPage() {
             follow_ups_dueDisplay: '<?= (int) ($stats['follow_ups_due'] ?? 0) ?>',
         },
         lastRefresh: null,
-        startRefresh() { setInterval(() => this.refreshQueue(), 60000); },
+        _lastPatientsToday: <?= (int) ($stats['patients_today'] ?? 0) ?>,
+        toast(msg) {
+            let el = document.getElementById('dash-toast');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'dash-toast';
+                el.setAttribute('role', 'status');
+                el.className = 'pointer-events-none fixed bottom-5 left-1/2 z-50 -translate-x-1/2 translate-y-4 rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white opacity-0 shadow-lg transition-all duration-300';
+                document.body.appendChild(el);
+            }
+            el.textContent = msg;
+            el.classList.remove('opacity-0', 'translate-y-4');
+            clearTimeout(this._toastTimer);
+            this._toastTimer = setTimeout(() => el.classList.add('opacity-0', 'translate-y-4'), 3500);
+        },
+        startRefresh() { setInterval(() => this.refreshQueue(), 15000); },
         async refreshQueue() {
             try {
                 const r = await fetch('/api/v1/dashboard/queue', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
                 if (!r.ok) return;
                 const data = await r.json();
                 if (data.stats) {
+                    // Nudge the doctor when today's appointment count rises
+                    // (e.g. the receptionist just added a walk-in).
+                    var nowToday = Number(data.stats.patients_today) || 0;
+                    if (nowToday > this._lastPatientsToday) {
+                        var added = nowToday - this._lastPatientsToday;
+                        this.toast('🔔 ' + added + ' new booking' + (added === 1 ? '' : 's') + ' added');
+                    }
+                    this._lastPatientsToday = nowToday;
                     Object.assign(this.stats, {
                         patients_today: data.stats.patients_today,
                         appointments_pending: data.stats.appointments_pending,
