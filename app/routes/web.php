@@ -102,8 +102,12 @@ return static function (RouteRegistrar $router): void {
         $app->post('/settings/leaves', [ClinicSettingsController::class, 'saveLeave']);
         $app->post('/settings/leaves/{id}/remove', [ClinicSettingsController::class, 'removeLeave']);
         $app->post('/settings/team/invite', [ClinicSettingsController::class, 'inviteStaff']);
+        $app->post('/settings/team/create', [ClinicSettingsController::class, 'createStaffAccount']);
         $app->post('/settings/team/invites/{id}/revoke', [ClinicSettingsController::class, 'revokeInvite']);
+        $app->post('/settings/team/{id}/reset-password', [ClinicSettingsController::class, 'resetStaffPassword']);
         $app->post('/settings/team/{id}', [ClinicSettingsController::class, 'updateStaff']);
+        $app->get('/change-password', [AuthController::class, 'showChangePassword']);
+        $app->post('/change-password', [AuthController::class, 'changePassword']);
         $app->post('/settings/api/keys', [ClinicSettingsController::class, 'createApiKey']);
         $app->post('/settings/api/keys/{id}/revoke', [ClinicSettingsController::class, 'revokeApiKey']);
         $app->post('/settings/branding', [ClinicSettingsController::class, 'saveBranding']);

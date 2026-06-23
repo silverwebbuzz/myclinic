@@ -19,6 +19,7 @@ use App\Services\ApiKeyService;
 use App\Services\StaffInvitationService;
 use App\Services\WhiteLabelService;
 use App\Support\Layout;
+use App\Support\SessionFlash;
 use App\Support\View;
 use App\Support\VisitView;
 
@@ -99,6 +100,8 @@ final class ClinicSettingsController
             'apiKeys' => ApiKeyService::listForClinic($clinicId),
             'apiScopes' => ApiKeyService::SCOPES,
             'newApiKey' => $request->query['new_key'] ?? null,
+            'staffCredentials' => SessionFlash::pull('staff_credentials'),
+            'loginUrl' => rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/') . '/login',
             'domainVerify' => !empty($clinic['custom_domain'])
                 ? [
                     'host' => '_manageclinic.' . $clinic['custom_domain'],
@@ -236,6 +239,58 @@ final class ClinicSettingsController
             AuditService::log($request, 'INSERT', 'staff_invitations', 0);
 
             return Response::redirect('/settings?tab=team&message=invited');
+        } catch (\Throwable $e) {
+            return Response::redirect('/settings?tab=team&error=' . urlencode($e->getMessage()));
+        }
+    }
+
+    public function createStaffAccount(Request $request): Response
+    {
+        $clinicId = RequestContext::clinicId();
+        if ($clinicId === null) {
+            return Response::redirect('/login');
+        }
+
+        try {
+            $result = StaffInvitationService::createAccount(
+                $clinicId,
+                trim((string) ($request->post['name'] ?? '')),
+                trim((string) ($request->post['username'] ?? '')) ?: null,
+                (string) ($request->post['role'] ?? 'receptionist'),
+            );
+            AuditService::log($request, 'INSERT', 'users', (int) $result['user_id']);
+            SessionFlash::put('staff_credentials', [
+                'name' => $result['name'],
+                'username' => $result['username'],
+                'password' => $result['password'],
+                'login_url' => rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/') . '/login',
+            ]);
+
+            return Response::redirect('/settings?tab=team&message=created');
+        } catch (\Throwable $e) {
+            return Response::redirect('/settings?tab=team&error=' . urlencode($e->getMessage()));
+        }
+    }
+
+    public function resetStaffPassword(Request $request, string $id): Response
+    {
+        $clinicId = RequestContext::clinicId();
+        if ($clinicId === null) {
+            return Response::redirect('/login');
+        }
+
+        try {
+            $result = StaffInvitationService::resetStaffPassword($clinicId, (int) $id);
+            AuditService::log($request, 'UPDATE', 'users', (int) $id);
+            SessionFlash::put('staff_credentials', [
+                'name' => $result['name'],
+                'username' => $result['username'],
+                'email' => $result['email'],
+                'password' => $result['password'],
+                'login_url' => rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/') . '/login',
+            ]);
+
+            return Response::redirect('/settings?tab=team&message=password_reset');
         } catch (\Throwable $e) {
             return Response::redirect('/settings?tab=team&error=' . urlencode($e->getMessage()));
         }

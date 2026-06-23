@@ -87,6 +87,23 @@ final class AuthService
         return QueryBuilder::table('users')->where('email', '=', $email)->where('is_active', '=', 1)->first();
     }
 
+    public static function findUserByLogin(string $login): ?array
+    {
+        $login = strtolower(trim($login));
+        if ($login === '') {
+            return null;
+        }
+
+        if (str_contains($login, '@')) {
+            return self::findUserByEmail($login);
+        }
+
+        return QueryBuilder::table('users')
+            ->where('username', '=', $login)
+            ->where('is_active', '=', 1)
+            ->first();
+    }
+
     public static function failedLoginCount(string $email): int
     {
         $key = 'auth:failed:' . strtolower($email);

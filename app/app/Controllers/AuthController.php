@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Core\Database;
 use App\Core\QueryBuilder;
+use App\Core\RequestContext;
 use App\Http\Request;
 use App\Http\Response;
 use App\Services\AuditService;
@@ -113,8 +114,8 @@ final class AuthController
 
     public function showLogin(Request $request): Response
     {
-        $email = strtolower(trim($request->query['email'] ?? ''));
-        $failures = $email !== '' ? AuthService::failedLoginCount($email) : 0;
+        $login = strtolower(trim($request->query['login'] ?? $request->query['email'] ?? ''));
+        $failures = $login !== '' ? AuthService::failedLoginCount($login) : 0;
 
         return Response::html($this->view('auth/login', [
             'csrf' => CsrfService::token(),
@@ -130,10 +131,10 @@ final class AuthController
             return Response::json(['error' => 'Database unavailable'], 503);
         }
 
-        $email = strtolower(trim($request->post['email'] ?? ''));
+        $login = strtolower(trim($request->post['login'] ?? $request->post['email'] ?? ''));
         $password = $request->post['password'] ?? '';
         $remember = !empty($request->post['remember_me']);
-        $failures = AuthService::failedLoginCount($email);
+        $failures = AuthService::failedLoginCount($login);
 
         if ($failures >= 3 && empty($request->post['captcha_confirm'])) {
             return Response::html($this->view('auth/login', [
@@ -144,7 +145,7 @@ final class AuthController
             ]), 422);
         }
 
-        $attemptFailures = AuthService::recordFailedLogin($email);
+        $attemptFailures = AuthService::recordFailedLogin($login);
         if ($attemptFailures >= 5) {
             return Response::html($this->view('auth/login', [
                 'csrf' => CsrfService::token(),
@@ -154,17 +155,17 @@ final class AuthController
             ]), 429);
         }
 
-        $user = AuthService::findUserByEmail($email);
+        $user = AuthService::findUserByLogin($login);
         if ($user === null || !password_verify($password, $user['password_hash'] ?? '')) {
             return Response::html($this->view('auth/login', [
                 'csrf' => CsrfService::token(),
-                'error' => 'Invalid email or password.',
+                'error' => 'Invalid email/username or password.',
                 'captchaRequired' => $attemptFailures >= 3,
                 'googleEnabled' => GoogleOAuthService::isConfigured(),
             ]), 401);
         }
 
-        AuthService::clearFailedLogins($email);
+        AuthService::clearFailedLogins($login);
         $clinicId = (int) $user['clinic_id'];
         $token = JwtService::issue($user, $clinicId);
         $refresh = AuthService::establishSession($user, $request, $remember);
@@ -181,7 +182,7 @@ final class AuthController
 
         $tenant = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first();
 
-        return Response::redirect($this->postLoginRedirect($tenant));
+        return Response::redirect($this->postLoginRedirect($tenant, $user));
     }
 
     public function logout(Request $request): Response
@@ -265,6 +266,60 @@ final class AuthController
         return Response::redirect('/login?error=' . urlencode('Password updated. Please sign in.'));
     }
 
+    public function showChangePassword(Request $request): Response
+    {
+        $user = RequestContext::user();
+        if ($user === null) {
+            return Response::redirect('/login');
+        }
+
+        return Response::html($this->view('auth/change-password', [
+            'csrf' => CsrfService::token(),
+            'error' => null,
+            'required' => !empty($user['must_change_password']),
+        ]));
+    }
+
+    public function changePassword(Request $request): Response
+    {
+        $user = RequestContext::user();
+        if ($user === null) {
+            return Response::redirect('/login');
+        }
+
+        $password = $request->post['password'] ?? '';
+        $confirm = $request->post['password_confirm'] ?? '';
+        $current = $request->post['current_password'] ?? '';
+
+        if (empty($user['must_change_password']) && !password_verify($current, $user['password_hash'] ?? '')) {
+            return Response::html($this->view('auth/change-password', [
+                'csrf' => CsrfService::token(),
+                'error' => 'Current password is incorrect.',
+                'required' => false,
+            ]), 422);
+        }
+
+        $passwordError = $this->validatePassword($password, $confirm);
+        if ($passwordError !== null) {
+            return Response::html($this->view('auth/change-password', [
+                'csrf' => CsrfService::token(),
+                'error' => $passwordError,
+                'required' => !empty($user['must_change_password']),
+            ]), 422);
+        }
+
+        AuthService::updatePassword((int) $user['id'], $password);
+        QueryBuilder::table('users')->where('id', '=', (int) $user['id'])->update([
+            'must_change_password' => 0,
+        ]);
+
+        AuditService::log($request, 'UPDATE', 'users', (int) $user['id']);
+
+        $tenant = QueryBuilder::table('tenants')->where('id', '=', (int) $user['clinic_id'])->first();
+
+        return Response::redirect($this->postLoginRedirect($tenant, ['must_change_password' => 0]));
+    }
+
     public function googleRedirect(Request $request): Response
     {
         if (!GoogleOAuthService::isConfigured()) {
@@ -312,7 +367,7 @@ final class AuthController
 
         $tenant = QueryBuilder::table('tenants')->where('id', '=', (int) $user['clinic_id'])->first();
 
-        return Response::redirect($this->postLoginRedirect($tenant));
+        return Response::redirect($this->postLoginRedirect($tenant, $user));
     }
 
     public function refreshToken(Request $request): Response
@@ -413,13 +468,29 @@ final class AuthController
         return null;
     }
 
-    /** @param array<string, mixed>|null $tenant */
-    private function postLoginRedirect(?array $tenant): string
+    /** @param array<string, mixed>|null $tenant @param array<string, mixed> $user */
+    private function postLoginRedirect(?array $tenant, array $user = []): string
     {
+        if (!empty($user['must_change_password'])) {
+            return '/change-password';
+        }
+
         if ($tenant === null) {
             return '/dashboard';
         }
 
         return OnboardingService::resumeUrl((int) $tenant['id']);
+    }
+
+    private function validatePassword(string $password, string $confirm): ?string
+    {
+        if (strlen($password) < 8 || !preg_match('/[A-Z]/', $password) || !preg_match('/[0-9]/', $password)) {
+            return 'Password must be 8+ characters with 1 uppercase and 1 number.';
+        }
+        if ($password !== $confirm) {
+            return 'Passwords do not match.';
+        }
+
+        return null;
     }
 }

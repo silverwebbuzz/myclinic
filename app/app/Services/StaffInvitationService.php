@@ -153,4 +153,137 @@ final class StaffInvitationService
                 ->update($update);
         }
     }
+
+    /** @return array{user_id: int, username: string, password: string, name: string} */
+    public static function createAccount(int $clinicId, string $name, ?string $username, string $role): array
+    {
+        if (!SeatService::canAddStaff($clinicId)) {
+            throw new \RuntimeException('Seat limit reached. Upgrade your plan or purchase extra seats.');
+        }
+
+        $name = trim($name);
+        if ($name === '') {
+            throw new \RuntimeException('Name is required.');
+        }
+
+        $role = in_array($role, ['doctor', 'nurse', 'receptionist', 'labtech'], true) ? $role : 'receptionist';
+        $baseUsername = $username !== null && trim($username) !== ''
+            ? self::normalizeUsername($username)
+            : self::suggestUsername($name);
+        $finalUsername = self::uniqueUsername($baseUsername);
+        $password = self::generateTempPassword();
+
+        $userId = QueryBuilder::table('users')->insert([
+            'clinic_id' => $clinicId,
+            'name' => $name,
+            'email' => null,
+            'username' => $finalUsername,
+            'password_hash' => password_hash($password, PASSWORD_BCRYPT),
+            'role' => $role,
+            'is_active' => 1,
+            'must_change_password' => 1,
+        ]);
+
+        return [
+            'user_id' => $userId,
+            'username' => $finalUsername,
+            'password' => $password,
+            'name' => $name,
+        ];
+    }
+
+    /** @return array{username: ?string, email: ?string, password: string, name: string} */
+    public static function resetStaffPassword(int $clinicId, int $userId): array
+    {
+        $user = QueryBuilder::table('users')
+            ->forClinic($clinicId)
+            ->where('id', '=', $userId)
+            ->where('is_owner', '=', 0)
+            ->first();
+
+        if ($user === null) {
+            throw new \RuntimeException('Staff member not found.');
+        }
+
+        $password = self::generateTempPassword();
+        QueryBuilder::table('users')
+            ->forClinic($clinicId)
+            ->where('id', '=', $userId)
+            ->update([
+                'password_hash' => password_hash($password, PASSWORD_BCRYPT),
+                'must_change_password' => 1,
+            ]);
+
+        return [
+            'username' => $user['username'] ?? null,
+            'email' => !empty($user['email']) ? (string) $user['email'] : null,
+            'password' => $password,
+            'name' => (string) $user['name'],
+        ];
+    }
+
+    public static function suggestUsername(string $name): string
+    {
+        $parts = preg_split('/\s+/', strtolower(trim($name)), -1, PREG_SPLIT_NO_EMPTY);
+        $base = $parts[0] ?? 'staff';
+        $base = preg_replace('/[^a-z0-9]/', '', $base) ?: 'staff';
+        if (strlen($base) < 3) {
+            $base = 'staff' . substr(bin2hex(random_bytes(2)), 0, 3);
+        }
+
+        return substr($base, 0, 26);
+    }
+
+    private static function normalizeUsername(string $username): string
+    {
+        $username = strtolower(trim($username));
+        $username = preg_replace('/[^a-z0-9_]/', '_', $username);
+        $username = preg_replace('/_+/', '_', $username);
+        $username = trim($username, '_');
+
+        if ($username === '' || strlen($username) < 3) {
+            throw new \RuntimeException('Username must be at least 3 characters (letters, numbers, underscore).');
+        }
+        if (strlen($username) > 30) {
+            $username = substr($username, 0, 30);
+        }
+        if (!preg_match('/^[a-z][a-z0-9_]*$/', $username)) {
+            throw new \RuntimeException('Username must start with a letter and use only lowercase letters, numbers, and underscores.');
+        }
+
+        return $username;
+    }
+
+    private static function uniqueUsername(string $base): string
+    {
+        if (QueryBuilder::table('users')->where('username', '=', $base)->first() === null) {
+            return $base;
+        }
+
+        for ($i = 2; $i <= 99; $i++) {
+            $candidate = substr($base, 0, 28) . $i;
+            if (QueryBuilder::table('users')->where('username', '=', $candidate)->first() === null) {
+                return $candidate;
+            }
+        }
+
+        return substr($base, 0, 24) . bin2hex(random_bytes(3));
+    }
+
+    private static function generateTempPassword(): string
+    {
+        $upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+        $lower = 'abcdefghjkmnpqrstuvwxyz';
+        $digits = '23456789';
+        $all = $upper . $lower . $digits;
+        $password = $upper[random_int(0, strlen($upper) - 1)]
+            . $lower[random_int(0, strlen($lower) - 1)]
+            . $digits[random_int(0, strlen($digits) - 1)];
+
+        for ($i = 0; $i < 7; $i++) {
+            $password .= $all[random_int(0, strlen($all) - 1)];
+        }
+
+        return str_shuffle($password);
+    }
 }

@@ -14,8 +14,8 @@ ob_start();
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
 
         <div>
-            <label class="block text-xs font-medium text-slate-600">Email</label>
-            <input name="email" type="email" required autocomplete="email"
+            <label class="block text-xs font-medium text-slate-600">Email or username</label>
+            <input name="login" type="text" required autocomplete="username"
                    class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
         </div>
 

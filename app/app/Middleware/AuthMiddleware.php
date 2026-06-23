@@ -37,6 +37,12 @@ final class AuthMiddleware implements MiddlewareInterface
         $refreshed = RequestContext::refreshedAuth();
         if ($refreshed !== null && (int) ($refreshed['user']['is_active'] ?? 0)) {
             RequestContext::setUser($refreshed['user']);
+            $path = parse_url($request->uri, PHP_URL_PATH) ?: $request->uri;
+            if (!empty($refreshed['user']['must_change_password'])
+                && $path !== '/change-password'
+                && !($path === '/logout' && $request->method === 'POST')) {
+                return Response::redirect('/change-password');
+            }
 
             return $next();
         }
@@ -58,6 +64,13 @@ final class AuthMiddleware implements MiddlewareInterface
         }
 
         RequestContext::setUser($user);
+
+        $path = parse_url($request->uri, PHP_URL_PATH) ?: $request->uri;
+        if (!empty($user['must_change_password'])
+            && $path !== '/change-password'
+            && !($path === '/logout' && $request->method === 'POST')) {
+            return Response::redirect('/change-password');
+        }
 
         return $next();
     }
