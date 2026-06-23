@@ -98,7 +98,7 @@ final class OnboardingController
 
     public function clinicSetup(Request $request): Response
     {
-        if ($redirect = $this->guardStep(2)) {
+        if ($redirect = $this->guardOnboardingStep(2)) {
             return $redirect;
         }
 
@@ -130,11 +130,220 @@ final class OnboardingController
         if (!$this->verifyCsrf($request)) {
             return Response::redirect('/onboarding/clinic-setup');
         }
-        if ($redirect = $this->guardStep(2)) {
+        if ($redirect = $this->guardOnboardingStep(2)) {
+            return $redirect;
+        }
+
+        $clinicId = (int) RequestContext::clinicId();
+        $this->writeClinicSetup($request, $clinicId);
+        $this->advanceIfBehind($clinicId, 3);
+        OnboardingService::refreshClinicContext($clinicId);
+
+        return Response::redirect('/onboarding/specialty-config');
+    }
+
+    public function draftClinicSetup(Request $request): Response
+    {
+        if (!$this->verifyCsrf($request)) {
+            return Response::json(['ok' => false, 'error' => 'Session expired — refresh the page.'], 419);
+        }
+        if ($redirect = $this->guardOnboardingStep(2, true)) {
+            return $redirect;
+        }
+
+        $clinicId = (int) RequestContext::clinicId();
+        $this->writeClinicSetup($request, $clinicId);
+        OnboardingService::refreshClinicContext($clinicId);
+
+        return Response::json(['ok' => true, 'saved_at' => date('c')]);
+    }
+
+    public function specialtyConfig(Request $request): Response
+    {
+        if ($redirect = $this->guardOnboardingStep(3)) {
+            return $redirect;
+        }
+
+        $clinic = RequestContext::clinic();
+        $config = OnboardingService::specialtyConfig((int) $clinic['id']) ?? [];
+        $specialty = $clinic['specialty'] ?? 'gp';
+        $options = $config['specialty_options'] ?? null;
+        if (is_string($options)) {
+            $options = json_decode($options, true) ?: [];
+        }
+
+        return $this->page('onboarding/specialty-config', [
+            'csrf' => CsrfService::token(),
+            'clinic' => $clinic,
+            'specialty' => $specialty,
+            'options' => is_array($options) ? $options : [],
+            'step' => 3,
+        ]);
+    }
+
+    public function saveSpecialtyConfig(Request $request): Response
+    {
+        if (!$this->verifyCsrf($request)) {
+            return Response::redirect('/onboarding/specialty-config');
+        }
+        if ($redirect = $this->guardOnboardingStep(3)) {
+            return $redirect;
+        }
+
+        $clinicId = (int) RequestContext::clinicId();
+        $this->writeSpecialtyConfig($request, $clinicId, true);
+        $this->advanceIfBehind($clinicId, 4);
+
+        return Response::redirect('/onboarding/notifications');
+    }
+
+    public function draftSpecialtyConfig(Request $request): Response
+    {
+        if (!$this->verifyCsrf($request)) {
+            return Response::json(['ok' => false, 'error' => 'Session expired — refresh the page.'], 419);
+        }
+        if ($redirect = $this->guardOnboardingStep(3, true)) {
+            return $redirect;
+        }
+
+        $this->writeSpecialtyConfig($request, (int) RequestContext::clinicId(), false);
+
+        return Response::json(['ok' => true, 'saved_at' => date('c')]);
+    }
+
+    public function notifications(Request $request): Response
+    {
+        if ($redirect = $this->guardOnboardingStep(4)) {
             return $redirect;
         }
 
         $clinicId = RequestContext::clinicId();
+        $config = OnboardingService::specialtyConfig($clinicId) ?? [];
+        $prefs = $config['notification_prefs'] ?? null;
+        if (is_string($prefs)) {
+            $prefs = json_decode($prefs, true) ?: [];
+        }
+
+        return $this->page('onboarding/notifications', [
+            'csrf' => CsrfService::token(),
+            'clinic' => RequestContext::clinic(),
+            'config' => $config,
+            'prefs' => is_array($prefs) ? $prefs : $this->defaultNotificationPrefs(),
+            'step' => 4,
+        ]);
+    }
+
+    public function saveNotifications(Request $request): Response
+    {
+        if (!$this->verifyCsrf($request)) {
+            return Response::redirect('/onboarding/notifications');
+        }
+        if ($redirect = $this->guardOnboardingStep(4)) {
+            return $redirect;
+        }
+
+        $clinicId = (int) RequestContext::clinicId();
+        $this->writeNotifications($request, $clinicId);
+        $this->advanceIfBehind($clinicId, 5);
+
+        return Response::redirect('/onboarding/complete');
+    }
+
+    public function draftNotifications(Request $request): Response
+    {
+        if (!$this->verifyCsrf($request)) {
+            return Response::json(['ok' => false, 'error' => 'Session expired — refresh the page.'], 419);
+        }
+        if ($redirect = $this->guardOnboardingStep(4, true)) {
+            return $redirect;
+        }
+
+        $this->writeNotifications($request, (int) RequestContext::clinicId());
+
+        return Response::json(['ok' => true, 'saved_at' => date('c')]);
+    }
+
+    public function complete(Request $request): Response
+    {
+        $clinicId = RequestContext::clinicId();
+        $step = OnboardingService::currentStep();
+
+        if ($step < 5 && $request->method === 'GET') {
+            return Response::redirect($this->routeForStep($step));
+        }
+
+        if ($request->method === 'POST') {
+            if (!$this->verifyCsrf($request)) {
+                return Response::redirect('/onboarding/complete');
+            }
+            OnboardingService::complete($clinicId);
+
+            return Response::redirect('/dashboard');
+        }
+
+        $clinic = RequestContext::clinic();
+        $config = OnboardingService::specialtyConfig($clinicId) ?? [];
+        $plans = PlanService::all();
+        // After Phase 1 there is only one plan ('standard'). The plan-picker
+        // step is removed in Phase 1 UI step 10; until then, fall back to
+        // 'standard' / first available so this page never crashes.
+        $planKey = $clinic['plan'] ?? 'standard';
+        $plan = $plans[$planKey] ?? ($plans['standard'] ?? reset($plans));
+
+        $specialties = \App\Support\SpecialtyCatalog::all();
+
+        return $this->page('onboarding/complete', [
+            'csrf' => CsrfService::token(),
+            'clinic' => $clinic,
+            'config' => $config,
+            'plan' => $plan,
+            'specialties' => $specialties,
+            'step' => 5,
+        ]);
+    }
+
+    private function guardOnboardingStep(int $minStep, bool $json = false): ?Response
+    {
+        $user = RequestContext::user();
+        if ($user === null || !in_array($user['role'] ?? '', ['admin'], true)) {
+            return $json
+                ? Response::json(['ok' => false, 'error' => 'Unauthorized'], 401)
+                : Response::redirect('/login');
+        }
+
+        $clinicId = RequestContext::clinicId();
+        if ($clinicId !== null && $minStep === 2) {
+            OnboardingService::ensureStandardTrialStarted($clinicId);
+        }
+
+        $step = OnboardingService::currentStep();
+        if ($step >= 5) {
+            return $json
+                ? Response::json(['ok' => false, 'error' => 'Onboarding already complete'], 400)
+                : Response::redirect('/dashboard');
+        }
+
+        // Block skipping ahead; allow revisiting earlier steps to edit saved data.
+        if ($step < $minStep) {
+            $url = $this->routeForStep($step);
+
+            return $json
+                ? Response::json(['ok' => false, 'error' => 'Complete earlier steps first', 'redirect' => $url], 400)
+                : Response::redirect($url);
+        }
+
+        return null;
+    }
+
+    private function advanceIfBehind(int $clinicId, int $targetStep): void
+    {
+        if (OnboardingService::currentStep() < $targetStep) {
+            OnboardingService::advanceTo($clinicId, $targetStep);
+        }
+    }
+
+    private function writeClinicSetup(Request $request, int $clinicId): void
+    {
         $specialty = $request->post['specialty'] ?? 'gp';
         $specialties = array_keys(\App\Support\SpecialtyCatalog::all(true));
         if (!in_array($specialty, $specialties, true)) {
@@ -151,7 +360,6 @@ final class OnboardingController
         $taxLabel = $request->post['invoice_tax_label'] ?? OnboardingService::taxLabelForCountry($country);
         $taxPercent = (float) ($request->post['invoice_tax_percent'] ?? 0);
         $consultationFee = (float) ($request->post['consultation_fee'] ?? 0);
-
         $workingHours = $this->parseWorkingHours($request->post);
 
         $logoPath = null;
@@ -197,49 +405,12 @@ final class OnboardingController
                 $configData,
             ));
         }
-
-        OnboardingService::advanceTo($clinicId, 3);
-        OnboardingService::refreshClinicContext($clinicId);
-
-        return Response::redirect('/onboarding/specialty-config');
     }
 
-    public function specialtyConfig(Request $request): Response
+    private function writeSpecialtyConfig(Request $request, int $clinicId, bool $syncSchedules): void
     {
-        if ($redirect = $this->guardStep(3)) {
-            return $redirect;
-        }
-
-        $clinic = RequestContext::clinic();
-        $config = OnboardingService::specialtyConfig((int) $clinic['id']) ?? [];
-        $specialty = $clinic['specialty'] ?? 'gp';
-        $options = $config['specialty_options'] ?? null;
-        if (is_string($options)) {
-            $options = json_decode($options, true) ?: [];
-        }
-
-        return $this->page('onboarding/specialty-config', [
-            'csrf' => CsrfService::token(),
-            'clinic' => $clinic,
-            'specialty' => $specialty,
-            'options' => is_array($options) ? $options : [],
-            'step' => 3,
-        ]);
-    }
-
-    public function saveSpecialtyConfig(Request $request): Response
-    {
-        if (!$this->verifyCsrf($request)) {
-            return Response::redirect('/onboarding/specialty-config');
-        }
-        if ($redirect = $this->guardStep(3)) {
-            return $redirect;
-        }
-
-        $clinicId = RequestContext::clinicId();
         $clinic = RequestContext::clinic();
         $specialty = $clinic['specialty'] ?? 'gp';
-
         $options = $this->parseSpecialtyOptions($specialty, $request->post);
 
         QueryBuilder::table('specialty_configs')
@@ -248,56 +419,24 @@ final class OnboardingController
                 'specialty_options' => json_encode($options),
             ]);
 
+        if (!$syncSchedules) {
+            return;
+        }
+
         $config = OnboardingService::specialtyConfig($clinicId) ?? [];
         $workingHours = $config['working_hours'] ?? null;
         if (is_string($workingHours)) {
             $workingHours = json_decode($workingHours, true) ?: OnboardingService::defaultWorkingHours();
         }
         $slotDuration = (int) ($options['slot_duration'] ?? $config['slot_duration_min'] ?? 15);
-
         $doctorIds = DoctorScheduleService::doctorIdsForClinic($clinicId);
         if (is_array($workingHours)) {
             DoctorScheduleService::syncFromWorkingHours($clinicId, $workingHours, $doctorIds, $slotDuration);
         }
-
-        OnboardingService::advanceTo($clinicId, 4);
-
-        return Response::redirect('/onboarding/notifications');
     }
 
-    public function notifications(Request $request): Response
+    private function writeNotifications(Request $request, int $clinicId): void
     {
-        if ($redirect = $this->guardStep(4)) {
-            return $redirect;
-        }
-
-        $clinicId = RequestContext::clinicId();
-        $config = OnboardingService::specialtyConfig($clinicId) ?? [];
-        $prefs = $config['notification_prefs'] ?? null;
-        if (is_string($prefs)) {
-            $prefs = json_decode($prefs, true) ?: [];
-        }
-
-        return $this->page('onboarding/notifications', [
-            'csrf' => CsrfService::token(),
-            'clinic' => RequestContext::clinic(),
-            'config' => $config,
-            'prefs' => is_array($prefs) ? $prefs : $this->defaultNotificationPrefs(),
-            'step' => 4,
-        ]);
-    }
-
-    public function saveNotifications(Request $request): Response
-    {
-        if (!$this->verifyCsrf($request)) {
-            return Response::redirect('/onboarding/notifications');
-        }
-        if ($redirect = $this->guardStep(4)) {
-            return $redirect;
-        }
-
-        $clinicId = RequestContext::clinicId();
-
         $prefs = [
             'appointment_reminder_24h' => !empty($request->post['appointment_reminder_24h']),
             'appointment_reminder_1h' => !empty($request->post['appointment_reminder_1h']),
@@ -310,83 +449,28 @@ final class OnboardingController
         $update = [
             'notification_prefs' => json_encode($prefs),
             'whatsapp_number' => trim($request->post['whatsapp_number'] ?? '') ?: null,
-            'whatsapp_token' => trim($request->post['whatsapp_token'] ?? '') ?: null,
         ];
 
-        if (!empty($request->post['razorpay_key']) && !empty($request->post['razorpay_secret'])) {
-            $update['razorpay_key'] = trim($request->post['razorpay_key']);
-            $update['razorpay_secret'] = trim($request->post['razorpay_secret']);
+        $token = trim($request->post['whatsapp_token'] ?? '');
+        if ($token !== '') {
+            $update['whatsapp_token'] = $token;
+        }
+
+        if (!empty($request->post['razorpay_key'])) {
+            $update['razorpay_key'] = trim((string) $request->post['razorpay_key']);
+        }
+        if (!empty($request->post['razorpay_secret'])) {
+            $update['razorpay_secret'] = trim((string) $request->post['razorpay_secret']);
         }
 
         QueryBuilder::table('specialty_configs')
             ->where('clinic_id', '=', $clinicId)
             ->update($update);
-
-        OnboardingService::advanceTo($clinicId, 5);
-
-        return Response::redirect('/onboarding/complete');
-    }
-
-    public function complete(Request $request): Response
-    {
-        $clinicId = RequestContext::clinicId();
-        $step = OnboardingService::currentStep();
-
-        if ($step < 5 && $request->method === 'GET') {
-            return Response::redirect($this->routeForStep($step));
-        }
-
-        if ($request->method === 'POST') {
-            if (!$this->verifyCsrf($request)) {
-                return Response::redirect('/onboarding/complete');
-            }
-            OnboardingService::complete($clinicId);
-
-            return Response::redirect('/dashboard');
-        }
-
-        $clinic = RequestContext::clinic();
-        $config = OnboardingService::specialtyConfig($clinicId) ?? [];
-        $plans = PlanService::all();
-        // After Phase 1 there is only one plan ('standard'). The plan-picker
-        // step is removed in Phase 1 UI step 10; until then, fall back to
-        // 'standard' / first available so this page never crashes.
-        $planKey = $clinic['plan'] ?? 'standard';
-        $plan = $plans[$planKey] ?? ($plans['standard'] ?? reset($plans));
-
-        $specialties = \App\Support\SpecialtyCatalog::all();
-
-        return $this->page('onboarding/complete', [
-            'csrf' => CsrfService::token(),
-            'clinic' => $clinic,
-            'config' => $config,
-            'plan' => $plan,
-            'specialties' => $specialties,
-            'step' => 5,
-        ]);
     }
 
     private function guardStep(int $expectedStep): ?Response
     {
-        $user = RequestContext::user();
-        if ($user === null || !in_array($user['role'] ?? '', ['admin'], true)) {
-            return Response::redirect('/login');
-        }
-
-        $clinicId = RequestContext::clinicId();
-        if ($clinicId !== null && $expectedStep === 2) {
-            OnboardingService::ensureStandardTrialStarted($clinicId);
-        }
-
-        $step = OnboardingService::currentStep();
-        if ($step >= 5) {
-            return Response::redirect('/dashboard');
-        }
-        if ($step !== $expectedStep) {
-            return Response::redirect($this->routeForStep($step));
-        }
-
-        return null;
+        return $this->guardOnboardingStep($expectedStep);
     }
 
     private function routeForStep(int $step): string
@@ -408,6 +492,9 @@ final class OnboardingController
     /** @param array<string, mixed> $data */
     private function page(string $view, array $data): Response
     {
+        $data['onboardingStep'] = OnboardingService::currentStep();
+        $data['onboardingResumed'] = \App\Support\SessionFlash::pull('onboarding_resume') === true;
+
         return Response::html(View::render($view, $data));
     }
 

@@ -19,6 +19,7 @@ use App\Services\PartnerReferralService;
 use App\Services\PasswordResetService;
 use App\Services\RoleAccessService;
 use App\Services\SessionService;
+use App\Support\SessionFlash;
 use App\Support\View;
 
 final class AuthController
@@ -482,6 +483,11 @@ final class AuthController
 
         if ($tenant === null) {
             return '/dashboard';
+        }
+
+        $step = (int) ($tenant['onboarding_step'] ?? 1);
+        if ($step < 5) {
+            SessionFlash::put('onboarding_resume', true);
         }
 
         return OnboardingService::resumeUrl((int) $tenant['id']);

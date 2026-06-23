@@ -182,10 +182,13 @@ return static function (RouteRegistrar $router): void {
         $app->get('/onboarding/billing/cashfree-return', [OnboardingController::class, 'cashfreeReturn']);
         $app->get('/onboarding/clinic-setup', [OnboardingController::class, 'clinicSetup']);
         $app->post('/onboarding/clinic-setup', [OnboardingController::class, 'saveClinicSetup']);
+        $app->post('/onboarding/clinic-setup/draft', [OnboardingController::class, 'draftClinicSetup']);
         $app->get('/onboarding/specialty-config', [OnboardingController::class, 'specialtyConfig']);
         $app->post('/onboarding/specialty-config', [OnboardingController::class, 'saveSpecialtyConfig']);
+        $app->post('/onboarding/specialty-config/draft', [OnboardingController::class, 'draftSpecialtyConfig']);
         $app->get('/onboarding/notifications', [OnboardingController::class, 'notifications']);
         $app->post('/onboarding/notifications', [OnboardingController::class, 'saveNotifications']);
+        $app->post('/onboarding/notifications/draft', [OnboardingController::class, 'draftNotifications']);
         $app->get('/onboarding/complete', [OnboardingController::class, 'complete']);
         $app->post('/onboarding/complete', [OnboardingController::class, 'complete']);
 

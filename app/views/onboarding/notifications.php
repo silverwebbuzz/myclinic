@@ -6,7 +6,9 @@ ob_start();
 <h1 class="text-2xl font-semibold text-slate-900">Notification setup</h1>
 <p class="mt-1 text-sm text-slate-500">WhatsApp reminders and patient billing (optional)</p>
 
-<form method="post" action="/onboarding/notifications" class="mt-8 space-y-6">
+<form method="post" action="/onboarding/notifications"
+      data-onboarding-draft="/onboarding/notifications/draft"
+      class="mt-8 space-y-6">
     <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
 
     <section class="rounded-xl border border-slate-200 bg-white p-6 space-y-4">

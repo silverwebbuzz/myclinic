@@ -20,13 +20,14 @@
             </form>
         </div>
         <?php if (!empty($step)): ?>
+        <?php $onboardingStep = (int) ($onboardingStep ?? $step ?? 1); ?>
         <div class="mx-auto max-w-4xl px-4 pb-4">
             <div class="flex items-center gap-2 text-xs">
                 <?php
                 $steps = [1 => 'Plan', 2 => 'Clinic', 3 => 'Specialty', 4 => 'Notify', 5 => 'Done'];
                 foreach ($steps as $num => $label):
                     $active = ($step ?? 0) === $num;
-                    $done = ($step ?? 0) > $num;
+                    $done = $onboardingStep > $num;
                 ?>
                 <div class="flex items-center gap-2 <?= $num < 5 ? 'flex-1' : '' ?>">
                     <span class="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-medium
@@ -42,7 +43,21 @@
         <?php endif; ?>
     </header>
     <main class="mx-auto max-w-4xl px-4 py-8">
+        <?php if (!empty($onboardingResumed)): ?>
+        <div class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            Welcome back — your setup progress was saved. Continue where you left off.
+        </div>
+        <?php endif; ?>
+        <?php if (!empty($step) && (int) ($step ?? 0) < 5): ?>
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm">
+            <p class="text-slate-600">
+                Your progress is saved automatically. Click <strong>Continue</strong> when a step is complete.
+            </p>
+            <span id="onboarding-draft-status" class="text-xs text-slate-400"></span>
+        </div>
+        <?php endif; ?>
         <?= $content ?? '' ?>
     </main>
+    <?php require dirname(__DIR__) . '/onboarding/_draft_script.php'; ?>
 </body>
 </html>

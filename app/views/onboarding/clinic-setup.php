@@ -8,7 +8,9 @@ $uhid = htmlspecialchars($config['uhid_prefix'] ?? 'MC');
 <h1 class="text-2xl font-semibold text-slate-900">Set up your clinic</h1>
 <p class="mt-1 text-sm text-slate-500">Basic details patients and staff will see</p>
 
-<form method="post" action="/onboarding/clinic-setup" enctype="multipart/form-data" class="mt-8 space-y-6">
+<form method="post" action="/onboarding/clinic-setup" enctype="multipart/form-data"
+      data-onboarding-draft="/onboarding/clinic-setup/draft"
+      class="mt-8 space-y-6">
     <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
 
     <section class="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
