@@ -9,6 +9,12 @@
     </div>
     <?php endif; ?>
 
+    <?php if (!empty($_GET['error'])): ?>
+    <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <?= htmlspecialchars((string) $_GET['error']) ?>
+    </div>
+    <?php endif; ?>
+
     <?php if (empty($isDirectoryListed)): ?>
     <!-- ============ Get listed on /find-a-doctor banner ============
          Shown to clinics that have a portal account but haven't been

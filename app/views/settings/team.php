@@ -117,13 +117,13 @@ $loginUrl = $loginUrl ?? 'https://app.eclinicpro.com/login';
                         <p class="mt-0.5 text-xs text-slate-500">Login: <?= htmlspecialchars($member['email']) ?></p>
                         <?php endif; ?>
                         <?php if ($showPassword): ?>
-                        <p class="mt-1 text-xs text-amber-800" x-data="{ copied: false }">
-                            Password: <code class="rounded bg-amber-50 px-1.5 py-0.5 font-mono text-sm tracking-wide"><?= htmlspecialchars($flashPassword) ?></code>
+                        <p class="mt-1 text-xs text-amber-800">
+                            Password: <code id="staff-pass-<?= $memberId ?>" class="rounded bg-amber-50 px-1.5 py-0.5 font-mono text-sm tracking-wide"><?= htmlspecialchars($flashPassword) ?></code>
                             <button type="button" class="ml-1 font-medium underline"
-                                    @click="navigator.clipboard.writeText(<?= json_encode($flashPassword) ?>); copied=true">
+                                    onclick="copyClinicText(<?= json_encode($flashPassword) ?>, this)">
                                 Copy
                             </button>
-                            <span x-show="copied" x-cloak class="ml-1 text-amber-700">Copied</span>
+                            <span class="ml-1 hidden text-amber-700 copy-done">Copied</span>
                             <span class="block text-amber-700/80">Shown once — share now. Staff must change on first login.</span>
                         </p>
                         <?php endif; ?>

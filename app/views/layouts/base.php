@@ -170,6 +170,9 @@
                 <?php foreach ($nav['groups'] ?? [] as $group): ?>
                 <p class="ui-group-label mb-1 mt-5 px-3"><?= htmlspecialchars($group['label']) ?></p>
                 <?php foreach ($group['items'] as $item):
+                    if (!\App\Services\RoleAccessService::canSeeNavHref($user ?? [], (string) $item['href'])) {
+                        continue;
+                    }
                     $active = $isActive((string) $item['href']);
                 ?>
                 <a href="<?= htmlspecialchars($item['href']) ?>"
@@ -181,10 +184,13 @@
                 <?php endforeach; ?>
 
                 <p class="ui-group-label mb-1 mt-5 px-3">Account</p>
+                <?php if (\App\Services\RoleAccessService::canSeeNavHref($user ?? [], '/follow-ups')): ?>
                 <a href="/follow-ups"
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/follow-ups') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
                     <?= ui_icon('bell', 18, 'shrink-0') ?><span>Follow-ups</span>
                 </a>
+                <?php endif; ?>
+                <?php if (\App\Services\RoleAccessService::isClinicAdmin($user ?? [])): ?>
                 <a href="/settings"
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/settings') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
                     <?= ui_icon('settings', 18, 'shrink-0') ?><span>Settings</span>
@@ -193,6 +199,7 @@
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/settings/team') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
                     <?= ui_icon('staff', 18, 'shrink-0') ?><span>Team</span>
                 </a>
+                <?php endif; ?>
                 <a href="/help"
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/help') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
                     <?= ui_icon('help', 18, 'shrink-0') ?><span>Help &amp; Guide</span>
@@ -256,8 +263,10 @@
                                 <p class="truncate text-sm font-semibold text-slate-900"><?= htmlspecialchars($user['name'] ?? '') ?></p>
                                 <p class="truncate text-xs text-slate-500"><?= htmlspecialchars($user['email'] ?? '') ?></p>
                             </div>
+                            <?php if (\App\Services\RoleAccessService::isClinicAdmin($user ?? [])): ?>
                             <a href="/settings?tab=general" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Clinic settings</a>
                             <a href="/settings/team" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Team</a>
+                            <?php endif; ?>
                             <a href="/settings/password" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Password</a>
                             <a href="/settings/sessions" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Sessions</a>
                             <form method="post" action="/logout" class="border-t border-slate-100">
@@ -287,6 +296,36 @@
     <?php require dirname(__DIR__) . '/components/modal.php'; ?>
 
     <script>
+    window.copyClinicText = function (text, btn) {
+        const showCopied = function () {
+            if (!btn || !btn.parentElement) return;
+            const hint = btn.parentElement.querySelector('.copy-done');
+            if (hint) {
+                hint.classList.remove('hidden');
+                window.setTimeout(function () { hint.classList.add('hidden'); }, 2000);
+            }
+        };
+        const fallback = function () {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            try {
+                document.execCommand('copy');
+                showCopied();
+            } catch (e) { /* ignore */ }
+            document.body.removeChild(ta);
+        };
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(showCopied).catch(fallback);
+        } else {
+            fallback();
+        }
+    };
+
     // Global patient quick-search (header). Jumps to any patient by name/phone;
     // opens the profile in a new tab so the doctor keeps their current screen.
     function patientQuickSearch() {

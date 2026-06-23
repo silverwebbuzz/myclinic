@@ -17,6 +17,7 @@ use App\Services\JwtService;
 use App\Services\OnboardingService;
 use App\Services\PartnerReferralService;
 use App\Services\PasswordResetService;
+use App\Services\RoleAccessService;
 use App\Services\SessionService;
 use App\Support\View;
 
@@ -473,6 +474,10 @@ final class AuthController
     {
         if (!empty($user['must_change_password'])) {
             return '/change-password';
+        }
+
+        if (!RoleAccessService::isClinicAdmin($user)) {
+            return '/dashboard';
         }
 
         if ($tenant === null) {
