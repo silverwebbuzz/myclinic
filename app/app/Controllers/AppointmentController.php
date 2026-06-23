@@ -158,7 +158,11 @@ final class AppointmentController
             $appointment = AppointmentService::create($clinicId, $data);
             AuditService::log($request, 'INSERT', 'appointments', (int) $appointment['id']);
 
-            return Response::redirect('/appointments/' . $appointment['id'] . '/slip?booked=1');
+            // Back to the listing (on the booking's own date) with a "Booking
+            // added" flash — no interstitial thanks page. The id lets the flash
+            // offer a one-click slip download.
+            $bookedDate = date('Y-m-d', strtotime((string) $appointment['scheduled_at']));
+            return Response::redirect('/appointments?booked=1&new_id=' . (int) $appointment['id'] . '&date=' . $bookedDate);
         } catch (\Throwable $e) {
             error_log('[appointments/store] ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
             try {

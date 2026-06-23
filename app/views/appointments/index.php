@@ -86,6 +86,15 @@ $bookUrl = static function (?string $d = null, ?string $time = null) use ($date,
     <?php if (!empty($_GET['cancelled'])): ?>
     <p class="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">Appointment cancelled.</p>
     <?php endif; ?>
+    <?php if (!empty($_GET['booked'])): ?>
+    <p class="flex items-center justify-between gap-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <span>✓ Booking added.</span>
+        <?php if (!empty($_GET['new_id'])): ?>
+        <a href="/appointments/<?= (int) $_GET['new_id'] ?>/slip"
+           class="font-medium text-emerald-700 underline hover:text-emerald-900">Download slip</a>
+        <?php endif; ?>
+    </p>
+    <?php endif; ?>
 
     <?php
     $selectedDoctorName = null;
