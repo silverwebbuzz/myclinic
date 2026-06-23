@@ -275,6 +275,22 @@ final class AppointmentService
 
         $update = ['status' => $status];
 
+        // Stamp the flow timestamps the FIRST time each milestone is reached
+        // (don't overwrite on a re-entry). These feed the In/Out columns on the
+        // appointments listing — confirmed → "In Clinic" (arrived_at),
+        // in_progress → "In" (consult_started_at), completed → "Out". See
+        // migration 041_appointment_flow_times.sql.
+        $now = date('Y-m-d H:i:s');
+        if ($status === 'confirmed' && empty($existing['arrived_at'])) {
+            $update['arrived_at'] = $now;
+        }
+        if ($status === 'in_progress' && empty($existing['consult_started_at'])) {
+            $update['consult_started_at'] = $now;
+        }
+        if ($status === 'completed' && empty($existing['completed_at'])) {
+            $update['completed_at'] = $now;
+        }
+
         // Pre-booked patients have no token until they reach the chair. Assign
         // one when the consultation starts so the waiting-room display stays
         // coherent for every appointment type, not just walk-ins.

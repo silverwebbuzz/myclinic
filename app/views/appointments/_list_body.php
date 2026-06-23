@@ -82,7 +82,7 @@ $cards = [
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[900px] text-sm">
+            <table class="w-full min-w-[1080px] text-sm">
                 <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr>
                         <th class="px-4 py-3">#</th>
@@ -90,6 +90,8 @@ $cards = [
                         <th class="px-4 py-3">Phone</th>
                         <th class="px-4 py-3">Type</th>
                         <th class="px-4 py-3">Slot</th>
+                        <th class="px-4 py-3 text-center" title="Called into consult">In</th>
+                        <th class="px-4 py-3 text-center" title="Consult finished">Out</th>
                         <th class="px-4 py-3">Doctor</th>
                         <th class="px-4 py-3">Complaint</th>
                         <th class="px-4 py-3">Status</th>
@@ -120,7 +122,17 @@ $cards = [
                             </a>
                             <div class="font-mono text-xs text-slate-500"><?= htmlspecialchars((string) ($a['uhid'] ?? '')) ?></div>
                         </td>
-                        <td class="px-4 py-3 text-xs"><?= htmlspecialchars((string) ($a['patient_phone'] ?? '—')) ?></td>
+                        <td class="px-4 py-3 text-xs">
+                            <?php $phone = trim((string) ($a['patient_phone'] ?? '')); ?>
+                            <?php if ($phone !== ''): ?>
+                            <a href="tel:<?= htmlspecialchars(preg_replace('/[^0-9+]/', '', $phone)) ?>"
+                               class="inline-flex items-center gap-1 font-medium text-emerald-700 hover:underline whitespace-nowrap"
+                               title="Call patient">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                <?= htmlspecialchars($phone) ?>
+                            </a>
+                            <?php else: ?><span class="text-slate-300">—</span><?php endif; ?>
+                        </td>
                         <td class="px-4 py-3">
                             <span class="rounded px-2 py-0.5 text-xs <?= $typeBadge ?>">
                                 <?= $type === 'walkin' ? 'Walk-in' : ($type === 'online' ? 'Online' : ($type === 'followup' ? 'Follow-up' : 'Booked')) ?>
@@ -128,6 +140,12 @@ $cards = [
                         </td>
                         <td class="px-4 py-3 font-medium">
                             <?= htmlspecialchars(date('h:i A', strtotime((string) $a['scheduled_at']))) ?>
+                        </td>
+                        <td class="px-4 py-3 text-center text-xs text-slate-500">
+                            <?= !empty($a['consult_started_at']) ? htmlspecialchars(date('h:i A', strtotime((string) $a['consult_started_at']))) : '<span class="text-slate-300">—</span>' ?>
+                        </td>
+                        <td class="px-4 py-3 text-center text-xs text-slate-500">
+                            <?= !empty($a['completed_at']) ? htmlspecialchars(date('h:i A', strtotime((string) $a['completed_at']))) : '<span class="text-slate-300">—</span>' ?>
                         </td>
                         <td class="px-4 py-3 text-xs text-slate-600"><?= htmlspecialchars((string) ($a['doctor_name'] ?? '')) ?></td>
                         <td class="px-4 py-3 text-xs text-slate-600 max-w-[200px] truncate" title="<?= htmlspecialchars((string) ($a['chief_complaint'] ?? '')) ?>">
@@ -144,17 +162,7 @@ $cards = [
                                 $canManageRow = \App\Services\RoleAccessService::canManageAppointment($rowUser, $a);
                             ?>
                             <?php if ($canManageRow): ?>
-                            <div class="flex justify-end gap-1">
-                                <a href="/appointments/<?= (int) $a['id'] ?>/edit"
-                                   class="rounded border px-2 py-1 text-xs hover:bg-slate-50">Edit</a>
-                                <?php if ($status !== 'cancelled' && $status !== 'completed'): ?>
-                                <form method="post" action="/appointments/<?= (int) $a['id'] ?>/cancel" class="inline"
-                                      onsubmit="return confirm('Cancel this appointment?')">
-                                    <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf ?? '') ?>">
-                                    <button type="submit" class="rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50">✕</button>
-                                </form>
-                                <?php endif; ?>
-                            </div>
+                                <?php require __DIR__ . '/_row_actions.php'; ?>
                             <?php else: ?>
                             <span class="block text-right text-xs text-slate-400">—</span>
                             <?php endif; ?>

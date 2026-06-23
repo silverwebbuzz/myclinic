@@ -49,6 +49,16 @@ final class RoleAccessService
             || self::appointmentDoctorScope($user) !== null;
     }
 
+    /**
+     * Can this user run a consultation (call a patient in / open a visit)?
+     * Doctors and clinic admins (owner-doctors) can; receptionists cannot —
+     * they manage the queue but don't consult. Drives the "Call" button.
+     */
+    public static function canConsult(array $user): bool
+    {
+        return ($user['role'] ?? '') === 'doctor' || self::isClinicAdmin($user);
+    }
+
     /** Logged-in doctor id when appointments must be scoped to self; null otherwise. */
     public static function appointmentDoctorScope(array $user): ?int
     {

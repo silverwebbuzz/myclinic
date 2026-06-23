@@ -108,6 +108,14 @@ final class QueueController
     /** Preserve the doctor filter across status-change redirects. */
     private static function queueUrl(Request $request): string
     {
+        // Stay on the page the action came from (appointments / dashboard /
+        // queue) instead of always bouncing to /queue. Only accept a safe,
+        // same-site relative path ("/...") to avoid an open-redirect.
+        $return = (string) ($request->post['return'] ?? $request->query['return'] ?? '');
+        if ($return !== '' && $return[0] === '/' && !str_starts_with($return, '//')) {
+            return $return;
+        }
+
         $doctorId = (int) ($request->post['doctor_id'] ?? $request->query['doctor_id'] ?? 0);
 
         return $doctorId > 0 ? '/queue?doctor_id=' . $doctorId : '/queue';
