@@ -292,6 +292,12 @@ function ecp_patient_set_cookie(string $token): void {
 
     $domain = ecp_patient_cookie_domain();
 
+    // Drop legacy host-only cookie so it cannot shadow the shared-domain session
+    // when patients move between eclinicpro.com and app.eclinicpro.com.
+    if ($domain !== '') {
+        ecp_patient_clear_host_cookie($secure);
+    }
+
     // Use the array form on PHP 7.3+ (supports SameSite). Fall back to the
     // legacy 6-arg form on older PHP, which doesn't support SameSite but
     // at least sets the cookie.
@@ -318,6 +324,29 @@ function ecp_patient_set_cookie(string $token): void {
     }
 }
 
+/** Expire the host-only ecp_pid cookie (no Domain attribute). */
+function ecp_patient_clear_host_cookie(?bool $secure = null): void {
+    if (headers_sent()) {
+        return;
+    }
+    if ($secure === null) {
+        $secure = ($_SERVER['HTTPS'] ?? '') === 'on'
+               || (strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+               || (($_SERVER['SERVER_PORT'] ?? '') == '443');
+    }
+    if (PHP_VERSION_ID >= 70300) {
+        setcookie(ECP_PAT_COOKIE, '', [
+            'expires'  => time() - 3600,
+            'path'     => '/',
+            'secure'   => $secure,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
+    } else {
+        setcookie(ECP_PAT_COOKIE, '', time() - 3600, '/; SameSite=Lax', '', $secure, true);
+    }
+}
+
 function ecp_patient_cookie_domain(): string {
     $explicit = trim((string) (getenv('PATIENT_COOKIE_DOMAIN') ?: ''));
     if ($explicit !== '') {
@@ -335,11 +364,16 @@ function ecp_patient_cookie_domain(): string {
 
 function ecp_patient_clear_cookie(): void {
     if (headers_sent()) return;
+    $secure = ($_SERVER['HTTPS'] ?? '') === 'on'
+           || (strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+           || (($_SERVER['SERVER_PORT'] ?? '') == '443');
     $domain = ecp_patient_cookie_domain();
+    ecp_patient_clear_host_cookie($secure);
     if (PHP_VERSION_ID >= 70300) {
         $opts = [
             'expires'  => time() - 3600,
             'path'     => '/',
+            'secure'   => $secure,
             'httponly' => true,
             'samesite' => 'Lax',
         ];
@@ -348,7 +382,7 @@ function ecp_patient_clear_cookie(): void {
         }
         setcookie(ECP_PAT_COOKIE, '', $opts);
     } else {
-        setcookie(ECP_PAT_COOKIE, '', time() - 3600, '/; SameSite=Lax', $domain, false, true);
+        setcookie(ECP_PAT_COOKIE, '', time() - 3600, '/; SameSite=Lax', $domain, $secure, true);
     }
 }
 
@@ -380,7 +414,13 @@ function ecp_patient_current(): ?array {
     $stmt->execute(['id' => $token]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$row) return $cached = null;
+    if (!$row) {
+        if ($token !== '') {
+            ecp_patient_clear_host_cookie();
+        }
+
+        return $cached = null;
+    }
 
     // Touch last_seen_at (cheap update, lets us prune stale sessions later).
     $db->prepare('UPDATE patient_sessions SET last_seen_at = NOW() WHERE id = :id')

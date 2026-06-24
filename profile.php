@@ -25,6 +25,15 @@ $canonicalUrl = ecp_site_url((string) ($p['canonical'] ?? ''));
 $hoursLines = ecp_profile_hours_lines($p['opening_hours'] ?? null);
 $showDoctorsTab = ($p['entity_type'] ?? '') === 'clinic';
 
+require_once __DIR__ . '/partials/book_bridge.php';
+$bookingCtx = ecp_profile_booking_context($p);
+$profileBrand = htmlspecialchars((string) ($bookingCtx['brandColor'] ?? '#0F9B6E'), ENT_QUOTES, 'UTF-8');
+$extraHead = '<link rel="stylesheet" href="/assets/css/profile-booking.css">';
+if (($bookingCtx['mode'] ?? '') === 'claimed') {
+    $extraHead .= '<script src="https://cdn.tailwindcss.com"></script>'
+        . '<style>#dp-book-widget{--brand:' . $profileBrand . ';}[x-cloak]{display:none!important}</style>';
+}
+
 require __DIR__ . '/partials/header.php';
 require __DIR__ . '/partials/views/directory-profile.php';
 require __DIR__ . '/partials/footer.php';

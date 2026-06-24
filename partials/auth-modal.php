@@ -594,11 +594,13 @@ function ecpAuthModal() {
         const cb = this._afterLogin;
         if (cb) {
           try { await cb(j.patient); } catch (e) { console.error(e); }
+          this.close();
+          if (this._reason !== 'book') {
+            location.reload();
+          }
+          return;
         }
 
-        // Reload so the server-rendered header pill, patient page, etc.
-        // reflect the new session immediately. Costs one round-trip but
-        // removes a whole class of "why isn't the UI updating?" bugs.
         location.reload();
       } catch (e) {
         this.errorMsg = "Couldn't reach server. Check your connection.";

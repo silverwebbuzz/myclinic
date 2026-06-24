@@ -8,6 +8,10 @@
 require_once __DIR__ . '/partials/helpers.php';
 require_once __DIR__ . '/partials/patient_auth.php';
 
+// Private page — never cache; cookie/session state must be fresh.
+header('Cache-Control: private, no-store, max-age=0');
+header('Vary: Cookie');
+
 $pageTitle  = 'Patient panel — eClinicPro';
 $metaDesc   = 'Save your shortlist of doctors and book faster next time.';
 $activePage = '';
@@ -1107,8 +1111,9 @@ function patientPanel(isLoggedIn) {
     },
 
     async init() {
-      if (!this.loggedIn) return;
-      // Load both in parallel — they're independent.
+      if (!this.loggedIn) {
+        return;
+      }
       await Promise.all([this.loadWishlist(), this.loadBookings()]);
     },
 

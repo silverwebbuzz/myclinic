@@ -91,18 +91,26 @@ $specFindUrl = !empty($p['specialty_url_slug']) && !empty($p['city_slug'])
                     </div>
                 </div>
             </div>
-            <aside class="dp-side">
+            <aside class="dp-side" id="book">
+                <?php if (!empty($p['phone']) || !empty($p['directions_url'])): ?>
                 <div class="dp-side-card">
                     <?php if (!empty($p['phone'])): ?><a href="tel:<?= e(preg_replace('/\s+/', '', (string) $p['phone'])) ?>" class="dp-btn dp-btn-call">📞 Call Now</a><?php endif; ?>
-                    <?php if (!empty($p['book_url'])): ?>
-                        <a href="<?= e($p['book_url']) ?>" target="_blank" rel="noopener" class="dp-btn dp-btn-book">📅 Book</a>
-                    <?php else: ?>
-                        <button type="button" class="dp-btn dp-btn-book" onclick="window.ecpAuth&&window.ecpAuth.require('book',function(){window.ecpBook&&window.ecpBook.open({id:<?= (int) ($p['id'] ?? 0) ?>});})">📅 Book</button>
-                    <?php endif; ?>
                     <?php if (!empty($p['directions_url'])): ?><a href="<?= e($p['directions_url']) ?>" target="_blank" rel="noopener" class="dp-btn dp-btn-ghost">🧭 Directions</a><?php endif; ?>
                 </div>
-                <!-- "Related in {city}" sidebar card intentionally removed -->
+                <?php endif; ?>
+                <div id="dp-book-widget">
+                    <?php require __DIR__ . '/profile-booking-sidebar.php'; ?>
+                </div>
             </aside>
         </div>
     </div>
+    <button type="button" class="dp-book-fab" onclick="document.getElementById('book')?.scrollIntoView({behavior:'smooth',block:'start'})">📅 Book</button>
+    <script>
+    if (window.location.hash === '#book') {
+        requestAnimationFrame(function () {
+            var el = document.getElementById('book');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    }
+    </script>
 </main>

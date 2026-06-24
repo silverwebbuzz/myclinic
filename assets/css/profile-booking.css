@@ -1,0 +1,92 @@
+/* Scoped booking widget on directory profile pages (#dp-book-widget) */
+
+#dp-book-widget {
+  --brand: #0F9B6E;
+}
+
+#dp-book-widget .bg-brand { background: var(--brand); }
+#dp-book-widget .text-brand { color: var(--brand); }
+#dp-book-widget .border-brand { border-color: var(--brand); }
+#dp-book-widget .ring-brand:focus { --tw-ring-color: var(--brand); }
+#dp-book-widget .bg-brand-50 { background: color-mix(in srgb, var(--brand) 8%, white); }
+#dp-book-widget .bg-brand-100 { background: color-mix(in srgb, var(--brand) 14%, white); }
+#dp-book-widget .border-brand-100 { border-color: color-mix(in srgb, var(--brand) 20%, white); }
+
+#dp-book-widget .auth-devcode {
+  font-size: 13px;
+  background: #fff7e0;
+  border: 1px solid #f5d97e;
+  color: #6b4f00;
+  padding: 10px 12px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#dp-book-widget .auth-devcode .tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: #f5d97e;
+  color: #6b4f00;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+#dp-book-widget .auth-devcode strong {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 16px;
+  letter-spacing: 2px;
+  margin-left: auto;
+}
+
+.dp-book-fab {
+  display: none;
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 40;
+  height: 48px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: var(--teal-600, #0F9B6E);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  border: 0;
+  box-shadow: 0 8px 24px rgba(15, 155, 110, 0.35);
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .dp-book-fab { display: inline-flex; align-items: center; justify-content: center; }
+  .dp-side { scroll-margin-top: 80px; }
+}
+
+.dp-lead-widget {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.dp-lead-widget-head {
+  background: color-mix(in srgb, var(--teal-600, #0F9B6E) 8%, white);
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.dp-lead-widget-head h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.dp-lead-widget-head p {
+  font-size: 12px;
+  color: var(--mute);
+  margin: 0;
+}
+
+.dp-lead-widget-body {
+  padding: 16px 18px 18px;
+}

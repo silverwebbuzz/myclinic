@@ -160,6 +160,7 @@ $ecpPatientJson = $ecpPatient
      so we don't have to embed PHP inside an Alpine x-data attribute. -->
 <script>window.ECP_PATIENT = <?= $ecpPatientJson ?>;</script>
 <script>window.ECP_PORTAL_URL = <?= json_encode(rtrim(ecp_portal_url('/'), '/'), JSON_UNESCAPED_SLASHES) ?>;</script>
+<script>window.ECP_SITE_URL = <?= json_encode(rtrim(ecp_site_url('/'), '/'), JSON_UNESCAPED_SLASHES) ?>;</script>
 
 <body class="<?= e($bodyClass) ?>"
       x-data="ecpHeader()"
@@ -226,14 +227,16 @@ function ecpHeader() {
     patientMenuOpen: false,
 
     loadPatient() {
-      // Server already gave us a session blob? Trust it.
-      if (this.patient) return;
-      try {
-        const raw = localStorage.getItem('ecp_patient');
-        this.patient = raw ? JSON.parse(raw) : null;
-      } catch (e) {
-        this.patient = null;
+      if (window.ECP_PATIENT) {
+        this.patient = window.ECP_PATIENT;
+        try {
+          localStorage.setItem('ecp_patient', JSON.stringify(this.patient));
+        } catch (e) {}
+        return;
       }
+      // Server says logged out — don't show a stale localStorage session in the header.
+      this.patient = null;
+      try { localStorage.removeItem('ecp_patient'); } catch (e) {}
     },
 
     patientFirstName() {
@@ -265,4 +268,3 @@ function ecpHeader() {
 
 <?php require __DIR__ . '/auth-modal.php'; ?>
 <?php require __DIR__ . '/doctor-claim-modal.php'; ?>
-<?php require __DIR__ . '/lead-book-modal.php'; ?>

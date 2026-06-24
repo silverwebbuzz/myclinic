@@ -33,6 +33,10 @@ RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
 # Short URL goes into outbound SMS — keep it as short and clean as possible.
 RewriteRule ^L/([a-f0-9]{16})/?$ L.php?t=$1 [L,QSA]
 
+# -------- Public clinic booking (joined doctors — same domain as patient auth) --------
+RewriteRule ^book/([a-z0-9-]+)/slots/?$ api/book.php?slug=$1 [L,QSA]
+RewriteRule ^book/([a-z0-9-]+)/?$ book.php?slug=$1 [L,QSA]
+
 # -------- Directory profile pages --------
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

@@ -361,8 +361,7 @@ function ecp_profile_build_payload(PDO $db, array $row, string $entityType, stri
         'treatments' => ecp_directory_treatments_for_specialty($row['specialty'] ?? null)['items'],
         'doctors' => $doctors,
         'related' => $related,
-        'book_url' => ($isClaimed && !empty($row['tenant_slug']))
-            ? ecp_portal_url('/book/' . rawurlencode((string) $row['tenant_slug'])) : null,
+        'book_url' => ecp_directory_profile_url($row) . '#book',
         'meta_title' => $displayName . ' — ' . $specLabel . ' in ' . $cityName . ' | eClinicPro',
         'meta_description' => $displayName . ' — ' . $specLabel . ' in ' . $cityName . '. View timings, treatments and book online.',
     ];

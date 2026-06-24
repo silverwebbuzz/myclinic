@@ -264,6 +264,11 @@ final class PatientIdentityAuthService
             || strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https'
             || (($_SERVER['SERVER_PORT'] ?? '') === '443');
 
+        $domain = self::cookieDomain();
+        if ($domain !== '') {
+            self::clearHostCookie($secure);
+        }
+
         $opts = [
             'expires' => time() + self::SESSION_DAYS * 86400,
             'path' => '/',
@@ -271,12 +276,26 @@ final class PatientIdentityAuthService
             'httponly' => true,
             'samesite' => 'Lax',
         ];
-        $domain = self::cookieDomain();
         if ($domain !== '') {
             $opts['domain'] = $domain;
         }
 
         setcookie(self::COOKIE, $token, $opts);
+    }
+
+    private static function clearHostCookie(bool $secure): void
+    {
+        if (headers_sent()) {
+            return;
+        }
+
+        setcookie(self::COOKIE, '', [
+            'expires' => time() - 3600,
+            'path' => '/',
+            'secure' => $secure,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
     }
 
     private static function clearCookie(): void
@@ -285,13 +304,20 @@ final class PatientIdentityAuthService
             return;
         }
 
+        $secure = ($_SERVER['HTTPS'] ?? '') === 'on'
+            || strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https'
+            || (($_SERVER['SERVER_PORT'] ?? '') === '443');
+
+        $domain = self::cookieDomain();
+        self::clearHostCookie($secure);
+
         $opts = [
             'expires' => time() - 3600,
             'path' => '/',
+            'secure' => $secure,
             'httponly' => true,
             'samesite' => 'Lax',
         ];
-        $domain = self::cookieDomain();
         if ($domain !== '') {
             $opts['domain'] = $domain;
         }

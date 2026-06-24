@@ -1,18 +1,10 @@
 <?php
-$slug = (string) ($clinic['slug'] ?? '');
-$customDomain = trim((string) ($clinic['custom_domain'] ?? ''));
+use App\Services\DirectoryProfileUrlService;
 
-// Prefer the configured APP_URL (set per environment) over the host the
-// request happened to come in on. Falls back to HTTP_HOST only if APP_URL
-// is missing, so dev still works.
-$envBase = rtrim((string) ($_ENV['APP_URL'] ?? ''), '/');
-if ($envBase === '') {
-    $scheme  = (($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https') ? 'https' : 'http';
-    $envBase = $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'app.eclinicpro.com');
-}
-$bookingUrl = $customDomain !== ''
-    ? 'https://' . $customDomain . '/book/' . rawurlencode($slug)
-    : $envBase . '/book/' . rawurlencode($slug);
+$slug = (string) ($clinic['slug'] ?? '');
+$clinicId = (int) ($clinic['id'] ?? 0);
+
+$bookingUrl = DirectoryProfileUrlService::publicBookingUrlForTenant($clinicId, $slug);
 
 $clinicName  = $clinic['name'] ?? 'our clinic';
 $shareText   = "Book your appointment at {$clinicName} online — quick, no calls needed: {$bookingUrl}";

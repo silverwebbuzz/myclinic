@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Core\Database;
 use App\Gates\ModuleGate;
+use App\Services\DirectoryProfileUrlService;
 
 final class PortalDashboardService
 {
@@ -28,7 +29,10 @@ final class PortalDashboardService
             'invoices' => $invoices,
             'appointments' => $appointments,
             'canBook' => ModuleGate::check('appointments_basic'),
-            'bookUrl' => '/book/' . ($clinic['slug'] ?? 'demo'),
+            'bookUrl' => DirectoryProfileUrlService::publicBookingUrlForTenant(
+                $clinicId,
+                (string) ($clinic['slug'] ?? 'demo'),
+            ),
         ];
     }
 

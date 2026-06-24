@@ -1680,17 +1680,8 @@ require __DIR__ . '/partials/header.php';
             },
 
             bookDoctor(d) {
-                // Claimed clinic → send to the real portal booking page.
-                if (d.is_claimed && d.slug) {
-                    window.open((window.ECP_PORTAL_URL || 'https://app.eclinicpro.com') + '/book/' + d.slug, '_blank');
-                    return;
-                }
-                // Unclaimed → patient must be logged in; lead is recorded + clinic notified.
-                const auth = window.ecpAuth;
-                if (!auth) return;
-                auth.require('book', () => {
-                    if (window.ecpBook) window.ecpBook.open(d);
-                });
+                const url = (d.profile_url || '/find-a-doctor') + '#book';
+                window.location.href = url;
             },
 
             // Fire-and-forget call-click analytics (no UI change, no await).
