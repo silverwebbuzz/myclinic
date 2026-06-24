@@ -90,3 +90,200 @@
 .dp-lead-widget-body {
   padding: 16px 18px 18px;
 }
+
+/* Lead booking form (unclaimed clinics) — was in lead-book-modal.php */
+#dp-book-widget .lb-date-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px 6px;
+  margin: 0 -2px;
+  scrollbar-width: thin;
+}
+
+#dp-book-widget .lb-date {
+  flex: 0 0 auto;
+  min-width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  border: 1.5px solid var(--line, #e2e8f0);
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.15s;
+  font: inherit;
+  color: inherit;
+}
+
+#dp-book-widget .lb-date:hover {
+  border-color: var(--teal-400, #2dd4bf);
+}
+
+#dp-book-widget .lb-date.is-active {
+  border-color: var(--teal-600, #0F9B6E);
+  background: var(--teal-600, #0F9B6E);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(15, 155, 110, 0.25);
+}
+
+#dp-book-widget .lb-dow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+#dp-book-widget .lb-day {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  margin-top: 2px;
+}
+
+#dp-book-widget .lb-mon {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+#dp-book-widget .lb-time-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+#dp-book-widget .lb-time {
+  background: #fff;
+  border: 1.5px solid var(--line, #e2e8f0);
+  border-radius: 10px;
+  padding: 10px 4px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-2, #475569);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+#dp-book-widget .lb-time:hover {
+  border-color: var(--teal-400, #2dd4bf);
+  color: var(--teal-700, #0d7a5a);
+}
+
+#dp-book-widget .lb-time.is-active {
+  background: var(--teal-600, #0F9B6E);
+  color: #fff;
+  border-color: var(--teal-600, #0F9B6E);
+  box-shadow: 0 4px 10px rgba(15, 155, 110, 0.25);
+}
+
+#dp-book-widget .lb-as-you {
+  background: var(--bg-2, #f8fafc);
+  padding: 9px 12px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  color: var(--ink-2, #475569);
+  margin-bottom: 12px;
+}
+
+#dp-book-widget .lb-as-you strong {
+  color: var(--ink, #0f172a);
+  font-weight: 600;
+}
+
+#dp-book-widget .lb-done {
+  text-align: center;
+  padding: 12px 4px;
+}
+
+#dp-book-widget .lb-done-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--teal-50, #ecfdf5);
+  color: var(--teal-700, #0d7a5a);
+  font-size: 30px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 14px;
+}
+
+#dp-book-widget .lb-done h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+#dp-book-widget .lb-done-summary {
+  background: var(--bg-2, #f8fafc);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+#dp-book-widget .lb-done-summary > div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13.5px;
+  padding: 4px 0;
+}
+
+#dp-book-widget .lb-done-summary strong {
+  font-weight: 600;
+}
+
+#dp-book-widget .lb-done-label {
+  color: var(--mute, #64748b);
+}
+
+#dp-book-widget .auth-form label {
+  display: block;
+  margin-bottom: 14px;
+}
+
+#dp-book-widget .auth-form .lbl {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mute, #64748b);
+  margin-bottom: 6px;
+}
+
+#dp-book-widget .auth-form input[type="text"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+}
+
+#dp-book-widget .auth-btn.primary {
+  width: 100%;
+  margin-top: 4px;
+}
+
+#dp-book-widget .auth-tos {
+  font-size: 11px;
+  color: var(--mute, #64748b);
+  text-align: center;
+  margin-top: 10px;
+}
+
+#dp-book-widget .auth-hint {
+  font-size: 12px;
+  color: var(--mute, #64748b);
+}
+
+#dp-book-widget .auth-error {
+  color: #b91c1c;
+  font-size: 13px;
+  margin-bottom: 8px;
+}

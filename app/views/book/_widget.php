@@ -44,7 +44,7 @@ $bookingError = $bookingError ?? null;
                     💡 Please arrive 10 minutes early and show your token at reception.
                 </div>
                 <div class="p-4">
-                    <a href="<?= htmlspecialchars(!empty($bookConfig['returnTo']) ? $bookConfig['returnTo'] : '/book/' . rawurlencode((string) ($slug ?? ''))) ?>"
+                    <a href="<?= htmlspecialchars((string) ($bookConfig['returnTo'] ?? $bookConfig['patientPanelUrl'] ?? '/find-a-doctor')) ?>"
                        class="block w-full rounded-xl bg-brand py-3 text-center text-sm font-semibold text-white hover:opacity-90">
                         Book another appointment
                     </a>

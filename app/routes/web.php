@@ -18,7 +18,6 @@ use App\Controllers\PrescriptionController;
 use App\Controllers\SettingsController;
 use App\Controllers\VisitController;
 use App\Controllers\AnalyticsController;
-use App\Controllers\BookController;
 use App\Controllers\StaffController;
 use App\Controllers\ApiV1Controller;
 use App\Controllers\DirectoryController;
@@ -271,14 +270,7 @@ return static function (RouteRegistrar $router): void {
         $api->post('/billing/{id}/simulate-pay', [BillingController::class, 'simulatePayApi']);
     });
 
-    $router->group(['middleware' => ['tenant', 'csrf', 'rate']], static function (GroupedRouteRegistrar $publicBook): void {
-        $publicBook->get('/book/{slug}', [BookController::class, 'show']);
-        $publicBook->post('/book/{slug}', [BookController::class, 'book']);
-    });
-
     $router->group(['middleware' => ['tenant', 'rate']], static function (GroupedRouteRegistrar $publicApi): void {
-        $publicApi->get('/book/{slug}/slots', [BookController::class, 'slotsApi']);
-        $publicApi->get('/book/{slug}/lookup', [BookController::class, 'lookupApi']);
         // Patient identity OTP — shared with marketing site (ecp_pid cookie).
         $publicApi->get('/api/patient-auth/me', [PatientAuthController::class, 'me']);
         $publicApi->post('/api/patient-auth/send-otp', [PatientAuthController::class, 'sendOtp']);

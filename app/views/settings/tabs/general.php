@@ -20,8 +20,8 @@ $qrSrc       = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                 </span>
                 <div>
-                    <h3 class="text-base font-semibold text-emerald-900">Your booking page</h3>
-                    <p class="text-xs text-emerald-700">Patients can self-book here — no sign-in, no app to install.</p>
+                    <h3 class="text-base font-semibold text-emerald-900">Your booking link</h3>
+                    <p class="text-xs text-emerald-700">Share this profile link — patients book from the sidebar on your listing.</p>
                 </div>
             </div>
 

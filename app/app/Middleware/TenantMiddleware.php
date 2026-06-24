@@ -19,17 +19,6 @@ final class TenantMiddleware implements MiddlewareInterface
             return $next();
         }
 
-        if (preg_match('#^/book/([a-z0-9-]+)(?:/(?:slots|lookup))?$#', $request->uri, $m)) {
-            $clinic = $this->loadClinic($m[1]);
-            if ($clinic !== null && (int) ($clinic['is_active'] ?? 0)) {
-                RequestContext::setClinic($clinic);
-
-                return $next();
-            }
-
-            return Response::html('Clinic not found', 404);
-        }
-
         if (str_starts_with($request->uri, '/queue/display')) {
             $slug = $request->query['clinic'] ?? null;
             if ($slug !== null && $slug !== '') {

@@ -51,6 +51,13 @@ function ecp_book_view_config(string $slug): array
     ];
 }
 
+function ecp_book_profile_url(string $slug): string
+{
+    ecp_book_bootstrap();
+
+    return \App\Services\DirectoryProfileUrlService::publicBookingUrlForTenantSlug($slug);
+}
+
 function ecp_book_dispatch(string $action, string $slug): Response
 {
     ecp_book_bootstrap();
@@ -64,16 +71,25 @@ function ecp_book_dispatch(string $action, string $slug): Response
     $controller = new BookController();
     $extras = ecp_book_view_config($slug);
 
+    if ($action === 'show') {
+        return Response::redirect(ecp_book_profile_url($slug), 301);
+    }
+
     if ($action === 'book') {
         $token = (string) ($request->post['_csrf'] ?? '');
         if (!CsrfService::verify($token !== '' ? $token : null)) {
-            return $controller->showWithExtras($request, $slug, $extras, 'Invalid session — please try again.');
+            if (session_status() !== PHP_SESSION_ACTIVE) {
+                session_start();
+            }
+            $_SESSION['ecp_book_error'] = 'Invalid session — please try again.';
+
+            return Response::redirect(ecp_book_profile_url($slug));
         }
 
         return $controller->bookWithExtras($request, $slug, $extras);
     }
 
-    return $controller->showWithExtras($request, $slug, $extras);
+    return Response::redirect(ecp_book_profile_url($slug), 301);
 }
 
 function ecp_book_slots(string $slug): Response
@@ -145,11 +161,14 @@ function ecp_profile_booking_context(array $profile): array
     }
     $confirmation = $_SESSION['ecp_book_flash'] ?? null;
     unset($_SESSION['ecp_book_flash']);
+    $bookingError = $_SESSION['ecp_book_error'] ?? null;
+    unset($_SESSION['ecp_book_error']);
 
     if (empty($profile['is_claimed']) || empty($profile['tenant_slug'])) {
         return array_merge($base, [
             'mode' => 'lead',
             'confirmation' => null,
+            'bookingError' => is_string($bookingError) ? $bookingError : null,
         ]);
     }
 
@@ -179,7 +198,7 @@ function ecp_profile_booking_context(array $profile): array
             'confirmation' => is_array($confirmation) ? $confirmation : null,
             'csrf' => CsrfService::token(),
             'brandColor' => $clinic['brand_color'] ?? '#0F9B6E',
-            'bookingError' => null,
+            'bookingError' => is_string($bookingError) ? $bookingError : null,
             'embedMode' => true,
         ]);
     } catch (\Throwable $e) {

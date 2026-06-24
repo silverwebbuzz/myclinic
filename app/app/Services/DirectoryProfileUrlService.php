@@ -22,7 +22,7 @@ final class DirectoryProfileUrlService
             return $site . $path . '#book';
         }
 
-        return $site . '/book/' . rawurlencode($tenantSlug);
+        return $site . '/find-a-doctor';
     }
 
     public static function publicBookingUrlForTenantSlug(string $tenantSlug): string

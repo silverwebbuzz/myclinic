@@ -349,6 +349,7 @@ function ecp_profile_build_payload(PDO $db, array $row, string $entityType, stri
         'rating' => $rating,
         'reviews' => $reviews,
         'is_claimed' => $isClaimed,
+        'tenant_slug' => !empty($row['tenant_slug']) ? (string) $row['tenant_slug'] : null,
         'bio' => trim((string) ($row['bio'] ?? '')),
         'languages' => $langs,
         'opening_hours' => $hours,
