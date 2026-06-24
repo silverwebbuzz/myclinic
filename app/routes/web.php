@@ -29,6 +29,7 @@ use App\Controllers\PartnerAdminController;
 use App\Controllers\PartnerAuthController;
 use App\Controllers\PartnerDashboardController;
 use App\Controllers\TeamSettingsController;
+use App\Controllers\SymptomsController;
 use App\Controllers\FollowUpController;
 use App\Controllers\DietTemplateController;
 use App\Controllers\DoctorScheduleController;
