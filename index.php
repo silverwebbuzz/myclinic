@@ -78,10 +78,10 @@ $extraHead = '<script type="application/ld+json">' . json_encode([
     '@context' => 'https://schema.org',
     '@type'    => 'WebSite',
     'name'     => 'eClinicPro',
-    'url'      => 'https://eclinicpro.com',
+    'url'      => ecp_site_url('/'),
     'potentialAction' => [
         '@type'       => 'SearchAction',
-        'target'      => 'https://eclinicpro.com/find-a-doctor?q={search_term_string}',
+        'target'      => ecp_site_url('/find-a-doctor?q={search_term_string}'),
         'query-input' => 'required name=search_term_string',
     ],
 ], JSON_UNESCAPED_SLASHES) . '</script>';
@@ -1150,7 +1150,7 @@ require __DIR__ . '/partials/header.php';
                         </div>
                     </div>
 
-                    <a href="https://app.eclinicpro.com/register" class="cta-btn">Start 30-day free trial</a>
+                    <a href="<?= e(ecp_portal_url('/register')) ?>" class="cta-btn">Start 30-day free trial</a>
                     <div class="trust-row">
                         <span class="trust-item"><svg viewBox="0 0 14 14">
                                 <polyline points="2,7 5,10 12,3" />

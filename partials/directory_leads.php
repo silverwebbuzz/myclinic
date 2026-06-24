@@ -29,6 +29,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/sms.php';
 
 // ---------------------------------------------------------------------
@@ -59,7 +60,7 @@ function _lead_settings_fallback(): array {
         'provider_template_id' => null,
         'template_body' => 'eClinicPro: {patient_name} wants to book you {date} at {time}. View: {url} Reply STOP to opt out.',
         'quiet_hours_start' => '21:00:00', 'quiet_hours_end' => '08:00:00',
-        'lead_landing_base' => 'https://eclinicpro.com/L/',
+        'lead_landing_base' => ecp_site_url('/L/'),
     ];
 }
 
@@ -148,7 +149,8 @@ function ecp_lead_create(int $doctorId, ?array $patientIdentity, string $type, a
                 ? date('d M Y', strtotime((string) $extra['preferred_date']))
                   . (!empty($extra['preferred_time']) ? ', ' . date('g:i A', strtotime('2000-01-01 ' . $extra['preferred_time'])) : '')
                 : 'your requested time';
-            $confirmLink = 'https://eclinicpro.com/L/' . $token;
+            $landingBase = rtrim((string) (ecp_lead_settings()['lead_landing_base'] ?? ecp_site_url('/L/')), '/');
+            $confirmLink = $landingBase . '/' . $token;
 
             // 1) Patient — "request sent, you can also call directly".
             if ($patientPhone !== '') {

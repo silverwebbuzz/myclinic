@@ -27,7 +27,7 @@ if (is_file($cachePath) && (time() - filemtime($cachePath)) < $cacheTtl) {
     exit;
 }
 
-$base = 'https://eclinicpro.com';
+$base = rtrim(ecp_site_url('/'), '/');
 $now  = date('Y-m-d');
 
 ob_start();

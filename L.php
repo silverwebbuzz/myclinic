@@ -218,7 +218,7 @@ $createdNice = date('M j, g:i A', strtotime((string) $lead['created_at']));
                     🚀 Claim my clinic free
                 </button>
                 <p class="L-trust">
-                    Already a member? <a href="https://app.eclinicpro.com/doctor/login">Sign in</a>
+                    Already a member? <a href="<?= e(ecp_portal_url('/doctor/login')) ?>">Sign in</a>
                 </p>
             </div>
         </section>

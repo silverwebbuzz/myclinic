@@ -76,12 +76,12 @@ if ($totalDoctors === 0) $totalDoctors = $totalMatches;
 
 // ---- Build $extraHead with canonical + JSON-LD schema (SEO pages only) ----
 if ($seoMeta) {
-    $canonical = 'https://eclinicpro.com' . $seoMeta['canonical'];
+    $canonical = ecp_site_url($seoMeta['canonical']);
 
     // 1. BreadcrumbList
     $crumbs = [
-        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Home', 'item' => 'https://eclinicpro.com/'],
-        ['@type' => 'ListItem', 'position' => 2, 'name' => 'Doctors', 'item' => 'https://eclinicpro.com/find-a-doctor'],
+        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Home', 'item' => ecp_site_url('/')],
+        ['@type' => 'ListItem', 'position' => 2, 'name' => 'Doctors', 'item' => ecp_site_url('/find-a-doctor')],
     ];
     if (!empty($seoMeta['specialty'])) {
         $crumbs[] = [
@@ -1682,7 +1682,7 @@ require __DIR__ . '/partials/header.php';
             bookDoctor(d) {
                 // Claimed clinic → send to the real portal booking page.
                 if (d.is_claimed && d.slug) {
-                    window.open('https://app.eclinicpro.com/book/' + d.slug, '_blank');
+                    window.open((window.ECP_PORTAL_URL || 'https://app.eclinicpro.com') + '/book/' + d.slug, '_blank');
                     return;
                 }
                 // Unclaimed → patient must be logged in; lead is recorded + clinic notified.

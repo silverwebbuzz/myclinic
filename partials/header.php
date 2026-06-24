@@ -42,9 +42,9 @@ if (!isset($canonicalUrl)) {
     $reqPath = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
     // Drop trailing .php if present — Apache rewrites canonical URLs anyway.
     $reqPath = preg_replace('/\.php$/', '', (string) $reqPath);
-    $canonicalUrl = 'https://eclinicpro.com' . $reqPath;
+    $canonicalUrl = ecp_site_url($reqPath);
 }
-$ogImage = $ogImage ?? 'https://eclinicpro.com/assets/img/logos/logo.png';
+$ogImage = $ogImage ?? ecp_site_url('/assets/img/logos/logo.png');
 $ogType  = $ogType  ?? 'website';
 
 // Resolve the logged-in patient once, server-side. Passed to the header
@@ -107,8 +107,8 @@ $ecpPatientJson = $ecpPatient
         "@context": "https://schema.org",
         "@type": "Organization",
         "name": "eClinicPro",
-        "url": "https://eclinicpro.com",
-        "logo": "https://eclinicpro.com/assets/img/logos/logo.png",
+        "url": "<?= e(ecp_site_url('/')) ?>",
+        "logo": "<?= e(ecp_site_url('/assets/img/logos/logo.png')) ?>",
         "description": "The clinic operating system — patient records, prescriptions, appointments, billing — all in one place.",
         "sameAs": [],
         "contactPoint": {
@@ -150,6 +150,7 @@ $ecpPatientJson = $ecpPatient
 <!-- Hand the initial session blob to JS via a separate JSON script tag
      so we don't have to embed PHP inside an Alpine x-data attribute. -->
 <script>window.ECP_PATIENT = <?= $ecpPatientJson ?>;</script>
+<script>window.ECP_PORTAL_URL = <?= json_encode(rtrim(ecp_portal_url('/'), '/'), JSON_UNESCAPED_SLASHES) ?>;</script>
 
 <body class="<?= e($bodyClass) ?>"
       x-data="ecpHeader()"

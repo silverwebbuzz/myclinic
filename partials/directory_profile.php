@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/seo_slugs.php';
 
 /** @return 'clinic'|'doctor' */
@@ -361,7 +362,7 @@ function ecp_profile_build_payload(PDO $db, array $row, string $entityType, stri
         'doctors' => $doctors,
         'related' => $related,
         'book_url' => ($isClaimed && !empty($row['tenant_slug']))
-            ? 'https://app.eclinicpro.com/book/' . rawurlencode((string) $row['tenant_slug']) : null,
+            ? ecp_portal_url('/book/' . rawurlencode((string) $row['tenant_slug'])) : null,
         'meta_title' => $displayName . ' — ' . $specLabel . ' in ' . $cityName . ' | eClinicPro',
         'meta_description' => $displayName . ' — ' . $specLabel . ' in ' . $cityName . '. View timings, treatments and book online.',
     ];

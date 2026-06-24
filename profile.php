@@ -21,7 +21,7 @@ $activePage = 'find';
 $hideFinalCta = true;
 $pageTitle = (string) ($p['meta_title'] ?? 'Profile — eClinicPro');
 $metaDesc = (string) ($p['meta_description'] ?? '');
-$canonicalUrl = 'https://eclinicpro.com' . (string) ($p['canonical'] ?? '');
+$canonicalUrl = ecp_site_url((string) ($p['canonical'] ?? ''));
 $hoursLines = ecp_profile_hours_lines($p['opening_hours'] ?? null);
 $showDoctorsTab = ($p['entity_type'] ?? '') === 'clinic';
 

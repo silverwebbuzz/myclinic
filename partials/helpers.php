@@ -36,9 +36,22 @@ function ecp_num(int $n): string
 }
 
 /**
- * Portal URL helper — change once if the subdomain ever moves.
+ * Public marketing site base URL (e.g. https://eclinicpro.com).
+ * Reads SITE_URL from env (app/.env), falling back to the production domain.
+ * Use this instead of hardcoding the domain in canonicals, JSON-LD, links, etc.
+ */
+function ecp_site_url(string $path = '/'): string
+{
+    $base = rtrim(ecp_env('SITE_URL', 'https://eclinicpro.com'), '/');
+    return $base . $path;
+}
+
+/**
+ * Portal URL helper — the doctor/clinic app (e.g. https://app.eclinicpro.com).
+ * Reads APP_URL from env, falling back to the production portal domain.
  */
 function ecp_portal_url(string $path = '/'): string
 {
-    return 'https://app.eclinicpro.com' . $path;
+    $base = rtrim(ecp_env('APP_URL', 'https://app.eclinicpro.com'), '/');
+    return $base . $path;
 }

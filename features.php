@@ -875,7 +875,7 @@ require __DIR__ . '/partials/header.php';
                     <li>Unlimited patients, unlimited staff users</li>
                     <li>30-day free trial — no credit card</li>
                 </ul>
-                <a href="https://app.eclinicpro.com/register" class="btn btn-teal btn-block">
+                <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-teal btn-block">
                     Start 30-day free trial →
                 </a>
                 <p class="plan-fineprint">No card needed. Cancel anytime during trial.</p>
