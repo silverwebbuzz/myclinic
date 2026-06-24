@@ -39,6 +39,10 @@ final class BookController
             ];
         }
 
+        // If the visitor is logged in on /patient, prefill name+phone so we don't
+        // ask again (and the booking form can lock those fields).
+        $me = PublicBookingService::currentPatientIdentity();
+
         return Response::html(View::render('book/index', [
             'clinic' => $clinic,
             'doctors' => $doctors,
@@ -47,6 +51,9 @@ final class BookController
             'days' => $days,
             'windowDays' => $windowDays,
             'confirmation' => null,
+            'patientName' => $me['name'] ?? '',
+            'patientPhone' => $me['phone'] ?? '',
+            'patientLoggedIn' => $me !== null,
             'csrf' => CsrfService::token(),
         ]));
     }

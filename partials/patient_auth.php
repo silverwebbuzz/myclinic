@@ -201,26 +201,45 @@ function ecp_patient_backfill_clinic_charts(int $identityId, string $normalizedP
     $db = ecp_db();
     if (!$db) return;
 
-    // The clinic side normalizes phones differently (PatientService strips +/spaces).
-    // Match on the raw digits to be safe.
-    $digits = preg_replace('/\D/', '', $normalizedPhone) ?? '';
-    // Indian numbers: try the +91-stripped 10-digit form too.
-    $ten = (strlen($digits) === 12 && str_starts_with($digits, '91')) ? substr($digits, 2) : $digits;
+    // Phones are stored in DIFFERENT shapes across the system:
+    //   - patient_identities: E.164 from ecp_normalize_phone (e.g. +919374249829)
+    //   - patients (clinic chart): PatientService::normalizePhone keeps whatever
+    //     was typed (e.g. 9374249829, or 91 9374... or +91...).
+    // Exact matching therefore misses the same person. The only reliable key both
+    // sides share is the LAST 10 DIGITS, so we compare on that symmetrically.
+    $last10 = ecp_phone_last10($normalizedPhone);
+    if ($last10 === '') return;
 
+    // RIGHT(digits_only(phone), 10) on the chart side == our identity's last 10.
+    // Use nested REPLACE() (works on MySQL 5.7/8 and MariaDB) to strip the common
+    // separators before taking the last 10 chars. Phones never contain letters,
+    // so stripping + - ( ) space yields a digits-only string.
+    // COLLATE pins the bound literal so a mixed server/column collation default
+    // never raises "#1267 Illegal mix of collations".
     $stmt = $db->prepare(
         'UPDATE patients
          SET identity_id = :iid
          WHERE identity_id IS NULL
-           AND (
-                REPLACE(REPLACE(REPLACE(phone, " ", ""), "-", ""), "+", "") = :d
-             OR REPLACE(REPLACE(REPLACE(phone, " ", ""), "-", ""), "+", "") = :t
-           )'
+           AND RIGHT(
+                 REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, " ", ""), "-", ""), "+", ""), "(", ""), ")", ""),
+                 10
+               ) = :l10 COLLATE utf8mb4_unicode_ci'
     );
     $stmt->execute([
         'iid' => $identityId,
-        'd'   => $digits,
-        't'   => $ten,
+        'l10' => $last10,
     ]);
+}
+
+/**
+ * Canonical phone key for cross-layer identity matching: the last 10 significant
+ * digits (drops +, spaces, and a leading country code like 91/0). Returns '' if
+ * fewer than 10 digits are present.
+ */
+function ecp_phone_last10(string $phone): string {
+    $digits = preg_replace('/\D/', '', $phone) ?? '';
+    if (strlen($digits) < 10) return '';
+    return substr($digits, -10);
 }
 
 // ---------------------------------------------------------------------

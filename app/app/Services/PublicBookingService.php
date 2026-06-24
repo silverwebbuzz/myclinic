@@ -128,20 +128,38 @@ final class PublicBookingService
         }
 
         $phone = PatientService::normalizePhone((string) ($data['phone'] ?? ''));
+        $bookerName = trim((string) ($data['name'] ?? ''));
 
-        // ----- Identity linking -----
-        // Look up patient_identities by the same phone. If the booker has
-        // signed up on eclinicpro.com/patient, this gives us their global
-        // identity id — we'll stamp it on the clinic chart so /patient's
-        // booking history can find this appointment.
-        $identityId = self::resolveIdentityByPhone($phone);
+        // ----- Identity resolution (front-side person) -----
+        // Priority:
+        //  1) Logged-in /patient session — trust their identity & phone directly.
+        //  2) Phone match against an existing identity.
+        //  3) No identity yet → REGISTER one now (we already collected a verified
+        //     name + phone), so the booker gets a /patient account and their
+        //     future booking history is linked from the start.
+        $loggedIn = self::currentPatientIdentity();
+        if ($loggedIn !== null) {
+            $identityId = (int) $loggedIn['id'];
+            // Trust the account's own phone/name over anything posted.
+            if (!empty($loggedIn['phone'])) {
+                $phone = PatientService::normalizePhone((string) $loggedIn['phone']);
+            }
+            if ($bookerName === '' && !empty($loggedIn['name'])) {
+                $bookerName = trim((string) $loggedIn['name']);
+            }
+        } else {
+            $identityId = self::resolveIdentityByPhone($phone);
+            if ($identityId === null && $phone !== '' && $bookerName !== '') {
+                $identityId = self::registerIdentity($phone, $bookerName);
+            }
+        }
 
         // Find the per-clinic chart (one patients row per clinic).
         $patient = $phone !== '' ? PatientService::findByPhone($clinicId, $phone) : null;
         if ($patient === null) {
             $patient = PatientService::create($clinicId, [
-                'name'        => $data['name'] ?? 'Patient',
-                'phone'       => $data['phone'] ?? '',
+                'name'        => $bookerName !== '' ? $bookerName : 'Patient',
+                'phone'       => $phone !== '' ? $phone : (string) ($data['phone'] ?? ''),
                 'source'      => 'online',
                 'identity_id' => $identityId,    // may be null — that's fine
             ]);
@@ -197,15 +215,137 @@ final class PublicBookingService
     }
 
     /**
+     * Resolve the front-side logged-in patient from the `ecp_pid` session cookie.
+     * Read-only mirror of partials/patient_auth.php's ecp_patient_current(): the
+     * front-end (/patient) and this app share one database, so we can validate
+     * the same patient_sessions token here. Returns the patient_identities row
+     * (id, name, phone, …) or null when not logged in / session invalid.
+     *
+     * @return array<string,mixed>|null
+     */
+    public static function currentPatientIdentity(): ?array
+    {
+        $token = (string) ($_COOKIE['ecp_pid'] ?? '');
+        // Same shape guard the front-end uses: 64-char hex token.
+        if (strlen($token) !== 64 || !ctype_xdigit($token)) {
+            return null;
+        }
+
+        try {
+            $pdo = \App\Core\Database::connection();
+            $stmt = $pdo->prepare(
+                'SELECT pi.*
+                 FROM patient_sessions ps
+                 JOIN patient_identities pi ON pi.id = ps.identity_id
+                 WHERE ps.id = :id AND ps.expires_at > NOW() AND pi.is_active = 1
+                 LIMIT 1'
+            );
+            $stmt->execute(['id' => $token]);
+            $row = $stmt->fetch();
+            return $row ?: null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Register a new front-side identity for a booker who has no account yet.
+     * Stores the phone in the SAME E.164 form the front-end uses (ecp_normalize_phone)
+     * so a later /patient OTP login on the same number finds this very identity.
+     * source='self_signup' — they actively gave name + phone to book.
+     * Returns the new identity id, or null if it could not be created.
+     */
+    private static function registerIdentity(string $phone, string $name): ?int
+    {
+        $e164 = self::toE164($phone);
+        if ($e164 === '') {
+            return null;
+        }
+        $name = trim($name) !== '' ? trim($name) : 'Patient';
+
+        try {
+            // Guard against a race / pre-existing row on the canonical phone:
+            // re-check by last-10 first, then insert.
+            $existing = self::resolveIdentityByPhone($e164);
+            if ($existing !== null) {
+                return $existing;
+            }
+
+            return (int) \App\Core\QueryBuilder::table('patient_identities')->insert([
+                'phone'  => $e164,
+                'name'   => $name,
+                'source' => 'self_signup',
+            ]);
+        } catch (\Throwable $e) {
+            // Unique-key collision or DB hiccup — fall back to a fresh lookup so
+            // booking still links if the row now exists; never break the booking.
+            error_log('[PublicBookingService::registerIdentity] ' . $e->getMessage());
+            return self::resolveIdentityByPhone($e164);
+        }
+    }
+
+    /**
+     * Canonical E.164 form matching the front-end's ecp_normalize_phone():
+     * 10-digit → +91XXXXXXXXXX (India default); already-+ kept; 0/91 prefixes
+     * handled. Returns '' if no usable digits.
+     */
+    private static function toE164(string $raw): string
+    {
+        $s = preg_replace('/[\s\-()]/', '', trim($raw)) ?? '';
+        if ($s === '') {
+            return '';
+        }
+        if ($s[0] === '+') {
+            $rest = preg_replace('/\D/', '', substr($s, 1)) ?? '';
+            return $rest === '' ? '' : '+' . $rest;
+        }
+        $digits = preg_replace('/\D/', '', $s) ?? '';
+        if ($digits === '') {
+            return '';
+        }
+        if (strlen($digits) === 10) {
+            return '+91' . $digits;
+        }
+        if (strlen($digits) === 11 && $digits[0] === '0') {
+            return '+91' . substr($digits, 1);
+        }
+        if (strlen($digits) === 12 && str_starts_with($digits, '91')) {
+            return '+' . $digits;
+        }
+        return '+' . $digits;
+    }
+
+    /**
      * Look up the patient_identities row that owns this phone, if any.
      * Returns the identity id or null.
      */
     private static function resolveIdentityByPhone(string $normalizedPhone): ?int
     {
         if ($normalizedPhone === '') return null;
-        $row = \App\Core\QueryBuilder::table('patient_identities')
-            ->where('phone', '=', $normalizedPhone)
-            ->first();
+
+        // patient_identities stores E.164 (+91…) while booking normalizes to a
+        // looser form, so an exact match misses the same person. Match on the
+        // last 10 digits — the only key both layers reliably share.
+        $digits = preg_replace('/\D/', '', $normalizedPhone) ?? '';
+        if (strlen($digits) < 10) {
+            return null;
+        }
+        $last10 = substr($digits, -10);
+
+        $pdo = \App\Core\Database::connection();
+        // COLLATE pins the bound literal's collation to the column's so a mixed
+        // server/column default never raises "#1267 Illegal mix of collations".
+        $stmt = $pdo->prepare(
+            'SELECT id FROM patient_identities
+             WHERE RIGHT(
+                 REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, " ", ""), "-", ""), "+", ""), "(", ""), ")", ""),
+                 10
+             ) = :l10 COLLATE utf8mb4_unicode_ci
+             ORDER BY id ASC
+             LIMIT 1'
+        );
+        $stmt->execute(['l10' => $last10]);
+        $row = $stmt->fetch();
         return $row ? (int) $row['id'] : null;
     }
 }
