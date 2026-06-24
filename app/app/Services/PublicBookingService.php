@@ -91,11 +91,32 @@ final class PublicBookingService
     public static function isWithinBookingWindow(int $clinicId, string $date): bool
     {
         $days = self::bookingWindowDays($clinicId);
-        $ts = strtotime($date);
-        if ($ts === false) return false;
-        $today = strtotime(date('Y-m-d'));
-        $diff = (int) (($ts - $today) / 86400);
-        return $diff >= 0 && $diff <= $days;
+
+        // Compute the day difference in the CLINIC's timezone so the window
+        // boundary matches SlotService (which also works in clinic-local time).
+        // Using server-local date() here caused the boundary day to be wrong
+        // near midnight when the server and clinic are in different zones.
+        $tz = SlotService::clinicTimezone($clinicId);
+        try {
+            $zone = new \DateTimeZone($tz);
+            $target = \DateTime::createFromFormat('Y-m-d', trim($date), $zone);
+            if ($target === false) {
+                return false;
+            }
+            $target->setTime(0, 0, 0);
+            $today = (new \DateTime('now', $zone))->setTime(0, 0, 0);
+        } catch (\Throwable) {
+            return false;
+        }
+
+        // Whole-day difference (DST-safe: both anchored to local midnight).
+        $diff = (int) floor(($target->getTimestamp() - $today->getTimestamp()) / 86400);
+
+        // "N days" means a window of N calendar days starting today, i.e. today
+        // plus the next N-1 days are bookable. So day 0..N-1 are allowed; day N
+        // is the first day OUTSIDE the window. (Previously `<= $days` wrongly
+        // allowed N+1 days.)
+        return $diff >= 0 && $diff < $days;
     }
 
     /** @param array<string, mixed> $data @return array<string, mixed> */

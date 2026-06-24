@@ -33,7 +33,9 @@ final class BookController
                 'day' => (int) date('d', $ts),
                 'month' => date('M', $ts),
                 'is_today' => $i === 0,
-                'within_window' => $i <= $windowDays,
+                // Matches PublicBookingService::isWithinBookingWindow: "N days"
+                // means day offsets 0..N-1 are bookable (day N is outside).
+                'within_window' => $i < $windowDays,
             ];
         }
 

@@ -1,8 +1,26 @@
 <?php
 $weekdaySource = $workingHours['mon'] ?? ['enabled' => false, 'sessions' => []];
 $weekdaySessions = is_array($weekdaySource['sessions'] ?? null) ? $weekdaySource['sessions'] : [];
-$morning = is_array($weekdaySessions[0] ?? null) ? $weekdaySessions[0] : [];
-$evening = is_array($weekdaySessions[1] ?? null) ? $weekdaySessions[1] : [];
+// Classify each saved session into the Morning / Evening field group by its
+// START TIME, not by array index. When only one session is enabled it is stored
+// at index 0; assuming index 0 == morning previously loaded an evening session
+// into the Morning fields and silently swapped the doctor's hours.
+[$morning, $evening] = (static function (array $sessions): array {
+    $morning = [];
+    $evening = [];
+    foreach ($sessions as $s) {
+        if (!is_array($s) || empty($s['start'])) {
+            continue;
+        }
+        // Before 13:00 → morning slot; 13:00 or later → evening slot.
+        if (substr((string) $s['start'], 0, 5) < '13:00') {
+            if ($morning === []) { $morning = $s; }
+        } else {
+            if ($evening === []) { $evening = $s; }
+        }
+    }
+    return [$morning, $evening];
+})($weekdaySessions);
 $morningEnabled = !empty($morning['start']) && !empty($morning['end']);
 $eveningEnabled = !empty($evening['start']) && !empty($evening['end']);
 
