@@ -963,6 +963,8 @@ function visitScreenV2(cfg) {
         peekLoading: false,
         chargesStatus: 'idle',
         chargesLabel: '',
+        _completing: false,           // re-entrancy guard for confirmComplete
+        prescriptionsCleared: false,  // set when doctor deliberately removes all meds
 
         // Call on any user edit so manual save / complete knows there's something to persist.
         markDirty() { this.dirty = true; },
@@ -998,15 +1000,35 @@ function visitScreenV2(cfg) {
         // + draft save first so nothing entered just before is lost.
         async confirmComplete(ev) {
             ev.preventDefault();
+            if (this._completing) return;             // guard against double-submit
             if (this.chargesDirty && this.charges.length) {
                 alert('You have unsaved charges. Please click "Save charges" before completing the visit.');
                 return;
             }
             if (!confirm('Complete this visit?')) return;
-            // Flush symptoms + the main form before the visit is locked.
-            await this.persistSymptomsNow();
-            if (this.dirty) { try { await this.save(); } catch (e) {} }
-            ev.target.submit();
+
+            this._completing = true;
+            const form = ev.target;
+            try {
+                // Flush symptoms + force-save the main form BEFORE the visit is
+                // locked. If the save fails, abort — completing now would lock the
+                // visit read-only and permanently lose the unsaved data.
+                await this.persistSymptomsNow();
+                const ok = await this.save(true);
+                if (!ok) {
+                    alert('Could not save the visit before completing — ' +
+                          (this.saveLabel || 'please try again') +
+                          '.\n\nThe visit was NOT completed so your data is safe. ' +
+                          'Fix the issue and try again.');
+                    this._completing = false;
+                    return;
+                }
+                // Save confirmed persisted — now it is safe to lock the visit.
+                form.submit();
+            } catch (e) {
+                this._completing = false;
+                alert('Unexpected error before completing the visit. It was NOT completed — your data is safe. Please try again.');
+            }
         },
         async saveCharges() {
             if (!this.editable || this.charges.length === 0) return;
@@ -1133,6 +1155,7 @@ function visitScreenV2(cfg) {
                 visited_at: this.visited_at,
                 vitals: this.vitals,
                 prescriptions: cleanRx,
+                prescriptions_cleared: this.prescriptionsCleared && cleanRx.every(p => !p.drug_id && !p.remedy_id && !p.drug_name && !p.frequency_preset && !p.dose_amount),
                 case_taking: this.case_taking,
                 specialty_data: { ...this.specialty_data, case_taking: this.case_taking },
                 _form_blob: {
@@ -1146,9 +1169,12 @@ function visitScreenV2(cfg) {
             };
         },
 
-        async save() {
-            // Only save when the doctor explicitly requests it (or before complete).
-            if (!this.editable || !this.dirty) return;
+        // Persist the current form. Returns true on confirmed success, false on
+        // failure. Pass force=true (used before completing) to save even when the
+        // dirty flag is stale — guarantees nothing entered is lost on completion.
+        async save(force = false) {
+            if (!this.editable) return true;          // read-only: nothing to persist
+            if (!this.dirty && !force) return true;   // nothing changed
             this.saveStatus = 'saving';
             this.saveLabel = 'Saving…';
             try {
@@ -1164,13 +1190,15 @@ function visitScreenV2(cfg) {
                     this.saveStatus = 'saved';
                     this.saveLabel = '✓ Saved ' + new Date().toLocaleTimeString();
                     this.dirty = false;
+                    this.prescriptionsCleared = false;   // consumed; reset for next edits
                     this.vitalsWarnings = data.warnings || [];
-                } else {
-                    throw new Error(data.error || ('Save failed (HTTP ' + r.status + ')'));
+                    return true;
                 }
+                throw new Error(data.error || ('Save failed (HTTP ' + r.status + ')'));
             } catch (e) {
                 this.saveStatus = 'error';
                 this.saveLabel = '⚠ ' + e.message;
+                return false;
             }
         },
 
@@ -1207,12 +1235,19 @@ function visitScreenV2(cfg) {
         removeRxLine(idx) {
             this.dirty = true;
             this.prescriptions.splice(idx, 1);
+            // If the doctor has now removed every line, mark this as a deliberate
+            // clear so the next save is allowed to wipe the saved medicines.
+            // (A blank autosave without this flag is treated as a no-op server-side.)
+            if (!(this.prescriptions || []).some(p => p.drug_id || p.remedy_id || p.drug_name || p.frequency_preset || p.dose_amount)) {
+                this.prescriptionsCleared = true;
+            }
         },
 
         setFollowUp(days) {
             const d = new Date();
             d.setDate(d.getDate() + days);
             this.follow_up_date = d.toISOString().slice(0, 10);
+            this.markDirty();
         },
 
         async cloneLastVisit() {
@@ -1673,6 +1708,11 @@ function prescriptionPanel() {
 
             line._suggestions = [];
             line._dropdown = false;
+
+            // Picking a medicine from the dropdown is the primary way doctors add
+            // an Rx line — it MUST mark the visit dirty so the pre-complete save
+            // actually fires. Without this, picked medicines are silently dropped.
+            if (parent && typeof parent.markDirty === 'function') parent.markDirty();
         },
 
         addTaperingStep(line) {
@@ -1684,6 +1724,7 @@ function prescriptionPanel() {
                 preset: last ? last.preset : (line.frequency_preset || '1-0-1'),
                 food: last ? last.food : (line.food_timing || 'after'),
             });
+            if (window.__visit && typeof window.__visit.markDirty === 'function') window.__visit.markDirty();
         },
     };
 }

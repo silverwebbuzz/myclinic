@@ -148,12 +148,59 @@ final class PrescriptionService
     }
 
     /** @param list<array<string, mixed>> $lines */
-    public static function syncForVisit(int $clinicId, int $visitId, int $patientId, array $lines): void
+    /**
+     * True when a prescription line carries any meaningful medicine content.
+     * A free-typed name (without a catalog pick) counts, as do frequency/dose —
+     * so a half-filled line a doctor is mid-entry on is never treated as empty.
+     *
+     * @param array<string,mixed> $line
+     */
+    private static function lineHasContent(array $line): bool
     {
+        $typedName = trim((string) ($line['drug_name'] ?? ''));
+
+        return !empty($line['drug_id']) || !empty($line['remedy_id'])
+            || !empty($line['dosage']) || $typedName !== ''
+            || !empty($line['frequency_preset']) || !empty($line['dose_amount']);
+    }
+
+    /**
+     * Replace the prescription lines for a visit with the supplied set.
+     *
+     * SAFETY: this is a destructive delete-then-reinsert sync. A blank or
+     * not-yet-hydrated autosave payload must never be allowed to wipe a visit's
+     * existing medicines. So when the incoming payload carries NO content-bearing
+     * lines but the visit already has prescriptions on record, we skip the sync
+     * entirely (treat it as "nothing to change") unless the caller explicitly
+     * asks to clear via $allowClear — the only path that may legitimately delete
+     * every line is an intentional "remove all medicines" action.
+     */
+    public static function syncForVisit(int $clinicId, int $visitId, int $patientId, array $lines, bool $allowClear = false): void
+    {
+        // Filter to the lines that actually carry medicine content up front, so
+        // the wipe-guard and the insert loop agree on what "non-empty" means.
+        $contentLines = array_values(array_filter($lines, static fn ($line) => is_array($line) && self::lineHasContent($line)));
+
+        if ($contentLines === [] && !$allowClear) {
+            // Nothing meaningful to save. Don't touch existing rows — a partial or
+            // pre-hydration autosave previously deleted everything here. Only wipe
+            // when the visit genuinely has no prescriptions yet (no-op anyway).
+            $existing = QueryBuilder::table('prescriptions')
+                ->forClinic($clinicId)
+                ->where('visit_id', '=', $visitId)
+                ->count();
+            if ($existing > 0) {
+                return; // protect the doctor's already-saved medicines
+            }
+        }
+
         QueryBuilder::table('prescriptions')
             ->forClinic($clinicId)
             ->where('visit_id', '=', $visitId)
             ->delete();
+
+        // Only the content-bearing lines get reinserted (empty rows are dropped).
+        $lines = $contentLines;
 
         $mode = SpecialtyAdapter::usesHomeopathicRx() ? 'homeopathic' : 'allopathic';
         $order = 0;
@@ -161,17 +208,9 @@ final class PrescriptionService
         $remedyIdsUsed = [];
 
         foreach ($lines as $line) {
-            // Keep a line if it has ANY meaningful content. Previously this
-            // only checked drug_id/remedy_id/dosage, so a free-typed medicine
-            // (name without a catalog pick) was silently dropped. Now we also
-            // keep lines that carry a typed name, frequency or dose.
+            // $lines is already filtered to content-bearing lines (see top of
+            // method / lineHasContent), so every line here is worth saving.
             $typedName = trim((string) ($line['drug_name'] ?? ''));
-            $hasContent = !empty($line['drug_id']) || !empty($line['remedy_id'])
-                || !empty($line['dosage']) || $typedName !== ''
-                || !empty($line['frequency_preset']) || !empty($line['dose_amount']);
-            if (!$hasContent) {
-                continue;
-            }
 
             // If the doctor typed a medicine but didn't pick from the catalog
             // (no drug_id), preserve the typed name in `dosage` so it isn't lost

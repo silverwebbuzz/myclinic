@@ -116,6 +116,80 @@ final class PrescriptionAutosaveTest extends DatabaseTestCase
         $this->assertSame(0, $count, 'Empty prescription line should be skipped');
     }
 
+    /**
+     * Wipe-guard: once a visit has saved medicines, a later blank/partial
+     * autosave (empty prescriptions array — e.g. a not-yet-hydrated form or a
+     * stray autosave) must NOT delete them. This is the core "medicines
+     * disappear on complete" regression.
+     */
+    public function testBlankAutosaveDoesNotWipeExistingPrescriptions(): void
+    {
+        $this->requireDatabase();
+        $clinic = $this->createClinic('-rx4');
+        $this->setClinicContext($clinic['clinic_id'], $clinic['user_id']);
+        $this->enableModules($clinic['clinic_id']);
+
+        $patient = PatientService::create($clinic['clinic_id'], [
+            'name' => 'Rx Patient 4', 'phone' => '9333333334', 'gender' => 'F', 'dob' => '1993-01-01',
+        ]);
+        $visit = VisitService::startForPatient($clinic['clinic_id'], (int) $patient['id'], $clinic['user_id']);
+
+        // 1) Doctor saves a real medicine.
+        VisitService::autosave($clinic['clinic_id'], (int) $visit['id'], [
+            'prescriptions' => [[
+                'drug_id' => null, 'remedy_id' => null,
+                'drug_name' => 'Amoxicillin 500', 'frequency_preset' => '1-0-1', 'duration_days' => 5,
+            ]],
+        ]);
+
+        // 2) A blank autosave fires (empty array of lines).
+        VisitService::autosave($clinic['clinic_id'], (int) $visit['id'], [
+            'prescriptions' => [],
+        ]);
+
+        // 3) A blank autosave with one empty line also fires.
+        VisitService::autosave($clinic['clinic_id'], (int) $visit['id'], [
+            'prescriptions' => [['drug_id' => null, 'drug_name' => '', 'frequency_preset' => '']],
+        ]);
+
+        $count = QueryBuilder::table('prescriptions')
+            ->forClinic($clinic['clinic_id'])
+            ->where('visit_id', '=', (int) $visit['id'])
+            ->count();
+        $this->assertSame(1, $count, 'Existing medicine must survive a blank/partial autosave');
+    }
+
+    /** Replacing medicines with a different real set still works (not over-protected). */
+    public function testAutosaveReplacesPrescriptionsWithNewSet(): void
+    {
+        $this->requireDatabase();
+        $clinic = $this->createClinic('-rx5');
+        $this->setClinicContext($clinic['clinic_id'], $clinic['user_id']);
+        $this->enableModules($clinic['clinic_id']);
+
+        $patient = PatientService::create($clinic['clinic_id'], [
+            'name' => 'Rx Patient 5', 'phone' => '9333333335', 'gender' => 'M', 'dob' => '1994-01-01',
+        ]);
+        $visit = VisitService::startForPatient($clinic['clinic_id'], (int) $patient['id'], $clinic['user_id']);
+
+        VisitService::autosave($clinic['clinic_id'], (int) $visit['id'], [
+            'prescriptions' => [['drug_name' => 'First Med', 'frequency_preset' => '1-0-0']],
+        ]);
+        // Replace with two different real medicines.
+        VisitService::autosave($clinic['clinic_id'], (int) $visit['id'], [
+            'prescriptions' => [
+                ['drug_name' => 'Second Med', 'frequency_preset' => '1-0-1'],
+                ['drug_name' => 'Third Med', 'frequency_preset' => '0-0-1'],
+            ],
+        ]);
+
+        $rows = QueryBuilder::table('prescriptions')
+            ->forClinic($clinic['clinic_id'])
+            ->where('visit_id', '=', (int) $visit['id'])
+            ->count();
+        $this->assertSame(2, $rows, 'A new non-empty set must fully replace the old one');
+    }
+
     private function enableModules(int $clinicId): void
     {
         foreach (['emr', 'prescription'] as $mod) {

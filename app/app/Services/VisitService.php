@@ -399,7 +399,18 @@ final class VisitService
         }
 
         if (isset($payload['prescriptions']) && is_array($payload['prescriptions'])) {
-            PrescriptionService::syncForVisit($clinicId, $visitId, (int) $visit['patient_id'], $payload['prescriptions']);
+            // The client sets prescriptions_cleared=true only when the doctor
+            // deliberately removed every medicine line. That is the one case in
+            // which an empty set is allowed to wipe existing rows; any other
+            // empty payload is treated as a no-op to protect saved medicines.
+            $allowClear = !empty($payload['prescriptions_cleared']);
+            PrescriptionService::syncForVisit(
+                $clinicId,
+                $visitId,
+                (int) $visit['patient_id'],
+                $payload['prescriptions'],
+                $allowClear,
+            );
         }
 
         // Phase 4: sync the canonical follow_ups row from the follow-up date
