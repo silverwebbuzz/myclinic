@@ -1475,7 +1475,9 @@ function visitScreenV2(cfg) {
                 const data = await r.json();
                 line._suggestions = data.drugs || data.remedies || [];
                 line._dropdown = true;
-                line._searchError = line._suggestions.length === 0 ? 'No medicines match "' + query + '".' : '';
+                line._searchError = line._suggestions.length === 0
+                    ? 'Not in the medicine catalog — you can still use "' + query + '" as typed.'
+                    : '';
             } catch (e) {
                 line._suggestions = [];
                 line._dropdown = true;

@@ -57,13 +57,17 @@ final class DrugService
             return $stmt->fetchAll() ?: [];
         }
 
+        $needle = mb_strtolower($q);
+        $escape = static fn (string $s): string => str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $s);
+
         // Prefix match — fast and what doctors expect for autocomplete.
         $stmt = $pdo->prepare(
             "SELECT {$cols} FROM drugs
-             WHERE is_active = 1 AND (name LIKE :p OR generic_name LIKE :p)
+             WHERE is_active = 1
+               AND (LOWER(name) LIKE :p OR LOWER(COALESCE(generic_name, '')) LIKE :p)
              ORDER BY {$order} LIMIT :lim",
         );
-        $stmt->bindValue(':p', $q . '%');
+        $stmt->bindValue(':p', $escape($needle) . '%');
         $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
         $stmt->execute();
         $rows = $stmt->fetchAll() ?: [];
@@ -71,11 +75,12 @@ final class DrugService
             return $rows;
         }
 
-        // Contains-LIKE fallback for substring matches.
-        $like = '%' . $q . '%';
+        // Contains-LIKE fallback for substring matches (e.g. "ubicar" → "Ubicar Cream").
+        $like = '%' . $escape($needle) . '%';
         $stmt = $pdo->prepare(
             "SELECT {$cols} FROM drugs
-             WHERE is_active = 1 AND (name LIKE :p OR generic_name LIKE :p)
+             WHERE is_active = 1
+               AND (LOWER(name) LIKE :p OR LOWER(COALESCE(generic_name, '')) LIKE :p)
              ORDER BY {$order} LIMIT :lim",
         );
         $stmt->bindValue(':p', $like);
