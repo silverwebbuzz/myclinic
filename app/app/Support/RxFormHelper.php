@@ -133,6 +133,7 @@ final class RxFormHelper
             str_contains($n, 'inhaler'), str_contains($n, 'rotacap'), str_contains($n, 'respule') => 'inhaler',
             str_contains($n, 'patch') => 'patch',
             str_contains($n, 'capsule'), preg_match('/\bcap\b/', $n) === 1 => 'capsule',
+            str_contains($n, 'suppository'), str_contains($n, 'supp') => 'other',
             str_contains($n, 'tablet'), preg_match('/\btab\b/', $n) === 1 => 'tablet',
             default => 'tablet',
         };
@@ -168,6 +169,43 @@ final class RxFormHelper
             'patch' => 'patch',
             'other' => 'other',
             default => 'tablet',
+        };
+    }
+
+    /**
+     * Best-effort reverse of legacyFrequency — used when reloading rows that
+     * only have the ENUM column populated (pre-migration data).
+     */
+    public static function presetFromLegacy(string $legacy, string $form): string
+    {
+        $form = self::normalizeForm($form);
+        $legacy = strtoupper(trim($legacy));
+
+        return match ($legacy) {
+            'TDS' => match ($form) {
+                'syrup' => '5 ml TDS',
+                'tablet', 'capsule' => '1-1-1',
+                default => 'TDS',
+            },
+            'BD' => match ($form) {
+                'syrup' => '5 ml BD',
+                'cream' => 'BD',
+                'inhaler' => '1 puff BD',
+                'tablet', 'capsule' => '1-0-1',
+                default => 'BD',
+            },
+            'OD' => match ($form) {
+                'syrup' => '5 ml BD',
+                'injection', 'patch' => 'OD',
+                'tablet', 'capsule' => '1-0-0',
+                default => 'OD',
+            },
+            'QID' => '1-1-1-1',
+            'SOS' => 'SOS',
+            'PRN' => 'SOS',
+            'WEEKLY' => 'Weekly',
+            'MONTHLY' => 'Monthly',
+            default => self::defaultLineDefaults($form)['frequency_preset'],
         };
     }
 

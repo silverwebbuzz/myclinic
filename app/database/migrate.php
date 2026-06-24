@@ -47,7 +47,8 @@ foreach ($files as $file) {
         try {
             $pdo->exec($statement);
         } catch (PDOException $e) {
-            if (str_contains($e->getMessage(), 'already exists')) {
+            if (str_contains($e->getMessage(), 'already exists')
+                || str_contains($e->getMessage(), 'Duplicate column')) {
                 continue;
             }
             throw $e;
