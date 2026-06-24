@@ -1,0 +1,173 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Support;
+
+/**
+ * Infer medicine form (tablet / syrup / injection …) and expose the right
+ * frequency presets for the prescription row UI.
+ */
+final class RxFormHelper
+{
+    /** @var list<string> */
+    public const FORMS = [
+        'tablet', 'capsule', 'syrup', 'injection', 'cream', 'drops', 'inhaler', 'patch', 'other',
+    ];
+
+    /**
+     * @return array<string, list<array{value: string, label: string}>>
+     */
+    public static function presetsByForm(): array
+    {
+        $tablet = [
+            ['value' => '1-0-0', 'label' => '1-0-0 (morning)'],
+            ['value' => '0-0-1', 'label' => '0-0-1 (night)'],
+            ['value' => '1-0-1', 'label' => '1-0-1 (BD)'],
+            ['value' => '1-1-1', 'label' => '1-1-1 (TDS)'],
+            ['value' => '1-1-1-1', 'label' => '1-1-1-1 (QID)'],
+            ['value' => '0-1-0', 'label' => '0-1-0 (afternoon)'],
+            ['value' => 'SOS', 'label' => 'SOS'],
+        ];
+
+        return [
+            'tablet' => $tablet,
+            'capsule' => $tablet,
+            'syrup' => [
+                ['value' => '5 ml BD', 'label' => '5 ml BD'],
+                ['value' => '5 ml TDS', 'label' => '5 ml TDS'],
+                ['value' => '10 ml BD', 'label' => '10 ml BD'],
+                ['value' => '10 ml TDS', 'label' => '10 ml TDS'],
+                ['value' => '1 tsp BD', 'label' => '1 tsp BD'],
+                ['value' => '1 tsp TDS', 'label' => '1 tsp TDS'],
+                ['value' => 'BD', 'label' => 'BD'],
+                ['value' => 'TDS', 'label' => 'TDS'],
+                ['value' => 'SOS', 'label' => 'SOS'],
+                ['value' => 'HS', 'label' => 'HS (bedtime)'],
+            ],
+            'injection' => [
+                ['value' => 'OD', 'label' => 'OD (once daily)'],
+                ['value' => 'BD', 'label' => 'BD'],
+                ['value' => 'Stat', 'label' => 'Stat (once now)'],
+                ['value' => 'SOS', 'label' => 'SOS'],
+                ['value' => 'Weekly', 'label' => 'Weekly'],
+            ],
+            'drops' => [
+                ['value' => '1 drop BD', 'label' => '1 drop BD'],
+                ['value' => '1 drop TDS', 'label' => '1 drop TDS'],
+                ['value' => '2 drops TDS', 'label' => '2 drops TDS'],
+                ['value' => 'BD', 'label' => 'BD'],
+                ['value' => 'TDS', 'label' => 'TDS'],
+                ['value' => 'SOS', 'label' => 'SOS'],
+            ],
+            'cream' => [
+                ['value' => 'BD', 'label' => 'BD (apply twice)'],
+                ['value' => 'TDS', 'label' => 'TDS'],
+                ['value' => 'HS', 'label' => 'HS (at bedtime)'],
+                ['value' => 'SOS', 'label' => 'SOS'],
+            ],
+            'inhaler' => [
+                ['value' => '1 puff BD', 'label' => '1 puff BD'],
+                ['value' => '2 puffs BD', 'label' => '2 puffs BD'],
+                ['value' => '1 puff SOS', 'label' => '1 puff SOS'],
+                ['value' => '2 puffs SOS', 'label' => '2 puffs SOS'],
+                ['value' => 'BD', 'label' => 'BD'],
+                ['value' => 'SOS', 'label' => 'SOS'],
+            ],
+            'patch' => [
+                ['value' => 'OD', 'label' => 'OD'],
+                ['value' => 'Weekly', 'label' => 'Weekly'],
+                ['value' => 'SOS', 'label' => 'SOS'],
+            ],
+            'other' => [
+                ['value' => 'BD', 'label' => 'BD'],
+                ['value' => 'TDS', 'label' => 'TDS'],
+                ['value' => 'OD', 'label' => 'OD'],
+                ['value' => 'SOS', 'label' => 'SOS'],
+            ],
+        ];
+    }
+
+  /**
+     * @return list<array{value: string, label: string}>
+     */
+    public static function frequencyPresets(string $form): array
+    {
+        $map = self::presetsByForm();
+        $group = self::normalizeForm($form);
+
+        return $map[$group] ?? $map['tablet'];
+    }
+
+    public static function inferForm(?string $catalogForm, ?string $doseUnit, string $drugName): string
+    {
+        $catalogForm = strtolower(trim((string) $catalogForm));
+        if ($catalogForm !== '' && in_array($catalogForm, self::FORMS, true)) {
+            return $catalogForm;
+        }
+
+        $unit = strtolower(trim((string) $doseUnit));
+        $unitMap = [
+            'tablet' => 'tablet',
+            'capsule' => 'capsule',
+            'ml' => 'syrup',
+            'drops' => 'drops',
+            'puff' => 'inhaler',
+            'sachet' => 'syrup',
+            'unit' => 'injection',
+        ];
+        if ($unit !== '' && isset($unitMap[$unit])) {
+            return $unitMap[$unit];
+        }
+
+        $n = mb_strtolower(trim($drugName));
+        if ($n === '') {
+            return 'tablet';
+        }
+
+        return match (true) {
+            str_contains($n, 'syrup'), str_contains($n, 'suspension'), str_contains($n, ' solution') => 'syrup',
+            str_contains($n, 'injection'), preg_match('/\binj\b/', $n) === 1, str_contains($n, 'vial') => 'injection',
+            str_contains($n, 'cream'), str_contains($n, 'ointment'), str_contains($n, ' gel'), str_contains($n, 'lotion') => 'cream',
+            str_contains($n, 'drop') => 'drops',
+            str_contains($n, 'inhaler'), str_contains($n, 'rotacap'), str_contains($n, 'respule') => 'inhaler',
+            str_contains($n, 'patch') => 'patch',
+            str_contains($n, 'capsule'), preg_match('/\bcap\b/', $n) === 1 => 'capsule',
+            str_contains($n, 'tablet'), preg_match('/\btab\b/', $n) === 1 => 'tablet',
+            default => 'tablet',
+        };
+    }
+
+    /** @return array{dose_unit: string, dose_amount: float|int|null, frequency_preset: string} */
+    public static function defaultLineDefaults(string $form): array
+    {
+        $form = self::normalizeForm($form);
+
+        return match ($form) {
+            'syrup' => ['dose_unit' => 'ml', 'dose_amount' => 5, 'frequency_preset' => '5 ml TDS'],
+            'injection' => ['dose_unit' => 'unit', 'dose_amount' => 1, 'frequency_preset' => 'OD'],
+            'drops' => ['dose_unit' => 'drops', 'dose_amount' => 1, 'frequency_preset' => '1 drop TDS'],
+            'cream' => ['dose_unit' => '', 'dose_amount' => null, 'frequency_preset' => 'BD'],
+            'inhaler' => ['dose_unit' => 'puff', 'dose_amount' => 1, 'frequency_preset' => '1 puff BD'],
+            'patch' => ['dose_unit' => '', 'dose_amount' => null, 'frequency_preset' => 'OD'],
+            default => ['dose_unit' => 'tablet', 'dose_amount' => 1, 'frequency_preset' => '1-0-1'],
+        };
+    }
+
+    private static function normalizeForm(string $form): string
+    {
+        $form = strtolower(trim($form));
+
+        return match ($form) {
+            'capsule' => 'capsule',
+            'syrup', 'suspension' => 'syrup',
+            'injection' => 'injection',
+            'cream', 'ointment' => 'cream',
+            'drops' => 'drops',
+            'inhaler' => 'inhaler',
+            'patch' => 'patch',
+            'other' => 'other',
+            default => 'tablet',
+        };
+    }
+}

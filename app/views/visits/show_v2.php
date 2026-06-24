@@ -9,6 +9,8 @@
  *
  * Ships behind ?new=1 until the default is flipped in VisitController::show().
  */
+use App\Support\RxFormHelper;
+
 $sd = $visit['specialty_data'] ?? [];
 $case = $caseTaking ?? ($sd['case_taking'] ?? []);
 
@@ -49,18 +51,37 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         // datetime-local wants "YYYY-MM-DDTHH:MM"
         'visited_at' => !empty($visit['visited_at']) ? date('Y-m-d\TH:i', strtotime((string) $visit['visited_at'])) : '',
         'vitals' => $vitals,
-        'prescriptions' => array_map(static fn ($r) => [
-            'drug_id' => $r['drug_id'] ?? null,
-            'remedy_id' => $r['remedy_id'] ?? null,
-            'drug_name' => $r['drug']['name'] ?? $r['remedy']['name'] ?? trim((string) ($r['dosage'] ?? '')),
-            'potency' => $r['potency'] ?? '',
-            'dosage' => $r['dosage'] ?? '',
-            'frequency_preset' => $r['frequency_preset'] ?? '',
-            'frequency' => $r['frequency'] ?? 'BD',
-            'duration_days' => $r['duration_days'] ?? '',
-            'food_timing' => $r['food_timing'] ?? 'any',
-            'instructions' => $r['instructions'] ?? '',
-        ], $prescriptions),
+        'prescriptions' => array_map(static function (array $r) {
+            $name = $r['drug']['name'] ?? $r['remedy']['name'] ?? trim((string) ($r['dosage'] ?? ''));
+            $catalogForm = isset($r['drug']['form']) ? (string) $r['drug']['form'] : null;
+            $doseUnit = isset($r['dose_unit']) ? (string) $r['dose_unit'] : null;
+            $taperRaw = $r['tapering_steps'] ?? null;
+            $tapering = null;
+            if (is_string($taperRaw) && $taperRaw !== '') {
+                $decoded = json_decode($taperRaw, true);
+                $tapering = is_array($decoded) ? $decoded : null;
+            } elseif (is_array($taperRaw)) {
+                $tapering = $taperRaw;
+            }
+
+            return [
+                'drug_id' => $r['drug_id'] ?? null,
+                'remedy_id' => $r['remedy_id'] ?? null,
+                'drug_name' => $name,
+                'potency' => $r['potency'] ?? '',
+                'dosage' => $r['dosage'] ?? '',
+                'dose_unit' => $doseUnit ?? '',
+                'dose_amount' => $r['dose_amount'] ?? '',
+                'mix_with' => $r['mix_with'] ?? '',
+                'drug_form' => RxFormHelper::inferForm($catalogForm, $doseUnit, $name),
+                'frequency_preset' => $r['frequency_preset'] ?? '',
+                'frequency' => $r['frequency'] ?? 'BD',
+                'duration_days' => $r['duration_days'] ?? '',
+                'food_timing' => $r['food_timing'] ?? 'any',
+                'instructions' => $r['instructions'] ?? '',
+                'tapering_steps' => $tapering,
+            ];
+        }, $prescriptions),
         'specialty_data' => $sd,
         'case_taking' => $case,
         'useHomeo' => $useHomeo,
@@ -343,7 +364,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                 <div class="sm:col-span-4 relative">
                                     <input type="text" :disabled="!editable"
                                            x-model="line.drug_name"
-                                           @input.debounce.250ms="searchDrugFor(idx, line.drug_name)"
+                                           @input.debounce.250ms="searchDrugFor(idx, line.drug_name); syncRxFormFromName(idx)"
                                            @focus="line._dropdown = true"
                                            @click.outside="line._dropdown = false"
                                            placeholder="Medicine"
@@ -370,13 +391,9 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                 <select :disabled="!editable || !!line.tapering_steps" x-model="line.frequency_preset"
                                         class="sm:col-span-2 rounded border px-2 py-1 text-sm">
                                     <option value="">Frequency…</option>
-                                    <option value="1-0-0">1-0-0</option>
-                                    <option value="0-0-1">0-0-1</option>
-                                    <option value="1-0-1">1-0-1</option>
-                                    <option value="1-1-1">1-1-1</option>
-                                    <option value="1-1-1-1">1-1-1-1</option>
-                                    <option value="0-1-0">0-1-0</option>
-                                    <option value="SOS">SOS</option>
+                                    <template x-for="opt in frequencyOptionsFor(line)" :key="opt.value">
+                                        <option :value="opt.value" x-text="opt.label"></option>
+                                    </template>
                                 </select>
                                 <input type="number" min="1" max="90"
                                        :disabled="!editable || !!line.tapering_steps"
@@ -471,11 +488,9 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                                     <span class="text-slate-600">days,</span>
                                                     <select :disabled="!editable" x-model="step.preset"
                                                             class="rounded border px-1.5 py-0.5">
-                                                        <option value="1-0-0">1-0-0</option>
-                                                        <option value="0-0-1">0-0-1</option>
-                                                        <option value="1-0-1">1-0-1</option>
-                                                        <option value="1-1-1">1-1-1</option>
-                                                        <option value="0-1-0">0-1-0</option>
+                                                        <template x-for="opt in frequencyOptionsFor(line)" :key="'t-' + sIdx + '-' + opt.value">
+                                                            <option :value="opt.value" x-text="opt.label"></option>
+                                                        </template>
                                                     </select>
                                                     <select :disabled="!editable" x-model="step.food"
                                                             class="rounded border px-1.5 py-0.5">
@@ -909,6 +924,12 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
 </div>
 
 <script>
+window.__RX_FORM_PRESETS = <?= json_encode(RxFormHelper::presetsByForm(), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE) ?>;
+window.__RX_FORM_DEFAULTS = <?= json_encode(array_combine(
+    RxFormHelper::FORMS,
+    array_map(static fn (string $f) => RxFormHelper::defaultLineDefaults($f), RxFormHelper::FORMS),
+), JSON_THROW_ON_ERROR) ?>;
+
 /** Map legacy saved keys to canonical case_taking field names for Alpine binding. */
 function normalizeCaseTaking(raw) {
     const ct = (raw && typeof raw === 'object') ? { ...raw } : {};
@@ -1230,8 +1251,11 @@ function visitScreenV2(cfg) {
             this.prescriptions.push({
                 drug_id: null, remedy_id: null, drug_name: '',
                 potency: '', dosage: '',
+                drug_form: 'tablet',
+                dose_unit: '', dose_amount: '', mix_with: '',
                 frequency_preset: '', frequency: 'BD',
                 duration_days: '', food_timing: 'any', instructions: '',
+                tapering_steps: null,
             });
         },
 
@@ -1303,6 +1327,68 @@ function visitScreenV2(cfg) {
         taperingTotalDays(steps) {
             if (!Array.isArray(steps)) return 0;
             return steps.reduce((sum, s) => sum + (parseInt(s.days, 10) || 0), 0);
+        },
+
+        inferRxForm(drugName, doseUnit, catalogForm) {
+            if (catalogForm && (window.__RX_FORM_PRESETS || {})[catalogForm]) return catalogForm;
+            const unit = (doseUnit || '').toLowerCase();
+            const unitMap = { tablet: 'tablet', capsule: 'capsule', ml: 'syrup', drops: 'drops', puff: 'inhaler', sachet: 'syrup', unit: 'injection' };
+            if (unit && unitMap[unit]) return unitMap[unit];
+            const n = (drugName || '').toLowerCase();
+            if (!n) return 'tablet';
+            if (n.includes('syrup') || n.includes('suspension')) return 'syrup';
+            if (n.includes('injection') || /\binj\b/.test(n) || n.includes('vial')) return 'injection';
+            if (n.includes('cream') || n.includes('ointment') || n.includes(' gel') || n.includes('lotion')) return 'cream';
+            if (n.includes('drop')) return 'drops';
+            if (n.includes('inhaler') || n.includes('rotacap') || n.includes('respule')) return 'inhaler';
+            if (n.includes('patch')) return 'patch';
+            if (n.includes('capsule') || /\bcap\b/.test(n)) return 'capsule';
+            if (n.includes('tablet') || /\btab\b/.test(n)) return 'tablet';
+            return 'tablet';
+        },
+
+        frequencyOptionsFor(line) {
+            const form = line.drug_form || this.inferRxForm(line.drug_name, line.dose_unit, null);
+            const presets = (window.__RX_FORM_PRESETS || {})[form]
+                || (window.__RX_FORM_PRESETS || {}).tablet
+                || [];
+            const opts = [...presets];
+            const cur = line.frequency_preset;
+            if (cur && !opts.some(o => o.value === cur)) {
+                opts.unshift({ value: cur, label: cur });
+            }
+            return opts;
+        },
+
+        syncFrequencyForForm(line) {
+            const opts = this.frequencyOptionsFor(line);
+            if (line.frequency_preset && !opts.some(o => o.value === line.frequency_preset)) {
+                line.frequency_preset = '';
+            }
+        },
+
+        syncRxFormFromName(idx) {
+            const line = this.prescriptions[idx];
+            if (!line) return;
+            const prev = line.drug_form;
+            line.drug_form = this.inferRxForm(line.drug_name, line.dose_unit, null);
+            if (prev !== line.drug_form) {
+                this.syncFrequencyForForm(line);
+            }
+            this.markDirty();
+        },
+
+        applyRxFormDefaults(line, form, skipIfSet = true) {
+            const defs = (window.__RX_FORM_DEFAULTS || {})[form] || {};
+            if (!skipIfSet || !line.dose_unit) {
+                if (defs.dose_unit) line.dose_unit = defs.dose_unit;
+            }
+            if ((!line.dose_amount && line.dose_amount !== 0) && defs.dose_amount != null) {
+                line.dose_amount = defs.dose_amount;
+            }
+            if (!line.frequency_preset && defs.frequency_preset) {
+                line.frequency_preset = defs.frequency_preset;
+            }
         },
 
         // ── Prescription panel (merged in — single coherent scope) ──────────
@@ -1485,7 +1571,13 @@ function visitScreenV2(cfg) {
                     : this.drugNameMatchesQuery(name, query);
                 if (!matches) return;
                 seen.add(name.toLowerCase());
-                out.push({ id: p.drug_id || null, name, strength: '', source: 'this_visit' });
+                out.push({
+                    id: p.drug_id || null,
+                    name,
+                    strength: '',
+                    form: p.drug_form || this.inferRxForm(name, p.dose_unit, null),
+                    source: 'this_visit',
+                });
             });
             return out;
         },
@@ -1580,17 +1672,26 @@ function visitScreenV2(cfg) {
             }
             line.drug_name = drug.name + (drug.strength && !String(drug.name).includes(drug.strength) ? ' ' + drug.strength : '');
 
+            const form = drug.form || this.inferRxForm(line.drug_name, line.dose_unit, null);
+            const formChanged = line.drug_form !== form;
+            line.drug_form = form;
+
             // Smart defaults: pre-fill from the clinic's last prescription of
             // this drug — but never overwrite what the doctor already entered.
             const def = drug.defaults || {};
             if (!line.frequency_preset && def.frequency_preset) {
                 line.frequency_preset = def.frequency_preset;
-                if (def.frequency) line.frequency = def.frequency; // keep legacy field in sync
+                if (def.frequency) line.frequency = def.frequency;
             }
             if (!line.duration_days && def.duration_days) line.duration_days = def.duration_days;
             if ((!line.food_timing || line.food_timing === 'any') && def.food_timing) line.food_timing = def.food_timing;
             if (!line.dose_unit && def.dose_unit) line.dose_unit = def.dose_unit;
             if (!line.dose_amount && def.dose_amount) line.dose_amount = def.dose_amount;
+
+            if (formChanged || !line.frequency_preset) {
+                this.applyRxFormDefaults(line, form, true);
+            }
+            this.syncFrequencyForForm(line);
 
             line._suggestions = [];
             line._dropdown = false;
@@ -1604,9 +1705,10 @@ function visitScreenV2(cfg) {
             if (!Array.isArray(line.tapering_steps)) line.tapering_steps = [];
             // Seed sensible defaults — last step's frequency, 3 days.
             const last = line.tapering_steps[line.tapering_steps.length - 1];
+            const formDef = ((window.__RX_FORM_DEFAULTS || {})[line.drug_form || 'tablet'] || {}).frequency_preset || '1-0-1';
             line.tapering_steps.push({
                 days: 3,
-                preset: last ? last.preset : (line.frequency_preset || '1-0-1'),
+                preset: last ? last.preset : (line.frequency_preset || formDef),
                 food: last ? last.food : (line.food_timing || 'after'),
             });
             this.markDirty();
