@@ -48,16 +48,13 @@ final class SymptomsController
         $specialty = (string) ($clinic['specialty'] ?? '');
         $q = (string) ($request->query['q'] ?? '');
 
-        // TEMP DIAGNOSTIC: surface the real DB/runtime error instead of a blank
-        // 500 so we can see it in the Network tab. Remove once root cause found.
+        // Never let a symptom-search hiccup break the visit page — degrade to an
+        // empty suggestion list and log, rather than throwing a 500.
         try {
             $results = SymptomSearch::search($doctorId, $clinicId, $specialty, $q);
         } catch (\Throwable $e) {
-            return Response::json([
-                'error' => $e->getMessage(),
-                'where' => 'SymptomSearch::search',
-                'file'  => $e->getFile() . ':' . $e->getLine(),
-            ], 500);
+            error_log('[SymptomsController::searchApi] ' . $e->getMessage());
+            $results = [];
         }
 
         return Response::json([
@@ -81,7 +78,7 @@ final class SymptomsController
         $specialty = (string) ($clinic['specialty'] ?? '');
         $cat = trim((string) ($request->query['cat'] ?? ''));
 
-        // TEMP DIAGNOSTIC: surface the real DB error instead of a blank 500.
+        // Never 500 the symptom browser — degrade to an empty list on any error.
         try {
             $pdo = Database::connection();
 
@@ -108,17 +105,18 @@ final class SymptomsController
             }
 
             // A category → its symptoms, specialty-relevant ones first.
+            // MariaDB-safe specialty match: plain LIKE on the JSON-array text
+            // (JSON_CONTAINS over LOWER(specialties) throws on MariaDB).
+            $spLike = '%"' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], strtolower(trim($specialty))) . '"%';
             $stmt = $pdo->prepare(
                 "SELECT id, label,
-                        CASE WHEN :sp1 <> '' AND JSON_VALID(specialties)
-                                  AND JSON_CONTAINS(LOWER(specialties), JSON_QUOTE(LOWER(:sp2)))
-                             THEN 1 ELSE 0 END AS specialty_match
+                        CASE WHEN :sp <> '' AND LOWER(specialties) LIKE :spLike THEN 1 ELSE 0 END AS specialty_match
                    FROM symptoms_master
                   WHERE is_active = 1 AND category = :cat
                   ORDER BY specialty_match DESC, global_usage_count DESC, label ASC
                   LIMIT 60"
             );
-            $stmt->execute([':sp1' => $specialty, ':sp2' => $specialty, ':cat' => $cat]);
+            $stmt->execute([':sp' => $specialty, ':spLike' => $spLike, ':cat' => $cat]);
 
             $symptoms = [];
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
@@ -135,11 +133,10 @@ final class SymptomsController
                 'symptoms' => $symptoms,
             ]);
         } catch (\Throwable $e) {
-            return Response::json([
-                'error' => $e->getMessage(),
-                'where' => 'byCategory cat=' . ($cat === '' ? '(none)' : $cat),
-                'file'  => $e->getFile() . ':' . $e->getLine(),
-            ], 500);
+            error_log('[SymptomsController::byCategory] ' . $e->getMessage());
+            // Return the shape the client expects so the UI just shows "no
+            // categories / no symptoms" instead of breaking.
+            return Response::json($cat === '' ? ['categories' => []] : ['category' => $cat, 'symptoms' => []]);
         }
     }
 

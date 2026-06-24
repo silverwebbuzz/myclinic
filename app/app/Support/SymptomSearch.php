@@ -207,26 +207,21 @@ final class SymptomSearch
     private static function masterHits(string $specialty, string $needle, int $limit): array
     {
         // Boost specialty-matching rows to the top; tiebreak by global usage.
-        // We do the specialty match as JSON_CONTAINS so an empty specialties
-        // array still matches with rank=0.
-        // Native prepares (ATTR_EMULATE_PREPARES=false) forbid reusing a named
-        // placeholder, so the specialty value is bound twice as :sp1 / :sp2.
-        $sql = "SELECT id, label, specialties,
-                       global_usage_count,
-                       CASE
-                         WHEN :sp1 = '' THEN 0
-                         WHEN JSON_VALID(specialties)
-                              AND JSON_CONTAINS(LOWER(specialties), JSON_QUOTE(LOWER(:sp2))) THEN 1
-                         ELSE 0
-                       END AS specialty_match
+        // The `specialties` column is a JSON array of strings like ["gp","peds"].
+        // We match membership with a plain LIKE on the text — JSON_CONTAINS over
+        // LOWER(specialties) throws on MariaDB (JSON is longtext there), which was
+        // 500'ing this endpoint. A LIKE on '%"<specialty>"%' is engine-agnostic.
+        $spNeedle = self::specialtyLike($specialty);
+        $sql = "SELECT id, label, specialties, global_usage_count,
+                       CASE WHEN :sp <> '' AND LOWER(specialties) LIKE :spLike THEN 1 ELSE 0 END AS specialty_match
                   FROM symptoms_master
                  WHERE is_active = 1 AND label LIKE :q
               ORDER BY specialty_match DESC, global_usage_count DESC, label ASC
                  LIMIT :n";
 
         $stmt = Database::connection()->prepare($sql);
-        $stmt->bindValue(':sp1', $specialty, PDO::PARAM_STR);
-        $stmt->bindValue(':sp2', $specialty, PDO::PARAM_STR);
+        $stmt->bindValue(':sp', $specialty, PDO::PARAM_STR);
+        $stmt->bindValue(':spLike', $spNeedle, PDO::PARAM_STR);
         $stmt->bindValue(':q', $needle, PDO::PARAM_STR);
         $stmt->bindValue(':n', $limit, PDO::PARAM_INT);
         $stmt->execute();
@@ -247,23 +242,20 @@ final class SymptomSearch
     /** @return list<array{id: int|null, label: string, source: string, master_id: int|null, specialty_match: bool}> */
     private static function synonymHits(string $specialty, string $contains, int $limit): array
     {
+        // Same MariaDB-safe approach: plain LIKE on the JSON text, no JSON_CONTAINS.
+        $spNeedle = self::specialtyLike($specialty);
         $sql = "SELECT id, label, specialties, global_usage_count,
-                       CASE
-                         WHEN :sp1 = '' THEN 0
-                         WHEN JSON_VALID(specialties)
-                              AND JSON_CONTAINS(LOWER(specialties), JSON_QUOTE(LOWER(:sp2))) THEN 1
-                         ELSE 0
-                       END AS specialty_match
+                       CASE WHEN :sp <> '' AND LOWER(specialties) LIKE :spLike THEN 1 ELSE 0 END AS specialty_match
                   FROM symptoms_master
                  WHERE is_active = 1
-                   AND JSON_VALID(synonyms)
+                   AND synonyms IS NOT NULL
                    AND LOWER(synonyms) LIKE LOWER(:q)
               ORDER BY specialty_match DESC, global_usage_count DESC
                  LIMIT :n";
 
         $stmt = Database::connection()->prepare($sql);
-        $stmt->bindValue(':sp1', $specialty, PDO::PARAM_STR);
-        $stmt->bindValue(':sp2', $specialty, PDO::PARAM_STR);
+        $stmt->bindValue(':sp', $specialty, PDO::PARAM_STR);
+        $stmt->bindValue(':spLike', $spNeedle, PDO::PARAM_STR);
         $stmt->bindValue(':q', $contains, PDO::PARAM_STR);
         $stmt->bindValue(':n', $limit, PDO::PARAM_INT);
         $stmt->execute();
@@ -306,5 +298,18 @@ final class SymptomSearch
             ];
         }
         return $out;
+    }
+
+    /**
+     * Build the LIKE needle for matching a specialty inside the `specialties`
+     * JSON-array text, e.g. specialty "GP" -> '%"gp"%'. Empty specialty yields a
+     * pattern that never matches the quoted form (the CASE guards on :sp anyway).
+     */
+    private static function specialtyLike(string $specialty): string
+    {
+        $s = strtolower(trim($specialty));
+        // Escape LIKE wildcards in the specialty value itself (defensive).
+        $s = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $s);
+        return '%"' . $s . '"%';
     }
 }
