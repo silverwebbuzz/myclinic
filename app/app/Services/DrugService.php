@@ -23,6 +23,23 @@ final class DrugService
         'oint' => 'ointment',
     ];
 
+    /** Form words that match hundreds of thousands of rows — never use alone for catalog search. */
+    private const GENERIC_TERMS = [
+        'tablet', 'tablets', 'tab', 'tabs',
+        'syrup', 'syr', 'syp',
+        'capsule', 'capsules', 'cap', 'caps',
+        'cream', 'crm',
+        'injection', 'inj',
+        'drops', 'drp',
+        'suspension', 'susp',
+        'ointment', 'oint',
+        'gel', 'lotion', 'powder', 'solution',
+        'mg', 'ml', 'mcg', 'iu',
+    ];
+
+    /** Minimum length before we run a substring (%) catalog scan on 250k+ rows. */
+    private const MIN_SUBSTRING_LEN = 4;
+
     /** @return list<array<string, mixed>> */
     public static function search(string $q, int $limit = 15, ?int $clinicId = null): array
     {
@@ -52,6 +69,12 @@ final class DrugService
             return $merged;
         }
 
+        // Skip the 250k-row catalog when the query is only a form word ("tablet",
+        // "syrup") — clinic recents + same-visit lines are enough in that case.
+        if (self::isGenericOnlyQuery($q)) {
+            return $merged;
+        }
+
         // Layer 2: global drugs catalog.
         try {
             $catalog = self::runSearch($q, $remaining, true);
@@ -67,8 +90,9 @@ final class DrugService
         }
 
         foreach ($catalog as $row) {
-            $key = mb_strtolower((string) ($row['name'] ?? ''));
-            if ($key === '' || isset($seen[$key])) {
+            $id = !empty($row['id']) ? (int) $row['id'] : 0;
+            $key = $id > 0 ? 'id:' . $id : 'name:' . mb_strtolower((string) ($row['name'] ?? ''));
+            if ($key === 'name:' || isset($seen[$key])) {
                 continue;
             }
             $seen[$key] = true;
@@ -79,6 +103,35 @@ final class DrugService
         }
 
         return $merged;
+    }
+
+    /** True when every token is a dosage-form word (e.g. "tablet", "syr"). */
+    public static function isGenericOnlyQuery(string $q): bool
+    {
+        $tokens = self::meaningfulTokens($q, false);
+
+        return self::queryTokens($q) !== [] && $tokens === [];
+    }
+
+    /**
+     * Tokens worth sending to the catalog index — drops form/strength noise.
+     *
+     * @return list<string>
+     */
+    private static function meaningfulTokens(string $q, bool $dropGeneric = true): array
+    {
+        $out = [];
+        foreach (self::queryTokens($q) as $token) {
+            if ($dropGeneric && in_array($token, self::GENERIC_TERMS, true)) {
+                continue;
+            }
+            if (mb_strlen($token) < 2) {
+                continue;
+            }
+            $out[] = $token;
+        }
+
+        return array_values(array_unique($out));
     }
 
     /**
@@ -136,12 +189,12 @@ final class DrugService
     /** Multi-token match: "CXM syr" matches "CXM Syrup". */
     public static function nameMatchesQuery(string $name, string $query): bool
     {
-        $hay = mb_strtolower($name);
-        $tokens = self::queryTokens($query);
+        $tokens = self::meaningfulTokens($query);
         if ($tokens === []) {
-            return true;
+            return false;
         }
 
+        $hay = mb_strtolower($name);
         $words = preg_split('/\s+/', $hay) ?: [];
 
         foreach ($tokens as $token) {
@@ -204,65 +257,127 @@ final class DrugService
             return $stmt->fetchAll() ?: [];
         }
 
-        $needle = mb_strtolower($q);
         $escape = static fn (string $s): string => str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $s);
         $nameCol = 'LOWER(name)';
         $genericCol = 'LOWER(COALESCE(generic_name, \'\'))';
 
-        // Multi-token: each word must appear in name or generic (e.g. "amox 500").
-        $tokens = self::queryTokens($q);
-        if (count($tokens) > 1) {
-            $conds = [];
-            $binds = [];
-            foreach (array_values(array_unique($tokens)) as $i => $token) {
-                $key = ':t' . $i;
-                $like = '%' . $escape($token) . '%';
-                $conds[] = "({$nameCol} LIKE {$key} OR {$genericCol} LIKE {$key})";
-                $binds[$key] = $like;
-            }
-            $sql = "SELECT {$cols} FROM drugs
-                    WHERE is_active = 1 AND " . implode(' AND ', $conds) . "
-                    ORDER BY {$order} LIMIT :lim";
-            $stmt = $pdo->prepare($sql);
-            foreach ($binds as $key => $val) {
-                $stmt->bindValue($key, $val);
-            }
+        // Search on brand/generic tokens only — "althrocin tablet" → "althrocin".
+        $tokens = self::meaningfulTokens($q);
+        if ($tokens === []) {
+            return [];
+        }
+
+        // FULLTEXT prefix search — fast on 250k+ rows (uses idx_drug_search).
+        $ft = self::fulltextSearch($pdo, $cols, $order, $tokens, $limit);
+        if ($ft !== []) {
+            return $ft;
+        }
+
+        $needle = $escape($tokens[0]);
+
+        // Single-token prefix — uses name index when present.
+        if (count($tokens) === 1) {
+            $stmt = $pdo->prepare(
+                "SELECT {$cols} FROM drugs
+                 WHERE is_active = 1
+                   AND ({$nameCol} LIKE :p OR {$genericCol} LIKE :p)
+                 ORDER BY {$order} LIMIT :lim",
+            );
+            $stmt->bindValue(':p', $needle . '%');
             $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
             $stmt->execute();
             $rows = $stmt->fetchAll() ?: [];
             if ($rows !== []) {
                 return $rows;
             }
+
+            // Substring only for longer, non-generic tokens (avoid %tablet% table scan).
+            if (mb_strlen($tokens[0]) >= self::MIN_SUBSTRING_LEN) {
+                $stmt = $pdo->prepare(
+                    "SELECT {$cols} FROM drugs
+                     WHERE is_active = 1
+                       AND ({$nameCol} LIKE :p OR {$genericCol} LIKE :p)
+                     ORDER BY {$order} LIMIT :lim",
+                );
+                $stmt->bindValue(':p', '%' . $needle . '%');
+                $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
+                $stmt->execute();
+
+                return $stmt->fetchAll() ?: [];
+            }
+
+            return [];
         }
 
-        // Prefix match — fast and what doctors expect for autocomplete.
-        $stmt = $pdo->prepare(
-            "SELECT {$cols} FROM drugs
-             WHERE is_active = 1
-               AND ({$nameCol} LIKE :p OR {$genericCol} LIKE :p)
-             ORDER BY {$order} LIMIT :lim",
-        );
-        $stmt->bindValue(':p', $escape($needle) . '%');
-        $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
-        $stmt->execute();
-        $rows = $stmt->fetchAll() ?: [];
-        if ($rows !== []) {
-            return $rows;
+        // Multi-token: each meaningful word must appear in name or generic.
+        $conds = [];
+        $binds = [];
+        foreach ($tokens as $i => $token) {
+            $key = ':t' . $i;
+            $like = '%' . $escape($token) . '%';
+            $conds[] = "({$nameCol} LIKE {$key} OR {$genericCol} LIKE {$key})";
+            $binds[$key] = $like;
         }
-
-        // Contains-LIKE fallback for substring matches (e.g. "ubicar" → "Ubicar Cream").
-        $like = '%' . $escape($needle) . '%';
-        $stmt = $pdo->prepare(
-            "SELECT {$cols} FROM drugs
-             WHERE is_active = 1
-               AND ({$nameCol} LIKE :p OR {$genericCol} LIKE :p)
-             ORDER BY {$order} LIMIT :lim",
-        );
-        $stmt->bindValue(':p', $like);
+        $sql = "SELECT {$cols} FROM drugs
+                WHERE is_active = 1 AND " . implode(' AND ', $conds) . "
+                ORDER BY {$order} LIMIT :lim";
+        $stmt = $pdo->prepare($sql);
+        foreach ($binds as $key => $val) {
+            $stmt->bindValue($key, $val);
+        }
         $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
         $stmt->execute();
 
         return $stmt->fetchAll() ?: [];
+    }
+
+    /**
+     * @param list<string> $tokens
+     * @return list<array<string, mixed>>
+     */
+    private static function fulltextSearch(\PDO $pdo, string $cols, string $order, array $tokens, int $limit): array
+    {
+        if ($tokens === []) {
+            return [];
+        }
+
+        $parts = [];
+        foreach ($tokens as $token) {
+            $clean = preg_replace('/[^a-z0-9]+/i', '', $token) ?? '';
+            if ($clean === '' || mb_strlen($clean) < 2) {
+                continue;
+            }
+            $parts[] = '+' . $clean . '*';
+        }
+        if ($parts === []) {
+            return [];
+        }
+
+        try {
+            $boolQ = implode(' ', $parts);
+            $sql = "SELECT {$cols},
+                           MATCH(name, generic_name) AGAINST(:q1 IN BOOLEAN MODE) AS ft_score
+                      FROM drugs
+                     WHERE is_active = 1
+                       AND MATCH(name, generic_name) AGAINST(:q2 IN BOOLEAN MODE)
+                  ORDER BY ft_score DESC, {$order}
+                     LIMIT :lim";
+            $stmt = $pdo->prepare($sql);
+            $stmt->bindValue(':q1', $boolQ);
+            $stmt->bindValue(':q2', $boolQ);
+            $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
+            $stmt->execute();
+
+            $rows = $stmt->fetchAll() ?: [];
+            foreach ($rows as &$row) {
+                unset($row['ft_score']);
+            }
+            unset($row);
+
+            return $rows;
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     public static function find(int $id): ?array

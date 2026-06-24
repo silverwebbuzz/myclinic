@@ -350,7 +350,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                            class="w-full rounded border px-2 py-1 text-sm">
                                     <ul x-show="line._dropdown && (line._suggestions || []).length"
                                         class="absolute z-10 mt-1 w-full max-h-44 overflow-y-auto rounded-lg border bg-white shadow-lg">
-                                        <template x-for="d in (line._suggestions || [])" :key="d.id || d.name">
+                                        <template x-for="(d, sIdx) in (line._suggestions || [])" :key="'rxs-' + idx + '-' + sIdx">
                                             <li>
                                                 <button type="button"
                                                         @click="pickDrugFor(idx, d)"
@@ -1450,11 +1450,19 @@ function visitScreenV2(cfg) {
             } catch (e) { /* skip */ }
         },
 
+        isGenericDrugQuery(query) {
+            const generic = new Set(['tablet','tablets','tab','tabs','syrup','syr','syp','capsule','capsules','cap','caps','cream','crm','injection','inj','drops','drp','suspension','susp','ointment','oint','gel','lotion','powder','solution','mg','ml','mcg','iu']);
+            const tokens = (query || '').toLowerCase().trim().split(/\s+/).filter(Boolean);
+            if (!tokens.length) return false;
+            return tokens.every(t => generic.has(t) || (generic.has(t.replace(/s$/, ''))));
+        },
+
         drugNameMatchesQuery(name, query) {
             const hay = (name || '').toLowerCase();
+            const generic = new Set(['tablet','tablets','tab','tabs','syrup','syr','syp','capsule','capsules','cap','caps','cream','crm','injection','inj','drops','drp','suspension','susp','ointment','oint','gel','lotion','powder','solution','mg','ml','mcg','iu']);
             const abbrevs = { syr: 'syrup', syp: 'syrup', tab: 'tablet', tabs: 'tablet', cap: 'capsule', caps: 'capsule', inj: 'injection', crm: 'cream' };
-            const tokens = (query || '').toLowerCase().trim().split(/\s+/).filter(Boolean);
-            if (!tokens.length) return true;
+            const tokens = (query || '').toLowerCase().trim().split(/\s+/).filter(t => t && !generic.has(t));
+            if (!tokens.length) return false;
             const words = hay.split(/\s+/);
             return tokens.every(t => {
                 if (hay.includes(t)) return true;
@@ -1467,24 +1475,40 @@ function visitScreenV2(cfg) {
         localDrugSuggestions(idx, query) {
             const seen = new Set();
             const out = [];
+            const genericOnly = this.isGenericDrugQuery(query);
             (this.prescriptions || []).forEach((p, i) => {
                 if (i === idx) return;
                 const name = (p.drug_name || '').trim();
                 if (!name || seen.has(name.toLowerCase())) return;
-                if (!this.drugNameMatchesQuery(name, query)) return;
+                const matches = genericOnly
+                    ? this.drugNameContainsToken(name, query)
+                    : this.drugNameMatchesQuery(name, query);
+                if (!matches) return;
                 seen.add(name.toLowerCase());
                 out.push({ id: p.drug_id || null, name, strength: '', source: 'this_visit' });
             });
             return out;
         },
 
+        drugNameContainsToken(name, query) {
+            const hay = (name || '').toLowerCase();
+            const tokens = (query || '').toLowerCase().trim().split(/\s+/).filter(Boolean);
+            return tokens.some(t => hay.includes(t) || hay.split(/\s+/).some(w => w.startsWith(t)));
+        },
+
         mergeDrugSuggestions(local, remote) {
-            const seen = new Set();
             const out = [];
+            const seenIds = new Set();
+            const seenNames = new Set();
             [...local, ...(remote || [])].forEach(d => {
-                const key = (d.name || '').toLowerCase();
-                if (!key || seen.has(key)) return;
-                seen.add(key);
+                const nameKey = (d.name || '').trim().toLowerCase();
+                if (!nameKey) return;
+                if (d.id) {
+                    if (seenIds.has(d.id)) return;
+                    seenIds.add(d.id);
+                }
+                if (seenNames.has(nameKey)) return;
+                seenNames.add(nameKey);
                 out.push(d);
             });
             return out;
@@ -1497,13 +1521,20 @@ function visitScreenV2(cfg) {
             const query = (q || '').trim();
             if (query.length < 2) { line._suggestions = []; line._dropdown = false; line._searchError = ''; return; }
 
-            // Instant hits from other lines on this visit (e.g. row 2 "CXM Syrup"
-            // while typing on row 3) — no network round-trip needed.
+            const genericOnly = this.isGenericDrugQuery(query);
             const local = this.localDrugSuggestions(idx, query);
             if (local.length) {
                 line._suggestions = local;
                 line._dropdown = true;
                 line._searchError = '';
+            }
+
+            if (genericOnly) {
+                line._dropdown = true;
+                line._searchError = local.length
+                    ? 'Showing medicines on this visit — type the brand name to search the full catalog.'
+                    : 'Type the brand name (e.g. Althrocin) — "tablet" matches too many medicines.';
+                return;
             }
 
             const url = this.useHomeo
