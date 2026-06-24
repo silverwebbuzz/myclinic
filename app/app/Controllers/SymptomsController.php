@@ -70,19 +70,17 @@ final class SymptomsController
      */
     public function byCategory(Request $request): Response
     {
-        if ($denied = ModuleGate::require('emr')) {
-            return $denied;
-        }
-
         $clinic = RequestContext::clinic() ?? [];
-        $specialty = (string) ($clinic['specialty'] ?? '');
+        $specialty = strtolower(trim((string) ($clinic['specialty'] ?? '')));
         $cat = trim((string) ($request->query['cat'] ?? ''));
 
-        // Never 500 the symptom browser — degrade to an empty list on any error.
         try {
+            if ($denied = ModuleGate::require('emr')) {
+                return $denied;
+            }
+
             $pdo = Database::connection();
 
-            // No category → return the category index (label + count).
             if ($cat === '') {
                 $rows = $pdo->query(
                     "SELECT category, COUNT(*) AS n
@@ -101,31 +99,11 @@ final class SymptomsController
                         'count' => (int) $r['n'],
                     ];
                 }
+
                 return Response::json(['categories' => $cats]);
             }
 
-            // A category → its symptoms, specialty-relevant ones first.
-            // MariaDB-safe specialty match: plain LIKE on the JSON-array text
-            // (JSON_CONTAINS over LOWER(specialties) throws on MariaDB).
-            $spLike = '%"' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], strtolower(trim($specialty))) . '"%';
-            $stmt = $pdo->prepare(
-                "SELECT id, label,
-                        CASE WHEN :sp <> '' AND LOWER(specialties) LIKE :spLike THEN 1 ELSE 0 END AS specialty_match
-                   FROM symptoms_master
-                  WHERE is_active = 1 AND category = :cat
-                  ORDER BY specialty_match DESC, global_usage_count DESC, label ASC
-                  LIMIT 60"
-            );
-            $stmt->execute([':sp' => $specialty, ':spLike' => $spLike, ':cat' => $cat]);
-
-            $symptoms = [];
-            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
-                $symptoms[] = [
-                    'label'     => (string) $r['label'],
-                    'master_id' => (int) $r['id'],
-                    'source'    => 'master',
-                ];
-            }
+            $symptoms = self::symptomsForCategory($pdo, $cat, $specialty);
 
             return Response::json([
                 'category' => $cat,
@@ -134,10 +112,48 @@ final class SymptomsController
             ]);
         } catch (\Throwable $e) {
             error_log('[SymptomsController::byCategory] ' . $e->getMessage());
-            // Return the shape the client expects so the UI just shows "no
-            // categories / no symptoms" instead of breaking.
+
             return Response::json($cat === '' ? ['categories' => []] : ['category' => $cat, 'symptoms' => []]);
         }
+    }
+
+    /**
+     * @return list<array{label: string, master_id: int, source: string}>
+     */
+    private static function symptomsForCategory(\PDO $pdo, string $cat, string $specialty): array
+    {
+        if ($specialty !== '') {
+            $spLike = SymptomSearch::specialtyLikeNeedle($specialty);
+            $stmt = $pdo->prepare(
+                "SELECT id, label,
+                        CASE WHEN LOWER(COALESCE(specialties, '')) LIKE ? THEN 1 ELSE 0 END AS specialty_match
+                   FROM symptoms_master
+                  WHERE is_active = 1 AND category = ?
+                  ORDER BY specialty_match DESC, global_usage_count DESC, label ASC
+                  LIMIT 60"
+            );
+            $stmt->execute([$spLike, $cat]);
+        } else {
+            $stmt = $pdo->prepare(
+                "SELECT id, label
+                   FROM symptoms_master
+                  WHERE is_active = 1 AND category = ?
+                  ORDER BY global_usage_count DESC, label ASC
+                  LIMIT 60"
+            );
+            $stmt->execute([$cat]);
+        }
+
+        $symptoms = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $symptoms[] = [
+                'label'     => (string) $r['label'],
+                'master_id' => (int) $r['id'],
+                'source'    => 'master',
+            ];
+        }
+
+        return $symptoms;
     }
 
     /** Human labels for the symptom category keys (Review-of-Systems style). */

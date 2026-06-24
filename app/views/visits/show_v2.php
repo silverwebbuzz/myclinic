@@ -947,14 +947,14 @@ function visitScreenV2(cfg) {
         _k: 'c0' + i, description: c.description || '', amount: c.amount ?? null,
     }));
 
-    return {
+    const screen = {
         ...cfg,
         specialty_data: specialtyData,
         case_taking: caseTaking,
         vitals,
         charges,
         saveStatus: 'idle',
-        saveLabel: 'Use Save to keep changes',
+        saveLabel: 'Click Save to keep changes',
         icdResults: [],
         vitalsWarnings: [],
         lastVisitNote: '',
@@ -987,15 +987,18 @@ function visitScreenV2(cfg) {
         // awaited). Used before navigating/completing so an in-flight
         // fire-and-forget save isn't cancelled by the page leaving.
         async persistSymptomsNow() {
-            if (!this.editable) return;
+            if (!this.editable) return true;
             try {
-                await fetch('/api/v1/visits/' + this.visitId + '/symptoms', {
+                const r = await fetch('/api/v1/visits/' + this.visitId + '/symptoms', {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify({ symptoms: this.symptoms || [] }),
                 });
-            } catch (e) { /* ignore — completion proceeds */ }
+                return r.ok;
+            } catch (e) {
+                return false;
+            }
         },
 
         // Block completing a visit while charges are unsaved; flush symptoms
@@ -1079,9 +1082,6 @@ function visitScreenV2(cfg) {
 
         _saveDebounce: null,
         initVisitScreen() {
-            // Expose the canonical visit scope so inner panels (prescription,
-            // symptom) can reach data Alpine's $root cannot.
-            window.__visit = this;
             if (!this.editable) return;
             this.$el.addEventListener('input', () => this.onFormEdit());
             this.$el.addEventListener('change', () => this.onFormEdit());
@@ -1180,6 +1180,7 @@ function visitScreenV2(cfg) {
             this.saveStatus = 'saving';
             this.saveLabel = 'Saving…';
             try {
+                await this.persistSymptomsNow();
                 const r = await fetch('/api/v1/visits/' + this.visitId + '/autosave', {
                     method: 'POST',
                     credentials: 'same-origin',
@@ -1527,6 +1528,8 @@ function visitScreenV2(cfg) {
             this.markDirty();
         },
     };
+    window.__visit = screen;
+    return screen;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1547,6 +1550,7 @@ function symptomPicker() {
             return v.symptoms;
         },
         set symptoms(val) { if (window.__visit) window.__visit.symptoms = val; },
+        get editable() { return !!(window.__visit && window.__visit.editable); },
         get chief_complaint() { return window.__visit ? (window.__visit.chief_complaint || '') : ''; },
         set chief_complaint(v) { if (window.__visit) window.__visit.chief_complaint = v; },
 
@@ -1574,6 +1578,10 @@ function symptomPicker() {
                 const r = await fetch('/api/v1/symptoms/by-category', {
                     credentials: 'same-origin', headers: { 'Accept': 'application/json' },
                 });
+                if (!r.ok) {
+                    this.categories = [];
+                    return;
+                }
                 const data = await r.json();
                 this.categories = data.categories || [];
             } catch (e) { this.categories = []; }
@@ -1595,8 +1603,12 @@ function symptomPicker() {
                 const r = await fetch('/api/v1/symptoms/by-category?cat=' + encodeURIComponent(key), {
                     credentials: 'same-origin', headers: { 'Accept': 'application/json' },
                 });
-                const data = await r.json();
-                this.catSymptoms = data.symptoms || [];
+                if (r.ok) {
+                    const data = await r.json();
+                    this.catSymptoms = data.symptoms || [];
+                } else {
+                    this.catSymptoms = [];
+                }
             } catch (e) { this.catSymptoms = []; }
             this.catLoading = false;
         },
@@ -1615,6 +1627,7 @@ function symptomPicker() {
             else {
                 this.symptoms.push({ label: label, master_id: sug.master_id || null, source: sug.source || 'master' });
             }
+            if (window.__visit) window.__visit.markDirty();
             this.persistSymptoms();
         },
 
@@ -1685,6 +1698,7 @@ function symptomPicker() {
             this.query = '';
             this.suggestions = [];
             this.showSuggestions = false;
+            if (window.__visit) window.__visit.markDirty();
         },
 
         addCustom(rawLabel) {
@@ -1705,19 +1719,23 @@ function symptomPicker() {
         removeSymptom(idx) {
             if (idx < 0 || idx >= this.symptoms.length) return;
             this.symptoms.splice(idx, 1);
+            if (window.__visit) window.__visit.markDirty();
         },
 
         async persistSymptoms() {
             const v = window.__visit;
             if (!v || !v.editable) return;
             try {
-                await fetch('/api/v1/visits/' + v.visitId + '/symptoms', {
+                const r = await fetch('/api/v1/visits/' + v.visitId + '/symptoms', {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify({ symptoms: this.symptoms }),
                 });
-            } catch (e) { /* autosave will retry on next save */ }
+                if (!r.ok) {
+                    console.warn('Symptom save failed', r.status);
+                }
+            } catch (e) { /* manual Save will retry */ }
         },
     };
 }

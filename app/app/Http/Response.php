@@ -14,8 +14,20 @@ final class Response
 
     public static function json(array $data, int $status = 200): self
     {
+        $flags = JSON_UNESCAPED_SLASHES;
+        if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
+            $flags |= JSON_INVALID_UTF8_SUBSTITUTE;
+        }
+
+        try {
+            $body = json_encode($data, JSON_THROW_ON_ERROR | $flags);
+        } catch (\JsonException) {
+            // Last resort — never take the API down because of a bad UTF-8 byte.
+            $body = json_encode($data, $flags) ?: '{"error":"encoding_error"}';
+        }
+
         return new self(
-            json_encode($data, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
+            $body,
             $status,
             ['Content-Type' => 'application/json; charset=UTF-8'],
         );
