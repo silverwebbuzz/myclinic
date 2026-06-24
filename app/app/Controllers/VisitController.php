@@ -404,14 +404,16 @@ final class VisitController
             return $denied;
         }
 
-        $drugs = DrugService::search($request->query['q'] ?? '');
+        $clinicId = (int) RequestContext::clinicId();
+        $drugs = DrugService::search($request->query['q'] ?? '', 15, $clinicId);
 
         // Smart defaults: attach the clinic's last-used frequency/duration/dose
         // per drug so picking a medicine pre-fills the empty fields.
-        $clinicId = (int) RequestContext::clinicId();
-        $defaults = DrugService::lastUsedDefaults($clinicId, array_map(static fn ($d) => (int) $d['id'], $drugs));
+        $defaults = DrugService::lastUsedDefaults($clinicId, array_values(array_filter(
+            array_map(static fn ($d) => !empty($d['id']) ? (int) $d['id'] : 0, $drugs),
+        )));
         foreach ($drugs as &$drug) {
-            $drug['defaults'] = $defaults[(int) $drug['id']] ?? null;
+            $drug['defaults'] = !empty($drug['id']) ? ($defaults[(int) $drug['id']] ?? null) : null;
         }
         unset($drug);
 

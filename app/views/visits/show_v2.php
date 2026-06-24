@@ -52,7 +52,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         'prescriptions' => array_map(static fn ($r) => [
             'drug_id' => $r['drug_id'] ?? null,
             'remedy_id' => $r['remedy_id'] ?? null,
-            'drug_name' => $r['drug']['name'] ?? $r['remedy']['name'] ?? '',
+            'drug_name' => $r['drug']['name'] ?? $r['remedy']['name'] ?? trim((string) ($r['dosage'] ?? '')),
             'potency' => $r['potency'] ?? '',
             'dosage' => $r['dosage'] ?? '',
             'frequency_preset' => $r['frequency_preset'] ?? '',
@@ -350,7 +350,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                            class="w-full rounded border px-2 py-1 text-sm">
                                     <ul x-show="line._dropdown && (line._suggestions || []).length"
                                         class="absolute z-10 mt-1 w-full max-h-44 overflow-y-auto rounded-lg border bg-white shadow-lg">
-                                        <template x-for="d in (line._suggestions || [])" :key="d.id">
+                                        <template x-for="d in (line._suggestions || [])" :key="d.id || d.name">
                                             <li>
                                                 <button type="button"
                                                         @click="pickDrugFor(idx, d)"
@@ -1450,38 +1450,89 @@ function visitScreenV2(cfg) {
             } catch (e) { /* skip */ }
         },
 
+        drugNameMatchesQuery(name, query) {
+            const hay = (name || '').toLowerCase();
+            const abbrevs = { syr: 'syrup', syp: 'syrup', tab: 'tablet', tabs: 'tablet', cap: 'capsule', caps: 'capsule', inj: 'injection', crm: 'cream' };
+            const tokens = (query || '').toLowerCase().trim().split(/\s+/).filter(Boolean);
+            if (!tokens.length) return true;
+            const words = hay.split(/\s+/);
+            return tokens.every(t => {
+                if (hay.includes(t)) return true;
+                const alt = abbrevs[t];
+                if (alt && hay.includes(alt)) return true;
+                return words.some(w => w.startsWith(t) || (alt && w.startsWith(alt)));
+            });
+        },
+
+        localDrugSuggestions(idx, query) {
+            const seen = new Set();
+            const out = [];
+            (this.prescriptions || []).forEach((p, i) => {
+                if (i === idx) return;
+                const name = (p.drug_name || '').trim();
+                if (!name || seen.has(name.toLowerCase())) return;
+                if (!this.drugNameMatchesQuery(name, query)) return;
+                seen.add(name.toLowerCase());
+                out.push({ id: p.drug_id || null, name, strength: '', source: 'this_visit' });
+            });
+            return out;
+        },
+
+        mergeDrugSuggestions(local, remote) {
+            const seen = new Set();
+            const out = [];
+            [...local, ...(remote || [])].forEach(d => {
+                const key = (d.name || '').toLowerCase();
+                if (!key || seen.has(key)) return;
+                seen.add(key);
+                out.push(d);
+            });
+            return out;
+        },
+
         async searchDrugFor(idx, q) {
             if (!Array.isArray(this.prescriptions)) return;
             const line = this.prescriptions[idx];
             if (!line) return;
             const query = (q || '').trim();
             if (query.length < 2) { line._suggestions = []; line._dropdown = false; line._searchError = ''; return; }
+
+            // Instant hits from other lines on this visit (e.g. row 2 "CXM Syrup"
+            // while typing on row 3) — no network round-trip needed.
+            const local = this.localDrugSuggestions(idx, query);
+            if (local.length) {
+                line._suggestions = local;
+                line._dropdown = true;
+                line._searchError = '';
+            }
+
             const url = this.useHomeo
                 ? '/api/v1/remedies/search?q=' + encodeURIComponent(query)
                 : '/api/v1/drugs/search?q=' + encodeURIComponent(query);
             try {
                 const r = await fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
-                // Surface API problems instead of silently showing an empty dropdown.
-                // Most common: 402 from ModuleGate when the `prescription` module
-                // isn't active for the clinic — without this, doctors see nothing.
                 if (!r.ok) {
-                    line._suggestions = [];
-                    line._dropdown = true;
-                    line._searchError = r.status === 402
-                        ? 'Prescription module not active for this clinic — contact admin.'
-                        : 'Drug search failed (HTTP ' + r.status + ').';
+                    if (!local.length) {
+                        line._suggestions = [];
+                        line._dropdown = true;
+                        line._searchError = r.status === 402
+                            ? 'Prescription module not active for this clinic — contact admin.'
+                            : 'Drug search failed (HTTP ' + r.status + ').';
+                    }
                     return;
                 }
                 const data = await r.json();
-                line._suggestions = data.drugs || data.remedies || [];
+                line._suggestions = this.mergeDrugSuggestions(local, data.drugs || data.remedies || []);
                 line._dropdown = true;
                 line._searchError = line._suggestions.length === 0
-                    ? 'Not in the medicine catalog — you can still use "' + query + '" as typed.'
+                    ? 'Not in catalog yet — you can still use "' + query + '" as typed.'
                     : '';
             } catch (e) {
-                line._suggestions = [];
-                line._dropdown = true;
-                line._searchError = 'Network error fetching medicines.';
+                if (!local.length) {
+                    line._suggestions = [];
+                    line._dropdown = true;
+                    line._searchError = 'Network error fetching medicines.';
+                }
             }
         },
 
@@ -1490,13 +1541,13 @@ function visitScreenV2(cfg) {
             const line = this.prescriptions[idx];
             if (!line) return;
             if (this.useHomeo) {
-                line.remedy_id = drug.id;
+                line.remedy_id = drug.id || null;
                 line.drug_id = null;
             } else {
-                line.drug_id = drug.id;
+                line.drug_id = drug.id || null;
                 line.remedy_id = null;
             }
-            line.drug_name = drug.name + (drug.strength ? ' ' + drug.strength : '');
+            line.drug_name = drug.name + (drug.strength && !String(drug.name).includes(drug.strength) ? ' ' + drug.strength : '');
 
             // Smart defaults: pre-fill from the clinic's last prescription of
             // this drug — but never overwrite what the doctor already entered.

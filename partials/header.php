@@ -146,6 +146,15 @@ $ecpPatientJson = $ecpPatient
 
     <!-- Alpine pinned to exact version for CDN cacheability (was @3.x.x — re-fetched on every floating release) -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+    <script src="https://analytics.ahrefs.com/analytics.js" data-key="4woSp6JOsZmShXEwnBQwUQ" async></script>
+    <script>
+        var ahrefs_analytics_script = document.createElement('script');
+        ahrefs_analytics_script.async = true;
+        ahrefs_analytics_script.src = 'https://analytics.ahrefs.com/analytics.js';
+        ahrefs_analytics_script.setAttribute('data-key', '4woSp6JOsZmShXEwnBQwUQ');
+        document.getElementsByTagName('head')[0].appendChild(ahrefs_analytics_script);
+    </script>
+
 </head>
 <!-- Hand the initial session blob to JS via a separate JSON script tag
      so we don't have to embed PHP inside an Alpine x-data attribute. -->
