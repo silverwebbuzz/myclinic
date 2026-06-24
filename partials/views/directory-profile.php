@@ -92,15 +92,15 @@ $specFindUrl = !empty($p['specialty_url_slug']) && !empty($p['city_slug'])
                 </div>
             </div>
             <aside class="dp-side" id="book">
+                <div id="dp-book-widget">
+                    <?php require __DIR__ . '/profile-booking-sidebar.php'; ?>
+                </div>
                 <?php if (!empty($p['phone']) || !empty($p['directions_url'])): ?>
-                <div class="dp-side-card">
+                <div class="dp-side-card dp-side-actions">
                     <?php if (!empty($p['phone'])): ?><a href="tel:<?= e(preg_replace('/\s+/', '', (string) $p['phone'])) ?>" class="dp-btn dp-btn-call">📞 Call Now</a><?php endif; ?>
                     <?php if (!empty($p['directions_url'])): ?><a href="<?= e($p['directions_url']) ?>" target="_blank" rel="noopener" class="dp-btn dp-btn-ghost">🧭 Directions</a><?php endif; ?>
                 </div>
                 <?php endif; ?>
-                <div id="dp-book-widget">
-                    <?php require __DIR__ . '/profile-booking-sidebar.php'; ?>
-                </div>
             </aside>
         </div>
     </div>

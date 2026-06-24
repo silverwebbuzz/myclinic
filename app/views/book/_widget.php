@@ -2,8 +2,10 @@
 $isConfirmed = !empty($confirmation);
 $embedMode = $embedMode ?? false;
 $bookingError = $bookingError ?? null;
+$slotGridClass = $embedMode ? 'pb-slot-grid pb-slot-grid--2' : 'grid grid-cols-3 gap-2';
+$cardClass = 'dp-book-card overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm' . ($embedMode ? ' dp-book-embed' : '');
 ?>
-            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="<?= $cardClass ?>">
 
                 <?php if ($isConfirmed): ?>
                 <!-- Confirmation panel -->
@@ -52,10 +54,11 @@ $bookingError = $bookingError ?? null;
 
                 <?php else: ?>
                 <!-- Active wizard -->
-                <div class="bg-brand-50 px-5 pt-5 pb-3 sm:px-6">
+                <div class="<?= $embedMode ? 'bg-brand-50 px-4 pt-4 pb-3' : 'bg-brand-50 px-5 pt-5 pb-3 sm:px-6' ?>">
                     <h2 class="text-base font-bold text-slate-900">Choose your appointment</h2>
                     <p class="mt-0.5 text-xs text-slate-600">Same-day slots available. No advance payment needed.</p>
 
+                    <?php if (empty($embedMode)): ?>
                     <!-- Appointment type segmented control -->
                     <div class="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-brand-100 bg-white p-1">
                         <button type="button" class="rounded-lg bg-brand py-1.5 text-xs font-semibold text-white">
@@ -71,6 +74,7 @@ $bookingError = $bookingError ?? null;
                             </span>
                         </button>
                     </div>
+                    <?php endif; ?>
                 </div>
 
                 <?php if ($bookingError): ?>
@@ -79,7 +83,7 @@ $bookingError = $bookingError ?? null;
                 </div>
                 <?php endif; ?>
 
-                <div class="p-5 sm:p-6" x-data="bookingWizard()" x-init="init()">
+                <div class="<?= $embedMode ? 'p-4' : 'p-5 sm:p-6' ?>" x-data="bookingWizard()" x-init="init()">
                     <?php require __DIR__ . '/_stepper.php'; ?>
 
                     <form method="post" action="<?= htmlspecialchars($bookConfig['formAction']) ?>" @submit="submitting = true" class="mt-5">
@@ -120,7 +124,7 @@ $bookingError = $bookingError ?? null;
                                                 ? 'border-brand bg-brand text-white shadow-md'
                                                 : '<?= $d['within_window'] ? 'border-slate-200 bg-white hover:border-brand text-slate-700' : 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed' ?>'"
                                             <?= $d['within_window'] ? '' : 'disabled' ?>
-                                            class="flex shrink-0 flex-col items-center rounded-xl border-2 px-3 py-2.5 transition min-w-[68px]">
+                                            class="flex shrink-0 flex-col items-center rounded-xl border-2 px-2.5 py-2 transition <?= $embedMode ? 'min-w-[54px]' : 'min-w-[68px]' ?>">
                                         <span class="text-[10px] font-semibold uppercase tracking-wider opacity-80"><?= htmlspecialchars($d['weekday']) ?></span>
                                         <span class="mt-0.5 text-xl font-bold leading-none"><?= (int) $d['day'] ?></span>
                                         <span class="mt-0.5 text-[10px] opacity-80"><?= htmlspecialchars($d['month']) ?></span>
@@ -144,7 +148,7 @@ $bookingError = $bookingError ?? null;
                                     <span class="text-amber-500">☀️</span> Morning
                                     <span class="ml-1 font-normal text-slate-400">(<span x-text="morningSlots.filter(s => s.available).length"></span> slots)</span>
                                 </p>
-                                <div class="mt-2 grid grid-cols-3 gap-2">
+                                <div class="mt-2 <?= $slotGridClass ?>">
                                     <template x-for="s in morningSlots" :key="s.datetime">
                                         <button type="button"
                                                 :disabled="!s.available"
@@ -163,7 +167,7 @@ $bookingError = $bookingError ?? null;
                                     <span class="text-indigo-500">🌙</span> Evening
                                     <span class="ml-1 font-normal text-slate-400">(<span x-text="eveningSlots.filter(s => s.available).length"></span> slots)</span>
                                 </p>
-                                <div class="mt-2 grid grid-cols-3 gap-2">
+                                <div class="mt-2 <?= $slotGridClass ?>">
                                     <template x-for="s in eveningSlots" :key="s.datetime">
                                         <button type="button"
                                                 :disabled="!s.available"

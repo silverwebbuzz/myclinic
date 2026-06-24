@@ -1,6 +1,14 @@
 <?php
-$currentStep = $isConfirmed ? 3 : 1; // default for confirmed page; step 1/2 is governed by Alpine in the wizard
+$embedMode = $embedMode ?? false;
+$isConfirmed = !empty($isConfirmed);
 ?>
+<?php if ($embedMode): ?>
+<div class="pb-stepper-embed" x-data>
+    <span class="pb-step" :class="step >= 1 ? 'is-on' : ''">1 · Pick slot</span>
+    <span class="pb-step-sep" aria-hidden="true"></span>
+    <span class="pb-step" :class="step >= 2 ? 'is-on' : ''">2 · Your details</span>
+</div>
+<?php else: ?>
 <div class="flex items-center justify-center gap-2 text-xs sm:gap-4 sm:text-sm">
     <?php
     $steps = [
@@ -9,13 +17,6 @@ $currentStep = $isConfirmed ? 3 : 1; // default for confirmed page; step 1/2 is 
         ['n' => 3, 'label' => 'Confirmed'],
     ];
     foreach ($steps as $i => $s):
-        if ($isConfirmed) {
-            $state = 'done';
-        } elseif ($s['n'] === 1) {
-            $state = 'current-or-done'; // can't tell from PHP; styled with Alpine below
-        } else {
-            $state = 'pending';
-        }
     ?>
     <div class="flex items-center gap-2">
         <?php if (!$isConfirmed && $s['n'] <= 2): ?>
@@ -36,3 +37,4 @@ $currentStep = $isConfirmed ? 3 : 1; // default for confirmed page; step 1/2 is 
     <?php endif; ?>
     <?php endforeach; ?>
 </div>
+<?php endif; ?>
