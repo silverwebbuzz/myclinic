@@ -23,6 +23,11 @@ $patientPhoneDisplay = preg_replace('/\D/', '', (string) $patientPhone);
 if (strlen($patientPhoneDisplay) >= 10) {
     $patientPhoneDisplay = substr($patientPhoneDisplay, -10);
 }
+$patientFirstName = 'Patient';
+if (trim($patientName) !== '') {
+    $patientFirstName = preg_split('/\s+/', trim($patientName))[0] ?: 'Patient';
+}
+$patientInitial = strtoupper(mb_substr($patientFirstName, 0, 1)) ?: 'P';
 ?><!DOCTYPE html>
 <html lang="en">
 <head>
@@ -45,6 +50,33 @@ if (strlen($patientPhoneDisplay) >= 10) {
         .bg-brand-100 { background: color-mix(in srgb, var(--brand) 14%, white); }
         .border-brand-100 { border-color: color-mix(in srgb, var(--brand) 20%, white); }
         [x-cloak] { display: none !important; }
+        .auth-devcode {
+            font-size: 13px;
+            background: #fff7e0;
+            border: 1px solid #f5d97e;
+            color: #6b4f00;
+            padding: 10px 12px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .auth-devcode .tag {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            background: #f5d97e;
+            color: #6b4f00;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .auth-devcode strong {
+            font-family: ui-monospace, Menlo, monospace;
+            font-size: 16px;
+            letter-spacing: 2px;
+            color: #6b4f00;
+            margin-left: auto;
+        }
         /* sticky right column scrolls independently on desktop */
         @media (min-width: 1024px) {
             .book-stick { position: sticky; top: 24px; align-self: start; }
@@ -62,6 +94,7 @@ if (strlen($patientPhoneDisplay) >= 10) {
             <span class="hidden text-slate-300 sm:inline">·</span>
             <span class="hidden text-xs text-slate-500 sm:inline">Online booking</span>
         </div>
+        <div class="flex items-center gap-4">
         <?php if ($clinicPhone): ?>
         <a href="tel:<?= htmlspecialchars($clinicPhone) ?>"
            class="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-brand">
@@ -70,6 +103,14 @@ if (strlen($patientPhoneDisplay) >= 10) {
             <span class="sm:hidden">Call clinic</span>
         </a>
         <?php endif; ?>
+        <div class="flex items-center gap-3" x-data x-show="$store.bookPatient.loggedIn" x-cloak>
+            <div class="flex items-center gap-2 text-sm text-slate-700">
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand"
+                      x-text="$store.bookPatient.initial()"><?= htmlspecialchars($patientInitial) ?></span>
+                <span class="hidden sm:inline">Hi, <strong x-text="$store.bookPatient.firstName()"><?= htmlspecialchars($patientFirstName) ?></strong></span>
+            </div>
+        </div>
+        </div>
     </div>
 </header>
 
@@ -494,9 +535,6 @@ if (strlen($patientPhoneDisplay) >= 10) {
                                             </div>
                                         </label>
                                         <p class="text-xs text-rose-700" x-show="authError" x-text="authError"></p>
-                                        <p class="rounded-lg bg-amber-50 px-2 py-1.5 text-xs text-amber-900" x-show="authDevCode" x-cloak>
-                                            Dev code: <strong x-text="authDevCode"></strong>
-                                        </p>
                                         <button type="button" @click="sendAuthOtp()" :disabled="authBusy || authPhoneDigits.length < 10"
                                                 class="w-full rounded-lg bg-brand py-2.5 text-sm font-semibold text-white disabled:opacity-50">
                                             <span x-show="!authBusy" x-text="authIntent === 'signup' ? 'Send code to create account' : 'Send sign-in code'"></span>
@@ -517,6 +555,12 @@ if (strlen($patientPhoneDisplay) >= 10) {
                                                 <input type="text" x-model="authName" placeholder="Your full name"
                                                        class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 ring-brand">
                                             </label>
+                                        </template>
+                                        <template x-if="authDevCode">
+                                            <div class="auth-devcode">
+                                                <span class="tag">DEV MODE</span>
+                                                Your code: <strong x-text="authDevCode"></strong>
+                                            </div>
                                         </template>
                                         <label class="block">
                                             <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">6-digit code</span>
@@ -582,6 +626,30 @@ if (strlen($patientPhoneDisplay) >= 10) {
 </main>
 
 <script>
+document.addEventListener('alpine:init', () => {
+    Alpine.store('bookPatient', {
+        loggedIn: <?= $patientLoggedIn ? 'true' : 'false' ?>,
+        name: <?= json_encode((string) $patientName) ?>,
+        firstName() {
+            const n = (this.name || '').trim();
+            if (!n) return 'Patient';
+            return n.split(/\s+/)[0] || 'Patient';
+        },
+        initial() {
+            const n = this.firstName();
+            return n ? n.charAt(0).toUpperCase() : 'P';
+        },
+        setPatient(p) {
+            this.loggedIn = true;
+            this.name = p.name || p.first_name || '';
+        },
+        clear() {
+            this.loggedIn = false;
+            this.name = '';
+        },
+    });
+});
+
 function bookingWizard() {
     return {
         step: 1,
@@ -638,6 +706,9 @@ function bookingWizard() {
             this.phone = this.displayPhoneFromE164(p.phone);
             this.authStep = 'phone';
             this.authError = '';
+            if (typeof Alpine !== 'undefined' && Alpine.store('bookPatient')) {
+                Alpine.store('bookPatient').setPatient(p);
+            }
         },
 
         async sendAuthOtp() {
@@ -718,6 +789,10 @@ function bookingWizard() {
             this.authPhoneDigits = '';
             this.authCode = '';
             this.authName = '';
+            this.authDevCode = '';
+            if (typeof Alpine !== 'undefined' && Alpine.store('bookPatient')) {
+                Alpine.store('bookPatient').clear();
+            }
         },
 
         selectDate(d) {

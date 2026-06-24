@@ -68,6 +68,7 @@ final class BookController
 
         try {
             $result = PublicBookingService::book((int) $clinic['id'], $request->post);
+            $me = PatientIdentityAuthService::current();
 
             return Response::html(View::render('book/index', [
                 'clinic' => $clinic,
@@ -83,9 +84,14 @@ final class BookController
                     'token' => $result['appointment']['token_number'] ?? null,
                     'appointment_id' => $result['appointment']['id'] ?? null,
                 ],
+                'patientName' => $me['name'] ?? '',
+                'patientPhone' => $me['phone'] ?? '',
+                'patientLoggedIn' => $me !== null,
                 'csrf' => CsrfService::token(),
             ]));
         } catch (\Throwable $e) {
+            $me = PatientIdentityAuthService::current();
+
             return Response::html(View::render('book/index', [
                 'clinic' => $clinic,
                 'doctors' => PublicBookingService::doctors((int) $clinic['id']),
@@ -95,6 +101,9 @@ final class BookController
                 'windowDays' => PublicBookingService::bookingWindowDays((int) $clinic['id']),
                 'confirmation' => null,
                 'error' => $e->getMessage(),
+                'patientName' => $me['name'] ?? '',
+                'patientPhone' => $me['phone'] ?? '',
+                'patientLoggedIn' => $me !== null,
                 'csrf' => CsrfService::token(),
             ]), 422);
         }

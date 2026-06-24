@@ -316,7 +316,8 @@ final class PublicBookingService
              WHERE RIGHT(
                  REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, " ", ""), "-", ""), "+", ""), "(", ""), ")", ""),
                  10
-             ) = :l10 COLLATE utf8mb4_unicode_ci
+             ) COLLATE utf8mb4_unicode_ci
+             = CAST(:l10 AS CHAR(10) CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci
              ORDER BY id ASC
              LIMIT 1'
         );

@@ -216,19 +216,24 @@ function ecp_patient_backfill_clinic_charts(int $identityId, string $normalizedP
     // so stripping + - ( ) space yields a digits-only string.
     // COLLATE pins the bound literal so a mixed server/column collation default
     // never raises "#1267 Illegal mix of collations".
-    $stmt = $db->prepare(
-        'UPDATE patients
-         SET identity_id = :iid
-         WHERE identity_id IS NULL
-           AND RIGHT(
-                 REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, " ", ""), "-", ""), "+", ""), "(", ""), ")", ""),
-                 10
-               ) = :l10 COLLATE utf8mb4_unicode_ci'
-    );
-    $stmt->execute([
-        'iid' => $identityId,
-        'l10' => $last10,
-    ]);
+    try {
+        $stmt = $db->prepare(
+            'UPDATE patients
+             SET identity_id = :iid
+             WHERE identity_id IS NULL
+               AND RIGHT(
+                     REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, " ", ""), "-", ""), "+", ""), "(", ""), ")", ""),
+                     10
+                   ) COLLATE utf8mb4_unicode_ci
+                 = CAST(:l10 AS CHAR(10) CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci'
+        );
+        $stmt->execute([
+            'iid' => $identityId,
+            'l10' => $last10,
+        ]);
+    } catch (\Throwable $e) {
+        error_log('[ecp_patient_backfill_clinic_charts] ' . $e->getMessage());
+    }
 }
 
 /**
