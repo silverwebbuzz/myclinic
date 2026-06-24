@@ -92,6 +92,14 @@ final class PublicBookingService
     {
         $days = self::bookingWindowDays($clinicId);
 
+        // Accept Y-m-d (slots API) or Y-m-d H:i:s (booking form posts scheduled_at).
+        $date = trim($date);
+        if (preg_match('/^(\d{4}-\d{2}-\d{2})/', $date, $m) === 1) {
+            $date = $m[1];
+        } else {
+            return false;
+        }
+
         // Compute the day difference in the CLINIC's timezone so the window
         // boundary matches SlotService (which also works in clinic-local time).
         // Using server-local date() here caused the boundary day to be wrong
