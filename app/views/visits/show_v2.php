@@ -131,6 +131,12 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         . "\n— " . ($visit['doctor_name'] ?? '');
     $waHref = 'https://wa.me/' . $waPhone . '?text=' . rawurlencode($waText);
     ?>
+    <?php if (!empty($_GET['complete_save_error'])): ?>
+    <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+        Could not save your notes before completing the visit. The visit was <strong>not</strong> completed — please click <strong>Save now</strong>, fix any errors, then try again.
+    </div>
+    <?php endif; ?>
+
     <?php if (!empty($_GET['completed']) && !$editable): ?>
     <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
         <p class="text-sm font-medium text-emerald-800">✓ Visit completed.</p>
@@ -803,6 +809,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 <?php if ($editable): ?>
                     <form method="post" action="/visits/<?= $visitId ?>/complete" @submit="confirmComplete($event)">
                         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+                        <input type="hidden" name="_visit_payload" value="">
                         <button type="submit" class="ui-btn ui-btn-primary">
                             Complete visit
                         </button>
@@ -1034,7 +1041,7 @@ function visitScreenV2(cfg) {
             if (!confirm('Complete this visit?')) return;
 
             this._completing = true;
-            const form = ev.target;
+            const form = ev.currentTarget;
             try {
                 // Flush symptoms + force-save the main form BEFORE the visit is
                 // locked. If the save fails, abort — completing now would lock the
@@ -1048,6 +1055,12 @@ function visitScreenV2(cfg) {
                           'Fix the issue and try again.');
                     this._completing = false;
                     return;
+                }
+                // Attach a full snapshot for the server-side complete handler
+                // (backup in case the fetch autosave was skipped).
+                const payloadInput = form.querySelector('[name="_visit_payload"]');
+                if (payloadInput) {
+                    payloadInput.value = JSON.stringify(this.payload());
                 }
                 // Save confirmed persisted — now it is safe to lock the visit.
                 form.submit();
@@ -1104,6 +1117,15 @@ function visitScreenV2(cfg) {
         _saveDebounce: null,
         initVisitScreen() {
             if (!this.editable) return;
+            // Pre-fill frequency presets for loaded lines that only have a name/duration.
+            (this.prescriptions || []).forEach(line => {
+                if (!line.drug_form) {
+                    line.drug_form = this.inferRxForm(line.drug_name, line.dose_unit, null);
+                }
+                if (!line.frequency_preset) {
+                    this.applyRxFormDefaults(line, line.drug_form, true);
+                }
+            });
             this.$el.addEventListener('input', () => this.onFormEdit());
             this.$el.addEventListener('change', () => this.onFormEdit());
         },
@@ -1146,6 +1168,18 @@ function visitScreenV2(cfg) {
             try { rec.start(); } catch (e) { this.listening = null; }
         },
 
+        rxLineHasContent(p) {
+            if (!p) return false;
+            const name = (p.drug_name || '').trim();
+            const taper = Array.isArray(p.tapering_steps) ? p.tapering_steps : [];
+            return !!(p.drug_id || p.remedy_id || name || p.frequency_preset || p.dose_amount
+                || p.duration_days || taper.length);
+        },
+
+        countRxLines() {
+            return (this.prescriptions || []).filter(p => this.rxLineHasContent(p)).length;
+        },
+
         payload() {
             // Strip UI-only flags from each rx line before serializing.
             const cleanRx = (this.prescriptions || []).map(p => ({
@@ -1153,11 +1187,12 @@ function visitScreenV2(cfg) {
                 remedy_id: p.remedy_id || null,
                 drug_name: p.drug_name || '',
                 potency: p.potency || null,
+                dosage: p.dosage || null,
                 dose_unit: p.dose_unit || null,
-                dose_amount: p.dose_amount || null,
+                dose_amount: p.dose_amount !== '' && p.dose_amount != null ? p.dose_amount : null,
                 frequency_preset: p.frequency_preset || null,
                 frequency: p.frequency || null,
-                duration_days: p.duration_days || null,
+                duration_days: p.duration_days !== '' && p.duration_days != null ? p.duration_days : null,
                 food_timing: p.food_timing || 'any',
                 mix_with: p.mix_with || null,
                 tapering_steps: Array.isArray(p.tapering_steps) && p.tapering_steps.length ? p.tapering_steps : null,
@@ -1211,6 +1246,15 @@ function visitScreenV2(cfg) {
                 let data = {};
                 try { data = await r.json(); } catch (e) { /* non-JSON (likely 500 HTML) */ }
                 if (r.ok && data.ok) {
+                    const expectedRx = force ? this.countRxLines() : 0;
+                    if (force && expectedRx > 0) {
+                        if (data.prescriptions_skipped) {
+                            throw new Error('Medicines were not saved (empty sync). Click Save now, then try completing again.');
+                        }
+                        if (data.prescriptions_synced != null && data.prescriptions_synced < expectedRx) {
+                            throw new Error('Only ' + data.prescriptions_synced + ' of ' + expectedRx + ' medicines saved.');
+                        }
+                    }
                     this.saveStatus = 'saved';
                     this.saveLabel = '✓ Saved ' + new Date().toLocaleTimeString();
                     this.dirty = false;
@@ -1248,6 +1292,7 @@ function visitScreenV2(cfg) {
 
         addRxLine() {
             this.dirty = true;
+            this.prescriptionsCleared = false;
             this.prescriptions.push({
                 drug_id: null, remedy_id: null, drug_name: '',
                 potency: '', dosage: '',
@@ -1663,6 +1708,7 @@ function visitScreenV2(cfg) {
             if (!Array.isArray(this.prescriptions)) return;
             const line = this.prescriptions[idx];
             if (!line) return;
+            this.prescriptionsCleared = false;
             if (this.useHomeo) {
                 line.remedy_id = drug.id || null;
                 line.drug_id = null;

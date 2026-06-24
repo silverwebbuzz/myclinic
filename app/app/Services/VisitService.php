@@ -398,13 +398,14 @@ final class VisitService
             VitalsService::saveForVisit($clinicId, $visitId, (int) $visit['patient_id'], $payload['vitals']);
         }
 
+        $prescriptionSync = null;
         if (isset($payload['prescriptions']) && is_array($payload['prescriptions'])) {
             // The client sets prescriptions_cleared=true only when the doctor
             // deliberately removed every medicine line. That is the one case in
             // which an empty set is allowed to wipe existing rows; any other
             // empty payload is treated as a no-op to protect saved medicines.
             $allowClear = !empty($payload['prescriptions_cleared']);
-            PrescriptionService::syncForVisit(
+            $prescriptionSync = PrescriptionService::syncForVisit(
                 $clinicId,
                 $visitId,
                 (int) $visit['patient_id'],
@@ -431,7 +432,12 @@ final class VisitService
             }
         }
 
-        return self::find($clinicId, $visitId) ?? [];
+        $result = self::find($clinicId, $visitId) ?? [];
+        if ($prescriptionSync !== null) {
+            $result['_prescription_sync'] = $prescriptionSync;
+        }
+
+        return $result;
     }
 
     /** @return array<string, mixed> */

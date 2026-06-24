@@ -183,8 +183,25 @@ final class VisitController
         }
 
         $clinicId = (int) RequestContext::clinicId();
-        VisitService::complete($clinicId, (int) $id);
-        AuditService::log($request, 'UPDATE', 'visits', (int) $id);
+        $visitId = (int) $id;
+
+        // Belt-and-suspenders: persist the form snapshot posted with the
+        // completion request so medicines are saved even if the prior fetch
+        // autosave was skipped or failed silently.
+        $rawPayload = $request->post['_visit_payload'] ?? null;
+        if (is_string($rawPayload) && $rawPayload !== '') {
+            $payload = json_decode($rawPayload, true);
+            if (is_array($payload)) {
+                try {
+                    VisitService::autosave($clinicId, $visitId, $payload);
+                } catch (\Throwable $e) {
+                    return Response::redirect('/visits/' . $visitId . '?complete_save_error=1');
+                }
+            }
+        }
+
+        VisitService::complete($clinicId, $visitId);
+        AuditService::log($request, 'UPDATE', 'visits', $visitId);
 
         return Response::redirect('/dashboard?visit_completed=1');
     }
@@ -260,11 +277,15 @@ final class VisitController
         try {
             $visit = VisitService::autosave($clinicId, (int) $id, $payload);
             $vitals = VitalsService::forVisit($clinicId, (int) $id);
+            $sync = $visit['_prescription_sync'] ?? null;
+            unset($visit['_prescription_sync']);
 
             return Response::json([
                 'ok' => true,
                 'saved_at' => date('c'),
                 'warnings' => $vitals ? VitalsService::rangeWarnings($vitals) : [],
+                'prescriptions_synced' => $sync['synced'] ?? null,
+                'prescriptions_skipped' => !empty($sync['skipped']),
             ]);
         } catch (\Throwable $e) {
             return Response::json(['error' => $e->getMessage()], 422);

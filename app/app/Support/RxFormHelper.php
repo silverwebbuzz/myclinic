@@ -170,4 +170,30 @@ final class RxFormHelper
             default => 'tablet',
         };
     }
+
+    /**
+     * Map client / preset notation to the legacy prescriptions.frequency ENUM.
+     */
+    public static function legacyFrequency(?string $frequency, ?string $preset = null): string
+    {
+        $allowed = ['OD', 'BD', 'TDS', 'QID', 'weekly', 'monthly', 'SOS', 'PRN'];
+        $freq = trim((string) $frequency);
+        if ($freq !== '' && in_array($freq, $allowed, true)) {
+            return $freq;
+        }
+
+        $p = strtoupper(trim((string) $preset));
+
+        return match (true) {
+            $p === '1-1-1-1', str_contains($p, 'QID') => 'QID',
+            $p === '1-1-1', str_contains($p, 'TDS') => 'TDS',
+            $p === '1-0-1', str_contains($p, ' BD') => 'BD',
+            $p === '1-0-0', $p === '0-0-1', $p === '0-1-0', $p === 'OD', str_contains($p, ' OD') => 'OD',
+            $p === 'SOS', str_contains($p, 'SOS') => 'SOS',
+            $p === 'PRN' => 'PRN',
+            $p === 'WEEKLY', str_contains($p, 'WEEKLY') => 'weekly',
+            $p === 'MONTHLY', str_contains($p, 'MONTHLY') => 'monthly',
+            default => 'BD',
+        };
+    }
 }

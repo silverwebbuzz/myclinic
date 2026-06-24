@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Core\Database;
 use App\Core\QueryBuilder;
+use App\Support\RxFormHelper;
 use App\Support\SpecialtyAdapter;
 
 final class PrescriptionService
@@ -158,10 +159,17 @@ final class PrescriptionService
     private static function lineHasContent(array $line): bool
     {
         $typedName = trim((string) ($line['drug_name'] ?? ''));
+        $taper = $line['tapering_steps'] ?? null;
+        if (is_string($taper) && $taper !== '') {
+            $decoded = json_decode($taper, true);
+            $taper = is_array($decoded) ? $decoded : null;
+        }
 
         return !empty($line['drug_id']) || !empty($line['remedy_id'])
             || !empty($line['dosage']) || $typedName !== ''
-            || !empty($line['frequency_preset']) || !empty($line['dose_amount']);
+            || !empty($line['frequency_preset']) || !empty($line['dose_amount'])
+            || !empty($line['duration_days'])
+            || (is_array($taper) && $taper !== []);
     }
 
     /**
@@ -175,7 +183,8 @@ final class PrescriptionService
      * asks to clear via $allowClear — the only path that may legitimately delete
      * every line is an intentional "remove all medicines" action.
      */
-    public static function syncForVisit(int $clinicId, int $visitId, int $patientId, array $lines, bool $allowClear = false): void
+    /** @return array{synced: int, skipped: bool} */
+    public static function syncForVisit(int $clinicId, int $visitId, int $patientId, array $lines, bool $allowClear = false): array
     {
         // Filter to the lines that actually carry medicine content up front, so
         // the wipe-guard and the insert loop agree on what "non-empty" means.
@@ -190,79 +199,99 @@ final class PrescriptionService
                 ->where('visit_id', '=', $visitId)
                 ->count();
             if ($existing > 0) {
-                return; // protect the doctor's already-saved medicines
+                return ['synced' => 0, 'skipped' => true];
             }
         }
 
-        QueryBuilder::table('prescriptions')
-            ->forClinic($clinicId)
-            ->where('visit_id', '=', $visitId)
-            ->delete();
+        $pdo = Database::connection();
+        $pdo->beginTransaction();
 
-        // Only the content-bearing lines get reinserted (empty rows are dropped).
-        $lines = $contentLines;
+        try {
+            QueryBuilder::table('prescriptions')
+                ->forClinic($clinicId)
+                ->where('visit_id', '=', $visitId)
+                ->delete();
 
-        $mode = SpecialtyAdapter::usesHomeopathicRx() ? 'homeopathic' : 'allopathic';
-        $order = 0;
-        $drugIdsUsed = [];
-        $remedyIdsUsed = [];
+            // Only the content-bearing lines get reinserted (empty rows are dropped).
+            $lines = $contentLines;
 
-        foreach ($lines as $line) {
-            // $lines is already filtered to content-bearing lines (see top of
-            // method / lineHasContent), so every line here is worth saving.
-            $typedName = trim((string) ($line['drug_name'] ?? ''));
+            $mode = SpecialtyAdapter::usesHomeopathicRx() ? 'homeopathic' : 'allopathic';
+            $order = 0;
+            $drugIdsUsed = [];
+            $remedyIdsUsed = [];
 
-            // If the doctor typed a medicine but didn't pick from the catalog
-            // (no drug_id), preserve the typed name in `dosage` so it isn't lost
-            // (prescriptions has no free-text name column).
-            $dosage = $line['dosage'] ?? null;
-            if ($dosage === null && empty($line['drug_id']) && empty($line['remedy_id']) && $typedName !== '') {
-                $dosage = mb_substr($typedName, 0, 60);
+            foreach ($lines as $line) {
+                $typedName = trim((string) ($line['drug_name'] ?? ''));
+
+                // If the doctor typed a medicine but didn't pick from the catalog
+                // (no drug_id), preserve the typed name in `dosage` so it isn't lost
+                // (prescriptions has no free-text name column).
+                $dosage = $line['dosage'] ?? null;
+                if ($dosage === null && empty($line['drug_id']) && empty($line['remedy_id']) && $typedName !== '') {
+                    $dosage = mb_substr($typedName, 0, 60);
+                }
+
+                $preset = isset($line['frequency_preset']) && $line['frequency_preset'] !== ''
+                    ? (string) $line['frequency_preset'] : null;
+
+                $row = [
+                    'clinic_id' => $clinicId,
+                    'visit_id' => $visitId,
+                    'patient_id' => $patientId,
+                    'mode' => $line['mode'] ?? $mode,
+                    'drug_id' => !empty($line['drug_id']) ? (int) $line['drug_id'] : null,
+                    'remedy_id' => !empty($line['remedy_id']) ? (int) $line['remedy_id'] : null,
+                    'potency' => $line['potency'] ?? null,
+                    'form' => $line['form'] ?? null,
+                    'dosage' => $dosage,
+                    'frequency' => RxFormHelper::legacyFrequency(
+                        isset($line['frequency']) ? (string) $line['frequency'] : null,
+                        $preset,
+                    ),
+                    'duration_days' => !empty($line['duration_days']) ? (int) $line['duration_days'] : null,
+                    'instructions' => $line['instructions'] ?? null,
+                    'sort_order' => $order++,
+                ];
+
+                // Phase 2/3 columns — wrapped because they don't exist until
+                // phase2_migrations.sql Block 2 has been run.
+                $optional = [
+                    'frequency_preset' => $preset,
+                    'tapering_steps' => isset($line['tapering_steps']) && is_array($line['tapering_steps']) && $line['tapering_steps'] !== []
+                                        ? json_encode($line['tapering_steps'], JSON_THROW_ON_ERROR) : null,
+                    'dose_unit' => $line['dose_unit'] ?? null,
+                    'dose_amount' => isset($line['dose_amount']) && $line['dose_amount'] !== '' ? (float) $line['dose_amount'] : null,
+                    'food_timing' => in_array($line['food_timing'] ?? 'any', ['before','after','with','empty','bedtime','any'], true)
+                                      ? ($line['food_timing'] ?? 'any') : 'any',
+                    'mix_with' => $line['mix_with'] ?? null,
+                ];
+
+                try {
+                    QueryBuilder::table('prescriptions')->insert(array_merge($row, $optional));
+                } catch (\Throwable $e) {
+                    // Pre-Phase-2 schema — retry with only the legacy columns.
+                    QueryBuilder::table('prescriptions')->insert($row);
+                }
+
+                if (!empty($line['drug_id'])) {
+                    $drugIdsUsed[] = (int) $line['drug_id'];
+                }
+                if (!empty($line['remedy_id'])) {
+                    $remedyIdsUsed[] = (int) $line['remedy_id'];
+                }
             }
 
-            $row = [
-                'clinic_id' => $clinicId,
-                'visit_id' => $visitId,
-                'patient_id' => $patientId,
-                'mode' => $line['mode'] ?? $mode,
-                'drug_id' => !empty($line['drug_id']) ? (int) $line['drug_id'] : null,
-                'remedy_id' => !empty($line['remedy_id']) ? (int) $line['remedy_id'] : null,
-                'potency' => $line['potency'] ?? null,
-                'form' => $line['form'] ?? null,
-                'dosage' => $dosage,
-                'frequency' => $line['frequency'] ?? 'BD',
-                'duration_days' => !empty($line['duration_days']) ? (int) $line['duration_days'] : null,
-                'instructions' => $line['instructions'] ?? null,
-                'sort_order' => $order++,
-            ];
-
-            // Phase 2/3 columns — wrapped because they don't exist until
-            // phase2_migrations.sql Block 2 has been run.
-            $optional = [
-                'frequency_preset' => $line['frequency_preset'] ?? null,
-                'tapering_steps' => isset($line['tapering_steps']) && is_array($line['tapering_steps']) && $line['tapering_steps'] !== []
-                                    ? json_encode($line['tapering_steps']) : null,
-                'dose_unit' => $line['dose_unit'] ?? null,
-                'dose_amount' => isset($line['dose_amount']) && $line['dose_amount'] !== '' ? (float) $line['dose_amount'] : null,
-                'food_timing' => in_array($line['food_timing'] ?? 'any', ['before','after','with','empty','bedtime','any'], true)
-                                  ? ($line['food_timing'] ?? 'any') : 'any',
-                'mix_with' => $line['mix_with'] ?? null,
-            ];
-
-            try {
-                QueryBuilder::table('prescriptions')->insert(array_merge($row, $optional));
-            } catch (\Throwable $e) {
-                // Pre-Phase-2 schema — retry with only the legacy columns.
-                QueryBuilder::table('prescriptions')->insert($row);
-            }
-
-            if (!empty($line['drug_id'])) $drugIdsUsed[] = (int) $line['drug_id'];
-            if (!empty($line['remedy_id'])) $remedyIdsUsed[] = (int) $line['remedy_id'];
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
         }
 
         // Phase 3: bump usage_count for ranked autocomplete. Wrapped so a
         // missing column never breaks the visit save.
         self::bumpUsageCounts($drugIdsUsed, $remedyIdsUsed);
+
+        return ['synced' => count($lines), 'skipped' => false];
     }
 
     /**
