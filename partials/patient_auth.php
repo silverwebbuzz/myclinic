@@ -285,21 +285,27 @@ function ecp_patient_set_cookie(string $token): void {
         return;
     }
 
+    $domain = ecp_patient_cookie_domain();
+
     // Use the array form on PHP 7.3+ (supports SameSite). Fall back to the
     // legacy 6-arg form on older PHP, which doesn't support SameSite but
     // at least sets the cookie.
     $ok = false;
     if (PHP_VERSION_ID >= 70300) {
-        $ok = setcookie(ECP_PAT_COOKIE, $token, [
+        $opts = [
             'expires'  => $expires,
             'path'     => '/',
             'secure'   => $secure,
             'httponly' => true,
             'samesite' => 'Lax',
-        ]);
+        ];
+        if ($domain !== '') {
+            $opts['domain'] = $domain;
+        }
+        $ok = setcookie(ECP_PAT_COOKIE, $token, $opts);
     } else {
         // 6-arg legacy form: name, value, expires, path, domain, secure, httponly
-        $ok = setcookie(ECP_PAT_COOKIE, $token, $expires, '/; SameSite=Lax', '', $secure, true);
+        $ok = setcookie(ECP_PAT_COOKIE, $token, $expires, '/; SameSite=Lax', $domain, $secure, true);
     }
 
     if (!$ok) {
@@ -307,17 +313,37 @@ function ecp_patient_set_cookie(string $token): void {
     }
 }
 
+function ecp_patient_cookie_domain(): string {
+    $explicit = trim((string) (getenv('PATIENT_COOKIE_DOMAIN') ?: ''));
+    if ($explicit !== '') {
+        return $explicit;
+    }
+    $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    if (preg_match('/(^|\.)eclinicpro\.com$/', $host)) {
+        return '.eclinicpro.com';
+    }
+    if (preg_match('/(^|\.)silverwebbuzz\.com$/', $host)) {
+        return '.silverwebbuzz.com';
+    }
+    return '';
+}
+
 function ecp_patient_clear_cookie(): void {
     if (headers_sent()) return;
+    $domain = ecp_patient_cookie_domain();
     if (PHP_VERSION_ID >= 70300) {
-        setcookie(ECP_PAT_COOKIE, '', [
+        $opts = [
             'expires'  => time() - 3600,
             'path'     => '/',
             'httponly' => true,
             'samesite' => 'Lax',
-        ]);
+        ];
+        if ($domain !== '') {
+            $opts['domain'] = $domain;
+        }
+        setcookie(ECP_PAT_COOKIE, '', $opts);
     } else {
-        setcookie(ECP_PAT_COOKIE, '', time() - 3600, '/; SameSite=Lax', '', false, true);
+        setcookie(ECP_PAT_COOKIE, '', time() - 3600, '/; SameSite=Lax', $domain, false, true);
     }
 }
 

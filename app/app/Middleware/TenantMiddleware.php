@@ -138,6 +138,7 @@ final class TenantMiddleware implements MiddlewareInterface
             || str_starts_with($uri, '/reset-password')
             || str_starts_with($uri, '/auth/google')
             || $uri === '/api/check-slug'
+            || str_starts_with($uri, '/api/patient-auth')
             || str_starts_with($uri, '/webhooks/');
     }
 

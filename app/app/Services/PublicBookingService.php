@@ -137,7 +137,7 @@ final class PublicBookingService
         //  3) No identity yet → REGISTER one now (we already collected a verified
         //     name + phone), so the booker gets a /patient account and their
         //     future booking history is linked from the start.
-        $loggedIn = self::currentPatientIdentity();
+        $loggedIn = PatientIdentityAuthService::current();
         if ($loggedIn !== null) {
             $identityId = (int) $loggedIn['id'];
             // Trust the account's own phone/name over anything posted.
@@ -216,36 +216,12 @@ final class PublicBookingService
 
     /**
      * Resolve the front-side logged-in patient from the `ecp_pid` session cookie.
-     * Read-only mirror of partials/patient_auth.php's ecp_patient_current(): the
-     * front-end (/patient) and this app share one database, so we can validate
-     * the same patient_sessions token here. Returns the patient_identities row
-     * (id, name, phone, …) or null when not logged in / session invalid.
      *
      * @return array<string,mixed>|null
      */
     public static function currentPatientIdentity(): ?array
     {
-        $token = (string) ($_COOKIE['ecp_pid'] ?? '');
-        // Same shape guard the front-end uses: 64-char hex token.
-        if (strlen($token) !== 64 || !ctype_xdigit($token)) {
-            return null;
-        }
-
-        try {
-            $pdo = \App\Core\Database::connection();
-            $stmt = $pdo->prepare(
-                'SELECT pi.*
-                 FROM patient_sessions ps
-                 JOIN patient_identities pi ON pi.id = ps.identity_id
-                 WHERE ps.id = :id AND ps.expires_at > NOW() AND pi.is_active = 1
-                 LIMIT 1'
-            );
-            $stmt->execute(['id' => $token]);
-            $row = $stmt->fetch();
-            return $row ?: null;
-        } catch (\Throwable) {
-            return null;
-        }
+        return PatientIdentityAuthService::current();
     }
 
     /**

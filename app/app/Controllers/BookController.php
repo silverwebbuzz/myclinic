@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Http\Request;
 use App\Http\Response;
 use App\Services\CsrfService;
+use App\Services\PatientIdentityAuthService;
 use App\Services\PublicBookingService;
 use App\Support\View;
 
@@ -41,7 +42,7 @@ final class BookController
 
         // If the visitor is logged in on /patient, prefill name+phone so we don't
         // ask again (and the booking form can lock those fields).
-        $me = PublicBookingService::currentPatientIdentity();
+        $me = PatientIdentityAuthService::current();
 
         return Response::html(View::render('book/index', [
             'clinic' => $clinic,

@@ -19,6 +19,10 @@ $displayFee = null;
 foreach ($doctors ?? [] as $d) {
     if (!empty($d['incentive_flat_fee'])) { $displayFee = (float) $d['incentive_flat_fee']; break; }
 }
+$patientPhoneDisplay = preg_replace('/\D/', '', (string) $patientPhone);
+if (strlen($patientPhoneDisplay) >= 10) {
+    $patientPhoneDisplay = substr($patientPhoneDisplay, -10);
+}
 ?><!DOCTYPE html>
 <html lang="en">
 <head>
@@ -446,69 +450,92 @@ foreach ($doctors ?? [] as $d) {
                                 </div>
                             </div>
 
-                            <!-- ===== Logged-in patient: don't ask phone/name ===== -->
+                            <!-- ===== Logged-in patient ===== -->
                             <template x-if="loggedIn">
                                 <div class="rounded-lg bg-emerald-50 px-3 py-3 text-sm">
                                     <p class="font-semibold text-emerald-800">👋 Booking as <span x-text="name"></span></p>
                                     <p class="mt-0.5 text-xs text-emerald-700">
                                         <span x-text="phone"></span> · using your eClinicPro profile.
+                                        <button type="button" @click="logoutPatient()" class="ml-1 text-emerald-900 underline">Switch account</button>
                                     </p>
-                                    <!-- Carry the values in the POST; server also trusts the session. -->
-                                    <input type="hidden" name="phone" :value="phone">
+                                    <input type="hidden" name="phone" :value="phoneRaw">
                                     <input type="hidden" name="name" :value="name">
                                 </div>
                             </template>
 
-                            <!-- ===== Guest booker: ask phone + name (auto-lookup) ===== -->
+                            <!-- ===== Not logged in: Sign in / Create account (same as main site) ===== -->
                             <template x-if="!loggedIn">
-                                <div class="space-y-4">
-                                    <label class="block">
-                                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Mobile number <span class="text-rose-500">*</span></span>
-                                        <!-- Auto-lookup the moment the patient stops typing — no Find button to click. -->
-                                        <input type="tel" name="phone" x-model="phone" required inputmode="numeric"
-                                               maxlength="14"
-                                               @input="phone = phone.replace(/\D/g, '').slice(0, 12); debouncedLookup()"
-                                               placeholder="10-digit mobile"
-                                               class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 ring-brand">
-                                        <p class="mt-1 text-[11px] text-slate-500" x-show="phone.length > 0 && phone.length < 10" x-cloak>
-                                            Enter your 10-digit mobile to check if you're in our system.
-                                        </p>
-                                    </label>
-
-                                    <!-- Loading shimmer while lookup is in flight -->
-                                    <div x-show="lookingUp" x-cloak class="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2.5 text-sm text-slate-600">
-                                        <div class="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-brand"></div>
-                                        Checking your number…
+                                <div class="space-y-4 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-900">Sign in to continue</p>
+                                        <p class="mt-0.5 text-xs text-slate-600">Use your eClinicPro patient account — we'll fill your name and mobile automatically.</p>
                                     </div>
 
-                                    <!-- Returning patient — name pre-filled, banner -->
-                                    <template x-if="!lookingUp && lookupResult === 'found'">
-                                        <div class="rounded-lg bg-emerald-50 px-3 py-2.5 text-sm">
-                                            <p class="font-semibold text-emerald-800">👋 Welcome back, <span x-text="foundName"></span>!</p>
-                                            <p class="mt-0.5 text-xs text-emerald-700">We've used your saved details. Just confirm the reason below.</p>
-                                        </div>
-                                    </template>
+                                    <div class="grid grid-cols-2 gap-1 rounded-lg border border-slate-200 bg-white p-1" x-show="authStep === 'phone'">
+                                        <button type="button"
+                                                :class="authIntent === 'signin' ? 'bg-brand text-white' : 'text-slate-600'"
+                                                @click="authIntent = 'signin'; authError = ''"
+                                                class="rounded-md py-1.5 text-xs font-semibold">Sign in</button>
+                                        <button type="button"
+                                                :class="authIntent === 'signup' ? 'bg-brand text-white' : 'text-slate-600'"
+                                                @click="authIntent = 'signup'; authError = ''"
+                                                class="rounded-md py-1.5 text-xs font-semibold">Create account</button>
+                                    </div>
 
-                                    <!-- Brand new patient — gentle nudge -->
-                                    <template x-if="!lookingUp && lookupResult === 'not_found'">
-                                        <div class="rounded-lg bg-sky-50 px-3 py-2.5 text-sm text-sky-800">
-                                            🆕 Welcome! Please enter your name below — we'll remember it for next time.
-                                        </div>
-                                    </template>
+                                    <div x-show="authStep === 'phone'" class="space-y-3">
+                                        <label class="block">
+                                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Mobile number <span class="text-rose-500">*</span></span>
+                                            <div class="mt-1.5 flex overflow-hidden rounded-lg border border-slate-300 bg-white focus-within:border-brand focus-within:ring-2 ring-brand">
+                                                <span class="flex items-center border-r border-slate-200 bg-slate-50 px-3 text-sm text-slate-500">+91</span>
+                                                <input type="tel" x-model="authPhoneDigits" inputmode="numeric" maxlength="10"
+                                                       @input="authPhoneDigits = authPhoneDigits.replace(/\D/g, '').slice(0, 10)"
+                                                       placeholder="98XXXXXXXX"
+                                                       class="w-full border-0 px-3 py-2.5 text-sm focus:outline-none focus:ring-0">
+                                            </div>
+                                        </label>
+                                        <p class="text-xs text-rose-700" x-show="authError" x-text="authError"></p>
+                                        <p class="rounded-lg bg-amber-50 px-2 py-1.5 text-xs text-amber-900" x-show="authDevCode" x-cloak>
+                                            Dev code: <strong x-text="authDevCode"></strong>
+                                        </p>
+                                        <button type="button" @click="sendAuthOtp()" :disabled="authBusy || authPhoneDigits.length < 10"
+                                                class="w-full rounded-lg bg-brand py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+                                            <span x-show="!authBusy" x-text="authIntent === 'signup' ? 'Send code to create account' : 'Send sign-in code'"></span>
+                                            <span x-show="authBusy" x-cloak>Sending…</span>
+                                        </button>
+                                    </div>
 
-                                    <label class="block" x-show="!lookingUp && (lookupResult || phone.length >= 10)" x-cloak>
-                                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                                            Full name <span class="text-rose-500">*</span>
-                                            <span x-show="lookupResult === 'found'" class="ml-1 font-normal normal-case tracking-normal text-emerald-700">(✓ from your profile)</span>
-                                        </span>
-                                        <input type="text" name="name" x-model="name" required
-                                               placeholder="Your full name"
-                                               :class="lookupResult === 'found' ? 'bg-emerald-50/50' : ''"
-                                               class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 ring-brand">
-                                    </label>
+                                    <div x-show="authStep === 'code'" class="space-y-3" x-cloak>
+                                        <button type="button" @click="authStep = 'phone'; authError = ''" class="text-xs text-slate-500 hover:text-brand">← Change number</button>
+                                        <template x-if="authExists && authNameHint">
+                                            <p class="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                                                Welcome back, <strong x-text="authNameHint"></strong> 👋 Enter the code we sent.
+                                            </p>
+                                        </template>
+                                        <template x-if="!authExists">
+                                            <label class="block">
+                                                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Full name <span class="text-rose-500">*</span></span>
+                                                <input type="text" x-model="authName" placeholder="Your full name"
+                                                       class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 ring-brand">
+                                            </label>
+                                        </template>
+                                        <label class="block">
+                                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">6-digit code</span>
+                                            <input type="text" inputmode="numeric" maxlength="6" x-model="authCode"
+                                                   @input="authCode = authCode.replace(/\D/g, '').slice(0, 6)"
+                                                   placeholder="••••••"
+                                                   class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-center text-lg tracking-widest focus:border-brand focus:outline-none focus:ring-2 ring-brand">
+                                        </label>
+                                        <p class="text-xs text-rose-700" x-show="authError" x-text="authError"></p>
+                                        <button type="button" @click="verifyAuthOtp()" :disabled="authBusy || authCode.length < 6"
+                                                class="w-full rounded-lg bg-brand py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+                                            <span x-show="!authBusy">Verify &amp; continue</span>
+                                            <span x-show="authBusy" x-cloak>Verifying…</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
 
+                            <div x-show="loggedIn" class="space-y-4">
                             <label class="block">
                                 <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Reason for visit <span class="font-normal normal-case tracking-normal text-slate-400">(optional)</span></span>
                                 <input type="text" name="chief_complaint"
@@ -523,15 +550,17 @@ foreach ($doctors ?? [] as $d) {
                                     <option value="1">Follow-up</option>
                                 </select>
                             </label>
+                            </div>
 
                             <div class="flex gap-2 pt-2">
                                 <button type="button" @click="step = 1"
                                         class="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                                     ← Back
                                 </button>
-                                <button type="submit" :disabled="submitting || !name || !phone"
+                                <button type="submit" :disabled="submitting || !loggedIn || !name || !phoneRaw"
                                         class="flex-1 rounded-lg bg-brand py-3 text-sm font-bold text-white shadow-sm transition hover:shadow-md disabled:opacity-50">
-                                    <span x-show="!submitting">Confirm booking</span>
+                                    <span x-show="!submitting && loggedIn">Confirm booking</span>
+                                    <span x-show="!submitting && !loggedIn" x-cloak>Sign in to confirm</span>
                                     <span x-show="submitting" x-cloak>Booking…</span>
                                 </button>
                             </div>
@@ -565,23 +594,130 @@ function bookingWizard() {
         eveningSlots: [],
         loadingSlots: false,
         loggedIn: <?= $patientLoggedIn ? 'true' : 'false' ?>,
-        phone: <?= json_encode((string) $patientPhone) ?>,
+        phone: <?= json_encode($patientPhoneDisplay) ?>,
+        phoneRaw: <?= json_encode((string) $patientPhone) ?>,
         name: <?= json_encode((string) $patientName) ?>,
-        foundName: '',
-        lookupResult: null,    // 'found' | 'not_found' | null (untouched)
-        lookingUp: false,
-        _lookupTimer: null,
         submitting: false,
+        // Inline patient auth (step 2)
+        authStep: 'phone',
+        authIntent: 'signin',
+        authPhoneDigits: '',
+        authCode: '',
+        authName: '',
+        authNameHint: '',
+        authExists: false,
+        authError: '',
+        authDevCode: '',
+        authBusy: false,
 
-        init() { this.loadSlots(); },
+        init() {
+            this.loadSlots();
+            this.refreshSession();
+        },
 
-        // Auto-trigger lookup ~400ms after the patient stops typing.
-        // (No Find button needed — the input feels reactive on its own.)
-        debouncedLookup() {
-            clearTimeout(this._lookupTimer);
-            this.lookupResult = null;
-            if (this.phone.length < 10) { this.foundName = ''; return; }
-            this._lookupTimer = setTimeout(() => this.lookupPatient(), 400);
+        displayPhoneFromE164(e164) {
+            const d = String(e164 || '').replace(/\D/g, '');
+            if (d.length >= 10) return d.slice(-10);
+            return d;
+        },
+
+        async refreshSession() {
+            try {
+                const r = await fetch('/api/patient-auth/me', { credentials: 'same-origin' });
+                const data = await r.json();
+                if (data.ok && data.patient) {
+                    this.applyPatient(data.patient);
+                }
+            } catch (e) { /* guest */ }
+        },
+
+        applyPatient(p) {
+            this.loggedIn = true;
+            this.name = p.name || '';
+            this.phoneRaw = p.phone || '';
+            this.phone = this.displayPhoneFromE164(p.phone);
+            this.authStep = 'phone';
+            this.authError = '';
+        },
+
+        async sendAuthOtp() {
+            if (this.authPhoneDigits.length < 10) return;
+            this.authBusy = true;
+            this.authError = '';
+            this.authDevCode = '';
+            try {
+                const r = await fetch('/api/patient-auth/send-otp', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({
+                        phone: this.authPhoneDigits,
+                        intent: this.authIntent,
+                    }),
+                });
+                const data = await r.json();
+                if (!r.ok || !data.ok) {
+                    if (data.error === 'account_not_found') {
+                        this.authError = 'No account on this number. Switch to Create account.';
+                    } else if (data.error === 'account_exists') {
+                        this.authError = 'Account already exists. Switch to Sign in.';
+                    } else {
+                        this.authError = data.error || 'Could not send code';
+                    }
+                    return;
+                }
+                this.authExists = !!data.exists;
+                this.authNameHint = data.name_hint || '';
+                if (!this.authExists && this.authName) { /* keep typed name */ }
+                this.authDevCode = data.dev_code || '';
+                this.authStep = 'code';
+            } catch (e) {
+                this.authError = 'Network error — try again';
+            } finally {
+                this.authBusy = false;
+            }
+        },
+
+        async verifyAuthOtp() {
+            if (this.authCode.length < 6) return;
+            this.authBusy = true;
+            this.authError = '';
+            try {
+                const r = await fetch('/api/patient-auth/verify-otp', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({
+                        phone: this.authPhoneDigits,
+                        code: this.authCode,
+                        name: this.authExists ? undefined : this.authName,
+                    }),
+                });
+                const data = await r.json();
+                if (!r.ok || !data.ok || !data.patient) {
+                    this.authError = data.error === 'invalid_code' ? 'Wrong code — try again' : (data.error || 'Verification failed');
+                    return;
+                }
+                this.applyPatient(data.patient);
+            } catch (e) {
+                this.authError = 'Network error — try again';
+            } finally {
+                this.authBusy = false;
+            }
+        },
+
+        async logoutPatient() {
+            try {
+                await fetch('/api/patient-auth/logout', { method: 'POST', credentials: 'same-origin' });
+            } catch (e) { /* ignore */ }
+            this.loggedIn = false;
+            this.name = '';
+            this.phone = '';
+            this.phoneRaw = '';
+            this.authStep = 'phone';
+            this.authPhoneDigits = '';
+            this.authCode = '';
+            this.authName = '';
         },
 
         selectDate(d) {
@@ -593,8 +729,7 @@ function bookingWizard() {
         goNext() {
             if (!this.selectedSlot) return;
             this.step = 2;
-            // Scroll the widget into view on mobile (where the right column
-            // sits below the left), so users see the form they just opened.
+            this.refreshSession();
             if (window.innerWidth < 1024) {
                 this.$el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
@@ -626,25 +761,7 @@ function bookingWizard() {
             }
         },
 
-        async lookupPatient() {
-            if (!this.phone || this.phone.length < 10) return;
-            this.lookingUp = true;
-            try {
-                const r = await fetch('/book/<?= htmlspecialchars($slug) ?>/lookup?phone=' + encodeURIComponent(this.phone));
-                const data = await r.json();
-                if (data.found) {
-                    this.foundName = data.name;
-                    this.name = data.name;
-                    this.lookupResult = 'found';
-                } else {
-                    this.lookupResult = 'not_found';
-                }
-            } catch (e) {
-                this.lookupResult = null;
-            } finally {
-                this.lookingUp = false;
-            }
-        },
+        async lookupPatient() { /* legacy — booking now uses OTP auth */ },
 
         _formatTime(hhmm) {
             const [h, m] = hhmm.split(':').map(n => parseInt(n, 10));

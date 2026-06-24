@@ -10,7 +10,7 @@ use App\Controllers\ClinicSettingsController;
 use App\Controllers\QueueController;
 use App\Controllers\DashboardController;
 use App\Controllers\HealthController;
-use App\Controllers\OnboardingController;
+use App\Controllers\PatientAuthController;
 use App\Controllers\SubscriptionController;
 use App\Controllers\PatientController;
 use App\Controllers\PortalController;
@@ -279,6 +279,11 @@ return static function (RouteRegistrar $router): void {
     $router->group(['middleware' => ['tenant', 'rate']], static function (GroupedRouteRegistrar $publicApi): void {
         $publicApi->get('/book/{slug}/slots', [BookController::class, 'slotsApi']);
         $publicApi->get('/book/{slug}/lookup', [BookController::class, 'lookupApi']);
+        // Patient identity OTP — shared with marketing site (ecp_pid cookie).
+        $publicApi->get('/api/patient-auth/me', [PatientAuthController::class, 'me']);
+        $publicApi->post('/api/patient-auth/send-otp', [PatientAuthController::class, 'sendOtp']);
+        $publicApi->post('/api/patient-auth/verify-otp', [PatientAuthController::class, 'verifyOtp']);
+        $publicApi->post('/api/patient-auth/logout', [PatientAuthController::class, 'logout']);
     });
 
     $router->group(['middleware' => ['tenant', 'rate']], static function (GroupedRouteRegistrar $publicQueue): void {
