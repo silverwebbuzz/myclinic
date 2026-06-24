@@ -283,7 +283,9 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
             </div>
 
             <!-- ---- PRESCRIPTION ---- -->
-            <div x-data="prescriptionPanel()" x-init="loadTemplates()" class="rounded-lg border border-slate-200 bg-white p-3">
+            <!-- Prescription state/methods now live in the parent visitScreenV2
+                 scope (no nested x-data) so medicine inputs bind to one scope. -->
+            <div x-init="loadTemplates()" class="rounded-lg border border-slate-200 bg-white p-3">
                 <div class="flex items-baseline justify-between">
                     <label class="ui-group-label">Prescription</label>
                     <button type="button" :disabled="!editable" @click="cloneLastVisit()"
@@ -503,7 +505,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                             + Add medicine
                         </button>
                         <button type="button" :disabled="!editable" @click="openSaveTemplate()"
-                                x-show="(window.__visit && (window.__visit.prescriptions || []).some(p => p.drug_id || p.drug_name))"
+                                x-show="hasRx"
                                 class="text-xs font-medium text-slate-600 hover:text-brand hover:underline disabled:opacity-50">
                             Save as template…
                         </button>
@@ -1301,6 +1303,229 @@ function visitScreenV2(cfg) {
             if (!Array.isArray(steps)) return 0;
             return steps.reduce((sum, s) => sum + (parseInt(s.days, 10) || 0), 0);
         },
+
+        // ── Prescription panel (merged in — single coherent scope) ──────────
+        // Previously a separate prescriptionPanel() x-data that reached into the
+        // parent via window.__visit. Now it lives here so prescriptions/editable
+        // and the medicine inputs bind to ONE scope — no cross-component hops.
+        templates: [],
+        suggestions: [],
+        saveTplModal: {
+            open: false,
+            name: '',
+            description: '',
+            scope: 'mine',     // 'mine' (this doctor) | 'clinic' (whole clinic)
+            saving: false,
+            error: '',
+        },
+
+        // True when at least one line carries a real medicine — drives the
+        // "Save as template" button visibility.
+        get hasRx() {
+            return (this.prescriptions || []).some(p => p.drug_id || p.drug_name);
+        },
+
+        openSaveTemplate() {
+            if (!this.editable) return;
+            if (!this.hasRx) {
+                alert('Add at least one medicine before saving as template.');
+                return;
+            }
+            this.saveTplModal.name = (this.chief_complaint || '').trim().slice(0, 80);
+            this.saveTplModal.description = '';
+            this.saveTplModal.scope = 'mine';
+            this.saveTplModal.error = '';
+            this.saveTplModal.saving = false;
+            this.saveTplModal.open = true;
+        },
+
+        async confirmSaveTemplate() {
+            if (this.saveTplModal.saving) return;
+            const m = this.saveTplModal;
+            const name = (m.name || '').trim();
+            if (name === '') { m.error = 'Please enter a name.'; return; }
+
+            // Map prescription rows -> template item shape the API expects.
+            const items = (this.prescriptions || [])
+                .filter(p => p.drug_id || p.drug_name)
+                .map(p => ({
+                    drug_id: p.drug_id || null,
+                    remedy_id: p.remedy_id || null,
+                    potency: p.potency || null,
+                    dose_unit: p.dose_unit || null,
+                    dose_amount: p.dose_amount || null,
+                    frequency_preset: p.frequency_preset || null,
+                    duration_days: p.duration_days || null,
+                    food_timing: p.food_timing || 'any',
+                    mix_with: p.mix_with || null,
+                    tapering_steps: Array.isArray(p.tapering_steps) && p.tapering_steps.length ? p.tapering_steps : null,
+                    instructions: p.instructions || null,
+                }));
+            if (items.length === 0) { m.error = 'No medicines to save.'; return; }
+
+            m.saving = true;
+            m.error = '';
+            try {
+                const r = await fetch('/api/v1/prescriptions/templates', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        description: (m.description || '').trim() || null,
+                        scope: m.scope === 'clinic' ? 'clinic' : 'mine',
+                        mode: this.useHomeo ? 'homeopathic' : 'allopathic',
+                        items: items,
+                    }),
+                });
+                const data = await r.json().catch(() => ({}));
+                if (!r.ok || !data.ok) {
+                    m.error = data.error || ('Save failed (HTTP ' + r.status + ').');
+                    m.saving = false;
+                    return;
+                }
+                m.open = false;
+                m.saving = false;
+                // Refresh the "Apply:" chips so the new template shows immediately.
+                await this.loadTemplates();
+            } catch (e) {
+                m.error = 'Network error.';
+                m.saving = false;
+            }
+        },
+
+        async loadTemplates() {
+            try {
+                const r = await fetch('/api/v1/prescriptions/templates?scope=all', {
+                    headers: { 'Accept': 'application/json' },
+                });
+                const data = await r.json();
+                this.templates = data.templates || [];
+                this.suggestions = data.suggestions || [];
+            } catch (e) { /* skip */ }
+        },
+
+        async applyTemplate(templateId) {
+            if (!this.editable) return;
+            if (this.hasRx && !confirm('Append template medicines to current prescription?')) return;
+            try {
+                const r = await fetch('/api/v1/prescriptions/templates/' + templateId + '/apply/' + this.visitId, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                });
+                const data = await r.json();
+                if (data.ok) {
+                    // Reload to pick up the newly inserted prescriptions.
+                    location.reload();
+                } else {
+                    alert(data.error || 'Could not apply template.');
+                }
+            } catch (e) {
+                alert('Network error.');
+            }
+        },
+
+        async activateSuggestion(sug) {
+            const name = prompt('Save this combination as a template. Name it:', sug.name.replace(/^Suggested:\s*/, ''));
+            if (!name) return;
+            try {
+                await fetch('/api/v1/prescriptions/templates/' + sug.id + '/activate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ name: name }),
+                });
+                this.loadTemplates();
+            } catch (e) {
+                alert('Could not save template.');
+            }
+        },
+
+        async dismissSuggestion(suggestionId) {
+            try {
+                await fetch('/api/v1/prescriptions/templates/' + suggestionId + '/delete', {
+                    method: 'POST', headers: { 'Accept': 'application/json' },
+                });
+                this.suggestions = this.suggestions.filter(s => s.id !== suggestionId);
+            } catch (e) { /* skip */ }
+        },
+
+        async searchDrugFor(idx, q) {
+            if (!Array.isArray(this.prescriptions)) return;
+            const line = this.prescriptions[idx];
+            if (!line) return;
+            const query = (q || '').trim();
+            if (query.length < 2) { line._suggestions = []; line._dropdown = false; line._searchError = ''; return; }
+            const url = this.useHomeo
+                ? '/api/v1/remedies/search?q=' + encodeURIComponent(query)
+                : '/api/v1/drugs/search?q=' + encodeURIComponent(query);
+            try {
+                const r = await fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+                // Surface API problems instead of silently showing an empty dropdown.
+                // Most common: 402 from ModuleGate when the `prescription` module
+                // isn't active for the clinic — without this, doctors see nothing.
+                if (!r.ok) {
+                    line._suggestions = [];
+                    line._dropdown = true;
+                    line._searchError = r.status === 402
+                        ? 'Prescription module not active for this clinic — contact admin.'
+                        : 'Drug search failed (HTTP ' + r.status + ').';
+                    return;
+                }
+                const data = await r.json();
+                line._suggestions = data.drugs || data.remedies || [];
+                line._dropdown = true;
+                line._searchError = line._suggestions.length === 0 ? 'No medicines match "' + query + '".' : '';
+            } catch (e) {
+                line._suggestions = [];
+                line._dropdown = true;
+                line._searchError = 'Network error fetching medicines.';
+            }
+        },
+
+        pickDrugFor(idx, drug) {
+            if (!Array.isArray(this.prescriptions)) return;
+            const line = this.prescriptions[idx];
+            if (!line) return;
+            if (this.useHomeo) {
+                line.remedy_id = drug.id;
+                line.drug_id = null;
+            } else {
+                line.drug_id = drug.id;
+                line.remedy_id = null;
+            }
+            line.drug_name = drug.name + (drug.strength ? ' ' + drug.strength : '');
+
+            // Smart defaults: pre-fill from the clinic's last prescription of
+            // this drug — but never overwrite what the doctor already entered.
+            const def = drug.defaults || {};
+            if (!line.frequency_preset && def.frequency_preset) {
+                line.frequency_preset = def.frequency_preset;
+                if (def.frequency) line.frequency = def.frequency; // keep legacy field in sync
+            }
+            if (!line.duration_days && def.duration_days) line.duration_days = def.duration_days;
+            if ((!line.food_timing || line.food_timing === 'any') && def.food_timing) line.food_timing = def.food_timing;
+            if (!line.dose_unit && def.dose_unit) line.dose_unit = def.dose_unit;
+            if (!line.dose_amount && def.dose_amount) line.dose_amount = def.dose_amount;
+
+            line._suggestions = [];
+            line._dropdown = false;
+
+            // Picking a medicine is the primary way doctors add an Rx line — it
+            // MUST mark the visit dirty so the pre-complete save actually fires.
+            this.markDirty();
+        },
+
+        addTaperingStep(line) {
+            if (!Array.isArray(line.tapering_steps)) line.tapering_steps = [];
+            // Seed sensible defaults — last step's frequency, 3 days.
+            const last = line.tapering_steps[line.tapering_steps.length - 1];
+            line.tapering_steps.push({
+                days: 3,
+                preset: last ? last.preset : (line.frequency_preset || '1-0-1'),
+                food: last ? last.food : (line.food_timing || 'after'),
+            });
+            this.markDirty();
+        },
     };
 }
 
@@ -1493,238 +1718,6 @@ function symptomPicker() {
                     body: JSON.stringify({ symptoms: this.symptoms }),
                 });
             } catch (e) { /* autosave will retry on next save */ }
-        },
-    };
-}
-
-// ─────────────────────────────────────────────────────────────
-// prescriptionPanel() — templates + auto-discovery + drug autocomplete
-// ─────────────────────────────────────────────────────────────
-function prescriptionPanel() {
-    return {
-        templates: [],
-        suggestions: [],
-
-        // Save-as-template modal state.
-        saveTplModal: {
-            open: false,
-            name: '',
-            description: '',
-            scope: 'mine',     // 'mine' (this doctor) | 'clinic' (whole clinic)
-            saving: false,
-            error: '',
-        },
-
-        // Open the modal — pre-fill with the chief complaint as a sensible
-        // default name (doctor can change it).
-        openSaveTemplate() {
-            const v = window.__visit;
-            if (!v || !v.editable) return;
-            const items = (v.prescriptions || []).filter(p => p.drug_id || p.drug_name);
-            if (items.length === 0) {
-                alert('Add at least one medicine before saving as template.');
-                return;
-            }
-            this.saveTplModal.name = (v.chief_complaint || '').trim().slice(0, 80);
-            this.saveTplModal.description = '';
-            this.saveTplModal.scope = 'mine';
-            this.saveTplModal.error = '';
-            this.saveTplModal.saving = false;
-            this.saveTplModal.open = true;
-        },
-
-        async confirmSaveTemplate() {
-            if (this.saveTplModal.saving) return;
-            const m = this.saveTplModal;
-            const v = window.__visit;
-            const name = (m.name || '').trim();
-            if (name === '') { m.error = 'Please enter a name.'; return; }
-            if (!v) { m.error = 'Visit not ready.'; return; }
-
-            // Map prescription rows -> template item shape the API expects.
-            const items = (v.prescriptions || [])
-                .filter(p => p.drug_id || p.drug_name)
-                .map(p => ({
-                    drug_id: p.drug_id || null,
-                    remedy_id: p.remedy_id || null,
-                    potency: p.potency || null,
-                    dose_unit: p.dose_unit || null,
-                    dose_amount: p.dose_amount || null,
-                    frequency_preset: p.frequency_preset || null,
-                    duration_days: p.duration_days || null,
-                    food_timing: p.food_timing || 'any',
-                    mix_with: p.mix_with || null,
-                    tapering_steps: Array.isArray(p.tapering_steps) && p.tapering_steps.length ? p.tapering_steps : null,
-                    instructions: p.instructions || null,
-                }));
-            if (items.length === 0) { m.error = 'No medicines to save.'; return; }
-
-            m.saving = true;
-            m.error = '';
-            try {
-                const r = await fetch('/api/v1/prescriptions/templates', {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                    body: JSON.stringify({
-                        name: name,
-                        description: (m.description || '').trim() || null,
-                        scope: m.scope === 'clinic' ? 'clinic' : 'mine',
-                        mode: v.useHomeo ? 'homeopathic' : 'allopathic',
-                        items: items,
-                    }),
-                });
-                const data = await r.json().catch(() => ({}));
-                if (!r.ok || !data.ok) {
-                    m.error = data.error || ('Save failed (HTTP ' + r.status + ').');
-                    m.saving = false;
-                    return;
-                }
-                m.open = false;
-                m.saving = false;
-                // Refresh the "Apply:" chips so the new template shows immediately.
-                await this.loadTemplates();
-            } catch (e) {
-                m.error = 'Network error.';
-                m.saving = false;
-            }
-        },
-
-        async loadTemplates() {
-            try {
-                const r = await fetch('/api/v1/prescriptions/templates?scope=all', {
-                    headers: { 'Accept': 'application/json' },
-                });
-                const data = await r.json();
-                this.templates = data.templates || [];
-                this.suggestions = data.suggestions || [];
-            } catch (e) { /* skip */ }
-        },
-
-        async applyTemplate(templateId) {
-            if (!window.__visit.editable) return;
-            const hasItems = (window.__visit.prescriptions || []).some(p => p.drug_name);
-            if (hasItems && !confirm('Append template medicines to current prescription?')) return;
-            try {
-                const r = await fetch('/api/v1/prescriptions/templates/' + templateId + '/apply/' + window.__visit.visitId, {
-                    method: 'POST',
-                    headers: { 'Accept': 'application/json' },
-                });
-                const data = await r.json();
-                if (data.ok) {
-                    // Reload to pick up the newly inserted prescriptions.
-                    location.reload();
-                } else {
-                    alert(data.error || 'Could not apply template.');
-                }
-            } catch (e) {
-                alert('Network error.');
-            }
-        },
-
-        async activateSuggestion(sug) {
-            const name = prompt('Save this combination as a template. Name it:', sug.name.replace(/^Suggested:\s*/, ''));
-            if (!name) return;
-            try {
-                await fetch('/api/v1/prescriptions/templates/' + sug.id + '/activate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                    body: JSON.stringify({ name: name }),
-                });
-                this.loadTemplates();
-            } catch (e) {
-                alert('Could not save template.');
-            }
-        },
-
-        async dismissSuggestion(suggestionId) {
-            try {
-                await fetch('/api/v1/prescriptions/templates/' + suggestionId + '/delete', {
-                    method: 'POST', headers: { 'Accept': 'application/json' },
-                });
-                this.suggestions = this.suggestions.filter(s => s.id !== suggestionId);
-            } catch (e) { /* skip */ }
-        },
-
-        async searchDrugFor(idx, q) {
-            const parent = window.__visit;
-            if (!parent || !Array.isArray(parent.prescriptions)) return;
-            const line = parent.prescriptions[idx];
-            if (!line) return;
-            const query = (q || '').trim();
-            if (query.length < 2) { line._suggestions = []; line._dropdown = false; line._searchError = ''; return; }
-            const url = window.__visit.useHomeo
-                ? '/api/v1/remedies/search?q=' + encodeURIComponent(query)
-                : '/api/v1/drugs/search?q=' + encodeURIComponent(query);
-            try {
-                const r = await fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
-                // Surface API problems instead of silently showing an empty dropdown.
-                // Most common: 402 from ModuleGate when the `prescription` module
-                // isn't active for the clinic — without this, doctors see nothing.
-                if (!r.ok) {
-                    line._suggestions = [];
-                    line._dropdown = true;
-                    line._searchError = r.status === 402
-                        ? 'Prescription module not active for this clinic — contact admin.'
-                        : 'Drug search failed (HTTP ' + r.status + ').';
-                    return;
-                }
-                const data = await r.json();
-                line._suggestions = data.drugs || data.remedies || [];
-                line._dropdown = true;
-                line._searchError = line._suggestions.length === 0 ? 'No medicines match "' + query + '".' : '';
-            } catch (e) {
-                line._suggestions = [];
-                line._dropdown = true;
-                line._searchError = 'Network error fetching medicines.';
-            }
-        },
-
-        pickDrugFor(idx, drug) {
-            const parent = window.__visit;
-            if (!parent || !Array.isArray(parent.prescriptions)) return;
-            const line = parent.prescriptions[idx];
-            if (!line) return;
-            if (parent.useHomeo) {
-                line.remedy_id = drug.id;
-                line.drug_id = null;
-            } else {
-                line.drug_id = drug.id;
-                line.remedy_id = null;
-            }
-            line.drug_name = drug.name + (drug.strength ? ' ' + drug.strength : '');
-
-            // Smart defaults: pre-fill from the clinic's last prescription of
-            // this drug — but never overwrite what the doctor already entered.
-            const def = drug.defaults || {};
-            if (!line.frequency_preset && def.frequency_preset) {
-                line.frequency_preset = def.frequency_preset;
-                if (def.frequency) line.frequency = def.frequency; // keep legacy field in sync
-            }
-            if (!line.duration_days && def.duration_days) line.duration_days = def.duration_days;
-            if ((!line.food_timing || line.food_timing === 'any') && def.food_timing) line.food_timing = def.food_timing;
-            if (!line.dose_unit && def.dose_unit) line.dose_unit = def.dose_unit;
-            if (!line.dose_amount && def.dose_amount) line.dose_amount = def.dose_amount;
-
-            line._suggestions = [];
-            line._dropdown = false;
-
-            // Picking a medicine from the dropdown is the primary way doctors add
-            // an Rx line — it MUST mark the visit dirty so the pre-complete save
-            // actually fires. Without this, picked medicines are silently dropped.
-            if (parent && typeof parent.markDirty === 'function') parent.markDirty();
-        },
-
-        addTaperingStep(line) {
-            if (!Array.isArray(line.tapering_steps)) line.tapering_steps = [];
-            // Seed sensible defaults — last step's frequency, 3 days.
-            const last = line.tapering_steps[line.tapering_steps.length - 1];
-            line.tapering_steps.push({
-                days: 3,
-                preset: last ? last.preset : (line.frequency_preset || '1-0-1'),
-                food: last ? last.food : (line.food_timing || 'after'),
-            });
-            if (window.__visit && typeof window.__visit.markDirty === 'function') window.__visit.markDirty();
         },
     };
 }
