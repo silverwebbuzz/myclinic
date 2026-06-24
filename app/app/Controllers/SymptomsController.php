@@ -48,7 +48,17 @@ final class SymptomsController
         $specialty = (string) ($clinic['specialty'] ?? '');
         $q = (string) ($request->query['q'] ?? '');
 
-        $results = SymptomSearch::search($doctorId, $clinicId, $specialty, $q);
+        // TEMP DIAGNOSTIC: surface the real DB/runtime error instead of a blank
+        // 500 so we can see it in the Network tab. Remove once root cause found.
+        try {
+            $results = SymptomSearch::search($doctorId, $clinicId, $specialty, $q);
+        } catch (\Throwable $e) {
+            return Response::json([
+                'error' => $e->getMessage(),
+                'where' => 'SymptomSearch::search',
+                'file'  => $e->getFile() . ':' . $e->getLine(),
+            ], 500);
+        }
 
         return Response::json([
             'q' => $q,
@@ -70,60 +80,67 @@ final class SymptomsController
         $clinic = RequestContext::clinic() ?? [];
         $specialty = (string) ($clinic['specialty'] ?? '');
         $cat = trim((string) ($request->query['cat'] ?? ''));
-        $pdo = Database::connection();
 
-        // No category → return the category index (label + count).
-        if ($cat === '') {
-            $rows = $pdo->query(
-                "SELECT category, COUNT(*) AS n
+        // TEMP DIAGNOSTIC: surface the real DB error instead of a blank 500.
+        try {
+            $pdo = Database::connection();
+
+            // No category → return the category index (label + count).
+            if ($cat === '') {
+                $rows = $pdo->query(
+                    "SELECT category, COUNT(*) AS n
+                       FROM symptoms_master
+                      WHERE is_active = 1 AND category IS NOT NULL AND category <> ''
+                      GROUP BY category
+                      ORDER BY category"
+                )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+                $cats = [];
+                foreach ($rows as $r) {
+                    $key = (string) $r['category'];
+                    $cats[] = [
+                        'key'   => $key,
+                        'label' => self::CATEGORY_LABELS[$key] ?? ucfirst($key),
+                        'count' => (int) $r['n'],
+                    ];
+                }
+                return Response::json(['categories' => $cats]);
+            }
+
+            // A category → its symptoms, specialty-relevant ones first.
+            $stmt = $pdo->prepare(
+                "SELECT id, label,
+                        CASE WHEN :sp1 <> '' AND JSON_VALID(specialties)
+                                  AND JSON_CONTAINS(LOWER(specialties), JSON_QUOTE(LOWER(:sp2)))
+                             THEN 1 ELSE 0 END AS specialty_match
                    FROM symptoms_master
-                  WHERE is_active = 1 AND category IS NOT NULL AND category <> ''
-                  GROUP BY category
-                  ORDER BY category"
-            )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                  WHERE is_active = 1 AND category = :cat
+                  ORDER BY specialty_match DESC, global_usage_count DESC, label ASC
+                  LIMIT 60"
+            );
+            $stmt->execute([':sp1' => $specialty, ':sp2' => $specialty, ':cat' => $cat]);
 
-            $cats = [];
-            foreach ($rows as $r) {
-                $key = (string) $r['category'];
-                $cats[] = [
-                    'key'   => $key,
-                    'label' => self::CATEGORY_LABELS[$key] ?? ucfirst($key),
-                    'count' => (int) $r['n'],
+            $symptoms = [];
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $symptoms[] = [
+                    'label'     => (string) $r['label'],
+                    'master_id' => (int) $r['id'],
+                    'source'    => 'master',
                 ];
             }
-            return Response::json(['categories' => $cats]);
+
+            return Response::json([
+                'category' => $cat,
+                'label'    => self::CATEGORY_LABELS[$cat] ?? ucfirst($cat),
+                'symptoms' => $symptoms,
+            ]);
+        } catch (\Throwable $e) {
+            return Response::json([
+                'error' => $e->getMessage(),
+                'where' => 'byCategory cat=' . ($cat === '' ? '(none)' : $cat),
+                'file'  => $e->getFile() . ':' . $e->getLine(),
+            ], 500);
         }
-
-        // A category → its symptoms, specialty-relevant ones first.
-        // NOTE: native prepares (ATTR_EMULATE_PREPARES=false) forbid reusing a
-        // named placeholder, so :sp appears once — passed via bindValue twice
-        // would also fail. We inject the specialty match with two distinct binds.
-        $stmt = $pdo->prepare(
-            "SELECT id, label,
-                    CASE WHEN :sp1 <> '' AND JSON_VALID(specialties)
-                              AND JSON_CONTAINS(LOWER(specialties), JSON_QUOTE(LOWER(:sp2)))
-                         THEN 1 ELSE 0 END AS specialty_match
-               FROM symptoms_master
-              WHERE is_active = 1 AND category = :cat
-              ORDER BY specialty_match DESC, global_usage_count DESC, label ASC
-              LIMIT 60"
-        );
-        $stmt->execute([':sp1' => $specialty, ':sp2' => $specialty, ':cat' => $cat]);
-
-        $symptoms = [];
-        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
-            $symptoms[] = [
-                'label'     => (string) $r['label'],
-                'master_id' => (int) $r['id'],
-                'source'    => 'master',
-            ];
-        }
-
-        return Response::json([
-            'category' => $cat,
-            'label'    => self::CATEGORY_LABELS[$cat] ?? ucfirst($cat),
-            'symptoms' => $symptoms,
-        ]);
     }
 
     /** Human labels for the symptom category keys (Review-of-Systems style). */
