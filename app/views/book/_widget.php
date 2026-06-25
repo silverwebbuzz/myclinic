@@ -53,6 +53,7 @@ $cardClass = 'dp-book-card overflow-hidden rounded-2xl border border-slate-200 b
                         ?? '/find-a-doctor');
                     ?>
                     <a href="<?= htmlspecialchars($bookAgainUrl) ?>"
+                       onclick="event.preventDefault();var u=this.getAttribute('href');if(u===window.location.pathname+window.location.search+window.location.hash){window.location.reload();}else{window.location.assign(u);}"
                        class="block w-full rounded-xl bg-brand py-3 text-center text-sm font-semibold text-white hover:opacity-90">
                         Book another appointment
                     </a>
