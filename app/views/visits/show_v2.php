@@ -51,7 +51,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         // datetime-local wants "YYYY-MM-DDTHH:MM"
         'visited_at' => !empty($visit['visited_at']) ? date('Y-m-d\TH:i', strtotime((string) $visit['visited_at'])) : '',
         'vitals' => $vitals,
-        'prescriptions' => array_map(static function (array $r) {
+        'prescriptions' => array_values(array_map(static function (array $r, int $idx) {
             $name = $r['drug']['name'] ?? $r['remedy']['name'] ?? trim((string) ($r['dosage'] ?? ''));
             $catalogForm = isset($r['drug']['form']) ? (string) $r['drug']['form'] : null;
             $doseUnit = isset($r['dose_unit']) ? (string) $r['dose_unit'] : null;
@@ -74,6 +74,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
             }
 
             return [
+                '_rxKey' => 'rx' . ((int) ($r['id'] ?? 0) ?: ('t' . $idx)),
                 'drug_id' => $r['drug_id'] ?? null,
                 'remedy_id' => $r['remedy_id'] ?? null,
                 'drug_name' => $name,
@@ -90,7 +91,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 'instructions' => $r['instructions'] ?? '',
                 'tapering_steps' => $tapering,
             ];
-        }, $prescriptions),
+        }, $prescriptions, array_keys($prescriptions))),
         'specialty_data' => $sd,
         'case_taking' => $case,
         'useHomeo' => $useHomeo,
@@ -372,7 +373,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 </template>
 
                 <div class="mt-2 space-y-2 overflow-visible">
-                    <template x-for="(line, idx) in prescriptions" :key="'rx-' + idx + '-' + (line.drug_id || line.drug_name || '')">
+                    <template x-for="(line, idx) in prescriptions" :key="line._rxKey || ('rx-fallback-' + idx)">
                         <div class="overflow-visible rounded-lg border border-slate-200 bg-white">
                             <!-- Main row -->
                             <div class="grid items-center gap-2 overflow-visible p-2 sm:grid-cols-12">
@@ -381,7 +382,8 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                      @click.outside="line._dropdown = false">
                                     <input type="text" :disabled="!editable"
                                            x-model="line.drug_name"
-                                           @input.debounce.250ms="searchDrugFor(idx, line.drug_name); syncRxFormFromName(idx)"
+                                           @input.debounce.250ms="searchDrugFor(idx, line.drug_name)"
+                                           @blur="syncRxFormFromName(idx)"
                                            @focus="onDrugFocus(idx)"
                                            placeholder="Medicine (type 2+ letters)"
                                            class="w-full rounded border px-2 py-1 text-sm"
@@ -1130,12 +1132,21 @@ function visitScreenV2(cfg) {
         },
 
         _saveDebounce: null,
+        _rxKeyCounter: 0,
         initVisitScreen() {
-            (this.prescriptions || []).forEach(line => this.hydrateRxLine(line));
+            (this.prescriptions || []).forEach(line => {
+                this.ensureRxLineKey(line);
+                this.hydrateRxLine(line);
+            });
             this.$nextTick(() => this.refreshAllFrequencySelects());
             if (!this.editable) return;
             this.$el.addEventListener('input', () => this.onFormEdit());
             this.$el.addEventListener('change', () => this.onFormEdit());
+        },
+
+        ensureRxLineKey(line) {
+            if (line._rxKey) return;
+            line._rxKey = 'rxn' + (++this._rxKeyCounter);
         },
 
         hydrateRxLine(line) {
@@ -1384,6 +1395,7 @@ function visitScreenV2(cfg) {
             this.dirty = true;
             this.prescriptionsCleared = false;
             this.prescriptions.push({
+                _rxKey: 'rxn' + (++this._rxKeyCounter),
                 drug_id: null, remedy_id: null, drug_name: '',
                 potency: '', dosage: '',
                 drug_form: 'tablet',
