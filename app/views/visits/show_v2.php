@@ -1709,7 +1709,12 @@ function visitScreenV2(cfg) {
 
         drugNameMatchesQuery(name, query) {
             const hay = (name || '').toLowerCase();
-            const generic = new Set(['tablet','tablets','tab','tabs','syrup','syr','syp','capsule','capsules','cap','caps','cream','crm','injection','inj','drops','drp','suspension','susp','ointment','oint','gel','lotion','powder','solution','mg','ml','mcg','iu']);
+            // Full form words only — abbrevs like "syr" / "tab" are search terms.
+            const generic = new Set([
+                'tablet', 'tablets', 'syrup', 'capsule', 'capsules',
+                'cream', 'injection', 'drops', 'suspension', 'ointment',
+                'gel', 'lotion', 'powder', 'solution', 'mg', 'ml', 'mcg', 'iu',
+            ]);
             const abbrevs = { syr: 'syrup', syp: 'syrup', tab: 'tablet', tabs: 'tablet', cap: 'capsule', caps: 'capsule', inj: 'injection', crm: 'cream' };
             const tokens = (query || '').toLowerCase().trim().split(/\s+/).filter(t => t && !generic.has(t));
             if (!tokens.length) return false;

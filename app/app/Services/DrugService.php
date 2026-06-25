@@ -23,16 +23,16 @@ final class DrugService
         'oint' => 'ointment',
     ];
 
-    /** Form words that match hundreds of thousands of rows — never use alone for catalog search. */
-    private const GENERIC_TERMS = [
-        'tablet', 'tablets', 'tab', 'tabs',
-        'syrup', 'syr', 'syp',
-        'capsule', 'capsules', 'cap', 'caps',
-        'cream', 'crm',
-        'injection', 'inj',
-        'drops', 'drp',
-        'suspension', 'susp',
-        'ointment', 'oint',
+    /** Full dosage-form words — too broad alone for catalog search (not abbrevs like syr/tab). */
+    private const FULL_FORM_TERMS = [
+        'tablet', 'tablets',
+        'syrup',
+        'capsule', 'capsules',
+        'cream',
+        'injection',
+        'drops',
+        'suspension',
+        'ointment',
         'gel', 'lotion', 'powder', 'solution',
         'mg', 'ml', 'mcg', 'iu',
     ];
@@ -105,12 +105,23 @@ final class DrugService
         return $merged;
     }
 
-    /** True when every token is a dosage-form word (e.g. "tablet", "syr"). */
+    /** True when every token is a full dosage-form word (e.g. "tablet", "syrup") — not abbrevs. */
     public static function isGenericOnlyQuery(string $q): bool
     {
-        $tokens = self::meaningfulTokens($q, false);
+        $parts = self::rawQueryParts($q);
+        if ($parts === []) {
+            return false;
+        }
+        foreach ($parts as $part) {
+            if (isset(self::FORM_ABBREVS[$part])) {
+                return false;
+            }
+            if (!in_array($part, self::FULL_FORM_TERMS, true)) {
+                return false;
+            }
+        }
 
-        return self::queryTokens($q) !== [] && $tokens === [];
+        return true;
     }
 
     /**
@@ -121,17 +132,35 @@ final class DrugService
     private static function meaningfulTokens(string $q, bool $dropGeneric = true): array
     {
         $out = [];
-        foreach (self::queryTokens($q) as $token) {
-            if ($dropGeneric && in_array($token, self::GENERIC_TERMS, true)) {
+        foreach (self::rawQueryParts($q) as $part) {
+            // Abbrevs like "syr" / "tab" are how doctors filter by form — keep them.
+            if (isset(self::FORM_ABBREVS[$part])) {
+                $out[] = $part;
                 continue;
             }
-            if (mb_strlen($token) < 2) {
+            if ($dropGeneric && in_array($part, self::FULL_FORM_TERMS, true)) {
                 continue;
             }
-            $out[] = $token;
+            $out[] = $part;
         }
 
         return array_values(array_unique($out));
+    }
+
+    /** @return list<string> */
+    private static function rawQueryParts(string $q): array
+    {
+        $parts = preg_split('/\s+/', mb_strtolower(trim($q))) ?: [];
+        $out = [];
+        foreach ($parts as $part) {
+            $part = trim($part);
+            if ($part === '' || mb_strlen($part) < 2) {
+                continue;
+            }
+            $out[] = $part;
+        }
+
+        return $out;
     }
 
     /**
@@ -201,9 +230,17 @@ final class DrugService
             if (str_contains($hay, $token)) {
                 continue;
             }
+            $expanded = self::FORM_ABBREVS[$token] ?? null;
+            if ($expanded !== null && str_contains($hay, $expanded)) {
+                continue;
+            }
             $matched = false;
             foreach ($words as $word) {
                 if (str_starts_with($word, $token)) {
+                    $matched = true;
+                    break;
+                }
+                if ($expanded !== null && str_starts_with($word, $expanded)) {
                     $matched = true;
                     break;
                 }
@@ -219,13 +256,8 @@ final class DrugService
     /** @return list<string> */
     private static function queryTokens(string $q): array
     {
-        $parts = preg_split('/\s+/', mb_strtolower(trim($q))) ?: [];
         $out = [];
-        foreach ($parts as $part) {
-            $part = trim($part);
-            if ($part === '') {
-                continue;
-            }
+        foreach (self::rawQueryParts($q) as $part) {
             $out[] = $part;
             $expanded = self::FORM_ABBREVS[$part] ?? null;
             if ($expanded !== null) {
@@ -234,6 +266,37 @@ final class DrugService
         }
 
         return array_values(array_unique($out));
+    }
+
+    /**
+     * @param list<string> $patterns already-escaped LIKE patterns (with %)
+     * @return list<array<string, mixed>>
+     */
+    private static function likeSearch(\PDO $pdo, string $cols, string $order, array $patterns, int $limit): array
+    {
+        if ($patterns === []) {
+            return [];
+        }
+        $nameCol = 'LOWER(name)';
+        $genericCol = 'LOWER(COALESCE(generic_name, \'\'))';
+        $conds = [];
+        $binds = [];
+        foreach ($patterns as $i => $pattern) {
+            $key = ':p' . $i;
+            $conds[] = "({$nameCol} LIKE {$key} OR {$genericCol} LIKE {$key})";
+            $binds[$key] = $pattern;
+        }
+        $sql = "SELECT {$cols} FROM drugs
+                WHERE is_active = 1 AND (" . implode(' OR ', $conds) . ")
+                ORDER BY {$order} LIMIT :lim";
+        $stmt = $pdo->prepare($sql);
+        foreach ($binds as $key => $val) {
+            $stmt->bindValue($key, $val);
+        }
+        $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll() ?: [];
     }
 
     /**
@@ -277,33 +340,24 @@ final class DrugService
 
         // Single-token prefix — uses name index when present.
         if (count($tokens) === 1) {
-            $stmt = $pdo->prepare(
-                "SELECT {$cols} FROM drugs
-                 WHERE is_active = 1
-                   AND ({$nameCol} LIKE :p OR {$genericCol} LIKE :p)
-                 ORDER BY {$order} LIMIT :lim",
-            );
-            $stmt->bindValue(':p', $needle . '%');
-            $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
-            $stmt->execute();
-            $rows = $stmt->fetchAll() ?: [];
+            $token = $tokens[0];
+            $rows = self::likeSearch($pdo, $cols, $order, [$needle . '%'], $limit);
             if ($rows !== []) {
                 return $rows;
             }
 
-            // Substring only for longer, non-generic tokens (avoid %tablet% table scan).
-            if (mb_strlen($tokens[0]) >= self::MIN_SUBSTRING_LEN) {
-                $stmt = $pdo->prepare(
-                    "SELECT {$cols} FROM drugs
-                     WHERE is_active = 1
-                       AND ({$nameCol} LIKE :p OR {$genericCol} LIKE :p)
-                     ORDER BY {$order} LIMIT :lim",
-                );
-                $stmt->bindValue(':p', '%' . $needle . '%');
-                $stmt->bindValue(':lim', $limit, \PDO::PARAM_INT);
-                $stmt->execute();
+            $abbrevExpanded = self::FORM_ABBREVS[$token] ?? null;
+            if ($abbrevExpanded !== null) {
+                $patterns = ['%' . $needle . '%', '%' . $escape($abbrevExpanded) . '%'];
+                $rows = self::likeSearch($pdo, $cols, $order, $patterns, $limit);
+                if ($rows !== []) {
+                    return $rows;
+                }
+            }
 
-                return $stmt->fetchAll() ?: [];
+            // Substring only for longer, non-generic tokens (avoid %tablet% table scan).
+            if (mb_strlen($token) >= self::MIN_SUBSTRING_LEN) {
+                return self::likeSearch($pdo, $cols, $order, ['%' . $needle . '%'], $limit);
             }
 
             return [];
