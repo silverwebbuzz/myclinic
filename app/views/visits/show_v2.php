@@ -168,7 +168,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
     <div class="space-y-4 lg:col-span-2">
 
     <!-- ====== TODAY'S VISIT ====== -->
-    <section class="ui-card shadow-sm">
+    <section class="ui-card overflow-visible shadow-sm">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-2.5" x-data="{ editDate: false }">
             <div class="flex items-baseline gap-3">
                 <h2 class="ui-section-title">Today's visit</h2>
@@ -322,7 +322,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
             <!-- ---- PRESCRIPTION ---- -->
             <!-- Prescription state/methods now live in the parent visitScreenV2
                  scope (no nested x-data) so medicine inputs bind to one scope. -->
-            <div x-init="loadTemplates()" class="rounded-lg border border-slate-200 bg-white p-3">
+            <div x-init="loadTemplates()" class="overflow-visible rounded-lg border border-slate-200 bg-white p-3">
                 <div class="flex items-baseline justify-between">
                     <label class="ui-group-label">Prescription</label>
                     <button type="button" :disabled="!editable" @click="cloneLastVisit()"
@@ -377,8 +377,8 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                         <div class="overflow-visible rounded-lg border border-slate-200 bg-white">
                             <!-- Main row -->
                             <div class="grid items-center gap-2 overflow-visible p-2 sm:grid-cols-12">
-                                <div class="relative z-0 min-w-0 sm:col-span-4"
-                                     :class="line._dropdown ? 'z-30' : ''"
+                                    <div class="relative isolate min-w-0 sm:col-span-4"
+                                     :class="line._dropdown ? 'z-50' : 'z-0'"
                                      @click.outside="line._dropdown = false">
                                     <input type="text" :disabled="!editable"
                                            x-model="line.drug_name"
@@ -386,31 +386,33 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                            @blur="syncRxFormFromName(idx)"
                                            @focus="onDrugFocus(idx)"
                                            placeholder="Medicine (type 2+ letters)"
-                                           class="w-full rounded border px-2 py-1 text-sm"
+                                           class="relative z-10 w-full rounded border bg-white px-2 py-1 text-sm"
                                            autocomplete="off"
                                            spellcheck="false">
                                     <div x-show="line._dropdown" x-cloak
-                                         class="absolute left-0 right-0 top-full z-50 mt-1">
-                                        <ul x-show="(line._suggestions || []).length"
-                                            class="max-h-44 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
-                                            <template x-for="(d, sIdx) in (line._suggestions || [])" :key="'rxs-' + idx + '-' + sIdx">
-                                                <li>
-                                                    <button type="button"
-                                                            @mousedown.prevent
-                                                            @click="pickDrugFor(idx, d)"
-                                                            class="block w-full px-2 py-1.5 text-left text-xs hover:bg-brand-light">
-                                                        <span x-text="d.name"></span>
-                                                        <span class="text-slate-400" x-show="d.strength" x-text="' ' + d.strength"></span>
-                                                    </button>
-                                                </li>
-                                            </template>
-                                        </ul>
-                                        <p x-show="line._searchHint" x-cloak
-                                           class="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-600"
-                                           x-text="line._searchHint"></p>
-                                        <p x-show="!line._searchHint && line._searchError" x-cloak
-                                           class="rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-800"
-                                           x-text="line._searchError"></p>
+                                         class="absolute left-0 right-0 top-full z-20 mt-2 min-w-[min(100%,320px)]">
+                                        <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl ring-1 ring-slate-200/80">
+                                            <p x-show="line._searchHint" x-cloak
+                                               class="border-b border-slate-100 bg-slate-50 px-2.5 py-2 text-xs text-slate-600"
+                                               x-text="line._searchHint"></p>
+                                            <ul x-show="(line._suggestions || []).length"
+                                                class="max-h-48 overflow-y-auto overscroll-contain">
+                                                <template x-for="(d, sIdx) in (line._suggestions || [])" :key="'rxs-' + idx + '-' + sIdx">
+                                                    <li class="border-b border-slate-50 last:border-0">
+                                                        <button type="button"
+                                                                @mousedown.prevent
+                                                                @click="pickDrugFor(idx, d)"
+                                                                class="block w-full px-2.5 py-2 text-left text-xs hover:bg-brand-light">
+                                                            <span x-text="d.name"></span>
+                                                            <span class="text-slate-400" x-show="d.strength" x-text="' ' + d.strength"></span>
+                                                        </button>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                            <p x-show="!line._searchHint && line._searchError" x-cloak
+                                               class="border-t border-amber-200 bg-amber-50 px-2.5 py-2 text-xs text-amber-800"
+                                               x-text="line._searchError"></p>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1692,10 +1694,17 @@ function visitScreenV2(cfg) {
         },
 
         isGenericDrugQuery(query) {
-            const generic = new Set(['tablet','tablets','tab','tabs','syrup','syr','syp','capsule','capsules','cap','caps','cream','crm','injection','inj','drops','drp','suspension','susp','ointment','oint','gel','lotion','powder','solution','mg','ml','mcg','iu']);
+            // Only skip the catalog API for standalone broad form words (e.g.
+            // "tablet", "syrup"). Short abbrevs like "syr" / "tab" are brand
+            // prefixes doctors type every day — always search the catalog.
+            const blockApi = new Set([
+                'tablet', 'tablets', 'syrup', 'capsule', 'capsules',
+                'injection', 'cream', 'drops', 'suspension', 'ointment',
+                'gel', 'lotion', 'powder', 'solution', 'mg', 'ml', 'mcg', 'iu',
+            ]);
             const tokens = (query || '').toLowerCase().trim().split(/\s+/).filter(Boolean);
             if (!tokens.length) return false;
-            return tokens.every(t => generic.has(t) || (generic.has(t.replace(/s$/, ''))));
+            return tokens.every(t => blockApi.has(t));
         },
 
         drugNameMatchesQuery(name, query) {
@@ -1798,18 +1807,20 @@ function visitScreenV2(cfg) {
 
             const genericOnly = this.isGenericDrugQuery(query);
             const local = this.localDrugSuggestions(idx, query);
+
+            if (genericOnly) {
+                line._suggestions = local;
+                line._dropdown = true;
+                line._searchError = local.length === 0
+                    ? 'Too broad — type a brand name (e.g. Althrocin), not just the dosage form.'
+                    : '';
+                return;
+            }
+
             if (local.length) {
                 line._suggestions = local;
                 line._dropdown = true;
                 line._searchError = '';
-            }
-
-            if (genericOnly) {
-                line._dropdown = true;
-                line._searchError = local.length
-                    ? 'Showing medicines on this visit — type the brand name to search the full catalog.'
-                    : 'Type the brand name (e.g. Althrocin) — "tablet" matches too many medicines.';
-                return;
             }
 
             const url = this.useHomeo
