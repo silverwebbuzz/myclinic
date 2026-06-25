@@ -12,7 +12,7 @@ use App\Core\QueryBuilder;
  */
 final class DirectoryProfileUrlService
 {
-    /** Patient-facing booking entry point: profile sidebar widget. */
+    /** Patient-facing booking entry point: profile #book or direct /book/{slug}. */
     public static function publicBookingUrlForTenant(int $tenantId, string $tenantSlug): string
     {
         $site = self::siteBase();
@@ -22,7 +22,19 @@ final class DirectoryProfileUrlService
             return $site . $path . '#book';
         }
 
+        // Signed-up clinic without a directory profile yet — still bookable.
+        $slug = strtolower(trim($tenantSlug));
+        if ($tenantId > 0 && $slug !== '' && preg_match('/^[a-z0-9-]+$/', $slug) === 1) {
+            return $site . '/book/' . rawurlencode($slug);
+        }
+
         return $site . '/find-a-doctor';
+    }
+
+    /** True when the clinic has a public directory profile page. */
+    public static function hasPublicProfile(int $tenantId): bool
+    {
+        return self::profilePathForTenant($tenantId) !== null;
     }
 
     public static function publicBookingUrlForTenantSlug(string $tenantSlug): string

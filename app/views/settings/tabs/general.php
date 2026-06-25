@@ -5,6 +5,7 @@ $slug = (string) ($clinic['slug'] ?? '');
 $clinicId = (int) ($clinic['id'] ?? 0);
 
 $bookingUrl = DirectoryProfileUrlService::publicBookingUrlForTenant($clinicId, $slug);
+$hasProfile = DirectoryProfileUrlService::hasPublicProfile($clinicId);
 
 $clinicName  = $clinic['name'] ?? 'our clinic';
 $shareText   = "Book your appointment at {$clinicName} online — quick, no calls needed: {$bookingUrl}";
@@ -21,7 +22,13 @@ $qrSrc       = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=
                 </span>
                 <div>
                     <h3 class="text-base font-semibold text-emerald-900">Your booking link</h3>
-                    <p class="text-xs text-emerald-700">Share this profile link — patients book from the sidebar on your listing.</p>
+                    <p class="text-xs text-emerald-700">
+                        <?php if ($hasProfile): ?>
+                        Share your public profile — patients book from the sidebar widget.
+                        <?php else: ?>
+                        Direct booking link for your clinic. After you’re listed on Find a Doctor, this upgrades to your full profile page.
+                        <?php endif; ?>
+                    </p>
                 </div>
             </div>
 
