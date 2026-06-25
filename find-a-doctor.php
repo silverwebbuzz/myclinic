@@ -311,29 +311,14 @@ require __DIR__ . '/partials/header.php';
         <section class="fd-hero fd-desktop-only">
             <div class="wrap-wide">
                 <h1>Find a doctor you can <span class="grad">actually trust.</span></h1>
-                <p class="lede">Search <?= ecp_num($totalDoctors) ?>+ verified clinicians across India, the US, UK and more — see real availability, fees and ratings before you book.</p>
+                <p class="lede">Search <?= ecp_num($totalDoctors) ?>+ verified clinicians across India — see real availability, fees and ratings before you book.</p>
 
-                <!-- Country pill -->
+                <!-- India-only label (multi-country picker removed) -->
                 <div class="fd-country-row" style="position: relative;">
                     <span class="fd-country">
-                        🌐
-                        <span class="flag" x-text="currentCountry().flag"></span>
-                        <span class="label">Showing doctors in <span x-text="currentCountry().name"></span></span>
-                        <button type="button" class="change" @click="countryOpen = !countryOpen">Change</button>
+                        <span class="flag">🇮🇳</span>
+                        <span class="label">Showing doctors in India</span>
                     </span>
-
-                    <div class="fd-cmenu" x-show="countryOpen" @click.outside="countryOpen = false" x-transition.opacity style="left: 50%; transform: translateX(-50%);">
-                        <template x-for="c in countries" :key="c.code">
-                            <div class="item" :class="c.code === country ? 'active' : ''"
-                                @click="country = c.code; locValue = null; loc = ''; countryOpen = false; page = 1">
-                                <span style="font-size: 16px;" x-text="c.flag"></span>
-                                <span x-text="c.name"></span>
-                                <template x-if="c.code === country">
-                                    <span class="check">✓</span>
-                                </template>
-                            </div>
-                        </template>
-                    </div>
                 </div>
 
                 <!-- Search bar -->

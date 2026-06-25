@@ -59,6 +59,39 @@ $specFindUrl = !empty($p['specialty_url_slug']) && !empty($p['city_slug'])
                     </nav>
                     <div class="dp-panels">
                         <section class="dp-panel" x-show="tab === 'overview'" x-cloak>
+                            <?php
+                            $langList = array_values(array_filter(array_map('strval', (array) ($p['languages'] ?? []))));
+                            $feeVal = (float) ($p['fee'] ?? 0);
+                            $facts = [];
+                            if (!empty($p['specialty_label'])) {
+                                $facts[] = ['🩺', 'Specialty', e((string) $p['specialty_label'])];
+                            }
+                            if (!empty($p['city'])) {
+                                $facts[] = ['📍', 'Location', e(trim(implode(', ', array_filter([$p['area'] ?? '', $p['city'] ?? '', $p['state'] ?? '']))))];
+                            }
+                            if ($langList) {
+                                $facts[] = ['🗣️', 'Languages', e(implode(', ', $langList))];
+                            }
+                            if ($feeVal > 0) {
+                                $facts[] = ['💳', 'Consultation fee', e((string) ($p['currency'] ?? '₹') . number_format($feeVal))];
+                            }
+                            if (($p['rating'] ?? 0) > 0) {
+                                $facts[] = ['⭐', 'Rating', number_format((float) $p['rating'], 1) . ' (' . (int) ($p['reviews'] ?? 0) . ' reviews)'];
+                            }
+                            if (!empty($p['website'])) {
+                                $facts[] = ['🌐', 'Website', '<a href="' . e((string) $p['website']) . '" target="_blank" rel="noopener nofollow">' . e(preg_replace('#^https?://#', '', (string) $p['website'])) . '</a>'];
+                            }
+                            ?>
+                            <?php if ($facts): ?>
+                            <dl class="dp-facts">
+                                <?php foreach ($facts as [$icon, $label, $value]): ?>
+                                <div class="dp-fact">
+                                    <dt><span class="dp-fact-ico"><?= $icon ?></span><?= e($label) ?></dt>
+                                    <dd><?= $value ?></dd>
+                                </div>
+                                <?php endforeach; ?>
+                            </dl>
+                            <?php endif; ?>
                             <h2>About</h2>
                             <p class="dp-about"><?= !empty($p['bio']) ? nl2br(e($p['bio'])) : e(($p['display_name'] ?? '') . ' is a ' . strtolower($p['specialty_label'] ?? 'doctor') . ' in ' . ($p['city'] ?? '') . '.') ?></p>
                             <?php if ($hoursLines): ?><h3 class="dp-subhead">Timings</h3><ul class="dp-hours"><?php foreach ($hoursLines as $line): ?><li><?= e($line) ?></li><?php endforeach; ?></ul><?php endif; ?>
@@ -99,6 +132,13 @@ $specFindUrl = !empty($p['specialty_url_slug']) && !empty($p['city_slug'])
                 <div class="dp-side-card dp-side-actions">
                     <?php if (!empty($p['phone'])): ?><a href="tel:<?= e(preg_replace('/\s+/', '', (string) $p['phone'])) ?>" class="dp-btn dp-btn-call">📞 Call Now</a><?php endif; ?>
                     <?php if (!empty($p['directions_url'])): ?><a href="<?= e($p['directions_url']) ?>" target="_blank" rel="noopener" class="dp-btn dp-btn-ghost">🧭 Directions</a><?php endif; ?>
+                </div>
+                <?php endif; ?>
+                <?php if (empty($p['is_claimed']) && empty($p['tenant_slug'])): ?>
+                <div class="dp-side-card dp-claim-card">
+                    <div class="dp-claim-head"><span class="dp-claim-ico">🏥</span><strong>Is this your <?= ($p['entity_type'] ?? '') === 'clinic' ? 'clinic' : 'practice' ?>?</strong></div>
+                    <p class="dp-claim-text">Claim this listing to manage your info, add timings and accept online bookings — free.</p>
+                    <a href="/onboarding/get-listed" class="dp-btn dp-btn-book">Claim this <?= ($p['entity_type'] ?? '') === 'clinic' ? 'clinic' : 'listing' ?> →</a>
                 </div>
                 <?php endif; ?>
             </aside>

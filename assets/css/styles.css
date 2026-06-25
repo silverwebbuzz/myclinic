@@ -8011,6 +8011,88 @@ body {
   color: var(--ink);
 }
 
+/* Overview quick-facts list */
+.dp-facts {
+  margin: 0 0 24px;
+  padding: 0;
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.dp-fact {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+}
+
+.dp-fact + .dp-fact {
+  border-top: 1px solid var(--line);
+}
+
+.dp-fact dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--mute);
+  font-weight: 600;
+}
+
+.dp-fact dd {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.dp-fact dd a {
+  color: var(--teal-600, #0F9B6E);
+  text-decoration: none;
+}
+
+.dp-fact dd a:hover {
+  text-decoration: underline;
+}
+
+.dp-fact-ico {
+  font-size: 15px;
+}
+
+@media (max-width: 520px) {
+  .dp-fact {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+
+/* "Claim this clinic" CTA card (unclaimed listings only) */
+.dp-claim-card {
+  background: linear-gradient(180deg, #f0fdf9, #fff);
+  border-color: var(--teal-600, #0F9B6E);
+}
+
+.dp-claim-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.dp-claim-ico {
+  font-size: 18px;
+}
+
+.dp-claim-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
 .relative {
   position: relative;
 }

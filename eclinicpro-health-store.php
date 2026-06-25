@@ -46,36 +46,68 @@ $conditions = [
     ['👁️', 'Eye Care',            'c-blue'],
 ];
 
+// Full wellness-store taxonomy — main categories + subcategories.
+// Each entry: [ title, image, [subcategories] ].
 $categories = [
     [
         'Health & Medical Devices',
         $hpImg . 'hero_products.png',
-        ['Thermometers', 'Blood Pressure Monitors', 'Glucose Monitors', 'Pulse Oximeters', 'Nebulizers']
+        ['Thermometers', 'Blood Pressure Monitors', 'Glucose Monitors', 'Pulse Oximeters', 'Nebulizers', 'Weighing Scales']
     ],
     [
         'Nutrition & Healthy Foods',
         $hpImg . 'product_weighing_scale.png',
-        ['Protein Supplements', 'Vitamins & Minerals', 'Herbal Supplements', 'Healthy Snacks', 'Meal Replacements']
+        ['Protein Supplements', 'Vitamins & Minerals', 'Herbal Supplements', 'Healthy Snacks', 'Meal Replacements', 'Diabetic Foods']
     ],
     [
         'Personal Care',
         $hpImg . 'product_thermometer.png',
-        ['Skin Care', 'Hair Care', 'Oral Care', 'Body Care', 'Hygiene Products']
+        ['Skin Care', 'Hair Care', 'Oral Care', 'Body Care', 'Hygiene Products', 'Feminine Care']
     ],
     [
         'Baby & Mother Care',
         $hpImg . 'product_pulse_oximeter.png',
-        ['Baby Feeding', 'Baby Skin Care', 'Diapers & Wipes', 'Nursing Products', 'Baby Monitors']
+        ['Baby Feeding', 'Baby Skin Care', 'Diapers & Wipes', 'Nursing Products', 'Baby Monitors', 'Maternity Care']
     ],
     [
         'Fitness & Recovery',
         $hpImg . 'product_bp_monitor.png',
-        ['Fitness Equipment', 'Muscle Recovery', 'Pain Relief', 'Yoga & Wellness', 'Massage Devices']
+        ['Fitness Equipment', 'Muscle Recovery', 'Pain Relief', 'Yoga & Wellness', 'Massage Devices', 'Sports Nutrition']
     ],
     [
-        'Ayurveda & Medical Care',
+        'Ayurveda & Herbal Care',
         $hpImg . 'product_glucometer.png',
-        ['Herbal Supplements', 'Ayurvedic Oils', 'Herbal Teas', 'Natural Wellness', 'Immunity Boosters']
+        ['Herbal Supplements', 'Ayurvedic Oils', 'Herbal Teas', 'Natural Wellness', 'Immunity Boosters', 'Chyawanprash']
+    ],
+    [
+        'Diabetes Care',
+        $hpImg . 'product_glucometer.png',
+        ['Glucometers', 'Test Strips', 'Lancets', 'Insulin Storage', 'Sugar-Free Foods', 'Diabetic Footwear']
+    ],
+    [
+        'Elderly Care',
+        $hpImg . 'product_bp_monitor.png',
+        ['Mobility Aids', 'Adult Diapers', 'Orthopedic Support', 'Bathroom Safety', 'Hearing Aids', 'Daily Living Aids']
+    ],
+    [
+        'Sexual Wellness',
+        $hpImg . 'product_thermometer.png',
+        ['Condoms', 'Lubricants', 'Pregnancy Tests', 'Fertility Support', 'Intimate Hygiene', 'Wellness Supplements']
+    ],
+    [
+        'Eye & Ear Care',
+        $hpImg . 'product_pulse_oximeter.png',
+        ['Contact Lens Care', 'Eye Drops', 'Reading Glasses', 'Ear Drops', 'Ear Wax Removal', 'Vision Supplements']
+    ],
+    [
+        'COVID Essentials',
+        $hpImg . 'product_pulse_oximeter.png',
+        ['Face Masks', 'Sanitizers', 'Pulse Oximeters', 'Self-Test Kits', 'Steam Inhalers', 'Disinfectants']
+    ],
+    [
+        'Health Supplements',
+        $hpImg . 'product_weighing_scale.png',
+        ['Multivitamins', 'Omega & Fish Oil', 'Calcium & Vitamin D', 'Probiotics', 'Antioxidants', 'Brain & Memory']
     ],
 ];
 
@@ -153,6 +185,34 @@ require __DIR__ . '/partials/header.php';
 
 
 <style>
+    /* ════════════════════════════════════════
+       DESIGN TOKENS — bind the store's hp-* palette to the global
+       site tokens (assets/css/styles.css) so typography, colour and
+       weight match the rest of eClinicPro. These were referenced
+       throughout the page but never defined, which made the store
+       render off-brand (transparent greens, mismatched headings).
+    ════════════════════════════════════════ */
+    .hp-store-page {
+        --hp-green: var(--teal-600, #0F9B6E);
+        --hp-green-dark: var(--teal-700, #0B7F5A);
+        --hp-green-light: var(--teal-50, #E0F4EE);
+        --hp-ink: var(--ink, #0A0A0A);
+        --hp-ink-2: var(--ink-2, #1C1C1E);
+        --hp-mute: var(--mute, #6E6E73);
+        --hp-line: var(--line, rgba(0, 0, 0, 0.08));
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        color: var(--hp-ink);
+    }
+
+    .hp-store-page h1,
+    .hp-store-page h2,
+    .hp-store-page h3,
+    .hp-store-page h4 {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        color: var(--hp-ink);
+        letter-spacing: -0.02em;
+    }
+
     /* ════════════════════════════════════════
        STORE HEADER (topbar + main nav)
     ════════════════════════════════════════ */
@@ -678,15 +738,16 @@ require __DIR__ . '/partials/header.php';
     }
 
     .sec-head h2 {
-        font-size: clamp(22px, 3vw, 34px);
+        font-size: clamp(24px, 3vw, 34px);
         font-weight: 800;
-        color: #0d1f12;
+        color: var(--hp-ink);
+        letter-spacing: -0.02em;
         margin-bottom: 8px;
     }
 
     .sec-head p {
-        font-size: 14px;
-        color: #6b8a72;
+        font-size: 15px;
+        color: var(--hp-mute);
         line-height: 1.6;
     }
 
@@ -840,18 +901,19 @@ require __DIR__ . '/partials/header.php';
     }
 
     .cat-name {
-        font-size: 13px;
+        font-size: 15px;
         font-weight: 700;
         color: var(--hp-ink);
-        margin-bottom: 8px;
+        margin-bottom: 10px;
         line-height: 1.35;
+        letter-spacing: -0.01em;
     }
 
     .cat-list {
-        font-size: 11.5px;
+        font-size: 12.5px;
         color: var(--hp-mute);
-        margin: 0 0 10px;
-        line-height: 1.65;
+        margin: 0 0 12px;
+        line-height: 1.75;
         flex: 1;
         list-style: none;
         padding: 0;
@@ -2462,13 +2524,13 @@ require __DIR__ . '/partials/header.php';
 
 
 <!-- ══════════════════════════════════════
-     SHOP BY CATEGORY without slider
+     SHOP BY CATEGORY — main categories + subcategories
 ══════════════════════════════════════ -->
-<!-- <section class="categories reveal-anim">
+<section class="categories reveal-anim">
     <div class="container">
         <div class="sec-head">
             <h2>Shop by Category</h2>
-            <p class="sec-sub">Explore our wide range of health products</p>
+            <p class="sec-sub">Explore our full range of health &amp; wellness products</p>
         </div>
         <div class="cat-grid" id="catGrid">
             <?php foreach ($categories as $cat): ?>
@@ -2489,7 +2551,7 @@ require __DIR__ . '/partials/header.php';
             <?php endforeach; ?>
         </div>
     </div>
-</section> -->
+</section>
 
 
 

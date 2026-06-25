@@ -8,14 +8,11 @@
 // =====================================================================
 
 $DATA = [
+    // India-only: eClinicPro currently serves India. The multi-country picker
+    // has been removed from the UI; keep a single entry so currentCountry(),
+    // language filters and fee ranges keep working (all pinned to India).
     'countries' => [
         ['code' => 'IN', 'name' => 'India',          'flag' => '🇮🇳', 'currency' => '₹',   'feeRange' => [200, 2000], 'langs' => ['English', 'Hindi', 'Marathi', 'Tamil', 'Telugu', 'Kannada', 'Bengali']],
-        ['code' => 'US', 'name' => 'United States',  'flag' => '🇺🇸', 'currency' => '$',   'feeRange' => [80, 500],   'langs' => ['English', 'Spanish']],
-        ['code' => 'GB', 'name' => 'United Kingdom', 'flag' => '🇬🇧', 'currency' => '£',   'feeRange' => [60, 350],   'langs' => ['English']],
-        ['code' => 'AE', 'name' => 'UAE',            'flag' => '🇦🇪', 'currency' => 'AED', 'feeRange' => [150, 900],  'langs' => ['English', 'Arabic', 'Hindi']],
-        ['code' => 'CA', 'name' => 'Canada',         'flag' => '🇨🇦', 'currency' => 'C$',  'feeRange' => [80, 400],   'langs' => ['English', 'French']],
-        ['code' => 'AU', 'name' => 'Australia',      'flag' => '🇦🇺', 'currency' => 'A$',  'feeRange' => [100, 450],  'langs' => ['English']],
-        ['code' => 'SG', 'name' => 'Singapore',      'flag' => '🇸🇬', 'currency' => 'S$',  'feeRange' => [80, 380],   'langs' => ['English', 'Mandarin', 'Malay', 'Tamil']],
     ],
 
     // Grouped specialty layout — keys are kept stable (used as `spec` in DB).
