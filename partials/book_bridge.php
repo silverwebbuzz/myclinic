@@ -178,6 +178,7 @@ function ecp_profile_booking_context(array $profile): array
     if (empty($profile['is_claimed']) || empty($profile['tenant_slug'])) {
         return array_merge($base, [
             'mode' => 'lead',
+            'days' => ecp_book_build_week_days(7),
             'confirmation' => null,
             'bookingError' => is_string($bookingError) ? $bookingError : null,
         ]);

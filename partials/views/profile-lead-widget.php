@@ -1,9 +1,14 @@
 <?php
 /** @var array<string, mixed> $bookingCtx */
 $doctor = $bookingCtx['leadDoctor'] ?? [];
+$leadDays = is_array($bookingCtx['days'] ?? null) ? $bookingCtx['days'] : [];
+if ($leadDays === [] && function_exists('ecp_book_build_week_days')) {
+    $leadDays = ecp_book_build_week_days(7);
+}
 $doctorJson = htmlspecialchars(json_encode($doctor, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES, 'UTF-8');
+$leadDaysJson = htmlspecialchars(json_encode($leadDays, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES, 'UTF-8');
 ?>
-<div class="dp-lead-widget" x-data="ecpProfileLeadBook(<?= $doctorJson ?>)" x-init="init()">
+<div class="dp-lead-widget" x-data="ecpProfileLeadBook(<?= $doctorJson ?>, <?= $leadDaysJson ?>)" x-init="init()">
     <div class="dp-lead-widget-head">
         <h2>Book appointment</h2>
         <p><?= e($doctor['name'] ?? '') ?><?php if (!empty($doctor['area']) || !empty($doctor['city'])): ?> · <?= e(trim(($doctor['area'] ?? '') !== '' ? $doctor['area'] : ($doctor['city'] ?? ''))) ?><?php endif; ?></p>
@@ -14,16 +19,20 @@ $doctorJson = htmlspecialchars(json_encode($doctor, JSON_UNESCAPED_UNICODE | JSO
             <label>
                 <span class="lbl">Preferred date</span>
                 <div class="lb-date-strip">
-                    <template x-for="d in days" :key="d.iso">
-                        <button type="button"
-                                @click="form.preferred_date = d.iso"
-                                :class="form.preferred_date === d.iso ? 'is-active' : ''"
-                                class="lb-date">
-                            <span class="lb-dow" x-text="d.dow"></span>
-                            <span class="lb-day" x-text="d.day"></span>
-                            <span class="lb-mon" x-text="d.mon"></span>
-                        </button>
-                    </template>
+                    <?php foreach ($leadDays as $i => $d): ?>
+                    <?php
+                    $iso = (string) ($d['date'] ?? '');
+                    $dowLabel = $i === 0 ? 'Today' : ($i === 1 ? 'Tom' : (string) ($d['weekday'] ?? ''));
+                    ?>
+                    <button type="button"
+                            @click="form.preferred_date = '<?= htmlspecialchars($iso, ENT_QUOTES) ?>'"
+                            :class="form.preferred_date === '<?= htmlspecialchars($iso, ENT_QUOTES) ?>' ? 'is-active' : ''"
+                            class="lb-date">
+                        <span class="lb-dow"><?= htmlspecialchars($dowLabel) ?></span>
+                        <span class="lb-day"><?= (int) ($d['day'] ?? 0) ?></span>
+                        <span class="lb-mon"><?= htmlspecialchars((string) ($d['month'] ?? '')) ?></span>
+                    </button>
+                    <?php endforeach; ?>
                 </div>
             </label>
 
@@ -81,7 +90,35 @@ $doctorJson = htmlspecialchars(json_encode($doctor, JSON_UNESCAPED_UNICODE | JSO
 </div>
 
 <script>
-function ecpProfileLeadBook(doctor) {
+function ecpProfileLeadBook(doctor, initialDays) {
+  const normalizeDays = (rows) => {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      const monthShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const dowShort   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const today = new Date();
+      const out = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+        const iso = d.getFullYear() + '-' +
+                    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(d.getDate()).padStart(2, '0');
+        out.push({
+          iso,
+          dow: i === 0 ? 'Today' : (i === 1 ? 'Tom' : dowShort[d.getDay()]),
+          day: d.getDate(),
+          mon: monthShort[d.getMonth()],
+        });
+      }
+      return out;
+    }
+    return rows.map((row, i) => ({
+      iso: String(row.date ?? row.iso ?? ''),
+      dow: i === 0 ? 'Today' : (i === 1 ? 'Tom' : String(row.weekday ?? row.dow ?? '')),
+      day: Number(row.day ?? 0),
+      mon: String(row.month ?? row.mon ?? ''),
+    })).filter((row) => row.iso !== '');
+  };
+
   return {
     doctor,
     patient: window.ECP_PATIENT || null,
@@ -89,7 +126,7 @@ function ecpProfileLeadBook(doctor) {
     done: false,
     errorMsg: '',
     resultMsg: '',
-    days: [],
+    days: normalizeDays(initialDays),
     times: [
       { value: '09:00', label: '9:00 AM' },
       { value: '10:00', label: '10:00 AM' },
@@ -104,21 +141,6 @@ function ecpProfileLeadBook(doctor) {
     form: { preferred_date: '', preferred_time: '', reason: '' },
 
     init() {
-      const monthShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      const dowShort   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-      const today = new Date();
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
-        const iso = d.getFullYear() + '-' +
-                    String(d.getMonth() + 1).padStart(2, '0') + '-' +
-                    String(d.getDate()).padStart(2, '0');
-        this.days.push({
-          iso,
-          dow: i === 0 ? 'Today' : (i === 1 ? 'Tom' : dowShort[d.getDay()]),
-          day: d.getDate(),
-          mon: monthShort[d.getMonth()],
-        });
-      }
       this.patient = window.ECP_PATIENT || null;
     },
 
