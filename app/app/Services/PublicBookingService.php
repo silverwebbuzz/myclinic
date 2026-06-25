@@ -215,7 +215,7 @@ final class PublicBookingService
             NotificationService::queueOnlineBooking($appointment, $patient, $doctor, $clinic);
         }
 
-        return ['patient' => $patient, 'appointment' => $appointment];
+        return ['patient' => $patient, 'appointment' => $appointment, 'doctor' => $doctor];
     }
 
     /**

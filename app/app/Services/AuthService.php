@@ -87,6 +87,21 @@ final class AuthService
         return QueryBuilder::table('users')->where('email', '=', $email)->where('is_active', '=', 1)->first();
     }
 
+    /**
+     * True if the email is already attached to any user (active or not).
+     * Used to reject duplicate registrations before the INSERT, so a unique
+     * constraint violation never bubbles up as a 500.
+     */
+    public static function emailRegistered(string $email): bool
+    {
+        $email = strtolower(trim($email));
+        if ($email === '' || !Database::ping()) {
+            return false;
+        }
+
+        return QueryBuilder::table('users')->where('email', '=', $email)->count() > 0;
+    }
+
     public static function findUserByLogin(string $login): ?array
     {
         $login = strtolower(trim($login));

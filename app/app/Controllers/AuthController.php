@@ -80,7 +80,22 @@ final class AuthController
             ]), 422);
         }
 
-        $result = AuthService::registerClinic($clinicName, $slug, $email, $password, $googleId);
+        try {
+            $result = AuthService::registerClinic($clinicName, $slug, $email, $password, $googleId);
+        } catch (\Throwable $e) {
+            error_log('[register] registerClinic failed: ' . $e->getMessage());
+            $isDuplicate = str_contains($e->getMessage(), '1062') || stripos($e->getMessage(), 'duplicate') !== false;
+
+            return Response::html($this->view('auth/register', [
+                'csrf' => CsrfService::token(),
+                'error' => $isDuplicate
+                    ? 'An account with this email already exists. Please log in instead.'
+                    : 'We could not create your account right now. Please try again.',
+                'old' => compact('clinicName', 'slug', 'email'),
+                'google' => $google,
+                'googleEnabled' => GoogleOAuthService::isConfigured(),
+            ]), 422);
+        }
         GoogleOAuthService::clearPendingRegistration();
 
         // Partner program: attribute this clinic to a referring partner if a
@@ -457,6 +472,9 @@ final class AuthController
         }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return 'Valid email is required.';
+        }
+        if (AuthService::emailRegistered($email)) {
+            return 'An account with this email already exists. Please log in instead.';
         }
         if (!$fromGoogle) {
             if (strlen($password) < 8 || !preg_match('/[A-Z]/', $password) || !preg_match('/[0-9]/', $password)) {

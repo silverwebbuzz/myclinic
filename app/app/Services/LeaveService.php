@@ -38,7 +38,7 @@ final class LeaveService
         $sql = "SELECT a.*, p.name AS patient_name FROM appointments a
                 INNER JOIN patients p ON p.id = a.patient_id
                 WHERE a.clinic_id = ? AND a.doctor_id = ? AND DATE(a.scheduled_at) = ?
-                AND a.status NOT IN ('cancelled', 'no_show')";
+                AND a.status NOT IN ('cancelled', 'no_show', 'completed')";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$clinicId, $doctorId, $date]);
         $rows = $stmt->fetchAll() ?: [];

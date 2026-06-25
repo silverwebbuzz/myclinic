@@ -41,6 +41,7 @@ final class BookController
             }
             $_SESSION['ecp_book_flash'] = [
                 'patient_name' => $result['patient']['name'] ?? '',
+                'doctor_name' => $result['doctor']['name'] ?? '',
                 'date' => date('D, j M Y', strtotime((string) $result['appointment']['scheduled_at'])),
                 'time' => date('g:i A', strtotime((string) $result['appointment']['scheduled_at'])),
                 'token' => $result['appointment']['token_number'] ?? null,

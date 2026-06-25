@@ -78,6 +78,7 @@ final class TeamSettingsController
             AuditService::log($request, 'INSERT', 'users', (int) $result['user_id']);
             SessionFlash::put('staff_password_flash', [
                 'user_id' => (int) $result['user_id'],
+                'username' => $result['username'],
                 'password' => $result['password'],
             ]);
 

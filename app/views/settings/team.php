@@ -9,6 +9,7 @@ $teamMessages = [
 ];
 $flashUserId = is_array($passwordFlash ?? null) ? (int) ($passwordFlash['user_id'] ?? 0) : 0;
 $flashPassword = is_array($passwordFlash ?? null) ? (string) ($passwordFlash['password'] ?? '') : '';
+$flashUsername = is_array($passwordFlash ?? null) ? (string) ($passwordFlash['username'] ?? '') : '';
 $loginUrl = $loginUrl ?? 'https://app.eclinicpro.com/login';
 ?>
 <?= ui_page_header('Team', 'Invite staff, create logins, and manage seats.') ?>
@@ -117,6 +118,15 @@ $loginUrl = $loginUrl ?? 'https://app.eclinicpro.com/login';
                         <p class="mt-0.5 text-xs text-slate-500">Login: <?= htmlspecialchars($member['email']) ?></p>
                         <?php endif; ?>
                         <?php if ($showPassword): ?>
+                        <?php if ($flashUsername !== ''): ?>
+                        <p class="mt-1 text-xs text-amber-800">
+                            Login ID: <code class="rounded bg-amber-50 px-1.5 py-0.5 font-mono text-sm tracking-wide"><?= htmlspecialchars($flashUsername) ?></code>
+                            <button type="button" class="ml-1 font-medium underline"
+                                    onclick="copyClinicText(<?= json_encode($flashUsername) ?>, this)">
+                                Copy
+                            </button>
+                        </p>
+                        <?php endif; ?>
                         <p class="mt-1 text-xs text-amber-800">
                             Password: <code id="staff-pass-<?= $memberId ?>" class="rounded bg-amber-50 px-1.5 py-0.5 font-mono text-sm tracking-wide"><?= htmlspecialchars($flashPassword) ?></code>
                             <button type="button" class="ml-1 font-medium underline"

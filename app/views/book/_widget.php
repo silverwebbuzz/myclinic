@@ -29,6 +29,12 @@ $cardClass = 'dp-book-card overflow-hidden rounded-2xl border border-slate-200 b
                         <dt class="text-slate-500">Patient</dt>
                         <dd class="font-semibold uppercase text-slate-900"><?= htmlspecialchars($confirmation['patient_name']) ?></dd>
                     </div>
+                    <?php if (!empty($confirmation['doctor_name'])): ?>
+                    <div class="flex justify-between border-b border-slate-100 py-2">
+                        <dt class="text-slate-500">Doctor</dt>
+                        <dd class="font-semibold text-slate-900"><?= htmlspecialchars($confirmation['doctor_name']) ?></dd>
+                    </div>
+                    <?php endif; ?>
                     <div class="flex justify-between border-b border-slate-100 py-2">
                         <dt class="text-slate-500">Date</dt>
                         <dd class="font-semibold text-slate-900"><?= htmlspecialchars($confirmation['date']) ?></dd>
@@ -53,7 +59,7 @@ $cardClass = 'dp-book-card overflow-hidden rounded-2xl border border-slate-200 b
                         ?? '/find-a-doctor');
                     ?>
                     <a href="<?= htmlspecialchars($bookAgainUrl) ?>"
-                       onclick="event.preventDefault();var u=this.getAttribute('href');if(u===window.location.pathname+window.location.search+window.location.hash){window.location.reload();}else{window.location.assign(u);}"
+                       onclick="event.preventDefault();window.location.href=this.getAttribute('href');"
                        class="block w-full rounded-xl bg-brand py-3 text-center text-sm font-semibold text-white hover:opacity-90">
                         Book another appointment
                     </a>
