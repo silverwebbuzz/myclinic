@@ -7679,8 +7679,8 @@ body {
 
 .dp-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 400px);
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 28px;
   align-items: start;
 }
 
@@ -7962,12 +7962,10 @@ body {
 }
 
 .dp-side {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  display: grid;
+  gap: 16px;
   position: sticky;
   top: 88px;
-  min-width: 0;
 }
 
 .dp-side-card {
@@ -8011,6 +8009,10 @@ body {
   background: #f8fafc;
   border-color: var(--line);
   color: var(--ink);
+}
+
+.relative {
+  position: relative;
 }
 
 .dp-related {

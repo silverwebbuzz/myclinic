@@ -15,23 +15,23 @@ $clinicCount = ecp_active_clinic_count();
 ?>
 
 <?php if (!$hideFinalCta): ?>
-<section class="cta-block" id="cta">
-    <div class="wrap reveal">
-        <h2>Ready to run your clinic beautifully?</h2>
-        <p class="lede">
-            Join <?= ecp_num($clinicCount) ?> clinics across India. Start free in 2 minutes.<br>
-            No credit card. No phone-tag with sales. Just a clean clinic.
-        </p>
-        <div class="hero-ctas">
-            <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg">
-                Start 30-day free trial
-            </a>
-            <a href="/book-a-demo" class="btn btn-ghost-dark btn-lg">
-                Schedule a 15-min demo →
-            </a>
+    <section class="cta-block" id="cta">
+        <div class="wrap reveal">
+            <h2>Ready to run your clinic beautifully?</h2>
+            <p class="lede">
+                Join <?= ecp_num($clinicCount) ?> clinics across India. Start free in 2 minutes.<br>
+                No credit card. No phone-tag with sales. Just a clean clinic.
+            </p>
+            <div class="hero-ctas">
+                <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg">
+                    Start 30-day free trial
+                </a>
+                <a href="/book-a-demo" class="btn btn-ghost-dark btn-lg">
+                    Schedule a 15-min demo →
+                </a>
+            </div>
         </div>
-    </div>
-</section>
+    </section>
 <?php endif; ?>
 
 <!-- Mega-city links — major SEO juice for /find-a-doctor/{city} pages.
@@ -48,23 +48,23 @@ try {
 }
 ?>
 <?php if (!empty($footerCities)): ?>
-<section class="foot-cities">
-    <div class="wrap">
-        <h4>Doctors near you</h4>
-        <ul>
-            <?php foreach ($footerCities as $c): ?>
-                <?php
-                $cityName = (string) ($c['city'] ?? '');
-                if ($cityName === '') continue;
-                $slug = function_exists('ecp_slug_for_city') ? ecp_slug_for_city($cityName) : '';
-                if ($slug === '') continue;
-                ?>
-                <li><a href="/find-a-doctor/<?= e($slug) ?>"><?= e($cityName) ?></a></li>
-            <?php endforeach; ?>
-            <li><a href="/find-a-doctor" class="foot-cities-more">All cities →</a></li>
-        </ul>
-    </div>
-</section>
+    <section class="foot-cities">
+        <div class="wrap">
+            <h4>Doctors near you</h4>
+            <ul>
+                <?php foreach ($footerCities as $c): ?>
+                    <?php
+                    $cityName = (string) ($c['city'] ?? '');
+                    if ($cityName === '') continue;
+                    $slug = function_exists('ecp_slug_for_city') ? ecp_slug_for_city($cityName) : '';
+                    if ($slug === '') continue;
+                    ?>
+                    <li><a href="/find-a-doctor/<?= e($slug) ?>"><?= e($cityName) ?></a></li>
+                <?php endforeach; ?>
+                <li><a href="/find-a-doctor" class="foot-cities-more">All cities →</a></li>
+            </ul>
+        </div>
+    </section>
 <?php endif; ?>
 
 <footer class="foot">
@@ -134,28 +134,82 @@ try {
 </footer>
 
 <?php if (($activePage ?? '') === 'find'): ?>
-<?php $fdSearchBust = @filemtime(__DIR__ . '/../assets/js/find-doctor-search.js') ?: time(); ?>
-<script defer src="/assets/js/find-doctor-search.js?v=<?= (int) $fdSearchBust ?>"></script>
+    <?php $fdSearchBust = @filemtime(__DIR__ . '/../assets/js/find-doctor-search.js') ?: time(); ?>
+    <script defer src="/assets/js/find-doctor-search.js?v=<?= (int) $fdSearchBust ?>"></script>
 <?php endif; ?>
 
 <!-- Reveal-on-scroll: light replacement for the React IntersectionObserver -->
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const els = document.querySelectorAll('.reveal');
-    if (!els.length || !('IntersectionObserver' in window)) {
-        els.forEach(el => el.classList.add('is-in'));
-        return;
-    }
-    const io = new IntersectionObserver((entries) => {
-        entries.forEach(e => {
-            if (e.isIntersecting) {
-                e.target.classList.add('is-in');
-                io.unobserve(e.target);
-            }
+
+<!-- jQuery (must be first) -->
+<!-- jQuery (FIRST) -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<!-- Slick JS (AFTER jQuery) -->
+<script src="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.9.0/slick.min.js"></script>
+
+
+
+<!-- Slick Init -->
+<!-- <script>
+jQuery(document).ready(function ($) {
+
+    if ($('.shop-list').length) {
+        $('.shop-list').slick({
+            slidesToShow: 5,
+            slidesToScroll: 1,
+            arrows: true,
+            dots: false,
+            autoplay: true,
+            autoplaySpeed: 3000,
+            responsive: [
+                {
+                    breakpoint: 1024,
+                    settings: { slidesToShow: 3 }
+                },
+                {
+                    breakpoint: 768,
+                    settings: { slidesToShow: 2 }
+                },
+                {
+                    breakpoint: 480,
+                    settings: { slidesToShow: 1 }
+                }
+            ]
         });
-    }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
-    els.forEach(el => io.observe(el));
+    }
+
 });
+</script> -->
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const els = document.querySelectorAll('.reveal');
+        if (!els.length || !('IntersectionObserver' in window)) {
+            els.forEach(el => el.classList.add('is-in'));
+            return;
+        }
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.classList.add('is-in');
+                    io.unobserve(e.target);
+                }
+            });
+        }, {
+            threshold: 0.12,
+            rootMargin: '0px 0px -60px 0px'
+        });
+        els.forEach(el => io.observe(el));
+    });
 </script>
+
 </body>
+
 </html>
