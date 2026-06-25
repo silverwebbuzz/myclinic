@@ -29,32 +29,36 @@ $pdo = new PDO(
 
 ClinicTime::applyMysqlSession($pdo);
 
-$dir = __DIR__ . '/migrations';
-$files = glob($dir . '/*.sql');
-sort($files);
-
-foreach ($files as $file) {
-    $name = basename($file);
-    echo "Running {$name}...\n";
-    $sql = file_get_contents($file);
-    foreach (array_filter(array_map('trim', explode(';', $sql))) as $statement) {
-        if ($statement === '' || str_starts_with($statement, '--')) {
-            continue;
-        }
-        if (preg_match('/^(CREATE\s+DATABASE|USE\s+)/i', $statement)) {
-            continue;
-        }
-        try {
-            $pdo->exec($statement);
-        } catch (PDOException $e) {
-            if (str_contains($e->getMessage(), 'already exists')
-                || str_contains($e->getMessage(), 'Duplicate column')) {
-                continue;
-            }
-            throw $e;
-        }
-    }
-    echo "  Done.\n";
+// install.sql is the single source of truth for the schema (full structure
+// + reference data). There are no incremental migration files anymore.
+//
+// The reference data contains literal semicolons inside string values, so we
+// cannot naively split on ';' in PHP — we pipe the file through the mysql
+// client, which parses SQL correctly. (PDO is only used above to validate the
+// connection settings before we shell out.)
+$file = __DIR__ . '/install.sql';
+if (!is_file($file)) {
+    fwrite(STDERR, "install.sql not found at {$file}\n");
+    exit(1);
 }
 
-echo "Migrations complete.\n";
+echo "Loading install.sql via mysql client...\n";
+
+$cmd = sprintf(
+    'mysql --host=%s --port=%s --user=%s %s %s < %s',
+    escapeshellarg($host),
+    escapeshellarg($port),
+    escapeshellarg($user),
+    $pass !== '' ? '--password=' . escapeshellarg($pass) : '',
+    escapeshellarg($dbname),
+    escapeshellarg($file),
+);
+
+passthru($cmd, $exitCode);
+if ($exitCode !== 0) {
+    fwrite(STDERR, "mysql import failed (exit {$exitCode}).\n");
+    fwrite(STDERR, "Alternatively run: mysql -u USER -p DB < database/install.sql\n");
+    exit($exitCode);
+}
+
+echo "Schema loaded.\n";

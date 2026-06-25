@@ -118,29 +118,19 @@ In **cPanel → MySQL Databases**:
 1. Create database `silverwebbuzz_in_eclinicpro` (or whatever you put in DB_DATABASE).
 2. Create user, set password, **add user to database with ALL privileges**.
 
-Then load the schema + migrations:
+Then load the schema:
 
 ```bash
 cd ~/public_html/app
 
-# Initial schema (only if database is empty):
+# Full schema + reference data (drugs, doctor directory, specialties,
+# templates, plans, platform admin). Idempotent-safe for an empty DB.
 mysql -u DB_USERNAME -p DB_DATABASE < database/install.sql
-
-# Apply all migrations in order:
-for m in database/migrations/*.sql; do
-  echo "Applying $m"
-  mysql -u DB_USERNAME -p DB_DATABASE < "$m"
-done
-
-# OR if there's a migrate.php runner:
-php database/migrate.php
 ```
 
-⚠️ The schema includes the new columns from this conversation: `doctor_schedules.extended_end_time` and `specialty_configs.booking_window_days` (migration `012_extended_hours_booking_window.sql`). If your DB was set up before that migration, run just that file:
-
-```bash
-mysql -u DB_USERNAME -p DB_DATABASE < database/migrations/012_extended_hours_booking_window.sql
-```
+`install.sql` is the single source of truth for the schema — it reflects
+the current production structure. There are no incremental migration files;
+when the schema changes, `install.sql` is regenerated from the live DB.
 
 ---
 
@@ -177,8 +167,8 @@ cd ~/public_html && git pull
 # Re-install composer if dependencies changed:
 cd ~/public_html/app && composer install --no-dev --optimize-autoloader
 
-# Apply a new migration:
-mysql -u DB_USERNAME -p DB_DATABASE < ~/public_html/app/database/migrations/0XX_whatever.sql
+# Apply a schema change: regenerate install.sql from the updated DB and
+# commit it (export via phpMyAdmin or mysqldump, schema + reference data only).
 
 # Clear OPcache (after a deploy, if changes don't show):
 # Easiest: cPanel → Restart Services → PHP-FPM
