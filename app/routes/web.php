@@ -34,6 +34,7 @@ use App\Controllers\DietTemplateController;
 use App\Controllers\DoctorScheduleController;
 use App\Controllers\HelpController;
 use App\Controllers\MessagingAdminController;
+use App\Controllers\OnboardingController;
 use App\Controllers\EmailTemplateAdminController;
 use App\Controllers\SpecialtyAdminController;
 use App\Controllers\VitalsController;

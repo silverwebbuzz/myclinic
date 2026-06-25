@@ -140,7 +140,13 @@ $cardClass = 'dp-book-card overflow-hidden rounded-2xl border border-slate-200 b
                             </div>
                             <div x-show="!loadingSlots && allSlots.length === 0" x-cloak
                                  class="rounded-xl bg-amber-50 px-3 py-4 text-center text-sm text-amber-800">
-                                No slots on this day. Try another date.
+                                <span x-show="slotMeta && slotMeta.in_window === false">This date is outside the online booking window.</span>
+                                <span x-show="!slotMeta || slotMeta.in_window !== false">No slots on this day — the clinic may be closed. Try another date.</span>
+                            </div>
+
+                            <div x-show="!loadingSlots && allSlots.length > 0 && morningSlots.filter(s => s.available).length === 0 && eveningSlots.filter(s => s.available).length === 0" x-cloak
+                                 class="rounded-xl bg-slate-50 px-3 py-4 text-center text-sm text-slate-600">
+                                All slots are full or past for this day. Try another date.
                             </div>
 
                             <div x-show="allSlots.length > 0 && morningSlots.length > 0" x-cloak>

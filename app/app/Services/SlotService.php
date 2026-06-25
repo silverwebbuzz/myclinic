@@ -41,7 +41,9 @@ final class SlotService
         }
 
         $slots = self::compute($clinicId, $doctorId, $date, $includeExtended);
-        RedisClient::setex($cacheKey, self::CACHE_TTL, json_encode($slots));
+        if ($slots !== []) {
+            RedisClient::setex($cacheKey, self::CACHE_TTL, json_encode($slots));
+        }
 
         return $slots;
     }
@@ -86,6 +88,8 @@ final class SlotService
         if (!Database::ping()) {
             return [];
         }
+
+        self::ensureSchedulesForDoctor($clinicId, $doctorId);
 
         $tz = self::clinicTimezone($clinicId);
         $dayOfWeek = self::dayOfWeekForDate($date, $tz);
@@ -305,6 +309,13 @@ final class SlotService
     /** @return array<string, true> */
     private static function bookedTimes(int $clinicId, int $doctorId, string $date): array
     {
+        $tz = self::clinicTimezone($clinicId);
+        try {
+            $zone = new \DateTimeZone($tz);
+        } catch (\Throwable) {
+            $zone = new \DateTimeZone(\App\Support\ClinicTime::zone());
+        }
+
         $pdo = Database::connection();
         $stmt = $pdo->prepare(
             "SELECT scheduled_at FROM appointments
@@ -312,17 +323,69 @@ final class SlotService
              AND scheduled_at >= ? AND scheduled_at < ?
              AND status NOT IN ('cancelled', 'no_show')",
         );
+        $nextDay = (new \DateTime($date . ' 00:00:00', $zone))->modify('+1 day')->format('Y-m-d');
         $stmt->execute([
             $clinicId,
             $doctorId,
             $date . ' 00:00:00',
-            date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00',
+            $nextDay . ' 00:00:00',
         ]);
         $booked = [];
         while ($row = $stmt->fetch()) {
-            $booked[date('Y-m-d H:i:s', strtotime($row['scheduled_at']))] = true;
+            $raw = (string) ($row['scheduled_at'] ?? '');
+            if ($raw === '') {
+                continue;
+            }
+            try {
+                $dt = new \DateTime($raw, $zone);
+                $booked[$dt->format('Y-m-d H:i:s')] = true;
+            } catch (\Throwable) {
+                $booked[date('Y-m-d H:i:s', strtotime($raw))] = true;
+            }
         }
 
         return $booked;
+    }
+
+    /**
+     * If working hours were saved but doctor_schedules rows are missing (sync
+     * failed, owner-only clinic, or legacy data), rebuild before slot compute.
+     */
+    private static function ensureSchedulesForDoctor(int $clinicId, int $doctorId): void
+    {
+        $hasRows = QueryBuilder::table('doctor_schedules')
+            ->forClinic($clinicId)
+            ->where('doctor_id', '=', $doctorId)
+            ->where('is_active', '=', 1)
+            ->first();
+
+        if ($hasRows !== null) {
+            return;
+        }
+
+        $bookable = DoctorScheduleService::doctorIdsForClinic($clinicId);
+        if (!in_array($doctorId, $bookable, true)) {
+            return;
+        }
+
+        $config = OnboardingService::specialtyConfig($clinicId) ?? [];
+        $wh = $config['working_hours'] ?? null;
+        if (is_string($wh)) {
+            $wh = json_decode($wh, true);
+        }
+        if (!is_array($wh) || $wh === []) {
+            return;
+        }
+
+        try {
+            DoctorScheduleService::syncForDoctor(
+                $clinicId,
+                $doctorId,
+                $wh,
+                DoctorScheduleService::slotDurationForClinic($clinicId),
+            );
+        } catch (\Throwable $e) {
+            error_log('[SlotService] ensureSchedulesForDoctor: ' . $e->getMessage());
+        }
     }
 }

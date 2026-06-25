@@ -35,6 +35,7 @@ function bookingWizard() {
         morningSlots: [],
         eveningSlots: [],
         loadingSlots: false,
+        slotMeta: null,
         loggedIn: <?= $patientLoggedIn ? 'true' : 'false' ?>,
         phone: <?= json_encode($patientPhoneDisplay) ?>,
         phoneRaw: <?= json_encode((string) $patientPhone) ?>,
@@ -198,6 +199,7 @@ function bookingWizard() {
                 this.allSlots = all;
                 this.morningSlots = all.filter(s => s.hour < 13);
                 this.eveningSlots = all.filter(s => s.hour >= 13);
+                this.slotMeta = data.meta || null;
                 if (data.meta) {
                     console.debug('[book slots]', data.meta);
                 }
@@ -205,6 +207,7 @@ function bookingWizard() {
                 this.allSlots = [];
                 this.morningSlots = [];
                 this.eveningSlots = [];
+                this.slotMeta = null;
             } finally {
                 this.loadingSlots = false;
             }
@@ -228,5 +231,3 @@ function bookingWizard() {
     };
 }
 </script>
-</body>
-</html>

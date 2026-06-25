@@ -16,19 +16,25 @@ final class PublicBookingService
     /** @return list<array<string, mixed>> */
     public static function doctors(int $clinicId): array
     {
-        return QueryBuilder::table('users')
-            ->forClinic($clinicId)
-            ->where('role', '=', 'doctor')
-            ->where('is_active', '=', 1)
-            ->get();
+        // Must match AppointmentService::doctorsForClinic() — the same IDs
+        // DoctorScheduleService uses when syncing working hours to doctor_schedules.
+        return AppointmentService::doctorsForClinic($clinicId);
     }
 
-    /** @return list<array{time: string, datetime: string, available: bool}> */
+    /** @return list<array{time: string, datetime: string, available: bool, blocked?: bool, past?: bool, extended?: bool}> */
     public static function slots(int $clinicId, int $doctorId, string $date): array
     {
+        if ($doctorId <= 0) {
+            $docs = self::doctors($clinicId);
+            $doctorId = (int) ($docs[0]['id'] ?? 0);
+        }
+        if ($doctorId <= 0) {
+            return [];
+        }
         if (!self::isWithinBookingWindow($clinicId, $date)) {
             return [];
         }
+
         return SlotService::available($clinicId, $doctorId, $date);
     }
 

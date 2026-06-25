@@ -70,7 +70,14 @@ final class BookController
         $ts = strtotime($dateRaw);
         $date = $ts !== false ? date('Y-m-d', $ts) : date('Y-m-d');
         $clinicId = (int) $clinic['id'];
+
+        if ($doctorId <= 0) {
+            $docs = \App\Services\AppointmentService::doctorsForClinic($clinicId);
+            $doctorId = (int) ($docs[0]['id'] ?? 0);
+        }
+
         $slots = PublicBookingService::slots($clinicId, $doctorId, $date);
+        $inWindow = PublicBookingService::isWithinBookingWindow($clinicId, $date);
 
         return Response::json([
             'slots' => $slots,
@@ -79,6 +86,8 @@ final class BookController
                 'doctor_id' => $doctorId,
                 'date' => $date,
                 'count' => count($slots),
+                'in_window' => $inWindow,
+                'available_count' => count(array_filter($slots, static fn (array $s) => !empty($s['available']))),
             ],
         ]);
     }
