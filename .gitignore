@@ -10,5 +10,6 @@ graphify-out/
 # Large MySQL dumps — exceed GitHub's 100MB limit; keep local only.
 # Real schema lives in app/database/migrations/ and document/seeds/.
 document/silverwebbuzz_in_myclinic*.sql
+app/database/install.sql
 *.sql.gz
 *.dump
