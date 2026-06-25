@@ -7705,14 +7705,16 @@ body {
   width: 200px;
   height: 200px;
   object-fit: cover;
-  border-radius: 12px;
+  border-radius: 16px;
   display: block;
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
 .dp-hero-avatar {
   width: 200px;
   height: 200px;
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -7720,6 +7722,7 @@ body {
   font-size: 48px;
   font-weight: 700;
   color: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
 /* Neutral default doctor icon fills the hero avatar box. */
@@ -7762,31 +7765,79 @@ body {
   margin-bottom: 8px;
 }
 
+/* Inline SVG icon — inherits text colour, aligns with adjacent text. */
+.dp-i {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  vertical-align: -0.125em;
+}
+
 .dp-entity-pill {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
-  padding: 4px 10px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 4px 11px;
   border-radius: 999px;
-  background: #ecfdf5;
-  color: #0b7f5c;
+  background: var(--teal-50, #E0F4EE);
+  color: var(--teal-700, #0B7F5A);
 }
 
 .dp-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
   font-weight: 600;
-  color: #0F9B6E;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  background: var(--teal-50, #E0F4EE);
+  color: var(--teal-700, #0B7F5A);
+}
+
+.dp-verified .dp-i {
+  width: 13px;
+  height: 13px;
 }
 
 .dp-rating {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+}
+
+/* Star bar — gold fill clipped to the rating percentage (--pct). */
+.dp-stars {
+  --pct: 100%;
+  position: relative;
+  display: inline-block;
+  font-size: 15px;
+  line-height: 1;
+  letter-spacing: 1px;
+  color: #e2e5ea;
+}
+
+.dp-stars::before {
+  content: '★★★★★';
+  position: absolute;
+  inset: 0;
+  width: var(--pct);
+  overflow: hidden;
+  color: #f5a623;
+  white-space: nowrap;
+}
+
+.dp-stars-sm {
+  font-size: 13px;
+  vertical-align: -1px;
 }
 
 .dp-rating-val {
   font-weight: 700;
-  font-size: 16px;
+  font-size: 15px;
+  color: var(--ink);
 }
 
 .dp-rating-count {
@@ -7795,28 +7846,47 @@ body {
 }
 
 .dp-title {
-  font-size: clamp(20px, 2.4vw, 26px);
+  font-size: clamp(21px, 2.4vw, 27px);
   font-weight: 700;
-  line-height: 1.25;
+  line-height: 1.22;
+  letter-spacing: -0.02em;
+  color: var(--ink);
   margin: 0 0 6px;
 }
 
 .dp-spec {
   margin: 0 0 10px;
-  color: var(--teal-700, #0b7f5c);
+  color: var(--teal-700, #0B7F5A);
   font-size: 15px;
   font-weight: 600;
 }
 
 .dp-meta-list {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   font-size: 14px;
+  color: var(--ink-2);
 }
 
 .dp-meta-row {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
+}
+
+.dp-meta-row .dp-i {
+  width: 16px;
+  height: 16px;
+  color: var(--mute);
+}
+
+.dp-meta-row a {
+  color: var(--ink-2);
+  text-decoration: none;
+}
+
+.dp-meta-row a:hover {
+  color: var(--teal-700, #0B7F5A);
 }
 
 .dp-content-block {
@@ -8011,6 +8081,16 @@ body {
   color: var(--ink);
 }
 
+.dp-btn .dp-i {
+  width: 16px;
+  height: 16px;
+}
+
+.dp-btn-book .dp-i {
+  width: 15px;
+  height: 15px;
+}
+
 /* Overview quick-facts list */
 .dp-facts {
   margin: 0 0 24px;
@@ -8037,7 +8117,7 @@ body {
 .dp-fact dt {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   margin: 0;
   color: var(--mute);
   font-weight: 600;
@@ -8046,10 +8126,12 @@ body {
 .dp-fact dd {
   margin: 0;
   color: var(--ink-2);
+  font-weight: 500;
 }
 
 .dp-fact dd a {
-  color: var(--teal-600, #0F9B6E);
+  color: var(--teal-700, #0B7F5A);
+  font-weight: 600;
   text-decoration: none;
 }
 
@@ -8057,8 +8139,23 @@ body {
   text-decoration: underline;
 }
 
+.dp-fact-muted {
+  color: var(--mute);
+  font-weight: 400;
+}
+
 .dp-fact-ico {
-  font-size: 15px;
+  display: inline-flex;
+  color: var(--teal-600, #0F9B6E);
+}
+
+.dp-fact-ico .dp-i {
+  width: 16px;
+  height: 16px;
+}
+
+.dp-fact:nth-child(odd) {
+  background: var(--bg-3, #FAFAFB);
 }
 
 @media (max-width: 520px) {
@@ -8077,13 +8174,26 @@ body {
 .dp-claim-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   font-size: 15px;
   color: var(--ink);
 }
 
 .dp-claim-ico {
-  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--teal-50, #E0F4EE);
+  color: var(--teal-700, #0B7F5A);
+  flex-shrink: 0;
+}
+
+.dp-claim-ico .dp-i {
+  width: 18px;
+  height: 18px;
 }
 
 .dp-claim-text {
