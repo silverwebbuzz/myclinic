@@ -191,6 +191,67 @@ final class ClinicSettingsService
         QueryBuilder::table('specialty_configs')->where('clinic_id', '=', $clinicId)->update($update);
     }
 
+    /**
+     * Services this clinic offers — shown on its public directory profile.
+     * Stored as a JSON array on the clinic's claimed directory_doctors row.
+     * Returns [] when the clinic has no claimed listing or none are set.
+     *
+     * @return list<string>
+     */
+    public static function servicesForClinic(int $clinicId): array
+    {
+        $listing = QueryBuilder::table('directory_doctors')
+            ->where('claimed_tenant_id', '=', $clinicId)
+            ->where('is_active', '=', 1)
+            ->first();
+
+        if ($listing === null || empty($listing['services'])) {
+            return [];
+        }
+
+        $decoded = json_decode((string) $listing['services'], true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(
+            static fn ($s): string => trim((string) $s),
+            $decoded,
+        ), static fn (string $s): bool => $s !== ''));
+    }
+
+    /**
+     * Save the clinic's services list to its claimed directory listing.
+     * Accepts either a newline-separated textarea ('services_text') or an
+     * array ('services[]'). No-ops silently when the clinic hasn't claimed
+     * a directory listing yet (nothing to attach the services to).
+     */
+    public static function saveServices(int $clinicId, array $post): void
+    {
+        $raw = $post['services'] ?? $post['services_text'] ?? '';
+        if (is_string($raw)) {
+            $items = preg_split('/[\r\n]+/', $raw) ?: [];
+        } else {
+            $items = is_array($raw) ? $raw : [];
+        }
+
+        $clean = [];
+        foreach ($items as $item) {
+            $item = trim((string) $item);
+            if ($item !== '' && !in_array($item, $clean, true)) {
+                $clean[] = mb_substr($item, 0, 80);
+            }
+            if (count($clean) >= 24) {
+                break;
+            }
+        }
+
+        QueryBuilder::table('directory_doctors')
+            ->where('claimed_tenant_id', '=', $clinicId)
+            ->where('is_active', '=', 1)
+            ->update(['services' => $clean === [] ? null : json_encode(array_values($clean))]);
+    }
+
     /** @return array{ok: bool, message: string} */
     public static function testWhatsApp(int $clinicId): array
     {

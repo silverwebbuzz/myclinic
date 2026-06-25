@@ -196,3 +196,21 @@ $qrSrc       = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=
     </div>
     <button type="submit" class="ui-btn ui-btn-primary">Save general</button>
 </form>
+
+<?php $servicesList = $services ?? []; ?>
+<form method="post" action="/settings/services" class="mt-4 space-y-3 ui-card ui-card-pad">
+    <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+    <div>
+        <h3 class="ui-section-title">Services offered</h3>
+        <p class="mt-1 text-xs text-slate-500">
+            Shown on your public profile under <strong>Treatments &amp; services</strong>.
+            One service per line. Leave blank to show common treatments for your specialty instead.
+        </p>
+    </div>
+    <label class="ui-label mb-1 block" for="services_text">Your services</label>
+    <textarea id="services_text" name="services_text" rows="6"
+              placeholder="Diabetes management&#10;Insulin therapy&#10;Thyroid disorders&#10;Diet &amp; lifestyle counselling"
+              class="ui-input font-mono text-sm"><?= htmlspecialchars(implode("\n", $servicesList)) ?></textarea>
+    <p class="text-xs text-slate-400">Up to 24 services. Each line becomes one item on your profile.</p>
+    <button type="submit" class="ui-btn ui-btn-primary">Save services</button>
+</form>

@@ -97,6 +97,7 @@ return static function (RouteRegistrar $router): void {
         $app->get('/settings/leaves', static fn () => \App\Http\Response::redirect('/settings?tab=leaves'));
         $app->get('/settings', [ClinicSettingsController::class, 'index']);
         $app->post('/settings/general', [ClinicSettingsController::class, 'saveGeneral']);
+        $app->post('/settings/services', [ClinicSettingsController::class, 'saveServices']);
         $app->post('/settings/hours', [ClinicSettingsController::class, 'saveHours']);
         $app->post('/settings/specialty', [ClinicSettingsController::class, 'saveSpecialty']);
         $app->post('/settings/notifications', [ClinicSettingsController::class, 'saveNotifications']);

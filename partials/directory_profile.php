@@ -109,18 +109,63 @@ function ecp_profile_city_meta(PDO $db, string $citySlug): ?array
 }
 
 /** @return array<string, list<string>> */
+/**
+ * Generic, specialty-appropriate treatment suggestions shown when a listing
+ * has no doctor-entered services yet. These are clearly labelled as common
+ * treatments for the specialty (not claims about this specific doctor).
+ */
 function ecp_directory_treatments_for_specialty(?string $specSlug): array
 {
     $map = [
         'derma' => ['Acne treatment', 'Psoriasis care', 'Hair fall treatment', 'Laser hair removal', 'Chemical peel', 'Anti-ageing therapy'],
         'dental' => ['Root canal', 'Dental implants', 'Braces & aligners', 'Teeth whitening', 'Wisdom tooth extraction', 'Crowns & bridges'],
-        'gp' => ['Fever management', 'Diabetes care', 'Hypertension', 'Thyroid disorders', 'General check-up', 'Vaccination'],
+        'gp' => ['Fever & infections', 'Diabetes care', 'Hypertension', 'Thyroid disorders', 'General check-up', 'Vaccination'],
+        'family_medicine' => ['Preventive check-ups', 'Chronic disease care', 'Vaccination', 'Lifestyle counselling', 'Minor illness care', 'Health screening'],
+        'diabetology' => ['Diabetes management', 'Insulin therapy', 'Blood sugar monitoring', 'Diabetic foot care', 'Thyroid disorders', 'Diet & lifestyle counselling'],
+        'endocrinology' => ['Diabetes management', 'Thyroid disorders', 'Hormonal imbalance', 'PCOS care', 'Obesity management', 'Osteoporosis care'],
+        'cardio' => ['Heart health check-up', 'Hypertension management', 'ECG & echo', 'Cholesterol management', 'Heart failure care', 'Post-cardiac care'],
+        'gastro' => ['Acidity & GERD', 'Liver care', 'IBS & gut health', 'Endoscopy', 'Constipation care', 'Pancreatitis management'],
+        'gyno' => ['Pregnancy care', 'PCOS treatment', 'Menstrual disorders', 'Infertility care', 'Menopause care', 'Contraception advice'],
+        'peds' => ['Child vaccination', 'Growth monitoring', 'Fever & infections', 'Nutrition guidance', 'Newborn care', 'Allergy management'],
         'ortho' => ['Joint pain treatment', 'Knee replacement', 'Fracture care', 'Sports injury rehab', 'Arthritis management', 'Spine care'],
+        'neuro' => ['Headache & migraine', 'Epilepsy care', 'Stroke management', 'Vertigo treatment', 'Nerve pain care', 'Memory disorders'],
+        'pulmonology' => ['Asthma care', 'COPD management', 'Allergy treatment', 'Sleep apnea care', 'TB treatment', 'Respiratory infections'],
+        'eye' => ['Cataract surgery', 'Vision testing', 'LASIK consultation', 'Glaucoma care', 'Diabetic eye care', 'Dry eye treatment'],
+        'ent' => ['Ear infection care', 'Sinusitis treatment', 'Tonsillitis care', 'Hearing assessment', 'Vertigo treatment', 'Snoring & sleep apnea'],
         'physio' => ['Back pain rehab', 'Sports injury rehab', 'Post-surgery rehab', 'Neck pain therapy', 'Stroke rehab', 'Posture correction'],
         'homeopathy' => ['Chronic ailment care', 'Allergy treatment', 'Skin disorders', 'Digestive issues', 'Migraine care', 'Immunity support'],
+        'psychiatry' => ['Anxiety & depression', 'Stress management', 'Sleep disorders', 'Counselling', 'Addiction care', 'Mood disorders'],
     ];
 
     return ['items' => $map[$specSlug ?: 'gp'] ?? $map['gp']];
+}
+
+/**
+ * Real, doctor-entered services for a directory listing, if any.
+ * Stored as a JSON array in directory_doctors.services. Returns [] when
+ * the column is missing/empty so the caller falls back to the generic list.
+ *
+ * @return list<string>
+ */
+function ecp_directory_services_from_row(array $row): array
+{
+    $raw = $row['services'] ?? null;
+    if ($raw === null || $raw === '') {
+        return [];
+    }
+    $decoded = is_array($raw) ? $raw : json_decode((string) $raw, true);
+    if (!is_array($decoded)) {
+        return [];
+    }
+    $out = [];
+    foreach ($decoded as $s) {
+        $s = trim((string) $s);
+        if ($s !== '') {
+            $out[] = $s;
+        }
+    }
+
+    return array_slice($out, 0, 24);
 }
 
 function ecp_directory_display_name(array $row): string
@@ -326,6 +371,12 @@ function ecp_profile_build_payload(PDO $db, array $row, string $entityType, stri
     $rating = isset($row['rating']) ? (float) $row['rating'] : 0;
     $reviews = (int) ($row['reviews'] ?? 0);
 
+    // Doctor-entered services win; otherwise show generic specialty treatments.
+    $customServices = ecp_directory_services_from_row($row);
+    $treatments = $customServices !== []
+        ? $customServices
+        : ecp_directory_treatments_for_specialty($row['specialty'] ?? null)['items'];
+
     return [
         'id' => (int) $row['id'],
         'entity_type' => $entityType,
@@ -359,7 +410,8 @@ function ecp_profile_build_payload(PDO $db, array $row, string $entityType, stri
         'photo_url' => $avatar['url'],
         'avatar_initials' => $avatar['initials'],
         'avatar_gradient' => $avatar['gradient'],
-        'treatments' => ecp_directory_treatments_for_specialty($row['specialty'] ?? null)['items'],
+        'treatments' => $treatments,
+        'treatments_custom' => $customServices !== [],
         'doctors' => $doctors,
         'related' => $related,
         'book_url' => ecp_directory_profile_url($row) . '#book',

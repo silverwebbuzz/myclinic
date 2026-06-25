@@ -7922,38 +7922,72 @@ body {
 
 .dp-panels {
   padding: 24px;
+  /* One consistent body type scale for everything inside the tab panels,
+     so About / Timings / Treatments / facts all read at the same size
+     instead of jumping between 14, 15 and the browser default 16px. */
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
 }
 
 .dp-panel h2 {
   font-size: 18px;
   font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
   margin: 0 0 14px;
 }
 
 .dp-subhead {
-  font-size: 15px;
-  font-weight: 600;
-  margin: 20px 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--mute);
+  margin: 24px 0 10px;
 }
 
 .dp-about {
-  font-size: 15px;
-  line-height: 1.6;
+  font-size: 14.5px;
+  line-height: 1.65;
   margin: 0;
   color: var(--ink-2);
 }
 
-.dp-hours {
-  margin: 0;
-  padding-left: 18px;
-  line-height: 1.8;
+.dp-note {
+  margin: 14px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--mute);
 }
 
+.dp-hours,
 .dp-treatment-list {
+  font-size: 14.5px;
+  line-height: 1.6;
   margin: 0;
-  padding-left: 18px;
+  padding: 0;
+  list-style: none;
   display: grid;
-  gap: 8px;
+  gap: 9px;
+}
+
+.dp-hours li,
+.dp-treatment-list li {
+  position: relative;
+  padding-left: 18px;
+}
+
+.dp-hours li::before,
+.dp-treatment-list li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.62em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--teal-400, #2DC08A);
 }
 
 .dp-doctor-grid {
@@ -8237,25 +8271,6 @@ body {
   height: 0;
   display: none;
 }
-
-.dp-treatment-list,
-.dp-hours, 
-li {
-  list-style: none;
-}
-
-.dp-hours li::before , .dp-treatment-list li::before {
-  content: "•";
-  unicode-bidi: isolate;
-  font-variant-numeric: tabular-nums;
-  text-transform: none;
-  color: #0F9B6E;
-  display: inline-block;
-  width: 1em;
-  margin-left: -1em;
-  text-align: start;
-}
-
 
 @media (max-width: 1399px) {
   .section {

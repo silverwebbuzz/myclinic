@@ -129,8 +129,11 @@ $ratingVal = (float) ($p['rating'] ?? 0);
                             <?php if ($hoursLines): ?><h3 class="dp-subhead">Timings</h3><ul class="dp-hours"><?php foreach ($hoursLines as $line): ?><li><?= e($line) ?></li><?php endforeach; ?></ul><?php endif; ?>
                         </section>
                         <section class="dp-panel" x-show="tab === 'treatments'" x-cloak>
-                            <h2>Treatments</h2>
+                            <h2><?= !empty($p['treatments_custom']) ? 'Services offered' : 'Treatments &amp; services' ?></h2>
                             <ul class="dp-treatment-list"><?php foreach (($p['treatments'] ?? []) as $t): ?><li><?= e((string) $t) ?></li><?php endforeach; ?></ul>
+                            <?php if (empty($p['treatments_custom'])): ?>
+                            <p class="dp-note">Common treatments for <?= e(strtolower($p['specialty_label'] ?? 'this specialty')) ?>. The clinic will confirm services during your visit.</p>
+                            <?php endif; ?>
                         </section>
                         <?php if ($showDoctorsTab): ?>
                             <section class="dp-panel" x-show="tab === 'doctors'" x-cloak>

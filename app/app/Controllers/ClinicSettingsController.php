@@ -82,6 +82,7 @@ final class ClinicSettingsController
             'workingHours' => $workingHours,
             'options' => is_array($options) ? $options : [],
             'prefs' => $prefs,
+            'services' => ClinicSettingsService::servicesForClinic($clinicId),
             'countries' => $this->countries(),
             'plans' => PlanService::all(),
             'modules' => ClinicSettingsService::activeModulesDetail($clinicId),
@@ -128,6 +129,18 @@ final class ClinicSettingsController
         }
 
         ClinicSettingsService::saveGeneral($clinicId, $request->post, $_FILES['logo'] ?? null);
+
+        return Response::redirect('/settings?tab=general&message=saved');
+    }
+
+    public function saveServices(Request $request): Response
+    {
+        $clinicId = RequestContext::clinicId();
+        if ($clinicId === null) {
+            return Response::redirect('/login');
+        }
+
+        ClinicSettingsService::saveServices($clinicId, $request->post);
 
         return Response::redirect('/settings?tab=general&message=saved');
     }
