@@ -381,6 +381,24 @@
 </style>
 
 <script>
+/** Keep header + booking widgets in sync after OTP login (no full page reload). */
+function ecpSetPatientSession(patient) {
+  if (!patient || !patient.id) return null;
+  const slim = {
+    id:         Number(patient.id),
+    name:       patient.name || patient.first_name || 'Patient',
+    first_name: patient.first_name || null,
+    phone:      patient.phone || patient.handle || null,
+    handle:     patient.phone || patient.handle || null,
+  };
+  window.ECP_PATIENT = slim;
+  try { localStorage.setItem('ecp_patient', JSON.stringify(slim)); } catch (e) {}
+  try {
+    window.dispatchEvent(new CustomEvent('ecp:patient-login', { detail: slim }));
+  } catch (e) {}
+  return slim;
+}
+
 function ecpAuthModal() {
   return {
     open: false,
@@ -425,7 +443,11 @@ function ecpAuthModal() {
 
     async require(reason, cb) {
       const me = await window.ecpAuth.me();
-      if (me) { cb && cb(me); return; }
+      if (me) {
+        ecpSetPatientSession(me);
+        cb && cb(me);
+        return;
+      }
       this._afterLogin = cb;
       this.openModal(reason);
     },
@@ -580,14 +602,7 @@ function ecpAuthModal() {
 
         // Success. Stash a minimal copy in localStorage so any other
         // open tabs pick up the new session via the 'storage' event.
-        try {
-          localStorage.setItem('ecp_patient', JSON.stringify({
-            id:         j.patient.id,
-            name:       j.patient.name || j.patient.first_name || 'Patient',
-            first_name: j.patient.first_name || null,
-            handle:     j.patient.phone,
-          }));
-        } catch (e) {}
+        ecpSetPatientSession(j.patient);
 
         // If the caller wanted us to do something after login (save a
         // doctor, start a booking), do it BEFORE reloading.

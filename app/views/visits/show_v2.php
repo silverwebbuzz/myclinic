@@ -371,36 +371,45 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                     </div>
                 </template>
 
-                <div class="mt-2 space-y-2">
+                <div class="mt-2 space-y-2 overflow-visible">
                     <template x-for="(line, idx) in prescriptions" :key="'rx-' + idx + '-' + (line.drug_id || line.drug_name || '')">
-                        <div class="rounded-lg border border-slate-200 bg-white">
+                        <div class="overflow-visible rounded-lg border border-slate-200 bg-white">
                             <!-- Main row -->
-                            <div class="grid items-center gap-2 p-2 sm:grid-cols-12">
-                                <div class="sm:col-span-4 relative">
+                            <div class="grid items-center gap-2 overflow-visible p-2 sm:grid-cols-12">
+                                <div class="relative z-0 min-w-0 sm:col-span-4"
+                                     :class="line._dropdown ? 'z-30' : ''"
+                                     @click.outside="line._dropdown = false">
                                     <input type="text" :disabled="!editable"
                                            x-model="line.drug_name"
                                            @input.debounce.250ms="searchDrugFor(idx, line.drug_name); syncRxFormFromName(idx)"
-                                           @focus="line._dropdown = true"
-                                           @click.outside="line._dropdown = false"
-                                           placeholder="Medicine"
-                                           class="w-full rounded border px-2 py-1 text-sm">
-                                    <ul x-show="line._dropdown && (line._suggestions || []).length"
-                                        class="absolute z-10 mt-1 w-full max-h-44 overflow-y-auto rounded-lg border bg-white shadow-lg">
-                                        <template x-for="(d, sIdx) in (line._suggestions || [])" :key="'rxs-' + idx + '-' + sIdx">
-                                            <li>
-                                                <button type="button"
-                                                        @click="pickDrugFor(idx, d)"
-                                                        class="block w-full px-2 py-1 text-left text-xs hover:bg-brand-light">
-                                                    <span x-text="d.name"></span>
-                                                    <span class="text-slate-400" x-show="d.strength" x-text="' ' + d.strength"></span>
-                                                </button>
-                                            </li>
-                                        </template>
-                                    </ul>
-                                    <!-- Visible error so doctors don't get a silent empty dropdown -->
-                                    <p x-show="line._dropdown && !((line._suggestions || []).length) && line._searchError" x-cloak
-                                       class="absolute z-10 mt-1 w-full rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800"
-                                       x-text="line._searchError"></p>
+                                           @focus="onDrugFocus(idx)"
+                                           placeholder="Medicine (type 2+ letters)"
+                                           class="w-full rounded border px-2 py-1 text-sm"
+                                           autocomplete="off"
+                                           spellcheck="false">
+                                    <div x-show="line._dropdown" x-cloak
+                                         class="absolute left-0 right-0 top-full z-50 mt-1">
+                                        <ul x-show="(line._suggestions || []).length"
+                                            class="max-h-44 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                                            <template x-for="(d, sIdx) in (line._suggestions || [])" :key="'rxs-' + idx + '-' + sIdx">
+                                                <li>
+                                                    <button type="button"
+                                                            @mousedown.prevent
+                                                            @click="pickDrugFor(idx, d)"
+                                                            class="block w-full px-2 py-1.5 text-left text-xs hover:bg-brand-light">
+                                                        <span x-text="d.name"></span>
+                                                        <span class="text-slate-400" x-show="d.strength" x-text="' ' + d.strength"></span>
+                                                    </button>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                        <p x-show="line._searchHint" x-cloak
+                                           class="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-600"
+                                           x-text="line._searchHint"></p>
+                                        <p x-show="!line._searchHint && line._searchError" x-cloak
+                                           class="rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-800"
+                                           x-text="line._searchError"></p>
+                                    </div>
                                 </div>
 
                                 <select :disabled="!editable || !!line.tapering_steps"
@@ -1740,12 +1749,40 @@ function visitScreenV2(cfg) {
             return out;
         },
 
+        onDrugFocus(idx) {
+            if (!Array.isArray(this.prescriptions)) return;
+            const line = this.prescriptions[idx];
+            if (!line) return;
+            const query = (line.drug_name || '').trim();
+            if (query.length >= 2) {
+                line._dropdown = true;
+                this.searchDrugFor(idx, query);
+                return;
+            }
+            if (query.length === 1) {
+                line._dropdown = true;
+                line._searchHint = 'Keep typing — search starts at 2 letters.';
+                line._searchError = '';
+                line._suggestions = [];
+            }
+        },
+
         async searchDrugFor(idx, q) {
             if (!Array.isArray(this.prescriptions)) return;
             const line = this.prescriptions[idx];
             if (!line) return;
             const query = (q || '').trim();
-            if (query.length < 2) { line._suggestions = []; line._dropdown = false; line._searchError = ''; return; }
+            const minLen = 2;
+            if (query.length < minLen) {
+                line._suggestions = [];
+                line._searchError = '';
+                line._searchHint = query.length === 1
+                    ? 'Keep typing — search starts at 2 letters.'
+                    : '';
+                line._dropdown = query.length > 0;
+                return;
+            }
+            line._searchHint = '';
 
             const genericOnly = this.isGenericDrugQuery(query);
             const local = this.localDrugSuggestions(idx, query);
@@ -1830,6 +1867,8 @@ function visitScreenV2(cfg) {
 
             line._suggestions = [];
             line._dropdown = false;
+            line._searchHint = '';
+            line._searchError = '';
 
             // Picking a medicine is the primary way doctors add an Rx line — it
             // MUST mark the visit dirty so the pre-complete save actually fires.

@@ -164,7 +164,7 @@ $ecpPatientJson = $ecpPatient
 
 <body class="<?= e($bodyClass) ?>"
       x-data="ecpHeader()"
-      x-init="loadPatient(); window.addEventListener('storage', loadPatient)">
+      x-init="loadPatient(); window.addEventListener('storage', loadPatient); window.addEventListener('ecp:patient-login', (e) => { if (e.detail) this.patient = e.detail; })">
 
 <header class="nav">
     <div class="nav-inner">

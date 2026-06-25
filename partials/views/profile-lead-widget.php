@@ -140,15 +140,30 @@ function ecpProfileLeadBook(doctor, initialDays) {
     ],
     form: { preferred_date: '', preferred_time: '', reason: '' },
 
+    applyPatient(p) {
+      if (!p || !p.id) {
+        this.patient = null;
+        return;
+      }
+      this.patient = {
+        id: p.id,
+        name: p.name || p.first_name || 'Patient',
+        first_name: p.first_name || null,
+        phone: p.phone || p.handle || null,
+        handle: p.phone || p.handle || null,
+      };
+    },
+
     init() {
-      this.patient = window.ECP_PATIENT || null;
+      this.applyPatient(window.ECP_PATIENT);
+      window.addEventListener('ecp:patient-login', (e) => this.applyPatient(e.detail));
     },
 
     resetForm() {
       this.done = false;
       this.errorMsg = '';
       this.form = { preferred_date: '', preferred_time: '', reason: '' };
-      this.patient = window.ECP_PATIENT || null;
+      this.applyPatient(window.ECP_PATIENT);
     },
 
     async submit() {
@@ -156,8 +171,8 @@ function ecpProfileLeadBook(doctor, initialDays) {
 
       if (!this.patient) {
         if (window.ecpAuth) {
-          window.ecpAuth.require('book', () => {
-            this.patient = window.ECP_PATIENT || null;
+          window.ecpAuth.require('book', (p) => {
+            this.applyPatient(p);
             if (this.patient) this.submit();
           });
         }
@@ -181,8 +196,8 @@ function ecpProfileLeadBook(doctor, initialDays) {
         const j = await r.json();
 
         if (r.status === 401) {
-          if (window.ecpAuth) window.ecpAuth.require('book', () => {
-            this.patient = window.ECP_PATIENT || null;
+          if (window.ecpAuth) window.ecpAuth.require('book', (p) => {
+            this.applyPatient(p);
             this.submit();
           });
           return;
