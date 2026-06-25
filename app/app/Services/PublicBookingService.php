@@ -41,7 +41,10 @@ final class PublicBookingService
     public static function bookingWindowDays(int $clinicId): int
     {
         $config = OnboardingService::specialtyConfig($clinicId) ?? [];
-        return (int) ($config['booking_window_days'] ?? 30);
+        $days = (int) ($config['booking_window_days'] ?? 30);
+
+        // NULL or 0 in DB (pre-migration rows) must not block all online booking.
+        return $days > 0 ? $days : 30;
     }
 
     /**

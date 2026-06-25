@@ -36,8 +36,11 @@ final class SlotService
         $cached = RedisClient::get($cacheKey);
         if ($cached !== null) {
             $decoded = json_decode($cached, true);
-
-            return is_array($decoded) ? $decoded : [];
+            if (is_array($decoded) && $decoded !== []) {
+                return $decoded;
+            }
+            // Drop legacy empty caches so a schedule fix shows immediately.
+            RedisClient::del($cacheKey);
         }
 
         $slots = self::compute($clinicId, $doctorId, $date, $includeExtended);
@@ -89,10 +92,10 @@ final class SlotService
             return [];
         }
 
-        self::ensureSchedulesForDoctor($clinicId, $doctorId);
-
         $tz = self::clinicTimezone($clinicId);
         $dayOfWeek = self::dayOfWeekForDate($date, $tz);
+        self::ensureSchedulesForDay($clinicId, $doctorId, $dayOfWeek);
+
         $schedules = QueryBuilder::table('doctor_schedules')
             ->forClinic($clinicId)
             ->where('doctor_id', '=', $doctorId)
@@ -348,18 +351,19 @@ final class SlotService
     }
 
     /**
-     * If working hours were saved but doctor_schedules rows are missing (sync
-     * failed, owner-only clinic, or legacy data), rebuild before slot compute.
+     * Rebuild doctor_schedules from saved working_hours when a day that should
+     * be open has no schedule rows (onboarding step 2 save, failed sync, etc.).
      */
-    private static function ensureSchedulesForDoctor(int $clinicId, int $doctorId): void
+    private static function ensureSchedulesForDay(int $clinicId, int $doctorId, int $dayOfWeek): void
     {
-        $hasRows = QueryBuilder::table('doctor_schedules')
+        $hasDayRows = QueryBuilder::table('doctor_schedules')
             ->forClinic($clinicId)
             ->where('doctor_id', '=', $doctorId)
+            ->where('day_of_week', '=', $dayOfWeek)
             ->where('is_active', '=', 1)
             ->first();
 
-        if ($hasRows !== null) {
+        if ($hasDayRows !== null) {
             return;
         }
 
@@ -377,6 +381,13 @@ final class SlotService
             return;
         }
 
+        $dayKeys = [0 => 'sun', 1 => 'mon', 2 => 'tue', 3 => 'wed', 4 => 'thu', 5 => 'fri', 6 => 'sat'];
+        $dayKey = $dayKeys[$dayOfWeek] ?? null;
+        $dayConfig = $dayKey !== null ? ($wh[$dayKey] ?? []) : [];
+        if (empty($dayConfig['enabled']) || empty($dayConfig['sessions'])) {
+            return;
+        }
+
         try {
             DoctorScheduleService::syncForDoctor(
                 $clinicId,
@@ -385,7 +396,7 @@ final class SlotService
                 DoctorScheduleService::slotDurationForClinic($clinicId),
             );
         } catch (\Throwable $e) {
-            error_log('[SlotService] ensureSchedulesForDoctor: ' . $e->getMessage());
+            error_log('[SlotService] ensureSchedulesForDay: ' . $e->getMessage());
         }
     }
 }

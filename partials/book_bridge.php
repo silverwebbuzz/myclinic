@@ -107,16 +107,27 @@ function ecp_book_slots(string $slug): Response
 }
 
 /** @return list<array<string, mixed>> */
-function ecp_book_build_week_days(int $windowDays): array
+function ecp_book_build_week_days(int $windowDays, ?string $timezone = null): array
 {
+    if ($windowDays <= 0) {
+        $windowDays = 30;
+    }
+
+    try {
+        $zone = new \DateTimeZone($timezone !== null && $timezone !== '' ? $timezone : date_default_timezone_get());
+    } catch (\Throwable) {
+        $zone = new \DateTimeZone(date_default_timezone_get());
+    }
+
+    $today = (new \DateTime('now', $zone))->setTime(0, 0, 0);
     $days = [];
     for ($i = 0; $i < 7; $i++) {
-        $ts = strtotime('+' . $i . ' day');
+        $dt = (clone $today)->modify('+' . $i . ' day');
         $days[] = [
-            'date' => date('Y-m-d', $ts),
-            'weekday' => strtoupper(date('D', $ts)),
-            'day' => (int) date('d', $ts),
-            'month' => date('M', $ts),
+            'date' => $dt->format('Y-m-d'),
+            'weekday' => strtoupper($dt->format('D')),
+            'day' => (int) $dt->format('d'),
+            'month' => $dt->format('M'),
             'is_today' => $i === 0,
             'within_window' => $i < $windowDays,
         ];
@@ -185,6 +196,7 @@ function ecp_profile_booking_context(array $profile): array
         $doctors = \App\Services\PublicBookingService::doctors($clinicId);
         $bookConfig = ecp_book_view_config($slug);
         $bookConfig['returnTo'] = $profilePath . '#book';
+        $clinicTz = \App\Services\SlotService::clinicTimezone($clinicId);
 
         return array_merge($base, [
             'mode' => 'claimed',
@@ -192,7 +204,7 @@ function ecp_profile_booking_context(array $profile): array
             'clinic' => $clinic,
             'doctors' => $doctors,
             'doctorId' => $doctors[0]['id'] ?? 0,
-            'days' => ecp_book_build_week_days($windowDays),
+            'days' => ecp_book_build_week_days($windowDays, $clinicTz),
             'windowDays' => $windowDays,
             'bookConfig' => $bookConfig,
             'confirmation' => is_array($confirmation) ? $confirmation : null,

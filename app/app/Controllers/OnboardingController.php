@@ -401,9 +401,17 @@ final class OnboardingController
                 ->update($configData);
         } else {
             QueryBuilder::table('specialty_configs')->insert(array_merge(
-                ['clinic_id' => $clinicId],
+                ['clinic_id' => $clinicId, 'booking_window_days' => 30],
                 $configData,
             ));
+        }
+
+        try {
+            $doctorIds = DoctorScheduleService::doctorIdsForClinic($clinicId);
+            $slotDuration = DoctorScheduleService::slotDurationForClinic($clinicId);
+            DoctorScheduleService::syncFromWorkingHours($clinicId, $workingHours, $doctorIds, $slotDuration);
+        } catch (\Throwable $e) {
+            error_log('[writeClinicSetup] doctor schedule sync failed: ' . $e->getMessage());
         }
     }
 

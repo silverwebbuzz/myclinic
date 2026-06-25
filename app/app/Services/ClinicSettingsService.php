@@ -134,6 +134,7 @@ final class ClinicSettingsService
             'invoice_tax_label' => 'Tax',
             'invoice_tax_percent' => 0,
             'notification_prefs' => json_encode([]),
+            'booking_window_days' => 30,
         ]);
     }
 

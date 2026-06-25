@@ -29,6 +29,9 @@ $sundaySession = is_array($sundayDay['sessions'][0] ?? null) ? $sundayDay['sessi
 
 $slotDuration = (int) ($config['slot_duration_min'] ?? 15);
 $bookingWindow = (int) ($config['booking_window_days'] ?? 30);
+if ($bookingWindow <= 0) {
+    $bookingWindow = 30;
+}
 
 // Compact inline time field: short "Start"/"End" label sits left of a
 // narrow time input (time text is short, no need for full-width fields).

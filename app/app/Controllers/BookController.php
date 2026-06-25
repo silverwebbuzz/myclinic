@@ -78,6 +78,21 @@ final class BookController
 
         $slots = PublicBookingService::slots($clinicId, $doctorId, $date);
         $inWindow = PublicBookingService::isWithinBookingWindow($clinicId, $date);
+        $windowDays = PublicBookingService::bookingWindowDays($clinicId);
+
+        try {
+            $tz = \App\Services\SlotService::clinicTimezone($clinicId);
+            $dow = (int) (new \DateTime($date . ' 12:00:00', new \DateTimeZone($tz)))->format('w');
+        } catch (\Throwable) {
+            $dow = (int) date('w', strtotime($date));
+        }
+
+        $scheduleRows = \App\Core\QueryBuilder::table('doctor_schedules')
+            ->forClinic($clinicId)
+            ->where('doctor_id', '=', $doctorId)
+            ->where('day_of_week', '=', $dow)
+            ->where('is_active', '=', 1)
+            ->count();
 
         return Response::json([
             'slots' => $slots,
@@ -85,8 +100,11 @@ final class BookController
                 'clinic_id' => $clinicId,
                 'doctor_id' => $doctorId,
                 'date' => $date,
+                'day_of_week' => $dow,
                 'count' => count($slots),
                 'in_window' => $inWindow,
+                'booking_window_days' => $windowDays,
+                'schedule_rows' => $scheduleRows,
                 'available_count' => count(array_filter($slots, static fn (array $s) => !empty($s['available']))),
             ],
         ]);
