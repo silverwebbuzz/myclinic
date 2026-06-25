@@ -46,7 +46,13 @@ $cardClass = 'dp-book-card overflow-hidden rounded-2xl border border-slate-200 b
                     💡 Please arrive 10 minutes early and show your token at reception.
                 </div>
                 <div class="p-4">
-                    <a href="<?= htmlspecialchars((string) ($bookConfig['returnTo'] ?? $bookConfig['patientPanelUrl'] ?? '/find-a-doctor')) ?>"
+                    <?php
+                    $bookAgainUrl = (string) ($bookConfig['bookAgainUrl']
+                        ?? $bookConfig['returnTo']
+                        ?? $bookConfig['patientPanelUrl']
+                        ?? '/find-a-doctor');
+                    ?>
+                    <a href="<?= htmlspecialchars($bookAgainUrl) ?>"
                        class="block w-full rounded-xl bg-brand py-3 text-center text-sm font-semibold text-white hover:opacity-90">
                         Book another appointment
                     </a>

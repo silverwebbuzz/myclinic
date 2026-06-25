@@ -58,6 +58,27 @@ function ecp_book_profile_url(string $slug): string
     return \App\Services\DirectoryProfileUrlService::publicBookingUrlForTenantSlug($slug);
 }
 
+/**
+ * Booking reset link — appends ?book=1 so the browser reloads even when already on #book.
+ */
+function ecp_book_again_url(string $returnTo): string
+{
+    $returnTo = trim($returnTo);
+    if ($returnTo === '') {
+        return '/find-a-doctor';
+    }
+    if (preg_match('/^(.*?)(#\S*)$/', $returnTo, $m)) {
+        $path = $m[1];
+        $hash = $m[2];
+        $sep = str_contains($path, '?') ? '&' : '?';
+
+        return $path . $sep . 'book=1' . $hash;
+    }
+    $sep = str_contains($returnTo, '?') ? '&' : '?';
+
+    return $returnTo . $sep . 'book=1';
+}
+
 function ecp_book_dispatch(string $action, string $slug): Response
 {
     ecp_book_bootstrap();
@@ -163,6 +184,7 @@ function ecp_tenant_booking_context(string $slug, array $clinic): array
     $doctors = \App\Services\PublicBookingService::doctors($clinicId);
     $bookConfig = ecp_book_view_config($slug);
     $bookConfig['returnTo'] = '/book/' . rawurlencode($slug);
+    $bookConfig['bookAgainUrl'] = ecp_book_again_url($bookConfig['returnTo']);
     $clinicTz = \App\Services\SlotService::clinicTimezone($clinicId);
 
     return [
@@ -273,6 +295,7 @@ function ecp_profile_booking_context(array $profile): array
         $doctors = \App\Services\PublicBookingService::doctors($clinicId);
         $bookConfig = ecp_book_view_config($slug);
         $bookConfig['returnTo'] = $profilePath . '#book';
+        $bookConfig['bookAgainUrl'] = ecp_book_again_url($bookConfig['returnTo']);
         $clinicTz = \App\Services\SlotService::clinicTimezone($clinicId);
 
         return array_merge($base, [
