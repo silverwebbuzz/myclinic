@@ -97,6 +97,113 @@ function ecp_lead_confirm(int $leadId): bool {
 }
 
 /**
+ * Build payload for patient_request_sent (6 template vars).
+ *
+ * @param array<string, mixed> $doctor directory_doctors row
+ * @param array<string, mixed> $patientIdentity patient_identities row
+ * @param array<string, mixed> $extra ['preferred_date'=>?, 'preferred_time'=>?]
+ * @return array<string, string>
+ */
+function ecp_patient_request_sent_payload(array $doctor, array $patientIdentity, array $extra = []): array
+{
+    $clinicName = trim((string) ($doctor['name'] ?? ''));
+    $doctorName = trim((string) ($doctor['doctor_name'] ?? ''));
+    if ($doctorName === '') {
+        $doctorName = $clinicName !== '' ? $clinicName : 'your doctor';
+    }
+    if ($clinicName === '') {
+        $clinicName = $doctorName;
+    }
+
+    [$appointmentDate, $appointmentTime] = ecp_lead_fmt_appointment_parts(
+        isset($extra['preferred_date']) ? (string) $extra['preferred_date'] : null,
+        isset($extra['preferred_time']) ? (string) $extra['preferred_time'] : null,
+    );
+
+    return [
+        'patient_name'     => trim((string) ($patientIdentity['name'] ?? '')) ?: 'there',
+        'doctor_name'      => $doctorName,
+        'clinic_name'      => $clinicName,
+        'appointment_date' => $appointmentDate,
+        'appointment_time' => $appointmentTime,
+        'clinic_address'   => ecp_lead_clinic_address($doctor),
+    ];
+}
+
+/** @param array<string, mixed> $row */
+function ecp_lead_clinic_address(array $row): string
+{
+    $addressParts = array_values(array_filter([
+        trim((string) ($row['address'] ?? $row['clinic_address'] ?? '')),
+        trim((string) ($row['area'] ?? $row['clinic_area'] ?? '')),
+        trim((string) ($row['city'] ?? $row['clinic_city'] ?? '')),
+    ], static fn (string $p) => $p !== ''));
+
+    return $addressParts !== []
+        ? implode(', ', $addressParts)
+        : 'Contact the clinic for directions';
+}
+
+/** @return array{0: string, 1: string} */
+function ecp_lead_fmt_appointment_parts(?string $date, ?string $time): array
+{
+    if ($date === null || $date === '') {
+        return ['To be confirmed', 'To be confirmed'];
+    }
+    $dateTs = strtotime($date);
+    $appointmentDate = $dateTs ? date('D, j M Y', $dateTs) : $date;
+    if ($time === null || $time === '') {
+        return [$appointmentDate, 'To be confirmed'];
+    }
+    $timeTs = strtotime('2000-01-01 ' . $time);
+    $appointmentTime = $timeTs ? date('g:i A', $timeTs) : $time;
+
+    return [$appointmentDate, $appointmentTime];
+}
+
+/**
+ * Build payload for doctor_new_lead (7 template vars).
+ * Template opens with "Hello Dr. {{1}}" — doctor_name omits the Dr. prefix.
+ *
+ * @param array<string, mixed> $doctor directory_doctors row
+ * @param array<string, mixed> $patientIdentity patient_identities row
+ * @param array<string, mixed> $extra ['preferred_date'=>?, 'preferred_time'=>?, 'reason'=>?]
+ * @return array<string, string>
+ */
+function ecp_doctor_new_lead_payload(array $doctor, array $patientIdentity, array $extra = []): array
+{
+    $clinicName = trim((string) ($doctor['name'] ?? ''));
+    $doctorName = trim((string) ($doctor['doctor_name'] ?? ''));
+    if ($doctorName === '') {
+        $doctorName = $clinicName !== '' ? $clinicName : 'Doctor';
+    }
+    $doctorName = preg_replace('/^Dr\.?\s+/i', '', $doctorName) ?? $doctorName;
+    if ($clinicName === '') {
+        $clinicName = $doctorName;
+    }
+
+    [$appointmentDate, $appointmentTime] = ecp_lead_fmt_appointment_parts(
+        isset($extra['preferred_date']) ? (string) $extra['preferred_date'] : null,
+        isset($extra['preferred_time']) ? (string) $extra['preferred_time'] : null,
+    );
+
+    $reason = trim((string) ($extra['reason'] ?? ''));
+    if ($reason === '') {
+        $reason = 'Consultation';
+    }
+
+    return [
+        'doctor_name'      => $doctorName,
+        'patient_name'     => trim((string) ($patientIdentity['name'] ?? '')) ?: 'Patient',
+        'patient_phone'    => trim((string) ($patientIdentity['phone'] ?? '')) ?: 'Not provided',
+        'appointment_date' => $appointmentDate,
+        'appointment_time' => $appointmentTime,
+        'reason'           => $reason,
+        'clinic_name'      => $clinicName,
+    ];
+}
+
+/**
  * Build payload for the patient_confirmed wa_templates row.
  *
  * @param array<string, mixed> $lead
@@ -110,27 +217,10 @@ function ecp_patient_confirmed_payload(array $lead): array
         $doctorName = $clinicName !== '' ? $clinicName : 'your doctor';
     }
 
-    $d = $lead['preferred_date'] ?? null;
-    $t = $lead['preferred_time'] ?? null;
-    if (!$d) {
-        $appointmentDate = 'To be confirmed';
-        $appointmentTime = 'To be confirmed';
-    } else {
-        $dateTs = strtotime((string) $d);
-        $appointmentDate = $dateTs ? date('D, j M Y', $dateTs) : (string) $d;
-        if (!$t) {
-            $appointmentTime = 'To be confirmed';
-        } else {
-            $timeTs = strtotime('2000-01-01 ' . $t);
-            $appointmentTime = $timeTs ? date('g:i A', $timeTs) : (string) $t;
-        }
-    }
-
-    $addressParts = array_values(array_filter([
-        trim((string) ($lead['clinic_address'] ?? '')),
-        trim((string) ($lead['clinic_area'] ?? '')),
-        trim((string) ($lead['clinic_city'] ?? '')),
-    ], static fn (string $p) => $p !== ''));
+    [$appointmentDate, $appointmentTime] = ecp_lead_fmt_appointment_parts(
+        isset($lead['preferred_date']) ? (string) $lead['preferred_date'] : null,
+        isset($lead['preferred_time']) ? (string) $lead['preferred_time'] : null,
+    );
 
     return [
         'patient_name' => trim((string) ($lead['patient_name'] ?? '')) ?: 'there',
@@ -138,8 +228,6 @@ function ecp_patient_confirmed_payload(array $lead): array
         'clinic_name' => $clinicName !== '' ? $clinicName : 'the clinic',
         'appointment_date' => $appointmentDate,
         'appointment_time' => $appointmentTime,
-        'clinic_address' => $addressParts !== []
-            ? implode(', ', $addressParts)
-            : 'Contact the clinic for directions',
+        'clinic_address' => ecp_lead_clinic_address($lead),
     ];
 }

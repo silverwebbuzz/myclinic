@@ -103,7 +103,7 @@ $enabled = ($settings['messaging_enabled']['setting_value'] ?? '0') === '1';
                 <label class="text-xs">Test number
                     <input type="text" name="test_number" placeholder="9198xxxxxxxx" class="ml-1 rounded border px-2 py-1 text-sm"></label>
                 <label class="text-xs">Template
-                    <input type="text" name="test_template" value="patient_confirmed" class="ml-1 rounded border px-2 py-1 text-sm"></label>
+                    <input type="text" name="test_template" value="patient_request_sent" class="ml-1 rounded border px-2 py-1 text-sm"></label>
                 <button type="submit" class="rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700">Send test</button>
             </form>
         </section>

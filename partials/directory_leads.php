@@ -92,7 +92,10 @@ function ecp_lead_create(int $doctorId, ?array $patientIdentity, string $type, a
     if (!$db) return ['ok' => false, 'error' => 'db_unavailable'];
 
     // Confirm doctor exists and is unclaimed (or admin override later).
-    $stmt = $db->prepare('SELECT id, is_claimed, phone FROM directory_doctors WHERE id = :id AND is_active = 1');
+    $stmt = $db->prepare(
+        'SELECT id, is_claimed, phone, name, doctor_name, address, area, city, state
+         FROM directory_doctors WHERE id = :id AND is_active = 1'
+    );
     $stmt->execute(['id' => $doctorId]);
     $doctor = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$doctor) return ['ok' => false, 'error' => 'doctor_not_found'];
@@ -141,30 +144,21 @@ function ecp_lead_create(int $doctorId, ?array $patientIdentity, string $type, a
             require_once __DIR__ . '/notify.php';
 
             $identityId = $identityId ? (int) $identityId : null;
-            $clinicPhone = $doctor['phone'] ?? '';
-            $patientName = $patientIdentity['name'] ?? 'there';
+            $clinicPhone = trim((string) ($doctor['phone'] ?? ''));
             $patientPhone = $patientIdentity['phone'] ?? '';
-            $clinicName = $doctor['name'] ?? 'the clinic';
-            $slot = ($extra['preferred_date'] ?? null)
-                ? date('d M Y', strtotime((string) $extra['preferred_date']))
-                  . (!empty($extra['preferred_time']) ? ', ' . date('g:i A', strtotime('2000-01-01 ' . $extra['preferred_time'])) : '')
-                : 'your requested time';
-            $landingBase = rtrim((string) (ecp_lead_settings()['lead_landing_base'] ?? ecp_site_url('/L/')), '/');
-            $confirmLink = $landingBase . '/' . $token;
 
-            // 1) Patient — "request sent, you can also call directly".
+            // 1) Patient — booking acknowledgement (6 template vars).
             if ($patientPhone !== '') {
-                ecp_enqueue_notification($identityId, $patientPhone, 'patient_request_sent', [
-                    'patient_name' => $patientName,
-                    'doctor_name'  => $clinicName,
-                    'datetime'     => $slot,
-                    'clinic_phone' => $clinicPhone,
-                ]);
+                ecp_enqueue_notification(
+                    $identityId,
+                    $patientPhone,
+                    'patient_request_sent',
+                    ecp_patient_request_sent_payload($doctor, $patientIdentity, $extra),
+                );
             }
 
-            // 2) Doctor — "new lead" with the L/{token} confirm link.
-            //    Non-joined (unclaimed) doctors get a capped number of WhatsApp
-            //    alerts per calendar month (default 10, per-doctor override via
+            // 2) Doctor — new-lead alert (7 template vars). Non-joined doctors
+            //    are capped per calendar month (default 10; override via
             //    directory_sms_quotas.per_month). Once capped, the lead is still
             //    saved + the patient still gets their ack; only the doctor alert
             //    is suppressed and the lead is flagged for admin follow-up.
@@ -173,12 +167,12 @@ function ecp_lead_create(int $doctorId, ?array $patientIdentity, string $type, a
                 $used = ecp_directory_doctor_alerts_this_month($doctorId);
 
                 if ($used < $cap) {
-                    ecp_enqueue_notification(null, (string) $clinicPhone, 'doctor_new_lead', [
-                        'patient_name' => $patientName,
-                        'datetime'     => $slot,
-                        'reason'       => $extra['reason'] ?? 'consultation',
-                        'link'         => $confirmLink,
-                    ]);
+                    ecp_enqueue_notification(
+                        null,
+                        (string) $clinicPhone,
+                        'doctor_new_lead',
+                        ecp_doctor_new_lead_payload($doctor, $patientIdentity, $extra),
+                    );
                     $db->prepare('UPDATE directory_leads SET doctor_alert_sent_at = NOW() WHERE id = :id')
                        ->execute(['id' => $leadId]);
                 } else {

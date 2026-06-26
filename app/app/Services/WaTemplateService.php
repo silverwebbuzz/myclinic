@@ -81,7 +81,7 @@ final class WaTemplateService
             // Legacy templates still handled by the old service.
             return NotificationTemplateService::render($templateKey, $payload);
         }
-        $text = !empty($tpl['sms_fallback_text']) ? $tpl['body_text'] : $tpl['sms_fallback_text'];
+        $text = !empty($tpl['body_text']) ? $tpl['body_text'] : $tpl['sms_fallback_text'];
         $params = self::params($templateKey, $payload);
         foreach ($params as $i => $val) {
             $text = str_replace('{{' . ($i + 1) . '}}', $val, $text);

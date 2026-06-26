@@ -132,10 +132,11 @@ final class NotificationService
      *
      *   1. To the doctor  — template `doctor_new_lead` (audience=doctor;
      *      WhatsApp even on trial — the conversion hook).
-     *      vars: ["patient_name","datetime","reason","link"]
+     *      vars: doctor_name, patient_name, patient_phone, appointment_date,
+     *            appointment_time, reason, clinic_name
      *   2. To the patient — template `patient_request_sent`
-     *      ("request sent, they'll confirm shortly, call directly: {clinic_phone}").
-     *      vars: ["patient_name","doctor_name","datetime","clinic_phone"]
+     *      vars: patient_name, doctor_name, clinic_name, appointment_date,
+     *            appointment_time, clinic_address
      *
      * This is a "request received" acknowledgement, not a confirmed slot —
      * the doctor follows up by phone. clinic_phone falls back to the clinic
@@ -160,28 +161,32 @@ final class NotificationService
         $clinicPhone = $doctorPhone !== '' ? $doctorPhone : (string) ($clinic['phone'] ?? '');
         $reason = (string) ($appointment['chief_complaint'] ?? 'Appointment request');
 
-        // 1) Doctor alert — template_key `doctor_new_lead`, audience auto-routes
-        //    to 'doctor' (key starts with `doctor_`). Payload keys match the
-        //    template's `variables` contract: patient_name, datetime, reason, link.
+        // 1) Doctor alert — template_key `doctor_new_lead` (7 vars).
         if ($doctorPhone !== '') {
+            $whenTs = strtotime($when) ?: time();
+            $doctorLabel = trim((string) ($doctor['name'] ?? 'Doctor'));
+            $doctorLabel = preg_replace('/^Dr\.?\s+/i', '', $doctorLabel) ?? $doctorLabel;
             self::queueWhatsApp(
                 (int) $clinic['id'],
                 (int) $patient['id'],
                 $doctorPhone,
                 'doctor_new_lead',
                 [
+                    'doctor_name' => $doctorLabel !== '' ? $doctorLabel : 'Doctor',
                     'patient_name' => $patient['name'] ?? 'Patient',
-                    'datetime' => $when,
-                    'reason' => $reason,
-                    'link' => '',
+                    'patient_phone' => trim((string) ($patient['phone'] ?? '')) ?: 'Not provided',
+                    'appointment_date' => date('D, j M Y', $whenTs),
+                    'appointment_time' => date('g:i A', $whenTs),
+                    'reason' => $reason !== '' ? $reason : 'Consultation',
+                    'clinic_name' => (string) ($clinic['name'] ?? 'the clinic'),
                 ],
                 $now,
             );
         }
 
-        // 2) Patient ack — template_key `patient_request_sent`.
-        //    Contract vars: patient_name, doctor_name, datetime, clinic_phone.
+        // 2) Patient ack — template_key `patient_request_sent` (6 vars).
         if ($patientPhone !== '') {
+            $whenTs = strtotime($when) ?: time();
             self::queueWhatsApp(
                 (int) $clinic['id'],
                 (int) $patient['id'],
@@ -190,8 +195,10 @@ final class NotificationService
                 [
                     'patient_name' => $patient['name'] ?? 'Patient',
                     'doctor_name' => $doctor['name'] ?? 'the doctor',
-                    'datetime' => $when,
-                    'clinic_phone' => $clinicPhone,
+                    'clinic_name' => $clinic['name'] ?? 'the clinic',
+                    'appointment_date' => date('D, j M Y', $whenTs),
+                    'appointment_time' => date('g:i A', $whenTs),
+                    'clinic_address' => trim((string) ($clinic['address'] ?? '')) ?: 'Contact the clinic for directions',
                 ],
                 $now,
             );

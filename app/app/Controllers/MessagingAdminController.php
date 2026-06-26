@@ -70,21 +70,43 @@ final class MessagingAdminController
                 'title' => 'New lead alert to a non-joined doctor',
                 'trigger' => 'A patient books a doctor who is listed in the public directory but has NOT joined eClinicPro.',
                 'to' => 'The (non-joined) doctor',
-                'vars' => ['{{1}}' => 'Patient name', '{{2}}' => 'Date & time', '{{3}}' => 'Reason for visit', '{{4}}' => 'Confirm link (L/{token} page)'],
+                'vars' => [
+                    '{{1}}' => 'Doctor name (without "Dr." — template adds it)',
+                    '{{2}}' => 'Patient name',
+                    '{{3}}' => 'Patient mobile',
+                    '{{4}}' => 'Appointment date',
+                    '{{5}}' => 'Appointment time',
+                    '{{6}}' => 'Reason for visit',
+                    '{{7}}' => 'Clinic name',
+                ],
                 'cap' => 'Counts against the per-doctor monthly cap (default 10/mo — set in Connection → "Non-joined doctor cap"). After the cap, this alert is suppressed but the patient still gets their acknowledgement.',
             ],
             'patient_request_sent' => [
                 'title' => 'Booking acknowledgement to patient',
                 'trigger' => 'Immediately after a patient submits a booking to a non-joined doctor.',
                 'to' => 'The patient',
-                'vars' => ['{{1}}' => 'Patient name', '{{2}}' => 'Doctor / clinic name', '{{3}}' => 'Date & time', '{{4}}' => 'Clinic phone (so they can call directly)'],
+                'vars' => [
+                    '{{1}}' => 'Patient name',
+                    '{{2}}' => 'Doctor name',
+                    '{{3}}' => 'Clinic name',
+                    '{{4}}' => 'Appointment date',
+                    '{{5}}' => 'Appointment time',
+                    '{{6}}' => 'Clinic address',
+                ],
                 'cap' => 'Always sent — NOT capped (patient-facing).',
             ],
             'patient_confirmed' => [
                 'title' => 'Appointment confirmed → patient',
                 'trigger' => 'The non-joined doctor taps "Confirm appointment" on the L/{token} page.',
                 'to' => 'The patient',
-                'vars' => ['{{1}}' => 'Patient name', '{{2}}' => 'Doctor / clinic name', '{{3}}' => 'Date & time', '{{4}}' => 'Clinic phone'],
+                'vars' => [
+                    '{{1}}' => 'Patient name',
+                    '{{2}}' => 'Doctor name',
+                    '{{3}}' => 'Clinic name',
+                    '{{4}}' => 'Appointment date',
+                    '{{5}}' => 'Appointment time',
+                    '{{6}}' => 'Clinic address',
+                ],
                 'cap' => 'Always sent — NOT capped (patient-facing).',
             ],
             'patient_soft_nudge' => [
@@ -247,7 +269,7 @@ final class MessagingAdminController
             return Response::redirect('/admin/messaging');
         }
         $to = trim((string) ($request->post['test_number'] ?? ''));
-        $tpl = trim((string) ($request->post['test_template'] ?? 'patient_confirmed'));
+        $tpl = trim((string) ($request->post['test_template'] ?? 'patient_request_sent'));
         if ($to === '') {
             return Response::redirect('/admin/messaging?message=test_no_number#connection');
         }
