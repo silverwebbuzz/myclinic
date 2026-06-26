@@ -458,9 +458,83 @@ final class DoctorClaimService
         return $row ?: null;
     }
 
+    /**
+     * Listing application status for a tenant, shaped for the dashboard banner
+     * and the Settings "Listed on eClinicPro" section. Reads the most recent
+     * request for the clinic's phone.
+     *
+     * @param array<string, mixed> $clinic the tenant row
+     * @return array{state: string, reason: ?string, submitted_at: ?string, request: ?array<string, mixed>}
+     *   state ∈ none | pending | approved | rejected | duplicate
+     */
+    public static function listingStatus(array $clinic): array
+    {
+        // A clinic flagged listed is approved regardless of the request row
+        // (covers clinics listed via admin approval of a Google claim).
+        if (!empty($clinic['is_directory_listed'])) {
+            $req = self::latestForTenantPhone((string) ($clinic['phone'] ?? ''));
+            return ['state' => 'approved', 'reason' => null, 'submitted_at' => $req['created_at'] ?? null, 'request' => $req];
+        }
+
+        $req = self::latestForTenantPhone((string) ($clinic['phone'] ?? ''));
+        if ($req === null) {
+            return ['state' => 'none', 'reason' => null, 'submitted_at' => null, 'request' => null];
+        }
+
+        $status = (string) ($req['status'] ?? 'pending');
+        $state = match ($status) {
+            'approved'              => 'approved',
+            'rejected'              => 'rejected',
+            'duplicate'             => 'rejected', // surfaced to the doctor as "not listed"
+            'pending', 'phone_verified' => 'pending',
+            default                 => 'pending',
+        };
+
+        return [
+            'state'        => $state,
+            'reason'       => $req['reviewer_notes'] ?? null,
+            'submitted_at' => $req['created_at'] ?? null,
+            'request'      => $req,
+        ];
+    }
+
     public static function reject(int $requestId, int $reviewerId, ?string $notes = null): bool
     {
-        return self::setStatus($requestId, 'rejected', $reviewerId, $notes);
+        $ok = self::setStatus($requestId, 'rejected', $reviewerId, $notes);
+        if ($ok) {
+            // Tell the doctor why — best-effort across email (SMS/WhatsApp can
+            // follow the same pattern as approval later). Never throws.
+            self::notifyRejected(self::find($requestId), $notes);
+        }
+        return $ok;
+    }
+
+    /**
+     * Rejection notification. Includes the admin's reason so the doctor knows
+     * what to fix and can re-apply. No-op when there's no email on file.
+     *
+     * @param array<string, mixed>|null $req
+     */
+    private static function notifyRejected(?array $req, ?string $reason): void
+    {
+        if ($req === null) {
+            return;
+        }
+        $email = trim((string) ($req['email'] ?? ''));
+        if ($email === '') {
+            return;
+        }
+        try {
+            $base = rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/');
+            MailService::send($email, 'doctor_rejected', [
+                'doctor_name' => $req['full_name'] ?? 'Doctor',
+                'clinic_name' => $req['clinic_name'] ?? '',
+                'reason'      => trim((string) ($reason ?? '')),
+                'reapply_url' => $base . '/onboarding/get-listed',
+            ], (int) ($req['created_tenant_id'] ?? 0) ?: null);
+        } catch (\Throwable $e) {
+            error_log('[DoctorClaimService::notifyRejected] ' . $e->getMessage());
+        }
     }
 
     public static function markDuplicate(int $requestId, int $reviewerId, ?string $notes = null): bool

@@ -100,6 +100,7 @@ return static function (RouteRegistrar $router): void {
         $app->post('/settings/services', [ClinicSettingsController::class, 'saveServices']);
         $app->post('/settings/hours', [ClinicSettingsController::class, 'saveHours']);
         $app->post('/settings/specialty', [ClinicSettingsController::class, 'saveSpecialty']);
+        $app->post('/settings/listing', [ClinicSettingsController::class, 'saveListing']);
         $app->post('/settings/notifications', [ClinicSettingsController::class, 'saveNotifications']);
         $app->post('/settings/test-whatsapp', [ClinicSettingsController::class, 'testWhatsApp']);
         $app->post('/settings/test-razorpay', [ClinicSettingsController::class, 'testRazorpay']);

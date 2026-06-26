@@ -50,7 +50,8 @@ final class MailService
 
             'staff_invite',
             'churn_outreach',
-            'doctor_approved' => $care,
+            'doctor_approved',
+            'doctor_rejected' => $care,
 
             'health_tip',
             'newsletter' => $healthTips,
@@ -142,6 +143,7 @@ final class MailService
             'invoice_paid' => 'Payment received — ' . $clinicName,
             'subscription_invoice' => 'Your eClinicPro invoice ' . (string) ($payload['invoice_no'] ?? ''),
             'doctor_approved' => 'Your clinic is now listed on eClinicPro',
+            'doctor_rejected' => 'About your eClinicPro listing request',
             'rx_delivery', 'prescription_ready' => 'Your prescription from ' . $clinicName,
             'follow_up_reminder' => 'Follow-up reminder — ' . $clinicName,
             'diet_plan_shared' => 'Your diet plan from ' . $clinicName,
@@ -462,6 +464,19 @@ final class MailService
                     . "You can connect with us on WhatsApp or call: +91 9998010029\n\n"
                     . "Best regards,\nThe eClinicPro Team",
             ],
+            'doctor_rejected' => [
+                'greeting' => 'Hello ' . ($payload['doctor_name'] ?? 'Doctor') . ',',
+                'paragraphs' => array_values(array_filter([
+                    'Thank you for submitting ' . ($payload['clinic_name'] ?? 'your clinic') . ' to be listed on eClinicPro.',
+                    'After reviewing your request, we were unable to approve the listing at this time.',
+                    trim((string) ($payload['reason'] ?? '')) !== ''
+                        ? 'Reason: ' . $payload['reason']
+                        : null,
+                    'You can update your details and re-apply using the button below. If you believe this was a mistake, just reply to this email.',
+                ])),
+                'cta' => ['label' => 'Review & re-apply', 'url' => (string) ($payload['reapply_url'] ?? $appUrl . '/onboarding/get-listed')],
+                'sign_off' => "Best regards,\nThe eClinicPro Team",
+            ],
             'password_reset' => [
                 'greeting' => 'Hello,',
                 'paragraphs' => ['Use the button below to reset your password. This link is valid for 1 hour.'],
@@ -553,6 +568,13 @@ final class MailService
                 . ($payload['phone'] ?? '') . "):\n"
                 . ($payload['login_url'] ?? '') . "\n\n"
                 . "No password is needed — we'll send you a one-time code by SMS.\n\n"
+                . "— Team eClinicPro",
+            'doctor_rejected' => "Hello " . ($payload['doctor_name'] ?? 'Doctor') . ",\n\n"
+                . "Thank you for submitting " . ($payload['clinic_name'] ?? 'your clinic')
+                . " to be listed on eClinicPro. After review, we were unable to approve the listing at this time.\n\n"
+                . (trim((string) ($payload['reason'] ?? '')) !== '' ? "Reason: " . $payload['reason'] . "\n\n" : '')
+                . "You can update your details and re-apply here:\n"
+                . ($payload['reapply_url'] ?? '') . "\n\n"
                 . "— Team eClinicPro",
             'rx_delivery', 'prescription_ready' => "Hello " . ($payload['patient_name'] ?? '') . ",\n\n"
                 . "Your prescription from " . ($payload['clinic_name'] ?? 'the clinic') . " is ready.\n\n"

@@ -39,10 +39,48 @@
     </div>
     <?php endif; ?>
 
-    <?php if (empty($isDirectoryListed)): ?>
+    <?php $listState = $listingStatus['state'] ?? ($isDirectoryListed ? 'approved' : 'none'); ?>
+
+    <?php if ($listState === 'pending'): ?>
+    <!-- Application submitted, awaiting admin review. Not dismissable —
+         it's a status, not a nag. -->
+    <div class="rounded-xl border border-amber-300 bg-amber-50 p-5 shadow-sm">
+        <div class="flex items-start gap-4">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div class="min-w-0 flex-1">
+                <h3 class="text-base font-bold text-slate-900">Listing under review</h3>
+                <p class="mt-1 text-sm text-slate-600">
+                    Your request to appear on
+                    <a href="https://eclinicpro.com/find-a-doctor" class="font-semibold text-amber-700 hover:underline" target="_blank">eclinicpro.com/find-a-doctor</a>
+                    has been submitted. Our team reviews within 1–2 business days. We'll email you once it's approved.
+                </p>
+                <a href="/settings?tab=listing" class="mt-3 inline-flex text-xs font-medium text-amber-700 hover:underline">View status in Settings →</a>
+            </div>
+        </div>
+    </div>
+    <?php elseif ($listState === 'rejected'): ?>
+    <!-- Application was rejected — show the admin's reason + re-apply CTA. -->
+    <div class="rounded-xl border border-rose-300 bg-rose-50 p-5 shadow-sm">
+        <div class="flex items-start gap-4">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500 text-white">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </div>
+            <div class="min-w-0 flex-1">
+                <h3 class="text-base font-bold text-slate-900">Listing not approved</h3>
+                <p class="mt-1 text-sm text-slate-600">Your request to be listed on eClinicPro wasn't approved.</p>
+                <?php if (!empty($listingStatus['reason'])): ?>
+                <p class="mt-2 rounded-lg bg-white/70 px-3 py-2 text-sm text-rose-800"><span class="font-semibold">Reason:</span> <?= htmlspecialchars((string) $listingStatus['reason']) ?></p>
+                <?php endif; ?>
+                <a href="/onboarding/get-listed" class="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700">Review &amp; re-apply</a>
+            </div>
+        </div>
+    </div>
+    <?php elseif ($listState === 'none'): ?>
     <!-- ============ Get listed on /find-a-doctor banner ============
-         Shown to clinics that have a portal account but haven't been
-         approved for the public directory yet. Dismissable per-session
+         Shown to clinics that have a portal account but haven't applied
+         to the public directory yet. Dismissable per-session
          so users who aren't ready right now aren't nagged on every load. -->
     <div x-data="{ show: localStorage.getItem('ecp_hide_dir_banner') !== '1' }"
          x-show="show" x-cloak

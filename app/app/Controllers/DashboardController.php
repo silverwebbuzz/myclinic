@@ -53,6 +53,7 @@ final class DashboardController
             'currency' => $clinic['currency'] ?? 'INR',
             'clinic' => $clinic,
             'isDirectoryListed' => (bool) ($clinic['is_directory_listed'] ?? false),
+            'listingStatus' => \App\Services\DoctorClaimService::listingStatus($clinic),
             'followUps' => $followUps,
         ], 'Dashboard'));
     }

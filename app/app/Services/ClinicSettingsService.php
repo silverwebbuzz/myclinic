@@ -260,6 +260,53 @@ final class ClinicSettingsService
             ->update(['services' => $clean === [] ? null : json_encode(array_values($clean))]);
     }
 
+    /**
+     * The clinic's claimed public directory row, or null if not listed yet.
+     * Backs the Settings "Listed on eClinicPro" editor.
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function publicListing(int $clinicId): ?array
+    {
+        return QueryBuilder::table('directory_doctors')
+            ->where('claimed_tenant_id', '=', $clinicId)
+            ->where('is_active', '=', 1)
+            ->first();
+    }
+
+    /**
+     * Save the doctor-editable fields of the public directory listing. Changes
+     * go live immediately — an approved clinic owns its verified listing, so no
+     * re-review. No-op when the clinic has no claimed listing.
+     *
+     * @param array<string, mixed> $post
+     */
+    public static function saveListing(int $clinicId, array $post): void
+    {
+        $listing = self::publicListing($clinicId);
+        if ($listing === null) {
+            return; // not listed yet — nothing to edit
+        }
+
+        $fee = trim((string) ($post['consultation_fee'] ?? ''));
+        $update = [
+            'doctor_name' => mb_substr(trim((string) ($post['doctor_name'] ?? '')), 0, 160) ?: null,
+            'bio'         => trim((string) ($post['bio'] ?? '')) !== '' ? mb_substr(trim((string) $post['bio']), 0, 2000) : null,
+            'address'     => trim((string) ($post['address'] ?? '')) !== '' ? mb_substr(trim((string) $post['address']), 0, 500) : null,
+            'area'        => mb_substr(trim((string) ($post['area'] ?? '')), 0, 120) ?: null,
+            'website'     => mb_substr(trim((string) ($post['website'] ?? '')), 0, 500) ?: null,
+            'consultation_fee' => $fee !== '' && is_numeric($fee) ? (float) $fee : null,
+        ];
+        if ($update['consultation_fee'] !== null && empty($listing['consultation_fee_currency'])) {
+            $update['consultation_fee_currency'] = 'INR';
+        }
+
+        QueryBuilder::table('directory_doctors')
+            ->where('claimed_tenant_id', '=', $clinicId)
+            ->where('is_active', '=', 1)
+            ->update($update);
+    }
+
     /** @return array{ok: bool, message: string} */
     public static function testWhatsApp(int $clinicId): array
     {
