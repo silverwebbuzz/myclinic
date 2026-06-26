@@ -184,6 +184,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['files'])) {
                     $d['area'] = extract_area((string) $d['address'], (string) $d['city']);
                 }
 
+                // Normalize phone to canonical +91XXXXXXXXXX (intl first, then
+                // local). If neither cleans to a valid Indian mobile, keep the
+                // raw values so nothing is lost.
+                $canonicalPhone = normalize_in_phone($d['intl_phone'] ?? null)
+                               ?? normalize_in_phone($d['phone'] ?? null);
+                $phoneOut     = $canonicalPhone ?? ($d['phone'] ?? null);
+                $intlPhoneOut = $canonicalPhone ?? ($d['intl_phone'] ?? null);
+
                 $stmt->execute([
                     ':place_id'        => $pid,
                     ':name'            => (string) ($d['name'] ?? ''),
@@ -197,8 +205,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['files'])) {
                     ':lat'             => $d['lat']       ?? null,
                     ':lng'             => $d['lng']       ?? null,
                     ':plus_code'       => $d['plus_code'] ?? null,
-                    ':phone'           => $d['phone']     ?? null,
-                    ':intl_phone'      => $d['intl_phone']?? null,
+                    ':phone'           => $phoneOut,
+                    ':intl_phone'      => $intlPhoneOut,
                     ':website'         => $d['website']   ?? null,
                     ':gmaps_url'       => $d['gmaps_url'] ?? null,
                     ':status'          => $status,

@@ -158,7 +158,9 @@ final class MessagingAdminController
      * Ordered display groups for the Templates section. Each maps a heading +
      * description to the template_keys it contains.
      *
-     * @return list<array{title:string,desc:string,keys:list<string>}>
+     * `color` is a Tailwind text class for the group heading.
+     *
+     * @return list<array{title:string,desc:string,color:string,keys:list<string>}>
      */
     public static function templateGroups(): array
     {
@@ -166,16 +168,19 @@ final class MessagingAdminController
             [
                 'title' => 'Directory — non-joined doctor booking',
                 'desc' => 'The public "find a doctor" funnel: a patient books a doctor who is listed but has not signed up. These are the messages you asked about.',
+                'color' => 'text-red-600',
                 'keys' => ['patient_request_sent', 'doctor_new_lead', 'patient_confirmed', 'patient_soft_nudge'],
             ],
             [
                 'title' => 'Appointments & reminders',
                 'desc' => 'Reminders sent ahead of a booked slot (directory leads and joined clinics).',
+                'color' => 'text-emerald-600',
                 'keys' => ['appointment_reminder'],
             ],
             [
                 'title' => 'Joined-clinic patient care',
                 'desc' => 'Messages a paying/joined clinic sends to its own patients. These consume the clinic\'s monthly quota.',
+                'color' => 'text-slate-700',
                 'keys' => ['prescription_ready', 'rx_delivery', 'diet_plan_shared', 'follow_up_reminder'],
             ],
         ];

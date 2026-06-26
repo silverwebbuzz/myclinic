@@ -57,39 +57,64 @@ $enabled = ($settings['messaging_enabled']['setting_value'] ?? '0') === '1';
                 </label>
 
                 <?php
-                $fields = [
+                $waFields = [
                     'wa_access_token' => 'WhatsApp Access Token',
                     'wa_phone_number_id' => 'Phone Number ID',
                     'wa_business_id' => 'Business ID',
                     'wa_webhook_verify_token' => 'Webhook Verify Token',
                     'wa_app_secret' => 'App Secret',
+                ];
+                $smsFields = [
                     'sms_provider' => 'SMS Provider (msg91 / twilio)',
                     'sms_auth_key' => 'SMS Auth Key',
                     'sms_sender_id' => 'SMS Sender ID',
                 ];
-                foreach ($fields as $k => $label): ?>
-                <label class="block text-xs">
-                    <span class="text-slate-600"><?= htmlspecialchars($label) ?></span>
-                    <input type="text" name="<?= $k ?>" value="<?= htmlspecialchars($val($settings, $k)) ?>"
-                           class="mt-1 w-full rounded border px-2 py-1.5 text-sm" autocomplete="off">
-                </label>
-                <?php endforeach; ?>
+                $credField = function (string $k, string $label) use ($settings, $val) { ?>
+                    <label class="block text-xs">
+                        <span class="text-slate-600"><?= htmlspecialchars($label) ?></span>
+                        <input type="text" name="<?= $k ?>" value="<?= htmlspecialchars($val($settings, $k)) ?>"
+                               class="mt-1 w-full rounded border px-2 py-1.5 text-sm" autocomplete="off">
+                    </label>
+                <?php };
+                ?>
+
+                <!-- WhatsApp credentials -->
+                <fieldset class="sm:col-span-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-4">
+                    <legend class="px-2 text-xs font-bold uppercase tracking-wider text-emerald-700">WhatsApp (Meta Cloud API)</legend>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <?php foreach ($waFields as $k => $label) { $credField($k, $label); } ?>
+                    </div>
+                </fieldset>
+
+                <!-- SMS credentials -->
+                <fieldset class="sm:col-span-2 rounded-lg border border-sky-200 bg-sky-50/40 p-4">
+                    <legend class="px-2 text-xs font-bold uppercase tracking-wider text-sky-700">SMS (fallback provider)</legend>
+                    <p class="mb-2 text-[11px] text-sky-700/80">Used when WhatsApp isn't approved/available, or when a rule's channel is set to SMS.</p>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <?php foreach ($smsFields as $k => $label) { $credField($k, $label); } ?>
+                    </div>
+                </fieldset>
 
                 <div class="grid grid-cols-3 gap-2 sm:col-span-2">
                     <label class="block text-xs"><span class="text-slate-600">Quota WhatsApp/mo</span>
-                        <input type="number" name="quota_whatsapp_base" value="<?= htmlspecialchars($val($settings, 'quota_whatsapp_base', false)) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm"></label>
+                        <input type="number" name="quota_whatsapp_base" value="<?= htmlspecialchars($val($settings, 'quota_whatsapp_base', false)) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
+                        <span class="mt-0.5 block text-[10px] text-slate-400">Default WhatsApp messages each clinic gets per month (resets monthly).</span></label>
                     <label class="block text-xs"><span class="text-slate-600">Quota SMS/mo</span>
-                        <input type="number" name="quota_sms_base" value="<?= htmlspecialchars($val($settings, 'quota_sms_base', false)) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm"></label>
+                        <input type="number" name="quota_sms_base" value="<?= htmlspecialchars($val($settings, 'quota_sms_base', false)) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
+                        <span class="mt-0.5 block text-[10px] text-slate-400">Default SMS messages each clinic gets per month (used for WhatsApp fallback too).</span></label>
                     <label class="block text-xs"><span class="text-slate-600">Global cap/mo (0=off)</span>
-                        <input type="number" name="messaging_global_monthly_cap" value="<?= htmlspecialchars($val($settings, 'messaging_global_monthly_cap', false)) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm"></label>
+                        <input type="number" name="messaging_global_monthly_cap" value="<?= htmlspecialchars($val($settings, 'messaging_global_monthly_cap', false)) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
+                        <span class="mt-0.5 block text-[10px] text-slate-400">Platform-wide safety ceiling across all clinics. Not yet enforced — placeholder.</span></label>
                     <label class="block text-xs sm:col-span-3 rounded-lg bg-amber-50 border border-amber-200 p-2">
                         <span class="font-semibold text-amber-900">Non-joined doctor cap / month</span>
                         <span class="block text-[11px] text-amber-700 mt-0.5">Max WhatsApp <strong>lead alerts</strong> (the <code>doctor_new_lead</code> message) a directory doctor who has NOT joined eClinicPro receives per month. Patient messages are never capped. Per-doctor overrides live in <code>directory_sms_quotas.per_month</code>.</span>
                         <input type="number" min="0" name="directory_doctor_wa_cap" value="<?= htmlspecialchars($val($settings, 'directory_doctor_wa_cap', false) ?: '10') ?>" class="mt-1 w-32 rounded border px-2 py-1.5 text-sm"></label>
                     <label class="block text-xs"><span class="text-slate-600">Quiet start (hr)</span>
-                        <input type="number" name="messaging_quiet_start" value="<?= htmlspecialchars($val($settings, 'messaging_quiet_start', false)) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm"></label>
+                        <input type="number" name="messaging_quiet_start" value="<?= htmlspecialchars($val($settings, 'messaging_quiet_start', false)) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
+                        <span class="mt-0.5 block text-[10px] text-slate-400">Hour (0–23) when messages STOP sending. E.g. 21 = 9 PM.</span></label>
                     <label class="block text-xs"><span class="text-slate-600">Quiet end (hr)</span>
-                        <input type="number" name="messaging_quiet_end" value="<?= htmlspecialchars($val($settings, 'messaging_quiet_end', false)) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm"></label>
+                        <input type="number" name="messaging_quiet_end" value="<?= htmlspecialchars($val($settings, 'messaging_quiet_end', false)) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
+                        <span class="mt-0.5 block text-[10px] text-slate-400">Hour (0–23) when sending RESUMES. E.g. 7 = 7 AM. (21→7 = silent overnight.)</span></label>
                 </div>
 
                 <div class="sm:col-span-2">
@@ -183,7 +208,7 @@ $enabled = ($settings['messaging_enabled']['setting_value'] ?? '0') === '1';
 
             foreach ($templateGroups as $group): ?>
                 <div class="mt-5">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700"><?= htmlspecialchars($group['title']) ?></h3>
+                    <h3 class="text-xs font-bold uppercase tracking-wider <?= htmlspecialchars($group['color'] ?? 'text-slate-700') ?>"><?= htmlspecialchars($group['title']) ?></h3>
                     <p class="mb-2 text-[11px] text-slate-500"><?= htmlspecialchars($group['desc']) ?></p>
                     <div class="space-y-3">
                         <?php foreach ($group['keys'] as $key):

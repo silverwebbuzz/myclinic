@@ -28,8 +28,7 @@ final class LeadAnalyticsService
                 SUM(type = 'book_submitted' AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS book_submitted_30d,
                 SUM(sms_status = 'sent') AS sms_sent_total,
                 SUM(sms_status = 'sent' AND sms_sent_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS sms_sent_30d,
-                SUM(doctor_viewed_at IS NOT NULL) AS doctor_views_total,
-                SUM(doctor_alert_capped = 1 AND created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')) AS doctor_alert_capped_mtd
+                SUM(doctor_viewed_at IS NOT NULL) AS doctor_views_total
              FROM directory_leads"
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
@@ -38,6 +37,19 @@ final class LeadAnalyticsService
         // divided by SMS sent. (Captures "did the SMS work?")
         $sent = max(1, (int) ($row['sms_sent_total'] ?? 0));
         $row['doctor_view_rate'] = round((int) ($row['doctor_views_total'] ?? 0) * 100 / $sent, 1);
+
+        // Capped-this-month tile — guarded so a DB that hasn't added the
+        // doctor_alert_capped column yet still renders the page.
+        $row['doctor_alert_capped_mtd'] = 0;
+        try {
+            $row['doctor_alert_capped_mtd'] = (int) $db->query(
+                "SELECT COUNT(*) FROM directory_leads
+                  WHERE doctor_alert_capped = 1
+                    AND created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')"
+            )->fetchColumn();
+        } catch (\Throwable $e) {
+            // column not present yet — leave at 0
+        }
 
         return $row;
     }
@@ -110,21 +122,26 @@ final class LeadAnalyticsService
      */
     public static function cappedLeads(int $limit = 50): array
     {
-        $db = Database::connection();
-        $stmt = $db->prepare(
-            "SELECT dl.*, dd.name AS clinic_name, dd.doctor_name, dd.city AS clinic_city,
-                    dd.area AS clinic_area, dd.phone AS clinic_phone, dd.is_claimed,
-                    pi.name AS patient_name, pi.phone AS patient_phone
-             FROM directory_leads dl
-             JOIN directory_doctors dd ON dd.id = dl.directory_doctor_id
-             LEFT JOIN patient_identities pi ON pi.id = dl.patient_identity_id
-             WHERE dl.doctor_alert_capped = 1
-             ORDER BY dl.created_at DESC
-             LIMIT :lim"
-        );
-        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $db = Database::connection();
+            $stmt = $db->prepare(
+                "SELECT dl.*, dd.name AS clinic_name, dd.doctor_name, dd.city AS clinic_city,
+                        dd.area AS clinic_area, dd.phone AS clinic_phone, dd.is_claimed,
+                        pi.name AS patient_name, pi.phone AS patient_phone
+                 FROM directory_leads dl
+                 JOIN directory_doctors dd ON dd.id = dl.directory_doctor_id
+                 LEFT JOIN patient_identities pi ON pi.id = dl.patient_identity_id
+                 WHERE dl.doctor_alert_capped = 1
+                 ORDER BY dl.created_at DESC
+                 LIMIT :lim"
+            );
+            $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            // doctor_alert_capped column not present yet — no capped leads to show.
+            return [];
+        }
     }
 
     /**
@@ -133,24 +150,29 @@ final class LeadAnalyticsService
      */
     public static function doctorAlertUsageThisMonth(int $limit = 50): array
     {
-        $db = Database::connection();
-        $stmt = $db->prepare(
-            "SELECT dd.id, dd.name, dd.doctor_name, dd.city, dd.phone, dd.is_claimed,
-                    COUNT(dl.id) AS alerts_sent,
-                    SUM(dl.doctor_alert_capped = 1) AS alerts_capped,
-                    q.per_month AS cap_override
-             FROM directory_leads dl
-             JOIN directory_doctors dd ON dd.id = dl.directory_doctor_id
-        LEFT JOIN directory_sms_quotas q ON q.directory_doctor_id = dd.id
-             WHERE dl.doctor_alert_sent_at >= DATE_FORMAT(NOW(), '%Y-%m-01')
-                OR (dl.doctor_alert_capped = 1 AND dl.created_at >= DATE_FORMAT(NOW(), '%Y-%m-01'))
-             GROUP BY dd.id
-             ORDER BY alerts_sent DESC, alerts_capped DESC
-             LIMIT :lim"
-        );
-        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $db = Database::connection();
+            $stmt = $db->prepare(
+                "SELECT dd.id, dd.name, dd.doctor_name, dd.city, dd.phone, dd.is_claimed,
+                        COUNT(dl.id) AS alerts_sent,
+                        SUM(dl.doctor_alert_capped = 1) AS alerts_capped,
+                        q.per_month AS cap_override
+                 FROM directory_leads dl
+                 JOIN directory_doctors dd ON dd.id = dl.directory_doctor_id
+            LEFT JOIN directory_sms_quotas q ON q.directory_doctor_id = dd.id
+                 WHERE dl.doctor_alert_sent_at >= DATE_FORMAT(NOW(), '%Y-%m-01')
+                    OR (dl.doctor_alert_capped = 1 AND dl.created_at >= DATE_FORMAT(NOW(), '%Y-%m-01'))
+                 GROUP BY dd.id
+                 ORDER BY alerts_sent DESC, alerts_capped DESC
+                 LIMIT :lim"
+            );
+            $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            // doctor_alert_* columns not present yet — nothing to show.
+            return [];
+        }
     }
 
     /** How SMS attempts broke down by suppression reason. */
