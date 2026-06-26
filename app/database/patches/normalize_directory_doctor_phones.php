@@ -73,7 +73,7 @@ $updated = 0;
 $skipped = 0;
 $alreadyClean = 0;
 
-$upd = $db->prepare('UPDATE directory_doctors SET phone = :p, intl_phone = :p WHERE id = :id');
+$upd = $db->prepare('UPDATE directory_doctors SET phone = :p1, intl_phone = :p2 WHERE id = :id');
 
 foreach ($rows as $r) {
     $id = (int) $r['id'];
@@ -100,7 +100,7 @@ foreach ($rows as $r) {
     if ($dryRun) {
         printf("WOULD UPDATE id=%d  '%s' / '%s'  ->  %s\n", $id, $r['phone'], $r['intl_phone'], $canonical);
     } else {
-        $upd->execute([':p' => $canonical, ':id' => $id]);
+        $upd->execute([':p1' => $canonical, ':p2' => $canonical, ':id' => $id]);
     }
     $updated++;
 }
