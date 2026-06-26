@@ -22,7 +22,7 @@ use App\Support\VisitView;
 
 final class ClinicSettingsController
 {
-    private const TABS = ['general', 'hours', 'specialty', 'listing', 'leaves', 'notifications', 'subscription', 'branding'];
+    private const TABS = ['general', 'hours', 'specialty', 'leaves', 'notifications', 'subscription', 'branding'];
 
     public function index(Request $request): Response
     {
@@ -95,8 +95,6 @@ final class ClinicSettingsController
             'message' => $request->query['message'] ?? null,
             'error' => $request->query['error'] ?? null,
             'warning' => $request->query['warning'] ?? null,
-            'listingStatus' => \App\Services\DoctorClaimService::listingStatus($clinic),
-            'listing' => ClinicSettingsService::publicListing($clinicId),
             'apiKeys' => ApiKeyService::listForClinic($clinicId),
             'apiScopes' => ApiKeyService::SCOPES,
             'newApiKey' => $request->query['new_key'] ?? null,
@@ -178,18 +176,6 @@ final class ClinicSettingsController
         ClinicSettingsService::saveSpecialty($clinicId, $specialty, $request->post, $change);
 
         return Response::redirect('/settings?tab=specialty&message=saved');
-    }
-
-    public function saveListing(Request $request): Response
-    {
-        $clinicId = RequestContext::clinicId();
-        if ($clinicId === null) {
-            return Response::redirect('/login');
-        }
-
-        ClinicSettingsService::saveListing($clinicId, $request->post);
-
-        return Response::redirect('/settings?tab=listing&message=saved');
     }
 
     public function saveNotifications(Request $request): Response

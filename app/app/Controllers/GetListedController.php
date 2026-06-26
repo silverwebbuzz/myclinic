@@ -7,14 +7,22 @@ namespace App\Controllers;
 use App\Core\RequestContext;
 use App\Http\Request;
 use App\Http\Response;
+use App\Services\ClinicSettingsService;
 use App\Services\CsrfService;
 use App\Services\DoctorClaimService;
 use App\Support\Layout;
 
 /**
- * /onboarding/get-listed — in-portal "list my clinic on eClinicPro"
- * application page. Reuses DoctorClaimService and the existing admin
- * review queue. The tenant is already authenticated so no phone OTP.
+ * /listing — the single "Listed on eClinicPro" page. One destination for the
+ * whole public-directory lifecycle:
+ *   - not listed      → application form (apply)
+ *   - pending         → "under review" status
+ *   - rejected        → reason + re-apply
+ *   - approved        → edit the live public profile (directory_doctors)
+ *
+ * Reuses DoctorClaimService (admin review queue) and ClinicSettingsService
+ * (public-profile fields). The tenant is already authenticated — no phone OTP.
+ * (/onboarding/get-listed redirects here for backwards compatibility.)
  */
 final class GetListedController
 {
@@ -23,20 +31,28 @@ final class GetListedController
         $clinic = RequestContext::clinic();
         if (!$clinic) return Response::redirect('/login');
 
-        // Already listed? Send them back to the dashboard with a flash hint.
-        if (!empty($clinic['is_directory_listed'])) {
-            return Response::redirect('/dashboard?message=already_listed');
-        }
-
-        $latest = DoctorClaimService::latestForTenantPhone((string) ($clinic['phone'] ?? ''));
+        $clinicId = (int) ($clinic['id'] ?? 0);
 
         return Response::html(Layout::page('onboarding/get-listed', [
-            'clinic'       => $clinic,
-            'latest'       => $latest,
-            'specialties'  => self::specialtyCatalog(),
-            'csrf'         => CsrfService::token(),
-            'message'      => $request->query['message'] ?? null,
-        ], 'Get listed'));
+            'clinic'        => $clinic,
+            'latest'        => DoctorClaimService::latestForTenantPhone((string) ($clinic['phone'] ?? '')),
+            'listingStatus' => DoctorClaimService::listingStatus($clinic),
+            'listing'       => ClinicSettingsService::publicListing($clinicId),
+            'specialties'   => self::specialtyCatalog(),
+            'csrf'          => CsrfService::token(),
+            'message'       => $request->query['message'] ?? null,
+        ], 'Listed on eClinicPro'));
+    }
+
+    /** Save edits to the live public profile (approved clinics only). */
+    public function save(Request $request): Response
+    {
+        $clinic = RequestContext::clinic();
+        if (!$clinic) return Response::redirect('/login');
+
+        ClinicSettingsService::saveListing((int) ($clinic['id'] ?? 0), $request->post);
+
+        return Response::redirect('/listing?message=saved');
     }
 
     /**
@@ -113,14 +129,14 @@ final class GetListedController
         $clinic = RequestContext::clinic();
         if (!$clinic) return Response::redirect('/login');
         if (!empty($clinic['is_directory_listed'])) {
-            return Response::redirect('/dashboard?message=already_listed');
+            return Response::redirect('/listing?message=already_listed');
         }
 
         $tenantId = (int) ($clinic['id'] ?? 0);
         $id = DoctorClaimService::submitFromPortal($tenantId, $clinic, $request->post);
         if ($id === null) {
-            return Response::redirect('/onboarding/get-listed?message=failed');
+            return Response::redirect('/listing?message=failed');
         }
-        return Response::redirect('/onboarding/get-listed?message=submitted');
+        return Response::redirect('/listing?message=submitted');
     }
 }

@@ -201,6 +201,10 @@
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/settings') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
                     <?= ui_icon('settings', 18, 'shrink-0') ?><span>Settings</span>
                 </a>
+                <a href="/listing"
+                   class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/listing') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
+                    <?= ui_icon('clinic', 18, 'shrink-0') ?><span>Listed on eClinicPro</span>
+                </a>
                 <a href="/settings/team"
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/settings/team') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
                     <?= ui_icon('staff', 18, 'shrink-0') ?><span>Team</span>

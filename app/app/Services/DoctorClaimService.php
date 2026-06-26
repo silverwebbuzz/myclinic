@@ -437,7 +437,55 @@ final class DoctorClaimService
             'ip'      => $ip,
             'ua'      => $ua ?: null,
         ]);
-        return (int) $db->lastInsertId();
+        $id = (int) $db->lastInsertId();
+
+        // Alert the platform admin that a new request is waiting in the queue.
+        self::notifyAdminOfNewClaim($id);
+
+        return $id;
+    }
+
+    /**
+     * Email the platform admin that a new claim/listing request needs review.
+     * Called from BOTH entry points (the public OTP claim in api/doctor_claim.php
+     * and the in-portal get-listed funnel). Best-effort — never throws, never
+     * blocks the submission. No-op if no admin address is configured.
+     *
+     * Recipient: PLATFORM_ADMIN_EMAIL (defaults to eclinicpro.com@gmail.com).
+     * From: noreply@eclinicpro.com (the 'claim_received' template routes there).
+     */
+    public static function notifyAdminOfNewClaim(int $requestId): void
+    {
+        try {
+            $adminEmail = trim((string) ($_ENV['PLATFORM_ADMIN_EMAIL'] ?? 'eclinicpro.com@gmail.com'));
+            if ($adminEmail === '' || !filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
+                return;
+            }
+
+            $req = self::find($requestId);
+            if ($req === null) {
+                return;
+            }
+
+            $base = rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/');
+            $type = (string) ($req['type'] ?? 'new_listing');
+            $source = (string) ($req['source'] ?? '');
+            $location = trim(((string) ($req['city'] ?? '')) . ($req['state'] ? ', ' . $req['state'] : ''));
+
+            MailService::send($adminEmail, 'claim_received', [
+                'type_label'      => $type === 'claim' ? 'claim' : 'new listing',
+                'source_label'    => $source === 'portal_dashboard' ? 'doctor panel' : ($source !== '' ? 'website' : ''),
+                'clinic_name'     => $req['clinic_name'] ?? '',
+                'doctor_name'     => $req['full_name'] ?? '',
+                'phone'           => $req['phone'] ?? '',
+                'applicant_email' => $req['email'] ?? '',
+                'location'        => $location,
+                'specialty'       => $req['specialty'] ?? '',
+                'review_url'      => $base . '/admin/claims/' . $requestId,
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[DoctorClaimService::notifyAdminOfNewClaim] ' . $e->getMessage());
+        }
     }
 
     /**
@@ -530,7 +578,7 @@ final class DoctorClaimService
                 'doctor_name' => $req['full_name'] ?? 'Doctor',
                 'clinic_name' => $req['clinic_name'] ?? '',
                 'reason'      => trim((string) ($reason ?? '')),
-                'reapply_url' => $base . '/onboarding/get-listed',
+                'reapply_url' => $base . '/listing',
             ], (int) ($req['created_tenant_id'] ?? 0) ?: null);
         } catch (\Throwable $e) {
             error_log('[DoctorClaimService::notifyRejected] ' . $e->getMessage());

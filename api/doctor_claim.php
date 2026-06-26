@@ -251,7 +251,43 @@ if ($action === 'submit') {
         'ua'      => $ua ?: null,
     ]);
 
-    out(200, ['ok' => true, 'request_id' => (int) $db->lastInsertId()]);
+    $requestId = (int) $db->lastInsertId();
+
+    // Alert the platform admin that a new claim is waiting for review.
+    // Best-effort: a mail problem must never fail the doctor's submission.
+    try {
+        require_once __DIR__ . '/../partials/mailer.php';
+        $adminEmail = trim((string) (getenv('PLATFORM_ADMIN_EMAIL') ?: ($_ENV['PLATFORM_ADMIN_EMAIL'] ?? 'eclinicpro.com@gmail.com')));
+        if ($adminEmail !== '' && filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
+            $appUrl = rtrim((string) (getenv('APP_URL') ?: ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com')), '/');
+            $loc = trim($city . ($state ? ', ' . $state : ''));
+            $rows = [
+                'Type'      => $type === 'claim' ? 'Claim existing listing' : 'New listing',
+                'Clinic'    => $clinicName ?: '—',
+                'Doctor'    => $fullName ?: '—',
+                'Phone'     => $phone ?: '—',
+                'Email'     => $email ?: '—',
+                'Location'  => $loc ?: '—',
+                'Specialty' => $specialty ?: '—',
+            ];
+            $body = '<p>A new listing request from the website needs review.</p><table cellpadding="4">';
+            foreach ($rows as $k => $v) {
+                $body .= '<tr><td><strong>' . htmlspecialchars($k) . '</strong></td><td>' . htmlspecialchars((string) $v) . '</td></tr>';
+            }
+            $body .= '</table><p><a href="' . htmlspecialchars($appUrl . '/admin/claims/' . $requestId) . '">Review in admin →</a></p>';
+            ecp_send_mail(
+                $adminEmail,
+                'New listing request: ' . ($clinicName ?: 'a clinic') . ' (website)',
+                ecp_email_template('New listing request', $body),
+                'eClinicPro Admin',
+                $email ?: null,   // Reply-To the applicant so admin can respond directly
+            );
+        }
+    } catch (\Throwable $e) {
+        error_log('[api/doctor_claim] admin notify failed: ' . $e->getMessage());
+    }
+
+    out(200, ['ok' => true, 'request_id' => $requestId]);
 }
 
 out(400, ['ok' => false, 'error' => 'unknown_action']);

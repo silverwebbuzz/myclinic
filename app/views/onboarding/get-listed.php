@@ -1,10 +1,14 @@
 <?php
-$title = 'Get listed on eClinicPro';
+$title = 'Listed on eClinicPro';
 $clinic = $clinic ?? [];
 $latest = $latest ?? null;
 $specialties = $specialties ?? [];
 $msg = $message ?? null;
 $status = $latest['status'] ?? null;
+$listingStatus = $listingStatus ?? ['state' => 'none', 'reason' => null];
+$row = $listing ?? null;            // directory_doctors row when approved
+$state = $listingStatus['state'] ?? 'none';
+$isApproved = $state === 'approved';
 ob_start();
 ?>
 
@@ -12,13 +16,95 @@ ob_start();
 
     <header>
         <a href="/dashboard" class="text-sm text-slate-500 hover:text-slate-900">← Back to dashboard</a>
-        <h1 class="mt-2 text-2xl font-semibold text-slate-900">Get listed on eClinicPro</h1>
+        <h1 class="mt-2 text-2xl font-semibold text-slate-900">Listed on eClinicPro</h1>
         <p class="mt-1 text-sm text-slate-500">
-            Show up in patient searches at
-            <a href="https://eclinicpro.com/find-a-doctor" target="_blank" class="font-medium text-emerald-700 hover:underline">eclinicpro.com/find-a-doctor</a>
-            and start receiving booking requests.
+            <?php if ($isApproved): ?>
+                Your clinic is live at
+                <a href="https://eclinicpro.com/find-a-doctor" target="_blank" class="font-medium text-emerald-700 hover:underline">eclinicpro.com/find-a-doctor</a>.
+                Edit your public profile below — changes go live immediately.
+            <?php else: ?>
+                Show up in patient searches at
+                <a href="https://eclinicpro.com/find-a-doctor" target="_blank" class="font-medium text-emerald-700 hover:underline">eclinicpro.com/find-a-doctor</a>
+                and start receiving booking requests.
+            <?php endif; ?>
         </p>
     </header>
+
+    <?php if ($msg === 'saved'): ?>
+    <div class="rounded-xl border-2 border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-800">
+        Your public profile was updated.
+    </div>
+    <?php endif; ?>
+
+    <?php if ($isApproved): ?>
+    <!-- ============ APPROVED → edit the live public profile ============ -->
+    <div class="flex items-center gap-2">
+        <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">✓ Listed &amp; live</span>
+    </div>
+
+    <?php if ($row === null): ?>
+    <div class="rounded-xl border bg-white p-5 text-sm text-slate-600 shadow-sm">
+        Your clinic is listed. The editable public profile will appear here shortly.
+    </div>
+    <?php else: ?>
+    <form method="post" action="/listing/save" class="space-y-5 rounded-xl border bg-white p-6 shadow-sm">
+        <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+
+        <label class="block">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Doctor name (shown publicly)</span>
+            <input type="text" name="doctor_name" maxlength="160"
+                   value="<?= htmlspecialchars((string) ($row['doctor_name'] ?? '')) ?>"
+                   placeholder="e.g. Dr. Mitesh Prajapati"
+                   class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
+        </label>
+
+        <label class="block">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">About / bio</span>
+            <textarea name="bio" rows="4" maxlength="2000"
+                      placeholder="Tell patients about your practice, experience, and approach."
+                      class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none"><?= htmlspecialchars((string) ($row['bio'] ?? '')) ?></textarea>
+        </label>
+
+        <label class="block">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Address</span>
+            <textarea name="address" rows="2" maxlength="500"
+                      class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none"><?= htmlspecialchars((string) ($row['address'] ?? '')) ?></textarea>
+        </label>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+            <label class="block">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Area / locality</span>
+                <input type="text" name="area" maxlength="120"
+                       value="<?= htmlspecialchars((string) ($row['area'] ?? '')) ?>"
+                       class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
+            </label>
+            <label class="block">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Consultation fee (<?= htmlspecialchars((string) ($row['consultation_fee_currency'] ?? 'INR')) ?>)</span>
+                <input type="number" name="consultation_fee" min="0" step="1"
+                       value="<?= htmlspecialchars((string) ($row['consultation_fee'] ?? '')) ?>"
+                       placeholder="e.g. 500"
+                       class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
+            </label>
+        </div>
+
+        <label class="block">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Website</span>
+            <input type="url" name="website" maxlength="500"
+                   value="<?= htmlspecialchars((string) ($row['website'] ?? '')) ?>"
+                   placeholder="https://"
+                   class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
+        </label>
+
+        <div class="flex items-center justify-between">
+            <a href="https://eclinicpro.com/find-a-doctor" target="_blank" class="text-sm text-emerald-700 hover:underline">View public page →</a>
+            <button type="submit" class="rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700">
+                Save public profile
+            </button>
+        </div>
+    </form>
+    <?php endif; ?>
+
+    <?php else: /* not approved → application / status flow below */ ?>
 
     <!-- Flash messages -->
     <?php if ($msg === 'submitted'): ?>
@@ -93,7 +179,7 @@ ob_start();
         </div>
     </section>
 
-    <form method="post" action="/onboarding/get-listed" class="space-y-5 rounded-xl border bg-white p-6 shadow-sm">
+    <form method="post" action="/listing/apply" class="space-y-5 rounded-xl border bg-white p-6 shadow-sm">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
 
         <!-- Locked: we trust the tenant's own phone/email/clinic name -->
@@ -201,7 +287,9 @@ ob_start();
         </div>
     </form>
 
-    <?php endif; ?>
+    <?php endif; /* apply-form visibility */ ?>
+
+    <?php endif; /* approved vs not-approved */ ?>
 </div>
 
 <?php

@@ -46,7 +46,8 @@ final class MailService
             'prescription_ready',
             'rx_delivery',
             'follow_up_reminder',
-            'diet_plan_shared' => $notify,
+            'diet_plan_shared',
+            'claim_received' => $notify,
 
             'staff_invite',
             'churn_outreach',
@@ -144,6 +145,8 @@ final class MailService
             'subscription_invoice' => 'Your eClinicPro invoice ' . (string) ($payload['invoice_no'] ?? ''),
             'doctor_approved' => 'Your clinic is now listed on eClinicPro',
             'doctor_rejected' => 'About your eClinicPro listing request',
+            'claim_received' => 'New listing request: ' . (string) ($payload['clinic_name'] ?? 'a clinic')
+                . (!empty($payload['source_label']) ? ' (' . $payload['source_label'] . ')' : ''),
             'rx_delivery', 'prescription_ready' => 'Your prescription from ' . $clinicName,
             'follow_up_reminder' => 'Follow-up reminder — ' . $clinicName,
             'diet_plan_shared' => 'Your diet plan from ' . $clinicName,
@@ -474,8 +477,23 @@ final class MailService
                         : null,
                     'You can update your details and re-apply using the button below. If you believe this was a mistake, just reply to this email.',
                 ])),
-                'cta' => ['label' => 'Review & re-apply', 'url' => (string) ($payload['reapply_url'] ?? $appUrl . '/onboarding/get-listed')],
+                'cta' => ['label' => 'Review & re-apply', 'url' => (string) ($payload['reapply_url'] ?? $appUrl . '/listing')],
                 'sign_off' => "Best regards,\nThe eClinicPro Team",
+            ],
+            'claim_received' => [
+                'greeting' => 'New listing request',
+                'paragraphs' => array_values(array_filter([
+                    'A new ' . ($payload['type_label'] ?? 'listing') . ' request needs review'
+                        . (!empty($payload['source_label']) ? ' (via ' . $payload['source_label'] . ')' : '') . '.',
+                    'Clinic: ' . ($payload['clinic_name'] ?? '—'),
+                    'Doctor: ' . ($payload['doctor_name'] ?? '—'),
+                    'Phone: ' . ($payload['phone'] ?? '—'),
+                    !empty($payload['applicant_email']) ? 'Email: ' . $payload['applicant_email'] : null,
+                    !empty($payload['location']) ? 'Location: ' . $payload['location'] : null,
+                    !empty($payload['specialty']) ? 'Specialty: ' . $payload['specialty'] : null,
+                ])),
+                'cta' => ['label' => 'Review in admin', 'url' => (string) ($payload['review_url'] ?? $appUrl . '/admin/claims')],
+                'sign_off' => "— eClinicPro",
             ],
             'password_reset' => [
                 'greeting' => 'Hello,',
@@ -576,6 +594,16 @@ final class MailService
                 . "You can update your details and re-apply here:\n"
                 . ($payload['reapply_url'] ?? '') . "\n\n"
                 . "— Team eClinicPro",
+            'claim_received' => "New " . ($payload['type_label'] ?? 'listing') . " request needs review"
+                . (!empty($payload['source_label']) ? " (via " . $payload['source_label'] . ")" : '') . ".\n\n"
+                . "Clinic: " . ($payload['clinic_name'] ?? '—') . "\n"
+                . "Doctor: " . ($payload['doctor_name'] ?? '—') . "\n"
+                . "Phone: " . ($payload['phone'] ?? '—') . "\n"
+                . (!empty($payload['applicant_email']) ? "Email: " . $payload['applicant_email'] . "\n" : '')
+                . (!empty($payload['location']) ? "Location: " . $payload['location'] . "\n" : '')
+                . (!empty($payload['specialty']) ? "Specialty: " . $payload['specialty'] . "\n" : '')
+                . "\nReview: " . ($payload['review_url'] ?? '') . "\n\n"
+                . "— eClinicPro",
             'rx_delivery', 'prescription_ready' => "Hello " . ($payload['patient_name'] ?? '') . ",\n\n"
                 . "Your prescription from " . ($payload['clinic_name'] ?? 'the clinic') . " is ready.\n\n"
                 . (!empty($payload['rx_url']) ? "Download: " . $payload['rx_url'] . "\n" : ''),

@@ -18,7 +18,6 @@ $meta = [
     'general'       => ['Clinic profile & booking page', 'Clinic name, contact details, and your public booking page.', 'M3 21h18M5 21V7l8-4 8 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01'],
     'hours'         => ['Working hours', 'Set consultation timings for each day of the week.', 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
     'specialty'     => ['Specialty', 'Choose your clinic specialty and what it tailors.', 'M11 4a4 4 0 100 8 4 4 0 000-8zm0 8v8m-4-4h8'],
-    'listing'       => ['Listed on eClinicPro', 'Your public directory profile and listing status.', 'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0zM12 7a3 3 0 100 6 3 3 0 000-6z'],
     'leaves'        => ['Leaves & holidays', 'Block dates when the clinic is closed.', 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'],
     'notifications' => ['Notifications & messaging', 'WhatsApp, automated patient reminders, and payments.', 'M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 00-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9'],
     'subscription'  => ['Subscription & billing', 'Your plan, seats, and billing details.', 'M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
@@ -30,7 +29,7 @@ $openByDefault = 'general';
 
 // Render order — single column, general first.
 // 'notifications' is intentionally omitted — not currently needed in Settings.
-$order = ['general', 'hours', 'specialty', 'listing', 'leaves', 'subscription', 'branding'];
+$order = ['general', 'hours', 'specialty', 'leaves', 'subscription', 'branding'];
 ?>
 <?php if (!empty($message)): ?>
 <div class="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Settings saved.</div>

@@ -56,7 +56,7 @@
                     <a href="https://eclinicpro.com/find-a-doctor" class="font-semibold text-amber-700 hover:underline" target="_blank">eclinicpro.com/find-a-doctor</a>
                     has been submitted. Our team reviews within 1–2 business days. We'll email you once it's approved.
                 </p>
-                <a href="/settings?tab=listing" class="mt-3 inline-flex text-xs font-medium text-amber-700 hover:underline">View status in Settings →</a>
+                <a href="/listing" class="mt-3 inline-flex text-xs font-medium text-amber-700 hover:underline">View listing status →</a>
             </div>
         </div>
     </div>
@@ -73,7 +73,7 @@
                 <?php if (!empty($listingStatus['reason'])): ?>
                 <p class="mt-2 rounded-lg bg-white/70 px-3 py-2 text-sm text-rose-800"><span class="font-semibold">Reason:</span> <?= htmlspecialchars((string) $listingStatus['reason']) ?></p>
                 <?php endif; ?>
-                <a href="/onboarding/get-listed" class="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700">Review &amp; re-apply</a>
+                <a href="/listing" class="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700">Review &amp; re-apply</a>
             </div>
         </div>
     </div>
@@ -97,9 +97,9 @@
                     yet. Submit your details once, our team reviews within 1–2 business days, and patients can start finding you.
                 </p>
                 <div class="mt-3 flex flex-wrap gap-2">
-                    <a href="/onboarding/get-listed"
+                    <a href="/listing"
                        class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
-                        Get listed — takes 1 minute
+                        Get listed
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                     </a>
                     <button type="button"

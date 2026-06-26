@@ -100,7 +100,6 @@ return static function (RouteRegistrar $router): void {
         $app->post('/settings/services', [ClinicSettingsController::class, 'saveServices']);
         $app->post('/settings/hours', [ClinicSettingsController::class, 'saveHours']);
         $app->post('/settings/specialty', [ClinicSettingsController::class, 'saveSpecialty']);
-        $app->post('/settings/listing', [ClinicSettingsController::class, 'saveListing']);
         $app->post('/settings/notifications', [ClinicSettingsController::class, 'saveNotifications']);
         $app->post('/settings/test-whatsapp', [ClinicSettingsController::class, 'testWhatsApp']);
         $app->post('/settings/test-razorpay', [ClinicSettingsController::class, 'testRazorpay']);
@@ -195,8 +194,14 @@ return static function (RouteRegistrar $router): void {
         $app->get('/onboarding/complete', [OnboardingController::class, 'complete']);
         $app->post('/onboarding/complete', [OnboardingController::class, 'complete']);
 
-        // "Get listed on eClinicPro" — in-portal application page
-        $app->get('/onboarding/get-listed',  [\App\Controllers\GetListedController::class, 'show']);
+        // "Listed on eClinicPro" — single page for the whole directory
+        // lifecycle: apply, status/reason, re-apply, and edit the live profile.
+        $app->get('/listing',        [\App\Controllers\GetListedController::class, 'show']);
+        $app->post('/listing/apply', [\App\Controllers\GetListedController::class, 'submit']);
+        $app->post('/listing/save',  [\App\Controllers\GetListedController::class, 'save']);
+
+        // Backwards-compat: old links / onboarding point at get-listed.
+        $app->get('/onboarding/get-listed',  static fn () => \App\Http\Response::redirect('/listing'));
         $app->post('/onboarding/get-listed', [\App\Controllers\GetListedController::class, 'submit']);
 
         $app->get('/patients', [PatientController::class, 'index']);
