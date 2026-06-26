@@ -51,6 +51,9 @@ $cardClass = 'dp-book-card overflow-hidden rounded-2xl border border-slate-200 b
                 <div class="border-t border-slate-100 bg-amber-50 px-4 py-3 text-xs text-amber-900">
                     💡 Please arrive 10 minutes early and show your token at reception.
                 </div>
+                <div class="border-t border-slate-100 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+                    💡 Please note: your appointment time is approximate. Since some patients may need extra care, the doctor may run a little behind schedule. We appreciate your patience and understanding.
+                </div>
                 <div class="p-4">
                     <?php
                     $bookAgainUrl = (string) ($bookConfig['bookAgainUrl']
