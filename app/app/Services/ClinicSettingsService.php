@@ -162,10 +162,12 @@ final class ClinicSettingsService
             }
         }
 
+        // Slot duration is owned by Working hours (saveHours). Don't touch
+        // slot_duration_min here, or saving specialty options would silently
+        // reset the doctor's configured slot length back to the default.
         $options = SpecialtyOptionsParser::fromPost($specialty, $post);
         QueryBuilder::table('specialty_configs')->where('clinic_id', '=', $clinicId)->update([
             'specialty_options' => json_encode($options),
-            'slot_duration_min' => (int) ($options['slot_duration'] ?? 15),
         ]);
 
         OnboardingService::refreshClinicContext($clinicId);
@@ -299,6 +301,24 @@ final class ClinicSettingsService
         ];
         if ($update['consultation_fee'] !== null && empty($listing['consultation_fee_currency'])) {
             $update['consultation_fee_currency'] = 'INR';
+        }
+
+        // Services list (newline-separated textarea) → JSON, same as the old
+        // standalone services form. Only touched when the field is submitted.
+        if (array_key_exists('services_text', $post) || array_key_exists('services', $post)) {
+            $raw = $post['services_text'] ?? $post['services'] ?? '';
+            $items = is_string($raw) ? (preg_split('/[\r\n]+/', $raw) ?: []) : (is_array($raw) ? $raw : []);
+            $clean = [];
+            foreach ($items as $item) {
+                $item = trim((string) $item);
+                if ($item !== '' && !in_array($item, $clean, true)) {
+                    $clean[] = mb_substr($item, 0, 80);
+                }
+                if (count($clean) >= 24) {
+                    break;
+                }
+            }
+            $update['services'] = $clean === [] ? null : json_encode(array_values($clean));
         }
 
         QueryBuilder::table('directory_doctors')

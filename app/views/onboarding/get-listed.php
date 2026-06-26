@@ -95,6 +95,14 @@ ob_start();
                    class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
         </label>
 
+        <label class="block">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Services offered</span>
+            <textarea name="services_text" rows="5"
+                      placeholder="One service per line, e.g.&#10;Diabetes management&#10;Thyroid disorders&#10;Diet &amp; lifestyle counselling"
+                      class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-mono text-sm focus:border-emerald-500 focus:outline-none"><?= htmlspecialchars(implode("\n", $services ?? [])) ?></textarea>
+            <span class="mt-1 block text-xs text-slate-500">Up to 24. Each line becomes one item under “Treatments &amp; services” on your public profile. Leave blank to show common treatments for your specialty.</span>
+        </label>
+
         <div class="flex items-center justify-between">
             <a href="https://eclinicpro.com/find-a-doctor" target="_blank" class="text-sm text-emerald-700 hover:underline">View public page →</a>
             <button type="submit" class="rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700">

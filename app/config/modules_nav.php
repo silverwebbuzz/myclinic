@@ -28,7 +28,7 @@ return [
         'label' => 'Operations',
         'items' => [
             'appointments_basic' => ['label' => 'Appointments', 'icon' => '📅', 'href' => '/appointments'],
-            'invoicing_basic' => ['label' => 'Billing', 'icon' => '🧾', 'href' => '/billing', 'any_of' => ['invoicing_basic', 'billing_pro']],
+            'invoicing_basic' => ['label' => 'Patient Bills', 'icon' => '🧾', 'href' => '/billing', 'any_of' => ['invoicing_basic', 'billing_pro']],
         ],
     ],
     'reports' => [

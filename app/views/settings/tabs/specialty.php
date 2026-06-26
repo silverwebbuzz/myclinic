@@ -17,25 +17,20 @@ $currentLabel = $specialties[$specialty]['label'] ?? ucfirst((string) $specialty
         <button type="button" @click="specialtyModal = true" class="ui-btn ui-btn-secondary ui-btn-sm">Change specialty</button>
     </div>
 
-    <!-- Slot duration + ICD stays inline (lightweight, frequently tuned) -->
+    <!-- Slot duration lives under Working hours (single source of truth).
+         Only specialty-specific toggles remain here. -->
+    <?php if ($specialty === 'gp'): ?>
     <form method="post" action="/settings/specialty" class="mt-4 space-y-3 border-t border-slate-100 pt-4">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
-        <div>
-            <label class="ui-label mb-1 block">Slot duration (minutes)</label>
-            <select name="slot_duration" class="ui-input">
-                <?php foreach ([10, 15, 20, 30, 45, 60] as $m): ?>
-                <option value="<?= $m ?>" <?= (int)($options['slot_duration'] ?? 15) === $m ? 'selected' : '' ?>><?= $m ?> min</option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <?php if ($specialty === 'gp'): ?>
         <label class="flex items-center gap-2 text-sm text-slate-700">
             <input class="ui-checkbox" type="checkbox" name="icd10_enabled" value="1" <?= !empty($options['icd10_enabled']) ? 'checked' : '' ?>>
             Enable ICD-10 codes
         </label>
-        <?php endif; ?>
         <button type="submit" class="ui-btn ui-btn-primary ui-btn-sm">Save</button>
     </form>
+    <?php endif; ?>
+
+    <p class="ui-help mt-3 border-t border-slate-100 pt-3">Consultation slot length is set under <a href="/settings?tab=hours" class="text-emerald-700 hover:underline">Working hours</a>.</p>
 
     <!-- Change-specialty modal -->
     <div x-show="specialtyModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"

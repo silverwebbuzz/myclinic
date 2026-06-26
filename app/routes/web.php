@@ -94,8 +94,16 @@ return static function (RouteRegistrar $router): void {
         $app->get('/follow-ups', [FollowUpController::class, 'index']);
         $app->get('/help', [HelpController::class, 'index']);
 
-        $app->get('/settings/leaves', static fn () => \App\Http\Response::redirect('/settings?tab=leaves'));
+        $app->get('/settings/leaves', static fn () => \App\Http\Response::redirect('/leaves'));
         $app->get('/settings', [ClinicSettingsController::class, 'index']);
+
+        // Promoted out of Settings into their own left-menu pages.
+        // NOTE: '/billing' is patient billing (BillingController). The clinic's
+        // own subscription/billing lives at '/subscription' to avoid the clash.
+        $app->get('/leaves',       [ClinicSettingsController::class, 'leaves']);
+        $app->get('/subscription', [ClinicSettingsController::class, 'billing']);
+        // Backwards-compat for old tab deep-links.
+        $app->get('/settings/subscription', static fn () => \App\Http\Response::redirect('/subscription'));
         $app->post('/settings/general', [ClinicSettingsController::class, 'saveGeneral']);
         $app->post('/settings/services', [ClinicSettingsController::class, 'saveServices']);
         $app->post('/settings/hours', [ClinicSettingsController::class, 'saveHours']);

@@ -407,6 +407,7 @@ function places_type_acceptable(array $types): bool {
 }
 
 require_once __DIR__ . '/_helpers.php';
+require_once __DIR__ . '/_places_api.php';
 
 function format_doctor(array $place, array $details, array $city, string $spec): array {
     $loc = $details['geometry']['location'] ?? [];
@@ -510,6 +511,7 @@ function http_get_json(string $url, int &$reqCount): ?array {
         if (!is_array($data)) return null;
 
         $status = $data['status'] ?? '';
+        $GLOBALS['fd_last_places_status'] = $status !== '' ? $status : ($code !== 200 ? 'HTTP_' . $code : 'UNKNOWN');
         if ($status === 'OK' || $status === 'ZERO_RESULTS') return $data;
         if ($status === 'INVALID_REQUEST' && $attempt === 1) { sleep(3); continue; }
         if ($status === 'OVER_QUERY_LIMIT' && $attempt === 1) { sleep(5); continue; }
@@ -524,6 +526,7 @@ function fetch_text_search(string $apiKey, string $query, float $lat, float $lng
         'query'    => $query,
         'location' => sprintf('%f,%f', $lat, $lng),
         'radius'   => (string) $radius,
+        'region'   => 'in',
         'key'      => $apiKey,
     ];
     $all = [];
@@ -543,6 +546,23 @@ function fetch_text_search(string $apiKey, string $query, float $lat, float $lng
         if (!$pageToken) break;
     }
     return $all;
+}
+
+function fetch_find_place(string $apiKey, string $query, float $lat, float $lng, int $radius, int &$reqCount): array {
+    $url = 'https://maps.googleapis.com/maps/api/place/findplacefromtext/json?' . http_build_query([
+        'input'        => $query,
+        'inputtype'    => 'textquery',
+        'fields'       => 'place_id,name,formatted_address,geometry,types,business_status,rating,user_ratings_total',
+        'locationbias' => sprintf('circle:%d@%f,%f', min($radius, 50000), $lat, $lng),
+        'region'       => 'in',
+        'key'          => $apiKey,
+    ]);
+    $data = http_get_json($url, $reqCount);
+    if (!is_array($data) || ($data['status'] ?? '') !== 'OK') {
+        return [];
+    }
+
+    return (array) ($data['candidates'] ?? []);
 }
 
 function fetch_place_details(string $apiKey, string $placeId, int &$reqCount): ?array {
@@ -904,20 +924,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['names'])) {
 
         $reqCount = 0;
         $newRows  = [];
+        $sawDenied = false;
 
         foreach ($names as $rawName) {
-            $query = $rawName;
-            if (stripos($query, $city['name']) === false) $query .= ' ' . $city['name'];
-            echo "🔍 {$query}\n";
+            echo "🔍 {$rawName}\n";
 
-            $places = fetch_text_search($apiKey, $query, $city['lat'], $city['lng'], 30000, $reqCount);
-            if (empty($places)) {
-                echo "   ⨯ no result\n";
+            $resolved = fd_resolve_place_by_name(
+                $apiKey,
+                $rawName,
+                $city,
+                $reqCount,
+                'fetch_find_place',
+                'fetch_text_search',
+            );
+            if ($resolved === null) {
+                $st = (string) ($GLOBALS['fd_last_places_status'] ?? 'ZERO_RESULTS');
+                if (fd_places_status_denied($st)) {
+                    $sawDenied = true;
+                }
+                echo '   ⨯ no result';
+                if ($st !== '' && $st !== 'ZERO_RESULTS' && $st !== 'OK') {
+                    echo " (Google: {$st})";
+                }
+                echo "\n";
+                if ($sawDenied) {
+                    break;
+                }
                 continue;
             }
 
-            // Take only the top result for a name lookup.
-            $place = $places[0];
+            $place = $resolved['place'];
+            $prefetchedDetails = $resolved['details'];
             $pid = $place['place_id'] ?? null;
             if (!$pid) { echo "   ⨯ no place_id\n"; continue; }
             if (isset($existingIds[$pid])) { echo "   = already in file\n"; continue; }
@@ -925,7 +962,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['names'])) {
             $biz = $place['business_status'] ?? 'OPERATIONAL';
             if (str_starts_with((string) $biz, 'CLOSED_')) { echo "   ⨯ closed\n"; continue; }
 
-            $details = fetch_place_details($apiKey, $pid, $reqCount);
+            $details = is_array($prefetchedDetails)
+                ? $prefetchedDetails
+                : fetch_place_details($apiKey, $pid, $reqCount);
             if (!$details) { echo "   ⨯ details failed\n"; continue; }
 
             // Guess specialty from the input or types
@@ -978,6 +1017,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['names'])) {
 
         $cost = round(($reqCount / 1000) * 24, 2);
         echo "\n" . str_repeat('=', 60) . "\n";
+        if (!empty($sawDenied)) {
+            echo fd_places_denied_help();
+        }
         echo "Added: " . count($newRows) . " · API requests: {$reqCount} · est. cost: \${$cost}\n";
         echo "\nFile: json/_named-lookups.json (will be picked up by insert_db.php)\n";
         echo "Next: open insert_db.php and import _named-lookups.json\n";
@@ -1049,6 +1091,11 @@ h1{font-size:24px;font-weight:600;margin:0 0 8px}
 
 <?php if ($keyMissing): ?>
     <div class="warn">⚠ <strong>GOOGLE_MAPS_API_KEY missing.</strong> Create <code>fetch_doctor/.env</code>: <code>GOOGLE_MAPS_API_KEY=your_key</code></div>
+<?php else: ?>
+    <div class="note" style="margin-bottom:16px">
+        <strong>API key checklist:</strong> Enable <em>Places API</em> + <em>Places API (New)</em>, billing on.
+        Restrict key by <strong>server IP</strong> (not HTTP referrers only) or leave unrestricted while testing.
+    </div>
 <?php endif; ?>
 <?php if ($err): ?><div class="err">❌ <?= htmlspecialchars($err) ?></div><?php endif; ?>
 
@@ -1102,7 +1149,8 @@ h1{font-size:24px;font-weight:600;margin:0 0 8px}
     </summary>
     <form method="post" style="margin-top: 14px;">
         <p style="font-size: 12.5px; color: var(--mute); margin: 0 0 12px;">
-            Paste one doctor or clinic name per line. Each name is searched via Google Places and added to <code>json/_named-lookups.json</code>. Costs ~$0.024 per name. Useful for filling gaps left by the area scan.
+            Paste one doctor or clinic name per line. Each name is searched via Google Places and added to <code>json/_named-lookups.json</code>. Costs ~$0.03–0.05 per name. Useful for filling gaps left by the area scan.
+            <br>Tip: city is auto-appended if missing. Long clinic names with <code>&amp;</code> are OK — we try several query variants.
         </p>
         <label style="display:block;font-size:12px;font-weight:500;color:var(--ink);margin-bottom:4px;">Default city <small style="color:var(--mute);font-weight:400;">(used if the name doesn't already include one)</small></label>
         <input type="text" name="names_city" value="Ahmedabad" style="width: 240px; padding:7px 10px; border:1px solid var(--line); border-radius:6px; font-size:13px; margin-bottom:10px;">
