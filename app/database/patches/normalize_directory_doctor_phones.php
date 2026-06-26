@@ -55,6 +55,21 @@ function dd_canonical_in_mobile(?string $raw): ?string
     return '+91' . $local;
 }
 
+/**
+ * Clean a SUPPORT / short-code / toll-free number (e.g. 1860, 1066, 500…,
+ * 1800-xxx-xxxx). These are call-only: keep the digits, strip spaces/dashes,
+ * but DO NOT add +91 and DO NOT treat as a mobile. Returns digits-only, or
+ * null if there are no usable digits.
+ *
+ * The +91 prefix is what marks a number as WhatsApp-able elsewhere, so leaving
+ * these without it keeps them call-only across the app.
+ */
+function dd_clean_support(?string $raw): ?string
+{
+    $digits = preg_replace('/\D/', '', (string) $raw) ?? '';
+    return $digits !== '' ? $digits : null;
+}
+
 $db = ecp_db();
 if (!$db) {
     fwrite(STDERR, "DB unavailable — check app/.env\n");
@@ -70,6 +85,7 @@ $logFile = $logDir . '/phone-normalize-skipped.log';
 $rows = $db->query('SELECT id, phone, intl_phone FROM directory_doctors')->fetchAll(PDO::FETCH_ASSOC);
 $total = count($rows);
 $updated = 0;
+$support = 0;
 $skipped = 0;
 $alreadyClean = 0;
 
@@ -77,11 +93,18 @@ $upd = $db->prepare('UPDATE directory_doctors SET phone = :p1, intl_phone = :p2 
 
 foreach ($rows as $r) {
     $id = (int) $r['id'];
-    // Prefer intl_phone (carries the country code), fall back to phone.
+    // 1) Real Indian mobile → canonical +91XXXXXXXXXX (intl first, then local).
     $canonical = dd_canonical_in_mobile($r['intl_phone']) ?? dd_canonical_in_mobile($r['phone']);
+    $kind = 'mobile';
+
+    // 2) Not a mobile → support/short-code/toll-free: keep digits, NO +91.
+    if ($canonical === null) {
+        $canonical = dd_clean_support($r['phone']) ?? dd_clean_support($r['intl_phone']);
+        $kind = 'support';
+    }
 
     if ($canonical === null) {
-        // Couldn't clean either column — leave as-is, log for review.
+        // No usable digits at all — leave as-is, log for review.
         $skipped++;
         $line = sprintf(
             "[%s] id=%d phone=%s intl_phone=%s\n",
@@ -98,19 +121,25 @@ foreach ($rows as $r) {
     }
 
     if ($dryRun) {
-        printf("WOULD UPDATE id=%d  '%s' / '%s'  ->  %s\n", $id, $r['phone'], $r['intl_phone'], $canonical);
+        printf("WOULD UPDATE id=%d [%s]  '%s' / '%s'  ->  %s\n", $id, $kind, $r['phone'], $r['intl_phone'], $canonical);
     } else {
         $upd->execute([':p1' => $canonical, ':p2' => $canonical, ':id' => $id]);
     }
-    $updated++;
+    if ($kind === 'support') {
+        $support++;
+    } else {
+        $updated++;
+    }
 }
 
 printf(
-    "\n%s\n  total rows:     %d\n  %s: %d\n  already clean:  %d\n  skipped (logged): %d\n",
+    "\n%s\n  total rows:         %d\n  %s mobile (+91): %d\n  %s support (no +91): %d\n  already clean:      %d\n  skipped (logged):   %d\n",
     $dryRun ? 'DRY RUN (no writes)' : 'DONE',
     $total,
-    $dryRun ? 'would update' : 'updated',
+    $dryRun ? 'would set' : 'set',
     $updated,
+    $dryRun ? 'would set' : 'set',
+    $support,
     $alreadyClean,
     $skipped
 );

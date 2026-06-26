@@ -99,7 +99,11 @@ $statusBadge = [
                             $st = (string) ($r['status'] ?? 'not_contacted');
                             $phone = (string) ($r['phone'] ?? '');
                             $waPhone = (string) ($r['intl_phone'] ?: $r['phone'] ?? '');
-                            $waDigits = preg_replace('/\D+/', '', $waPhone);
+                            // WhatsApp-able only if it's a +91 mobile. Support /
+                            // short-code numbers (1860, 1066, 500…) have no +91
+                            // prefix → call-only, no WhatsApp link.
+                            $isMobile = str_starts_with($waPhone, '+91');
+                            $waDigits = $isMobile ? preg_replace('/\D+/', '', $waPhone) : '';
                         ?>
                         <tr class="hover:bg-slate-50 align-top">
                             <td class="px-4 py-3">
@@ -121,6 +125,8 @@ $statusBadge = [
                                     <a href="tel:<?= htmlspecialchars($phone) ?>" class="text-emerald-700 hover:underline">📞 <?= htmlspecialchars($phone) ?></a>
                                     <?php if ($waDigits): ?>
                                     <a href="https://wa.me/<?= htmlspecialchars($waDigits) ?>" target="_blank" rel="noopener" class="text-[11px] text-emerald-600 hover:underline">WhatsApp</a>
+                                    <?php else: ?>
+                                    <span class="text-[11px] text-slate-400">Call only</span>
                                     <?php endif; ?>
                                 </div>
                                 <?php else: ?>

@@ -184,13 +184,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['files'])) {
                     $d['area'] = extract_area((string) $d['address'], (string) $d['city']);
                 }
 
-                // Normalize phone to canonical +91XXXXXXXXXX (intl first, then
-                // local). If neither cleans to a valid Indian mobile, keep the
-                // raw values so nothing is lost.
-                $canonicalPhone = normalize_in_phone($d['intl_phone'] ?? null)
-                               ?? normalize_in_phone($d['phone'] ?? null);
-                $phoneOut     = $canonicalPhone ?? ($d['phone'] ?? null);
-                $intlPhoneOut = $canonicalPhone ?? ($d['intl_phone'] ?? null);
+                // Normalize phone. Real Indian mobile → canonical +91XXXXXXXXXX
+                // (intl first, then local). Otherwise treat as a support /
+                // short-code number → digits-only, NO +91 (call-only). If there
+                // are no usable digits at all, keep the raw values.
+                $cleanPhone = normalize_in_phone($d['intl_phone'] ?? null)
+                           ?? normalize_in_phone($d['phone'] ?? null)
+                           ?? clean_support_phone($d['phone'] ?? null)
+                           ?? clean_support_phone($d['intl_phone'] ?? null);
+                $phoneOut     = $cleanPhone ?? ($d['phone'] ?? null);
+                $intlPhoneOut = $cleanPhone ?? ($d['intl_phone'] ?? null);
 
                 $stmt->execute([
                     ':place_id'        => $pid,
