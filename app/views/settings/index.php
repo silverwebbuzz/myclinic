@@ -29,7 +29,7 @@ $openByDefault = 'general';
 
 // Render order — single column, general first.
 // 'notifications' is intentionally omitted — not currently needed in Settings.
-$order = ['general', 'hours', 'specialty', 'leaves', 'subscription', 'branding'];
+$order = ['general', 'hours', 'specialty', 'branding'];
 ?>
 <?php if (!empty($message)): ?>
 <div class="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Settings saved.</div>

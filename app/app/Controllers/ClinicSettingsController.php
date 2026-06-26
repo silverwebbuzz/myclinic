@@ -22,7 +22,7 @@ use App\Support\VisitView;
 
 final class ClinicSettingsController
 {
-    private const TABS = ['general', 'hours', 'specialty', 'leaves', 'notifications', 'subscription', 'branding'];
+    private const TABS = ['general', 'hours', 'specialty', 'notifications', 'branding'];
 
     public function index(Request $request): Response
     {
@@ -35,6 +35,16 @@ final class ClinicSettingsController
         $tab = $request->query['tab'] ?? 'general';
         if ($tab === 'team') {
             return Response::redirect('/settings/team');
+        }
+        // Leaves & Billing were promoted to their own pages — keep old
+        // ?tab= deep-links working by redirecting to the new locations.
+        if ($tab === 'leaves') {
+            $qs = $request->query;
+            unset($qs['tab']);
+            return Response::redirect('/leaves' . ($qs ? '?' . http_build_query($qs) : ''));
+        }
+        if ($tab === 'subscription') {
+            return Response::redirect('/billing');
         }
         if (!in_array($tab, $tabs, true)) {
             $tab = 'general';
@@ -119,6 +129,65 @@ final class ClinicSettingsController
             'sections' => $sections,
             'message' => $request->query['message'] ?? null,
         ], 'Settings'));
+    }
+
+    /** Standalone "Leaves & holidays" page (promoted out of Settings). */
+    public function leaves(Request $request): Response
+    {
+        $clinicId = RequestContext::clinicId();
+        if ($clinicId === null) {
+            return Response::redirect('/login');
+        }
+
+        $doctors  = AppointmentService::doctorsForClinic($clinicId);
+        $doctorId = isset($request->query['doctor_id']) ? (int) $request->query['doctor_id'] : null;
+        if ($doctorId === null && $doctors !== []) {
+            $doctorId = (int) $doctors[0]['id'];
+        }
+        $leaveMonth = $request->query['month'] ?? date('Y-m');
+        $leaves = $doctorId !== null ? LeaveService::forDoctor($clinicId, $doctorId, $leaveMonth) : [];
+
+        $section = View::render('settings/tabs/leaves', [
+            'doctors'    => $doctors,
+            'doctorId'   => $doctorId,
+            'leaveMonth' => $leaveMonth,
+            'leaves'     => $leaves,
+            'csrf'       => \App\Services\CsrfService::token(),
+            'warning'    => $request->query['warning'] ?? null,
+        ]);
+
+        return Response::html(Layout::page('settings/standalone', [
+            'pageHeading' => 'Leaves & holidays',
+            'pageSub'     => 'Block dates when the clinic or a doctor is unavailable.',
+            'section'     => $section,
+            'message'     => $request->query['message'] ?? null,
+        ], 'Leaves'));
+    }
+
+    /** Standalone "Subscription & billing" page (promoted out of Settings). */
+    public function billing(Request $request): Response
+    {
+        $clinic = RequestContext::clinic() ?? [];
+        $clinicId = (int) ($clinic['id'] ?? 0);
+        if ($clinicId <= 0) {
+            return Response::redirect('/login');
+        }
+
+        $section = View::render('settings/tabs/subscription', [
+            'clinic'     => $clinic,
+            'plans'      => PlanService::all(),
+            'modules'    => ClinicSettingsService::activeModulesDetail($clinicId),
+            'invoices'   => \App\Services\SaasInvoiceService::forClinic($clinicId),
+            'staffCount' => QueryBuilder::table('users')->forClinic($clinicId)->where('is_active', '=', 1)->count(),
+            'csrf'       => \App\Services\CsrfService::token(),
+        ]);
+
+        return Response::html(Layout::page('settings/standalone', [
+            'pageHeading' => 'Subscription & billing',
+            'pageSub'     => 'Your plan, seats, invoices, and billing details.',
+            'section'     => $section,
+            'message'     => $request->query['message'] ?? null,
+        ], 'Billing'));
     }
 
     public function saveGeneral(Request $request): Response
@@ -206,14 +275,14 @@ final class ClinicSettingsController
         if ($conflicts !== []) {
             $names = array_map(static fn ($r) => $r['patient_name'] ?? 'Patient', $conflicts);
 
-            return Response::redirect('/settings?tab=leaves&doctor_id=' . $doctorId . '&month=' . substr($date, 0, 7)
+            return Response::redirect('/leaves?doctor_id=' . $doctorId . '&month=' . substr($date, 0, 7)
                 . '&warning=' . urlencode('Conflicting appointments: ' . implode(', ', array_slice($names, 0, 5))));
         }
 
         LeaveService::add($clinicId, $doctorId, $date, $session, $reason);
         AuditService::log($request, 'INSERT', 'doctor_leaves', $doctorId);
 
-        return Response::redirect('/settings?tab=leaves&doctor_id=' . $doctorId . '&month=' . substr($date, 0, 7) . '&message=saved');
+        return Response::redirect('/leaves?doctor_id=' . $doctorId . '&month=' . substr($date, 0, 7) . '&message=saved');
     }
 
     public function removeLeave(Request $request, string $id): Response
@@ -227,7 +296,7 @@ final class ClinicSettingsController
         LeaveService::remove($clinicId, (int) $id);
         AuditService::log($request, 'DELETE', 'doctor_leaves', (int) $id);
 
-        return Response::redirect('/settings?tab=leaves&doctor_id=' . $doctorId . '&message=removed');
+        return Response::redirect('/leaves?doctor_id=' . $doctorId . '&message=removed');
     }
 
     public function createApiKey(Request $request): Response
@@ -421,7 +490,7 @@ final class ClinicSettingsController
         }
 
         if (empty($abs) || !is_file((string) $abs)) {
-            return Response::redirect('/settings?tab=subscription&error=' . urlencode('Invoice PDF unavailable'));
+            return Response::redirect('/billing?error=' . urlencode('Invoice PDF unavailable'));
         }
 
         return Response::download((string) $abs, 'eclinicpro-invoice-' . ($invoice['invoice_no'] ?? $id) . '.pdf')
