@@ -35,6 +35,20 @@ if (!function_exists('normalize_in_phone')) {
     }
 }
 
+if (!function_exists('clean_support_phone')) {
+    /**
+     * Clean a SUPPORT / short-code / toll-free number (1860, 1066, 500…,
+     * 1800-xxx-xxxx): keep digits, strip spaces/dashes, but DO NOT add +91 —
+     * these are call-only, not WhatsApp/SMS-able. Returns digits-only or null.
+     * The +91 prefix is the app-wide marker for "WhatsApp-able", so leaving it
+     * off keeps these call-only.
+     */
+    function clean_support_phone(?string $raw): ?string {
+        $digits = preg_replace('/\D/', '', (string) $raw) ?? '';
+        return $digits !== '' ? $digits : null;
+    }
+}
+
 if (!function_exists('extract_doctor_name')) {
     /**
      * Tries to pull a doctor's personal name out of the clinic/listing name.
