@@ -7,6 +7,34 @@
 //   - insert_db.php (lazy fallback for legacy JSON that lacks these fields)
 // =====================================================================
 
+if (!function_exists('normalize_in_phone')) {
+    /**
+     * Normalize a phone string to canonical Indian mobile  +91XXXXXXXXXX
+     * (+91 + 10 digits, no spaces). Returns null if it can't be cleaned to a
+     * valid Indian mobile (prefix 6-9). Mirrors ecp_normalize_phone() + adds
+     * the mobile-prefix check, but is self-contained so the importer needs no
+     * portal includes.
+     */
+    function normalize_in_phone(?string $raw): ?string {
+        $s = trim((string) $raw);
+        if ($s === '') return null;
+        $s = preg_replace('/[\s\-\(\)]/', '', $s) ?? $s;       // strip spaces/dashes/parens
+
+        if ($s !== '' && $s[0] === '+') {
+            $digits = preg_replace('/\D/', '', substr($s, 1)) ?? '';
+        } else {
+            $digits = preg_replace('/\D/', '', $s) ?? '';
+            if (strlen($digits) === 11 && $digits[0] === '0') $digits = substr($digits, 1); // drop leading 0
+            if (strlen($digits) === 10) $digits = '91' . $digits;                            // assume India
+        }
+        // Expect 91 + 10 national digits, mobile prefix 6-9.
+        if (preg_match('/^91([6-9]\d{9})$/', $digits, $m)) {
+            return '+91' . $m[1];
+        }
+        return null;
+    }
+}
+
 if (!function_exists('extract_doctor_name')) {
     /**
      * Tries to pull a doctor's personal name out of the clinic/listing name.

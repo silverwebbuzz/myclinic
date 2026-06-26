@@ -443,6 +443,11 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/lead-settings', [\App\Controllers\LeadSettingsController::class, 'save']);
         $admin->post('/lead-settings/doctor-quota', [\App\Controllers\LeadSettingsController::class, 'saveDoctorQuota']);
 
+        // Outreach worklist (convert non-joined clinics receiving leads)
+        $admin->get('/outreach', [\App\Controllers\OutreachAdminController::class, 'index']);
+        $admin->get('/outreach/export', [\App\Controllers\OutreachAdminController::class, 'exportCsv']);
+        $admin->post('/outreach/status', [\App\Controllers\OutreachAdminController::class, 'saveStatus']);
+
         // Partner / affiliate program management
         $admin->get('/partners', [PartnerAdminController::class, 'index']);
         $admin->post('/partner-settings', [PartnerAdminController::class, 'saveSettings']);
