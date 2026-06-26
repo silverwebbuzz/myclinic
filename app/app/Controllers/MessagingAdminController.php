@@ -146,10 +146,12 @@ final class MessagingAdminController
             return Response::redirect('/admin/messaging?message=test_no_number#connection');
         }
         $result = WhatsAppService::send($to, $tpl, [
-            'patient_name' => 'Test',
-            'doctor_name' => 'eClinicPro',
-            'datetime' => date('d M Y, g:i A'),
-            'clinic_phone' => $to,
+            'patient_name' => 'Riya',
+            'doctor_name' => 'Dr. Sharma',
+            'clinic_name' => 'Sharma Clinic',
+            'appointment_date' => date('D, j M Y'),
+            'appointment_time' => date('g:i A'),
+            'clinic_address' => '12 MG Road, Ahmedabad',
         ]);
         $msg = $result['ok'] ? 'test_sent' : 'test_failed';
         return Response::redirect('/admin/messaging?message=' . $msg . '#connection');

@@ -64,7 +64,9 @@ function ecp_lead_confirm(int $leadId): bool {
 
     // Load the lead with patient + clinic context.
     $stmt = $db->prepare(
-        'SELECT dl.*, dd.name AS clinic_name, dd.phone AS clinic_phone,
+        'SELECT dl.*, dd.name AS clinic_name, dd.doctor_name AS directory_doctor_name,
+                dd.phone AS clinic_phone, dd.address AS clinic_address,
+                dd.area AS clinic_area, dd.city AS clinic_city,
                 pi.id AS identity_id, pi.name AS patient_name, pi.phone AS patient_phone
            FROM directory_leads dl
            JOIN directory_doctors dd ON dd.id = dl.directory_doctor_id
@@ -84,22 +86,60 @@ function ecp_lead_confirm(int $leadId): bool {
 
     // Notify the patient (WhatsApp-first; processor handles SMS fallback).
     if (!empty($lead['patient_phone'])) {
-        $slot = $lead['preferred_date']
-            ? date('d M Y', strtotime((string) $lead['preferred_date']))
-              . ($lead['preferred_time'] ? ', ' . date('g:i A', strtotime('2000-01-01 ' . $lead['preferred_time'])) : '')
-            : 'your requested time';
-
         ecp_enqueue_notification(
             $lead['identity_id'] ? (int) $lead['identity_id'] : null,
             (string) $lead['patient_phone'],
             'patient_confirmed',
-            [
-                'patient_name' => $lead['patient_name'] ?: 'there',
-                'doctor_name'  => $lead['clinic_name'] ?: 'the clinic',
-                'datetime'     => $slot,
-                'clinic_phone' => $lead['clinic_phone'] ?: '',
-            ]
+            ecp_patient_confirmed_payload($lead),
         );
     }
     return true;
+}
+
+/**
+ * Build payload for the patient_confirmed wa_templates row.
+ *
+ * @param array<string, mixed> $lead
+ * @return array<string, string>
+ */
+function ecp_patient_confirmed_payload(array $lead): array
+{
+    $clinicName = trim((string) ($lead['clinic_name'] ?? ''));
+    $doctorName = trim((string) ($lead['directory_doctor_name'] ?? ''));
+    if ($doctorName === '') {
+        $doctorName = $clinicName !== '' ? $clinicName : 'your doctor';
+    }
+
+    $d = $lead['preferred_date'] ?? null;
+    $t = $lead['preferred_time'] ?? null;
+    if (!$d) {
+        $appointmentDate = 'To be confirmed';
+        $appointmentTime = 'To be confirmed';
+    } else {
+        $dateTs = strtotime((string) $d);
+        $appointmentDate = $dateTs ? date('D, j M Y', $dateTs) : (string) $d;
+        if (!$t) {
+            $appointmentTime = 'To be confirmed';
+        } else {
+            $timeTs = strtotime('2000-01-01 ' . $t);
+            $appointmentTime = $timeTs ? date('g:i A', $timeTs) : (string) $t;
+        }
+    }
+
+    $addressParts = array_values(array_filter([
+        trim((string) ($lead['clinic_address'] ?? '')),
+        trim((string) ($lead['clinic_area'] ?? '')),
+        trim((string) ($lead['clinic_city'] ?? '')),
+    ], static fn (string $p) => $p !== ''));
+
+    return [
+        'patient_name' => trim((string) ($lead['patient_name'] ?? '')) ?: 'there',
+        'doctor_name' => $doctorName,
+        'clinic_name' => $clinicName !== '' ? $clinicName : 'the clinic',
+        'appointment_date' => $appointmentDate,
+        'appointment_time' => $appointmentTime,
+        'clinic_address' => $addressParts !== []
+            ? implode(', ', $addressParts)
+            : 'Contact the clinic for directions',
+    ];
 }

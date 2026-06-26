@@ -75,6 +75,11 @@ final class WhatsAppService
             ];
         }
 
+        // Meta has no matching template (admin marked approved locally but not in BM).
+        if (self::isMissingMetaTemplate($data) && ($body['type'] ?? '') === 'template') {
+            return self::sendPlainText($to, $token, $phoneId, $template, $payload);
+        }
+
         return [
             'ok' => false,
             'message' => $data['error']['message'] ?? ('HTTP ' . $code . ': ' . (string) $response),
@@ -110,6 +115,69 @@ final class WhatsAppService
                 'components' => $components,
             ],
         ];
+    }
+
+    /** @param array<string, mixed> $payload */
+    private static function sendPlainText(
+        string $to,
+        string $token,
+        string $phoneId,
+        string $template,
+        array $payload,
+    ): array {
+        $body = [
+            'messaging_product' => 'whatsapp',
+            'to' => $to,
+            'type' => 'text',
+            'text' => ['body' => WaTemplateService::renderPlain($template, $payload)],
+        ];
+
+        $ch = curl_init("https://graph.facebook.com/v18.0/{$phoneId}/messages");
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_TIMEOUT => 15,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $token,
+                'Content-Type: application/json',
+            ],
+            CURLOPT_POSTFIELDS => json_encode($body),
+        ]);
+        $response = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $data = json_decode((string) $response, true);
+
+        if ($code >= 200 && $code < 300) {
+            return [
+                'ok' => true,
+                'message' => 'sent (plain-text fallback; sync template in Meta)',
+                'wamid' => $data['messages'][0]['id'] ?? null,
+                'configured' => true,
+            ];
+        }
+
+        return [
+            'ok' => false,
+            'message' => $data['error']['message'] ?? ('HTTP ' . $code . ': ' . (string) $response),
+            'wamid' => null,
+            'configured' => true,
+        ];
+    }
+
+    /** @param array<string, mixed>|null $data */
+    private static function isMissingMetaTemplate(?array $data): bool
+    {
+        $code = (int) ($data['error']['code'] ?? 0);
+        if ($code === 132001 || $code === 132000) {
+            return true;
+        }
+        $msg = strtolower((string) ($data['error']['message'] ?? ''));
+
+        return str_contains($msg, 'does not exist')
+            || str_contains($msg, 'template name')
+            || str_contains($msg, 'not found');
     }
 
     private static function logDev(string $to, string $template, string $body): void

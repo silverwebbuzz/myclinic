@@ -34,7 +34,9 @@ final class LeadFlowService
 
         $pdo = Database::connection();
         $stmt = $pdo->prepare(
-            'SELECT dl.*, dd.name AS doctor_name, dd.phone AS doctor_phone,
+            'SELECT dl.*, dd.name AS clinic_name, dd.doctor_name AS directory_doctor_name,
+                    dd.phone AS doctor_phone, dd.address AS clinic_address,
+                    dd.area AS clinic_area, dd.city AS clinic_city,
                     pi.name AS patient_name, pi.phone AS patient_phone
                FROM directory_leads dl
           LEFT JOIN directory_doctors dd ON dd.id = dl.directory_doctor_id
@@ -64,12 +66,7 @@ final class LeadFlowService
                 (int) ($lead['patient_identity_id'] ?? 0) ?: null,
                 (string) $lead['patient_phone'],
                 'patient_confirmed',
-                [
-                    'patient_name' => $lead['patient_name'] ?? 'there',
-                    'doctor_name' => $lead['doctor_name'] ?? 'the clinic',
-                    'datetime' => self::fmtSlot($lead),
-                    'clinic_phone' => $lead['doctor_phone'] ?? '',
-                ]
+                self::patientConfirmedPayload($lead),
             );
         }
         return true;
@@ -190,14 +187,51 @@ final class LeadFlowService
         ]);
     }
 
-    private static function fmtSlot(array $lead): string
+    /** @param array<string, mixed> $lead */
+    public static function patientConfirmedPayload(array $lead): array
+    {
+        $clinicName = trim((string) ($lead['clinic_name'] ?? ''));
+        $doctorName = trim((string) ($lead['directory_doctor_name'] ?? ''));
+        if ($doctorName === '') {
+            $doctorName = $clinicName !== '' ? $clinicName : 'your doctor';
+        }
+
+        [$appointmentDate, $appointmentTime] = self::fmtAppointmentParts($lead);
+
+        $addressParts = array_filter([
+            trim((string) ($lead['clinic_address'] ?? '')),
+            trim((string) ($lead['clinic_area'] ?? '')),
+            trim((string) ($lead['clinic_city'] ?? '')),
+        ], static fn (string $p) => $p !== '');
+
+        return [
+            'patient_name' => trim((string) ($lead['patient_name'] ?? '')) ?: 'there',
+            'doctor_name' => $doctorName,
+            'clinic_name' => $clinicName !== '' ? $clinicName : 'the clinic',
+            'appointment_date' => $appointmentDate,
+            'appointment_time' => $appointmentTime,
+            'clinic_address' => $addressParts !== []
+                ? implode(', ', $addressParts)
+                : 'Contact the clinic for directions',
+        ];
+    }
+
+    /** @param array<string, mixed> $lead @return array{0: string, 1: string} */
+    private static function fmtAppointmentParts(array $lead): array
     {
         $d = $lead['preferred_date'] ?? null;
         $t = $lead['preferred_time'] ?? null;
         if (!$d) {
-            return 'your requested time';
+            return ['To be confirmed', 'To be confirmed'];
         }
-        $ts = strtotime($d . ' ' . ($t ?: '09:00'));
-        return $ts ? date('d M Y, g:i A', $ts) : (string) $d;
+        $dateTs = strtotime((string) $d);
+        $appointmentDate = $dateTs ? date('D, j M Y', $dateTs) : (string) $d;
+        if (!$t) {
+            return [$appointmentDate, 'To be confirmed'];
+        }
+        $timeTs = strtotime('2000-01-01 ' . $t);
+        $appointmentTime = $timeTs ? date('g:i A', $timeTs) : (string) $t;
+
+        return [$appointmentDate, $appointmentTime];
     }
 }
