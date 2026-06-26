@@ -163,13 +163,33 @@ function ecp_lead_create(int $doctorId, ?array $patientIdentity, string $type, a
             }
 
             // 2) Doctor — "new lead" with the L/{token} confirm link.
+            //    Non-joined (unclaimed) doctors get a capped number of WhatsApp
+            //    alerts per calendar month (default 10, per-doctor override via
+            //    directory_sms_quotas.per_month). Once capped, the lead is still
+            //    saved + the patient still gets their ack; only the doctor alert
+            //    is suppressed and the lead is flagged for admin follow-up.
             if (!empty($clinicPhone) && empty($doctor['is_claimed'])) {
-                ecp_enqueue_notification(null, (string) $clinicPhone, 'doctor_new_lead', [
-                    'patient_name' => $patientName,
-                    'datetime'     => $slot,
-                    'reason'       => $extra['reason'] ?? 'consultation',
-                    'link'         => $confirmLink,
-                ]);
+                $cap  = ecp_directory_doctor_alert_cap($doctorId);
+                $used = ecp_directory_doctor_alerts_this_month($doctorId);
+
+                if ($used < $cap) {
+                    ecp_enqueue_notification(null, (string) $clinicPhone, 'doctor_new_lead', [
+                        'patient_name' => $patientName,
+                        'datetime'     => $slot,
+                        'reason'       => $extra['reason'] ?? 'consultation',
+                        'link'         => $confirmLink,
+                    ]);
+                    $db->prepare('UPDATE directory_leads SET doctor_alert_sent_at = NOW() WHERE id = :id')
+                       ->execute(['id' => $leadId]);
+                } else {
+                    // Cap reached — suppress doctor alert, flag for admin.
+                    $db->prepare('UPDATE directory_leads SET doctor_alert_capped = 1 WHERE id = :id')
+                       ->execute(['id' => $leadId]);
+                    error_log(sprintf(
+                        '[directory lead] doctor #%d WhatsApp cap reached (%d/%d) — lead #%d alert suppressed',
+                        $doctorId, $used, $cap, $leadId
+                    ));
+                }
             }
         } catch (\Throwable $e) {
             // notify bridge unavailable / unmigrated — fall through to legacy SMS.
@@ -205,6 +225,64 @@ function ecp_messaging_enabled(): bool {
         return $cached = ($v === '1');
     } catch (\Throwable $e) {
         return $cached = false;  // table missing → use legacy SMS path
+    }
+}
+
+// ---------------------------------------------------------------------
+// Doctor-facing WhatsApp alert cap (non-joined directory doctors)
+// ---------------------------------------------------------------------
+
+/**
+ * Monthly cap on doctor-facing WhatsApp alerts for a non-joined directory
+ * doctor. Per-doctor override lives in directory_sms_quotas.per_month;
+ * otherwise the platform default (platform_settings.directory_doctor_wa_cap,
+ * default 10) applies.
+ */
+function ecp_directory_doctor_alert_cap(int $doctorId): int {
+    $db = ecp_db();
+    if (!$db) return 10;
+
+    try {
+        $stmt = $db->prepare('SELECT per_month FROM directory_sms_quotas WHERE directory_doctor_id = :id');
+        $stmt->execute(['id' => $doctorId]);
+        $perMonth = $stmt->fetchColumn();
+        if ($perMonth !== false && $perMonth !== null) {
+            return (int) $perMonth;
+        }
+    } catch (\Throwable $e) {
+        // quotas table missing — fall through to platform default
+    }
+
+    try {
+        $v = $db->query("SELECT setting_value FROM platform_settings WHERE setting_key = 'directory_doctor_wa_cap' LIMIT 1")
+                ->fetchColumn();
+        if ($v !== false && $v !== null && $v !== '') {
+            return (int) $v;
+        }
+    } catch (\Throwable $e) {
+        // platform_settings missing — use hard default
+    }
+    return 10;
+}
+
+/**
+ * Count doctor-facing WhatsApp alerts already enqueued for this doctor in the
+ * current calendar month (rows where doctor_alert_sent_at falls in this month).
+ */
+function ecp_directory_doctor_alerts_this_month(int $doctorId): int {
+    $db = ecp_db();
+    if (!$db) return 0;
+    try {
+        $stmt = $db->prepare(
+            "SELECT COUNT(*) FROM directory_leads
+              WHERE directory_doctor_id = :id
+                AND doctor_alert_sent_at IS NOT NULL
+                AND doctor_alert_sent_at >= DATE_FORMAT(NOW(), '%Y-%m-01')"
+        );
+        $stmt->execute(['id' => $doctorId]);
+        return (int) $stmt->fetchColumn();
+    } catch (\Throwable $e) {
+        return 0;
     }
 }
 

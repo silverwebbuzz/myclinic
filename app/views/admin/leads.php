@@ -20,7 +20,7 @@
         </div>
 
         <!-- KPI tiles -->
-        <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
             <div class="ui-card p-4">
                 <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">Bookings (30d)</div>
                 <div class="mt-1 text-2xl font-bold text-slate-900"><?= (int) ($kpis['book_submitted_30d'] ?? 0) ?></div>
@@ -41,7 +41,108 @@
                 <div class="mt-1 text-2xl font-bold text-emerald-600"><?= htmlspecialchars((string) ($kpis['doctor_view_rate'] ?? 0)) ?>%</div>
                 <div class="text-xs text-slate-500"><?= (int) ($kpis['doctor_views_total'] ?? 0) ?> doctors opened SMS</div>
             </div>
+            <div class="ui-card p-4">
+                <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">Capped this month</div>
+                <div class="mt-1 text-2xl font-bold <?= (int) ($kpis['doctor_alert_capped_mtd'] ?? 0) > 0 ? 'text-rose-600' : 'text-slate-900' ?>"><?= (int) ($kpis['doctor_alert_capped_mtd'] ?? 0) ?></div>
+                <div class="text-xs text-slate-500">Doctor alerts suppressed (cap hit)</div>
+            </div>
         </div>
+
+        <!-- Capped leads — needs admin follow-up -->
+        <?php if (!empty($cappedLeads)): ?>
+        <section class="mt-6 ui-card border border-rose-200">
+            <div class="border-b border-rose-100 bg-rose-50 p-4">
+                <h2 class="ui-section-title text-rose-900">Needs follow-up — doctor alert capped</h2>
+                <p class="mt-0.5 text-xs text-rose-700">These non-joined doctors hit their monthly WhatsApp cap, so the doctor alert was suppressed. The patient was acknowledged, but someone should call the patient or reach the doctor manually.</p>
+            </div>
+            <div class="divide-y divide-rose-50">
+                <?php foreach ($cappedLeads as $l): ?>
+                <div class="flex flex-wrap items-center gap-3 p-4 hover:bg-rose-50/40">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <strong class="text-slate-900"><?= htmlspecialchars((string) ($l['patient_name'] ?? 'Patient')) ?></strong>
+                            <?php if (!empty($l['patient_phone'])): ?>
+                            <a href="tel:<?= htmlspecialchars((string) $l['patient_phone']) ?>" class="text-emerald-700 hover:underline"><?= htmlspecialchars((string) $l['patient_phone']) ?></a>
+                            <?php endif; ?>
+                            <span class="text-xs text-slate-400">→</span>
+                            <span class="text-slate-700"><?= htmlspecialchars((string) ($l['doctor_name'] ?: $l['clinic_name'])) ?></span>
+                            <?php if (!empty($l['clinic_phone'])): ?>
+                            <a href="tel:<?= htmlspecialchars((string) $l['clinic_phone']) ?>" class="text-xs text-slate-500 hover:underline">(doctor: <?= htmlspecialchars((string) $l['clinic_phone']) ?>)</a>
+                            <?php endif; ?>
+                        </div>
+                        <div class="mt-0.5 text-xs text-slate-500">
+                            <?= htmlspecialchars((string) ($l['clinic_city'] ?? '')) ?>
+                            <?php if ($l['preferred_date']): ?>
+                                · <?= htmlspecialchars(date('M j', strtotime((string) $l['preferred_date']))) ?>
+                                <?= htmlspecialchars($l['preferred_time'] ? '@ ' . date('g:i A', strtotime('2000-01-01 ' . $l['preferred_time'])) : '') ?>
+                            <?php endif; ?>
+                            <?php if (!empty($l['reason'])): ?>
+                                · <?= htmlspecialchars(mb_substr((string) $l['reason'], 0, 60)) ?>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <div class="text-right text-xs">
+                        <span class="rounded-full bg-rose-100 px-2 py-0.5 font-semibold text-rose-800">Doctor alert capped</span>
+                        <div class="mt-1 text-slate-400"><?= htmlspecialchars(date('M j H:i', strtotime((string) $l['created_at']))) ?></div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </section>
+        <?php endif; ?>
+
+        <!-- Per-doctor WhatsApp alert usage (this month) -->
+        <?php if (!empty($alertUsage)): ?>
+        <section class="mt-6 ui-card">
+            <div class="border-b p-4">
+                <h2 class="ui-section-title">WhatsApp alert usage this month</h2>
+                <p class="mt-0.5 text-xs text-slate-500">Non-joined doctors are capped at the platform default (10/month) unless a per-doctor override is set in SMS settings. Set <code>per_month</code> in <code>directory_sms_quotas</code> to raise/lower a specific doctor.</p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Doctor / Clinic</th>
+                            <th class="px-4 py-3 text-left">City</th>
+                            <th class="px-4 py-3 text-right">Alerts sent</th>
+                            <th class="px-4 py-3 text-right">Cap</th>
+                            <th class="px-4 py-3 text-right">Capped (suppressed)</th>
+                            <th class="px-4 py-3 text-left">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <?php foreach ($alertUsage as $u):
+                            $cap  = ($u['cap_override'] !== null) ? (int) $u['cap_override'] : 10;
+                            $sent = (int) $u['alerts_sent'];
+                            $atCap = $sent >= $cap;
+                        ?>
+                        <tr class="hover:bg-slate-50">
+                            <td class="px-4 py-3">
+                                <div class="font-semibold text-slate-900"><?= htmlspecialchars((string) ($u['doctor_name'] ?: $u['name'])) ?></div>
+                                <?php if (!empty($u['phone'])): ?>
+                                <a href="tel:<?= htmlspecialchars((string) $u['phone']) ?>" class="text-xs text-emerald-700 hover:underline"><?= htmlspecialchars((string) $u['phone']) ?></a>
+                                <?php endif; ?>
+                            </td>
+                            <td class="px-4 py-3 text-slate-600"><?= htmlspecialchars((string) ($u['city'] ?? '—')) ?></td>
+                            <td class="px-4 py-3 text-right font-bold <?= $atCap ? 'text-rose-600' : 'text-slate-900' ?>"><?= $sent ?></td>
+                            <td class="px-4 py-3 text-right text-slate-600"><?= $cap ?><?= $u['cap_override'] !== null ? ' <span class="text-[10px] text-sky-600">(override)</span>' : '' ?></td>
+                            <td class="px-4 py-3 text-right text-slate-600"><?= (int) $u['alerts_capped'] ?></td>
+                            <td class="px-4 py-3">
+                                <?php if ($atCap): ?>
+                                <span class="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-800">At cap</span>
+                                <?php elseif ($sent >= $cap - 2): ?>
+                                <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">Near cap</span>
+                                <?php else: ?>
+                                <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">OK</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <?php endif; ?>
 
         <!-- SMS dispatch breakdown -->
         <section class="mt-6 ui-card p-4">

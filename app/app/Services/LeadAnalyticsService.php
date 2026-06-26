@@ -28,7 +28,8 @@ final class LeadAnalyticsService
                 SUM(type = 'book_submitted' AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS book_submitted_30d,
                 SUM(sms_status = 'sent') AS sms_sent_total,
                 SUM(sms_status = 'sent' AND sms_sent_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) AS sms_sent_30d,
-                SUM(doctor_viewed_at IS NOT NULL) AS doctor_views_total
+                SUM(doctor_viewed_at IS NOT NULL) AS doctor_views_total,
+                SUM(doctor_alert_capped = 1 AND created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')) AS doctor_alert_capped_mtd
              FROM directory_leads"
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
@@ -98,6 +99,56 @@ final class LeadAnalyticsService
         );
         $stmt->bindValue(':days', $days, PDO::PARAM_INT);
         $stmt->bindValue(':lim',  $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Leads whose doctor-facing WhatsApp alert was suppressed because the
+     * non-joined doctor hit their monthly cap. These need manual admin
+     * follow-up (call the patient / forward to the doctor by other means).
+     */
+    public static function cappedLeads(int $limit = 50): array
+    {
+        $db = Database::connection();
+        $stmt = $db->prepare(
+            "SELECT dl.*, dd.name AS clinic_name, dd.doctor_name, dd.city AS clinic_city,
+                    dd.area AS clinic_area, dd.phone AS clinic_phone, dd.is_claimed,
+                    pi.name AS patient_name, pi.phone AS patient_phone
+             FROM directory_leads dl
+             JOIN directory_doctors dd ON dd.id = dl.directory_doctor_id
+             LEFT JOIN patient_identities pi ON pi.id = dl.patient_identity_id
+             WHERE dl.doctor_alert_capped = 1
+             ORDER BY dl.created_at DESC
+             LIMIT :lim"
+        );
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Per-doctor doctor-alert usage this calendar month, for the doctors who
+     * have sent at least one alert — lets admin see who is near/at the cap.
+     */
+    public static function doctorAlertUsageThisMonth(int $limit = 50): array
+    {
+        $db = Database::connection();
+        $stmt = $db->prepare(
+            "SELECT dd.id, dd.name, dd.doctor_name, dd.city, dd.phone, dd.is_claimed,
+                    COUNT(dl.id) AS alerts_sent,
+                    SUM(dl.doctor_alert_capped = 1) AS alerts_capped,
+                    q.per_month AS cap_override
+             FROM directory_leads dl
+             JOIN directory_doctors dd ON dd.id = dl.directory_doctor_id
+        LEFT JOIN directory_sms_quotas q ON q.directory_doctor_id = dd.id
+             WHERE dl.doctor_alert_sent_at >= DATE_FORMAT(NOW(), '%Y-%m-01')
+                OR (dl.doctor_alert_capped = 1 AND dl.created_at >= DATE_FORMAT(NOW(), '%Y-%m-01'))
+             GROUP BY dd.id
+             ORDER BY alerts_sent DESC, alerts_capped DESC
+             LIMIT :lim"
+        );
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

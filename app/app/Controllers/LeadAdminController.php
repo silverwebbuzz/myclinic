@@ -25,6 +25,8 @@ final class LeadAdminController
             'csrf'         => CsrfService::token(),
             'kpis'         => LeadAnalyticsService::kpis(),
             'recent'       => LeadAnalyticsService::recent(50),
+            'cappedLeads'  => LeadAnalyticsService::cappedLeads(50),
+            'alertUsage'   => LeadAnalyticsService::doctorAlertUsageThisMonth(50),
             'topDoctors'   => LeadAnalyticsService::topDoctorsBySmsLeads(25, 30),
             'smsBreakdown' => LeadAnalyticsService::smsStatusBreakdown(30),
             'topCities'    => LeadAnalyticsService::topCitiesUnclaimed(10, 30),
