@@ -44,7 +44,7 @@ final class ClinicSettingsController
             return Response::redirect('/leaves' . ($qs ? '?' . http_build_query($qs) : ''));
         }
         if ($tab === 'subscription') {
-            return Response::redirect('/billing');
+            return Response::redirect('/subscription');
         }
         if (!in_array($tab, $tabs, true)) {
             $tab = 'general';
@@ -490,7 +490,7 @@ final class ClinicSettingsController
         }
 
         if (empty($abs) || !is_file((string) $abs)) {
-            return Response::redirect('/billing?error=' . urlencode('Invoice PDF unavailable'));
+            return Response::redirect('/subscription?error=' . urlencode('Invoice PDF unavailable'));
         }
 
         return Response::download((string) $abs, 'eclinicpro-invoice-' . ($invoice['invoice_no'] ?? $id) . '.pdf')

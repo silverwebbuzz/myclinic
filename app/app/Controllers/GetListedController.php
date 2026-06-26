@@ -38,6 +38,7 @@ final class GetListedController
             'latest'        => DoctorClaimService::latestForTenantPhone((string) ($clinic['phone'] ?? '')),
             'listingStatus' => DoctorClaimService::listingStatus($clinic),
             'listing'       => ClinicSettingsService::publicListing($clinicId),
+            'services'      => ClinicSettingsService::servicesForClinic($clinicId),
             'specialties'   => self::specialtyCatalog(),
             'csrf'          => CsrfService::token(),
             'message'       => $request->query['message'] ?? null,

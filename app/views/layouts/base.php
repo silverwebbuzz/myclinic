@@ -213,9 +213,9 @@
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/leaves') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
                     <?= ui_icon('appointments', 18, 'shrink-0') ?><span>Leaves</span>
                 </a>
-                <a href="/billing"
-                   class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/billing') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
-                    <?= ui_icon('billing', 18, 'shrink-0') ?><span>Billing</span>
+                <a href="/subscription"
+                   class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/subscription') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
+                    <?= ui_icon('billing', 18, 'shrink-0') ?><span>Subscription</span>
                 </a>
                 <?php endif; ?>
                 <a href="/help"
