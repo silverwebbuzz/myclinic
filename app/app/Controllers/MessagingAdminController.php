@@ -47,11 +47,116 @@ final class MessagingAdminController
             'csrf' => CsrfService::token(),
             'settings' => $settings,
             'templates' => $templates,
+            'templateMeta' => self::templateMeta(),
+            'templateGroups' => self::templateGroups(),
             'rules' => $rules,
             'log' => $log,
             'webhookUrl' => $webhookUrl,
             'message' => $request->query['message'] ?? null,
         ]));
+    }
+
+    /**
+     * Plain-English documentation for each template_key, shown in the admin
+     * UI so a non-technical admin knows what each message is, when it fires,
+     * who receives it, and which quota/cap governs it.
+     *
+     * @return array<string,array{title:string,trigger:string,to:string,vars:array<string,string>,cap:string}>
+     */
+    public static function templateMeta(): array
+    {
+        return [
+            'doctor_new_lead' => [
+                'title' => 'New lead alert to a non-joined doctor',
+                'trigger' => 'A patient books a doctor who is listed in the public directory but has NOT joined eClinicPro.',
+                'to' => 'The (non-joined) doctor',
+                'vars' => ['{{1}}' => 'Patient name', '{{2}}' => 'Date & time', '{{3}}' => 'Reason for visit', '{{4}}' => 'Confirm link (L/{token} page)'],
+                'cap' => 'Counts against the per-doctor monthly cap (default 10/mo — set in Connection → "Non-joined doctor cap"). After the cap, this alert is suppressed but the patient still gets their acknowledgement.',
+            ],
+            'patient_request_sent' => [
+                'title' => 'Booking acknowledgement to patient',
+                'trigger' => 'Immediately after a patient submits a booking to a non-joined doctor.',
+                'to' => 'The patient',
+                'vars' => ['{{1}}' => 'Patient name', '{{2}}' => 'Doctor / clinic name', '{{3}}' => 'Date & time', '{{4}}' => 'Clinic phone (so they can call directly)'],
+                'cap' => 'Always sent — NOT capped (patient-facing).',
+            ],
+            'patient_confirmed' => [
+                'title' => 'Appointment confirmed → patient',
+                'trigger' => 'The non-joined doctor taps "Confirm appointment" on the L/{token} page.',
+                'to' => 'The patient',
+                'vars' => ['{{1}}' => 'Patient name', '{{2}}' => 'Doctor / clinic name', '{{3}}' => 'Date & time', '{{4}}' => 'Clinic phone'],
+                'cap' => 'Always sent — NOT capped (patient-facing).',
+            ],
+            'patient_soft_nudge' => [
+                'title' => 'Still-awaiting-confirmation nudge → patient',
+                'trigger' => 'Cron, ~2h after booking, if the doctor has not confirmed yet (and the slot is >3h away).',
+                'to' => 'The patient',
+                'vars' => ['{{1}}' => 'Patient name', '{{2}}' => 'Doctor / clinic name', '{{3}}' => 'Clinic phone'],
+                'cap' => 'Always sent — NOT capped (patient-facing). Once per lead.',
+            ],
+            'appointment_reminder' => [
+                'title' => 'Appointment reminder → patient',
+                'trigger' => 'Cron, ~2h before the booked slot. Used for BOTH directory leads and joined-clinic appointments.',
+                'to' => 'The patient',
+                'vars' => ['{{1}}' => 'Patient name', '{{2}}' => 'Doctor / clinic name', '{{3}}' => 'Time', '{{4}}' => 'Clinic phone'],
+                'cap' => 'For joined clinics: governed by the clinic quota + the appointment_reminder rule. Directory leads: not capped.',
+            ],
+            'prescription_ready' => [
+                'title' => 'Prescription ready → patient',
+                'trigger' => 'A joined clinic finalises/shares a prescription with the patient.',
+                'to' => 'The patient (joined-clinic chart)',
+                'vars' => ['{{1}}' => 'Patient name', '{{2}}' => 'Doctor name', '{{3}}' => 'Link to the prescription'],
+                'cap' => 'Counts against the clinic\'s monthly WhatsApp/SMS quota (Connection → quota) and the matching rule.',
+            ],
+            'rx_delivery' => [
+                'title' => 'Prescription delivery link → patient',
+                'trigger' => 'Prescription is made available for download/delivery from a joined clinic.',
+                'to' => 'The patient (joined-clinic chart)',
+                'vars' => ['{{1}}' => 'Patient name', '{{2}}' => 'Clinic name', '{{3}}' => 'Prescription URL'],
+                'cap' => 'Counts against the clinic\'s monthly quota + the matching rule.',
+            ],
+            'diet_plan_shared' => [
+                'title' => 'Diet plan shared → patient',
+                'trigger' => 'A joined clinic shares a diet plan with the patient.',
+                'to' => 'The patient (joined-clinic chart)',
+                'vars' => ['{{1}}' => 'Patient name', '{{2}}' => 'Doctor name', '{{3}}' => 'Link to the diet plan'],
+                'cap' => 'Counts against the clinic\'s monthly quota + the matching rule.',
+            ],
+            'follow_up_reminder' => [
+                'title' => 'Follow-up reminder → patient',
+                'trigger' => 'A joined clinic schedules a follow-up reminder for the patient.',
+                'to' => 'The patient (joined-clinic chart)',
+                'vars' => ['{{1}}' => 'Patient name', '{{2}}' => 'Doctor name', '{{3}}' => 'Context / note', '{{4}}' => 'Re-book link'],
+                'cap' => 'Counts against the clinic\'s monthly quota + the matching rule.',
+            ],
+        ];
+    }
+
+    /**
+     * Ordered display groups for the Templates section. Each maps a heading +
+     * description to the template_keys it contains.
+     *
+     * @return list<array{title:string,desc:string,keys:list<string>}>
+     */
+    public static function templateGroups(): array
+    {
+        return [
+            [
+                'title' => 'Directory — non-joined doctor booking',
+                'desc' => 'The public "find a doctor" funnel: a patient books a doctor who is listed but has not signed up. These are the messages you asked about.',
+                'keys' => ['patient_request_sent', 'doctor_new_lead', 'patient_confirmed', 'patient_soft_nudge'],
+            ],
+            [
+                'title' => 'Appointments & reminders',
+                'desc' => 'Reminders sent ahead of a booked slot (directory leads and joined clinics).',
+                'keys' => ['appointment_reminder'],
+            ],
+            [
+                'title' => 'Joined-clinic patient care',
+                'desc' => 'Messages a paying/joined clinic sends to its own patients. These consume the clinic\'s monthly quota.',
+                'keys' => ['prescription_ready', 'rx_delivery', 'diet_plan_shared', 'follow_up_reminder'],
+            ],
+        ];
     }
 
     /** POST /admin/messaging/connection — save creds + toggles. */
@@ -65,6 +170,7 @@ final class MessagingAdminController
             'wa_webhook_verify_token', 'wa_app_secret', 'sms_provider', 'sms_auth_key',
             'sms_sender_id', 'quota_whatsapp_base', 'quota_sms_base',
             'messaging_quiet_start', 'messaging_quiet_end', 'messaging_global_monthly_cap',
+            'directory_doctor_wa_cap',
         ];
         foreach ($keys as $k) {
             if (array_key_exists($k, $request->post)) {

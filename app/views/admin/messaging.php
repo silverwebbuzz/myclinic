@@ -82,6 +82,10 @@ $enabled = ($settings['messaging_enabled']['setting_value'] ?? '0') === '1';
                         <input type="number" name="quota_sms_base" value="<?= htmlspecialchars($val($settings, 'quota_sms_base', false)) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm"></label>
                     <label class="block text-xs"><span class="text-slate-600">Global cap/mo (0=off)</span>
                         <input type="number" name="messaging_global_monthly_cap" value="<?= htmlspecialchars($val($settings, 'messaging_global_monthly_cap', false)) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm"></label>
+                    <label class="block text-xs sm:col-span-3 rounded-lg bg-amber-50 border border-amber-200 p-2">
+                        <span class="font-semibold text-amber-900">Non-joined doctor cap / month</span>
+                        <span class="block text-[11px] text-amber-700 mt-0.5">Max WhatsApp <strong>lead alerts</strong> (the <code>doctor_new_lead</code> message) a directory doctor who has NOT joined eClinicPro receives per month. Patient messages are never capped. Per-doctor overrides live in <code>directory_sms_quotas.per_month</code>.</span>
+                        <input type="number" min="0" name="directory_doctor_wa_cap" value="<?= htmlspecialchars($val($settings, 'directory_doctor_wa_cap', false) ?: '10') ?>" class="mt-1 w-32 rounded border px-2 py-1.5 text-sm"></label>
                     <label class="block text-xs"><span class="text-slate-600">Quiet start (hr)</span>
                         <input type="number" name="messaging_quiet_start" value="<?= htmlspecialchars($val($settings, 'messaging_quiet_start', false)) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm"></label>
                     <label class="block text-xs"><span class="text-slate-600">Quiet end (hr)</span>
@@ -106,19 +110,49 @@ $enabled = ($settings['messaging_enabled']['setting_value'] ?? '0') === '1';
 
         <!-- ============ TEMPLATES ============ -->
         <section id="templates" class="rounded-xl border bg-white p-5 scroll-mt-4">
-            <h2 class="text-sm font-semibold">Templates (<?= count($templates) ?>)</h2>
-            <p class="mt-1 text-xs text-slate-500">Approve here AFTER Meta approves the matching template name. Until approved, the system sends plain text / SMS fallback.</p>
+            <h2 class="text-sm font-semibold">Message templates</h2>
+            <p class="mt-1 text-xs text-slate-500">
+                Each card is one message the system sends. The blue box explains <strong>when it fires</strong>, <strong>who receives it</strong>, and <strong>which cap applies</strong>.
+                Edit the text below it. <code>{{1}} {{2}}</code> are auto-filled placeholders — see the legend on each card.
+                Set status to <strong>approved</strong> only AFTER Meta approves the matching template name; until then the system sends the SMS-fallback text.
+            </p>
+
             <?php if (empty($templates)): ?>
                 <p class="mt-3 text-sm text-slate-500">No templates — run the messaging migration.</p>
             <?php else: ?>
-            <div class="mt-3 space-y-3">
-                <?php foreach ($templates as $t): ?>
+            <?php
+            // Index templates by key, then render group-by-group so unknown/new
+            // keys still appear in a trailing "Other" group.
+            $byKey = [];
+            foreach ($templates as $t) { $byKey[$t['template_key']] = $t; }
+            $rendered = [];
+
+            $renderCard = function (array $t, array $meta) use ($csrf) {
+                $m = $meta[$t['template_key']] ?? null;
+                ?>
                 <form method="post" action="/admin/messaging/template/<?= (int) $t['id'] ?>" class="rounded-lg border p-3">
                     <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
-                    <div class="flex items-center justify-between">
-                        <code class="text-xs font-semibold"><?= htmlspecialchars($t['template_key']) ?></code>
-                        <span class="rounded px-2 py-0.5 text-[10px] font-semibold <?= $t['status'] === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' ?>"><?= htmlspecialchars($t['status']) ?></span>
+                    <div class="flex items-center justify-between gap-2">
+                        <div>
+                            <div class="text-sm font-semibold text-slate-900"><?= htmlspecialchars($m['title'] ?? $t['template_key']) ?></div>
+                            <code class="text-[11px] text-slate-400"><?= htmlspecialchars($t['template_key']) ?></code>
+                        </div>
+                        <span class="shrink-0 rounded px-2 py-0.5 text-[10px] font-semibold <?= $t['status'] === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' ?>"><?= htmlspecialchars($t['status']) ?></span>
                     </div>
+
+                    <?php if ($m): ?>
+                    <div class="mt-2 rounded-md bg-sky-50 border border-sky-100 px-3 py-2 text-[11px] leading-relaxed text-slate-700">
+                        <div><span class="font-semibold text-sky-900">When:</span> <?= htmlspecialchars($m['trigger']) ?></div>
+                        <div><span class="font-semibold text-sky-900">Sent to:</span> <?= htmlspecialchars($m['to']) ?></div>
+                        <div><span class="font-semibold text-sky-900">Cap:</span> <?= htmlspecialchars($m['cap']) ?></div>
+                        <div class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                            <?php foreach ($m['vars'] as $ph => $desc): ?>
+                            <span><code class="rounded bg-white px-1 text-sky-700"><?= htmlspecialchars($ph) ?></code> = <?= htmlspecialchars($desc) ?></span>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
                     <div class="mt-2 grid gap-2 sm:grid-cols-4 text-xs">
                         <input type="text" name="meta_name" value="<?= htmlspecialchars($t['meta_name']) ?>" placeholder="Meta name" class="rounded border px-2 py-1">
                         <input type="text" name="language" value="<?= htmlspecialchars($t['language']) ?>" class="rounded border px-2 py-1">
@@ -133,15 +167,45 @@ $enabled = ($settings['messaging_enabled']['setting_value'] ?? '0') === '1';
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <textarea name="body_text" rows="2" class="mt-2 w-full rounded border px-2 py-1 text-xs" placeholder="Body with {{1}} {{2}}"><?= htmlspecialchars($t['body_text']) ?></textarea>
-                    <textarea name="sms_fallback_text" rows="1" class="mt-1 w-full rounded border px-2 py-1 text-xs" placeholder="SMS fallback text"><?= htmlspecialchars((string) $t['sms_fallback_text']) ?></textarea>
+                    <label class="mt-2 block text-[11px] font-medium text-slate-500">WhatsApp message
+                        <textarea name="body_text" rows="2" class="mt-1 w-full rounded border px-2 py-1 text-xs" placeholder="Body with {{1}} {{2}}"><?= htmlspecialchars($t['body_text']) ?></textarea>
+                    </label>
+                    <label class="mt-1 block text-[11px] font-medium text-slate-500">SMS fallback (sent if WhatsApp isn't approved/available)
+                        <textarea name="sms_fallback_text" rows="1" class="mt-1 w-full rounded border px-2 py-1 text-xs" placeholder="SMS fallback text"><?= htmlspecialchars((string) $t['sms_fallback_text']) ?></textarea>
+                    </label>
                     <div class="mt-2 flex items-center justify-between">
                         <label class="text-xs"><input class="ui-checkbox" type="checkbox" name="is_active" value="1" <?= $t['is_active'] ? 'checked' : '' ?>> active</label>
                         <button type="submit" class="rounded bg-slate-800 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-900">Save</button>
                     </div>
                 </form>
-                <?php endforeach; ?>
-            </div>
+                <?php
+            };
+
+            foreach ($templateGroups as $group): ?>
+                <div class="mt-5">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700"><?= htmlspecialchars($group['title']) ?></h3>
+                    <p class="mb-2 text-[11px] text-slate-500"><?= htmlspecialchars($group['desc']) ?></p>
+                    <div class="space-y-3">
+                        <?php foreach ($group['keys'] as $key):
+                            if (!isset($byKey[$key])) continue;
+                            $rendered[$key] = true;
+                            $renderCard($byKey[$key], $templateMeta);
+                        endforeach; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+
+            <?php
+            $leftovers = array_filter($templates, static fn ($t) => empty($rendered[$t['template_key']]));
+            if (!empty($leftovers)): ?>
+                <div class="mt-5">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Other</h3>
+                    <p class="mb-2 text-[11px] text-slate-500">Templates without a documented trigger yet.</p>
+                    <div class="space-y-3">
+                        <?php foreach ($leftovers as $t) { $renderCard($t, $templateMeta); } ?>
+                    </div>
+                </div>
+            <?php endif; ?>
             <?php endif; ?>
         </section>
 
