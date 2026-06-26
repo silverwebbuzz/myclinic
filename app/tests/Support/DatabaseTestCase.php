@@ -24,7 +24,7 @@ abstract class DatabaseTestCase extends TestCase
     {
         $slug = 'test-' . bin2hex(random_bytes(4)) . $suffix;
         $email = $slug . '@test.manageclinic.local';
-        $result = AuthService::registerClinic('Test Clinic ' . $slug, $slug, $email, 'TestPass123!', null);
+        $result = AuthService::registerClinic('Test Clinic ' . $slug, 'Dr Test Owner', $slug, $email, 'TestPass123!', null);
 
         return [
             'clinic_id' => $result['tenant_id'],

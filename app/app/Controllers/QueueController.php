@@ -112,7 +112,11 @@ final class QueueController
         // queue) instead of always bouncing to /queue. Only accept a safe,
         // same-site relative path ("/...") to avoid an open-redirect.
         $return = (string) ($request->post['return'] ?? $request->query['return'] ?? '');
-        if ($return !== '' && $return[0] === '/' && !str_starts_with($return, '//')) {
+        // Same-site relative path only (no open-redirect), and never an AJAX/API
+        // endpoint — redirecting there would render raw JSON in the browser.
+        if ($return !== '' && $return[0] === '/' && !str_starts_with($return, '//')
+            && !str_starts_with($return, '/api/')
+            && !str_contains($return, '/dashboard/queue')) {
             return $return;
         }
 

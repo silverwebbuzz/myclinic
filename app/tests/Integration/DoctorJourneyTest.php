@@ -37,7 +37,7 @@ final class DoctorJourneyTest extends DatabaseTestCase
         $slug = 'journey-' . bin2hex(random_bytes(4));
         $email = $slug . '@test.local';
         $password = 'TestPass123!';
-        $reg = AuthService::registerClinic('Journey Clinic', $slug, $email, $password, null);
+        $reg = AuthService::registerClinic('Journey Clinic', 'Dr Journey Owner', $slug, $email, $password, null);
         $clinicId = (int) $reg['tenant_id'];
         $userId = (int) $reg['user_id'];
         $this->assertGreaterThan(0, $clinicId, 'Clinic should be created');

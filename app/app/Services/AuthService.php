@@ -22,11 +22,17 @@ final class AuthService
     /** @return array{tenant_id: int, user_id: int} */
     public static function registerClinic(
         string $clinicName,
+        string $ownerName,
         string $slug,
         string $email,
         string $password,
         ?string $googleId = null,
     ): array {
+        // The user (clinic owner/doctor) gets their own name; the tenant keeps
+        // the clinic name. Fall back to the clinic name only if no owner name
+        // was provided, so older callers / blank submits never store an empty
+        // user name.
+        $ownerName = trim($ownerName) !== '' ? trim($ownerName) : $clinicName;
         $pdo = Database::connection();
         $pdo->beginTransaction();
         try {
@@ -46,7 +52,7 @@ final class AuthService
 
             $userData = [
                 'clinic_id' => $tenantId,
-                'name' => $clinicName,
+                'name' => $ownerName,
                 'email' => $email,
                 'password_hash' => password_hash($password, PASSWORD_BCRYPT),
                 'role' => 'admin',

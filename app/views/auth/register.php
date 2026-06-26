@@ -20,6 +20,13 @@ ob_start();
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
 
         <div>
+            <label class="block text-xs font-medium text-slate-600">Your name</label>
+            <input name="owner_name" type="text" required value="<?= htmlspecialchars($old['ownerName'] ?? ($google['name'] ?? '')) ?>"
+                   placeholder="e.g. Dr. Mitesh Prajapati"
+                   class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+        </div>
+
+        <div>
             <label class="block text-xs font-medium text-slate-600">Clinic name</label>
             <input name="clinic_name" type="text" required value="<?= htmlspecialchars($old['clinicName'] ?? '') ?>"
                    @input="suggestSlug($event.target.value)"

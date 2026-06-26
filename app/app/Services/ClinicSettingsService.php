@@ -151,6 +151,14 @@ final class ClinicSettingsService
                     'prescription_mode' => $specConfig[$specialty]['prescription_mode'] ?? 'allopathic',
                     'specialty_options' => json_encode([]),
                 ]);
+
+                // Keep the public directory listing in sync. The front-end
+                // profile reads specialty from directory_doctors, so without
+                // this the panel and the public page diverge. Only the claimed
+                // clinic's own row is touched.
+                QueryBuilder::table('directory_doctors')
+                    ->where('claimed_tenant_id', '=', $clinicId)
+                    ->update(['specialty' => $specialty]);
             }
         }
 

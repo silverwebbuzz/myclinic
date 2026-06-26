@@ -338,6 +338,44 @@ function ecp_profile_build_payload(PDO $db, array $row, string $entityType, stri
 
     $doctors = [];
     if ($entityType === 'clinic') {
+        // Claimed clinic: list the clinic's REAL doctor users from the portal
+        // (users table) rather than guessing siblings from scraped Google rows.
+        // A doctor who registered/claimed and added staff will see them here.
+        $claimedTenantId = (int) ($row['claimed_tenant_id'] ?? 0);
+        if ($claimedTenantId > 0) {
+            $userStmt = $db->prepare(
+                "SELECT id, name, specialization, qualification
+                 FROM users
+                 WHERE clinic_id = :cid AND is_active = 1
+                   AND role IN ('doctor', 'admin')
+                 ORDER BY is_owner DESC, name ASC
+                 LIMIT 50"
+            );
+            $userStmt->execute(['cid' => $claimedTenantId]);
+            foreach ($userStmt->fetchAll(PDO::FETCH_ASSOC) as $u) {
+                $name = trim((string) ($u['name'] ?? ''));
+                if ($name === '') {
+                    continue;
+                }
+                $avatar = ecp_directory_avatar(['doctor_name' => $name, 'id' => (int) ($u['id'] ?? 0)], 120);
+                $doctors[] = [
+                    'name' => $name,
+                    'spec_label' => ecp_specialty_label($u['specialization'] ?? ($row['specialty'] ?? null)),
+                    'rating' => 0,
+                    'reviews' => 0,
+                    'profile_url' => '#',
+                    'photo_url' => $avatar['url'],
+                    'avatar_initials' => $avatar['initials'],
+                    'avatar_gradient' => $avatar['gradient'],
+                ];
+            }
+        }
+    }
+
+    // Unclaimed clinic (or claimed but no portal doctors yet): fall back to the
+    // scraped-directory heuristic — sibling directory_doctors rows in the same
+    // city whose name matches this clinic's base name.
+    if ($entityType === 'clinic' && $doctors === []) {
         $base = ecp_directory_clinic_base_name($row);
         $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $base) . '%';
         $docStmt = $db->prepare(

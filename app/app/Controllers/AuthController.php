@@ -43,6 +43,7 @@ final class AuthController
         }
 
         $clinicName = trim($request->post['clinic_name'] ?? '');
+        $ownerName = trim($request->post['owner_name'] ?? '');
         $slug = strtolower(trim($request->post['slug'] ?? ''));
         $email = strtolower(trim($request->post['email'] ?? ''));
         $password = $request->post['password'] ?? '';
@@ -52,6 +53,9 @@ final class AuthController
 
         if ($google !== null) {
             $email = $google['email'];
+            if ($ownerName === '') {
+                $ownerName = trim((string) ($google['name'] ?? ''));
+            }
             if ($password === '') {
                 $password = bin2hex(random_bytes(16)) . 'A1';
                 $confirm = $password;
@@ -69,19 +73,19 @@ final class AuthController
         }
         $slug = $this->resolveUniqueSlug($slug);
 
-        $error = $this->validateRegistration($clinicName, $slug, $email, $password, $confirm, $google !== null);
+        $error = $this->validateRegistration($clinicName, $ownerName, $slug, $email, $password, $confirm, $google !== null);
         if ($error !== null) {
             return Response::html($this->view('auth/register', [
                 'csrf' => CsrfService::token(),
                 'error' => $error,
-                'old' => compact('clinicName', 'slug', 'email'),
+                'old' => compact('clinicName', 'ownerName', 'slug', 'email'),
                 'google' => $google,
                 'googleEnabled' => GoogleOAuthService::isConfigured(),
             ]), 422);
         }
 
         try {
-            $result = AuthService::registerClinic($clinicName, $slug, $email, $password, $googleId);
+            $result = AuthService::registerClinic($clinicName, $ownerName, $slug, $email, $password, $googleId);
         } catch (\Throwable $e) {
             error_log('[register] registerClinic failed: ' . $e->getMessage());
             $isDuplicate = str_contains($e->getMessage(), '1062') || stripos($e->getMessage(), 'duplicate') !== false;
@@ -91,7 +95,7 @@ final class AuthController
                 'error' => $isDuplicate
                     ? 'An account with this email already exists. Please log in instead.'
                     : 'We could not create your account right now. Please try again.',
-                'old' => compact('clinicName', 'slug', 'email'),
+                'old' => compact('clinicName', 'ownerName', 'slug', 'email'),
                 'google' => $google,
                 'googleEnabled' => GoogleOAuthService::isConfigured(),
             ]), 422);
@@ -451,12 +455,16 @@ final class AuthController
 
     private function validateRegistration(
         string $clinicName,
+        string $ownerName,
         string $slug,
         string $email,
         string $password,
         string $confirm,
         bool $fromGoogle,
     ): ?string {
+        if ($ownerName === '' || strlen($ownerName) < 2) {
+            return 'Your name is required.';
+        }
         if ($clinicName === '' || strlen($clinicName) < 2) {
             return 'Clinic name is required.';
         }

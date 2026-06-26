@@ -21,7 +21,16 @@ $aid     = (int) ($a['id'] ?? 0);
 $pid     = (int) ($a['patient_id'] ?? 0);
 $status  = (string) ($a['status'] ?? 'scheduled');
 $canConsult = \App\Services\RoleAccessService::canConsult(\App\Core\RequestContext::user() ?? []);
-$returnTo   = $_SERVER['REQUEST_URI'] ?? '/appointments';
+
+// Where the status-change POST redirects back to. We default to the current
+// URL, but this partial is also rendered INSIDE the dashboard's queue JSON
+// endpoint (/api/v1/dashboard/queue), refreshed via AJAX. If we baked that API
+// URL into the form, submitting it would navigate the browser straight to raw
+// JSON. So never return to an API/AJAX endpoint — fall back to a real page.
+$returnTo = $_SERVER['REQUEST_URI'] ?? '/appointments';
+if (str_starts_with($returnTo, '/api/') || str_contains($returnTo, '/dashboard/queue')) {
+    $returnTo = '/dashboard';
+}
 $csrfTok    = htmlspecialchars((string) ($csrf ?? ''), ENT_QUOTES);
 $retEsc     = htmlspecialchars($returnTo, ENT_QUOTES);
 

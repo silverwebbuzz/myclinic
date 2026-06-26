@@ -27,7 +27,7 @@ final class QueryBuilderTest extends TestCase
         }
 
         $slug = 'test-qb-' . bin2hex(random_bytes(3));
-        $reg = \App\Services\AuthService::registerClinic('QB Test', $slug, $slug . '@t.local', 'TestPass123!', null);
+        $reg = \App\Services\AuthService::registerClinic('QB Test', 'Dr QB Owner', $slug, $slug . '@t.local', 'TestPass123!', null);
         $clinic = ['clinic_id' => $reg['tenant_id']];
         $qb = QueryBuilder::table('notifications')->forClinic($clinic['clinic_id']);
         $id = $qb->insert([
