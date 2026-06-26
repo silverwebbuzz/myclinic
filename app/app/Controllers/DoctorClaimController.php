@@ -26,6 +26,7 @@ final class DoctorClaimController
             'pendingClaimCount' => DoctorClaimService::pendingCount(),
             'message'           => $request->query['message'] ?? null,
             'error'             => $request->query['error'] ?? null,
+            'notify'            => $request->query['notify'] ?? null,
         ]));
     }
 
@@ -55,7 +56,13 @@ final class DoctorClaimController
         }
         $result = DoctorClaimService::approve($id, (int) $admin['id'], $notes);
         if ($result['ok']) {
-            return Response::redirect('/admin/claims?message=approved');
+            // Surface the per-channel notification outcome (email / SMS /
+            // WhatsApp) so the admin knows what fired and what was skipped.
+            $notes = $result['notifications'] ?? [];
+            $query = $notes !== []
+                ? '?message=approved&notify=' . rawurlencode(implode("\n", $notes))
+                : '?message=approved';
+            return Response::redirect('/admin/claims' . $query);
         }
         $error = $result['error'] ?? 'Approval failed for an unknown reason.';
         return Response::redirect('/admin/claims/' . $id . '?error=' . rawurlencode($error));

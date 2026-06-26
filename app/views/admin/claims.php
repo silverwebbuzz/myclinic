@@ -40,6 +40,18 @@
             </div>
         <?php endif; ?>
 
+        <?php if (!empty($notify)): ?>
+            <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                <div class="font-semibold text-slate-800">Doctor notification</div>
+                <ul class="mt-1 space-y-0.5 text-xs">
+                    <?php foreach (explode("\n", (string) $notify) as $line): ?>
+                        <?php if (trim($line) === '') continue; ?>
+                        <li><?= htmlspecialchars($line) ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        <?php endif; ?>
+
         <div class="mt-6 space-y-3">
             <?php foreach ($claims as $c): ?>
                 <?php $isClaim = $c['type'] === 'claim'; $listing = $c['_listing'] ?? null; ?>

@@ -84,7 +84,11 @@ final class DoctorClaimService
      * Approve a request. Creates clinic + doctor user (or reuses existing),
      * links the directory listing if it was a claim.
      *
-     * @return array{ok: true, user_id: int}|array{ok: false, error: string, step?: string}
+     * On success, `notifications` holds one human-readable line per channel
+     * (email / SMS / WhatsApp) describing whether it fired and why not — so
+     * the admin sees, e.g. "WhatsApp: skipped (not configured yet)".
+     *
+     * @return array{ok: true, user_id: int, notifications: list<string>}|array{ok: false, error: string, step?: string}
      */
     public static function approve(int $requestId, int $reviewerId, ?string $notes = null): array
     {
@@ -213,12 +217,14 @@ final class DoctorClaimService
             // onboarding wizard — claim approval already collected clinic info.
             self::bootstrapApprovedTenant($tenantId, $req);
 
-            // Notify the doctor that they're approved — best-effort, AFTER the
-            // commit so a mail problem never rolls back the account. Guarded:
-            // only sends when an email is on file (it's optional on a claim).
-            self::sendApprovalEmail($req, $tenantId);
+            // Notify the doctor that they're approved across every available
+            // channel — best-effort, AFTER the commit so a notification problem
+            // never rolls back the account. Each channel is independently
+            // guarded; the returned lines tell the admin what fired and what
+            // was skipped (e.g. SMS/WhatsApp not configured yet).
+            $notifications = self::notifyApproved($req, $tenantId);
 
-            return ['ok' => true, 'user_id' => $userId];
+            return ['ok' => true, 'user_id' => $userId, 'notifications' => $notifications];
         } catch (\Throwable $e) {
             if ($db->inTransaction()) {
                 $db->rollBack();
@@ -269,29 +275,109 @@ final class DoctorClaimService
     }
 
     /**
-     * Approval notification to the doctor. Login is passwordless (phone OTP),
-     * so the email points them to the doctor login page to sign in with their
-     * verified number — no password is sent. No-op when there's no email.
+     * Approval notification to the doctor, fanned out across every channel we
+     * have a destination for: email, SMS, and WhatsApp. Login is passwordless
+     * (phone OTP), so every channel points them to the doctor login page to
+     * sign in with their verified number — no password is generated or sent.
+     *
+     * Design per requirement:
+     *   - SMS/WhatsApp may not be live yet. When their provider isn't
+     *     configured we DON'T pretend to send — we skip with a clear reason.
+     *   - Every channel is independently guarded; a failure in one never
+     *     aborts the others and never throws out of here (called post-commit).
+     *   - Returns one human line per channel for the admin to see.
      *
      * @param array<string, mixed> $req the claim request row
+     * @return list<string>
      */
-    private static function sendApprovalEmail(array $req, int $tenantId): void
+    private static function notifyApproved(array $req, int $tenantId): array
     {
-        $email = trim((string) ($req['email'] ?? ''));
-        if ($email === '') {
-            return; // email is optional — nothing to notify
-        }
+        $base      = rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/');
+        $loginUrl  = $base . '/doctor/login';
+        $email     = trim((string) ($req['email'] ?? ''));
+        $phone     = trim((string) ($req['phone'] ?? ''));
+        $name      = (string) ($req['full_name'] ?? 'Doctor');
+        $clinic    = (string) ($req['clinic_name'] ?? '');
 
+        // Shared payload for SMS/WhatsApp template rendering.
+        $payload = [
+            'doctor_name' => $name,
+            'clinic_name' => $clinic,
+            'phone'       => $phone,
+            'login_url'   => $loginUrl,
+        ];
+
+        // Plain text used for SMS and as the WhatsApp body. Self-contained so
+        // it reads sensibly even with no wa_templates row registered.
+        $plain = 'Hello ' . $name . ', your eClinicPro clinic panel is now active. '
+            . 'Sign in at ' . $loginUrl . ' with your phone ' . $phone
+            . ' — no password needed, we send a one-time SMS code.';
+
+        $lines = [];
+        $lines[] = self::notifyByEmail($email, $tenantId, $payload);
+        $lines[] = self::notifyBySms($phone, $plain);
+        $lines[] = self::notifyByWhatsApp($phone, $payload, $plain);
+
+        return $lines;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private static function notifyByEmail(string $email, int $tenantId, array $payload): string
+    {
+        if ($email === '') {
+            return 'Email: skipped (no email address on file for this request).';
+        }
         try {
-            $base = rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/');
-            MailService::send($email, 'doctor_approved', [
-                'doctor_name' => $req['full_name'] ?? 'Doctor',
-                'clinic_name' => $req['clinic_name'] ?? '',
-                'phone' => $req['phone'] ?? '',
-                'login_url' => $base . '/doctor/login',
-            ], $tenantId);
+            MailService::send($email, 'doctor_approved', $payload, $tenantId);
+            return 'Email: sent to ' . $email . '.';
         } catch (\Throwable $e) {
-            error_log('[DoctorClaimService::sendApprovalEmail] ' . $e->getMessage());
+            error_log('[DoctorClaimService::notifyByEmail] ' . $e->getMessage());
+            return 'Email: NOT sent — ' . $e->getMessage();
+        }
+    }
+
+    private static function notifyBySms(string $phone, string $plain): string
+    {
+        if ($phone === '') {
+            return 'SMS: skipped (no phone number on file).';
+        }
+        if (!\App\Support\MessagingSettings::smsConfigured()) {
+            return 'SMS: not sent — SMS provider is not configured/started yet.';
+        }
+        try {
+            $r = SmsService::send($phone, $plain);
+            return $r['ok']
+                ? 'SMS: sent to ' . $phone . '.'
+                : 'SMS: NOT sent — ' . ($r['message'] ?? 'unknown error');
+        } catch (\Throwable $e) {
+            error_log('[DoctorClaimService::notifyBySms] ' . $e->getMessage());
+            return 'SMS: NOT sent — ' . $e->getMessage();
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private static function notifyByWhatsApp(string $phone, array $payload, string $plain): string
+    {
+        if ($phone === '') {
+            return 'WhatsApp: skipped (no phone number on file).';
+        }
+        if (!\App\Support\MessagingSettings::whatsappConfigured()) {
+            return 'WhatsApp: not sent — WhatsApp is not configured/started yet.';
+        }
+        try {
+            // WhatsAppService renders via WaTemplateService; pass the plain body
+            // through the payload so a missing wa_templates row still has text.
+            $r = WhatsAppService::send($phone, 'doctor_approved', $payload + ['body' => $plain]);
+            return ($r['ok'] ?? false)
+                ? 'WhatsApp: sent to ' . $phone . '.'
+                : 'WhatsApp: NOT sent — ' . ($r['message'] ?? 'unknown error');
+        } catch (\Throwable $e) {
+            error_log('[DoctorClaimService::notifyByWhatsApp] ' . $e->getMessage());
+            return 'WhatsApp: NOT sent — ' . $e->getMessage();
         }
     }
 
