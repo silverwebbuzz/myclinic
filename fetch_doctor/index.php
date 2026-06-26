@@ -510,6 +510,7 @@ function http_get_json(string $url, int &$reqCount): ?array {
         if (!is_array($data)) return null;
 
         $status = $data['status'] ?? '';
+        $GLOBALS['fd_last_places_status'] = $status !== '' ? $status : ($code !== 200 ? 'HTTP_' . $code : 'UNKNOWN');
         if ($status === 'OK' || $status === 'ZERO_RESULTS') return $data;
         if ($status === 'INVALID_REQUEST' && $attempt === 1) { sleep(3); continue; }
         if ($status === 'OVER_QUERY_LIMIT' && $attempt === 1) { sleep(5); continue; }
@@ -519,11 +520,89 @@ function http_get_json(string $url, int &$reqCount): ?array {
     return null;
 }
 
+/** Query variants for name-by-name lookup (Find Place + Text Search). */
+function name_lookup_query_variants(string $rawName, array $city): array {
+    $cityName = (string) ($city['name'] ?? '');
+    $base = trim($rawName);
+    if ($base === '') {
+        return [];
+    }
+
+    $variants = [];
+    $add = static function (string $q) use (&$variants): void {
+        $q = trim(preg_replace('/\s+/u', ' ', $q) ?? $q);
+        if ($q !== '') {
+            $variants[$q] = true;
+        }
+    };
+
+    $withCity = (stripos($base, $cityName) !== false) ? $base : ($base . ' ' . $cityName);
+    $add($withCity);
+    if (str_contains($withCity, '&')) {
+        $add(str_replace('&', 'and', $withCity));
+    }
+
+    if ($cityName !== '') {
+        $noCity = trim(preg_replace('/\s+' . preg_quote($cityName, '/') . '\s*$/iu', '', $base));
+        if ($noCity !== '' && strcasecmp($noCity, $base) !== 0) {
+            $add($noCity . ' ' . $cityName);
+            if (str_contains($noCity, '&')) {
+                $add(str_replace('&', 'and', $noCity) . ' ' . $cityName);
+            }
+        }
+        $add($withCity . ' Gujarat');
+    }
+
+    return array_keys($variants);
+}
+
+function fetch_find_place(string $apiKey, string $query, float $lat, float $lng, int $radius, int &$reqCount): array {
+    $url = 'https://maps.googleapis.com/maps/api/place/findplacefromtext/json?' . http_build_query([
+        'input'        => $query,
+        'inputtype'    => 'textquery',
+        'fields'       => 'place_id,name,formatted_address,geometry,types,business_status,rating,user_ratings_total',
+        'locationbias' => sprintf('circle:%d@%f,%f', min($radius, 50000), $lat, $lng),
+        'region'       => 'in',
+        'key'          => $apiKey,
+    ]);
+    $data = http_get_json($url, $reqCount);
+    if (!is_array($data) || ($data['status'] ?? '') !== 'OK') {
+        return [];
+    }
+
+    return (array) ($data['candidates'] ?? []);
+}
+
+/** Resolve one listing by clinic/doctor name — tries Find Place, then Text Search. */
+function resolve_place_by_name(string $apiKey, string $rawName, array $city, int &$reqCount): ?array {
+    $lastStatus = 'ZERO_RESULTS';
+    foreach (name_lookup_query_variants($rawName, $city) as $query) {
+        foreach (fetch_find_place($apiKey, $query, $city['lat'], $city['lng'], 50000, $reqCount) as $candidate) {
+            if (!empty($candidate['place_id'])) {
+                return $candidate;
+            }
+        }
+        $lastStatus = (string) ($GLOBALS['fd_last_places_status'] ?? $lastStatus);
+
+        foreach (fetch_text_search($apiKey, $query, $city['lat'], $city['lng'], 50000, $reqCount) as $place) {
+            if (!empty($place['place_id'])) {
+                return $place;
+            }
+        }
+        $lastStatus = (string) ($GLOBALS['fd_last_places_status'] ?? $lastStatus);
+    }
+
+    $GLOBALS['fd_last_places_status'] = $lastStatus;
+
+    return null;
+}
+
 function fetch_text_search(string $apiKey, string $query, float $lat, float $lng, int $radius, int &$reqCount): array {
     $baseParams = [
         'query'    => $query,
         'location' => sprintf('%f,%f', $lat, $lng),
         'radius'   => (string) $radius,
+        'region'   => 'in',
         'key'      => $apiKey,
     ];
     $all = [];
@@ -906,18 +985,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['names'])) {
         $newRows  = [];
 
         foreach ($names as $rawName) {
-            $query = $rawName;
-            if (stripos($query, $city['name']) === false) $query .= ' ' . $city['name'];
-            echo "🔍 {$query}\n";
+            echo "🔍 {$rawName}\n";
 
-            $places = fetch_text_search($apiKey, $query, $city['lat'], $city['lng'], 30000, $reqCount);
-            if (empty($places)) {
-                echo "   ⨯ no result\n";
+            $place = resolve_place_by_name($apiKey, $rawName, $city, $reqCount);
+            if ($place === null) {
+                $st = (string) ($GLOBALS['fd_last_places_status'] ?? 'ZERO_RESULTS');
+                echo '   ⨯ no result';
+                if ($st !== '' && $st !== 'ZERO_RESULTS' && $st !== 'OK') {
+                    echo " (Google: {$st})";
+                }
+                echo "\n";
                 continue;
             }
-
-            // Take only the top result for a name lookup.
-            $place = $places[0];
             $pid = $place['place_id'] ?? null;
             if (!$pid) { echo "   ⨯ no place_id\n"; continue; }
             if (isset($existingIds[$pid])) { echo "   = already in file\n"; continue; }
@@ -1102,7 +1181,8 @@ h1{font-size:24px;font-weight:600;margin:0 0 8px}
     </summary>
     <form method="post" style="margin-top: 14px;">
         <p style="font-size: 12.5px; color: var(--mute); margin: 0 0 12px;">
-            Paste one doctor or clinic name per line. Each name is searched via Google Places and added to <code>json/_named-lookups.json</code>. Costs ~$0.024 per name. Useful for filling gaps left by the area scan.
+            Paste one doctor or clinic name per line. Each name is searched via Google Places and added to <code>json/_named-lookups.json</code>. Costs ~$0.03–0.05 per name. Useful for filling gaps left by the area scan.
+            <br>Tip: city is auto-appended if missing. Long clinic names with <code>&amp;</code> are OK — we try several query variants.
         </p>
         <label style="display:block;font-size:12px;font-weight:500;color:var(--ink);margin-bottom:4px;">Default city <small style="color:var(--mute);font-weight:400;">(used if the name doesn't already include one)</small></label>
         <input type="text" name="names_city" value="Ahmedabad" style="width: 240px; padding:7px 10px; border:1px solid var(--line); border-radius:6px; font-size:13px; margin-bottom:10px;">
