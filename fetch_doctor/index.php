@@ -407,6 +407,7 @@ function places_type_acceptable(array $types): bool {
 }
 
 require_once __DIR__ . '/_helpers.php';
+require_once __DIR__ . '/_places_api.php';
 
 function format_doctor(array $place, array $details, array $city, string $spec): array {
     $loc = $details['geometry']['location'] ?? [];
@@ -520,83 +521,6 @@ function http_get_json(string $url, int &$reqCount): ?array {
     return null;
 }
 
-/** Query variants for name-by-name lookup (Find Place + Text Search). */
-function name_lookup_query_variants(string $rawName, array $city): array {
-    $cityName = (string) ($city['name'] ?? '');
-    $base = trim($rawName);
-    if ($base === '') {
-        return [];
-    }
-
-    $variants = [];
-    $add = static function (string $q) use (&$variants): void {
-        $q = trim(preg_replace('/\s+/u', ' ', $q) ?? $q);
-        if ($q !== '') {
-            $variants[$q] = true;
-        }
-    };
-
-    $withCity = (stripos($base, $cityName) !== false) ? $base : ($base . ' ' . $cityName);
-    $add($withCity);
-    if (str_contains($withCity, '&')) {
-        $add(str_replace('&', 'and', $withCity));
-    }
-
-    if ($cityName !== '') {
-        $noCity = trim(preg_replace('/\s+' . preg_quote($cityName, '/') . '\s*$/iu', '', $base));
-        if ($noCity !== '' && strcasecmp($noCity, $base) !== 0) {
-            $add($noCity . ' ' . $cityName);
-            if (str_contains($noCity, '&')) {
-                $add(str_replace('&', 'and', $noCity) . ' ' . $cityName);
-            }
-        }
-        $add($withCity . ' Gujarat');
-    }
-
-    return array_keys($variants);
-}
-
-function fetch_find_place(string $apiKey, string $query, float $lat, float $lng, int $radius, int &$reqCount): array {
-    $url = 'https://maps.googleapis.com/maps/api/place/findplacefromtext/json?' . http_build_query([
-        'input'        => $query,
-        'inputtype'    => 'textquery',
-        'fields'       => 'place_id,name,formatted_address,geometry,types,business_status,rating,user_ratings_total',
-        'locationbias' => sprintf('circle:%d@%f,%f', min($radius, 50000), $lat, $lng),
-        'region'       => 'in',
-        'key'          => $apiKey,
-    ]);
-    $data = http_get_json($url, $reqCount);
-    if (!is_array($data) || ($data['status'] ?? '') !== 'OK') {
-        return [];
-    }
-
-    return (array) ($data['candidates'] ?? []);
-}
-
-/** Resolve one listing by clinic/doctor name — tries Find Place, then Text Search. */
-function resolve_place_by_name(string $apiKey, string $rawName, array $city, int &$reqCount): ?array {
-    $lastStatus = 'ZERO_RESULTS';
-    foreach (name_lookup_query_variants($rawName, $city) as $query) {
-        foreach (fetch_find_place($apiKey, $query, $city['lat'], $city['lng'], 50000, $reqCount) as $candidate) {
-            if (!empty($candidate['place_id'])) {
-                return $candidate;
-            }
-        }
-        $lastStatus = (string) ($GLOBALS['fd_last_places_status'] ?? $lastStatus);
-
-        foreach (fetch_text_search($apiKey, $query, $city['lat'], $city['lng'], 50000, $reqCount) as $place) {
-            if (!empty($place['place_id'])) {
-                return $place;
-            }
-        }
-        $lastStatus = (string) ($GLOBALS['fd_last_places_status'] ?? $lastStatus);
-    }
-
-    $GLOBALS['fd_last_places_status'] = $lastStatus;
-
-    return null;
-}
-
 function fetch_text_search(string $apiKey, string $query, float $lat, float $lng, int $radius, int &$reqCount): array {
     $baseParams = [
         'query'    => $query,
@@ -622,6 +546,23 @@ function fetch_text_search(string $apiKey, string $query, float $lat, float $lng
         if (!$pageToken) break;
     }
     return $all;
+}
+
+function fetch_find_place(string $apiKey, string $query, float $lat, float $lng, int $radius, int &$reqCount): array {
+    $url = 'https://maps.googleapis.com/maps/api/place/findplacefromtext/json?' . http_build_query([
+        'input'        => $query,
+        'inputtype'    => 'textquery',
+        'fields'       => 'place_id,name,formatted_address,geometry,types,business_status,rating,user_ratings_total',
+        'locationbias' => sprintf('circle:%d@%f,%f', min($radius, 50000), $lat, $lng),
+        'region'       => 'in',
+        'key'          => $apiKey,
+    ]);
+    $data = http_get_json($url, $reqCount);
+    if (!is_array($data) || ($data['status'] ?? '') !== 'OK') {
+        return [];
+    }
+
+    return (array) ($data['candidates'] ?? []);
 }
 
 function fetch_place_details(string $apiKey, string $placeId, int &$reqCount): ?array {
@@ -983,20 +924,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['names'])) {
 
         $reqCount = 0;
         $newRows  = [];
+        $sawDenied = false;
 
         foreach ($names as $rawName) {
             echo "🔍 {$rawName}\n";
 
-            $place = resolve_place_by_name($apiKey, $rawName, $city, $reqCount);
-            if ($place === null) {
+            $resolved = fd_resolve_place_by_name(
+                $apiKey,
+                $rawName,
+                $city,
+                $reqCount,
+                'fetch_find_place',
+                'fetch_text_search',
+            );
+            if ($resolved === null) {
                 $st = (string) ($GLOBALS['fd_last_places_status'] ?? 'ZERO_RESULTS');
+                if (fd_places_status_denied($st)) {
+                    $sawDenied = true;
+                }
                 echo '   ⨯ no result';
                 if ($st !== '' && $st !== 'ZERO_RESULTS' && $st !== 'OK') {
                     echo " (Google: {$st})";
                 }
                 echo "\n";
+                if ($sawDenied) {
+                    break;
+                }
                 continue;
             }
+
+            $place = $resolved['place'];
+            $prefetchedDetails = $resolved['details'];
             $pid = $place['place_id'] ?? null;
             if (!$pid) { echo "   ⨯ no place_id\n"; continue; }
             if (isset($existingIds[$pid])) { echo "   = already in file\n"; continue; }
@@ -1004,7 +962,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['names'])) {
             $biz = $place['business_status'] ?? 'OPERATIONAL';
             if (str_starts_with((string) $biz, 'CLOSED_')) { echo "   ⨯ closed\n"; continue; }
 
-            $details = fetch_place_details($apiKey, $pid, $reqCount);
+            $details = is_array($prefetchedDetails)
+                ? $prefetchedDetails
+                : fetch_place_details($apiKey, $pid, $reqCount);
             if (!$details) { echo "   ⨯ details failed\n"; continue; }
 
             // Guess specialty from the input or types
@@ -1057,6 +1017,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['names'])) {
 
         $cost = round(($reqCount / 1000) * 24, 2);
         echo "\n" . str_repeat('=', 60) . "\n";
+        if (!empty($sawDenied)) {
+            echo fd_places_denied_help();
+        }
         echo "Added: " . count($newRows) . " · API requests: {$reqCount} · est. cost: \${$cost}\n";
         echo "\nFile: json/_named-lookups.json (will be picked up by insert_db.php)\n";
         echo "Next: open insert_db.php and import _named-lookups.json\n";
@@ -1128,6 +1091,11 @@ h1{font-size:24px;font-weight:600;margin:0 0 8px}
 
 <?php if ($keyMissing): ?>
     <div class="warn">⚠ <strong>GOOGLE_MAPS_API_KEY missing.</strong> Create <code>fetch_doctor/.env</code>: <code>GOOGLE_MAPS_API_KEY=your_key</code></div>
+<?php else: ?>
+    <div class="note" style="margin-bottom:16px">
+        <strong>API key checklist:</strong> Enable <em>Places API</em> + <em>Places API (New)</em>, billing on.
+        Restrict key by <strong>server IP</strong> (not HTTP referrers only) or leave unrestricted while testing.
+    </div>
 <?php endif; ?>
 <?php if ($err): ?><div class="err">❌ <?= htmlspecialchars($err) ?></div><?php endif; ?>
 
