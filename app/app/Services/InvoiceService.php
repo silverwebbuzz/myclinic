@@ -72,7 +72,7 @@ final class InvoiceService
         }
 
         $config = OnboardingService::specialtyConfig($clinicId) ?? [];
-        $fee = (float) ($config['consultation_fee'] ?? 0);
+        $fee = ClinicSettingsService::consultationFeeForClinic($clinicId);
         $clinic = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first();
 
         $invoiceId = self::create($clinicId, [

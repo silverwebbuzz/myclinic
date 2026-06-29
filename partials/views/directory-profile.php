@@ -4,6 +4,8 @@ $gradient = (int) ($p['avatar_gradient'] ?? 1);
 $initials = (string) ($p['avatar_initials'] ?? 'DR');
 $primaryImage = $p['photo_url'] ?? null;
 $hoursLines = $hoursLines ?? ecp_profile_hours_lines($p['opening_hours'] ?? null);
+$hoursRows = ecp_profile_hours_table_rows($p['opening_hours'] ?? null);
+$showTimingsTab = $hoursRows !== [];
 $showDoctorsTab = $showDoctorsTab ?? (($p['entity_type'] ?? '') === 'clinic');
 $specFindUrl = !empty($p['specialty_url_slug']) && !empty($p['city_slug'])
     ? '/find-a-doctor/' . e($p['specialty_url_slug']) . '-in-' . e($p['city_slug'])
@@ -76,15 +78,13 @@ $ratingVal = (float) ($p['rating'] ?? 0);
                             <?php if (!empty($p['phone'])): ?>
                                 <div class="dp-meta-row"><?= dp_icon('phone') ?><a href="tel:<?= e(preg_replace('/\s+/', '', (string) $p['phone'])) ?>"><?= e($p['phone']) ?></a></div>
                             <?php endif; ?>
-                            <?php if ($hoursLines): ?>
-                                <div class="dp-meta-row"><?= dp_icon('clock') ?><span><?= e($hoursLines[0]) ?></span></div>
-                            <?php endif; ?>
                         </div>
                     </div>
                 </section>
                 <div class="dp-content-block">
                     <nav class="dp-tabs">
                         <button type="button" class="dp-tab" :class="tab === 'overview' ? 'on' : ''" @click="tab = 'overview'">Overview</button>
+                        <?php if ($showTimingsTab): ?><button type="button" class="dp-tab" :class="tab === 'timings' ? 'on' : ''" @click="tab = 'timings'">Timings</button><?php endif; ?>
                         <button type="button" class="dp-tab" :class="tab === 'treatments' ? 'on' : ''" @click="tab = 'treatments'">Treatments</button>
                         <?php if ($showDoctorsTab): ?><button type="button" class="dp-tab" :class="tab === 'doctors' ? 'on' : ''" @click="tab = 'doctors'">Doctors</button><?php endif; ?>
                         <button type="button" class="dp-tab" :class="tab === 'photos' ? 'on' : ''" @click="tab = 'photos'">Photos</button>
@@ -126,8 +126,31 @@ $ratingVal = (float) ($p['rating'] ?? 0);
                             <?php endif; ?>
                             <h2>About</h2>
                             <p class="dp-about"><?= !empty($p['bio']) ? nl2br(e($p['bio'])) : e(($p['display_name'] ?? '') . ' is a ' . strtolower($p['specialty_label'] ?? 'doctor') . ' in ' . ($p['city'] ?? '') . '.') ?></p>
-                            <?php if ($hoursLines): ?><h3 class="dp-subhead">Timings</h3><ul class="dp-hours"><?php foreach ($hoursLines as $line): ?><li><?= e($line) ?></li><?php endforeach; ?></ul><?php endif; ?>
                         </section>
+                        <?php if ($showTimingsTab): ?>
+                            <section class="dp-panel" x-show="tab === 'timings'" x-cloak>
+                                <div class="dp-hours-wrap">
+                                    <table class="dp-hours-table" aria-label="Clinic timings">
+                                        <thead>
+                                            <tr>
+                                                <th>Day</th>
+                                                <th>Morning</th>
+                                                <th>Evening</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($hoursRows as $row): ?>
+                                                <tr>
+                                                    <td><?= e((string) $row['day']) ?></td>
+                                                    <td><?= e((string) $row['morning']) ?></td>
+                                                    <td><?= e((string) $row['evening']) ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </section>
+                        <?php endif; ?>
                         <section class="dp-panel" x-show="tab === 'treatments'" x-cloak>
                             <h2><?= !empty($p['treatments_custom']) ? 'Services offered' : 'Treatments &amp; services' ?></h2>
                             <ul class="dp-treatment-list"><?php foreach (($p['treatments'] ?? []) as $t): ?><li><?= e((string) $t) ?></li><?php endforeach; ?></ul>

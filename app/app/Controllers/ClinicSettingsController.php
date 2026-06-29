@@ -50,6 +50,11 @@ final class ClinicSettingsController
             $tab = 'general';
         }
         $clinicId = (int) $clinic['id'];
+        $listing = ClinicSettingsService::publicListing($clinicId);
+        if (!empty($listing['name'])) {
+            // General tab should show the listing-side clinic name.
+            $clinic['name'] = (string) $listing['name'];
+        }
         $config = OnboardingService::specialtyConfig($clinicId) ?? [];
         $specialties = \App\Support\SpecialtyCatalog::all();
 

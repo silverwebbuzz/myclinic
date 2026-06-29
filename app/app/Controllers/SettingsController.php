@@ -9,11 +9,48 @@ use App\Http\Request;
 use App\Http\Response;
 use App\Services\AuthService;
 use App\Services\JwtService;
+use App\Services\RoleAccessService;
 use App\Services\SessionService;
+use App\Services\UserProfileService;
 use App\Support\Layout;
 
 final class SettingsController
 {
+    public function showProfile(Request $request): Response
+    {
+        $user = RequestContext::user() ?? [];
+        $userId = (int) ($user['id'] ?? 0);
+
+        return Response::html(Layout::page('settings/profile', [
+            'error' => null,
+            'success' => $request->query['success'] ?? null,
+            'userName' => $userId > 0 ? UserProfileService::displayName($userId) : '',
+            'roleLabel' => RoleAccessService::panelRoleLabel($user),
+        ], 'My profile'));
+    }
+
+    public function updateProfile(Request $request): Response
+    {
+        $user = RequestContext::user();
+        $clinicId = RequestContext::clinicId();
+        if ($user === null || $clinicId === null) {
+            return Response::redirect('/login');
+        }
+
+        $name = (string) ($request->post['name'] ?? '');
+        $result = UserProfileService::updateName((int) $user['id'], $clinicId, $name);
+        if (!$result['ok']) {
+            return Response::html(Layout::page('settings/profile', [
+                'error' => $result['error'],
+                'success' => null,
+                'userName' => $name,
+                'roleLabel' => RoleAccessService::panelRoleLabel($user),
+            ], 'My profile'), 422);
+        }
+
+        return Response::redirect('/settings/profile?success=1');
+    }
+
     public function showPassword(Request $request): Response
     {
         return Response::html(Layout::page('settings/password', [

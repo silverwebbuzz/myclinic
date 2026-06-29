@@ -7,7 +7,7 @@ namespace App\Support;
 final class View
 {
     /** @param array<string, mixed> $data */
-    public static function render(string $name, array $data = []): string
+    public static function render(string $view, array $data = []): string
     {
         // UI component helpers (ui_icon, ui_card, ui_button, …) must be
         // available to every view, including content views rendered before
@@ -16,7 +16,7 @@ final class View
 
         extract($data, EXTR_SKIP);
         ob_start();
-        require dirname(__DIR__, 2) . '/views/' . $name . '.php';
+        require dirname(__DIR__, 2) . '/views/' . $view . '.php';
 
         return (string) ob_get_clean();
     }

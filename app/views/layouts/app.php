@@ -10,6 +10,7 @@
     <header class="border-b bg-white px-6 py-4 flex justify-between items-center">
         <a href="/dashboard" class="font-semibold text-emerald-600"><?= htmlspecialchars($clinic['name'] ?? 'Clinic') ?></a>
         <nav class="flex items-center gap-4 text-sm text-slate-600">
+            <a href="/settings/profile" class="hover:text-emerald-600">My profile</a>
             <a href="/settings/password" class="hover:text-emerald-600">Password</a>
             <a href="/settings/sessions" class="hover:text-emerald-600">Sessions</a>
             <form method="post" action="/logout" class="inline">

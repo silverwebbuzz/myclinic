@@ -7889,6 +7889,60 @@ body {
   color: var(--teal-700, #0B7F5A);
 }
 
+.dp-meta-row--hours {
+  align-items: flex-start;
+}
+
+.dp-meta-row--hours .dp-i {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.dp-hours-wrap {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  max-width: 520px;
+}
+
+.dp-panel .dp-hours-wrap {
+  max-width: 100%;
+}
+
+.dp-hours-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.dp-hours-table thead th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--mute);
+  padding: 0 8px 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.dp-hours-table tbody td {
+  padding: 6px 8px 6px 0;
+  vertical-align: top;
+  border-bottom: 1px dashed #e6ecea;
+}
+
+.dp-hours-table tbody tr:last-child td {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.dp-hours-table tbody td:first-child {
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
 .dp-content-block {
   background: #fff;
   border: 1px solid var(--line);
