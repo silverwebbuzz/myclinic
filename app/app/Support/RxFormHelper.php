@@ -234,4 +234,42 @@ final class RxFormHelper
             default => 'BD',
         };
     }
+
+    /**
+     * Doses per day from a frequency preset or legacy enum (for qty-to-purchase math).
+     * Returns null when not calculable (SOS / PRN / unknown).
+     */
+    public static function dosesPerDay(?string $preset, ?string $legacyFreq = null): ?float
+    {
+        $preset = trim((string) $preset);
+        if (preg_match('/^(\d+(?:\.\d+)?)(?:-(\d+(?:\.\d+)?))(?:-(\d+(?:\.\d+)?))?(?:-(\d+(?:\.\d+)?))?$/', $preset, $m)) {
+            $sum = 0.0;
+            for ($i = 1, $n = count($m); $i < $n; $i++) {
+                if ($m[$i] !== '' && $m[$i] !== null) {
+                    $sum += (float) $m[$i];
+                }
+            }
+            if ($sum > 0) {
+                return $sum;
+            }
+        }
+
+        $p = strtoupper($preset);
+        $legacy = strtoupper(trim((string) $legacyFreq));
+
+        return match (true) {
+            str_contains($p, 'SOS'), str_contains($p, 'PRN'),
+            $legacy === 'SOS', $legacy === 'PRN' => null,
+            str_contains($p, 'WEEKLY'), $legacy === 'WEEKLY' => 1 / 7,
+            str_contains($p, 'MONTHLY'), $legacy === 'MONTHLY' => 1 / 30,
+            $p === '1-1-1-1', str_contains($p, 'QID'), $legacy === 'QID' => 4.0,
+            $p === '1-1-1', str_contains($p, 'TDS'), $legacy === 'TDS' => 3.0,
+            $p === '1-0-1', str_contains($p, ' BD'), $legacy === 'BD' => 2.0,
+            $p === '1-0-0', $p === '0-0-1', $p === '0-1-0',
+            str_contains($p, ' OD'), $legacy === 'OD' => 1.0,
+            str_contains($p, 'TDS') => 3.0,
+            str_contains($p, ' BD') => 2.0,
+            default => null,
+        };
+    }
 }

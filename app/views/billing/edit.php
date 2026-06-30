@@ -29,6 +29,13 @@ $editable = !in_array($status, ['paid', 'refunded'], true);
                     <?= ui_badge(ucfirst($status), in_array($status, ['paid'], true) ? 'success' : ($status === 'partial' ? 'warning' : 'neutral')) ?>
                 </h2>
                 <p class="text-sm text-slate-500"><?= htmlspecialchars($patient['patient_name'] ?? $patient['name'] ?? '') ?> · <?= htmlspecialchars($patient['uhid'] ?? '') ?></p>
+                <?php if (!empty($invoice['visit_id']) && !empty($visit)): ?>
+                <p class="mt-1 text-sm">
+                    <a href="/visits/<?= (int) $invoice['visit_id'] ?>" class="font-medium text-brand hover:underline">
+                        Visit #<?= (int) ($visit['visit_number'] ?? 0) ?> · <?= htmlspecialchars(date('d M Y', strtotime((string) ($visit['visited_at'] ?? 'now')))) ?>
+                    </a>
+                </p>
+                <?php endif; ?>
                 <?php if ((float) ($patient['advance_balance'] ?? 0) > 0): ?>
                 <p class="mt-1 text-xs text-emerald-700">Advance balance: ₹<?= number_format((float) $patient['advance_balance'], 2) ?></p>
                 <?php endif; ?>

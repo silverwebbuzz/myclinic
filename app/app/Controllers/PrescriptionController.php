@@ -59,7 +59,7 @@ final class PrescriptionController
         $patient = PatientService::find($clinicId, (int) $visit['patient_id']) ?? [];
         $clinic = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first() ?? [];
         $lines = PrescriptionService::forVisit($clinicId, (int) $visitId);
-
+       
         // ?paper=a4 for full-page pads; default A5. ?download=1 forces a file
         // download — the default opens inline so the browser shows a print
         // preview in one click.
@@ -269,6 +269,14 @@ final class PrescriptionController
             );
 
             foreach (array_values($items) as $idx => $it) {
+                $itemDose = isset($it['dose_amount']) && $it['dose_amount'] !== '' ? (float) $it['dose_amount'] : null;
+                $itemTapering = null;
+                if (isset($it['tapering_steps']) && is_array($it['tapering_steps']) && $it['tapering_steps'] !== []) {
+                    $itemTapering = PrescriptionService::normalizeTaperingStepsForSave($it['tapering_steps'], $itemDose);
+                    if ($itemTapering === []) {
+                        $itemTapering = null;
+                    }
+                }
                 $insItem->execute([
                     ':t' => $templateId,
                     ':m' => $mode,
@@ -276,14 +284,13 @@ final class PrescriptionController
                     ':re' => $mode === 'homeopathic' ? ($it['remedy_id'] ?? null) : null,
                     ':po' => $it['potency'] ?? null,
                     ':du' => $it['dose_unit'] ?? null,
-                    ':da' => isset($it['dose_amount']) && $it['dose_amount'] !== '' ? (float) $it['dose_amount'] : null,
+                    ':da' => $itemDose,
                     ':fp' => $it['frequency_preset'] ?? null,
                     ':dd' => isset($it['duration_days']) && $it['duration_days'] !== '' ? (int) $it['duration_days'] : null,
                     ':ft' => in_array($it['food_timing'] ?? 'any', ['before','after','with','empty','bedtime','any'], true)
                               ? ($it['food_timing'] ?? 'any') : 'any',
                     ':mw' => $it['mix_with'] ?? null,
-                    ':ts' => isset($it['tapering_steps']) && is_array($it['tapering_steps']) && $it['tapering_steps'] !== []
-                              ? json_encode($it['tapering_steps']) : null,
+                    ':ts' => $itemTapering !== null ? json_encode($itemTapering, JSON_THROW_ON_ERROR) : null,
                     ':ins' => $it['instructions'] ?? null,
                     ':o' => $idx,
                 ]);

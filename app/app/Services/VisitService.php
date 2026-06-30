@@ -636,7 +636,7 @@ final class VisitService
         $invoices = [];
         try {
             $stmt = $pdo->prepare(
-                "SELECT i.visit_id, i.id, i.total, i.status
+                "SELECT i.visit_id, i.id, i.invoice_number, i.created_at, i.total, i.status
                    FROM invoices i
                   WHERE i.clinic_id = ? AND i.visit_id IN ($placeholders)
                   ORDER BY i.visit_id, i.id DESC"
@@ -649,6 +649,8 @@ final class VisitService
                 }
                 $invoices[$vid] = [
                     'id' => (int) $row['id'],
+                    'invoice_number' => (string) ($row['invoice_number'] ?? ''),
+                    'created_at' => (string) ($row['created_at'] ?? ''),
                     'total' => (float) $row['total'],
                     'status' => (string) $row['status'],
                 ];

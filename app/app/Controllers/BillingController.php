@@ -12,6 +12,7 @@ use App\Services\AuditService;
 use App\Services\BillingExportService;
 use App\Services\BillingPaymentService;
 use App\Services\InvoiceService;
+use App\Services\VisitService;
 use App\Support\Layout;
 
 final class BillingController
@@ -53,8 +54,14 @@ final class BillingController
 
         $config = \App\Services\OnboardingService::specialtyConfig($clinicId) ?? [];
 
+        $visit = null;
+        if (!empty($invoice['visit_id'])) {
+            $visit = VisitService::find($clinicId, (int) $invoice['visit_id']);
+        }
+
         return Response::html(Layout::page('billing/edit', [
             'invoice' => $invoice,
+            'visit' => $visit,
             'taxPercent' => $config['invoice_tax_percent'] ?? 0,
             'message' => $request->query['message'] ?? null,
         ], 'Invoice ' . $invoice['invoice_number']));

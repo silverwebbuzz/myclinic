@@ -9,6 +9,7 @@
  *
  * Ships behind ?new=1 until the default is flipped in VisitController::show().
  */
+use App\Services\PrescriptionService;
 use App\Support\RxFormHelper;
 
 $sd = $visit['specialty_data'] ?? [];
@@ -63,6 +64,11 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
             } elseif (is_array($taperRaw)) {
                 $tapering = $taperRaw;
             }
+            if (is_array($tapering)) {
+                $lineDose = isset($r['dose_amount']) && $r['dose_amount'] !== ''
+                    ? (float) $r['dose_amount'] : null;
+                $tapering = PrescriptionService::hydrateTaperingSteps($tapering, $lineDose);
+            }
 
             $drugForm = RxFormHelper::inferForm($catalogForm, $doseUnit, $name);
             $preset = trim((string) ($r['frequency_preset'] ?? ''));
@@ -99,6 +105,10 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         'ghostRevealed' => [],   // sections the doctor revealed this visit
         'symptoms' => $visitSymptoms ?? [],   // hydrated by symptomPicker on mount
         'charges' => $charges ?? [],   // existing invoice line items {description, amount}
+        'chargesPrefilled' => !empty($chargesPrefilled),
+        'invoiceId' => !empty($visitInvoice) ? (int) $visitInvoice['id'] : null,
+        'invoiceNumber' => !empty($visitInvoice['invoice_number']) ? (string) $visitInvoice['invoice_number'] : null,
+        'invoiceDate' => !empty($visitInvoice['created_at']) ? date('d M Y', strtotime((string) $visitInvoice['created_at'])) : null,
     ], JSON_THROW_ON_ERROR), ENT_QUOTES) ?>)"
      x-init="initVisitScreen()">
 
@@ -159,6 +169,11 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
             <?php endif; ?>
             <?php endif; ?>
             <a href="/appointments/new?patient_id=<?= (int) $patient['id'] ?>" class="ui-btn ui-btn-secondary ui-btn-sm">Book follow-up</a>
+            <?php if (!empty($visitInvoice)): ?>
+            <a href="/billing/<?= (int) $visitInvoice['id'] ?>" class="text-sm font-medium text-brand hover:underline">
+                <?= htmlspecialchars((string) $visitInvoice['invoice_number']) ?> · <?= htmlspecialchars(date('d M Y', strtotime((string) ($visitInvoice['created_at'] ?? 'now')))) ?>
+            </a>
+            <?php endif; ?>
         </div>
     </div>
     <?php endif; ?>
@@ -170,22 +185,27 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
     <!-- ====== TODAY'S VISIT ====== -->
     <section class="ui-card overflow-visible shadow-sm">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-2.5" x-data="{ editDate: false }">
-            <div class="flex items-baseline gap-3">
-                <h2 class="ui-section-title">Today's visit</h2>
-                <span class="flex items-center gap-2 text-xs text-slate-400">
-                    Visit #<?= (int) $visit['visit_number'] ?> ·
-                    <!-- Editable visit date/time (for late catch-up entry) -->
-                    <template x-if="!editDate">
-                        <button type="button" :disabled="!editable" @click="editDate = true"
-                                class="text-slate-500 hover:text-brand disabled:cursor-default disabled:hover:text-slate-500"
-                                x-text="visited_at ? new Date(visited_at).toLocaleString() : 'Set date'"></button>
-                    </template>
-                    <template x-if="editDate">
-                        <input type="datetime-local" x-model="visited_at" :disabled="!editable"
-                               @change="markDirty()" @blur="editDate = false"
-                               class="rounded border border-slate-300 px-2 py-0.5 text-xs">
-                    </template>
-                </span>
+            <div>
+                <div class="flex items-baseline gap-3">
+                    <h2 class="ui-section-title">Today's visit</h2>
+                    <span class="flex items-center gap-2 text-xs text-slate-400">
+                        Visit #<?= (int) $visit['visit_number'] ?> ·
+                        <!-- Editable visit date/time (for late catch-up entry) -->
+                        <template x-if="!editDate">
+                            <button type="button" :disabled="!editable" @click="editDate = true"
+                                    class="text-slate-500 hover:text-brand disabled:cursor-default disabled:hover:text-slate-500"
+                                    x-text="visited_at ? new Date(visited_at).toLocaleString() : 'Set date'"></button>
+                        </template>
+                        <template x-if="editDate">
+                            <input type="datetime-local" x-model="visited_at" :disabled="!editable"
+                                   @change="markDirty()" @blur="editDate = false"
+                                   class="rounded border border-slate-300 px-2 py-0.5 text-xs">
+                        </template>
+                    </span>
+                </div>
+                <p class="mt-0.5 text-sm" x-show="invoiceId" x-cloak>
+                    <a :href="'/billing/' + invoiceId" class="font-medium text-brand hover:underline" x-text="invoiceLinkLabel()"></a>
+                </p>
             </div>
             <div class="flex items-center gap-3 text-xs">
                 <span
@@ -507,17 +527,26 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                     <template x-if="line.tapering_steps && line.tapering_steps.length">
                                         <ol class="mt-2 space-y-1.5">
                                             <template x-for="(step, sIdx) in line.tapering_steps" :key="sIdx">
-                                                <li class="flex items-center gap-2">
+                                                <li class="flex flex-wrap items-center gap-2">
                                                     <span class="w-6 text-slate-500" x-text="(sIdx + 1) + '.'"></span>
                                                     <span class="text-slate-600">For</span>
                                                     <input type="number" min="1" :disabled="!editable" x-model.number="step.days"
+                                                           @change="markDirty()"
                                                            class="w-16 rounded border px-1.5 py-0.5">
                                                     <span class="text-slate-600">days,</span>
+                                                    <input type="number" step="0.01" min="0.01" :disabled="!editable"
+                                                           x-model.number="step.dose_amount"
+                                                           @change="markDirty()"
+                                                           class="w-16 rounded border px-1.5 py-0.5"
+                                                           :placeholder="line.dose_amount || '1'">
+                                                    <span class="text-slate-500 text-[10px] uppercase"
+                                                          x-text="line.dose_unit || 'dose'"></span>
                                                     <select :disabled="!editable"
                                                             x-init="initFrequencySelect($el, line, step)"
                                                             class="rounded border px-1.5 py-0.5">
                                                     </select>
                                                     <select :disabled="!editable" x-model="step.food"
+                                                            @change="markDirty()"
                                                             class="rounded border px-1.5 py-0.5">
                                                         <option value="any">Any</option>
                                                         <option value="before">Before food</option>
@@ -891,7 +920,9 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                             <?php endif; ?>
                             <span class="flex gap-3 text-[11px]">
                                 <?php if ($inv): ?>
-                                    <a href="/billing/<?= (int) $inv['id'] ?>" class="text-brand hover:underline">Invoice</a>
+                                    <a href="/billing/<?= (int) $inv['id'] ?>" class="font-medium text-brand hover:underline">
+                                        <?= htmlspecialchars((string) ($inv['invoice_number'] ?? 'Invoice')) ?><?= !empty($inv['created_at']) ? ' · ' . htmlspecialchars(date('d M Y', strtotime((string) $inv['created_at']))) : '' ?>
+                                    </a>
                                 <?php endif; ?>
                                 <button type="button" @click="togglePeek(<?= (int) $rv['id'] ?>)" class="font-medium text-brand hover:underline">
                                     <span x-text="peekId === <?= (int) $rv['id'] ?> ? '▲ Hide' : '▼ View'"></span>
@@ -1021,6 +1052,12 @@ function visitScreenV2(cfg) {
         // ---- Charges (visit invoice line items) ----
         _chargeKey: 0,
         chargesDirty: false,
+        invoiceLinkLabel() {
+            if (this.invoiceNumber) {
+                return this.invoiceNumber + (this.invoiceDate ? ' · ' + this.invoiceDate : '');
+            }
+            return 'Invoice';
+        },
         markChargesDirty() { this.dirty = true; this.chargesDirty = true; },
         addCharge() {
             this.markChargesDirty();
@@ -1106,6 +1143,11 @@ function visitScreenV2(cfg) {
                     this.chargesStatus = 'saved';
                     this.chargesLabel = 'Saved · ₹' + (data.total || 0);
                     this.chargesDirty = false;   // clears the "unsaved" / required state
+                    if (data.invoice_id) {
+                        this.invoiceId = data.invoice_id;
+                        if (data.invoice_number) this.invoiceNumber = data.invoice_number;
+                        if (data.invoice_date) this.invoiceDate = data.invoice_date;
+                    }
                 } else throw new Error(data.error || 'Save failed');
             } catch (e) {
                 this.chargesStatus = 'error';
@@ -1140,6 +1182,10 @@ function visitScreenV2(cfg) {
                 this.ensureRxLineKey(line);
                 this.hydrateRxLine(line);
             });
+            if (this.chargesPrefilled && this.charges.length) {
+                this.chargesDirty = true;
+                this.chargesLabel = 'Review and save charges';
+            }
             this.$nextTick(() => this.refreshAllFrequencySelects());
             if (!this.editable) return;
             this.$el.addEventListener('input', () => this.onFormEdit());
@@ -1284,6 +1330,15 @@ function visitScreenV2(cfg) {
         },
 
         payload() {
+            const cleanTapering = (steps) => {
+                if (!Array.isArray(steps) || !steps.length) return null;
+                return steps.map(s => ({
+                    days: s.days,
+                    preset: s.preset || null,
+                    food: s.food || 'any',
+                    dose_amount: s.dose_amount !== '' && s.dose_amount != null ? s.dose_amount : null,
+                }));
+            };
             // Strip UI-only flags from each rx line before serializing.
             const cleanRx = (this.prescriptions || []).map(p => ({
                 drug_id: p.drug_id || null,
@@ -1298,7 +1353,7 @@ function visitScreenV2(cfg) {
                 duration_days: p.duration_days !== '' && p.duration_days != null ? p.duration_days : null,
                 food_timing: p.food_timing || 'any',
                 mix_with: p.mix_with || null,
-                tapering_steps: Array.isArray(p.tapering_steps) && p.tapering_steps.length ? p.tapering_steps : null,
+                tapering_steps: cleanTapering(p.tapering_steps),
                 instructions: p.instructions || null,
             }));
 
@@ -1602,7 +1657,7 @@ function visitScreenV2(cfg) {
                     duration_days: p.duration_days || null,
                     food_timing: p.food_timing || 'any',
                     mix_with: p.mix_with || null,
-                    tapering_steps: Array.isArray(p.tapering_steps) && p.tapering_steps.length ? p.tapering_steps : null,
+                    tapering_steps: cleanTapering(p.tapering_steps),
                     instructions: p.instructions || null,
                 }));
             if (items.length === 0) { m.error = 'No medicines to save.'; return; }
@@ -1910,6 +1965,9 @@ function visitScreenV2(cfg) {
             const formDef = ((window.__RX_FORM_DEFAULTS || {})[line.drug_form || 'tablet'] || {}).frequency_preset || '1-0-1';
             line.tapering_steps.push({
                 days: 3,
+                dose_amount: last && last.dose_amount != null && last.dose_amount !== ''
+                    ? last.dose_amount
+                    : (line.dose_amount !== '' && line.dose_amount != null ? line.dose_amount : 1),
                 preset: last ? last.preset : (line.frequency_preset || formDef),
                 food: last ? last.food : (line.food_timing || 'after'),
             });
