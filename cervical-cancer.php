@@ -160,7 +160,16 @@ ob_start(); ?>
     linear-gradient(180deg, var(--teal-950) 0%, #0a5d44 55%, var(--teal-700) 100%);
   color:#fff; padding:84px 0 96px;
 }
-.cc-hero .wrap{position:relative; z-index:1; max-width:920px;}
+.cc-hero .wrap{position:relative; z-index:1; max-width:1180px; display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); gap:48px; align-items:center;}
+.cc-hero-text{min-width:0;}
+.cc-hero-media{min-width:0;}
+/* Responsive 16:9 video frame */
+.cc-video{position:relative; width:100%; padding-top:56.25%; border-radius:18px; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.16); background:#000;}
+.cc-video iframe{position:absolute; inset:0; width:100%; height:100%; border:0;}
+@media (max-width:880px){
+  .cc-hero .wrap{grid-template-columns:1fr; gap:34px;}
+  .cc-hero-media{order:2;}
+}
 .cc-ribbon{
   display:inline-flex; align-items:center; gap:8px;
   background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22);
@@ -169,7 +178,7 @@ ob_start(); ?>
 }
 .cc-ribbon svg{width:15px;height:15px}
 .cc-hero h1{font-size:clamp(30px,5vw,52px); line-height:1.08; font-weight:600; margin-bottom:18px;}
-.cc-hero p.lede{font-size:clamp(16px,2.2vw,20px); line-height:1.6; color:rgba(255,255,255,.86); max-width:680px; margin-bottom:30px;}
+.cc-hero p.lede{font-size:clamp(16px,2.2vw,20px); line-height:1.6; color:rgba(255,255,255,.86); margin-bottom:30px;}
 .cc-hero-ctas{display:flex; flex-wrap:wrap; gap:12px;}
 .cc-btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:15px;border-radius:12px;padding:13px 22px;text-decoration:none;transition:transform .15s ease, box-shadow .15s ease;border:1px solid transparent;}
 .cc-btn:hover{transform:translateY(-1px)}
@@ -296,17 +305,31 @@ require __DIR__ . '/partials/header.php';
 <!-- ============================ HERO ============================ -->
 <section class="cc-hero">
   <div class="wrap">
-    <span class="cc-ribbon">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c-2 3-2 6 0 9 2-3 2-6 0-9zm0 9c-1.5 4-4.5 7-8 9 4.5.5 7.5-1.5 8-4 .5 2.5 3.5 4.5 8 4-3.5-2-6.5-5-8-9z"/></svg>
-      Cervical Cancer Awareness · Vaccination Campaign Launched
-    </span>
-    <h1>Cervical cancer is one of the most preventable cancers — let’s end it together.</h1>
-    <p class="lede">Almost all cervical cancers are caused by HPV, and almost all can be prevented through vaccination and regular screening. Know the facts, understand India’s national programme, and take the next step for the women you love.</p>
-    <div class="cc-hero-ctas">
-      <a class="cc-btn cc-btn-primary" href="#find-doctor">
-        Find a gynecologist near you
-      </a>
-      <a class="cc-btn cc-btn-ghost" href="#tests">Tests &amp; screening</a>
+    <div class="cc-hero-text">
+      <span class="cc-ribbon">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c-2 3-2 6 0 9 2-3 2-6 0-9zm0 9c-1.5 4-4.5 7-8 9 4.5.5 7.5-1.5 8-4 .5 2.5 3.5 4.5 8 4-3.5-2-6.5-5-8-9z"/></svg>
+        Cervical Cancer Awareness · Vaccination Campaign Launched
+      </span>
+      <h1>Cervical cancer is one of the most preventable cancers — let’s end it together.</h1>
+      <p class="lede">Almost all cervical cancers are caused by HPV, and almost all can be prevented through vaccination and regular screening. Know the facts, understand India’s national programme, and take the next step for the women you love.</p>
+      <div class="cc-hero-ctas">
+        <a class="cc-btn cc-btn-primary" href="#find-doctor">
+          Find a gynecologist near you
+        </a>
+        <a class="cc-btn cc-btn-ghost" href="#tests">Tests &amp; screening</a>
+      </div>
+    </div>
+    <div class="cc-hero-media">
+      <div class="cc-video">
+        <iframe
+          src="https://www.youtube-nocookie.com/embed/X9ix-GQOX3U?rel=0"
+          title="Cervical Cancer Awareness video"
+          loading="lazy"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen></iframe>
+      </div>
     </div>
   </div>
 </section>
