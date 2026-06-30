@@ -9,6 +9,7 @@ use App\Core\RequestContext;
 use App\Http\Request;
 use App\Http\Response;
 use App\Services\BillingGatewayService;
+use App\Services\ClinicSettingsService;
 use App\Services\CsrfService;
 use App\Services\DoctorScheduleService;
 use App\Services\OnboardingService;
@@ -118,6 +119,8 @@ final class OnboardingController
             'csrf' => CsrfService::token(),
             'clinic' => $clinic,
             'config' => $config,
+            'consultationFee' => ClinicSettingsService::consultationFeeForClinic((int) $clinic['id']),
+            'consultationFeeCurrency' => ClinicSettingsService::consultationFeeCurrencyForClinic((int) $clinic['id']),
             'specialties' => $specialties,
             'workingHours' => $workingHours,
             'countries' => $this->countries(),
@@ -390,7 +393,6 @@ final class OnboardingController
             'uhid_prefix' => $uhidPrefix,
             'invoice_tax_label' => $taxLabel,
             'invoice_tax_percent' => $taxPercent,
-            'consultation_fee' => $consultationFee,
             'working_hours' => json_encode($workingHours),
         ];
 
@@ -405,6 +407,12 @@ final class OnboardingController
                 $configData,
             ));
         }
+
+        ClinicSettingsService::saveConsultationFee(
+            $clinicId,
+            $consultationFee > 0 ? $consultationFee : null,
+            $currency,
+        );
 
         try {
             $doctorIds = DoctorScheduleService::doctorIdsForClinic($clinicId);

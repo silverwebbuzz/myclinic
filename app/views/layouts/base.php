@@ -285,6 +285,7 @@
                             <a href="/settings?tab=general" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Clinic settings</a>
                             <a href="/settings/team" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Team</a>
                             <?php endif; ?>
+                            <a href="/settings/profile" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">My profile</a>
                             <a href="/settings/password" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Password</a>
                             <a href="/settings/sessions" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Sessions</a>
                             <form method="post" action="/logout" class="border-t border-slate-100">

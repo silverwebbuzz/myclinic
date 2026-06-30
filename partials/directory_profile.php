@@ -239,8 +239,118 @@ function ecp_profile_find(string $citySlug, string $entityType, string $slug): ?
     if ($row === null) {
         return null;
     }
-
     return ecp_profile_build_payload($db, $row, $entityType, $citySlug, $cityMeta);
+}
+
+function ecp_profile_time_12h(string $hhmm): string
+{
+    if (!preg_match('/^(\d{1,2}):(\d{2})/', $hhmm, $m)) {
+        return '';
+    }
+    $h = (int) $m[1];
+    $min = $m[2];
+    $ampm = $h >= 12 ? 'PM' : 'AM';
+    $h12 = $h % 12;
+    if ($h12 === 0) {
+        $h12 = 12;
+    }
+
+    return $h12 . ':' . $min . ' ' . $ampm;
+}
+
+function ecp_profile_session_period(string $start): string
+{
+    $t = substr(trim($start), 0, 5);
+
+    return ($t !== '' && $t < '13:00') ? 'Morning' : 'Evening';
+}
+
+/** @param list<array{start?: string, end?: string}> $sessions @return list<array{label: string, time: string}> */
+function ecp_profile_labeled_sessions(array $sessions): array
+{
+    $out = [];
+    foreach ($sessions as $session) {
+        if (!is_array($session)) {
+            continue;
+        }
+        $startRaw = (string) ($session['start'] ?? '');
+        $start = ecp_profile_time_12h($startRaw);
+        $end = ecp_profile_time_12h((string) ($session['end'] ?? ''));
+        if ($start === '' || $end === '') {
+            continue;
+        }
+        $out[] = [
+            'label' => ecp_profile_session_period($startRaw),
+            'time' => $start . ' - ' . $end,
+        ];
+    }
+
+    return $out;
+}
+
+/** @param array<int, string>|array<string, mixed>|null $hours @return list<array{day: string, sessions: list<array{label: string, time: string}>, closed: bool}> */
+function ecp_profile_hours_day_rows(?array $hours): array
+{
+    if (!$hours || (isset($hours[0]) && is_string($hours[0])) || isset($hours['weekday_text'])) {
+        return [];
+    }
+
+    $dayOrder = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+    $dayLabel = ['mon' => 'Monday', 'tue' => 'Tuesday', 'wed' => 'Wednesday', 'thu' => 'Thursday', 'fri' => 'Friday', 'sat' => 'Saturday', 'sun' => 'Sunday'];
+    $byDay = [];
+
+    foreach ($dayOrder as $day) {
+        $cfg = $hours[$day] ?? null;
+        if (!is_array($cfg)) {
+            continue;
+        }
+        $enabled = !empty($cfg['enabled']);
+        $sessions = is_array($cfg['sessions'] ?? null) ? $cfg['sessions'] : [];
+        $labeled = ($enabled && $sessions !== []) ? ecp_profile_labeled_sessions($sessions) : [];
+        $byDay[$day] = [
+            'day' => $dayLabel[$day],
+            'sessions' => $labeled,
+            'closed' => $labeled === [],
+        ];
+    }
+
+    if ($byDay === []) {
+        return [];
+    }
+
+    $rows = [];
+    $monSat = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    $monSatKeys = array_values(array_filter($monSat, static fn (string $d): bool => array_key_exists($d, $byDay)));
+    if (count($monSatKeys) === 6) {
+        $fingerprints = array_map(
+            static fn (string $d): string => json_encode($byDay[$d]['sessions']),
+            $monSatKeys
+        );
+        if (count(array_unique($fingerprints)) === 1) {
+            $first = $byDay['mon'];
+            $rows[] = [
+                'day' => 'Monday - Saturday',
+                'sessions' => $first['sessions'],
+                'closed' => $first['closed'],
+            ];
+        } else {
+            foreach ($monSat as $day) {
+                if (isset($byDay[$day])) {
+                    $rows[] = $byDay[$day];
+                }
+            }
+        }
+    } else {
+        foreach ($monSatKeys as $day) {
+            $rows[] = $byDay[$day];
+        }
+    }
+
+    if (isset($byDay['sun'])) {
+        $rows[] = $byDay['sun'];
+    }
+
+    return $rows;
 }
 
 /** @param array<int, string>|array<string, mixed>|null $hours */
@@ -256,7 +366,275 @@ function ecp_profile_hours_lines(?array $hours): array
         return $hours['weekday_text'];
     }
 
-    return [];
+    // Portal specialty_configs.working_hours shape:
+    // ['mon'=>['enabled'=>bool,'sessions'=>[['start'=>'09:00','end'=>'13:00'], ...]], ...]
+    $dayOrder = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+    $dayLabel = ['mon' => 'Monday', 'tue' => 'Tuesday', 'wed' => 'Wednesday', 'thu' => 'Thursday', 'fri' => 'Friday', 'sat' => 'Saturday', 'sun' => 'Sunday'];
+    $sessionTextByDay = [];
+
+    foreach ($dayOrder as $day) {
+        $cfg = $hours[$day] ?? null;
+        if (!is_array($cfg)) {
+            continue;
+        }
+
+        $enabled = !empty($cfg['enabled']);
+        $sessions = is_array($cfg['sessions'] ?? null) ? $cfg['sessions'] : [];
+        if (!$enabled || $sessions === []) {
+            $sessionTextByDay[$day] = 'Closed';
+            continue;
+        }
+
+        $parts = [];
+        foreach ($sessions as $session) {
+            if (!is_array($session)) {
+                continue;
+            }
+            $start = ecp_profile_time_12h((string) ($session['start'] ?? ''));
+            $end = ecp_profile_time_12h((string) ($session['end'] ?? ''));
+            if ($start === '' || $end === '') {
+                continue;
+            }
+            $label = ecp_profile_session_period((string) ($session['start'] ?? ''));
+            $parts[] = $label . ': ' . $start . ' - ' . $end;
+        }
+
+        $sessionTextByDay[$day] = $parts ? implode(', ', $parts) : 'Closed';
+    }
+
+    $lines = [];
+    $monSat = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    $monSatAvailable = array_values(array_filter(
+        $monSat,
+        static fn (string $d): bool => array_key_exists($d, $sessionTextByDay),
+    ));
+    if (count($monSatAvailable) === 6) {
+        $uniqueMonSat = array_values(array_unique(array_map(
+            static fn (string $d): string => $sessionTextByDay[$d],
+            $monSatAvailable
+        )));
+        if (count($uniqueMonSat) === 1) {
+            $lines[] = 'Monday - Saturday: ' . $uniqueMonSat[0];
+        } else {
+            foreach ($monSat as $day) {
+                $lines[] = $dayLabel[$day] . ': ' . $sessionTextByDay[$day];
+            }
+        }
+    } else {
+        foreach ($monSatAvailable as $day) {
+            $lines[] = $dayLabel[$day] . ': ' . $sessionTextByDay[$day];
+        }
+    }
+
+    if (array_key_exists('sun', $sessionTextByDay)) {
+        $lines[] = 'Sunday: ' . $sessionTextByDay['sun'];
+    }
+
+    return $lines;
+}
+
+/** @param array<int, string>|array<string, mixed>|null $hours @return array{compact: bool, day_range: string, sessions: list<array{label: string, time: string}>, rows: list<array{day: string, sessions: list<array{label: string, time: string}>, closed: bool}>} */
+function ecp_profile_hours_hero_display(?array $hours): array
+{
+    $empty = ['compact' => true, 'day_range' => '', 'sessions' => [], 'rows' => []];
+    $rows = ecp_profile_hours_day_rows($hours);
+    if ($rows !== []) {
+        $fingerprints = array_map(
+            static fn (array $row): string => json_encode($row['sessions']),
+            $rows
+        );
+        if (count(array_unique($fingerprints)) <= 1) {
+            $first = $rows[0];
+
+            return [
+                'compact' => true,
+                'day_range' => $first['day'],
+                'sessions' => $first['sessions'],
+                'rows' => [],
+            ];
+        }
+
+        return ['compact' => false, 'day_range' => '', 'sessions' => [], 'rows' => $rows];
+    }
+
+    $hoursLines = ecp_profile_hours_lines($hours);
+    if ($hoursLines === []) {
+        return $empty;
+    }
+
+    $legacyRows = [];
+    $timeParts = [];
+    foreach ($hoursLines as $line) {
+        $line = trim((string) $line);
+        if ($line === '') {
+            continue;
+        }
+        $pos = strpos($line, ':');
+        if ($pos === false) {
+            $legacyRows[] = ['day' => '', 'sessions' => [], 'closed' => false];
+            $timeParts[] = $line;
+            continue;
+        }
+        $day = trim(substr($line, 0, $pos));
+        $time = trim(substr($line, $pos + 1));
+        $legacyRows[] = [
+            'day' => $day,
+            'sessions' => $time === 'Closed' ? [] : [['label' => '', 'time' => $time]],
+            'closed' => $time === 'Closed',
+        ];
+        $timeParts[] = $time;
+    }
+
+    if ($legacyRows === []) {
+        return $empty;
+    }
+
+    if (count(array_unique($timeParts)) <= 1) {
+        $first = $legacyRows[0];
+
+        return [
+            'compact' => true,
+            'day_range' => $first['day'],
+            'sessions' => $first['sessions'],
+            'rows' => [],
+        ];
+    }
+
+    return ['compact' => false, 'day_range' => '', 'sessions' => [], 'rows' => $legacyRows];
+}
+
+/** @param array<int, string>|array<string, mixed>|null $hours @return list<array{day: string, morning: string, evening: string}> */
+function ecp_profile_hours_table_rows(?array $hours): array
+{
+    $hoursDisplay = ecp_profile_hours_hero_display($hours);
+    $out = [];
+
+    if ($hoursDisplay['compact']) {
+        $morning = '-';
+        $evening = '-';
+        foreach ((array) ($hoursDisplay['sessions'] ?? []) as $session) {
+            $label = strtolower((string) ($session['label'] ?? ''));
+            if ($label === 'morning') {
+                $morning = (string) ($session['time'] ?? '-');
+            } elseif ($label === 'evening') {
+                $evening = (string) ($session['time'] ?? '-');
+            }
+        }
+        $out[] = [
+            'day' => (string) (($hoursDisplay['day_range'] ?? '') !== '' ? $hoursDisplay['day_range'] : 'Working days'),
+            'morning' => $morning,
+            'evening' => $evening,
+        ];
+
+        return $out;
+    }
+
+    foreach ((array) ($hoursDisplay['rows'] ?? []) as $hoursRow) {
+        $morning = '-';
+        $evening = '-';
+        if (!empty($hoursRow['closed'])) {
+            $morning = 'Closed';
+            $evening = 'Closed';
+        } else {
+            foreach ((array) ($hoursRow['sessions'] ?? []) as $session) {
+                $label = strtolower((string) ($session['label'] ?? ''));
+                if ($label === 'morning') {
+                    $morning = (string) ($session['time'] ?? '-');
+                } elseif ($label === 'evening') {
+                    $evening = (string) ($session['time'] ?? '-');
+                }
+            }
+        }
+        $out[] = [
+            'day' => (string) ($hoursRow['day'] ?? ''),
+            'morning' => $morning,
+            'evening' => $evening,
+        ];
+    }
+
+    return $out;
+}
+
+/** @return array<string, mixed>|null */
+function ecp_profile_owner_working_hours(PDO $db, int $clinicId): ?array
+{
+    if ($clinicId <= 0) {
+        return null;
+    }
+
+    // Prefer clinic owner. If absent, fall back to the first active doctor.
+    $ownerStmt = $db->prepare(
+        "SELECT id
+           FROM users
+          WHERE clinic_id = :cid
+            AND is_active = 1
+            AND is_owner = 1
+          ORDER BY id ASC
+          LIMIT 1"
+    );
+    $ownerStmt->execute(['cid' => $clinicId]);
+    $doctorId = (int) ($ownerStmt->fetchColumn() ?: 0);
+
+    if ($doctorId <= 0) {
+        $docStmt = $db->prepare(
+            "SELECT id
+               FROM users
+              WHERE clinic_id = :cid
+                AND is_active = 1
+                AND role = 'doctor'
+              ORDER BY id ASC
+              LIMIT 1"
+        );
+        $docStmt->execute(['cid' => $clinicId]);
+        $doctorId = (int) ($docStmt->fetchColumn() ?: 0);
+    }
+
+    if ($doctorId <= 0) {
+        return null;
+    }
+
+    $rowsStmt = $db->prepare(
+        "SELECT day_of_week, start_time, end_time, extended_end_time
+           FROM doctor_schedules
+          WHERE clinic_id = :cid
+            AND doctor_id = :did
+            AND is_active = 1
+          ORDER BY day_of_week ASC, start_time ASC"
+    );
+    $rowsStmt->execute(['cid' => $clinicId, 'did' => $doctorId]);
+    $rows = $rowsStmt->fetchAll(PDO::FETCH_ASSOC);
+    if (!$rows) {
+        return null;
+    }
+
+    $dayKeys = [0 => 'sun', 1 => 'mon', 2 => 'tue', 3 => 'wed', 4 => 'thu', 5 => 'fri', 6 => 'sat'];
+    $hours = [];
+    foreach ($dayKeys as $k) {
+        $hours[$k] = ['enabled' => false, 'sessions' => []];
+    }
+
+    foreach ($rows as $r) {
+        $dow = (int) ($r['day_of_week'] ?? -1);
+        $day = $dayKeys[$dow] ?? null;
+        if ($day === null) {
+            continue;
+        }
+        $start = substr((string) ($r['start_time'] ?? ''), 0, 5);
+        $end = substr((string) ($r['end_time'] ?? ''), 0, 5);
+        if ($start === '' || $end === '') {
+            continue;
+        }
+
+        $hours[$day]['enabled'] = true;
+        $session = ['start' => $start, 'end' => $end];
+        $extended = substr((string) ($r['extended_end_time'] ?? ''), 0, 5);
+        if ($extended !== '') {
+            $session['extended_end'] = $extended;
+        }
+        $hours[$day]['sessions'][] = $session;
+    }
+
+    return $hours;
 }
 
 /** @param array<string, mixed> $row @param array<string, mixed> $cityMeta */
@@ -268,7 +646,11 @@ function ecp_profile_build_payload(PDO $db, array $row, string $entityType, stri
     $avatar = ecp_directory_avatar($row, 800);
 
     $hours = null;
-    if (!empty($row['tenant_hours'])) {
+    $claimedTenantId = (int) ($row['claimed_tenant_id'] ?? 0);
+    if ($claimedTenantId > 0) {
+        $hours = ecp_profile_owner_working_hours($db, $claimedTenantId);
+    }
+    if ($hours === null && !empty($row['tenant_hours'])) {
         $decoded = json_decode((string) $row['tenant_hours'], true);
         if (is_array($decoded)) {
             $hours = $decoded;

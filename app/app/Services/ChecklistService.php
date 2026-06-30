@@ -23,7 +23,7 @@ final class ChecklistService
             self::item('patient', 'Add first patient', self::tableCount('patients', $clinicId) > 0),
             self::item('appointment', 'Book first appointment', self::tableCount('appointments', $clinicId) > 0),
             self::item('payment', 'Connect payment method', self::hasPaymentMethod($clinic, $config)),
-            self::item('fee', 'Set consultation fee', (float) ($config['consultation_fee'] ?? 0) > 0),
+            self::item('fee', 'Set consultation fee', ClinicSettingsService::consultationFeeForClinic($clinicId) > 0),
         ];
 
         $done = count(array_filter($items, static fn ($i) => $i['done']));

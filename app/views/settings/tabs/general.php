@@ -123,10 +123,6 @@ $qrSrc       = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=
             <label class="ui-label mb-1 block">GSTIN</label>
             <input name="gstin" value="<?= htmlspecialchars($clinic['gstin'] ?? '') ?>" class="ui-input">
         </div>
-        <div class="sm:col-span-2 lg:col-span-3">
-            <label class="ui-label mb-1 block">Address</label>
-            <textarea name="address" rows="2" class="ui-input"><?= htmlspecialchars($clinic['address'] ?? '') ?></textarea>
-        </div>
         <div>
             <label class="ui-label mb-1 block">Country</label>
             <select name="country_code" class="ui-input">
@@ -150,10 +146,6 @@ $qrSrc       = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=
         <div>
             <label class="ui-label mb-1 block">Invoice prefix</label>
             <input name="invoice_prefix" value="<?= htmlspecialchars($config['invoice_prefix'] ?? 'INV') ?>" class="ui-input">
-        </div>
-        <div>
-            <label class="ui-label mb-1 block">Consultation fee</label>
-            <input name="consultation_fee" type="number" step="0.01" value="<?= htmlspecialchars((string) ($config['consultation_fee'] ?? '0')) ?>" class="ui-input">
         </div>
         <div>
             <label class="ui-label mb-1 block">Tax label</label>

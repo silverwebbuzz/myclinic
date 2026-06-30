@@ -9,6 +9,16 @@ $listingStatus = $listingStatus ?? ['state' => 'none', 'reason' => null];
 $row = $listing ?? null;            // directory_doctors row when approved
 $state = $listingStatus['state'] ?? 'none';
 $isApproved = $state === 'approved';
+$languages = [];
+if (!empty($row['languages'])) {
+    $decoded = json_decode((string) $row['languages'], true);
+    if (is_array($decoded)) {
+        $languages = array_values(array_filter(array_map(
+            static fn ($l): string => trim((string) $l),
+            $decoded
+        ), static fn (string $l): bool => $l !== ''));
+    }
+}
 ob_start();
 ?>
 
@@ -101,6 +111,14 @@ ob_start();
                       placeholder="One service per line, e.g.&#10;Diabetes management&#10;Thyroid disorders&#10;Diet &amp; lifestyle counselling"
                       class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-mono text-sm focus:border-emerald-500 focus:outline-none"><?= htmlspecialchars(implode("\n", $services ?? [])) ?></textarea>
             <span class="mt-1 block text-xs text-slate-500">Up to 24. Each line becomes one item under “Treatments &amp; services” on your public profile. Leave blank to show common treatments for your specialty.</span>
+        </label>
+
+        <label class="block">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Languages spoken</span>
+            <textarea name="languages_text" rows="3"
+                      placeholder="One language per line, e.g.&#10;English&#10;Hindi&#10;Gujarati"
+                      class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-mono text-sm focus:border-emerald-500 focus:outline-none"><?= htmlspecialchars(implode("\n", $languages)) ?></textarea>
+            <span class="mt-1 block text-xs text-slate-500">Up to 12 languages. These appear on your public listing profile.</span>
         </label>
 
         <div class="flex items-center justify-between">

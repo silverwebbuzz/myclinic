@@ -63,6 +63,7 @@ final class SuperAdminClinicService
 
         return [
             'config' => $config,
+            'directory_listing' => ClinicSettingsService::publicListing($clinicId),
             'users' => $users,
             'doctors' => $doctors,
             'counts' => $counts,

@@ -9,6 +9,7 @@
     <?php
     $overview = $overview ?? [];
     $config = $overview['config'] ?? [];
+    $directoryListing = $overview['directory_listing'] ?? null;
     $counts = $overview['counts'] ?? [];
     $users = $overview['users'] ?? [];
     $doctors = $overview['doctors'] ?? [];
@@ -97,7 +98,12 @@
                 <div>
                     <div class="text-xs text-slate-500">Consultation fee</div>
                     <div class="font-medium">
-                        <?= isset($config['consultation_fee']) ? '₹' . number_format((float) $config['consultation_fee'], 0) : '—' ?>
+                        <?php
+                        $listingFee = isset($directoryListing['consultation_fee']) && $directoryListing['consultation_fee'] !== null
+                            ? (float) $directoryListing['consultation_fee']
+                            : null;
+                        ?>
+                        <?= $listingFee !== null ? '₹' . number_format($listingFee, 0) : '—' ?>
                     </div>
                 </div>
                 <div>

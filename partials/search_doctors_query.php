@@ -125,10 +125,18 @@ function ecp_search_doctors(array $filters): array {
     };
 
     $slugCols = ecp_profile_slug_columns_ready($db) ? 'dd.entity_type, dd.listing_slug,' : '';
-    $selectCols = "dd.id, dd.name, dd.doctor_name, {$slugCols}
+    $selectCols = "dd.id, dd.name, dd.doctor_name,
+                   (SELECT u.name
+                      FROM users u
+                     WHERE u.clinic_id = dd.claimed_tenant_id
+                       AND u.is_owner = 1
+                       AND u.is_active = 1
+                     ORDER BY u.id ASC
+                     LIMIT 1) AS owner_doctor_name,
+                   {$slugCols}
                    dd.specialty, dd.country, dd.city, dd.state, dd.area, dd.address,
                    dd.lat, dd.lng, dd.phone, dd.website, dd.gmaps_url, dd.rating, dd.reviews,
-                   dd.opening_hours, dd.photo_reference, dd.types,
+                   dd.opening_hours, dd.photo_reference, dd.types, dd.languages,
                    dd.consultation_fee, dd.consultation_fee_currency,
                    dd.is_claimed, dd.quality_score, t.slug AS clinic_slug,
                    t.logo_path AS clinic_logo_path";
@@ -194,7 +202,10 @@ function ecp_search_doctors(array $filters): array {
 /** @param array<string, mixed> $r */
 function ecp_shape_directory_row(array $r): array {
     $clinicName = (string) ($r['name'] ?? '');
-    $doctorName = trim((string) ($r['doctor_name'] ?? ''));
+    $ownerDoctorName = trim((string) ($r['owner_doctor_name'] ?? ''));
+    $doctorName = $ownerDoctorName !== ''
+        ? $ownerDoctorName
+        : trim((string) ($r['doctor_name'] ?? ''));
     $display    = $doctorName !== '' ? $doctorName : $clinicName;
     $avatar     = ecp_directory_avatar($r, 400);
     $first      = mb_substr($avatar['initials'], 0, 1) ?: 'D';
@@ -205,6 +216,20 @@ function ecp_shape_directory_row(array $r): array {
         $d = json_decode((string) $r['opening_hours'], true);
         if (is_array($d)) {
             $hours = $d;
+        }
+    }
+
+    $langs = ['English'];
+    if (!empty($r['languages'])) {
+        $decoded = json_decode((string) $r['languages'], true);
+        if (is_array($decoded)) {
+            $clean = array_values(array_filter(array_map(
+                static fn ($l): string => trim((string) $l),
+                $decoded
+            ), static fn (string $l): bool => $l !== ''));
+            if ($clean !== []) {
+                $langs = $clean;
+            }
         }
     }
 
@@ -245,7 +270,7 @@ function ecp_shape_directory_row(array $r): array {
         'distance_km'     => isset($r['distance_km']) ? round((float) $r['distance_km'], 1) : null,
         'qual'            => '',
         'years'           => 0,
-        'langs'           => ['English'],
+        'langs'           => $langs,
         'gender'          => '',
         'video'           => false,
         'next'            => ['when' => 'later', 'label' => 'Contact clinic', 'sub' => ''],

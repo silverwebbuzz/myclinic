@@ -89,7 +89,7 @@ $uhid = htmlspecialchars($config['uhid_prefix'] ?? 'MC');
             </div>
             <div>
                 <label class="text-xs font-medium text-slate-600">Default consultation fee</label>
-                <input name="consultation_fee" type="number" step="0.01" min="0" value="<?= htmlspecialchars((string) ($config['consultation_fee'] ?? '0')) ?>" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                <input name="consultation_fee" type="number" step="0.01" min="0" value="<?= htmlspecialchars((string) ($consultationFee ?? 0)) ?>" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
             </div>
         </div>
     </section>

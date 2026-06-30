@@ -168,6 +168,7 @@ final class RoleAccessService
     private static function isSelfServicePath(string $path): bool
     {
         return $path === '/change-password'
+            || $path === '/settings/profile'
             || $path === '/settings/password'
             || $path === '/settings/sessions'
             || str_starts_with($path, '/settings/sessions/');
