@@ -281,6 +281,23 @@ button {
   color: var(--ink-2);
 }
 
+/* Awareness ribbon symbol in the header (→ /cervical-cancer) */
+.nav-ribbon {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: var(--teal-600);
+  background: var(--teal-50);
+  border: 1px solid var(--teal-100);
+  transition: transform .15s ease, background .15s ease;
+}
+.nav-ribbon:hover {
+  background: var(--teal-100);
+  transform: translateY(-1px);
+}
+
 /* Logged-in user dropdown in the header */
 .nav-user {
   position: relative;

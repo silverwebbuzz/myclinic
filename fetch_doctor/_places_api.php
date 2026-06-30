@@ -10,9 +10,22 @@ declare(strict_types=1);
  * - API key is restricted to HTTP referrers (browser) but fetch_doctor runs server-side.
  */
 
+function fd_places_set_status(string $status, ?string $message = null): void
+{
+    $GLOBALS['fd_last_places_status'] = $status;
+    if ($message !== null && $message !== '') {
+        $GLOBALS['fd_last_places_message'] = $message;
+    }
+}
+
+function fd_places_last_message(): string
+{
+    return (string) ($GLOBALS['fd_last_places_message'] ?? '');
+}
+
 function fd_places_denied_help(): string
 {
-    return implode("\n", [
+    $lines = [
         '',
         '⚠ Google API key rejected (REQUEST_DENIED / PERMISSION_DENIED). Check:',
         '  1. Google Cloud → APIs & Services → Library → enable BOTH:',
@@ -21,9 +34,16 @@ function fd_places_denied_help(): string
         '  2. Billing must be enabled on the project.',
         '  3. API key restrictions: use "IP addresses" (your server IP),',
         '     NOT "HTTP referrers" — fetch_doctor calls Google from PHP on the server.',
+        '     Add BOTH IPv4 (147.93.62.3) AND IPv6 (2a02:4780:41:9938::1).',
         '  4. Key lives in fetch_doctor/.env as GOOGLE_MAPS_API_KEY=...',
-        '',
-    ]);
+    ];
+    $msg = fd_places_last_message();
+    if ($msg !== '') {
+        $lines[] = '';
+        $lines[] = '  Google says: ' . $msg;
+    }
+
+    return implode("\n", $lines) . "\n";
 }
 
 function fd_places_status_denied(?string $status): bool
@@ -75,26 +95,27 @@ function fd_http_post_json(string $url, array $body, array $headers, int &$reqCo
     curl_close($ch);
 
     if ($bodyRaw === false || $code === 0) {
-        $GLOBALS['fd_last_places_status'] = 'NETWORK_ERROR';
+        fd_places_set_status('NETWORK_ERROR');
 
         return null;
     }
 
     $data = json_decode((string) $bodyRaw, true);
     if (!is_array($data)) {
-        $GLOBALS['fd_last_places_status'] = 'INVALID_JSON';
+        fd_places_set_status('INVALID_JSON');
 
         return null;
     }
 
     if ($code >= 400) {
         $errStatus = (string) ($data['error']['status'] ?? ('HTTP_' . $code));
-        $GLOBALS['fd_last_places_status'] = $errStatus;
+        $errMsg = (string) ($data['error']['message'] ?? '');
+        fd_places_set_status($errStatus, $errMsg);
 
         return null;
     }
 
-    $GLOBALS['fd_last_places_status'] = 'OK';
+    fd_places_set_status('OK');
 
     return $data;
 }

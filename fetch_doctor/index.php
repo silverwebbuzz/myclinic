@@ -511,7 +511,13 @@ function http_get_json(string $url, int &$reqCount): ?array {
         if (!is_array($data)) return null;
 
         $status = $data['status'] ?? '';
-        $GLOBALS['fd_last_places_status'] = $status !== '' ? $status : ($code !== 200 ? 'HTTP_' . $code : 'UNKNOWN');
+        $errMsg = (string) ($data['error_message'] ?? '');
+        if ($status !== '' || $errMsg !== '') {
+            fd_places_set_status(
+                $status !== '' ? $status : ($code !== 200 ? 'HTTP_' . $code : 'UNKNOWN'),
+                $errMsg !== '' ? $errMsg : null,
+            );
+        }
         if ($status === 'OK' || $status === 'ZERO_RESULTS') return $data;
         if ($status === 'INVALID_REQUEST' && $attempt === 1) { sleep(3); continue; }
         if ($status === 'OVER_QUERY_LIMIT' && $attempt === 1) { sleep(5); continue; }
@@ -833,6 +839,56 @@ if ($action === 'status' && $jobId !== null) {
     exit;
 }
 
+// ----- Diagnostic: test API key from this server -----
+if ($action === 'test_key') {
+    header('Content-Type: text/plain; charset=utf-8');
+    echo "fetch_doctor — API key test\n" . str_repeat('=', 60) . "\n\n";
+
+    if ($apiKey === '') {
+        echo "❌ GOOGLE_MAPS_API_KEY missing in fetch_doctor/.env\n";
+        exit;
+    }
+
+    $masked = substr($apiKey, 0, 8) . '…' . substr($apiKey, -4);
+    echo "Key loaded: {$masked}\n";
+
+    $outboundIp = @file_get_contents('https://api.ipify.org');
+    if ($outboundIp) {
+        echo "Server outbound IP (IPv4): {$outboundIp}\n";
+    }
+    $outboundIp6 = @file_get_contents('https://api64.ipify.org');
+    if ($outboundIp6 && $outboundIp6 !== $outboundIp) {
+        echo "Server outbound IP (api64): {$outboundIp6}\n";
+    }
+    echo "\n";
+
+    $reqCount = 0;
+    $legacy = fetch_find_place($apiKey, 'Cosmocare Dental Ahmedabad', 23.0225, 72.5714, 50000, $reqCount);
+    $legacyStatus = (string) ($GLOBALS['fd_last_places_status'] ?? 'UNKNOWN');
+    $legacyMsg = fd_places_last_message();
+    echo "Legacy Places API (findplacefromtext):\n";
+    echo "  status: {$legacyStatus}\n";
+    if ($legacyMsg !== '') echo "  message: {$legacyMsg}\n";
+    echo "  candidates: " . count($legacy) . "\n\n";
+
+    $newRows = fd_places_new_search_text($apiKey, 'Cosmocare Dental Ahmedabad', 23.0225, 72.5714, 50000, $reqCount);
+    $newStatus = (string) ($GLOBALS['fd_last_places_status'] ?? 'UNKNOWN');
+    $newMsg = fd_places_last_message();
+    echo "Places API (New) (searchText):\n";
+    echo "  status: {$newStatus}\n";
+    if ($newMsg !== '') echo "  message: {$newMsg}\n";
+    echo "  places: " . count($newRows) . "\n\n";
+
+    if (fd_places_status_denied($legacyStatus) || fd_places_status_denied($newStatus)) {
+        echo fd_places_denied_help();
+    } elseif (count($legacy) > 0 || count($newRows) > 0) {
+        echo "✓ Key works. Re-run name lookup.\n";
+    } else {
+        echo "Key accepted but no results for test query (may be ZERO_RESULTS).\n";
+    }
+    exit;
+}
+
 // ----- AJAX: pause / resume / cancel -----
 if ($action === 'pause' && $jobId !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json; charset=utf-8');
@@ -945,6 +1001,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['names'])) {
                 echo '   ⨯ no result';
                 if ($st !== '' && $st !== 'ZERO_RESULTS' && $st !== 'OK') {
                     echo " (Google: {$st})";
+                    $detail = fd_places_last_message();
+                    if ($detail !== '') {
+                        echo "\n     → {$detail}";
+                    }
                 }
                 echo "\n";
                 if ($sawDenied) {
