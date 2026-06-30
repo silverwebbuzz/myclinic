@@ -335,10 +335,21 @@ final class PatientService
             ->forClinic($clinicId)
             ->where('patient_id', '=', $patientId)
             ->orderBy('recorded_at', 'DESC')
-            ->limit($limit)
+            ->limit($limit * 3)
             ->get();
 
-        return array_reverse($rows);
+        $filtered = [];
+        foreach ($rows as $row) {
+            if (!VitalsService::hasRecordedValues($row)) {
+                continue;
+            }
+            $filtered[] = $row;
+            if (count($filtered) >= $limit) {
+                break;
+            }
+        }
+
+        return array_reverse($filtered);
     }
 
     /** @return list<array<string, mixed>> */

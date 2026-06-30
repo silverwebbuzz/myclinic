@@ -51,6 +51,8 @@ final class VitalsService
             $where[] = '(v.bp_systolic >= 140 OR v.bp_diastolic >= 90 OR v.spo2 < 94 OR v.temperature >= 38)';
         }
 
+        $where[] = self::hasValuesSql('v');
+
         $whereSql = implode(' AND ', $where);
         $pdo = Database::connection();
 
@@ -89,6 +91,18 @@ final class VitalsService
             ->first();
 
         $row = self::normalize($data);
+
+        if (!self::hasRecordedValues($row)) {
+            if ($existing !== null) {
+                QueryBuilder::table('vitals')
+                    ->forClinic($clinicId)
+                    ->where('id', '=', (int) $existing['id'])
+                    ->delete();
+            }
+
+            return [];
+        }
+
         $row['clinic_id'] = $clinicId;
         $row['visit_id'] = $visitId;
         $row['patient_id'] = $patientId;
@@ -117,7 +131,7 @@ final class VitalsService
             ->first();
 
         if ($row !== null) {
-            return self::hydrateForEdit($row);
+            return self::hasRecordedValues($row) ? self::hydrateForEdit($row) : null;
         }
 
         // Legacy compatibility: old rows may have null/0 clinic_id.
@@ -139,6 +153,10 @@ final class VitalsService
                 ->where('id', '=', (int) $legacy['id'])
                 ->update(['clinic_id' => $clinicId]);
             $legacy['clinic_id'] = $clinicId;
+        }
+
+        if ($legacy !== null && !self::hasRecordedValues($legacy)) {
+            return null;
         }
 
         return $legacy !== null ? self::hydrateForEdit($legacy) : null;
@@ -193,12 +211,25 @@ final class VitalsService
     /** @return list<array<string, mixed>> */
     public static function history(int $clinicId, int $patientId, int $limit = 12): array
     {
-        return QueryBuilder::table('vitals')
+        $rows = QueryBuilder::table('vitals')
             ->forClinic($clinicId)
             ->where('patient_id', '=', $patientId)
             ->orderBy('recorded_at', 'DESC')
-            ->limit($limit)
+            ->limit($limit * 3)
             ->get();
+
+        $filtered = [];
+        foreach ($rows as $row) {
+            if (!self::hasRecordedValues($row)) {
+                continue;
+            }
+            $filtered[] = $row;
+            if (count($filtered) >= $limit) {
+                break;
+            }
+        }
+
+        return $filtered;
     }
 
     /** @param array<string, mixed> $vitals @return list<array{field: string, message: string, level: string}> */
@@ -221,6 +252,58 @@ final class VitalsService
         }
 
         return $warnings;
+    }
+
+    /** True when at least one measured vital value is present. */
+    public static function hasRecordedValues(array $data): bool
+    {
+        foreach (self::valueColumns() as $col) {
+            if (isset($data[$col]) && $data[$col] !== '' && $data[$col] !== null) {
+                return true;
+            }
+        }
+
+        $extra = $data['extra_vitals'] ?? $data['extra'] ?? null;
+        if (is_string($extra) && $extra !== '' && $extra !== '{}') {
+            $decoded = json_decode($extra, true);
+
+            return is_array($decoded) && self::extraHasValues($decoded);
+        }
+
+        return is_array($extra) && self::extraHasValues($extra);
+    }
+
+    /** @return list<string> */
+    private static function valueColumns(): array
+    {
+        return [
+            'bp_systolic', 'bp_diastolic', 'blood_sugar', 'weight_kg', 'height_cm',
+            'temperature', 'spo2', 'pulse_rate', 'tsh', 't3', 't4', 'skin_score',
+        ];
+    }
+
+    /** SQL fragment: row has at least one stored vital measurement. */
+    private static function hasValuesSql(string $alias): string
+    {
+        $parts = [];
+        foreach (self::valueColumns() as $col) {
+            $parts[] = "{$alias}.{$col} IS NOT NULL";
+        }
+        $parts[] = "({$alias}.extra_vitals IS NOT NULL AND {$alias}.extra_vitals != '' AND {$alias}.extra_vitals != '{}')";
+
+        return '(' . implode(' OR ', $parts) . ')';
+    }
+
+    /** @param array<string, mixed> $extra */
+    private static function extraHasValues(array $extra): bool
+    {
+        foreach ($extra as $value) {
+            if ($value !== '' && $value !== null) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** @param array<string, mixed> $data @return array<string, mixed> */

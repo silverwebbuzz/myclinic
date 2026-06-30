@@ -139,13 +139,347 @@ final class PrescriptionService
         return array_map(static function (array $row) {
             if (!empty($row['drug_id'])) {
                 $row['drug'] = DrugService::find((int) $row['drug_id']);
+                $row['drug_name'] = $row['drug']['name'] ?? null;
             }
             if (!empty($row['remedy_id'])) {
                 $row['remedy'] = RemedyService::find((int) $row['remedy_id']);
+                $row['remedy_name'] = $row['remedy']['name'] ?? null;
             }
 
             return $row;
         }, $rows);
+    }
+
+    /**
+     * Resolve the medicine label for display / PDF (matches visit UI hydration).
+     *
+     * @param array<string, mixed> $line
+     */
+    public static function medicineName(array $line): string
+    {
+        $name = trim((string) (
+            $line['drug_name'] ?? $line['remedy_name']
+            ?? $line['drug']['name'] ?? $line['remedy']['name'] ?? ''
+        ));
+        if ($name === '' && empty($line['drug_id']) && empty($line['remedy_id'])) {
+            // Free-typed medicine with no catalog pick — name is stored in `dosage`.
+            $name = trim((string) ($line['dosage'] ?? ''));
+        }
+
+        return $name;
+    }
+
+    /**
+     * Human-readable dose for print (dose_amount + dose_unit, else legacy dosage).
+     *
+     * @param array<string, mixed> $line
+     */
+    public static function dosageDisplay(array $line): string
+    {
+        $amount = $line['dose_amount'] ?? null;
+        if ($amount !== null && $amount !== '') {
+            $unit = trim((string) ($line['dose_unit'] ?? ''));
+            $amt = is_numeric($amount) && (float) $amount == floor((float) $amount)
+                ? (string) (int) (float) $amount
+                : rtrim(rtrim((string) $amount, '0'), '.');
+
+            return $unit !== '' ? $amt . ' ' . $unit : $amt;
+        }
+
+        // Legacy `dosage` column — skip when it holds a free-typed drug name.
+        if (!empty($line['drug_id']) || !empty($line['remedy_id'])
+            || trim((string) ($line['drug_name'] ?? $line['remedy_name'] ?? '')) !== '') {
+            return trim((string) ($line['dosage'] ?? ''));
+        }
+
+        return '';
+    }
+
+    /**
+     * Frequency label for print — preset label (e.g. "1-0-1 (BD)") when available.
+     *
+     * @param array<string, mixed> $line
+     */
+    public static function frequencyDisplay(array $line): string
+    {
+        $preset = trim((string) ($line['frequency_preset'] ?? ''));
+        if ($preset !== '') {
+            return self::frequencyPresetLabel($preset, $line);
+        }
+
+        return trim((string) ($line['frequency'] ?? ''));
+    }
+
+    /**
+     * @param array<string, mixed> $line
+     */
+    public static function frequencyPresetLabel(string $preset, array $line): string
+    {
+        $preset = trim($preset);
+        if ($preset === '') {
+            return '';
+        }
+
+        $name = self::medicineName($line);
+        $doseUnit = (string) ($line['dose_unit'] ?? '');
+        $catalogForm = isset($line['drug']['form']) ? (string) $line['drug']['form'] : null;
+        $form = RxFormHelper::inferForm($catalogForm, $doseUnit, $name);
+        foreach (RxFormHelper::frequencyPresets($form) as $opt) {
+            if (($opt['value'] ?? '') === $preset) {
+                return (string) ($opt['label'] ?? $preset);
+            }
+        }
+
+        return $preset;
+    }
+
+    public static function foodTimingLabel(?string $timing): string
+    {
+        return match ($timing ?? 'any') {
+            'before' => 'Before food',
+            'after' => 'After food',
+            'empty' => 'Empty stomach',
+            'bedtime' => 'At bedtime',
+            default => 'Any time',
+        };
+    }
+
+    /** @return list<array<string, mixed>> */
+    public static function taperingSteps(array $line): array
+    {
+        $raw = $line['tapering_steps'] ?? null;
+        if (is_string($raw) && $raw !== '') {
+            $decoded = json_decode($raw, true);
+            $raw = is_array($decoded) ? $decoded : null;
+        }
+
+        if (!is_array($raw)) {
+            return [];
+        }
+
+        $lineDose = isset($line['dose_amount']) && $line['dose_amount'] !== ''
+            ? (float) $line['dose_amount'] : null;
+
+        return self::hydrateTaperingSteps(
+            array_values(array_filter($raw, 'is_array')),
+            $lineDose,
+        );
+    }
+
+    /**
+     * Ensure each tapering step has dose_amount (falls back to the line dose).
+     *
+     * @param list<array<string, mixed>> $steps
+     * @return list<array<string, mixed>>
+     */
+    public static function hydrateTaperingSteps(array $steps, ?float $lineDoseAmount = null): array
+    {
+        return array_values(array_map(static function (array $step) use ($lineDoseAmount): array {
+            if (!isset($step['dose_amount']) || $step['dose_amount'] === '' || $step['dose_amount'] === null) {
+                if ($lineDoseAmount !== null) {
+                    $step['dose_amount'] = $lineDoseAmount;
+                }
+            }
+
+            return $step;
+        }, $steps));
+    }
+
+    /**
+     * Validate + normalize tapering JSON before save.
+     * Schema per step: {days, preset, food, dose_amount}
+     *
+     * @param list<array<string, mixed>> $steps
+     * @return list<array{days: int, preset: string, food: string, dose_amount: float|null}>
+     */
+    public static function normalizeTaperingStepsForSave(array $steps, ?float $lineDoseAmount = null): array
+    {
+        $normalized = [];
+        foreach ($steps as $step) {
+            if (!is_array($step)) {
+                continue;
+            }
+            $days = isset($step['days']) && $step['days'] !== '' ? (int) $step['days'] : 0;
+            if ($days < 1) {
+                continue;
+            }
+
+            $food = (string) ($step['food'] ?? 'any');
+            if (!in_array($food, ['any', 'before', 'after', 'empty', 'bedtime'], true)) {
+                $food = 'any';
+            }
+
+            $doseAmount = null;
+            if (isset($step['dose_amount']) && $step['dose_amount'] !== '' && $step['dose_amount'] !== null) {
+                $doseAmount = (float) $step['dose_amount'];
+            } elseif ($lineDoseAmount !== null) {
+                $doseAmount = $lineDoseAmount;
+            }
+
+            $normalized[] = [
+                'days' => $days,
+                'preset' => trim((string) ($step['preset'] ?? '')),
+                'food' => $food,
+                'dose_amount' => $doseAmount,
+            ];
+        }
+
+        return $normalized;
+    }
+
+    /** @param array<string, mixed> $step @param array<string, mixed> $line */
+    public static function stepDoseDisplay(array $step, array $line): string
+    {
+        $amount = $step['dose_amount'] ?? null;
+        if ($amount === null || $amount === '') {
+            return self::dosageDisplay($line);
+        }
+
+        $unit = trim((string) ($line['dose_unit'] ?? ''));
+        $amt = is_numeric($amount) && (float) $amount == floor((float) $amount)
+            ? (string) (int) (float) $amount
+            : rtrim(rtrim((string) $amount, '0'), '.');
+
+        return $unit !== '' ? $amt . ' ' . $unit : $amt;
+    }
+
+    /**
+     * Total units to dispense (dose × frequency × days). Null when not calculable (e.g. SOS).
+     *
+     * @param array<string, mixed> $line
+     * @return array{qty: float, unit: string, display: string}|null
+     */
+    public static function totalQuantityToPurchase(array $line): ?array
+    {
+        $unit = trim((string) ($line['dose_unit'] ?? ''));
+        if ($unit === '') {
+            $unit = 'unit';
+        }
+
+        // Liquids / drops are dispensed as one bottle — not a summed ml/drop count.
+        if (self::isSinglePackUnit($unit)) {
+            return [
+                'qty' => 1.0,
+                'unit' => $unit,
+                'display' => '1',
+            ];
+        }
+
+        $taperSteps = self::taperingSteps($line);
+        $total = 0.0;
+        $calculable = false;
+
+        if ($taperSteps !== []) {
+            foreach ($taperSteps as $step) {
+                $stepQty = self::quantityForStep($step, $line);
+                if ($stepQty !== null) {
+                    $total += $stepQty;
+                    $calculable = true;
+                }
+            }
+        } else {
+            $lineQty = self::quantityForLine($line);
+            if ($lineQty !== null) {
+                $total = $lineQty;
+                $calculable = true;
+            }
+        }
+
+        if (!$calculable || $total <= 0) {
+            return null;
+        }
+
+        return [
+            'qty' => $total,
+            'unit' => $unit,
+            'display' => self::formatPurchaseQuantity($total, $unit),
+        ];
+    }
+
+    /** @param array<string, mixed> $step @param array<string, mixed> $line */
+    private static function quantityForStep(array $step, array $line): ?float
+    {
+        $doseAmount = $step['dose_amount'] ?? $line['dose_amount'] ?? null;
+        if ($doseAmount === null || $doseAmount === '') {
+            return null;
+        }
+
+        $days = (int) ($step['days'] ?? 0);
+        if ($days < 1) {
+            return null;
+        }
+
+        $perDay = RxFormHelper::dosesPerDay((string) ($step['preset'] ?? ''), null);
+        if ($perDay === null || $perDay <= 0) {
+            return null;
+        }
+
+        return (float) $doseAmount * $perDay * $days;
+    }
+
+    /** @param array<string, mixed> $line */
+    private static function quantityForLine(array $line): ?float
+    {
+        $doseAmount = $line['dose_amount'] ?? null;
+        if ($doseAmount === null || $doseAmount === '') {
+            return null;
+        }
+
+        $days = (int) ($line['duration_days'] ?? 0);
+        if ($days < 1) {
+            return null;
+        }
+
+        $perDay = RxFormHelper::dosesPerDay(
+            (string) ($line['frequency_preset'] ?? ''),
+            (string) ($line['frequency'] ?? ''),
+        );
+        if ($perDay === null || $perDay <= 0) {
+            return null;
+        }
+
+        return (float) $doseAmount * $perDay * $days;
+    }
+
+    private static function formatPurchaseQuantity(float $qty, string $unit): string
+    {
+        $qtyStr = abs($qty - round($qty)) < 0.001
+            ? (string) (int) round($qty)
+            : rtrim(rtrim(number_format($qty, 2, '.', ''), '0'), '.');
+
+        $unit = $unit !== '' ? $unit : 'units';
+        $qtyNum = (float) $qtyStr;
+        if ($qtyNum !== 1.0 && !str_ends_with($unit, 's')) {
+            $unit = match ($unit) {
+                'capsule' => 'capsules',
+                'tablet' => 'tablets',
+                'drop' => 'drops',
+                'drops' => 'drops',
+                'sachet' => 'sachets',
+                'puff' => 'puffs',
+                'ml' => 'ml',
+                default => $unit . 's',
+            };
+        }
+
+        return $qtyStr . ' ' . $unit;
+    }
+
+    /** ml / drops are purchased as one bottle, not a summed volume/count. */
+    private static function isSinglePackUnit(string $unit): bool
+    {
+        return in_array(strtolower(trim($unit)), ['ml', 'drops', 'drop'], true);
+    }
+
+    /** @param list<array<string, mixed>> $steps */
+    public static function taperingTotalDays(array $steps): int
+    {
+        $total = 0;
+        foreach ($steps as $step) {
+            $total += (int) ($step['days'] ?? 0);
+        }
+
+        return $total;
     }
 
     /** @param list<array<string, mixed>> $lines */
@@ -234,6 +568,16 @@ final class PrescriptionService
                 $preset = isset($line['frequency_preset']) && $line['frequency_preset'] !== ''
                     ? (string) $line['frequency_preset'] : null;
 
+                $lineDose = isset($line['dose_amount']) && $line['dose_amount'] !== ''
+                    ? (float) $line['dose_amount'] : null;
+                $tapering = null;
+                if (isset($line['tapering_steps']) && is_array($line['tapering_steps']) && $line['tapering_steps'] !== []) {
+                    $tapering = self::normalizeTaperingStepsForSave($line['tapering_steps'], $lineDose);
+                    if ($tapering === []) {
+                        $tapering = null;
+                    }
+                }
+
                 $row = [
                     'clinic_id' => $clinicId,
                     'visit_id' => $visitId,
@@ -257,8 +601,8 @@ final class PrescriptionService
                 // phase2_migrations.sql Block 2 has been run.
                 $optional = [
                     'frequency_preset' => $preset,
-                    'tapering_steps' => isset($line['tapering_steps']) && is_array($line['tapering_steps']) && $line['tapering_steps'] !== []
-                                        ? json_encode($line['tapering_steps'], JSON_THROW_ON_ERROR) : null,
+                    'tapering_steps' => $tapering !== null
+                        ? json_encode($tapering, JSON_THROW_ON_ERROR) : null,
                     'dose_unit' => $line['dose_unit'] ?? null,
                     'dose_amount' => isset($line['dose_amount']) && $line['dose_amount'] !== '' ? (float) $line['dose_amount'] : null,
                     'food_timing' => in_array($line['food_timing'] ?? 'any', ['before','after','with','empty','bedtime','any'], true)

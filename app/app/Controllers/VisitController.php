@@ -9,6 +9,7 @@ use App\Gates\ModuleGate;
 use App\Http\Request;
 use App\Http\Response;
 use App\Services\AuditService;
+use App\Services\ClinicSettingsService;
 use App\Services\DietService;
 use App\Services\DrugService;
 use App\Services\Icd10Service;
@@ -108,6 +109,9 @@ final class VisitController
         $caseTaking = VisitService::extractCaseTaking($visit);
         $visit['specialty_data'] = array_merge($visit['specialty_data'] ?? [], ['case_taking' => $caseTaking]);
 
+        $chargeData = self::chargesForVisit($clinicId, (int) $id, $editable);
+        $visitInvoice = \App\Services\InvoiceService::findForVisit($clinicId, (int) $id);
+
         $viewData = [
             'visit' => $visit,
             'patient' => $patient,
@@ -130,7 +134,9 @@ final class VisitController
             'defaultDietWeek' => DietService::defaultWeekPlan(),
             'visibleModules' => $visibleModules,
             'clinic' => $clinic,
-            'charges' => self::existingCharges($clinicId, (int) $id),
+            'charges' => $chargeData['items'],
+            'chargesPrefilled' => $chargeData['prefilled'],
+            'visitInvoice' => $visitInvoice,
         ];
 
         // Single-screen consultation layout (the only visit screen).
@@ -385,6 +391,10 @@ final class VisitController
             return Response::json([
                 'ok' => true,
                 'invoice_id' => $invoiceId,
+                'invoice_number' => $invoice['invoice_number'] ?? null,
+                'invoice_date' => !empty($invoice['created_at'])
+                    ? date('d M Y', strtotime((string) $invoice['created_at']))
+                    : date('d M Y'),
                 'total' => (float) ($invoice['total'] ?? 0),
             ]);
         } catch (\Throwable $e) {
@@ -559,30 +569,29 @@ final class VisitController
         ]);
     }
 
-    /** @return list<array<string, mixed>> */
-    /**
-     * Existing charge line items for the visit's draft invoice, as simple
-     * {description, amount} rows for the charges UI. Empty if none yet.
-     * @return list<array{description:string, amount:float}>
-     */
-    private static function existingCharges(int $clinicId, int $visitId): array
+    /** @return array{items: list<array{description: string, amount: float}>, prefilled: bool} */
+    private static function chargesForVisit(int $clinicId, int $visitId, bool $editable): array
     {
-        try {
-            $stmt = \App\Core\Database::connection()->prepare(
-                'SELECT ii.description, ii.unit_price AS amount
-                   FROM invoice_items ii
-                   JOIN invoices i ON i.id = ii.invoice_id
-                  WHERE i.clinic_id = :c AND i.visit_id = :v AND i.status = "draft"
-                  ORDER BY ii.id ASC'
-            );
-            $stmt->execute([':c' => $clinicId, ':v' => $visitId]);
-            return array_map(static fn ($r) => [
-                'description' => (string) $r['description'],
-                'amount' => (float) $r['amount'],
-            ], $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: []);
-        } catch (\Throwable $e) {
-            return [];
+        $existing = \App\Services\InvoiceService::chargeLinesForVisit($clinicId, $visitId);
+        if ($existing !== []) {
+            return ['items' => $existing, 'prefilled' => false];
         }
+
+        if (!$editable) {
+            return ['items' => [], 'prefilled' => false];
+        }
+
+        $fee = ClinicSettingsService::consultationFeeForClinic($clinicId);
+        if ($fee > 0) {
+            return [
+                'items' => [
+                    ['description' => 'Consultation fee', 'amount' => $fee],
+                ],
+                'prefilled' => true,
+            ];
+        }
+
+        return ['items' => [], 'prefilled' => false];
     }
 
     private static function fetchVisitSymptoms(int $clinicId, int $visitId): array

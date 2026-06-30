@@ -48,6 +48,53 @@ final class InvoiceService
             ->get();
     }
 
+    /** Latest non-cancelled invoice linked to a visit, if any. */
+    public static function findForVisit(int $clinicId, int $visitId): ?array
+    {
+        $rows = QueryBuilder::table('invoices')
+            ->forClinic($clinicId)
+            ->where('visit_id', '=', $visitId)
+            ->orderBy('id', 'DESC')
+            ->get();
+
+        foreach ($rows as $row) {
+            if ((string) ($row['status'] ?? '') === 'cancelled') {
+                continue;
+            }
+
+            return $row;
+        }
+
+        return null;
+    }
+
+    /** @return list<array{description: string, amount: float}> */
+    public static function chargeLinesForVisit(int $clinicId, int $visitId): array
+    {
+        $invoice = self::findForVisit($clinicId, $visitId);
+        if ($invoice === null) {
+            return [];
+        }
+
+        $lines = [];
+        foreach (self::items((int) $invoice['id']) as $item) {
+            $desc = trim((string) ($item['description'] ?? ''));
+            $qty = max(1, (int) ($item['qty'] ?? 1));
+            $unit = (float) ($item['unit_price'] ?? 0);
+            $discount = (float) ($item['discount'] ?? 0);
+            $amount = round($unit * $qty - $discount, 2);
+            if ($desc === '' && $amount <= 0) {
+                continue;
+            }
+            $lines[] = [
+                'description' => $desc !== '' ? $desc : 'Charge',
+                'amount' => $amount,
+            ];
+        }
+
+        return $lines;
+    }
+
     /** @param array<string, mixed> $payload */
     public static function createDraftFromVisit(int $clinicId, array $payload): int
     {
@@ -56,12 +103,7 @@ final class InvoiceService
             return 0;
         }
 
-        $existing = QueryBuilder::table('invoices')
-            ->forClinic($clinicId)
-            ->where('visit_id', '=', $visitId)
-            ->where('status', '=', 'draft')
-            ->first();
-
+        $existing = self::findForVisit($clinicId, $visitId);
         if ($existing !== null) {
             return (int) $existing['id'];
         }
@@ -83,13 +125,13 @@ final class InvoiceService
             'tax_label' => $config['invoice_tax_label'] ?? 'GST',
             'tax_percent' => (float) ($config['invoice_tax_percent'] ?? 0),
             'status' => 'draft',
-            'items' => [[
+            'items' => $fee > 0 ? [[
                 'description' => 'Consultation fee',
                 'item_type' => 'consultation',
                 'qty' => 1,
-                'unit_price' => $fee > 0 ? $fee : 500.00,
+                'unit_price' => $fee,
                 'discount' => 0,
-            ]],
+            ]] : [],
         ]);
 
         return $invoiceId;
