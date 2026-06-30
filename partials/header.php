@@ -174,8 +174,6 @@ $ecpPatientJson = $ecpPatient
 
         <nav class="nav-links" :class="mobileNav ? 'is-open' : ''">
             <a href="/find-a-doctor" class="nav-link <?= nav_active('find') ?>">Find a doctor</a>
-            <a href="/eclinicpro-health-store" class="nav-link <?= nav_active('store') ?>">Health Store</a>
-            <a href="/lab" class="nav-link <?= nav_active('lab') ?>">Lab Tests</a>
             <a href="/features" class="nav-link <?= nav_active('features') ?>">For doctors</a>
             <a href="/#specialties" class="nav-link <?= nav_active('specialties') ?>">Specialties</a>
             <a href="/security" class="nav-link <?= nav_active('security') ?>">Security</a>
