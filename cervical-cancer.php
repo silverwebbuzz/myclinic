@@ -184,6 +184,26 @@ ob_start(); ?>
 .cc-pillar h3{font-size:18px;font-weight:600;color:var(--ink);margin-bottom:8px;}
 .cc-pillar p{font-size:14.5px;line-height:1.6;color:var(--mute);}
 
+/* "How it develops" step flow */
+.cc-steps{display:flex;flex-wrap:wrap;align-items:stretch;gap:14px;}
+.cc-step{flex:1 1 180px;background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:22px;position:relative;}
+.cc-step-n{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--teal-600);color:#fff;font-weight:700;font-size:14px;margin-bottom:12px;}
+.cc-step h3{font-size:16px;font-weight:600;color:var(--ink);margin-bottom:6px;}
+.cc-step p{font-size:14px;line-height:1.55;color:var(--mute);}
+.cc-step-arrow{display:flex;align-items:center;color:var(--teal-400);font-size:24px;font-weight:700;}
+@media (max-width:760px){.cc-step-arrow{display:none}}
+
+/* Two-column info cards (symptoms, risk, treatment) */
+.cc-two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;}
+.cc-card{background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:26px;}
+.cc-card h3{font-size:17px;font-weight:600;color:var(--ink);margin-bottom:14px;}
+.cc-card ul{list-style:none;display:grid;gap:10px;}
+.cc-card li{position:relative;padding-left:24px;font-size:14.5px;line-height:1.55;color:var(--ink-2);}
+.cc-card li::before{content:"";position:absolute;left:2px;top:7px;width:8px;height:8px;border-radius:50%;background:var(--teal-400);}
+.cc-card-warn{border-color:var(--teal-100);background:linear-gradient(180deg,#fff,var(--teal-50));}
+.cc-card-alert{border-color:rgba(255,159,10,.35);background:linear-gradient(180deg,#fff,#FFF6E8);}
+.cc-card-alert li::before{background:var(--amber);}
+
 /* Data tables (test costs + age schedule) */
 .cc-table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--bg);}
 .cc-table{width:100%;border-collapse:collapse;font-size:14.5px;min-width:420px;}
@@ -271,8 +291,162 @@ require __DIR__ . '/partials/header.php';
   </div>
 </section>
 
+<!-- ====================== WHAT IT IS ====================== -->
+<section class="cc-section" id="what">
+  <div class="wrap">
+    <span class="cc-eyebrow">The basics</span>
+    <h2 class="cc-h2">What is cervical cancer?</h2>
+    <p class="cc-sub">Cervical cancer begins in the <strong>cervix</strong> — the lower, narrow part of the uterus (womb) that connects to the vagina. It happens when cells in the cervix begin to grow out of control. The good news: because it grows slowly and has clear warning signs under a microscope, it is one of the most preventable and, when caught early, most treatable cancers.</p>
+    <div class="cc-pillars">
+      <div class="cc-pillar">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg></div>
+        <h3>Where it forms</h3>
+        <p>In the cervix — the “gateway” between the uterus and the vagina. Changes usually begin in the surface cells lining the cervix.</p>
+      </div>
+      <div class="cc-pillar">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"/><path d="M9 12a3 3 0 1 0 6 0 3 3 0 0 0-6 0"/></svg></div>
+        <h3>Main type</h3>
+        <p><strong>Squamous cell carcinoma</strong> makes up most cases (up to ~90%); <strong>adenocarcinoma</strong> starts in the inner glandular cells.</p>
+      </div>
+      <div class="cc-pillar">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg></div>
+        <h3>The cause</h3>
+        <p>Almost all cases are caused by long-lasting infection with high-risk <strong>HPV</strong> — making it the only cancer that a vaccine can prevent.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== HOW IT STARTS / DEVELOPS ====================== -->
+<section class="cc-section cc-section-alt" id="how">
+  <div class="wrap">
+    <span class="cc-eyebrow">How it starts</span>
+    <h2 class="cc-h2">From a common infection to cancer — over many years</h2>
+    <p class="cc-sub">Cervical cancer does not appear overnight. It usually takes <strong>15–20 years</strong> for abnormal cells to slowly turn into cancer (faster — about 5–10 years — in women with weak immunity, such as untreated HIV). That long window is exactly why screening works: it catches the warning changes long before cancer forms.</p>
+    <div class="cc-steps">
+      <div class="cc-step">
+        <span class="cc-step-n">1</span>
+        <h3>HPV infection</h3>
+        <p>A high-risk HPV type infects the cervix, usually through sexual contact. In most women, immunity clears it within ~2 years with no harm.</p>
+      </div>
+      <div class="cc-step-arrow">→</div>
+      <div class="cc-step">
+        <span class="cc-step-n">2</span>
+        <h3>Persistent infection</h3>
+        <p>In some women the high-risk infection does not clear and lingers for years — this is what drives the risk.</p>
+      </div>
+      <div class="cc-step-arrow">→</div>
+      <div class="cc-step">
+        <span class="cc-step-n">3</span>
+        <h3>Pre-cancer (dysplasia)</h3>
+        <p>Cells start to change abnormally but are <em>not yet cancer</em>. These changes are picked up by a Pap smear — and can be simply treated.</p>
+      </div>
+      <div class="cc-step-arrow">→</div>
+      <div class="cc-step">
+        <span class="cc-step-n">4</span>
+        <h3>Cervical cancer</h3>
+        <p>If pre-cancer is not found and treated, abnormal cells can become cancer and grow into deeper tissue over time.</p>
+      </div>
+    </div>
+    <p class="cc-note">Source: WHO &amp; National Cancer Institute (NCI). See <a href="#references" style="color:var(--teal-700);">references</a>.</p>
+  </div>
+</section>
+
+<!-- ====================== SYMPTOMS ====================== -->
+<section class="cc-section" id="symptoms">
+  <div class="wrap">
+    <span class="cc-eyebrow">Warning signs</span>
+    <h2 class="cc-h2">Symptoms to watch for</h2>
+    <p class="cc-sub"><strong>Early cervical cancer often has no symptoms at all</strong> — which is why regular screening is so important. When symptoms do appear, they should always be checked by a gynecologist. Having these signs does not mean you have cancer, but never ignore them.</p>
+    <div class="cc-two">
+      <div class="cc-card cc-card-warn">
+        <h3>Early signs</h3>
+        <ul>
+          <li>Bleeding between periods</li>
+          <li>Bleeding after intercourse</li>
+          <li>Bleeding after menopause</li>
+          <li>Unusual or foul-smelling vaginal discharge</li>
+          <li>Pain during intercourse</li>
+        </ul>
+      </div>
+      <div class="cc-card cc-card-alert">
+        <h3>Advanced signs</h3>
+        <ul>
+          <li>Persistent pelvic, back or leg pain</li>
+          <li>Swelling in the legs</li>
+          <li>Unexplained weight loss, fatigue or loss of appetite</li>
+          <li>Difficulty passing urine or stool</li>
+        </ul>
+      </div>
+    </div>
+    <p class="cc-note">If you notice any of these — especially abnormal bleeding or discharge — see a gynecologist promptly. Early detection saves lives. Source: WHO. See <a href="#references" style="color:var(--teal-700);">references</a>.</p>
+  </div>
+</section>
+
+<!-- ====================== RISK & AGE ====================== -->
+<section class="cc-section cc-section-alt" id="risk">
+  <div class="wrap">
+    <span class="cc-eyebrow">Who &amp; when</span>
+    <h2 class="cc-h2">Who is at risk, and which ages matter</h2>
+    <p class="cc-sub">Any woman with a cervix can develop cervical cancer, but some factors raise the risk. It occurs most often in women <strong>over the age of 30</strong> — which is why screening is advised from then on, while vaccination is given much earlier, before exposure.</p>
+    <div class="cc-two">
+      <div class="cc-card">
+        <h3>Higher-risk factors</h3>
+        <ul>
+          <li>Long-lasting high-risk HPV infection</li>
+          <li>Smoking</li>
+          <li>Weak immunity (e.g. untreated HIV)</li>
+          <li>Never having a Pap smear or HPV test</li>
+          <li>Unprotected sex / multiple partners</li>
+          <li>Starting sexual activity at a very young age</li>
+        </ul>
+      </div>
+      <div class="cc-card">
+        <h3>Which ages matter most</h3>
+        <ul>
+          <li><strong>9–14 yrs:</strong> best age for the HPV vaccine — before exposure</li>
+          <li><strong>15–26 yrs:</strong> catch-up vaccination if not done earlier</li>
+          <li><strong>30+ yrs:</strong> begin regular screening (Pap / HPV DNA)</li>
+          <li><strong>30–65 yrs:</strong> the years cervical cancer is most common — keep screening</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== TREATMENT ====================== -->
+<section class="cc-section" id="treatment">
+  <div class="wrap">
+    <span class="cc-eyebrow">If something is found</span>
+    <h2 class="cc-h2">How cervical cancer is treated</h2>
+    <p class="cc-sub">Treatment depends entirely on how early the changes are caught — another reason not to wait. Pre-cancer found by screening is treated with simple, quick procedures. Treatment is decided by your doctor based on the stage and your overall health.</p>
+    <div class="cc-two">
+      <div class="cc-card">
+        <h3>Pre-cancer (caught by screening)</h3>
+        <p style="margin-bottom:10px;color:var(--mute);font-size:14.5px;line-height:1.6;">Abnormal cells are removed before they ever become cancer — usually as a day procedure:</p>
+        <ul>
+          <li>Cryotherapy / thermal ablation (freezing or heating abnormal cells)</li>
+          <li>LEEP / LLETZ (removing tissue with a fine electrical loop)</li>
+          <li>Cone biopsy</li>
+        </ul>
+      </div>
+      <div class="cc-card">
+        <h3>Invasive cancer</h3>
+        <p style="margin-bottom:10px;color:var(--mute);font-size:14.5px;line-height:1.6;">When cancer has formed, treatment is planned by a specialist team and may combine:</p>
+        <ul>
+          <li>Surgery</li>
+          <li>Radiotherapy</li>
+          <li>Chemotherapy</li>
+          <li>Targeted / immunotherapy and supportive (palliative) care</li>
+        </ul>
+      </div>
+    </div>
+    <p class="cc-note">When found early, cervical cancer is highly treatable with good long-term survival. This information is educational only — your gynecologist or oncologist will recommend the right plan for you. Source: WHO &amp; NCI. See <a href="#references" style="color:var(--teal-700);">references</a>.</p>
+  </div>
+</section>
+
 <!-- ====================== FIGURES & FACTS ====================== -->
-<section class="cc-section" id="facts">
+<section class="cc-section cc-section-alt" id="facts">
   <div class="wrap">
     <span class="cc-eyebrow">Figures &amp; Facts</span>
     <h2 class="cc-h2">The numbers India can’t ignore</h2>
@@ -313,7 +487,7 @@ require __DIR__ . '/partials/header.php';
 </section>
 
 <!-- ====================== HOW TO PREVENT ====================== -->
-<section class="cc-section cc-section-alt" id="prevention">
+<section class="cc-section" id="prevention">
   <div class="wrap">
     <span class="cc-eyebrow">Three ways to protect</span>
     <h2 class="cc-h2">Prevention works — and it’s within reach</h2>
@@ -339,7 +513,7 @@ require __DIR__ . '/partials/header.php';
 </section>
 
 <!-- ================= TESTS & SCREENING ================= -->
-<section class="cc-section" id="tests">
+<section class="cc-section cc-section-alt" id="tests">
   <div class="wrap">
     <span class="cc-eyebrow">Tests &amp; screening</span>
     <h2 class="cc-h2">The tests that catch it early</h2>
@@ -407,7 +581,7 @@ require __DIR__ . '/partials/header.php';
 </section>
 
 <!-- ================= GOVERNMENT OF INDIA — 2026 CAMPAIGN ================= -->
-<section class="cc-section cc-section-alt" id="government">
+<section class="cc-section" id="government">
   <div class="wrap">
     <span class="cc-eyebrow">Government of India</span>
     <h2 class="cc-h2">Cervical Cancer Vaccination Campaign launched</h2>
@@ -444,7 +618,7 @@ require __DIR__ . '/partials/header.php';
 </section>
 
 <!-- ========================== FAQ ========================== -->
-<section class="cc-section" id="faq">
+<section class="cc-section cc-section-alt" id="faq">
   <div class="wrap">
     <span class="cc-eyebrow">Questions answered</span>
     <h2 class="cc-h2">Frequently asked questions</h2>
@@ -463,7 +637,7 @@ require __DIR__ . '/partials/header.php';
 </section>
 
 <!-- ============= FIND A GYNECOLOGIST (city-aware) ============= -->
-<section class="cc-section cc-section-alt" id="find-doctor">
+<section class="cc-section" id="find-doctor">
   <div class="wrap">
     <span class="cc-eyebrow">Take the next step</span>
     <h2 class="cc-h2">
@@ -518,10 +692,10 @@ require __DIR__ . '/partials/header.php';
 </section>
 
 <!-- ====================== REFERENCES ====================== -->
-<section class="cc-refs">
+<section class="cc-refs" id="references">
   <div class="wrap">
     <h2>References &amp; sources</h2>
-    <p>The information on this page is compiled from the following public, authoritative sources:</p>
+    <p>The information on this page is compiled from the following public, authoritative sources. It is reviewed against official guidance, but medical knowledge evolves — always confirm with a qualified doctor.</p>
     <ul>
       <li>Press Information Bureau (PIB), Government of India — <em>Cervical Cancer Vaccination Campaign Launched</em> (28 Feb 2026) &amp; cervical cancer / GLOBOCAN 2022 data —
         <a href="https://www.pib.gov.in/PressReleasePage.aspx?PRID=2233632&amp;reg=3&amp;lang=1" target="_blank" rel="noopener nofollow">pib.gov.in</a>
@@ -529,8 +703,12 @@ require __DIR__ . '/partials/header.php';
       <li>World Health Organization — <em>Cervical cancer fact sheet</em> —
         <a href="https://www.who.int/news-room/fact-sheets/detail/cervical-cancer" target="_blank" rel="noopener nofollow">who.int</a>
       </li>
-      <li>Centers for Disease Control and Prevention (CDC) — <em>Basic information about HPV and cancer</em> —
-        <a href="https://www.cdc.gov/cancer/hpv/basic-information.html" target="_blank" rel="noopener nofollow">cdc.gov</a>
+      <li>National Cancer Institute (NCI), USA — <em>Cervical cancer: types, how it develops, stages &amp; treatment</em> —
+        <a href="https://www.cancer.gov/types/cervical" target="_blank" rel="noopener nofollow">cancer.gov</a>
+      </li>
+      <li>Centers for Disease Control and Prevention (CDC) — <em>About cervical cancer</em> &amp; <em>Basic information about HPV and cancer</em> —
+        <a href="https://www.cdc.gov/cervical-cancer/about/index.html" target="_blank" rel="noopener nofollow">cdc.gov/cervical-cancer</a>,
+        <a href="https://www.cdc.gov/cancer/hpv/basic-information.html" target="_blank" rel="noopener nofollow">cdc.gov/cancer/hpv</a>
       </li>
       <li>National Library of Medicine (PMC) — peer-reviewed research on cervical cancer in India —
         <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12702179/" target="_blank" rel="noopener nofollow">pmc.ncbi.nlm.nih.gov</a>
