@@ -3634,7 +3634,7 @@ require __DIR__ . '/partials/header.php';
     <div class="info-card" id="info-card-type">
       <div class="info-card-left">
         <div class="info-num-badge">02</div>
-        <img src="/assets/img/eclinicpro-Main-type.png"
+        <img src="/assets/img/eclinipro-The-cause.png"
           alt="Microscopic illustration of abnormal squamous cells in cervical cancer" class="info-card-img" />
       </div>
       <div class="info-card-content">
@@ -3655,7 +3655,7 @@ require __DIR__ . '/partials/header.php';
     <div class="info-card" id="info-card-cause">
       <div class="info-card-left">
         <div class="info-num-badge">03</div>
-        <img src="/assets/img/eclinipro-The-cause.png" alt="3D illustration of the HPV virus" class="info-card-img" />
+        <img src="/assets/img/eclinicpro-Main-type.png" alt="3D illustration of the HPV virus" class="info-card-img" />
       </div>
       <div class="info-card-content">
         <h3 class="info-card-title">The cause</h3>
