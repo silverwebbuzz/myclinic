@@ -25,7 +25,7 @@ final class SubscriptionController
     /**
      * The hard-block "Plan expired" screen. SubscriptionMiddleware redirects
      * every panel page here once the trial/plan is expired. From here the only
-     * ways forward are renew (→ /settings?tab=subscription), contact support,
+     * ways forward are renew (→ /subscription), contact support,
      * or sign out — so an expired clinic can't keep using the panel for free.
      */
     public function expired(Request $request): Response
@@ -54,7 +54,7 @@ final class SubscriptionController
         $onboarded = OnboardingService::currentStep() >= 5;
         $returnUrl = static function (string $msg) use ($onboarded): Response {
             if ($onboarded) {
-                return Response::redirect('/settings?tab=subscription&error=' . urlencode($msg));
+                return Response::redirect('/subscription?error=' . urlencode($msg));
             }
 
             return Response::redirect('/onboarding/clinic-setup?error=' . urlencode($msg));
@@ -82,7 +82,7 @@ final class SubscriptionController
         $result = BillingGatewayService::startCheckout($clinicId, $planId, $cycle, $country);
         AuditService::log($request, 'INSERT', 'saas_invoices', $clinicId);
 
-        $cancelUrl = $onboarded ? '/settings?tab=subscription' : '/onboarding/clinic-setup';
+        $cancelUrl = $onboarded ? '/subscription' : '/onboarding/clinic-setup';
 
         if (($result['type'] ?? '') === 'cashfree' && !empty($result['payment_session_id'])) {
             return Response::html(View::render('subscription/cashfree-checkout', [
