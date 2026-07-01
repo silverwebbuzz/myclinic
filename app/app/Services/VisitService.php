@@ -359,7 +359,7 @@ final class VisitService
             $specialtyDirty = true;
         }
         // Top-level case_taking wins over nested specialty_data.case_taking (avoids stale overwrite).
-        if (isset($payload['case_taking']) && is_array($payload['case_taking'])) {
+        if (array_key_exists('case_taking', $payload) && is_array($payload['case_taking'])) {
             $sd['case_taking'] = self::mergeCaseTakingPreservingSaved(
                 is_array($sd['case_taking'] ?? null) ? $sd['case_taking'] : [],
                 $payload['case_taking'],

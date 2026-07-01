@@ -12,8 +12,10 @@ use App\Services\AuditService;
 use App\Services\OnboardingService;
 use App\Services\InvoiceService;
 use App\Services\GdprService;
+use App\Services\PatientImmunizationService;
 use App\Services\PatientService;
 use App\Support\Layout;
+use App\Support\PediatricVaccineSchedule;
 use App\Support\View;
 
 final class PatientController
@@ -103,6 +105,13 @@ final class PatientController
             return Response::html('Patient not found', 404);
         }
 
+        $clinic = RequestContext::clinic() ?? [];
+        $showImmunizations = PediatricVaccineSchedule::shouldManageImmunizations(
+            (string) ($clinic['specialty'] ?? ''),
+            null,
+            PediatricVaccineSchedule::patientAgeYears($patient),
+        );
+
         return Response::html(Layout::page('patients/show', [
             'patient' => $patient,
             'allergies' => PatientService::decodeTags($patient['allergies'] ?? null),
@@ -114,6 +123,7 @@ final class PatientController
             'invoices' => PatientService::invoices($clinicId, (int) $id),
             'documents' => PatientService::documents($clinicId, (int) $id),
             'hasVitals' => ModuleGate::check('vitals'),
+            'showImmunizations' => $showImmunizations,
             'created' => $request->query['created'] ?? null,
         ], $patient['name']));
     }
@@ -264,6 +274,37 @@ final class PatientController
             'status'  => 'unknown',
             'exists'  => false,
             'patient' => null,
+        ]);
+    }
+
+    public function immunizationsApi(Request $request, string $id): Response
+    {
+        if ($denied = ModuleGate::require('patients')) {
+            return $denied;
+        }
+
+        $clinicId = (int) RequestContext::clinicId();
+        $patientId = (int) $id;
+        $patient = PatientService::find($clinicId, $patientId);
+        if ($patient === null) {
+            return Response::json(['error' => 'Patient not found'], 404);
+        }
+
+        if ($request->method === 'POST') {
+            $body = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
+            $rows = PatientImmunizationService::saveBatch(
+                $clinicId,
+                $patientId,
+                is_array($body['items'] ?? null) ? $body['items'] : [],
+            );
+            AuditService::log($request, 'UPDATE', 'patient_immunizations', $patientId);
+
+            return Response::json(['ok' => true, 'items' => $rows]);
+        }
+
+        return Response::json([
+            'ok' => true,
+            'items' => PatientImmunizationService::forPatient($clinicId, $patientId),
         ]);
     }
 

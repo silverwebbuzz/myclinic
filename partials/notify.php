@@ -54,6 +54,45 @@ function ecp_enqueue_notification(
 }
 
 /**
+ * Record a positive messaging opt-in for a phone number (marketing-side bridge
+ * into the messaging_consent ledger). Idempotent — keeps the first opt-in.
+ *
+ * Meta's Acceptable Use policy requires a demonstrable opt-in. We call this when
+ * a person proves control of their number and chooses to use the service:
+ * OTP verification (source 'otp_verify') and directory booking (source
+ * 'booking'). Best-effort: never breaks the calling flow if the table is
+ * unmigrated.
+ */
+function ecp_record_optin(string $phone, string $source, ?int $identityId = null): bool {
+    $db = ecp_db();
+    if (!$db) return false;
+
+    $digits = preg_replace('/\D/', '', $phone) ?? '';
+    if (strlen($digits) < 10) return false;
+    $tail = substr($digits, -10);
+
+    $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? null;
+    $ip = $ip ? substr(explode(',', (string) $ip)[0], 0, 45) : null;
+
+    try {
+        $stmt = $db->prepare(
+            'INSERT INTO messaging_consent (phone_tail, source, patient_identity_id, raw_phone, ip)
+             VALUES (:t, :s, :iid, :r, :ip)
+             ON DUPLICATE KEY UPDATE created_at = created_at'
+        );
+        return $stmt->execute([
+            't'   => $tail,
+            's'   => substr($source, 0, 32),
+            'iid' => $identityId,
+            'r'   => substr($phone, 0, 32),
+            'ip'  => $ip,
+        ]);
+    } catch (\Throwable $e) {
+        return false; // table unmigrated — don't break the flow
+    }
+}
+
+/**
  * Doctor confirmed a directory lead from the L/{token} page.
  * Marks the lead book_confirmed (idempotent) + queues the patient confirmation.
  * Returns true if newly confirmed.

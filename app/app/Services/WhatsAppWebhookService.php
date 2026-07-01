@@ -107,6 +107,14 @@ final class WhatsAppWebhookService
             self::cacheWhatsApp($from, 'yes');
         }
 
+        // Opt-out gate: an inbound STOP/UNSUBSCRIBE blocks all further
+        // business-initiated messaging to this number (Meta Acceptable Use).
+        $text = trim((string) ($message['text']['body'] ?? ''));
+        if ($from !== '' && $text !== '' && MessagingConsent::isStopKeyword($text)) {
+            MessagingConsent::recordStop((string) $from, 'all', $text);
+            return; // don't also treat a STOP as a confirm/other action
+        }
+
         // Button reply (Confirm). Meta delivers interactive button payloads.
         $btn = $message['button']['payload']
             ?? ($message['interactive']['button_reply']['id'] ?? null);

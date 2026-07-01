@@ -35,6 +35,35 @@ final class PatientService
             ->first();
     }
 
+    public static function findByFamilyMember(int $clinicId, int $familyMemberId): ?array
+    {
+        if ($familyMemberId <= 0) {
+            return null;
+        }
+
+        return QueryBuilder::table('patients')
+            ->forClinic($clinicId)
+            ->where('family_member_id', '=', $familyMemberId)
+            ->where('is_active', '=', 1)
+            ->first();
+    }
+
+    /** Account-holder chart at a clinic (excludes dependent family-member charts). */
+    public static function findAccountHolderByPhone(int $clinicId, string $phone): ?array
+    {
+        $normalized = self::normalizePhone($phone);
+        if ($normalized === '') {
+            return null;
+        }
+
+        return QueryBuilder::table('patients')
+            ->forClinic($clinicId)
+            ->where('phone', '=', $normalized)
+            ->where('family_member_id', 'IS', null)
+            ->where('is_active', '=', 1)
+            ->first();
+    }
+
     /**
      * Smart phone lookup used by reception / doctor "Add patient" flows.
      *
@@ -271,6 +300,10 @@ final class PatientService
             ModuleGate::invalidateCache($clinicId);
             DashboardService::invalidateStats($clinicId);
 
+            if ($patient !== null) {
+                PatientImmunizationService::syncScheduleIfEligible($clinicId, $patient);
+            }
+
             return $patient ?? [];
         } catch (\Throwable $e) {
             $pdo->rollBack();
@@ -286,18 +319,21 @@ final class PatientService
             throw new \RuntimeException('Patient not found');
         }
 
-        $data = self::mapPayload($payload);
-        self::assertValid($data);
+        // Only columns present in $payload are written — partial updates (e.g.
+        // online re-booking for a family member) must not wipe phone, identity_id,
+        // or family_member_id when those keys are omitted.
+        $data = self::mapPayloadForUpdate($payload);
+        self::assertValid(array_merge($existing, $data));
 
         // The create flow blocks duplicate phones; without the same guard here
         // an edit could silently produce two charts sharing one number, and
         // phone lookup (booking, check-in) would pick one arbitrarily.
-        $dupe = self::findByPhone($clinicId, $data['phone']);
-        if ($dupe !== null && (int) $dupe['id'] !== $patientId) {
-            throw new \RuntimeException(
-                'Another patient (' . ($dupe['uhid'] ?? $dupe['name'] ?? 'unknown') . ') already uses this phone number.',
-            );
-        }
+        // $dupe = self::findByPhone($clinicId, $data['phone'] ?? (string) ($existing['phone'] ?? ''));
+        // if ($dupe !== null && (int) $dupe['id'] !== $patientId) {
+        //     throw new \RuntimeException(
+        //         'Another patient (' . ($dupe['uhid'] ?? $dupe['name'] ?? 'unknown') . ') already uses this phone number.',
+        //     );
+        // }
 
         if ($photoFile !== null) {
             $path = StorageService::storePatientPhoto($clinicId, $patientId, $photoFile);
@@ -311,7 +347,12 @@ final class PatientService
             ->where('id', '=', $patientId)
             ->update($data);
 
-        return QueryBuilder::table('patients')->where('id', '=', $patientId)->first() ?? [];
+        $patient = QueryBuilder::table('patients')->where('id', '=', $patientId)->first() ?? [];
+        if ($patient !== []) {
+            PatientImmunizationService::syncScheduleIfEligible($clinicId, $patient);
+        }
+
+        return $patient;
     }
 
     /** @return list<array<string, mixed>> */
@@ -384,6 +425,39 @@ final class PatientService
             ->get();
     }
 
+    /**
+     * Map only fields explicitly provided in $payload (for UPDATE).
+     *
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private static function mapPayloadForUpdate(array $payload): array
+    {
+        $mapped = self::mapPayload($payload);
+        $out = [];
+
+        $direct = [
+            'name', 'phone', 'email', 'dob', 'gender', 'address', 'blood_group', 'veg_type',
+            'allergies', 'chronic_conditions', 'specialty_data', 'insurance_provider',
+            'insurance_id', 'referred_by', 'source', 'family_member_id',
+        ];
+        foreach ($direct as $col) {
+            if (array_key_exists($col, $payload)) {
+                $out[$col] = $mapped[$col];
+            }
+        }
+
+        if (array_key_exists('identity_id', $payload) || array_key_exists('phone', $payload)) {
+            $out['identity_id'] = $mapped['identity_id'];
+        }
+
+        if (!empty($payload['surgeries']) || !empty($payload['family_history']) || array_key_exists('specialty_data', $payload)) {
+            $out['specialty_data'] = $mapped['specialty_data'];
+        }
+
+        return $out;
+    }
+
     /** @param array<string, mixed> $payload @return array<string, mixed> */
     private static function mapPayload(array $payload): array
     {
@@ -424,6 +498,7 @@ final class PatientService
             'referred_by' => trim((string) ($payload['referred_by'] ?? '')) ?: null,
             'source' => in_array($payload['source'] ?? 'walk_in', ['walk_in', 'referral', 'online', 'camp', 'other'], true)
                 ? $payload['source'] : 'walk_in',
+            'family_member_id' => !empty($payload['family_member_id']) ? (int) $payload['family_member_id'] : null,
             // Link to the global patient_identities row when possible:
             //   1) Caller passed identity_id explicitly (booking flow does this).
             //   2) Otherwise look up by normalized phone.

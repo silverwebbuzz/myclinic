@@ -153,7 +153,7 @@ function ecp_patient_verify_otp(string $rawPhone, string $code, ?string $name = 
        ->execute(['id' => $row['id']]);
 
     // Get-or-create identity.
-    // (Family members live in patient_family_members, never here, so a member
+    // (Family members live in family_member_identities, never here, so a member
     // record can't be matched as a login — no special guard needed.)
     $find = $db->prepare('SELECT * FROM patient_identities WHERE phone = :p LIMIT 1');
     $find->execute(['p' => $phone]);
@@ -178,6 +178,16 @@ function ecp_patient_verify_otp(string $rawPhone, string $code, ?string $name = 
             $db->prepare('UPDATE patient_identities SET phone_verified_at = NOW() WHERE id = :id')
                ->execute(['id' => $identity['id']]);
         }
+    }
+
+    // Record messaging opt-in. A verified OTP proves the person controls this
+    // number and chose to use the service — the strongest consent basis for
+    // business-initiated WhatsApp (Meta Acceptable Use). Best-effort.
+    if (function_exists('ecp_record_optin')) {
+        ecp_record_optin($phone, 'otp_verify', (int) $identity['id']);
+    } else {
+        require_once __DIR__ . '/notify.php';
+        ecp_record_optin($phone, 'otp_verify', (int) $identity['id']);
     }
 
     // Backfill: link any existing clinic charts (`patients` rows) that share

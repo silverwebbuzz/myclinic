@@ -47,6 +47,27 @@ final class NotificationProcessor
         $to = (string) ($row['to_number'] ?? '');
         $audience = str_starts_with($template, 'doctor_') || $template === 'quota_warning' ? 'doctor' : 'patient';
 
+        // Recipient opt-out gate. Meta's Acceptable Use policy requires honouring
+        // opt-outs; a STOP blocks ALL further business-initiated messaging to this
+        // number. Checked here (the single choke-point) so neither a WhatsApp send
+        // NOR a WhatsApp→SMS downgrade can slip past it. OTP does not route here.
+        if (in_array($channel, ['whatsapp', 'sms'], true) && MessagingConsent::isOptedOut($to, $channel)) {
+            self::markSkipped($id, 'recipient opted out');
+            return false;
+        }
+
+        // Opt-in gate for platform/marketing-origin WhatsApp (clinic_id 0 — the
+        // directory funnel that caused the ban). These recipients must have a
+        // recorded opt-in (booking / OTP verify). A clinic messaging its OWN
+        // registered patients (clinic_id > 0) has a direct treatment
+        // relationship and is not gated here. Patient audience only — doctor
+        // alerts no longer use WhatsApp at all.
+        if ($channel === 'whatsapp' && $clinicId === 0 && $audience === 'patient'
+            && !MessagingConsent::hasOptedIn($to)) {
+            self::markSkipped($id, 'no recorded opt-in (platform-origin WhatsApp)');
+            return false;
+        }
+
         try {
             if ($channel === 'whatsapp') {
                 // MessagingPolicy decides the actual channel: applies rules

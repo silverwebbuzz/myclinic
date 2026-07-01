@@ -27,6 +27,7 @@ $photoUrl = !empty($patient['photo_path']) ? '/' . ltrim($patient['photo_path'],
         ['visits', 'Visits'],
     ];
     if ($hasVitals) $jump[] = ['vitals', 'Vitals'];
+    if (!empty($showImmunizations)) $jump[] = ['immunizations', 'Immunizations'];
     $jump[] = ['prescriptions', 'Prescriptions'];
     $jump[] = ['invoices', 'Invoices'];
     $jump[] = ['documents', 'Documents'];
@@ -157,6 +158,16 @@ $photoUrl = !empty($patient['photo_path']) ? '/' . ltrim($patient['photo_path'],
 
             </div>
     </section>
+
+    <?php if (!empty($showImmunizations)): ?>
+    <section id="sec-immunizations" class="scroll-mt-28">
+        <?php
+        $patientId = (int) $patient['id'];
+        $editable = true;
+        require __DIR__ . '/partials/immunizations.php';
+        ?>
+    </section>
+    <?php endif; ?>
 
     <!-- ============ VISITS ============ -->
     <section id="sec-visits" class="scroll-mt-28 ui-card p-6">

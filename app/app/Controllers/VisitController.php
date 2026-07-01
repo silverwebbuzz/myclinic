@@ -13,12 +13,14 @@ use App\Services\ClinicSettingsService;
 use App\Services\DietService;
 use App\Services\DrugService;
 use App\Services\Icd10Service;
+use App\Services\PatientImmunizationService;
 use App\Services\PatientService;
 use App\Services\PrescriptionService;
 use App\Services\RemedyService;
 use App\Services\VitalsService;
 use App\Services\VisitService;
 use App\Support\Layout;
+use App\Support\PediatricVaccineSchedule;
 use App\Support\SpecialtyAdapter;
 use App\Support\View;
 use App\Support\VisitView;
@@ -112,6 +114,23 @@ final class VisitController
         $chargeData = self::chargesForVisit($clinicId, (int) $id, $editable);
         $visitInvoice = \App\Services\InvoiceService::findForVisit($clinicId, (int) $id);
 
+        $doctorRow = \App\Core\QueryBuilder::table('users')
+            ->where('id', '=', (int) ($visit['doctor_id'] ?? 0))
+            ->first();
+        $patientAgeYears = PediatricVaccineSchedule::patientAgeYears($patient);
+        $patient['age'] = $patientAgeYears;
+        $showImmunizations = PediatricVaccineSchedule::shouldManageImmunizations(
+            (string) ($clinic['specialty'] ?? ''),
+            isset($doctorRow['specialization']) ? (string) $doctorRow['specialization'] : null,
+            $patientAgeYears,
+        );
+        $immunizationSummary = $showImmunizations
+            ? PatientImmunizationService::visitSummary($clinicId, (int) $patient['id'])
+            : ['overdue' => [], 'due_today' => [], 'due_soon' => [], 'upcoming' => []];
+        $immunizationsGiven = $showImmunizations
+            ? PatientImmunizationService::givenGroupedByVisit($clinicId, (int) $patient['id'], (int) $id)
+            : [];
+
         $viewData = [
             'visit' => $visit,
             'patient' => $patient,
@@ -137,6 +156,9 @@ final class VisitController
             'charges' => $chargeData['items'],
             'chargesPrefilled' => $chargeData['prefilled'],
             'visitInvoice' => $visitInvoice,
+            'showImmunizations' => $showImmunizations,
+            'immunizationSummary' => $immunizationSummary,
+            'immunizationsGiven' => $immunizationsGiven,
         ];
 
         // Single-screen consultation layout (the only visit screen).
@@ -296,6 +318,50 @@ final class VisitController
         } catch (\Throwable $e) {
             return Response::json(['error' => $e->getMessage()], 422);
         }
+    }
+
+    /** POST /api/v1/visits/{id}/immunizations/given — mark a dose given during this visit. */
+    public function markImmunizationGiven(Request $request, string $id): Response
+    {
+        if ($denied = ModuleGate::require('emr')) {
+            return $denied;
+        }
+
+        $clinicId = (int) RequestContext::clinicId();
+        $visitId = (int) $id;
+        $visit = VisitService::find($clinicId, $visitId);
+        if ($visit === null) {
+            return Response::json(['error' => 'Visit not found'], 404);
+        }
+        if (!VisitService::isEditable($visit)) {
+            return Response::json(['error' => 'Visit is read-only'], 422);
+        }
+
+        $body = json_decode($request->rawBody ?? '{}', true);
+        if (!is_array($body)) {
+            return Response::json(['error' => 'Invalid JSON'], 400);
+        }
+
+        $immId = (int) ($body['immunization_id'] ?? 0);
+        if ($immId <= 0) {
+            return Response::json(['error' => 'immunization_id required'], 400);
+        }
+
+        $row = PatientImmunizationService::markGiven(
+            $clinicId,
+            (int) $visit['patient_id'],
+            $immId,
+            $visitId,
+            !empty($body['given_date']) ? (string) $body['given_date'] : null,
+            array_key_exists('notes', $body) ? (string) $body['notes'] : null,
+        );
+        if ($row === null) {
+            return Response::json(['error' => 'Immunization not found'], 404);
+        }
+
+        AuditService::log($request, 'UPDATE', 'patient_immunizations', $immId);
+
+        return Response::json(['ok' => true, 'item' => $row]);
     }
 
     /**

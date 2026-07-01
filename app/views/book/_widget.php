@@ -224,14 +224,29 @@ $cardClass = 'dp-book-card overflow-hidden rounded-2xl border border-slate-200 b
 
                             <!-- ===== Logged-in patient ===== -->
                             <template x-if="loggedIn">
-                                <div class="rounded-lg bg-emerald-50 px-3 py-3 text-sm">
-                                    <p class="font-semibold text-emerald-800">👋 Booking as <span x-text="name"></span></p>
-                                    <p class="mt-0.5 text-xs text-emerald-700">
-                                        <span x-text="phone"></span> · using your eClinicPro profile.
-                                        <button type="button" @click="logoutPatient()" class="ml-1 text-emerald-900 underline">Switch account</button>
+                                <div class="rounded-lg bg-emerald-50 px-3 py-3 text-sm space-y-3">
+                                    <div>
+                                        <p class="font-semibold text-emerald-800">👋 Signed in as <span x-text="bookerName"></span></p>
+                                        <p class="mt-0.5 text-xs text-emerald-700">
+                                            <span x-text="phone"></span> · using your eClinicPro profile.
+                                            <button type="button" @click="logoutPatient()" class="ml-1 text-emerald-900 underline">Switch account</button>
+                                        </p>
+                                    </div>
+                                    <label class="block">
+                                        <span class="text-xs font-semibold uppercase tracking-wider text-emerald-900">Who is this visit for?</span>
+                                        <select x-model="selectedFamilyMemberId" @change="applyFamilySelection()"
+                                                class="mt-1.5 w-full rounded-lg border border-emerald-200 bg-white px-3 py-2.5 text-sm focus:border-brand focus:outline-none focus:ring-2 ring-brand">
+                                            <template x-for="m in familyMembers" :key="m.id">
+                                                <option :value="m.id" x-text="familyOptionLabel(m)"></option>
+                                            </template>
+                                        </select>
+                                    </label>
+                                    <p class="text-xs text-emerald-700" x-show="familyMembers.length <= 1">
+                                        <a :href="bookApi.patientPanelUrl + '#family'" class="underline" target="_blank" rel="noopener">Add family members</a> in your profile to book for them.
                                     </p>
                                     <input type="hidden" name="phone" :value="phoneRaw">
                                     <input type="hidden" name="name" :value="name">
+                                    <input type="hidden" name="family_member_id" :value="selectedFamilyMemberId || ''">
                                 </div>
                             </template>
 

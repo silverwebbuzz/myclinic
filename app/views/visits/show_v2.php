@@ -807,6 +807,12 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 </details>
             <?php endif; ?>
 
+            <?php
+            $visitId = (int) $visit['id'];
+            $patientId = (int) $patient['id'];
+            require __DIR__ . '/partials/immunizations_summary.php';
+            ?>
+
             <!-- ---- Ghost-link strip: reveal hidden sections for this visit ---- -->
             <?php if (!empty($ghostModules)): ?>
                 <div class="flex flex-wrap items-center gap-2 border-t border-dashed border-slate-200 pt-3 text-xs text-slate-500">
@@ -1012,7 +1018,10 @@ function normalizeCaseTaking(raw) {
 
 function visitScreenV2(cfg) {
     const caseTaking = normalizeCaseTaking(cfg.case_taking || cfg.specialty_data?.case_taking || {});
-    const specialtyData = { ...(cfg.specialty_data || {}), case_taking: caseTaking };
+    const specialtyData = {
+        ...(cfg.specialty_data || {}),
+        case_taking: caseTaking,
+    };
 
     // Normalize vitals.extra into an object — same handling as legacy view.
     const vitals = cfg.vitals || {};
@@ -1048,6 +1057,14 @@ function visitScreenV2(cfg) {
 
         // Call on any user edit so manual save / complete knows there's something to persist.
         markDirty() { this.dirty = true; },
+
+        scheduleAutosave() {
+            if (!this.editable) return;
+            clearTimeout(this._saveDebounce);
+            this._saveDebounce = setTimeout(() => {
+                if (this.dirty) this.save();
+            }, 800);
+        },
 
         // ---- Charges (visit invoice line items) ----
         _chargeKey: 0,
@@ -1281,6 +1298,7 @@ function visitScreenV2(cfg) {
 
         onFormEdit() {
             this.markDirty();
+            this.scheduleAutosave();
         },
 
         // ---- Voice dictation (Web Speech API, browser-native) ----
@@ -1373,7 +1391,10 @@ function visitScreenV2(cfg) {
                 prescriptions: cleanRx,
                 prescriptions_cleared: this.prescriptionsCleared && cleanRx.every(p => !p.drug_id && !p.remedy_id && !p.drug_name && !p.frequency_preset && !p.dose_amount),
                 case_taking: this.case_taking,
-                specialty_data: { ...this.specialty_data, case_taking: this.case_taking },
+                specialty_data: {
+                    ...this.specialty_data,
+                    case_taking: this.case_taking,
+                },
                 _form_blob: {
                     chief_complaint: this.chief_complaint,
                     diagnosis: this.diagnosis,

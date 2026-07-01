@@ -37,17 +37,21 @@ final class WhatsAppService
         $token = (string) MessagingSettings::waAccessToken();
         $phoneId = (string) MessagingSettings::waPhoneNumberId();
 
-        // Template message when approved; else plain text (rollout / service window).
-        if (WaTemplateService::isApproved($template)) {
-            $body = self::templatePayload($to, $template, $payload);
-        } else {
-            $body = [
-                'messaging_product' => 'whatsapp',
-                'to' => $to,
-                'type' => 'text',
-                'text' => ['body' => WaTemplateService::renderPlain($template, $payload)],
+        // Business-initiated WhatsApp messages MUST use an approved template.
+        // Meta forbids free-form business-initiated text outside the 24h service
+        // window; sending it is an Acceptable-Use breach (the cause of the WABA
+        // ban). If no approved template exists, DO NOT fall back to plain text —
+        // fail so the caller keeps the message queued/flagged instead of sending.
+        if (!WaTemplateService::isApproved($template)) {
+            return [
+                'ok' => false,
+                'message' => "no approved WhatsApp template for '{$template}' — send held (approve template in Meta first)",
+                'wamid' => null,
+                'configured' => true,
             ];
         }
+
+        $body = self::templatePayload($to, $template, $payload);
 
         $ch = curl_init("https://graph.facebook.com/v18.0/{$phoneId}/messages");
         curl_setopt_array($ch, [
@@ -75,9 +79,16 @@ final class WhatsAppService
             ];
         }
 
-        // Meta has no matching template (admin marked approved locally but not in BM).
-        if (self::isMissingMetaTemplate($data) && ($body['type'] ?? '') === 'template') {
-            return self::sendPlainText($to, $token, $phoneId, $template, $payload);
+        // Meta has no matching template (marked approved locally but not in BM).
+        // Do NOT fall back to plain text — surface the error so the template gets
+        // synced in Meta. Business-initiated plain text is a policy breach.
+        if (self::isMissingMetaTemplate($data)) {
+            return [
+                'ok' => false,
+                'message' => "WhatsApp template '{$template}' not found in Meta — sync/approve it in Business Manager",
+                'wamid' => null,
+                'configured' => true,
+            ];
         }
 
         return [
@@ -114,55 +125,6 @@ final class WhatsAppService
                 'language' => ['code' => WaTemplateService::language($template)],
                 'components' => $components,
             ],
-        ];
-    }
-
-    /** @param array<string, mixed> $payload */
-    private static function sendPlainText(
-        string $to,
-        string $token,
-        string $phoneId,
-        string $template,
-        array $payload,
-    ): array {
-        $body = [
-            'messaging_product' => 'whatsapp',
-            'to' => $to,
-            'type' => 'text',
-            'text' => ['body' => WaTemplateService::renderPlain($template, $payload)],
-        ];
-
-        $ch = curl_init("https://graph.facebook.com/v18.0/{$phoneId}/messages");
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_TIMEOUT => 15,
-            CURLOPT_HTTPHEADER => [
-                'Authorization: Bearer ' . $token,
-                'Content-Type: application/json',
-            ],
-            CURLOPT_POSTFIELDS => json_encode($body),
-        ]);
-        $response = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        $data = json_decode((string) $response, true);
-
-        if ($code >= 200 && $code < 300) {
-            return [
-                'ok' => true,
-                'message' => 'sent (plain-text fallback; sync template in Meta)',
-                'wamid' => $data['messages'][0]['id'] ?? null,
-                'configured' => true,
-            ];
-        }
-
-        return [
-            'ok' => false,
-            'message' => $data['error']['message'] ?? ('HTTP ' . $code . ': ' . (string) $response),
-            'wamid' => null,
-            'configured' => true,
         ];
     }
 

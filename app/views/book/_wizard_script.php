@@ -39,7 +39,14 @@ function bookingWizard() {
         loggedIn: <?= $patientLoggedIn ? 'true' : 'false' ?>,
         phone: <?= json_encode($patientPhoneDisplay) ?>,
         phoneRaw: <?= json_encode((string) $patientPhone) ?>,
+        bookerName: <?= json_encode((string) $patientName) ?>,
         name: <?= json_encode((string) $patientName) ?>,
+        familyMembers: [],
+        selectedFamilyMemberId: '',
+        familyRelations: {
+            self: 'Self', spouse: 'Spouse', mother: 'Mother', father: 'Father',
+            son: 'Son', daughter: 'Daughter', guardian: 'Guardian', other: 'Other',
+        },
         submitting: false,
         // Inline patient auth (step 2)
         authStep: 'phone',
@@ -55,7 +62,9 @@ function bookingWizard() {
 
         init() {
             this.loadSlots();
-            this.refreshSession();
+            this.refreshSession().then(() => {
+                if (this.loggedIn) this.loadFamilyMembers();
+            });
         },
 
         displayPhoneFromE164(e164) {
@@ -76,14 +85,52 @@ function bookingWizard() {
 
         applyPatient(p) {
             this.loggedIn = true;
+            this.bookerName = p.name || '';
             this.name = p.name || '';
             this.phoneRaw = p.phone || '';
             this.phone = this.displayPhoneFromE164(p.phone);
             this.authStep = 'phone';
             this.authError = '';
+            this.loadFamilyMembers();
             if (typeof Alpine !== 'undefined' && Alpine.store('bookPatient')) {
                 Alpine.store('bookPatient').setPatient(p);
             }
+        },
+
+        async loadFamilyMembers() {
+            if (!this.loggedIn) {
+                this.familyMembers = [];
+                this.selectedFamilyMemberId = '';
+                return;
+            }
+            try {
+                const r = await fetch(bookApi.familyUrl, { credentials: 'same-origin' });
+                const data = await r.json();
+                this.familyMembers = data.ok ? (data.members || []) : [];
+                if (this.familyMembers.length > 0) {
+                    const selfRow = this.familyMembers.find(m => m.is_self) || this.familyMembers[0];
+                    this.selectedFamilyMemberId = String(selfRow.id);
+                    this.applyFamilySelection();
+                } else {
+                    this.name = this.bookerName;
+                    this.selectedFamilyMemberId = '';
+                }
+            } catch (e) {
+                this.familyMembers = [];
+                this.name = this.bookerName;
+                this.selectedFamilyMemberId = '';
+            }
+        },
+
+        familyOptionLabel(m) {
+            const rel = this.familyRelations[m.relation] || m.relation || 'Member';
+            return m.name + ' (' + rel + ')';
+        },
+
+        applyFamilySelection() {
+            const id = String(this.selectedFamilyMemberId || '');
+            const m = this.familyMembers.find(row => String(row.id) === id);
+            this.name = m ? (m.name || this.bookerName) : this.bookerName;
         },
 
         async sendAuthOtp() {
@@ -157,9 +204,12 @@ function bookingWizard() {
                 await fetch(bookApi.authLogout, { method: 'POST', credentials: 'same-origin' });
             } catch (e) { /* ignore */ }
             this.loggedIn = false;
+            this.bookerName = '';
             this.name = '';
             this.phone = '';
             this.phoneRaw = '';
+            this.familyMembers = [];
+            this.selectedFamilyMemberId = '';
             this.authStep = 'phone';
             this.authPhoneDigits = '';
             this.authCode = '';
@@ -180,6 +230,7 @@ function bookingWizard() {
             if (!this.selectedSlot) return;
             this.step = 2;
             this.refreshSession();
+            if (this.loggedIn) this.loadFamilyMembers();
             if (window.innerWidth < 1024) {
                 this.$el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
