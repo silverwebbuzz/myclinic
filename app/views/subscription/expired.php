@@ -25,7 +25,7 @@ ob_start();
         </p>
 
         <!-- Primary action: renew / choose a plan via the existing Cashfree checkout. -->
-        <a href="/settings?tab=subscription"
+        <a href="/subscription"
            class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700">
             <?= $isTrial ? 'Choose a plan to continue' : 'Renew your plan' ?>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
