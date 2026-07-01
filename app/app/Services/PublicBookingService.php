@@ -209,10 +209,13 @@ final class PublicBookingService
                 ]);
             } else {
                 PatientService::update($clinicId, (int) $patient['id'], [
-                    'name'        => $demo['name'],
-                    'dob'         => $demo['dob'],
-                    'gender'      => $demo['gender'],
-                    'blood_group' => $demo['blood_group'],
+                    'name'             => $demo['name'],
+                    'dob'              => $demo['dob'],
+                    'gender'           => $demo['gender'],
+                    'blood_group'      => $demo['blood_group'],
+                    'phone'            => $phone !== '' ? $phone : (string) ($data['phone'] ?? ''),
+                    'identity_id'      => $identityId,
+                    'family_member_id' => $sharedMemberId,
                 ]);
                 $patient = PatientService::find($clinicId, (int) $patient['id']) ?? $patient;
             }

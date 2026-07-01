@@ -315,13 +315,16 @@ final class PatientService
             throw new \RuntimeException('Patient not found');
         }
 
-        $data = self::mapPayload($payload);
-        self::assertValid($data);
+        // Only columns present in $payload are written — partial updates (e.g.
+        // online re-booking for a family member) must not wipe phone, identity_id,
+        // or family_member_id when those keys are omitted.
+        $data = self::mapPayloadForUpdate($payload);
+        self::assertValid(array_merge($existing, $data));
 
         // The create flow blocks duplicate phones; without the same guard here
         // an edit could silently produce two charts sharing one number, and
         // phone lookup (booking, check-in) would pick one arbitrarily.
-        $dupe = self::findByPhone($clinicId, $data['phone']);
+        $dupe = self::findByPhone($clinicId, $data['phone'] ?? (string) ($existing['phone'] ?? ''));
         if ($dupe !== null && (int) $dupe['id'] !== $patientId) {
             throw new \RuntimeException(
                 'Another patient (' . ($dupe['uhid'] ?? $dupe['name'] ?? 'unknown') . ') already uses this phone number.',
@@ -411,6 +414,39 @@ final class PatientService
             ->where('patient_id', '=', $patientId)
             ->orderBy('created_at', 'DESC')
             ->get();
+    }
+
+    /**
+     * Map only fields explicitly provided in $payload (for UPDATE).
+     *
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private static function mapPayloadForUpdate(array $payload): array
+    {
+        $mapped = self::mapPayload($payload);
+        $out = [];
+
+        $direct = [
+            'name', 'phone', 'email', 'dob', 'gender', 'address', 'blood_group', 'veg_type',
+            'allergies', 'chronic_conditions', 'specialty_data', 'insurance_provider',
+            'insurance_id', 'referred_by', 'source', 'family_member_id',
+        ];
+        foreach ($direct as $col) {
+            if (array_key_exists($col, $payload)) {
+                $out[$col] = $mapped[$col];
+            }
+        }
+
+        if (array_key_exists('identity_id', $payload) || array_key_exists('phone', $payload)) {
+            $out['identity_id'] = $mapped['identity_id'];
+        }
+
+        if (!empty($payload['surgeries']) || !empty($payload['family_history']) || array_key_exists('specialty_data', $payload)) {
+            $out['specialty_data'] = $mapped['specialty_data'];
+        }
+
+        return $out;
     }
 
     /** @param array<string, mixed> $payload @return array<string, mixed> */
