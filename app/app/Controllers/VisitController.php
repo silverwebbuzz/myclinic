@@ -19,6 +19,7 @@ use App\Services\RemedyService;
 use App\Services\VitalsService;
 use App\Services\VisitService;
 use App\Support\Layout;
+use App\Support\PediatricVaccineSchedule;
 use App\Support\SpecialtyAdapter;
 use App\Support\View;
 use App\Support\VisitView;
@@ -112,6 +113,21 @@ final class VisitController
         $chargeData = self::chargesForVisit($clinicId, (int) $id, $editable);
         $visitInvoice = \App\Services\InvoiceService::findForVisit($clinicId, (int) $id);
 
+        $doctorRow = \App\Core\QueryBuilder::table('users')
+            ->where('id', '=', (int) ($visit['doctor_id'] ?? 0))
+            ->first();
+        $patientAgeYears = PediatricVaccineSchedule::patientAgeYears($patient);
+        $patient['age'] = $patientAgeYears;
+        $showPediatricVaccines = PediatricVaccineSchedule::shouldShow(
+            (string) ($clinic['specialty'] ?? ''),
+            isset($doctorRow['specialization']) ? (string) $doctorRow['specialization'] : null,
+            $patientAgeYears,
+        );
+        $pediatricVaccineSchedule = $showPediatricVaccines ? PediatricVaccineSchedule::schedule() : [];
+        $pediatricVaccinesSelected = PediatricVaccineSchedule::normalizeSelected(
+            $visit['specialty_data']['pediatric_vaccines'] ?? null,
+        );
+
         $viewData = [
             'visit' => $visit,
             'patient' => $patient,
@@ -137,6 +153,9 @@ final class VisitController
             'charges' => $chargeData['items'],
             'chargesPrefilled' => $chargeData['prefilled'],
             'visitInvoice' => $visitInvoice,
+            'showPediatricVaccines' => $showPediatricVaccines,
+            'pediatricVaccineSchedule' => $pediatricVaccineSchedule,
+            'pediatricVaccinesSelected' => $pediatricVaccinesSelected,
         ];
 
         // Single-screen consultation layout (the only visit screen).

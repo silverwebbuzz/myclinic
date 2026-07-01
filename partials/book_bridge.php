@@ -43,6 +43,7 @@ function ecp_book_view_config(string $slug): array
         'authSendOtp' => '/api/patient_auth.php?action=send_otp',
         'authVerifyOtp' => '/api/patient_auth.php?action=verify_otp',
         'authLogout' => '/api/patient_auth.php?action=logout',
+        'familyUrl' => '/api/family',
         'slotsUrl' => '/book/' . rawurlencode($slug) . '/slots',
         'formAction' => '/book/' . rawurlencode($slug),
         'siteHomeUrl' => ecp_site_url('/'),

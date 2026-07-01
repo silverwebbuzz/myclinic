@@ -109,6 +109,8 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         'invoiceId' => !empty($visitInvoice) ? (int) $visitInvoice['id'] : null,
         'invoiceNumber' => !empty($visitInvoice['invoice_number']) ? (string) $visitInvoice['invoice_number'] : null,
         'invoiceDate' => !empty($visitInvoice['created_at']) ? date('d M Y', strtotime((string) $visitInvoice['created_at'])) : null,
+        'showPediatricVaccines' => !empty($showPediatricVaccines),
+        'pediatricVaccines' => $pediatricVaccinesSelected ?? [],
     ], JSON_THROW_ON_ERROR), ENT_QUOTES) ?>)"
      x-init="initVisitScreen()">
 
@@ -807,6 +809,8 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 </details>
             <?php endif; ?>
 
+            <?php require __DIR__ . '/partials/pediatric_vaccines.php'; ?>
+
             <!-- ---- Ghost-link strip: reveal hidden sections for this visit ---- -->
             <?php if (!empty($ghostModules)): ?>
                 <div class="flex flex-wrap items-center gap-2 border-t border-dashed border-slate-200 pt-3 text-xs text-slate-500">
@@ -1012,7 +1016,12 @@ function normalizeCaseTaking(raw) {
 
 function visitScreenV2(cfg) {
     const caseTaking = normalizeCaseTaking(cfg.case_taking || cfg.specialty_data?.case_taking || {});
-    const specialtyData = { ...(cfg.specialty_data || {}), case_taking: caseTaking };
+    const pediatricVaccinesInit = Array.isArray(cfg.pediatricVaccines) ? cfg.pediatricVaccines : [];
+    const specialtyData = {
+        ...(cfg.specialty_data || {}),
+        case_taking: caseTaking,
+        pediatric_vaccines: pediatricVaccinesInit,
+    };
 
     // Normalize vitals.extra into an object — same handling as legacy view.
     const vitals = cfg.vitals || {};
@@ -1029,6 +1038,8 @@ function visitScreenV2(cfg) {
         ...cfg,
         specialty_data: specialtyData,
         case_taking: caseTaking,
+        pediatricVaccines: Array.isArray(cfg.pediatricVaccines) ? [...cfg.pediatricVaccines] : [],
+        showPediatricVaccines: !!cfg.showPediatricVaccines,
         vitals,
         charges,
         saveStatus: 'idle',
@@ -1048,6 +1059,19 @@ function visitScreenV2(cfg) {
 
         // Call on any user edit so manual save / complete knows there's something to persist.
         markDirty() { this.dirty = true; },
+
+        togglePediatricVaccine(key, on) {
+            const list = Array.isArray(this.pediatricVaccines) ? [...this.pediatricVaccines] : [];
+            if (on) {
+                if (!list.includes(key)) list.push(key);
+            } else {
+                const i = list.indexOf(key);
+                if (i >= 0) list.splice(i, 1);
+            }
+            this.pediatricVaccines = list;
+            this.specialty_data = { ...(this.specialty_data || {}), pediatric_vaccines: list };
+            this.markDirty();
+        },
 
         // ---- Charges (visit invoice line items) ----
         _chargeKey: 0,
@@ -1373,7 +1397,11 @@ function visitScreenV2(cfg) {
                 prescriptions: cleanRx,
                 prescriptions_cleared: this.prescriptionsCleared && cleanRx.every(p => !p.drug_id && !p.remedy_id && !p.drug_name && !p.frequency_preset && !p.dose_amount),
                 case_taking: this.case_taking,
-                specialty_data: { ...this.specialty_data, case_taking: this.case_taking },
+                specialty_data: {
+                    ...this.specialty_data,
+                    case_taking: this.case_taking,
+                    pediatric_vaccines: this.pediatricVaccines || [],
+                },
                 _form_blob: {
                     chief_complaint: this.chief_complaint,
                     diagnosis: this.diagnosis,

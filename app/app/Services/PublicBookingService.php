@@ -146,18 +146,14 @@ final class PublicBookingService
 
         $phone = PatientService::normalizePhone((string) ($data['phone'] ?? ''));
         $bookerName = trim((string) ($data['name'] ?? ''));
+        // family_member_id in the booking form = family_member_identities.id (private panel row).
+        $identityMemberId = (int) ($data['family_member_id'] ?? 0);
+        $sharedMemberId = 0;
 
         // ----- Identity resolution (front-side person) -----
-        // Priority:
-        //  1) Logged-in /patient session — trust their identity & phone directly.
-        //  2) Phone match against an existing identity.
-        //  3) No identity yet → REGISTER one now (we already collected a verified
-        //     name + phone), so the booker gets a /patient account and their
-        //     future booking history is linked from the start.
         $loggedIn = PatientIdentityAuthService::current();
         if ($loggedIn !== null) {
             $identityId = (int) $loggedIn['id'];
-            // Trust the account's own phone/name over anything posted.
             if (!empty($loggedIn['phone'])) {
                 $phone = PatientService::normalizePhone((string) $loggedIn['phone']);
             }
@@ -171,25 +167,76 @@ final class PublicBookingService
             }
         }
 
-        // Find the per-clinic chart (one patients row per clinic).
-        $patient = $phone !== '' ? PatientService::findByPhone($clinicId, $phone) : null;
-        if ($patient === null) {
-            $patient = PatientService::create($clinicId, [
-                'name'        => $bookerName !== '' ? $bookerName : 'Patient',
-                'phone'       => $phone !== '' ? $phone : (string) ($data['phone'] ?? ''),
-                'source'      => 'online',
-                'identity_id' => $identityId,    // may be null — that's fine
-            ]);
-        } elseif ($identityId !== null && empty($patient['identity_id'])) {
-            // Existing clinic chart, but no identity link yet — backfill it.
-            \App\Core\QueryBuilder::table('patients')
-                ->where('id', '=', (int) $patient['id'])
-                ->update(['identity_id' => $identityId]);
-            $patient['identity_id'] = $identityId;
+        if ($identityMemberId > 0) {
+            if ($loggedIn === null) {
+                throw new \RuntimeException('Sign in to book for a family member.');
+            }
+            $ownerId = (int) $loggedIn['id'];
+            if (FamilyMemberService::identityForOwner($ownerId, $identityMemberId) === null) {
+                throw new \RuntimeException('That family member could not be found on your account.');
+            }
+
+            $shared = FamilyMemberService::shareIdentityToClinic($clinicId, $ownerId, $identityMemberId);
+            if ($shared === null) {
+                throw new \RuntimeException('Could not share family member details with this clinic.');
+            }
+            $sharedMemberId = (int) $shared['id'];
+            $demo = FamilyMemberService::sanitizeMemberDemographics($shared);
+            if ($demo['name'] === '') {
+                throw new \RuntimeException('Please add a name for this family member in your profile.');
+            }
+
+            $patient = PatientService::findByFamilyMember($clinicId, $sharedMemberId);
+            if ($patient === null && !empty($shared['is_self']) && $phone !== '') {
+                $patient = PatientService::findAccountHolderByPhone($clinicId, $phone);
+                if ($patient !== null) {
+                    \App\Core\QueryBuilder::table('patients')
+                        ->where('id', '=', (int) $patient['id'])
+                        ->update(['family_member_id' => $sharedMemberId]);
+                    $patient['family_member_id'] = $sharedMemberId;
+                }
+            }
+            if ($patient === null) {
+                $patient = PatientService::create($clinicId, [
+                    'name'             => $demo['name'],
+                    'phone'            => $phone !== '' ? $phone : (string) ($data['phone'] ?? ''),
+                    'dob'              => $demo['dob'],
+                    'gender'           => $demo['gender'],
+                    'blood_group'      => $demo['blood_group'],
+                    'source'           => 'online',
+                    'identity_id'      => $identityId,
+                    'family_member_id' => $sharedMemberId,
+                ]);
+            } else {
+                PatientService::update($clinicId, (int) $patient['id'], [
+                    'name'        => $demo['name'],
+                    'dob'         => $demo['dob'],
+                    'gender'      => $demo['gender'],
+                    'blood_group' => $demo['blood_group'],
+                ]);
+                $patient = PatientService::find($clinicId, (int) $patient['id']) ?? $patient;
+            }
+        } else {
+            // Book for the account holder (default) — match chart by phone, not dependents.
+            $patient = $phone !== '' ? PatientService::findAccountHolderByPhone($clinicId, $phone) : null;
+            if ($patient === null) {
+                $patient = PatientService::create($clinicId, [
+                    'name'        => $bookerName !== '' ? $bookerName : 'Patient',
+                    'phone'       => $phone !== '' ? $phone : (string) ($data['phone'] ?? ''),
+                    'source'      => 'online',
+                    'identity_id' => $identityId,
+                ]);
+            } elseif ($identityId !== null && empty($patient['identity_id'])) {
+                \App\Core\QueryBuilder::table('patients')
+                    ->where('id', '=', (int) $patient['id'])
+                    ->update(['identity_id' => $identityId]);
+                $patient['identity_id'] = $identityId;
+            }
         }
 
         $appointment = AppointmentService::create($clinicId, [
             'patient_id' => (int) $patient['id'],
+            'family_member_id' => $sharedMemberId > 0 ? $sharedMemberId : null,
             'doctor_id' => (int) $data['doctor_id'],
             'scheduled_at' => $scheduledAt,
             'type' => 'online',

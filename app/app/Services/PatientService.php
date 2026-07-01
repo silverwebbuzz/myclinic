@@ -35,6 +35,35 @@ final class PatientService
             ->first();
     }
 
+    public static function findByFamilyMember(int $clinicId, int $familyMemberId): ?array
+    {
+        if ($familyMemberId <= 0) {
+            return null;
+        }
+
+        return QueryBuilder::table('patients')
+            ->forClinic($clinicId)
+            ->where('family_member_id', '=', $familyMemberId)
+            ->where('is_active', '=', 1)
+            ->first();
+    }
+
+    /** Account-holder chart at a clinic (excludes dependent family-member charts). */
+    public static function findAccountHolderByPhone(int $clinicId, string $phone): ?array
+    {
+        $normalized = self::normalizePhone($phone);
+        if ($normalized === '') {
+            return null;
+        }
+
+        return QueryBuilder::table('patients')
+            ->forClinic($clinicId)
+            ->where('phone', '=', $normalized)
+            ->where('family_member_id', 'IS', null)
+            ->where('is_active', '=', 1)
+            ->first();
+    }
+
     /**
      * Smart phone lookup used by reception / doctor "Add patient" flows.
      *
@@ -424,6 +453,7 @@ final class PatientService
             'referred_by' => trim((string) ($payload['referred_by'] ?? '')) ?: null,
             'source' => in_array($payload['source'] ?? 'walk_in', ['walk_in', 'referral', 'online', 'camp', 'other'], true)
                 ? $payload['source'] : 'walk_in',
+            'family_member_id' => !empty($payload['family_member_id']) ? (int) $payload['family_member_id'] : null,
             // Link to the global patient_identities row when possible:
             //   1) Caller passed identity_id explicitly (booking flow does this).
             //   2) Otherwise look up by normalized phone.

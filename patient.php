@@ -258,11 +258,13 @@ require __DIR__ . '/partials/header.php';
           <div x-show="tab === 'family'" class="pt-tab-pane">
             <div class="pt-section-head">
               <h3>Family profiles</h3>
-              <button type="button" class="btn-mini primary" @click="family.startAdd()">+ Add member</button>
+              <button type="button" class="btn-mini primary" x-show="family.canAdd()" @click="family.startAdd()">+ Add member</button>
             </div>
             <p class="pt-section-note">
-              Keep your family's health details, emergency contacts, insurance &amp; documents in one place — handy during an emergency.
+              Add up to 6 family members (including yourself) with relation, name, date of birth, gender, blood group, and ABHA number.
+              <span x-show="family.members.length > 0" x-text="' · ' + family.members.length + '/' + family.maxMembers + ' added'"></span>
             </p>
+            <p class="pt-fam-limit" x-show="!family.loading && !family.canAdd()">You’ve reached the maximum of 6 family members. Remove someone to add another.</p>
 
             <div x-show="family.loading" class="pt-loading">Loading your family…</div>
 
@@ -292,32 +294,11 @@ require __DIR__ . '/partials/header.php';
                   <label class="pt-fld"><span>Blood group</span>
                     <select x-model="family.form.blood_group">
                       <option value="">—</option>
-                      <template x-for="b in family.bloods" :key="b"><option x-text="b"></option></template>
+                      <template x-for="b in family.bloods" :key="b"><option :value="b" x-text="b"></option></template>
                     </select>
                   </label>
-                  <label class="pt-fld"><span>Mobile <em>(optional)</em></span>
-                    <input type="tel" x-model="family.form.phone" placeholder="If they have one" inputmode="numeric">
-                  </label>
-                </div>
-
-                <div class="pt-fam-edit-grid">
-                  <label class="pt-fld pt-fld-wide"><span>Allergies</span>
-                    <input type="text" x-model="family.form.allergies" placeholder="e.g. penicillin, peanuts">
-                  </label>
-                  <label class="pt-fld pt-fld-wide"><span>Chronic conditions</span>
-                    <input type="text" x-model="family.form.chronic_conditions" placeholder="e.g. diabetes, asthma">
-                  </label>
-                </div>
-
-                <div class="pt-fam-edit-grid">
-                  <label class="pt-fld"><span>Emergency contact</span>
-                    <input type="text" x-model="family.form.emergency_contact_name" placeholder="Name">
-                  </label>
-                  <label class="pt-fld"><span>Emergency phone</span>
-                    <input type="tel" x-model="family.form.emergency_contact_phone" placeholder="Mobile" inputmode="numeric">
-                  </label>
-                  <label class="pt-fld"><span>ABHA ID <em>(optional)</em></span>
-                    <input type="text" x-model="family.form.abha_id" placeholder="14-digit ABHA number">
+                  <label class="pt-fld"><span>ABHA number <em>(optional)</em></span>
+                    <input type="text" x-model="family.form.abha_id" placeholder="14-digit ABHA number" inputmode="numeric">
                   </label>
                 </div>
 
@@ -333,103 +314,21 @@ require __DIR__ . '/partials/header.php';
             <!-- Accordion of members -->
             <div class="pt-fam-list" x-show="!family.loading && family.members.length > 0">
               <template x-for="m in family.members" :key="m.id">
-                <div class="pt-fam-card" :class="family.openId === m.id ? 'is-open' : ''">
-                  <button type="button" class="pt-fam-head" @click="family.toggle(m.id)">
+                <div class="pt-fam-card">
+                  <div class="pt-fam-head">
                     <span class="pt-fam-avatar" x-text="family.initials(m.name)"></span>
                     <span class="pt-fam-id">
                       <span class="pt-fam-name" x-text="m.name"></span>
                       <span class="pt-fam-rel">
                         <span x-text="family.relLabel(m.relation)"></span>
                         <template x-if="m.dob"><span x-text="' · ' + family.age(m.dob) + ' yrs'"></span></template>
+                        <template x-if="m.gender"><span x-text="' · ' + family.genderLabel(m.gender)"></span></template>
                         <template x-if="m.blood_group"><span class="pt-fam-blood" x-text="m.blood_group"></span></template>
+                        <template x-if="m.abha_id"><span x-text="' · ABHA ' + m.abha_id"></span></template>
                       </span>
                     </span>
-                    <span class="pt-fam-chevron" aria-hidden="true">▾</span>
-                  </button>
-
-                  <div class="pt-fam-body" x-show="family.openId === m.id" x-cloak>
-                    <!-- summary rows -->
-                    <dl class="pt-fam-facts">
-                      <template x-if="m.phone"><div><dt>Mobile</dt><dd x-text="m.phone"></dd></div></template>
-                      <template x-if="m.allergies"><div><dt>Allergies</dt><dd x-text="m.allergies"></dd></div></template>
-                      <template x-if="m.chronic_conditions"><div><dt>Conditions</dt><dd x-text="m.chronic_conditions"></dd></div></template>
-                      <template x-if="m.emergency_contact_name"><div><dt>Emergency</dt><dd x-text="m.emergency_contact_name + (m.emergency_contact_phone ? ' · ' + m.emergency_contact_phone : '')"></dd></div></template>
-                      <template x-if="m.abha_id"><div><dt>ABHA</dt><dd x-text="m.abha_id"></dd></div></template>
-                    </dl>
-
-                    <!-- insurance -->
-                    <div class="pt-fam-sub">
-                      <div class="pt-fam-sub-head">
-                        <h4>🛡️ Insurance policies</h4>
-                        <button type="button" class="pt-link-btn" @click="family.addPolicy(m.id)">+ Add policy</button>
-                      </div>
-                      <template x-if="m.policies.length === 0">
-                        <p class="pt-fam-empty">No policies added.</p>
-                      </template>
-                      <template x-for="p in m.policies" :key="p.id">
-                        <div class="pt-fam-policy">
-                          <div>
-                            <strong x-text="p.insurer_name || 'Policy'"></strong>
-                            <span class="pt-fam-tag" x-text="family.policyLabel(p.policy_type)"></span>
-                            <div class="pt-fam-policy-sub">
-                              <span x-show="p.policy_number" x-text="'No. ' + p.policy_number"></span>
-                              <span x-show="p.sum_insured_inr" x-text="' · ₹' + Number(p.sum_insured_inr).toLocaleString('en-IN') + ' cover'"></span>
-                              <span x-show="p.valid_till" x-text="' · valid till ' + p.valid_till"></span>
-                            </div>
-                          </div>
-                          <button type="button" class="btn-mini" @click="family.deletePolicy(m.id, p.id)" aria-label="Remove policy">✕</button>
-                        </div>
-                      </template>
-
-                      <!-- inline policy form -->
-                      <template x-if="family.policyFor === m.id">
-                        <div class="pt-fam-policy-form">
-                          <input type="text" placeholder="Insurer" x-model="family.policyForm.insurer_name">
-                          <select x-model="family.policyForm.policy_type">
-                            <template x-for="t in family.policyTypes" :key="t.v"><option :value="t.v" x-text="t.t"></option></template>
-                          </select>
-                          <input type="text" placeholder="Policy number" x-model="family.policyForm.policy_number">
-                          <input type="number" placeholder="Sum insured ₹" x-model="family.policyForm.sum_insured_inr">
-                          <input type="date" x-model="family.policyForm.valid_till">
-                          <button type="button" class="btn-mini primary" @click="family.savePolicy()">Save</button>
-                          <button type="button" class="btn-mini" @click="family.policyFor = null">Cancel</button>
-                        </div>
-                      </template>
-                    </div>
-
-                    <!-- documents -->
-                    <div class="pt-fam-sub">
-                      <div class="pt-fam-sub-head">
-                        <h4>📄 Documents</h4>
-                        <label class="pt-link-btn pt-fam-upload">
-                          + Upload
-                          <input type="file" accept="image/*,application/pdf" hidden
-                                 @change="family.uploadDoc(m.id, $event)">
-                        </label>
-                      </div>
-                      <p class="pt-fam-hint">ABHA card, insurance card, vaccine certificate, lab report… (image or PDF, max 5 MB).</p>
-                      <template x-if="m.documents.length === 0">
-                        <p class="pt-fam-empty">No documents uploaded.</p>
-                      </template>
-                      <div class="pt-fam-docs" x-show="m.documents.length > 0">
-                        <template x-for="d in m.documents" :key="d.id">
-                          <div class="pt-fam-doc">
-                            <a :href="'/api/family_doc?id=' + d.id" target="_blank" rel="noopener" class="pt-fam-doc-link">
-                              <span class="pt-fam-doc-ic" x-text="family.docIcon(d.mime_type)"></span>
-                              <span class="pt-fam-doc-meta">
-                                <span class="pt-fam-doc-title" x-text="d.title"></span>
-                                <span class="pt-fam-doc-type" x-text="family.docLabel(d.doc_type)"></span>
-                              </span>
-                            </a>
-                            <button type="button" class="btn-mini" @click="family.deleteDoc(m.id, d.id)" aria-label="Delete document">✕</button>
-                          </div>
-                        </template>
-                      </div>
-                    </div>
-
-                    <!-- member actions -->
                     <div class="pt-fam-actions">
-                      <button type="button" class="btn-mini" @click="family.startEdit(m)">✎ Edit details</button>
+                      <button type="button" class="btn-mini" @click="family.startEdit(m)">✎ Edit</button>
                       <template x-if="!m.is_self">
                         <button type="button" class="btn-mini" @click="family.removeMember(m)">Remove</button>
                       </template>
@@ -444,7 +343,7 @@ require __DIR__ . '/partials/header.php';
                 <div class="glyph">👨‍👩‍👧</div>
                 <h3>No family members yet</h3>
                 <p>Add yourself, your spouse, parents or children to keep everyone's health details in one place.</p>
-                <button type="button" class="btn btn-primary" @click="family.startAdd()">+ Add a member</button>
+                <button type="button" class="btn btn-primary" x-show="family.canAdd()" @click="family.startAdd()">+ Add a member</button>
               </div>
             </template>
           </div>
@@ -839,11 +738,10 @@ require __DIR__ . '/partials/header.php';
 
 /* -------- Family profiles -------- */
 .pt-fam-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
-.pt-fam-card { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; transition: border-color .15s, box-shadow .15s; }
-.pt-fam-card.is-open { border-color: var(--teal-400); box-shadow: 0 4px 16px rgba(15,155,110,0.07); }
+.pt-fam-card { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #fff; }
 .pt-fam-head {
-  width: 100%; display: flex; align-items: center; gap: 12px;
-  background: #fff; border: 0; padding: 14px 16px; cursor: pointer; text-align: left;
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
 }
 .pt-fam-avatar {
   width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
@@ -854,43 +752,12 @@ require __DIR__ . '/partials/header.php';
 .pt-fam-name { display: block; font-weight: 600; font-size: 14.5px; color: var(--ink); }
 .pt-fam-rel { display: block; font-size: 12.5px; color: var(--mute); margin-top: 2px; }
 .pt-fam-blood { background: var(--teal-50); color: var(--teal-800); padding: 1px 7px; border-radius: 999px; font-size: 10.5px; font-weight: 700; margin-left: 6px; }
-.pt-fam-chevron { color: var(--mute); transition: transform .2s; font-size: 13px; }
-.pt-fam-card.is-open .pt-fam-chevron { transform: rotate(180deg); }
 
-.pt-fam-body { padding: 4px 16px 18px; border-top: 1px solid var(--line); }
-.pt-fam-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; margin: 14px 0 4px; }
-.pt-fam-facts > div { min-width: 0; }
-.pt-fam-facts dt { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--mute); }
-.pt-fam-facts dd { margin: 2px 0 0; font-size: 13.5px; color: var(--ink); }
-
-.pt-fam-sub { margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 12px; }
-.pt-fam-sub-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-.pt-fam-sub-head h4 { margin: 0; font-size: 13px; font-weight: 700; color: var(--ink); }
-.pt-fam-hint { font-size: 11.5px; color: var(--mute); margin: 0 0 8px; }
-.pt-fam-empty { font-size: 12.5px; color: var(--mute); margin: 4px 0; }
-
-.pt-fam-policy { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
-.pt-fam-policy strong { font-size: 13.5px; }
-.pt-fam-tag { display: inline-block; background: var(--bg-2); color: var(--ink-2); font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; margin-left: 6px; }
-.pt-fam-policy-sub { font-size: 12px; color: var(--mute); margin-top: 3px; }
-.pt-fam-policy-form, .pt-fam-edit-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-.pt-fam-policy-form input, .pt-fam-policy-form select {
-  border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; font: inherit; font-size: 13px; flex: 1 1 130px; min-width: 0;
-}
-
-.pt-fam-docs { display: flex; flex-direction: column; gap: 6px; }
-.pt-fam-doc { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
-.pt-fam-doc-link { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); min-width: 0; flex: 1; }
-.pt-fam-doc-ic { font-size: 20px; flex-shrink: 0; }
-.pt-fam-doc-meta { min-width: 0; }
-.pt-fam-doc-title { display: block; font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pt-fam-doc-type { display: block; font-size: 11.5px; color: var(--mute); }
-.pt-fam-upload { cursor: pointer; }
-
-.pt-fam-actions { display: flex; gap: 8px; margin-top: 16px; }
+.pt-fam-actions { display: flex; gap: 8px; margin-left: auto; flex-shrink: 0; }
 
 /* Add/edit member form */
 .pt-fam-edit { border: 1px solid var(--teal-400); border-radius: 14px; padding: 16px; margin: 14px 0; background: var(--teal-50, #f0faf6); }
+.pt-fam-edit-grid { display: flex; flex-wrap: wrap; gap: 8px; }
 .pt-fld { display: flex; flex-direction: column; gap: 4px; flex: 1 1 150px; min-width: 0; }
 .pt-fld-wide { flex-basis: 100%; }
 .pt-fld > span { font-size: 11px; font-weight: 600; color: var(--mute); }
@@ -898,6 +765,7 @@ require __DIR__ . '/partials/header.php';
 .pt-fld input, .pt-fld select { border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; font: inherit; font-size: 14px; background: #fff; outline: none; width: 100%; }
 .pt-fld input:focus, .pt-fld select:focus { border-color: var(--teal-400); }
 .pt-fam-err { color: #c0392b; font-size: 13px; margin: 8px 0 0; }
+.pt-fam-limit { color: #b45309; font-size: 13px; margin: 0 0 12px; }
 .pt-fam-edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 
 /* -------- Responsive -------- */
@@ -947,16 +815,12 @@ function patientPanel(isLoggedIn) {
       loaded: false,
       loading: false,
       members: [],
-      openId: null,
-      // add/edit member
+      maxMembers: 6,
+      canAddFlag: true,
       editing: false,
       saving: false,
       formError: '',
       form: {},
-      // inline insurance form
-      policyFor: null,
-      policyForm: {},
-      // static option lists
       relations: [
         { v: 'self', t: 'Self' }, { v: 'spouse', t: 'Spouse' },
         { v: 'mother', t: 'Mother' }, { v: 'father', t: 'Father' },
@@ -964,11 +828,6 @@ function patientPanel(isLoggedIn) {
         { v: 'guardian', t: 'Guardian' }, { v: 'other', t: 'Other' },
       ],
       bloods: ['A+','A-','B+','B-','O+','O-','AB+','AB-'],
-      policyTypes: [
-        { v: 'health', t: 'Health' }, { v: 'topup', t: 'Top-up' },
-        { v: 'personal_accident', t: 'Personal accident' },
-        { v: 'critical_illness', t: 'Critical illness' }, { v: 'other', t: 'Other' },
-      ],
 
       async loadOnce() {
         if (this.loaded) return;
@@ -980,20 +839,20 @@ function patientPanel(isLoggedIn) {
           const r = await fetch('/api/family', { credentials: 'same-origin' });
           const j = await r.json();
           this.members = j.ok ? (j.members || []) : [];
+          if (j.ok && j.max_members) this.maxMembers = j.max_members;
+          if (j.ok && typeof j.can_add === 'boolean') this.canAddFlag = j.can_add;
         } catch (e) { this.members = []; }
         finally { this.loading = false; this.loaded = true; }
       },
-      toggle(id) { this.openId = this.openId === id ? null : id; },
 
-      // ---- labels / formatting ----
-      relLabel(v) { return (this.relations.find(r => r.v === v) || {}).t || v; },
-      policyLabel(v) { return (this.policyTypes.find(t => t.v === v) || {}).t || v; },
-      docLabel(v) {
-        return ({ abha: 'ABHA card', insurance_card: 'Insurance card', id_photo: 'ID photo',
-          prescription: 'Prescription', lab_report: 'Lab report', vaccine_cert: 'Vaccine certificate',
-          other: 'Document' })[v] || 'Document';
+      canAdd() {
+        return this.canAddFlag && this.members.length < this.maxMembers;
       },
-      docIcon(mime) { return (mime || '').indexOf('pdf') >= 0 ? '📕' : '🖼️'; },
+
+      relLabel(v) { return (this.relations.find(r => r.v === v) || {}).t || v; },
+      genderLabel(v) {
+        return ({ M: 'Male', F: 'Female', Other: 'Other' })[v] || v;
+      },
       initials(name) {
         const p = (name || '').trim().split(/\s+/);
         return ((p[0] || '')[0] || '?').toUpperCase() + (p.length > 1 ? (p[p.length-1][0] || '').toUpperCase() : '');
@@ -1009,19 +868,22 @@ function patientPanel(isLoggedIn) {
 
       // ---- add / edit member ----
       blankForm(relation) {
-        return { member_id: 0, relation: relation || 'other', name: '', dob: '', gender: '',
-          blood_group: '', phone: '', allergies: '', chronic_conditions: '',
-          emergency_contact_name: '', emergency_contact_phone: '', abha_id: '' };
+        return { member_id: 0, relation: relation || 'other', name: '', dob: '', gender: '', blood_group: '', abha_id: '' };
       },
-      startAdd() { this.formError = ''; this.form = this.blankForm('spouse'); this.editing = true; },
+      startAdd() {
+        if (!this.canAdd()) {
+          this.formError = 'You can add up to ' + this.maxMembers + ' family members only.';
+          return;
+        }
+        this.formError = '';
+        this.form = this.blankForm('spouse');
+        this.editing = true;
+      },
       startEdit(m) {
         this.formError = '';
         this.form = {
           member_id: m.id, relation: m.relation, name: m.name || '', dob: m.dob || '',
-          gender: m.gender || '', blood_group: m.blood_group || '', phone: m.phone || '',
-          allergies: m.allergies || '', chronic_conditions: m.chronic_conditions || '',
-          emergency_contact_name: m.emergency_contact_name || '',
-          emergency_contact_phone: m.emergency_contact_phone || '', abha_id: m.abha_id || '',
+          gender: m.gender || '', blood_group: m.blood_group || '', abha_id: m.abha_id || '',
         };
         this.editing = true;
       },
@@ -1037,7 +899,11 @@ function patientPanel(isLoggedIn) {
           });
           const j = await r.json();
           if (j.ok) { this.editing = false; await this.load(); }
-          else { this.formError = 'Could not save. ' + (j.error || ''); }
+          else {
+            this.formError = j.error === 'member_limit_reached'
+              ? 'You can add up to ' + this.maxMembers + ' family members only.'
+              : ('Could not save. ' + (j.error || ''));
+          }
         } catch (e) { this.formError = 'Network error — please try again.'; }
         finally { this.saving = false; }
       },
@@ -1049,62 +915,6 @@ function patientPanel(isLoggedIn) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ member_id: m.id }),
           });
-          if (this.openId === m.id) this.openId = null;
-          await this.load();
-        } catch (e) {}
-      },
-
-      // ---- insurance ----
-      addPolicy(memberId) {
-        this.policyFor = memberId;
-        this.policyForm = { member_id: memberId, policy_id: 0, insurer_name: '', policy_type: 'health',
-          policy_number: '', sum_insured_inr: '', valid_till: '' };
-      },
-      async savePolicy() {
-        try {
-          const r = await fetch('/api/family?action=save_policy', {
-            method: 'POST', credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(this.policyForm),
-          });
-          const j = await r.json();
-          if (j.ok) { this.policyFor = null; await this.load(); }
-        } catch (e) {}
-      },
-      async deletePolicy(memberId, policyId) {
-        if (!confirm('Delete this policy?')) return;
-        try {
-          await fetch('/api/family?action=delete_policy', {
-            method: 'POST', credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ policy_id: policyId }),
-          });
-          await this.load();
-        } catch (e) {}
-      },
-
-      // ---- documents ----
-      async uploadDoc(memberId, ev) {
-        const file = ev.target.files && ev.target.files[0];
-        ev.target.value = '';
-        if (!file) return;
-        if (file.size > 5 * 1024 * 1024) { alert('File is larger than 5 MB.'); return; }
-        const fd = new FormData();
-        fd.append('member_id', memberId);
-        fd.append('file', file);
-        fd.append('title', file.name.replace(/\.[^.]+$/, ''));
-        try {
-          const r = await fetch('/api/family_doc', { method: 'POST', credentials: 'same-origin', body: fd });
-          const j = await r.json();
-          if (j.ok) await this.load();
-          else alert('Upload failed: ' + (j.error || 'unknown error'));
-        } catch (e) { alert('Upload failed — please try again.'); }
-      },
-      async deleteDoc(memberId, docId) {
-        if (!confirm('Delete this document?')) return;
-        const fd = new FormData(); fd.append('id', docId);
-        try {
-          await fetch('/api/family_doc?action=delete', { method: 'POST', credentials: 'same-origin', body: fd });
           await this.load();
         } catch (e) {}
       },

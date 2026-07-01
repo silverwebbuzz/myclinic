@@ -113,6 +113,7 @@ final class AppointmentService
                 $id = QueryBuilder::table('appointments')->insert([
                     'clinic_id' => $clinicId,
                     'patient_id' => (int) $data['patient_id'],
+                    'family_member_id' => !empty($data['family_member_id']) ? (int) $data['family_member_id'] : null,
                     'doctor_id' => $doctorId,
                     'scheduled_at' => $scheduledAt,
                     'slot_duration' => (int) ($data['slot_duration'] ?? 15),
