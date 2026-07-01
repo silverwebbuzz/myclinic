@@ -168,6 +168,16 @@ final class PatientIdentityAuthService
                 ->execute(['id' => $identity['id']]);
         }
 
+        // Record messaging opt-in: a verified OTP proves control of the number
+        // and intent to use the service — the strongest consent basis for
+        // business-initiated WhatsApp (Meta Acceptable Use). Best-effort.
+        MessagingConsent::recordOptIn(
+            $phone,
+            'otp_verify',
+            (int) $identity['id'],
+            $_SERVER['REMOTE_ADDR'] ?? null,
+        );
+
         self::backfillClinicCharts((int) $identity['id'], $phone);
         self::startSession((int) $identity['id']);
 

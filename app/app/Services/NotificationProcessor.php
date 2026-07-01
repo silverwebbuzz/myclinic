@@ -56,6 +56,18 @@ final class NotificationProcessor
             return false;
         }
 
+        // Opt-in gate for platform/marketing-origin WhatsApp (clinic_id 0 — the
+        // directory funnel that caused the ban). These recipients must have a
+        // recorded opt-in (booking / OTP verify). A clinic messaging its OWN
+        // registered patients (clinic_id > 0) has a direct treatment
+        // relationship and is not gated here. Patient audience only — doctor
+        // alerts no longer use WhatsApp at all.
+        if ($channel === 'whatsapp' && $clinicId === 0 && $audience === 'patient'
+            && !MessagingConsent::hasOptedIn($to)) {
+            self::markSkipped($id, 'no recorded opt-in (platform-origin WhatsApp)');
+            return false;
+        }
+
         try {
             if ($channel === 'whatsapp') {
                 // MessagingPolicy decides the actual channel: applies rules

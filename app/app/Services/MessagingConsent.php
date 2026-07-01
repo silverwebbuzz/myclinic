@@ -50,6 +50,58 @@ final class MessagingConsent
         }
     }
 
+    /**
+     * Record a positive opt-in. Idempotent — keeps the FIRST opt-in timestamp
+     * (that's the auditable "when consent was given" moment). Called at OTP
+     * verification and at booking, where the person proves control of the number
+     * and chooses to use the service.
+     */
+    public static function recordOptIn(
+        string $phone,
+        string $source,
+        ?int $identityId = null,
+        ?string $ip = null
+    ): bool {
+        $tail = self::tail($phone);
+        if ($tail === '') {
+            return false;
+        }
+        try {
+            $stmt = Database::connection()->prepare(
+                'INSERT INTO messaging_consent (phone_tail, source, patient_identity_id, raw_phone, ip)
+                 VALUES (:t, :s, :iid, :r, :ip)
+                 ON DUPLICATE KEY UPDATE created_at = created_at'
+            );
+            return $stmt->execute([
+                ':t' => $tail,
+                ':s' => mb_substr($source, 0, 32),
+                ':iid' => $identityId,
+                ':r' => mb_substr($phone, 0, 32),
+                ':ip' => $ip !== null ? mb_substr($ip, 0, 45) : null,
+            ]);
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /** Has this number a recorded opt-in? (For audit/appeal evidence.) */
+    public static function hasOptedIn(string $phone): bool
+    {
+        $tail = self::tail($phone);
+        if ($tail === '') {
+            return false;
+        }
+        try {
+            $stmt = Database::connection()->prepare(
+                'SELECT 1 FROM messaging_consent WHERE phone_tail = :t LIMIT 1'
+            );
+            $stmt->execute([':t' => $tail]);
+            return (bool) $stmt->fetchColumn();
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
     /** Does this inbound text mean the sender wants to opt out? */
     public static function isStopKeyword(string $text): bool
     {

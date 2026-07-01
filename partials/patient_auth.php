@@ -180,6 +180,16 @@ function ecp_patient_verify_otp(string $rawPhone, string $code, ?string $name = 
         }
     }
 
+    // Record messaging opt-in. A verified OTP proves the person controls this
+    // number and chose to use the service — the strongest consent basis for
+    // business-initiated WhatsApp (Meta Acceptable Use). Best-effort.
+    if (function_exists('ecp_record_optin')) {
+        ecp_record_optin($phone, 'otp_verify', (int) $identity['id']);
+    } else {
+        require_once __DIR__ . '/notify.php';
+        ecp_record_optin($phone, 'otp_verify', (int) $identity['id']);
+    }
+
     // Backfill: link any existing clinic charts (`patients` rows) that share
     // this phone but have no identity yet. This is how a doctor's walk-in
     // patient gets connected to their global identity the moment they

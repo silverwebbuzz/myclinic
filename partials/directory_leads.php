@@ -147,6 +147,13 @@ function ecp_lead_create(int $doctorId, ?array $patientIdentity, string $type, a
             $clinicPhone = trim((string) ($doctor['phone'] ?? ''));
             $patientPhone = $patientIdentity['phone'] ?? '';
 
+            // Record the patient's messaging opt-in: they submitted a booking
+            // with their number, choosing to be contacted about it (Meta
+            // Acceptable Use consent basis). Best-effort.
+            if ($patientPhone !== '') {
+                ecp_record_optin((string) $patientPhone, 'booking', $identityId);
+            }
+
             // 1) Patient — booking acknowledgement (6 template vars).
             if ($patientPhone !== '') {
                 ecp_enqueue_notification(
