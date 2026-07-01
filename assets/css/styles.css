@@ -288,13 +288,13 @@ button {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  color: var(--teal-600);
-  background: var(--teal-50);
-  border: 1px solid var(--teal-100);
+  color: #E6398B;            /* cervical-cancer awareness pink */
+  background: #FCE7F1;
+  border: 1px solid #F7C6DD;
   transition: transform .15s ease, background .15s ease;
 }
 .nav-ribbon:hover {
-  background: var(--teal-100);
+  background: #F9D3E3;
   transform: translateY(-1px);
 }
 

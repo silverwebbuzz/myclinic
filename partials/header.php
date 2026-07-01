@@ -174,19 +174,16 @@ $ecpPatientJson = $ecpPatient
 
         <nav class="nav-links" :class="mobileNav ? 'is-open' : ''">
             <a href="/find-a-doctor" class="nav-link <?= nav_active('find') ?>">Find a doctor</a>
-            <a href="/eclinicpro-health-store" class="nav-link <?= nav_active('store') ?>">Health Store</a>
-            <a href="/lab" class="nav-link <?= nav_active('lab') ?>">Lab Tests</a>
+            <a href="/cervical-cancer" class="nav-link nav-link-awareness <?= nav_active('cervical') ?>">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15" aria-hidden="true"><path d="M12 2c-2 3-2 6 0 9 2-3 2-6 0-9zm0 9c-1.5 4-4.5 7-8 9 4.5.5 7.5-1.5 8-4 .5 2.5 3.5 4.5 8 4-3.5-2-6.5-5-8-9z"/></svg>
+                Cervical Cancer
+            </a>
             <a href="/features" class="nav-link <?= nav_active('features') ?>">For doctors</a>
             <a href="/#specialties" class="nav-link <?= nav_active('specialties') ?>">Specialties</a>
             <a href="/security" class="nav-link <?= nav_active('security') ?>">Security</a>
         </nav>
 
         <div class="nav-cta">
-            <!-- Awareness ribbon symbol → Cervical Cancer campaign page. -->
-            <a href="/cervical-cancer" class="nav-ribbon" aria-label="Cervical Cancer Awareness" title="Cervical Cancer Awareness">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true"><path d="M12 2c-2 3-2 6 0 9 2-3 2-6 0-9zm0 9c-1.5 4-4.5 7-8 9 4.5.5 7.5-1.5 8-4 .5 2.5 3.5 4.5 8 4-3.5-2-6.5-5-8-9z"/></svg>
-            </a>
-
             <!-- Logged out: opens the shared login modal. -->
             <button type="button" class="nav-signin" x-show="!patient"
                     @click="window.ecpAuth && window.ecpAuth.open('default')"
