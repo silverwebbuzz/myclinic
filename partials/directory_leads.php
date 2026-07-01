@@ -167,11 +167,18 @@ function ecp_lead_create(int $doctorId, ?array $patientIdentity, string $type, a
                 $used = ecp_directory_doctor_alerts_this_month($doctorId);
 
                 if ($used < $cap) {
+                    // NON-JOINED doctors have NOT opted in to WhatsApp. Meta's
+                    // Acceptable Use policy forbids business-initiated WhatsApp to
+                    // people with no prior relationship/opt-in — this is what got
+                    // the WABA banned. Doctor lead alerts therefore go over SMS
+                    // ONLY. Once a doctor joins + opts in, alerts can move to WA.
                     ecp_enqueue_notification(
                         null,
                         (string) $clinicPhone,
                         'doctor_new_lead',
                         ecp_doctor_new_lead_payload($doctor, $patientIdentity, $extra),
+                        0,
+                        'sms',
                     );
                     $db->prepare('UPDATE directory_leads SET doctor_alert_sent_at = NOW() WHERE id = :id')
                        ->execute(['id' => $leadId]);

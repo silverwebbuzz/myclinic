@@ -47,6 +47,15 @@ final class NotificationProcessor
         $to = (string) ($row['to_number'] ?? '');
         $audience = str_starts_with($template, 'doctor_') || $template === 'quota_warning' ? 'doctor' : 'patient';
 
+        // Recipient opt-out gate. Meta's Acceptable Use policy requires honouring
+        // opt-outs; a STOP blocks ALL further business-initiated messaging to this
+        // number. Checked here (the single choke-point) so neither a WhatsApp send
+        // NOR a WhatsApp→SMS downgrade can slip past it. OTP does not route here.
+        if (in_array($channel, ['whatsapp', 'sms'], true) && MessagingConsent::isOptedOut($to, $channel)) {
+            self::markSkipped($id, 'recipient opted out');
+            return false;
+        }
+
         try {
             if ($channel === 'whatsapp') {
                 // MessagingPolicy decides the actual channel: applies rules
