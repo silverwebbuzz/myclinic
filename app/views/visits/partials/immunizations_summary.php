@@ -78,14 +78,18 @@ $groupByDate = static function (array $rows): array {
             <h4 class="text-xs font-semibold uppercase tracking-wide text-amber-800">Overdue</h4>
             <ul class="mt-1 divide-y divide-amber-100 rounded-md border border-amber-200 bg-amber-50/80">
                 <?php foreach ($overdue as $row): ?>
-                <li class="flex items-center justify-between gap-3 px-3 py-2">
+                <li class="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
                     <div class="min-w-0">
                         <span class="font-medium text-slate-800"><?= htmlspecialchars((string) $row['vaccine_name']) ?></span>
                         <span class="block text-xs text-slate-500">Due <?= htmlspecialchars($fmtDate((string) $row['due_date'])) ?></span>
                     </div>
                     <?php if (!empty($editable)): ?>
-                    <button type="button" class="shrink-0 rounded border border-brand/30 bg-white px-2 py-1 text-xs font-medium text-brand hover:bg-brand/5"
-                            @click="markGiven(<?= (int) $row['id'] ?>)">Given today</button>
+                    <div class="flex w-full min-w-0 flex-col gap-1.5 sm:w-auto sm:min-w-[14rem] sm:max-w-xs">
+                        <input type="text" class="ui-input text-xs" placeholder="Note (optional)"
+                               x-model="notes[<?= (int) $row['id'] ?>]">
+                        <button type="button" class="shrink-0 rounded border border-brand/30 bg-white px-2 py-1 text-xs font-medium text-brand hover:bg-brand/5"
+                                @click="markGiven(<?= (int) $row['id'] ?>)">Given today</button>
+                    </div>
                     <?php endif; ?>
                 </li>
                 <?php endforeach; ?>
@@ -98,11 +102,15 @@ $groupByDate = static function (array $rows): array {
             <h4 class="text-xs font-semibold uppercase tracking-wide text-emerald-800">Due today</h4>
             <ul class="mt-1 divide-y divide-emerald-100 rounded-md border border-emerald-200 bg-emerald-50/60">
                 <?php foreach ($dueToday as $row): ?>
-                <li class="flex items-center justify-between gap-3 px-3 py-2">
+                <li class="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
                     <span class="font-medium text-slate-800"><?= htmlspecialchars((string) $row['vaccine_name']) ?></span>
                     <?php if (!empty($editable)): ?>
-                    <button type="button" class="shrink-0 rounded border border-brand/30 bg-white px-2 py-1 text-xs font-medium text-brand hover:bg-brand/5"
-                            @click="markGiven(<?= (int) $row['id'] ?>)">Given</button>
+                    <div class="flex w-full min-w-0 flex-col gap-1.5 sm:w-auto sm:min-w-[14rem] sm:max-w-xs">
+                        <input type="text" class="ui-input text-xs" placeholder="Note (optional)"
+                               x-model="notes[<?= (int) $row['id'] ?>]">
+                        <button type="button" class="shrink-0 rounded border border-brand/30 bg-white px-2 py-1 text-xs font-medium text-brand hover:bg-brand/5"
+                                @click="markGiven(<?= (int) $row['id'] ?>)">Given</button>
+                    </div>
                     <?php endif; ?>
                 </li>
                 <?php endforeach; ?>
@@ -126,11 +134,15 @@ $groupByDate = static function (array $rows): array {
                     </summary>
                     <ul class="divide-y border-t border-slate-100">
                         <?php foreach ($rows as $row): ?>
-                        <li class="flex items-center justify-between gap-3 px-3 py-1.5 text-xs">
+                        <li class="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
                             <span class="text-slate-700"><?= htmlspecialchars((string) $row['vaccine_name']) ?></span>
                             <?php if (!empty($editable)): ?>
-                            <button type="button" class="shrink-0 text-brand hover:underline"
-                                    @click="markGiven(<?= (int) $row['id'] ?>)">Given today</button>
+                            <div class="flex w-full min-w-0 flex-col gap-1.5 sm:w-auto sm:min-w-[14rem] sm:max-w-xs">
+                                <input type="text" class="ui-input text-xs" placeholder="Note (optional)"
+                                       x-model="notes[<?= (int) $row['id'] ?>]">
+                                <button type="button" class="shrink-0 text-left text-xs font-medium text-brand hover:underline sm:text-right"
+                                        @click="markGiven(<?= (int) $row['id'] ?>)">Given today</button>
+                            </div>
                             <?php endif; ?>
                         </li>
                         <?php endforeach; ?>
@@ -214,6 +226,7 @@ if (typeof window.visitImmunizations !== 'function') {
         return {
             visitId,
             editable,
+            notes: {},
             error: '',
             async markGiven(immunizationId) {
                 if (!this.editable) return;
@@ -223,7 +236,10 @@ if (typeof window.visitImmunizations !== 'function') {
                         method: 'POST',
                         credentials: 'same-origin',
                         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                        body: JSON.stringify({ immunization_id: immunizationId }),
+                        body: JSON.stringify({
+                            immunization_id: immunizationId,
+                            notes: (this.notes[immunizationId] || '').trim(),
+                        }),
                     });
                     const data = await r.json();
                     if (!r.ok) throw new Error(data.error || 'Could not save');

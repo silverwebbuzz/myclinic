@@ -151,6 +151,7 @@ final class PatientImmunizationService
         int $immunizationId,
         ?int $visitId = null,
         ?string $givenDate = null,
+        ?string $notes = null,
     ): ?array {
         $row = QueryBuilder::table('patient_immunizations')
             ->where('id', '=', $immunizationId)
@@ -165,12 +166,17 @@ final class PatientImmunizationService
             ? $givenDate
             : date('Y-m-d');
 
+        $noteValue = $notes !== null
+            ? (trim($notes) !== '' ? trim($notes) : null)
+            : ($row['notes'] ?? null);
+
         QueryBuilder::table('patient_immunizations')
             ->where('id', '=', $immunizationId)
             ->update([
                 'given_date'    => $date,
                 'status'        => 'given',
                 'last_visit_id' => $visitId,
+                'notes'         => $noteValue,
             ]);
 
         return self::hydrateRow(

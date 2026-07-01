@@ -353,6 +353,7 @@ final class VisitController
             $immId,
             $visitId,
             !empty($body['given_date']) ? (string) $body['given_date'] : null,
+            array_key_exists('notes', $body) ? (string) $body['notes'] : null,
         );
         if ($row === null) {
             return Response::json(['error' => 'Immunization not found'], 404);
