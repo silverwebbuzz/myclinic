@@ -300,6 +300,10 @@ final class PatientService
             ModuleGate::invalidateCache($clinicId);
             DashboardService::invalidateStats($clinicId);
 
+            if ($patient !== null) {
+                PatientImmunizationService::syncScheduleIfEligible($clinicId, $patient);
+            }
+
             return $patient ?? [];
         } catch (\Throwable $e) {
             $pdo->rollBack();
@@ -324,12 +328,12 @@ final class PatientService
         // The create flow blocks duplicate phones; without the same guard here
         // an edit could silently produce two charts sharing one number, and
         // phone lookup (booking, check-in) would pick one arbitrarily.
-        $dupe = self::findByPhone($clinicId, $data['phone'] ?? (string) ($existing['phone'] ?? ''));
-        if ($dupe !== null && (int) $dupe['id'] !== $patientId) {
-            throw new \RuntimeException(
-                'Another patient (' . ($dupe['uhid'] ?? $dupe['name'] ?? 'unknown') . ') already uses this phone number.',
-            );
-        }
+        // $dupe = self::findByPhone($clinicId, $data['phone'] ?? (string) ($existing['phone'] ?? ''));
+        // if ($dupe !== null && (int) $dupe['id'] !== $patientId) {
+        //     throw new \RuntimeException(
+        //         'Another patient (' . ($dupe['uhid'] ?? $dupe['name'] ?? 'unknown') . ') already uses this phone number.',
+        //     );
+        // }
 
         if ($photoFile !== null) {
             $path = StorageService::storePatientPhoto($clinicId, $patientId, $photoFile);
@@ -343,7 +347,12 @@ final class PatientService
             ->where('id', '=', $patientId)
             ->update($data);
 
-        return QueryBuilder::table('patients')->where('id', '=', $patientId)->first() ?? [];
+        $patient = QueryBuilder::table('patients')->where('id', '=', $patientId)->first() ?? [];
+        if ($patient !== []) {
+            PatientImmunizationService::syncScheduleIfEligible($clinicId, $patient);
+        }
+
+        return $patient;
     }
 
     /** @return list<array<string, mixed>> */

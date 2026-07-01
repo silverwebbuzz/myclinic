@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Support;
 
 /**
- * IAP-style pediatric immunization schedule for the visit screen.
+ * IAP-style pediatric immunization schedule — definitions and due-date math.
+ * Patient rows live in patient_immunizations (see PatientImmunizationService).
  */
 final class PediatricVaccineSchedule
 {
@@ -83,6 +84,87 @@ final class PediatricVaccineSchedule
         return $rows;
     }
 
+    /**
+     * Expand schedule into concrete doses for a patient (incl. yearly influenza).
+     *
+     * @return list<array{key: string, age: string, vaccine: string, due_date: string}>
+     */
+    public static function dosesForPatient(string $dob): array
+    {
+        $birth = self::parseDate($dob);
+        if ($birth === null) {
+            return [];
+        }
+
+        $out = [];
+        foreach (self::schedule() as $row) {
+            if (strcasecmp($row['age'], 'Every Year') === 0 && strcasecmp($row['vaccine'], 'Influenza') === 0) {
+                for ($y = 1; $y < self::MAX_CHILD_AGE_YEARS; $y++) {
+                    $due = $birth->modify('+' . $y . ' years');
+                    if ($due > $birth->modify('+' . self::MAX_CHILD_AGE_YEARS . ' years')) {
+                        break;
+                    }
+                    $out[] = [
+                        'key'       => $row['key'] . '_y' . $y,
+                        'age'       => 'Year ' . $y,
+                        'vaccine'   => $row['vaccine'],
+                        'due_date'  => $due->format('Y-m-d'),
+                    ];
+                }
+                continue;
+            }
+
+            $due = self::dueDateFromBirth($birth, $row['age']);
+            if ($due === null) {
+                continue;
+            }
+            if ($due > $birth->modify('+' . self::MAX_CHILD_AGE_YEARS . ' years')) {
+                continue;
+            }
+
+            $out[] = [
+                'key'      => $row['key'],
+                'age'      => $row['age'],
+                'vaccine'  => $row['vaccine'],
+                'due_date' => $due->format('Y-m-d'),
+            ];
+        }
+
+        usort($out, static fn (array $a, array $b): int => strcmp($a['due_date'], $b['due_date']));
+
+        return $out;
+    }
+
+    public static function dueDateFromBirth(\DateTimeImmutable $birth, string $ageLabel): ?\DateTimeImmutable
+    {
+        $age = trim($ageLabel);
+        if ($age === '' || strcasecmp($age, 'Every Year') === 0) {
+            return null;
+        }
+        if (strcasecmp($age, 'Birth') === 0) {
+            return $birth;
+        }
+        if (preg_match('/^(\d+)\s*Weeks?$/i', $age, $m)) {
+            return $birth->modify('+' . (int) $m[1] . ' weeks');
+        }
+        if (preg_match('/^(\d+)\s*Months?$/i', $age, $m)) {
+            return $birth->modify('+' . (int) $m[1] . ' months');
+        }
+        if (preg_match('/^(\d+)\s*[–-]\s*(\d+)\s*Months?$/i', $age, $m)) {
+            $mid = (int) floor(((int) $m[1] + (int) $m[2]) / 2);
+
+            return $birth->modify('+' . $mid . ' months');
+        }
+        if (preg_match('/^(\d+)\s*Years?$/i', $age, $m)) {
+            return $birth->modify('+' . (int) $m[1] . ' years');
+        }
+        if (preg_match('/^(\d+)\s*[–-]\s*(\d+)\s*Years?$/i', $age, $m)) {
+            return $birth->modify('+' . (int) $m[1] . ' years');
+        }
+
+        return null;
+    }
+
     /** @param array<string, mixed> $patient */
     public static function patientAgeYears(array $patient): ?int
     {
@@ -91,14 +173,9 @@ final class PediatricVaccineSchedule
             return null;
         }
 
-        try {
-            $birth = new \DateTimeImmutable($dob);
-            $today = new \DateTimeImmutable('today');
+        $birth = self::parseDate($dob);
 
-            return (int) $birth->diff($today)->y;
-        } catch (\Throwable) {
-            return null;
-        }
+        return $birth?->diff(new \DateTimeImmutable('today'))->y;
     }
 
     public static function isPediatricSpecialty(string $clinicSpecialty, ?string $doctorSpecialization = null): bool
@@ -119,8 +196,11 @@ final class PediatricVaccineSchedule
             || preg_match('/\bpeds?\b/', $spec) === 1;
     }
 
-    public static function shouldShow(string $clinicSpecialty, ?string $doctorSpecialization, ?int $patientAgeYears): bool
-    {
+    public static function shouldManageImmunizations(
+        string $clinicSpecialty,
+        ?string $doctorSpecialization,
+        ?int $patientAgeYears,
+    ): bool {
         if (!self::isPediatricSpecialty($clinicSpecialty, $doctorSpecialization)) {
             return false;
         }
@@ -128,25 +208,55 @@ final class PediatricVaccineSchedule
         return $patientAgeYears !== null && $patientAgeYears < self::MAX_CHILD_AGE_YEARS;
     }
 
-    /**
-     * @param mixed $stored
-     * @return list<string>
-     */
-    public static function normalizeSelected(mixed $stored): array
+    public static function initialStatusForDueDate(string $dueDate, ?string $givenDate): string
     {
-        if (!is_array($stored)) {
-            return [];
+        if ($givenDate !== null && $givenDate !== '') {
+            return 'given';
         }
 
-        $valid = array_flip(array_column(self::schedule(), 'key'));
-        $out = [];
-        foreach ($stored as $key) {
-            $k = (string) $key;
-            if ($k !== '' && isset($valid[$k]) && !in_array($k, $out, true)) {
-                $out[] = $k;
-            }
+        $due = self::parseDate($dueDate);
+        $today = new \DateTimeImmutable('today');
+        if ($due === null) {
+            return 'due';
+        }
+        if ($due < $today) {
+            return 'unknown';
         }
 
-        return $out;
+        return 'due';
+    }
+
+    public static function displayStatus(string $storedStatus, string $dueDate, ?string $givenDate): string
+    {
+        if ($givenDate !== null && $givenDate !== '') {
+            return 'given';
+        }
+        if ($storedStatus === 'skipped') {
+            return 'skipped';
+        }
+        if ($storedStatus === 'not_given') {
+            return 'not_given';
+        }
+
+        $due = self::parseDate($dueDate);
+        $today = new \DateTimeImmutable('today');
+        if ($due !== null && $due < $today) {
+            return in_array($storedStatus, ['unknown', 'overdue'], true) ? $storedStatus : 'overdue';
+        }
+
+        return $storedStatus === 'unknown' ? 'unknown' : 'due';
+    }
+
+    private static function parseDate(string $date): ?\DateTimeImmutable
+    {
+        $date = trim($date);
+        if ($date === '') {
+            return null;
+        }
+        try {
+            return new \DateTimeImmutable($date);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }
