@@ -501,6 +501,25 @@ function dedupe_by_place_id(array $rows): array {
 // HTTP — Google Places calls (per-chunk; brief enough to fit in one PHP call)
 // =====================================================================
 
+/**
+ * Record one Google call for debugging. URL has the key redacted. The last N
+ * entries are surfaced in the job log + the ?debug view so we can see EXACTLY
+ * what was sent and what Google replied — no more guessing.
+ */
+function fd_debug_trace(string $url, int $httpCode, string $status, string $errMsg, int $resultCount): void {
+    if (!isset($GLOBALS['fd_debug_trace'])) {
+        $GLOBALS['fd_debug_trace'] = [];
+    }
+    $safeUrl = preg_replace('/([?&](?:key|X-Goog-Api-Key)=)[^&]+/i', '$1REDACTED', $url) ?? $url;
+    $GLOBALS['fd_debug_trace'][] = [
+        'url'     => $safeUrl,
+        'http'    => $httpCode,
+        'status'  => $status,
+        'error'   => $errMsg,
+        'results' => $resultCount,
+    ];
+}
+
 function http_get_json(string $url, int &$reqCount): ?array {
     for ($attempt = 1; $attempt <= 2; $attempt++) {
         $reqCount++;
@@ -517,15 +536,19 @@ function http_get_json(string $url, int &$reqCount): ?array {
         curl_close($ch);
 
         if ($body === false || $code === 0 || ($code >= 500 && $code < 600)) {
+            fd_debug_trace($url, $code, 'NETWORK/5xx', $body === false ? 'curl failed' : '', 0);
             if ($attempt === 1) { sleep(2); continue; }
             return null;
         }
-        if ($code !== 200) return null;
         $data = json_decode((string) $body, true);
-        if (!is_array($data)) return null;
+        if ($code !== 200 || !is_array($data)) {
+            fd_debug_trace($url, $code, 'HTTP_' . $code, is_array($data) ? (string) ($data['error_message'] ?? '') : substr((string) $body, 0, 120), 0);
+            return null;
+        }
 
         $status = $data['status'] ?? '';
         $errMsg = (string) ($data['error_message'] ?? '');
+        fd_debug_trace($url, $code, $status !== '' ? $status : 'UNKNOWN', $errMsg, count((array) ($data['results'] ?? [])));
         if ($status !== '' || $errMsg !== '') {
             fd_places_set_status(
                 $status !== '' ? $status : ($code !== 200 ? 'HTTP_' . $code : 'UNKNOWN'),
@@ -906,6 +929,21 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
         $failNow > 0 ? sprintf(', %d detail-fail⚠', $failNow) : '',
         $skipNow > 0 ? sprintf(', %d skipped', $skipNow) : ''
     ));
+
+    // DEBUG: when the chunk saved nothing, dump exactly what Google was asked +
+    // replied (URL key-redacted, HTTP code, Google status, error, result count)
+    // straight into the log so you can copy a URL into a browser and compare.
+    if ($found === 0 && !empty($GLOBALS['fd_debug_trace'])) {
+        foreach (array_slice($GLOBALS['fd_debug_trace'], 0, 6) as $t) {
+            job_append_log($job, sprintf(
+                '   ↳ HTTP %d · %s%s · %d results · %s',
+                $t['http'], $t['status'],
+                $t['error'] !== '' ? ' ("' . $t['error'] . '")' : '',
+                $t['results'], $t['url']
+            ));
+        }
+    }
+    $GLOBALS['fd_debug_trace'] = [];   // reset for next chunk
 
     if ($job['cursor'] >= $job['total']) $job['status'] = 'done';
 }

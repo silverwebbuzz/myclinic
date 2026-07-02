@@ -111,11 +111,17 @@ function fd_http_post_json(string $url, array $body, array $headers, int &$reqCo
         $errStatus = (string) ($data['error']['status'] ?? ('HTTP_' . $code));
         $errMsg = (string) ($data['error']['message'] ?? '');
         fd_places_set_status($errStatus, $errMsg);
+        if (function_exists('fd_debug_trace')) {
+            fd_debug_trace('[NEW API] ' . $url, $code, $errStatus, $errMsg, 0);
+        }
 
         return null;
     }
 
     fd_places_set_status('OK');
+    if (function_exists('fd_debug_trace')) {
+        fd_debug_trace('[NEW API] ' . $url, $code, 'OK', '', count((array) ($data['places'] ?? [])));
+    }
 
     return $data;
 }
