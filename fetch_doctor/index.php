@@ -580,6 +580,23 @@ function fetch_text_search(string $apiKey, string $query, float $lat, float $lng
         $pageToken = $data['next_page_token'] ?? null;
         if (!$pageToken) break;
     }
+
+    // Fallback: legacy Text Search returned nothing. If the key has ONLY
+    // "Places API (New)" enabled, legacy is DENIED and silently yields 0 places
+    // → 0 saved (this exact symptom). Retry via the New API, converting each
+    // result to the legacy `place` shape the worker expects.
+    if ($all === []) {
+        $lastStatus = (string) ($GLOBALS['fd_last_places_status'] ?? '');
+        if (fd_places_status_denied($lastStatus) || $lastStatus === '' || $lastStatus === 'ZERO_RESULTS') {
+            foreach (fd_places_new_search_text($apiKey, $query, $lat, $lng, $radius, $reqCount) as $p) {
+                $bundle = fd_places_new_to_legacy_bundle($p);
+                if (!empty($bundle['place']['place_id'])) {
+                    $all[] = $bundle['place'];
+                }
+            }
+        }
+    }
+
     return $all;
 }
 

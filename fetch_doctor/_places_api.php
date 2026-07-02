@@ -131,7 +131,7 @@ function fd_places_new_search_text(string $apiKey, string $query, float $lat, fl
         'textQuery' => $query,
         'regionCode' => 'IN',
         'languageCode' => 'en',
-        'maxResultCount' => 5,
+        'maxResultCount' => 20,   // New API max per call (was 5 — starved results)
         'locationBias' => [
             'circle' => [
                 'center' => ['latitude' => $lat, 'longitude' => $lng],
