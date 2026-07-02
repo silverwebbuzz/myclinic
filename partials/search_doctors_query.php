@@ -112,16 +112,20 @@ function ecp_search_doctors(array $filters): array {
         $params['ulng'] = $lng;
     }
 
+    // Default ranking tiers: joined clinics first, then listings WITH a photo,
+    // then the rest by quality. Photos make cards look complete/trustworthy, so
+    // photo'd listings rank above photo-less ones within the same claim tier.
+    $hasPhoto = "(dd.photo_reference IS NOT NULL AND dd.photo_reference <> '') DESC";
     $order = match ($sort) {
-        'distance' => $selectDistance !== null ? 'distance_km IS NULL, distance_km ASC' : 'dd.is_claimed DESC, dd.quality_score DESC',
+        'distance' => $selectDistance !== null ? 'distance_km IS NULL, distance_km ASC' : "dd.is_claimed DESC, $hasPhoto, dd.quality_score DESC",
         'rating'   => 'dd.rating DESC, dd.reviews DESC',
         'fee_asc'  => 'dd.consultation_fee IS NULL, dd.consultation_fee ASC',
         'fee_desc' => 'dd.consultation_fee IS NULL, dd.consultation_fee DESC',
-        'claimed'  => 'dd.is_claimed DESC, dd.quality_score DESC',
+        'claimed'  => "dd.is_claimed DESC, $hasPhoto, dd.quality_score DESC",
         'relevance', '' => ($relevanceExpr !== null)
-            ? "$relevanceExpr DESC, dd.is_claimed DESC, dd.quality_score DESC"
-            : 'dd.is_claimed DESC, dd.quality_score DESC, dd.reviews DESC, dd.rating DESC',
-        default => 'dd.is_claimed DESC, dd.quality_score DESC',
+            ? "$relevanceExpr DESC, dd.is_claimed DESC, $hasPhoto, dd.quality_score DESC"
+            : "dd.is_claimed DESC, $hasPhoto, dd.quality_score DESC, dd.reviews DESC, dd.rating DESC",
+        default => "dd.is_claimed DESC, $hasPhoto, dd.quality_score DESC",
     };
 
     $slugCols = ecp_profile_slug_columns_ready($db) ? 'dd.entity_type, dd.listing_slug,' : '';
