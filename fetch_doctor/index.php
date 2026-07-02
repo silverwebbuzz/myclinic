@@ -552,13 +552,28 @@ function fetch_text_search(string $apiKey, string $query, float $lat, float $lng
     $pageToken = null;
     for ($page = 0; $page < 3; $page++) {
         if ($pageToken !== null) {
-            sleep(3);
+            // Google's next_page_token is NOT valid immediately — there's a
+            // propagation delay. Requesting too soon returns INVALID_REQUEST and
+            // (previously) silently capped us at page 1 = 20 results. Poll the
+            // token: wait, try, and if it's still "not ready" wait longer and
+            // retry a few times before giving up. This is what lets a saturated
+            // cell reach the full 60, which in turn triggers the sub-area grid.
+            // http_get_json() returns null when the token isn't ready yet
+            // (INVALID_REQUEST) — so poll with escalating waits until it returns
+            // real data or we exhaust the tries.
             $params = ['pagetoken' => $pageToken, 'key' => $apiKey];
+            $url = 'https://maps.googleapis.com/maps/api/place/textsearch/json?' . http_build_query($params);
+            $data = null;
+            foreach ([2, 3, 4, 5] as $wait) {   // up to ~14s total across tries
+                sleep($wait);
+                $data = http_get_json($url, $reqCount);
+                if ($data !== null) break;   // token accepted → results returned
+            }
         } else {
             $params = $baseParams;
+            $url = 'https://maps.googleapis.com/maps/api/place/textsearch/json?' . http_build_query($params);
+            $data = http_get_json($url, $reqCount);
         }
-        $url = 'https://maps.googleapis.com/maps/api/place/textsearch/json?' . http_build_query($params);
-        $data = http_get_json($url, $reqCount);
         if (!$data) break;
         foreach ((array) ($data['results'] ?? []) as $row) $all[] = $row;
         $pageToken = $data['next_page_token'] ?? null;
