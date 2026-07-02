@@ -180,13 +180,13 @@ ob_start(); ?>
       radial-gradient(900px 480px at 80% -10%, rgba(15, 155, 110, .16), transparent 60%),
       linear-gradient(180deg, var(--teal-950) 0%, #0a5d44 55%, var(--teal-700) 100%);
     color: #fff;
-    padding: 84px 0 96px;
+    padding: 160px 0 90px;
   }
 
   .cc-hero .wrap {
     position: relative;
     z-index: 1;
-    max-width: 1180px;
+    max-width: 1280px;
     display: grid;
     grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
     gap: 48px;
@@ -310,7 +310,7 @@ ob_start(); ?>
   }
 
   .cc-section .wrap {
-    max-width: 1080px;
+    max-width: 1280px;
   }
 
   .cc-section-alt {
@@ -396,7 +396,13 @@ ob_start(); ?>
     border: 1px dashed var(--teal-200);
     display: grid;
     place-items: center;
-    min-height: 220px;
+    overflow: hidden;
+  }
+  .cc-facts-img-ph img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    max-width: 100%;
   }
 
   .cc-facts-img-ph span {
@@ -421,6 +427,7 @@ ob_start(); ?>
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    height:100%;
   }
 
   .cc-stat::before {
@@ -430,10 +437,12 @@ ob_start(); ?>
     height: 4px;
     background: linear-gradient(90deg, var(--teal-500), var(--teal-700));
   }
+  .cc-stat-ico-wrap{display:flex;align-items:flex-start;gap:15px;padding-bottom:35px;}
+  .cc-stat-ico-desc{flex:1 1 auto;display:flex;flex-direction:column;justify-content:flex-start;}
 
   .cc-stat-ico {
-    width: 40px;
-    height: 40px;
+    width: 50px;
+    height: 50px;
     margin-bottom: 12px;
     flex: 0 0 auto;
   }
@@ -466,9 +475,20 @@ ob_start(); ?>
   }
 
   .cc-stat-src {
-    margin-top: 12px;
+    margin-top: auto;
     font-size: 11.5px;
     color: var(--mute);
+    position: relative;
+  }
+  .cc-stat-src::before{
+    content: "";
+    position: absolute;
+    left:0;
+    top:-10px;
+    width: 50px;
+    height: 2px;
+    background: var(--teal-700);
+    z-index: 1;
   }
 
   .cc-remember {
@@ -655,13 +675,19 @@ ob_start(); ?>
 
   .cc-prev-hero-ph {
     width: 100%;
-    border: 1px dashed var(--teal-200);
+    border: 1px dashed #c6e3d9;
     border-radius: 20px;
-    min-height: 240px;
-    aspect-ratio: 16/8;
+    aspect-ratio: auto;
     background: linear-gradient(135deg, #f7fbfa 0%, var(--teal-50) 45%, #eef5f2 100%);
     display: grid;
     place-items: center;
+    overflow: hidden;
+  }
+  .cc-prev-hero-ph img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    max-width: 100%;
   }
 
   .cc-prev-hero-ph span {
@@ -721,10 +747,10 @@ ob_start(); ?>
   }
 
   .cc-prev-icon {
-    width: 54px;
-    height: 54px;
+    width: 65px;
+    height: 65px;
     border-radius: 50%;
-    margin-top: -44px;
+    margin-top: -55px;
     margin-bottom: 12px;
     background: #fff;
     border: 1px solid #dbe7e2;
@@ -732,15 +758,20 @@ ob_start(); ?>
     display: grid;
     place-items: center;
     color: var(--teal-700);
+    position: relative;
+    z-index: 1;
   }
 
-  .cc-prev-icon svg {
-    width: 26px;
-    height: 26px;
+  .cc-prev-icon svg,
+  .cc-prev-icon img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    max-width: 100%;
   }
 
   .cc-prev-card h3 {
-    font-size: clamp(28px, 3vw, 34px);
+    font-size: clamp(20px, 1.8vw, 22px);
     font-weight: 700;
     color: #1c2630;
     margin-bottom: 8px;
@@ -777,9 +808,12 @@ ob_start(); ?>
     font-weight: 700;
   }
 
-  .cc-prev-bar-left svg {
+  .cc-prev-bar-left svg,
+  .cc-prev-bar-left img {
     width: 22px;
     height: 22px;
+    object-fit: contain;
+    max-width: 100%;
   }
 
   .cc-prev-links {
@@ -802,16 +836,22 @@ ob_start(); ?>
     border-left: 1px solid #bfd2ca;
   }
 
-  .cc-prev-links svg {
-    width: 18px;
-    height: 18px;
+  .cc-prev-links svg,
+  .cc-prev-links img {
+    width: 30px;
+    height: 30px;
     color: var(--teal-700);
+    object-fit: contain;
+    max-width: 100%;
+    background: #fff;
+    border-radius: 50%;
+    padding: 5px;
   }
 
   .cc-prev-bar-end {
-    font-size: 29px;
+    font-size: 16px;
     color: var(--teal-700);
-    font-weight: 700;
+    font-weight: 600;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -819,9 +859,12 @@ ob_start(); ?>
   }
 
   .cc-prev-bar-end svg {
-    width: 17px;
-    height: 17px;
+    width: 20px;
+    height: 20px;
     color: #f87171;
+    margin-top: 5px;
+    object-fit: contain;
+    max-width: 100%;
   }
 
   @media (max-width:1080px) {
@@ -913,6 +956,13 @@ ob_start(); ?>
     background: linear-gradient(135deg, #edf7f3 0%, #e6f2ee 55%, #f8fbfa 100%);
     display: grid;
     place-items: center;
+    overflow: hidden;
+  }
+  .cc-tests-hero-ph img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    max-width: 100%;
   }
 
   .cc-tests-hero-ph span,
@@ -951,7 +1001,7 @@ ob_start(); ?>
 
   .cc-tests-card-media img {
     width: 100%;
-    height: 100%;
+    height: 240px;
     object-fit: cover;
     display: block;
   }
@@ -967,26 +1017,30 @@ ob_start(); ?>
   }
 
   .cc-tests-icon {
-    width: 42px;
-    height: 42px;
+    width: 55px;
+    height: 55px;
     border-radius: 50%;
     display: grid;
     place-items: center;
     background: #fff;
     border: 1px solid #d7e7e1;
+    box-shadow: 0 4px 10px rgba(15, 155, 110, .08);
     color: var(--teal-700);
-    margin-top: -34px;
+    margin-top: -5px;
     position: relative;
     z-index: 2;
   }
 
-  .cc-tests-icon svg {
-    width: 22px;
-    height: 22px;
+  .cc-tests-icon svg,
+  .cc-tests-icon img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    max-width: 100%;
   }
 
   .cc-tests-card h3 {
-    font-size: 23px;
+    font-size: clamp(18px, 1.5vw, 20px);
     color: var(--teal-700);
     font-weight: 700;
     margin: 10px 0 8px;
@@ -1018,10 +1072,20 @@ ob_start(); ?>
     margin-bottom: 12px;
   }
 
-  .cc-box-title svg {
-    width: 20px;
-    height: 20px;
+  .cc-box-title svg,
+  .cc-box-title img {
+    width: 40px;
+    height: 40px;
     color: var(--teal-700);
+    object-fit: contain;
+    max-width: 100%;
+    border:2px solid var(--teal-700);
+    border-radius: 50%;
+    padding: 6px;
+    background: #fff;
+    color: var(--teal-700);
+    position: relative;
+    z-index: 2;
   }
 
   .cc-cost-grid {
@@ -1041,8 +1105,8 @@ ob_start(); ?>
   }
 
   .cc-cost-item .ico {
-    width: 38px;
-    height: 38px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     display: grid;
     place-items: center;
@@ -1050,9 +1114,12 @@ ob_start(); ?>
     color: var(--teal-700);
   }
 
-  .cc-cost-item .ico svg {
-    width: 20px;
-    height: 20px;
+  .cc-cost-item .ico svg,
+  .cc-cost-item .ico img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    max-width: 100%;
   }
 
   .cc-cost-item h4 {
@@ -1100,11 +1167,17 @@ ob_start(); ?>
   .cc-vax-bottle-ph {
     width: 72px;
     height: 72px;
-    border-radius: 10px;
-    border: 1px dashed #c5ddd3;
     background: linear-gradient(135deg, #ecf7f3, #f8fcfa);
     display: grid;
     place-items: center;
+  }
+
+  .cc-vax-bottle-ph img {
+    width: 90px;
+    height: 90px;
+    object-fit: contain;
+    max-width: 100%;
+    margin-right: 20px;
   }
 
   .cc-vax-name {
@@ -1130,28 +1203,66 @@ ob_start(); ?>
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 10px;
     position: relative;
+    margin-top:60px;
   }
 
   .cc-age-track::before {
     content: "";
     position: absolute;
-    left: 6%;
-    right: 6%;
-    top: 13px;
+    left: 0;
+    right: 0;
+    top: -27px;
     height: 2px;
     background: #8cd0b7;
     z-index: 0;
+    width: 81%;
+    margin: 0 auto;
   }
 
   .cc-age-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
     position: relative;
     z-index: 1;
-    background: #f9fcfb;
+    background: #fff;
     border: 1px solid #e4ece9;
     border-radius: 10px;
     padding: 18px 10px 12px;
   }
-
+  .cc-age-item:before{
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 100%;
+    width: 15px;
+    height: 15px;
+    top: -35px;
+    left: 50%;
+    transform: translate(-50%, 0%);
+    background: var(--teal-700);
+    z-index: 2;
+  }
+  .cc-age-item:after{
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 100%;
+    width: 2px;
+    height: 35px;
+    top: -35px;
+    left: 50%;
+    transform: translate(-50%, 0%);
+    background: #dce6e2;
+    z-index: 1;
+  }
+  .cc-age-item img {
+    width: 30px;
+    height: auto;
+    object-fit: contain;
+    max-width:100%;
+  }
+  .cc-age-item:nth-child(4) img{width:50px;}
   .cc-age-dot {
     width: 10px;
     height: 10px;
@@ -1164,18 +1275,18 @@ ob_start(); ?>
   }
 
   .cc-age-item h4 {
-    font-size: 13px;
+    font-size: 16px;
     font-weight: 700;
-    color: #1f2b36;
-    margin-bottom: 6px;
-    text-align: center;
+    color: var(--teal-700);
+    margin-bottom: 10px;
+    text-align: left;
   }
 
   .cc-age-item p {
     font-size: 11.5px;
     line-height: 1.45;
     color: #5f6c77;
-    text-align: center;
+    text-align: left;
   }
 
   .cc-tests-cta {
@@ -1200,9 +1311,12 @@ ob_start(); ?>
     font-weight: 700;
   }
 
-  .cc-tests-cta-left svg {
+  .cc-tests-cta-left svg,
+  .cc-tests-cta-left img {
     width: 24px;
     height: 24px;
+    object-fit: contain;
+    max-width: 100%;
   }
 
   .cc-tests-cta-links {
@@ -1268,6 +1382,17 @@ ob_start(); ?>
     .cc-age-track::before {
       display: none;
     }
+    .cc-tests-intro, .cc-prev-intro, .treated-description,.cc-risk-intro,.cc-how-intro,
+    .cc-tests-note, .cc-gov-intro, .cc-faq-intro {
+      max-width: 100% !important;
+    }
+    .cc-tests-card-media{aspect-ratio: auto;}
+    .cc-tests-card-media img{height:100%;}
+    .cc-tests-card-body{margin-top:-40px;}
+    .cc-vax-name{font-size:20px;}
+    .cc-age-item:before, .cc-age-item:after{display:none;}
+    .cc-age-track{margin-top:20px;}
+
   }
 
   @media (max-width:640px) {
@@ -1284,6 +1409,8 @@ ob_start(); ?>
     .cc-vax-card:last-child {
       grid-column: auto;
     }
+    .cc-age-item:nth-child(4) img{width:30px;}
+    .cc-cost-item strong{width:20px;}
   }
 
   /* How it starts / progression (mockup-style) */
@@ -1466,7 +1593,7 @@ ob_start(); ?>
 
   .cc-how-bar {
     position: relative;
-    height: 8px;
+    height: 4px;
     background: #e8f3ef;
     border-radius: 999px;
     margin: 8px 0 20px;
@@ -1478,7 +1605,7 @@ ob_start(); ?>
     position: absolute;
     inset: 0;
     background: linear-gradient(90deg, var(--teal-600), var(--teal-400));
-    border-radius: 999px;
+    border-radius:999px;
   }
 
   .cc-how-bar-labels {
@@ -1490,11 +1617,25 @@ ob_start(); ?>
   }
 
   .cc-how-bar-labels span {
-    font-size: 10.5px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 700;
     color: var(--teal-700);
     text-align: center;
     flex: 1;
+    position: relative;
+  }
+  .cc-how-bar-labels span::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius:100%;
+    width:15px;
+    height:15px;
+    top:-26px;
+    left:50%;
+    transform:translate(-50%, 0%);
+    background: var(--teal-700);
+    z-index: 1;
   }
 
   .cc-how-footer {
@@ -1558,6 +1699,13 @@ ob_start(); ?>
     color: var(--teal-700);
   }
 
+  .cc-how-footer-pills span img {
+    width: 15px;
+    height: 15px;
+    object-fit: contain;
+    max-width: 100%;
+  }
+
   @media (max-width:1024px) {
     .cc-how-track {
       flex-wrap: wrap;
@@ -1570,6 +1718,7 @@ ob_start(); ?>
     .cc-how-arrow {
       display: none;
     }
+    .cc-how-bar::after, .cc-how-bar-labels span::before{display:none;}
   }
 
   @media (max-width:880px) {
@@ -1654,7 +1803,13 @@ ob_start(); ?>
     background: linear-gradient(135deg, #edf7f3 0%, #e6f2ee 55%, #f8fbfa 100%);
     display: grid;
     place-items: center;
-    min-height: 200px;
+    overflow: hidden;
+  }
+  .cc-risk-hero-ph img{
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    max-width: 100%;
   }
 
   .cc-risk-hero-ph span,
@@ -1849,9 +2004,12 @@ ob_start(); ?>
     color: var(--teal-700);
   }
 
-  .cc-risk-banner-ico svg {
+  .cc-risk-banner-ico svg,
+  .cc-risk-banner-ico img {
     width: 26px;
     height: 26px;
+    object-fit: contain;
+    max-width: 100%;
   }
 
   .cc-risk-banner p {
@@ -1879,6 +2037,13 @@ ob_start(); ?>
     background: rgba(255, 255, 255, .6);
     display: grid;
     place-items: center;
+    overflow: hidden;
+  }
+  .cc-risk-banner-ph img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    max-width: 100%;
   }
 
   .cc-risk-banner-img {
@@ -2306,6 +2471,13 @@ ob_start(); ?>
     flex: 0 0 auto;
   }
 
+  .cc-gov-emblem-ph img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    max-width: 100%;
+  }
+
   .cc-gov-emblem-ph span {
     font-size: 8px;
     color: var(--mute);
@@ -2345,7 +2517,13 @@ ob_start(); ?>
     background: linear-gradient(135deg, #edf7f3 0%, #e6f2ee 55%, #f8fbfa 100%);
     display: grid;
     place-items: center;
-    min-height: 220px;
+    overflow: hidden;
+  }
+  .cc-gov-hero-ph img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    max-width: 100%;
   }
 
   .cc-gov-hero-ph span {
@@ -2367,6 +2545,7 @@ ob_start(); ?>
     border-radius: 16px;
     padding: 22px 20px 20px;
     margin-bottom: 14px;
+    margin-top:35px;
   }
 
   .cc-gov-features h3 {
@@ -2399,9 +2578,12 @@ ob_start(); ?>
     color: var(--teal-700);
   }
 
-  .cc-gov-ico svg {
+  .cc-gov-ico svg,
+  .cc-gov-ico img {
     width: 30px;
     height: 30px;
+    object-fit: contain;
+    max-width: 100%;
   }
 
   .cc-gov-item h4 {
@@ -2438,11 +2620,14 @@ ob_start(); ?>
     border-bottom: 1px solid rgba(255, 255, 255, .18);
   }
 
-  .cc-gov-who-top svg {
+  .cc-gov-who-top svg,
+  .cc-gov-who-top img {
     flex: 0 0 auto;
     width: 28px;
     height: 28px;
     margin-top: 2px;
+    object-fit: contain;
+    max-width: 100%;
   }
 
   .cc-gov-who-top p {
@@ -2584,7 +2769,13 @@ ob_start(); ?>
     background: linear-gradient(135deg, #edf7f3 0%, #e8f3ef 55%, #f8fbfa 100%);
     display: grid;
     place-items: center;
-    min-height: 200px;
+    overflow: hidden;
+  }
+  .cc-faq-img-ph img{
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    max-width: 100%;
   }
 
   .cc-faq-img-ph span {
@@ -2610,12 +2801,15 @@ ob_start(); ?>
     align-items: flex-start;
   }
 
-  .cc-faq-callout svg {
+  .cc-faq-callout svg,
+  .cc-faq-callout img {
     flex: 0 0 auto;
     width: 28px;
     height: 28px;
     color: var(--teal-700);
     margin-top: 2px;
+    object-fit: contain;
+    max-width: 100%;
   }
 
   .cc-faq-callout p {
@@ -2963,11 +3157,11 @@ ob_start(); ?>
 
   @media (max-width:640px) {
     .cc-hero {
-      padding: 60px 0 64px;
+      padding: 120px 0 64px;
     }
 
     .cc-section {
-      padding: 48px 0;
+      padding: 40px 0;
     }
   }
 
@@ -2977,7 +3171,7 @@ ob_start(); ?>
 
 
   .basics-section {
-    max-width: 1440px;
+    max-width: 1280px;
     margin: 0 auto;
     padding: 48px 32px 0;
   }
@@ -3106,7 +3300,7 @@ ob_start(); ?>
   /* Card illustration */
   .info-card-img {
     width: 100%;
-    height: 180px;
+    height: 130px;
     object-fit: contain;
     border-radius: 10px;
   }
@@ -3183,6 +3377,13 @@ ob_start(); ?>
     opacity: 0.55;
   }
 
+  .good-news-right-icon img {
+    width: 70px;
+    height: auto;
+    object-fit: contain;
+    max-width: 100%;
+  }
+
   /* ── Basics Responsive ──────────────────────── */
   @media (max-width: 900px) {
     .basics-row {
@@ -3215,7 +3416,7 @@ ob_start(); ?>
 
 
   .treated-section {
-    max-width: 1440px;
+    max-width: 1280px;
     margin: 0 auto;
     padding: 48px 32px 64px;
   }
@@ -3329,14 +3530,22 @@ ob_start(); ?>
 
   /* Header Icon circle */
   .tcard-header-icon {
-    width: 40px;
-    height: 40px;
+    width:50px;
+    height: 50px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
     margin-top: 2px;
+    background:#f8fbfa;
+    padding:10px;
+  }
+  .tcard-header-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    max-width: 100%;
   }
 
   .tcard-icon--green {
@@ -3419,15 +3628,15 @@ ob_start(); ?>
   /* Illustration */
   .tcard-illustration {
     flex-shrink: 0;
-    width: 110px;
+    width: 190px;
     display: flex;
     align-items: center;
     justify-content: center;
   }
-
+  #tcard-invasive .tcard-illustration{width:130px;}
   .tcard-illus-img {
-    width: 100%;
-    height: auto;
+    width: auto;
+    height: 130px;
     object-fit: contain;
     border-radius: 10px;
   }
@@ -3459,6 +3668,13 @@ ob_start(); ?>
     flex-shrink: 0;
   }
 
+  .treatment-banner-icon img {
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+    max-width: 100%;
+  }
+
   .treatment-banner-text {
     font-size: 14px;
     color: #3a4e3a;
@@ -3482,8 +3698,9 @@ ob_start(); ?>
     .treated-text,
     .treated-image {
       flex: 1 1 100%;
+      width:100%;
     }
-
+    .treated-image img{max-width:100%;}
     .treated-image {
       justify-content: center;
     }
@@ -3501,6 +3718,11 @@ ob_start(); ?>
       max-width: 180px;
       margin: 0 auto;
     }
+  }
+
+  @media (max-width: 640px) {
+    .basics-section{padding:40px 20px 0px;}
+    .treated-section{padding:40px 20px 40px;}
   }
 </style>
 <?php
@@ -3676,11 +3898,13 @@ require __DIR__ . '/partials/header.php';
   <div class="good-news-banner" id="good-news-banner">
     <div class="good-news-left">
       <div class="good-news-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+        <!-- <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
           stroke="#1f6e3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
           <polyline points="9 12 11 14 15 10" />
-        </svg>
+        </svg> -->
+        <img src="/assets/img/eclinicpro-The-good-news-icon.png" alt="HPV vaccine illustration" loading="lazy">
+
       </div>
       <div>
         <p class="good-news-title">The good news</p>
@@ -3689,13 +3913,14 @@ require __DIR__ . '/partials/header.php';
       </div>
     </div>
     <div class="good-news-right-icon">
-      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#1f6e3a"
+      <!-- <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#1f6e3a"
         stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path
           d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
         <path d="M12 21.7C9.5 20 5 17 5 13" />
         <path d="M12 21.7C14.5 20 19 17 19 13" />
-      </svg>
+      </svg> -->
+      <img src="/assets/img/eclinicpro-The-good-news-right.png" alt="HPV vaccine illustration" loading="lazy">
     </div>
   </div>
 
@@ -3825,23 +4050,35 @@ require __DIR__ . '/partials/header.php';
       </div>
       <p class="cc-how-footer-text">Regular screening (Pap smear/HPV test), HPV vaccination, and early treatment can prevent almost all cervical cancers.</p>
       <div class="cc-how-footer-pills">
-        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <span>
+          <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="m19 5-7 7-7-7" />
-          </svg>HPV Vaccination</span>
-        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          </svg> -->
+          <img src="/assets/img/eclinicpro-HPV-Vaccination-icon.png" alt="HPV vaccine illustration" loading="lazy">
+          HPV Vaccination</span>
+        <span>
+          <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M10 2v7.31" />
             <path d="M14 9.3V2" />
             <path d="M8.5 2h7" />
             <path d="M14 9.3a6.5 6.5 0 1 1-4 0" />
-          </svg>Regular Screening</span>
-        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          </svg> -->
+          <img src="/assets/img/eclinicpro-Early-Detection-icon.png" alt="Regular screening illustration" loading="lazy">
+          Regular Screening</span>
+        <span>
+          <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10" />
             <path d="M12 8v8" />
             <path d="M8 12h8" />
-          </svg>Early Detection</span>
-        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          </svg> -->
+          <img src="/assets/img/eclinicpro-Early-detection-icon.png" alt="Early detection illustration" loading="lazy">
+          Early Detection</span>
+        <span>
+          <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-          </svg>Timely Treatment</span>
+          </svg> -->
+          <img src="/assets/img/eclinicpro-The-good-news-right.png" alt="Timely treatment illustration" loading="lazy">
+          Timely Treatment</span>
       </div>
     </div>
 
@@ -3860,7 +4097,7 @@ require __DIR__ . '/partials/header.php';
       </div>
       <figure class="cc-risk-hero">
         <div class="cc-risk-hero-ph" role="img" aria-label="Uterus model illustration — image coming soon">
-          <img src="/assets/img/eclinicpro-Who-When.png" alt="Uterus model illustration" loading="lazy">
+          <img src="/assets/img/eclinicpro-Who-Whenn.png" alt="Uterus model illustration" loading="lazy">
         </div>
       </figure>
     </div>
@@ -3973,15 +4210,18 @@ require __DIR__ . '/partials/header.php';
 
     <div class="cc-risk-banner">
       <div class="cc-risk-banner-ico" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
           <path d="m9 12 2 2 4-4" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+        </svg> -->
+
+        <img src="/assets/img/eclinicpro-Pre-cancer-icon.png" alt="HPV vaccine illustration" loading="lazy">
       </div>
-      <p><strong>The good news:</strong> Cervical cancer is preventable. HPV vaccination, healthy choices, and regular screening can save lives.</p>
+      <p><strong>The good news:</strong> Cervical cancer is preventable. <br />HPV vaccination, healthy choices, and regular screening can save lives.</p>
       <figure class="cc-risk-banner-visual">
         <div class="cc-risk-banner-ph" role="img" aria-label="HPV vaccine image — add later">
-          <span>Banner image — add later</span>
+          <img src="/assets/img/eclinicpro-HPV-vaccine-image.png" alt="HPV vaccine image" loading="lazy">
+          <!-- <span>Banner image — add later</span> -->
         </div>
       </figure>
     </div>
@@ -4104,10 +4344,11 @@ require __DIR__ . '/partials/header.php';
     <div class="treatment-card" id="tcard-precancer">
       <div class="tcard-header tcard-header--green">
         <div class="tcard-header-icon tcard-icon--green">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1f6e3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1f6e3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             <polyline points="9 12 11 14 15 10" />
-          </svg>
+          </svg> -->
+          <img src="/assets/img/eclinicpro-Pre-cancer-icon.png" alt="Pre-cancer illustration" loading="lazy">
         </div>
         <div>
           <h3 class="tcard-title tcard-title--green">Pre-cancer (early treatment)</h3>
@@ -4134,11 +4375,13 @@ require __DIR__ . '/partials/header.php';
     <div class="treatment-card" id="tcard-invasive">
       <div class="tcard-header tcard-header--orange">
         <div class="tcard-header-icon tcard-icon--orange">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c85a00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c85a00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             <line x1="12" y1="8" x2="12" y2="16" />
             <line x1="8" y1="12" x2="16" y2="12" />
-          </svg>
+          </svg> -->
+
+          <img src="/assets/img/eclinicpro-Invasive cancer-icon.png" alt="Invasive cancer illustration" loading="lazy">
         </div>
         <div>
           <h3 class="tcard-title tcard-title--orange">Invasive cancer</h3>
@@ -4168,11 +4411,12 @@ require __DIR__ . '/partials/header.php';
   <div class="treatment-banner" id="treatment-banner">
     <div class="treatment-banner-left">
       <div class="treatment-banner-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1f6e3a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <!-- <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1f6e3a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
           <path d="M12 21.7C9.5 20 5 17 5 13" />
           <path d="M12 21.7C14.5 20 19 17 19 13" />
-        </svg>
+        </svg> -->
+        <img src="/assets/img/eclinicpro-Early-detection-heart-icon.png" alt="Every woman's journey is unique" loading="lazy">
       </div>
       <div>
         <p class="treatment-banner-text">
@@ -4207,16 +4451,21 @@ require __DIR__ . '/partials/header.php';
 
     <div class="cc-facts-grid">
       <div class="cc-stat">
-        <div class="cc-stat-ico" aria-hidden="true">
-          <svg viewBox="0 0 40 40" fill="none">
-            <circle cx="20" cy="20" r="20" fill="#fce7f3" /><text x="20" y="27" text-anchor="middle" font-size="20" font-weight="700" fill="#db2777">♀</text>
-          </svg>
+        <div class="cc-stat-ico-wrap">
+          <div class="cc-stat-ico" aria-hidden="true">
+            <svg viewBox="0 0 40 40" fill="none">
+              <circle cx="20" cy="20" r="20" fill="#fce7f3" /><text x="20" y="27" text-anchor="middle" font-size="20" font-weight="700" fill="#db2777">♀</text>
+            </svg>
+          </div>
+          <div class="cc-stat-ico-desc">
+            <div class="cc-stat-num">2<span>nd</span></div>
+            <div class="cc-stat-label">most common cancer among women in India.</div>
+          </div>
         </div>
-        <div class="cc-stat-num">2<span>nd</span></div>
-        <div class="cc-stat-label">most common cancer among women in India.</div>
         <div class="cc-stat-src">Source: GLOBOCAN 2022 / PIB</div>
       </div>
       <div class="cc-stat">
+      <div class="cc-stat-ico-wrap">
         <div class="cc-stat-ico" aria-hidden="true">
           <svg viewBox="0 0 40 40" fill="none">
             <rect width="40" height="40" rx="10" fill="#fef2f2" />
@@ -4226,11 +4475,15 @@ require __DIR__ . '/partials/header.php';
             <path d="M28 8l4 4-2 2" stroke="#dc2626" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </div>
+        <div class="cc-stat-ico-desc">
         <div class="cc-stat-num">1.2<span>lakh+</span></div>
         <div class="cc-stat-label">new cases and nearly 80,000 deaths in India every year.</div>
+        </div>
+        </div>
         <div class="cc-stat-src">Source: GLOBOCAN 2022</div>
       </div>
       <div class="cc-stat">
+      <div class="cc-stat-ico-wrap">
         <div class="cc-stat-ico" aria-hidden="true">
           <svg viewBox="0 0 40 40" fill="none">
             <rect width="40" height="40" rx="10" fill="#e0f2f1" />
@@ -4242,11 +4495,15 @@ require __DIR__ . '/partials/header.php';
             <path d="M25 26c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke="#0d9488" stroke-width="1.8" stroke-linecap="round" />
           </svg>
         </div>
+        <div class="cc-stat-ico-desc">
         <div class="cc-stat-num">25<span>%</span></div>
         <div class="cc-stat-label">of the world’s cervical cancer deaths occur in India — 1 in 5 patients globally is Indian.</div>
+        </div>
+      </div>
         <div class="cc-stat-src">Source: WHO / PIB</div>
       </div>
       <div class="cc-stat">
+      <div class="cc-stat-ico-wrap">
         <div class="cc-stat-ico" aria-hidden="true">
           <svg viewBox="0 0 40 40" fill="none">
             <rect width="40" height="40" rx="10" fill="#fce7f3" />
@@ -4257,11 +4514,15 @@ require __DIR__ . '/partials/header.php';
             <circle cx="23" cy="22" r="1" fill="#be185d" />
           </svg>
         </div>
+        <div class="cc-stat-ico-desc">
         <div class="cc-stat-num">80<span>%+</span></div>
         <div class="cc-stat-label">of India’s cases are caused by high-risk HPV types 16 &amp; 18.</div>
+        </div>
+        </div>
         <div class="cc-stat-src">Source: PIB</div>
       </div>
       <div class="cc-stat">
+      <div class="cc-stat-ico-wrap">
         <div class="cc-stat-ico" aria-hidden="true">
           <svg viewBox="0 0 40 40" fill="none">
             <rect width="40" height="40" rx="10" fill="#e0f2f1" />
@@ -4269,11 +4530,15 @@ require __DIR__ . '/partials/header.php';
             <path d="M15 18l3.5 3.5L26 14" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </div>
+        <div class="cc-stat-ico-desc">
         <div class="cc-stat-num">93–100<span>%</span></div>
         <div class="cc-stat-label">effectiveness of a Gardasil-4 dose against the HPV types it covers.</div>
+        </div> 
+      </div>
         <div class="cc-stat-src">Source: PIB, 2026</div>
       </div>
       <div class="cc-stat">
+      <div class="cc-stat-ico-wrap">
         <div class="cc-stat-ico" aria-hidden="true">
           <svg viewBox="0 0 40 40" fill="none">
             <rect width="40" height="40" rx="10" fill="#fef9c3" />
@@ -4285,8 +4550,11 @@ require __DIR__ . '/partials/header.php';
             <path d="M27 16l1.5 1.5 3-3" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </div>
+        <div class="cc-stat-ico-desc">
         <div class="cc-stat-num">1.15<span>crore</span></div>
         <div class="cc-stat-label">girls aged 14 to be vaccinated free under India’s 2026 campaign.</div>
+        </div>
+        </div>
         <div class="cc-stat-src">Source: PIB, Feb 2026</div>
       </div>
 
@@ -4348,6 +4616,7 @@ require __DIR__ . '/partials/header.php';
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               <path d="m9 12 2 2 4-4" stroke-linecap="round" stroke-linejoin="round" />
             </svg> -->
+            <img src="/assets/img/eclinicpro-Vaccinate-icon.png" alt="Vaccinate illustration" loading="lazy">
           </div>
           <h3><span>1.</span> Vaccinate</h3>
           <p>The HPV vaccine protects against the virus types that cause most cervical cancers. It is most effective when given before sexual activity begins — girls aged 9–14 need just 2 doses.</p>
@@ -4370,6 +4639,7 @@ require __DIR__ . '/partials/header.php';
               <path d="M11 8v6" />
               <path d="M8 11h6" />
             </svg> -->
+            <img src="/assets/img/eclinicpro-Regular-Screening-icon.png" alt="Screen illustration" loading="lazy">
           </div>
           <h3><span>2.</span> Screen</h3>
           <p>A Pap smear (every 3 years) or HPV DNA test (every 5 years) from age 30 detects abnormal cells years before cancer forms — even after vaccination.</p>
@@ -4391,6 +4661,7 @@ require __DIR__ . '/partials/header.php';
               <path d="M9 12h6" />
               <path d="M12 9v6" />
             </svg> -->
+            <img src="/assets/img/eclinicpro-Early-Detection-icon.png" alt="Treat early illustration" loading="lazy">
           </div>
           <h3><span>3.</span> Treat early</h3>
           <p>When changes are found early, treatment is simple and highly effective. Don’t wait for symptoms — by then, the disease may be advanced.</p>
@@ -4400,19 +4671,22 @@ require __DIR__ . '/partials/header.php';
 
     <div class="cc-prev-bar">
       <div class="cc-prev-bar-left">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M9 18h6" />
           <path d="M10 22h4" />
           <path d="M12 2a7 7 0 0 0-4 12.75c.54.4 1 1.02 1 1.75V18h6v-1.5c0-.73.46-1.35 1-1.75A7 7 0 0 0 12 2z" />
-        </svg>
+        </svg> -->
+        <img src="/assets/img/eclinicpro-Remember-icon.png" alt="Vaccinate illustration" loading="lazy">
+
         <span>Remember:</span>
       </div>
       <div class="cc-prev-links">
         <span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="m19 5-7 7-7-7" />
-            <path d="m12 12 7 7" />
-          </svg>
+          <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m19 5-7 7-7-7" />
+              <path d="m12 12 7 7" />
+            </svg> -->
+          <img src="/assets/img/eclinicpro-HPV-Vaccination-icon.png" alt="Vaccinate illustration" loading="lazy">
           Vaccinate</span>
         <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="7" />
@@ -4452,16 +4726,19 @@ require __DIR__ . '/partials/header.php';
       <article class="cc-tests-card">
         <figure class="cc-tests-card-media">
           <!-- Replace placeholder with card image -->
-          <div class="cc-tests-card-ph" role="img" aria-label="Pap smear image coming soon"><span>Card image 1 - add later</span></div>
+          <div class="cc-tests-card-ph" role="img" aria-label="Pap smear image coming soon"><img src="/assets/img/eclinicpro-Pap-smear.png" alt="Pap smear image" loading="lazy"></div>
         </figure>
         <div class="cc-tests-card-body">
-          <div class="cc-tests-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M10 2v7.31" />
-              <path d="M14 9.3V2" />
-              <path d="M8.5 2h7" />
-              <path d="M14 9.3a6.5 6.5 0 1 1-4 0" />
-              <path d="M5.58 16.5h12.85" />
-            </svg></div>
+          <div class="cc-tests-icon" aria-hidden="true">
+            <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10 2v7.31" />
+                <path d="M14 9.3V2" />
+                <path d="M8.5 2h7" />
+                <path d="M14 9.3a6.5 6.5 0 1 1-4 0" />
+                <path d="M5.58 16.5h12.85" />
+              </svg> -->
+            <img src="/assets/img/eclinicpro-Regular-Screening-icon.png" alt="Pap smear image" loading="lazy">
+          </div>
           <h3>Pap smear</h3>
           <p>A gynecologist gently collects a few cells from the cervix with a small brush (5–10 minutes). It’s painless — only mild discomfort for a few seconds — and finds early abnormal changes. From age 30, every 3 years.</p>
         </div>
@@ -4469,16 +4746,22 @@ require __DIR__ . '/partials/header.php';
       <article class="cc-tests-card">
         <figure class="cc-tests-card-media">
           <!-- Replace placeholder with card image -->
-          <div class="cc-tests-card-ph" role="img" aria-label="LBC test image coming soon"><span>Card image 2 - add later</span></div>
+          <div class="cc-tests-card-ph" role="img" aria-label="LBC test image coming soon">
+            <img src="/assets/img/eclinicpro-Liquid-Based-Cytology.png" alt="LBC test image" loading="lazy">
+            <!-- <span>Card image 2 - add later</span> -->
+          </div>
         </figure>
         <div class="cc-tests-card-body">
-          <div class="cc-tests-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <div class="cc-tests-icon" aria-hidden="true">
+            <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M10 2v7.31" />
               <path d="M14 9.3V2" />
               <path d="M8.5 2h7" />
               <path d="M14 9.3a6.5 6.5 0 1 1-4 0" />
               <path d="M5.58 16.5h12.85" />
-            </svg></div>
+            </svg> -->
+            <img src="/assets/img/eclinicpro-Liquid-Based-Cytologyy.png" alt="Pap smear image" loading="lazy">
+          </div>
           <h3>Liquid Based Cytology (LBC)</h3>
           <p>An advanced version of the Pap smear where cells are preserved in a liquid for clearer lab analysis — often giving more reliable results.</p>
         </div>
@@ -4486,17 +4769,23 @@ require __DIR__ . '/partials/header.php';
       <article class="cc-tests-card">
         <figure class="cc-tests-card-media">
           <!-- Replace placeholder with card image -->
-          <div class="cc-tests-card-ph" role="img" aria-label="HPV DNA test image coming soon"><span>Card image 3 - add later</span></div>
+          <div class="cc-tests-card-ph" role="img" aria-label="HPV DNA test image coming soon">
+            <img src="/assets/img/eclinicpro-HPV-DNA-test.png" alt="HPV DNA test image" loading="lazy">
+            <!-- <span>Card image 3 - add later</span> -->
+          </div>
         </figure>
         <div class="cc-tests-card-body">
-          <div class="cc-tests-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <div class="cc-tests-icon" aria-hidden="true">
+            <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 3v3" />
               <path d="M15 3v3" />
               <path d="M9 18v3" />
               <path d="M15 18v3" />
               <path d="M9 6c0 3 6 3 6 6s-6 3-6 6" />
               <path d="M15 6c0 3-6 3-6 6s6 3 6 6" />
-            </svg></div>
+            </svg> -->
+            <img src="/assets/img/eclinicpro-HPV-DNA-testt.png" alt="HPV DNA test image" loading="lazy">
+          </div>
           <h3>HPV DNA test</h3>
           <p>Detects the high-risk HPV virus itself before it has caused cell changes. From age 30, every 5 years is an option instead of a 3-yearly Pap smear.</p>
         </div>
@@ -4512,37 +4801,49 @@ require __DIR__ . '/partials/header.php';
         </svg>Approximate cost in India</h3>
       <div class="cc-cost-grid">
         <div class="cc-cost-item">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <div class="ico">
+            <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M10 2v7.31" />
               <path d="M14 9.3V2" />
               <path d="M8.5 2h7" />
               <path d="M14 9.3a6.5 6.5 0 1 1-4 0" />
-            </svg></div>
+            </svg> -->
+            <img src="/assets/img/eclinicpro-Regular-Screening-icon.png" alt="Pap smear image" loading="lazy">
+
+          </div>
           <div>
             <h4>Pap Smear</h4>
             <p>Starts from</p><strong>₹500</strong>
           </div>
         </div>
         <div class="cc-cost-item">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <div class="ico">
+            <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M10 2v7.31" />
               <path d="M14 9.3V2" />
               <path d="M8.5 2h7" />
               <path d="M14 9.3a6.5 6.5 0 1 1-4 0" />
-            </svg></div>
+            </svg> -->
+            <img src="/assets/img/eclinicpro-Liquid-Based-Cytologyy.png" alt="Pap smear image" loading="lazy">
+
+          </div>
           <div>
             <h4>Liquid Based Cytology (LBC)</h4>
             <p>Starts from</p><strong>₹1,200</strong>
           </div>
         </div>
         <div class="cc-cost-item">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <div class="ico">
+            <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 3v3" />
               <path d="M15 3v3" />
               <path d="M9 18v3" />
               <path d="M15 18v3" />
               <path d="M9 6c0 3 6 3 6 6s-6 3-6 6" />
-            </svg></div>
+            </svg> -->
+            <img src="/assets/img/eclinicpro-HPV-DNA-testt.png" alt="Pap smear image" loading="lazy">
+
+          </div>
           <div>
             <h4>Pap + HPV DNA Test</h4>
             <p>Starts from</p><strong>₹2,000</strong>
@@ -4553,29 +4854,42 @@ require __DIR__ . '/partials/header.php';
     </div>
 
     <div class="cc-vax-box">
-      <h3 class="cc-box-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <h3 class="cc-box-title">
+        <img src="/assets/img/eclinicpro-Pre-cancer-icon.png" alt="HPV vaccines icon" loading="lazy">
+        <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M20 7 7 20" />
           <path d="m14 7 3 3" />
           <path d="M4 20a3 3 0 0 1 0-4l2-2" />
           <path d="M20 4a3 3 0 0 1 0 4l-2 2" />
-        </svg>HPV vaccines available in India</h3>
+        </svg> -->
+        HPV vaccines available in India
+      </h3>
       <div class="cc-vax-grid">
         <article class="cc-vax-card">
-          <div class="cc-vax-bottle-ph" role="img" aria-label="Cervavac bottle image coming soon"><span>Bottle image</span></div>
+          <div class="cc-vax-bottle-ph" role="img" aria-label="Cervavac bottle image coming soon">
+            <img src="/assets/img/eclinicpro-Cervavac-vaccines.png" alt="Cervavac bottle image" loading="lazy">
+            <!-- <span>Bottle image</span> -->
+          </div>
           <div>
             <div class="cc-vax-name">Cervavac</div>
             <p class="cc-vax-meta"><strong>4</strong> HPV types<br>Starts from <strong>~₹1,500 / dose</strong><br>Made in India by Serum Institute</p>
           </div>
         </article>
         <article class="cc-vax-card">
-          <div class="cc-vax-bottle-ph" role="img" aria-label="Gardasil 4 bottle image coming soon"><span>Bottle image</span></div>
+          <div class="cc-vax-bottle-ph" role="img" aria-label="Gardasil 4 bottle image coming soon">
+            <img src="/assets/img/eclinicpro-Gardasil4-vaccines.png" alt="Gardasil 4 bottle image" loading="lazy">
+            <!-- <span>Bottle image</span> -->
+          </div>
           <div>
             <div class="cc-vax-name">Gardasil 4</div>
             <p class="cc-vax-meta"><strong>4</strong> HPV types<br>Starts from <strong>~₹3,500 / dose</strong><br>Used free in the 2026 govt. campaign</p>
           </div>
         </article>
         <article class="cc-vax-card">
-          <div class="cc-vax-bottle-ph" role="img" aria-label="Gardasil 9 bottle image coming soon"><span>Bottle image</span></div>
+          <div class="cc-vax-bottle-ph" role="img" aria-label="Gardasil 9 bottle image coming soon">
+            <img src="/assets/img/eclinicpro-Gardasil9-vaccines.png" alt="Gardasil 9 bottle image" loading="lazy">
+            <!-- <span>Bottle image</span> -->
+          </div>
           <div>
             <div class="cc-vax-name">Gardasil 9</div>
             <p class="cc-vax-meta"><strong>9</strong> HPV types<br>Starts from <strong>~₹9,000 / dose</strong><br>Broadest protection</p>
@@ -4586,31 +4900,56 @@ require __DIR__ . '/partials/header.php';
     </div>
 
     <div class="cc-age-box">
-      <h3 class="cc-box-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <h3 class="cc-box-title">
+        <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M3 12h18" />
           <path d="M12 3v18" />
           <circle cx="12" cy="12" r="9" />
-        </svg>Age-wise prevention schedule</h3>
+        </svg> -->
+        <img src="/assets/img/eclinicpro-Age-wise-prevention-schedule.png" alt="Age-wise prevention schedule icon" loading="lazy">
+        Age-wise prevention schedule
+      </h3>
       <div class="cc-age-track">
-        <article class="cc-age-item"><span class="cc-age-dot"></span>
+        <article class="cc-age-item">
+          <!-- <span class="cc-age-dot"> -->
+          <img src="/assets/img/eclinicpro-nine-years.png" alt="Age-wise prevention schedule icon" loading="lazy">
+          <!-- </span> -->
+           <div class="cc-age-item-content">
           <h4>9–14 years</h4>
           <p>HPV vaccine<br>(best protection)</p>
+          </div>
         </article>
-        <article class="cc-age-item"><span class="cc-age-dot"></span>
+        <article class="cc-age-item">
+          <!-- <span class="cc-age-dot"></span> -->
+          <img src="/assets/img/eclinicpro-fiftyfive–twentyfive-years.png" alt="Age-wise prevention schedule icon" loading="lazy">
+          <div class="cc-age-item-content">
           <h4>15–26 years</h4>
           <p>Catch-up<br>HPV vaccine</p>
+          </div>
         </article>
-        <article class="cc-age-item"><span class="cc-age-dot"></span>
+        <article class="cc-age-item">
+          <!-- <span class="cc-age-dot"></span> -->
+          <img src="/assets/img/eclinicpro-fiftyfive–twentyfive-years.png" alt="Age-wise prevention schedule icon" loading="lazy">
+          <div class="cc-age-item-content">
           <h4>27–45 years</h4>
-          <p>HPV vaccine on<br>doctor’s advice</p>
+          <p>HPV vaccine on<br>doctor’s advice</p>  
+          </div>
         </article>
-        <article class="cc-age-item"><span class="cc-age-dot"></span>
+        <article class="cc-age-item">
+          <!-- <span class="cc-age-dot"></span> -->
+          <img src="/assets/img/eclinicpro-thertyfive–sixtyfive-years.png" alt="Age-wise prevention schedule icon" loading="lazy">
+          <div class="cc-age-item-content">
           <h4>30–65 years</h4>
           <p>Pap smear every 3 years /<br>HPV DNA test every 5 years</p>
+          </div>
         </article>
-        <article class="cc-age-item"><span class="cc-age-dot"></span>
+        <article class="cc-age-item">
+          <!-- <span class="cc-age-dot"></span> -->
+          <img src="/assets/img/eclinicpro-after-sixtyfive-year.png" alt="Age-wise prevention schedule icon" loading="lazy">
+          <div class="cc-age-item-content">
           <h4>After 65 years</h4>
           <p>Screening may stop if last 10 years reports were normal</p>
+          </div>
         </article>
       </div>
       <p class="cc-tests-note">HPV vaccination works best before sexual activity begins. Even after vaccination, regular Pap smears remain important. It should not be taken during pregnancy.</p>
@@ -4618,10 +4957,11 @@ require __DIR__ . '/partials/header.php';
 
     <div class="cc-tests-cta">
       <div class="cc-tests-cta-left">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <img src="/assets/img/eclinicpro-Pre-cancer-icon.png" alt="Prevention today icon" loading="lazy">
+        <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
           <path d="m9 12 2 2 4-4" />
-        </svg>
+        </svg> -->
         <span>Prevention today, protection for life</span>
       </div>
       <div class="cc-tests-cta-links">
@@ -4651,7 +4991,10 @@ require __DIR__ . '/partials/header.php';
       <div>
         <div class="cc-gov-emblem">
           <!-- Replace with emblem image: <img src="/path/to/goi-emblem.png" alt="Government of India" width="36" height="36"> -->
-          <div class="cc-gov-emblem-ph" aria-hidden="true"><span>Logo</span></div>
+          <div class="cc-gov-emblem-ph" aria-hidden="true">
+            <img src="/assets/img/eclinicpro-Government-of-India.png" alt="Government of India emblem" loading="lazy">
+            <!-- <span>Logo</span> -->
+          </div>
           Government of India
         </div>
         <h2 class="cc-gov-title">Cervical Cancer Vaccination Campaign launched</h2>
@@ -4660,7 +5003,8 @@ require __DIR__ . '/partials/header.php';
       <figure class="cc-gov-hero">
         <!-- Replace placeholder with your image: <img class="cc-gov-hero-img" src="/path/to/campaign-hero.jpg" alt="HPV vaccination campaign launch" loading="lazy"> -->
         <div class="cc-gov-hero-ph" role="img" aria-label="Campaign launch photo — image coming soon">
-          <span>Hero image — add later</span>
+          <img src="/assets/img/eclinicpro-Government-of-India-Hero-image.png" alt="Campaign launch photo" loading="lazy">
+          <!-- <span>Hero image — add later</span> -->
         </div>
       </figure>
     </div>
@@ -4670,10 +5014,11 @@ require __DIR__ . '/partials/header.php';
       <div class="cc-gov-grid">
         <article class="cc-gov-item">
           <div class="cc-gov-ico" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="m19 5-7 7-7-7" />
               <path d="m12 12 7 7" />
-            </svg>
+            </svg> -->
+            <img src="/assets/img/eclinicpro-HPV-Vaccination-icon.png" alt="Free vaccine for 14-year-old girls icon" loading="lazy">
           </div>
           <div>
             <h4>Free vaccine for 14-year-old girls</h4>
@@ -4682,11 +5027,12 @@ require __DIR__ . '/partials/header.php';
         </article>
         <article class="cc-gov-item">
           <div class="cc-gov-ico" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
               <rect x="9" y="3" width="6" height="4" rx="1" />
               <path d="m9 12 2 2 4-4" />
-            </svg>
+            </svg> -->
+            <img src="/assets/img/eclinicpro-Easy-registration.png" alt="Easy registration icon" loading="lazy">
           </div>
           <div>
             <h4>Easy registration</h4>
@@ -4695,10 +5041,11 @@ require __DIR__ . '/partials/header.php';
         </article>
         <article class="cc-gov-item">
           <div class="cc-gov-ico" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               <path d="m9 12 2 2 4-4" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
+            </svg> -->
+            <img src="/assets/img/eclinicpro-The-good-news-icon.png" alt="Safe & supervised icon" loading="lazy">
           </div>
           <div>
             <h4>Safe &amp; supervised</h4>
@@ -4707,11 +5054,12 @@ require __DIR__ . '/partials/header.php';
         </article>
         <article class="cc-gov-item">
           <div class="cc-gov-ico" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10" />
               <path d="M2 12h20" />
               <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-            </svg>
+            </svg> -->
+            <img src="/assets/img/eclinicpro-World-class-backing.png" alt="World-class backing icon" loading="lazy">
           </div>
           <div>
             <h4>World-class backing</h4>
@@ -4723,11 +5071,12 @@ require __DIR__ . '/partials/header.php';
 
     <div class="cc-gov-who">
       <div class="cc-gov-who-top">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="10" />
           <circle cx="12" cy="12" r="6" />
           <circle cx="12" cy="12" r="2" />
-        </svg>
+        </svg> -->
+        <img src="/assets/img/eclinicpro-The-global-goal.png" alt="The global goal icon" loading="lazy">
         <p><strong>The global goal — WHO “90-70-90” by 2030:</strong> India’s 2026 campaign is a major step toward this elimination target.</p>
       </div>
       <div class="cc-gov-who-grid">
@@ -4783,10 +5132,11 @@ require __DIR__ . '/partials/header.php';
           </div>
         </figure>
         <div class="cc-faq-callout">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             <path d="m9 12 2 2 4-4" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
+          </svg> -->
+          <img src="/assets/img/eclinicpro-Pre-cancer-icon.png" alt="Early screening, timely vaccination and awareness can help prevent cervical cancer." loading="lazy">
           <p>Early screening, timely vaccination and awareness can help prevent cervical cancer.</p>
         </div>
       </aside>
