@@ -420,9 +420,21 @@ function format_doctor(array $place, array $details, array $city, string $spec):
         }
         if ($latest > 0) $lastReviewAt = date('Y-m-d H:i:s', $latest);
     }
+    // Collect up to 5 photo references. photo_reference (singular) stays the
+    // FIRST one for backward compatibility (existing find-a-doctor page +
+    // importer read it); photo_references (plural) holds the gallery. Note: a
+    // reference is a TOKEN, not a URL — exchange it via the Places Photo API to
+    // render (that render call is billed per image, so display 1, lazy-load rest).
     $photoRef = null;
-    if (isset($details['photos'][0]['photo_reference'])) {
-        $photoRef = (string) $details['photos'][0]['photo_reference'];
+    $photoRefs = [];
+    if (isset($details['photos']) && is_array($details['photos'])) {
+        foreach ($details['photos'] as $ph) {
+            if (!empty($ph['photo_reference'])) {
+                $photoRefs[] = (string) $ph['photo_reference'];
+                if (count($photoRefs) >= 5) break;
+            }
+        }
+        $photoRef = $photoRefs[0] ?? null;
     }
     $rawName = (string) ($details['name'] ?? $place['name'] ?? '');
     $address = $details['formatted_address'] ?? null;
@@ -452,6 +464,7 @@ function format_doctor(array $place, array $details, array $city, string $spec):
         'types'           => array_values((array) ($details['types'] ?? [])),
         'opening_hours'   => $details['opening_hours']['weekday_text'] ?? null,
         'photo_reference' => $photoRef,
+        'photo_references'=> $photoRefs,          // up to 5; gallery
         'fetched_at'      => date('Y-m-d H:i:s'),
     ];
 }
@@ -929,6 +942,33 @@ function _job_snapshot(array $job): array {
     ];
 }
 
+// ----- POST: targeted single specialty + single city fetch -----
+// One dropdown each (specialty from $QUERIES, city from $STATES). Reuses the
+// same job pipeline as the full matrix — just scoped to ONE (city, query) pair
+// — so the worker, JSON save, and insert_db.php upsert all work unchanged.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['spec'], $_POST['fetch_city'])) {
+    if ($apiKey === '') {
+        $err = 'GOOGLE_MAPS_API_KEY missing in fetch_doctor/.env';
+    } else {
+        $spec = (string) $_POST['spec'];
+        $city = find_city($STATES, (string) $_POST['fetch_city']);
+
+        // Match the chosen specialty against $QUERIES by its 'spec' code.
+        $query = null;
+        foreach ($QUERIES as $qrow) {
+            if ($qrow['spec'] === $spec) { $query = $qrow; break; }
+        }
+
+        if (!$city)       $err = 'Please select a valid city.';
+        elseif (!$query)  $err = 'Please select a valid specialty.';
+        else {
+            $newJobId = job_create([$city], [$query]);
+            header('Location: ?job=' . $newJobId);
+            exit;
+        }
+    }
+}
+
 // ----- POST: create job from picker -----
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cities'])) {
     if ($apiKey === '') {
@@ -1164,6 +1204,41 @@ h1{font-size:24px;font-weight:600;margin:0 0 8px}
     <span>States: <strong><?= count($STATES) ?></strong></span>
     <span>Specialty queries per city: <strong><?= count($QUERIES) ?></strong></span>
     <span>JSON files saved: <strong><?= count($existingJson) ?></strong></span>
+</div>
+
+<!-- ===================== TARGETED: ONE SPECIALTY + ONE CITY ===================== -->
+<div class="state" style="margin-bottom: 24px; border: 2px solid var(--teal);">
+    <div class="state-head">
+        <span class="state-name">🎯 Quick fetch <small style="color:var(--mute);font-weight:400;">— one specialty in one city (e.g. Gynecologist in Ahmedabad)</small></span>
+    </div>
+    <form method="post" style="padding: 14px 16px; display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+        <div>
+            <label style="display:block;font-size:12px;font-weight:500;color:var(--ink);margin-bottom:4px;">Specialty</label>
+            <select name="spec" required style="min-width:220px;padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:#fff;">
+                <option value="">— Select specialty —</option>
+                <?php foreach ($QUERIES as $qrow): ?>
+                    <option value="<?= htmlspecialchars($qrow['spec']) ?>"><?= htmlspecialchars(ucfirst($qrow['q'])) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div>
+            <label style="display:block;font-size:12px;font-weight:500;color:var(--ink);margin-bottom:4px;">City</label>
+            <select name="fetch_city" required style="min-width:200px;padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:#fff;">
+                <option value="">— Select city —</option>
+                <?php foreach ($STATES as $stateName => $cities): ?>
+                    <optgroup label="<?= htmlspecialchars($stateName) ?>">
+                        <?php foreach ($cities as $c): ?>
+                            <option value="<?= htmlspecialchars($c['name']) ?>"><?= htmlspecialchars($c['name']) ?></option>
+                        <?php endforeach; ?>
+                    </optgroup>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <button type="submit" class="submit" style="position:static;width:auto;margin:0;padding:9px 20px;box-shadow:none;">▶ Fetch</button>
+    </form>
+    <div class="note" style="margin: 0 16px 14px;">
+        Runs just this one specialty in this one city (~25 sub-area chunks), then upsert via <a href="insert_db.php">the importer</a>. Cheapest way to top up a single segment.
+    </div>
 </div>
 
 <form method="post">

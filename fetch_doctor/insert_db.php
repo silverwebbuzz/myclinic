@@ -89,12 +89,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['files'])) {
     $sql = "INSERT INTO directory_doctors
         (place_id, source, name, doctor_name, specialty, country, city, state, area, address, lat, lng, plus_code,
          phone, intl_phone, website, gmaps_url, status, rating, reviews, price_level, last_review_at,
-         types, opening_hours, photo_reference, quality_score, is_active, dropped_reason,
+         types, opening_hours, photo_reference, photo_references, quality_score, is_active, dropped_reason,
          fetched_at, refreshed_at)
         VALUES
         (:place_id, 'google', :name, :doctor_name, :specialty, :country, :city, :state, :area, :address, :lat, :lng, :plus_code,
          :phone, :intl_phone, :website, :gmaps_url, :status, :rating, :reviews, :price_level, :last_review_at,
-         :types, :opening_hours, :photo_reference, :quality_score, :is_active, :dropped_reason,
+         :types, :opening_hours, :photo_reference, :photo_references, :quality_score, :is_active, :dropped_reason,
          :fetched_at, NOW())
         ON DUPLICATE KEY UPDATE
             name = VALUES(name),
@@ -115,6 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['files'])) {
             last_review_at = VALUES(last_review_at),
             types = VALUES(types), opening_hours = VALUES(opening_hours),
             photo_reference = VALUES(photo_reference),
+            photo_references = VALUES(photo_references),
             quality_score = VALUES(quality_score),
             -- Don't overwrite is_active if a human deactivated this row.
             -- Only re-activate when we see fresh OPERATIONAL data.
@@ -220,6 +221,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['files'])) {
                     ':types'           => isset($d['types']) ? json_encode($d['types'], JSON_UNESCAPED_UNICODE) : null,
                     ':opening_hours'   => isset($d['opening_hours']) ? json_encode($d['opening_hours'], JSON_UNESCAPED_UNICODE) : null,
                     ':photo_reference' => $d['photo_reference'] ?? null,
+                    ':photo_references'=> !empty($d['photo_references']) ? json_encode($d['photo_references'], JSON_UNESCAPED_UNICODE) : null,
                     ':quality_score'   => $score,
                     ':is_active'       => $isActive,
                     ':dropped_reason'  => $d['dropped_reason'] ?? null,
