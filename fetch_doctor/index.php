@@ -741,6 +741,7 @@ function job_create(array $cities, array $queries): string {
             'skipped_city'   => 0,
             'flagged'        => 0,
             'detail_fail'    => 0,
+            'already'        => 0,
         ],
         'log'        => [],   // recent log lines (capped)
         'status'     => 'running',  // running | paused | done | error
@@ -799,6 +800,7 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
     $failBefore = (int) $job['totals']['detail_fail'];
     $skipBefore = (int) ($job['totals']['skipped_type'] + $job['totals']['skipped_addr']
                        + $job['totals']['skipped_city'] + $job['totals']['skipped_closed']);
+    $alreadyBefore = (int) $job['totals']['already'];
 
     // Load existing city JSON for dedup against rows already saved
     $cityPath = $jsonDir . '/' . slugify($city['name']) . '.json';
@@ -816,7 +818,10 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
 
     foreach ($places as $place) {
         $pid = $place['place_id'] ?? null;
-        if (!$pid || isset($existingIds[$pid])) continue;
+        if (!$pid) continue;
+        // Already saved (from a prior fetch) → skip, but COUNT it so "0 saved"
+        // is explained as "all N already in the DB" rather than looking broken.
+        if (isset($existingIds[$pid])) { $job['totals']['already']++; continue; }
 
         $types = $place['types'] ?? [];
         $biz = $place['business_status'] ?? 'OPERATIONAL';
@@ -910,6 +915,7 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
     $failNow = (int) $job['totals']['detail_fail'] - $failBefore;
     $skipNow = (int) ($job['totals']['skipped_type'] + $job['totals']['skipped_addr']
                     + $job['totals']['skipped_city'] + $job['totals']['skipped_closed']) - $skipBefore;
+    $alreadyNow = (int) $job['totals']['already'] - $alreadyBefore;
 
     // Label: area name for area chunks (more useful than "area 1/1"), else probe.
     if ($kind === 'probe') {
@@ -927,7 +933,8 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
         $city['name'], $q, $areaLabel, $found, $reqs,
         $probeComplete ? ', complete' : '',
         $failNow > 0 ? sprintf(', %d detail-fail⚠', $failNow) : '',
-        $skipNow > 0 ? sprintf(', %d skipped', $skipNow) : ''
+        ($skipNow > 0 ? sprintf(', %d skipped', $skipNow) : '')
+        . ($alreadyNow > 0 ? sprintf(', %d already in DB', $alreadyNow) : '')
     ));
 
     // DEBUG: when the chunk saved nothing, dump exactly what Google was asked +
@@ -1611,6 +1618,7 @@ h1{font-size:22px;font-weight:600;margin:0 0 4px}
         <div class="stat"><div class="v" x-text="(s.totals.skipped_closed + s.totals.skipped_type + s.totals.skipped_addr + s.totals.skipped_city).toLocaleString()"></div><div class="l">Filtered out</div></div>
         <div class="stat"><div class="v" x-text="s.totals.flagged.toLocaleString()"></div><div class="l">Flagged low-quality</div></div>
         <div class="stat" :style="s.totals.detail_fail > 0 ? 'border-color:#dc2626' : ''"><div class="v" :style="s.totals.detail_fail > 0 ? 'color:#dc2626' : ''" x-text="s.totals.detail_fail.toLocaleString()"></div><div class="l">Detail fetch failed<span x-show="s.totals.detail_fail > 0"> ⚠</span></div></div>
+        <div class="stat"><div class="v" x-text="(s.totals.already || 0).toLocaleString()"></div><div class="l">Already in DB</div></div>
     </div>
 
     <div class="toolbar">
@@ -1638,7 +1646,7 @@ h1{font-size:22px;font-weight:600;margin:0 0 4px}
 function progress(cfg){
     return {
         jobId: cfg.jobId,
-        s: { status:'running', cursor:0, total:1, percent:0, totals:{doctors_new:0,requests:0,skipped_closed:0,skipped_type:0,skipped_addr:0,skipped_city:0,flagged:0,detail_fail:0}, log:[], current:null, cities:[], updated_at:'' },
+        s: { status:'running', cursor:0, total:1, percent:0, totals:{doctors_new:0,requests:0,skipped_closed:0,skipped_type:0,skipped_addr:0,skipped_city:0,flagged:0,detail_fail:0,already:0}, log:[], current:null, cities:[], updated_at:'' },
         running: false,
         init(){
             // Initial status load, then loop.
