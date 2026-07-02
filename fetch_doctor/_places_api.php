@@ -175,6 +175,69 @@ function fd_places_new_search_text(string $apiKey, string $query, float $lat, fl
 }
 
 /**
+ * Places API (New) — Place Details by ID. Fallback for when the LEGACY
+ * place/details/json endpoint is denied (key has only "Places API (New)"
+ * enabled). Returns a legacy-shaped `result` array so callers are unchanged,
+ * or null on failure.
+ *
+ * @return array<string, mixed>|null
+ */
+function fd_places_new_details(string $apiKey, string $placeId, int &$reqCount): ?array
+{
+    $fieldMask = implode(',', [
+        'id', 'displayName', 'formattedAddress', 'location', 'types',
+        'businessStatus', 'rating', 'userRatingCount', 'nationalPhoneNumber',
+        'internationalPhoneNumber', 'websiteUri', 'googleMapsUri',
+        'regularOpeningHours', 'photos', 'reviews', 'priceLevel', 'plusCode',
+    ]);
+
+    $reqCount++;
+    $ch = curl_init('https://places.googleapis.com/v1/places/' . rawurlencode($placeId));
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 25,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_HTTPHEADER => [
+            'X-Goog-Api-Key: ' . $apiKey,
+            'X-Goog-FieldMask: ' . $fieldMask,
+        ],
+        CURLOPT_USERAGENT => 'eClinicPro-Fetcher/1.0',
+    ]);
+    $body = curl_exec($ch);
+    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($body === false || $code >= 400) {
+        $data = json_decode((string) $body, true);
+        fd_places_set_status(
+            (string) ($data['error']['status'] ?? ('HTTP_' . $code)),
+            (string) ($data['error']['message'] ?? ''),
+        );
+        return null;
+    }
+    $p = json_decode((string) $body, true);
+    if (!is_array($p) || empty($p['id'])) {
+        return null;
+    }
+    fd_places_set_status('OK');
+
+    // Reuse the bundle converter to get the legacy `details` shape, then add the
+    // extra detail-only fields the search bundle doesn't carry.
+    $bundle = fd_places_new_to_legacy_bundle($p);
+    $details = $bundle['details'];
+    if (isset($p['plusCode']['compoundCode'])) {
+        $details['plus_code'] = ['compound_code' => (string) $p['plusCode']['compoundCode']];
+    }
+    if (isset($p['priceLevel'])) {
+        // New API returns an enum like PRICE_LEVEL_MODERATE → map to 0-4.
+        $map = ['PRICE_LEVEL_FREE' => 0, 'PRICE_LEVEL_INEXPENSIVE' => 1, 'PRICE_LEVEL_MODERATE' => 2, 'PRICE_LEVEL_EXPENSIVE' => 3, 'PRICE_LEVEL_VERY_EXPENSIVE' => 4];
+        $details['price_level'] = $map[$p['priceLevel']] ?? null;
+    }
+
+    return $details;
+}
+
+/**
  * Convert a Places API (New) place object to legacy text-search + details shapes.
  *
  * @return array{place: array<string, mixed>, details: array<string, mixed>}

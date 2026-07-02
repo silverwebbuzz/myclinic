@@ -610,7 +610,22 @@ function fetch_place_details(string $apiKey, string $placeId, int &$reqCount): ?
         'key'      => $apiKey,
     ]);
     $data = http_get_json($url, $reqCount);
-    return is_array($data['result'] ?? null) ? $data['result'] : null;
+    if (is_array($data['result'] ?? null)) {
+        return $data['result'];
+    }
+
+    // Legacy Place Details denied/empty (common when the key has ONLY
+    // "Places API (New)" enabled). This was silently dropping EVERY place as
+    // detail_fail → 0 saved even when search found dozens. Fall back to the New
+    // API's Place Details so results actually get saved.
+    $lastStatus = (string) ($GLOBALS['fd_last_places_status'] ?? '');
+    if ($data === null || fd_places_status_denied($lastStatus) || $lastStatus === 'NOT_FOUND' || $lastStatus === '') {
+        $new = fd_places_new_details($apiKey, $placeId, $reqCount);
+        if (is_array($new)) {
+            return $new;
+        }
+    }
+    return null;
 }
 
 // =====================================================================
@@ -720,8 +735,30 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
     $reqs = 0;
     $newRows = [];
 
+    // Lazy geocode: "All areas" tasks are queued with just an area NAME (no
+    // coords) so the form submit stays instant — geocoding all 40 areas upfront
+    // would time out the page. Resolve THIS area's coordinates now, one per
+    // chunk (cached forever after). If geocoding fails, skip this area cleanly.
+    if (!empty($task['areaName']) && (empty($area['lat']) || empty($area['lng']))) {
+        $coords = fd_area_coords($apiKey, (string) $task['areaName'], $city, $reqs);
+        if (!$coords) {
+            job_append_log($job, sprintf('%s · %s · could not geocode "%s" — skipped',
+                $city['name'], $q, $task['areaName']));
+            $job['cursor']++;
+            $job['updated_at'] = date('Y-m-d H:i:s');
+            if ($job['cursor'] >= $job['total']) $job['status'] = 'done';
+            return;
+        }
+        $area = $coords;   // {lat, lng, radius}
+    }
+
     // Step 1 — Text Search this sub-area
     $places = fetch_text_search($apiKey, $q, $area['lat'], $area['lng'], $area['radius'], $reqs);
+
+    // Snapshot cumulative skip/fail counters so we can log THIS chunk's deltas.
+    $failBefore = (int) $job['totals']['detail_fail'];
+    $skipBefore = (int) ($job['totals']['skipped_type'] + $job['totals']['skipped_addr']
+                       + $job['totals']['skipped_city'] + $job['totals']['skipped_closed']);
 
     // Load existing city JSON for dedup against rows already saved
     $cityPath = $jsonDir . '/' . slugify($city['name']) . '.json';
@@ -829,13 +866,28 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
         ));
     }
 
-    $areaLabel = $kind === 'probe'
-        ? sprintf('probe (city-wide, r=%.1fkm)', $area['radius'] / 1000)
-        : sprintf('area %d/%d', $task['aIdx'] + 1, $task['aCount']);
+    // Per-chunk quality signals: how many places were dropped this chunk.
+    $failNow = (int) $job['totals']['detail_fail'] - $failBefore;
+    $skipNow = (int) ($job['totals']['skipped_type'] + $job['totals']['skipped_addr']
+                    + $job['totals']['skipped_city'] + $job['totals']['skipped_closed']) - $skipBefore;
+
+    // Label: area name for area chunks (more useful than "area 1/1"), else probe.
+    if ($kind === 'probe') {
+        $areaLabel = sprintf('probe (city-wide, r=%.1fkm)', $area['radius'] / 1000);
+    } elseif (!empty($task['areaName'])) {
+        $areaLabel = 'area: ' . $task['areaName'];
+    } else {
+        $areaLabel = sprintf('area %d/%d', ($task['aIdx'] ?? 0) + 1, $task['aCount'] ?? 1);
+    }
+
+    // $probeCount>=60 means a probe saturated Google's cap (more may be hidden).
+    $probeComplete = ($kind === 'probe' && $probeCount < 60);
     job_append_log($job, sprintf(
-        '%s · %s · %s → +%d doctors (%d req%s)',
+        '%s · %s · %s → +%d doctors (%d req%s%s%s)',
         $city['name'], $q, $areaLabel, $found, $reqs,
-        ($kind === 'probe' && !$hitCap) ? ', complete' : ''
+        $probeComplete ? ', complete' : '',
+        $failNow > 0 ? sprintf(', %d detail-fail⚠', $failNow) : '',
+        $skipNow > 0 ? sprintf(', %d skipped', $skipNow) : ''
     ));
 
     if ($job['cursor'] >= $job['total']) $job['status'] = 'done';
@@ -998,21 +1050,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['spec'], $_POST['fetch
             //   - '' (city-wide)→ legacy behaviour (probe + auto-grid fallback)
             $reqTmp = 0;
             if ($areaSel === '__all__') {
+                // Queue every area by NAME only — no upfront geocoding. The
+                // worker geocodes each area lazily when its chunk runs, so the
+                // form submit is instant (geocoding 40 areas here would time
+                // out). Each area carries lat/lng=null → worker resolves it.
                 $areas = fd_areas_for_city($city['name'], $JSON_DIR);
                 $cityPoints = [];
                 foreach ($areas as $areaName) {
-                    $coords = fd_area_coords($apiKey, $areaName, $city, $reqTmp);
-                    if ($coords) {
-                        $cityPoints[] = $city + [
-                            'name'   => $city['name'],
-                            'lat'    => $coords['lat'],
-                            'lng'    => $coords['lng'],
-                            'radius' => $coords['radius'],
-                            'area'   => $areaName,
-                        ];
-                    }
+                    $cityPoints[] = $city + [
+                        'name'   => $city['name'],
+                        'lat'    => null,
+                        'lng'    => null,
+                        'radius' => FD_AREA_RADIUS,
+                        'area'   => $areaName,
+                    ];
                 }
-                if (empty($cityPoints)) $err = 'No areas resolved for this city.';
+                if (empty($cityPoints)) $err = 'This city has no area list yet.';
                 else {
                     $newJobId = job_create($cityPoints, [$query]);
                     header('Location: ?job=' . $newJobId);
@@ -1502,6 +1555,7 @@ h1{font-size:22px;font-weight:600;margin:0 0 4px}
         <div class="stat"><div class="v" x-text="'$' + (s.totals.requests * 0.024).toFixed(2)"></div><div class="l">Est. cost</div></div>
         <div class="stat"><div class="v" x-text="(s.totals.skipped_closed + s.totals.skipped_type + s.totals.skipped_addr + s.totals.skipped_city).toLocaleString()"></div><div class="l">Filtered out</div></div>
         <div class="stat"><div class="v" x-text="s.totals.flagged.toLocaleString()"></div><div class="l">Flagged low-quality</div></div>
+        <div class="stat" :style="s.totals.detail_fail > 0 ? 'border-color:#dc2626' : ''"><div class="v" :style="s.totals.detail_fail > 0 ? 'color:#dc2626' : ''" x-text="s.totals.detail_fail.toLocaleString()"></div><div class="l">Detail fetch failed<span x-show="s.totals.detail_fail > 0"> ⚠</span></div></div>
     </div>
 
     <div class="toolbar">
