@@ -486,13 +486,22 @@ function quality_check(array $row, array $city): string {
 }
 
 function dedupe_by_place_id(array $rows): array {
-    $seen = [];
-    $out = [];
+    // Keep the LAST occurrence per place_id so a refreshed row (appended after
+    // its stale copy) wins — capturing changed photos/hours/phone. Preserves
+    // original ordering of first-seen positions.
+    $byId = [];
+    $order = [];
     foreach ($rows as $r) {
         $k = $r['place_id'] ?? null;
-        if (!$k || isset($seen[$k])) continue;
-        $seen[$k] = true;
-        $out[] = $r;
+        if (!$k) continue;
+        if (!isset($byId[$k])) {
+            $order[] = $k;
+        }
+        $byId[$k] = $r;   // later occurrence overwrites earlier
+    }
+    $out = [];
+    foreach ($order as $k) {
+        $out[] = $byId[$k];
     }
     return $out;
 }
@@ -774,7 +783,8 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
     $spec = $task['spec'];
 
     $reqs = 0;
-    $newRows = [];
+    $newRows = [];        // genuinely-new places
+    $refreshedRows = [];  // already-in-DB places, re-fetched to capture changes
 
     // Lazy geocode: "All areas" tasks are queued with just an area NAME (no
     // coords) so the form submit stays instant — geocoding all 40 areas upfront
@@ -816,12 +826,18 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
         }
     }
 
+    $seenThisChunk = [];   // dedup within this chunk only
     foreach ($places as $place) {
         $pid = $place['place_id'] ?? null;
-        if (!$pid) continue;
-        // Already saved (from a prior fetch) → skip, but COUNT it so "0 saved"
-        // is explained as "all N already in the DB" rather than looking broken.
-        if (isset($existingIds[$pid])) { $job['totals']['already']++; continue; }
+        if (!$pid || isset($seenThisChunk[$pid])) continue;
+        $seenThisChunk[$pid] = true;
+
+        // Whether this place is already saved. We DON'T skip it — we re-fetch and
+        // REFRESH the row so changed data (new photo_references, hours, phone,
+        // rating) gets captured. Counted as "already" for visibility; the merge
+        // (dedupe_by_place_id keeps the LAST occurrence) replaces the old row.
+        $isExisting = isset($existingIds[$pid]);
+        if ($isExisting) { $job['totals']['already']++; }
 
         $types = $place['types'] ?? [];
         $biz = $place['business_status'] ?? 'OPERATIONAL';
@@ -848,13 +864,20 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
             $row['dropped_reason'] = $verdict;
             $job['totals']['flagged']++;
         }
-        $newRows[] = $row;
-        $existingIds[$pid] = true; // also dedup within this chunk
+        // Only count as NEW when it wasn't already in the DB (keeps the "doctors
+        // saved" number meaning genuinely-new). Refreshed rows still get merged.
+        if (!$isExisting) {
+            $newRows[] = $row;
+        } else {
+            $refreshedRows[] = $row;
+        }
     }
 
-    // Save merged JSON for the city
-    if (!empty($newRows)) {
-        $merged = dedupe_by_place_id(array_merge($existing, $newRows));
+    // Save merged JSON for the city. Order matters: existing first, then new,
+    // then refreshed LAST — dedupe_by_place_id keeps the LAST occurrence, so a
+    // refreshed row overwrites its stale copy (new photos/hours/phone captured).
+    if (!empty($newRows) || !empty($refreshedRows)) {
+        $merged = dedupe_by_place_id(array_merge($existing, $newRows, $refreshedRows));
         file_put_contents($cityPath, json_encode([
             'city'       => $city['name'],
             'state'      => $city['state'],
