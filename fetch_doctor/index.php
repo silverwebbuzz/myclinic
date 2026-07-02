@@ -408,6 +408,7 @@ function places_type_acceptable(array $types): bool {
 
 require_once __DIR__ . '/_helpers.php';
 require_once __DIR__ . '/_places_api.php';
+require_once __DIR__ . '/_areas.php';
 
 function format_doctor(array $place, array $details, array $city, string $spec): array {
     $loc = $details['geometry']['location'] ?? [];
@@ -644,12 +645,18 @@ function job_create(array $cities, array $queries): string {
     // grid tasks dynamically. Saves ~40% of API calls for small specialties.
     foreach ($cities as $city) {
         foreach ($queries as $qIdx => $qrow) {
+            // A pre-tightened area point (city carries an 'area' name + its own
+            // small radius) is already precise → 'grid' kind so it does NOT
+            // auto-expand into a geometric sub-grid. A bare city point stays a
+            // 'probe' that may expand. This keeps area-wise fetches tight.
+            $isArea = !empty($city['area']);
             $tasks[] = [
-                'kind'    => 'probe',
+                'kind'    => $isArea ? 'grid' : 'probe',
                 'city'    => $city['name'],
                 'state'   => $city['state'],
                 'q'       => $qrow['q'],
                 'spec'    => $qrow['spec'],
+                'areaName'=> $isArea ? (string) $city['area'] : null,
                 'area'    => [
                     'lat'    => $city['lat'],
                     'lng'    => $city['lng'],
@@ -783,12 +790,18 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
     $job['updated_at'] = date('Y-m-d H:i:s');
 
     // ---- Adaptive grid expansion ----
-    // If this was the city-wide probe AND we hit Google's 60-result ceiling,
-    // the area definitely has more doctors hidden behind the cap. Expand
-    // the search into the sub-area grid for THIS (city, query) pair only.
+    // Expand a city-wide probe into the sub-area grid. We used to only expand
+    // when the probe hit Google's hard 60 cap — but broad Text Search queries
+    // (e.g. "gynecologist" over a 15km radius) rank by prominence and often
+    // return WELL under 60 even when a city has hundreds. That left the grid
+    // un-triggered and the fetch stuck at a handful. So: for a city-wide probe
+    // that returns a non-trivial number, ALWAYS expand into sub-areas — each
+    // gets its own 60-cap, which is the only way to get past the per-query
+    // ceiling. Threshold kept low (>=10) so tiny towns don't over-scan.
     $kind = $task['kind'] ?? 'grid';
-    $hitCap = count($places) >= 60;   // 3 pages × 20 = Google's hard cap
-    if ($kind === 'probe' && $hitCap) {
+    $probeCount = count($places);
+    $shouldExpand = ($kind === 'probe') && ($probeCount >= 10);
+    if ($shouldExpand) {
         $subAreas = generate_sub_areas($city['lat'], $city['lng'], $city['radius']);
         $newTasks = [];
         foreach ($subAreas as $aIdx => $area) {
@@ -811,8 +824,8 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
         array_splice($job['tasks'], $job['cursor'], 0, $newTasks);
         $job['total'] += count($newTasks);
         job_append_log($job, sprintf(
-            '%s · %s · probe hit cap (60) → expanding into %d sub-areas',
-            $city['name'], $q, count($subAreas)
+            '%s · %s · probe returned %d → expanding into %d sub-areas',
+            $city['name'], $q, $probeCount, count($subAreas)
         ));
     }
 
@@ -974,12 +987,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['spec'], $_POST['fetch
             if ($qrow['spec'] === $spec) { $query = $qrow; break; }
         }
 
+        $areaSel = trim((string) ($_POST['area'] ?? ''));   // '' = city-wide, '__all__' = every area
+
         if (!$city)       $err = 'Please select a valid city.';
         elseif (!$query)  $err = 'Please select a valid specialty.';
         else {
-            $newJobId = job_create([$city], [$query]);
-            header('Location: ?job=' . $newJobId);
-            exit;
+            // Quality-first: tight area queries beat one wide city probe.
+            //   - specific area → geocode it, one tight ~3.5km job
+            //   - '__all__'     → every known area of the city as its own chunk
+            //   - '' (city-wide)→ legacy behaviour (probe + auto-grid fallback)
+            $reqTmp = 0;
+            if ($areaSel === '__all__') {
+                $areas = fd_areas_for_city($city['name'], $JSON_DIR);
+                $cityPoints = [];
+                foreach ($areas as $areaName) {
+                    $coords = fd_area_coords($apiKey, $areaName, $city, $reqTmp);
+                    if ($coords) {
+                        $cityPoints[] = $city + [
+                            'name'   => $city['name'],
+                            'lat'    => $coords['lat'],
+                            'lng'    => $coords['lng'],
+                            'radius' => $coords['radius'],
+                            'area'   => $areaName,
+                        ];
+                    }
+                }
+                if (empty($cityPoints)) $err = 'No areas resolved for this city.';
+                else {
+                    $newJobId = job_create($cityPoints, [$query]);
+                    header('Location: ?job=' . $newJobId);
+                    exit;
+                }
+            } elseif ($areaSel !== '') {
+                $coords = fd_area_coords($apiKey, $areaSel, $city, $reqTmp);
+                if (!$coords) $err = 'Could not locate that area. Try another or use city-wide.';
+                else {
+                    $areaCity = $city + [
+                        'lat' => $coords['lat'], 'lng' => $coords['lng'],
+                        'radius' => $coords['radius'], 'area' => $areaSel,
+                    ];
+                    $newJobId = job_create([$areaCity], [$query]);
+                    header('Location: ?job=' . $newJobId);
+                    exit;
+                }
+            } else {
+                $newJobId = job_create([$city], [$query]);
+                header('Location: ?job=' . $newJobId);
+                exit;
+            }
         }
     }
 }
@@ -1167,6 +1222,18 @@ function render_picker_ui(array $STATES, array $QUERIES, string $apiKey, string 
         $raw = json_decode((string) file_get_contents($f), true);
         $existingJson[basename($f)] = (int) ($raw['count'] ?? 0);
     }
+
+    // Area list per city (curated seed ∪ areas already saved), for the dependent
+    // Area dropdown in Quick Fetch. Cities with no areas simply show city-wide.
+    $areaMap = [];
+    foreach ($STATES as $cities) {
+        foreach ($cities as $c) {
+            $areas = fd_areas_for_city($c['name'], $jsonDir);
+            if ($areas !== []) {
+                $areaMap[$c['name']] = $areas;
+            }
+        }
+    }
     ?><!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1238,7 +1305,7 @@ h1{font-size:24px;font-weight:600;margin:0 0 8px}
         </div>
         <div>
             <label style="display:block;font-size:12px;font-weight:500;color:var(--ink);margin-bottom:4px;">City</label>
-            <select name="fetch_city" required style="min-width:200px;padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:#fff;">
+            <select name="fetch_city" id="qf_city" required onchange="qfCityChanged()" style="min-width:200px;padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:#fff;">
                 <option value="">— Select city —</option>
                 <?php foreach ($STATES as $stateName => $cities): ?>
                     <optgroup label="<?= htmlspecialchars($stateName) ?>">
@@ -1249,11 +1316,39 @@ h1{font-size:24px;font-weight:600;margin:0 0 8px}
                 <?php endforeach; ?>
             </select>
         </div>
+        <div>
+            <label style="display:block;font-size:12px;font-weight:500;color:var(--ink);margin-bottom:4px;">Area <small style="color:var(--mute);font-weight:400;">(recommended)</small></label>
+            <select name="area" id="qf_area" style="min-width:200px;padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:#fff;">
+                <option value="">City-wide (fewer, less accurate)</option>
+            </select>
+        </div>
         <button type="submit" class="submit" style="position:static;width:auto;margin:0;padding:9px 20px;box-shadow:none;">▶ Fetch</button>
     </form>
     <div class="note" style="margin: 0 16px 14px;">
-        Runs just this one specialty in this one city (~25 sub-area chunks), then upsert via <a href="insert_db.php">the importer</a>. Cheapest way to top up a single segment.
+        <strong>Pick an Area for proper data.</strong> A wide city query returns very few (Google ranks by prominence + caps at 60); tight area queries return dense, accurate results. Use <strong>All areas</strong> to sweep the whole city (queued area-by-area, no timeout). Then upsert via <a href="insert_db.php">the importer</a>.
     </div>
+    <script>
+    // Areas per city (curated seed ∪ areas already in saved JSON), for the
+    // dependent Area dropdown. '__all__' sweeps every area of the city.
+    const QF_AREAS = <?= json_encode($areaMap ?: new stdClass(), JSON_UNESCAPED_UNICODE) ?>;
+    function qfCityChanged() {
+        const city = document.getElementById('qf_city').value;
+        const areaSel = document.getElementById('qf_area');
+        areaSel.innerHTML = '<option value="">City-wide (fewer, less accurate)</option>';
+        const areas = QF_AREAS[city] || [];
+        if (areas.length) {
+            const all = document.createElement('option');
+            all.value = '__all__';
+            all.textContent = '★ All areas (' + areas.length + ') — full sweep';
+            areaSel.appendChild(all);
+            for (const a of areas) {
+                const o = document.createElement('option');
+                o.value = a; o.textContent = a;
+                areaSel.appendChild(o);
+            }
+        }
+    }
+    </script>
 </div>
 
 <form method="post">
