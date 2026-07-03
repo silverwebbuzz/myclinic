@@ -18,7 +18,9 @@ declare(strict_types=1);
  *     pay Google's geocoding cost once per area, ever.
  */
 
-const FD_AREA_RADIUS = 3500;   // metres — tight enough for dense, well-ranked results
+const FD_AREA_RADIUS = 2500;   // metres — tight so each area returns its own ~20
+                               // WITHOUT needing Google's flaky next_page_token
+                               // pagination. Coverage comes from MANY small areas.
 const FD_AREA_GEOCACHE = __DIR__ . '/json/_area_geocache.json';
 
 /**

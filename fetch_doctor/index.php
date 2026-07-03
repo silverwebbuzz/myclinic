@@ -398,6 +398,49 @@ function generate_sub_areas(float $lat, float $lng, int $cityRadius): array {
     return $areas;
 }
 
+/**
+ * Dense coverage grid for "All areas". Tiles the whole city bounding box into
+ * an N×N grid of small overlapping circles so EVERY doctor falls inside at least
+ * one cell — no reliance on Google's flaky next_page_token. Each cell returns
+ * its own ~20 in a single page; union (deduped by place_id) = full coverage.
+ *
+ * Cell radius is set so adjacent cells overlap ~40% (no gaps between circles).
+ * Returns list of ['lat','lng','radius','label'].
+ *
+ * @return list<array{lat: float, lng: float, radius: int, label: string}>
+ */
+function generate_coverage_grid(float $lat, float $lng, int $cityRadius): array {
+    // Grid density by city size. 8×8=64 for big metros down to 5×5=25 for towns.
+    if     ($cityRadius >= 14000) $n = 8;   // 64 cells (Ahmedabad, Mumbai, Delhi…)
+    elseif ($cityRadius >= 11000) $n = 7;   // 49
+    elseif ($cityRadius >=  8000) $n = 6;   // 36
+    else                          $n = 5;   // 25
+
+    // Cell spacing (deg) across the city diameter, and a cell radius that
+    // overlaps neighbours so nothing slips between cells.
+    $spanKm    = ($cityRadius * 2) / 1000.0;         // city diameter in km
+    $stepKm    = $spanKm / $n;                        // distance between cell centres
+    $cellRadius = (int) round($stepKm * 1000 * 0.75); // 0.75× step → ~40% overlap
+    $cellRadius = max(1500, min($cellRadius, 4000));  // clamp: tight enough to avoid pagination
+
+    $latStep = $stepKm / 111.0;
+    $lngStep = $stepKm / (111.0 * max(0.2, cos(deg2rad($lat))));
+    $half = ($n - 1) / 2.0;
+
+    $cells = [];
+    for ($dy = 0; $dy < $n; $dy++) {
+        for ($dx = 0; $dx < $n; $dx++) {
+            $cells[] = [
+                'lat'    => $lat + $latStep * ($dy - $half),
+                'lng'    => $lng + $lngStep * ($dx - $half),
+                'radius' => $cellRadius,
+                'label'  => sprintf('grid r%dc%d', $dy + 1, $dx + 1),
+            ];
+        }
+    }
+    return $cells;
+}
+
 function places_type_acceptable(array $types): bool {
     $accept = ['doctor', 'dentist', 'hospital', 'physiotherapist', 'health'];
     $reject = ['pharmacy', 'drugstore', 'health_food', 'spa'];
@@ -581,59 +624,27 @@ function fetch_text_search(string $apiKey, string $query, float $lat, float $lng
         'region'   => 'in',
         'key'      => $apiKey,
     ];
+    // SINGLE PAGE ONLY. Google's legacy next_page_token pagination is a proven
+    // dead end for these queries — it returns INVALID_REQUEST on page 2 even
+    // after 26s of polling (confirmed in logs). Chasing it wasted ~10 requests
+    // and ~26 seconds PER cell. Coverage instead comes from the COVERAGE GRID:
+    // many small cells, each returning its own ≤20 in one page. So we take page
+    // 1 and stop — fast + cheap, no token waiting.
     $all = [];
-    $pageToken = null;
     $pagesFetched = 0;
-    for ($page = 0; $page < 3; $page++) {
-        if ($pageToken !== null) {
-            // Google's next_page_token is NOT valid immediately — there's a
-            // propagation delay. Requesting too soon returns INVALID_REQUEST and
-            // (previously) silently capped us at page 1 = 20 results. Poll the
-            // token: wait, try, and if it's still "not ready" wait longer and
-            // retry a few times before giving up. This is what lets a saturated
-            // cell reach the full 60, which in turn triggers the sub-area grid.
-            // http_get_json() returns null when the token isn't ready yet
-            // (INVALID_REQUEST) — so poll with escalating waits until it returns
-            // real data or we exhaust the tries.
-            $params = ['pagetoken' => $pageToken, 'key' => $apiKey];
-            $url = 'https://maps.googleapis.com/maps/api/place/textsearch/json?' . http_build_query($params);
-            $data = null;
-            $tries = 0;
-            foreach ([3, 4, 5, 6, 8] as $wait) {   // up to ~26s across tries
-                sleep($wait);
-                $tries++;
-                $data = http_get_json($url, $reqCount);
-                if ($data !== null && !empty($data['results'])) break;  // page ready
-                $data = null;  // INVALID_REQUEST/not-ready → keep polling
-            }
-            if (function_exists('fd_debug_trace')) {
-                fd_debug_trace(
-                    sprintf('[page %d fetch: %d poll tries, got %s]',
-                        $page + 1, $tries, $data ? (count($data['results'] ?? []) . ' results') : 'NOTHING'),
-                    200, 'PAGEFETCH', '', $data ? count($data['results'] ?? []) : 0
-                );
-            }
-        } else {
-            $params = $baseParams;
-            $url = 'https://maps.googleapis.com/maps/api/place/textsearch/json?' . http_build_query($params);
-            $data = http_get_json($url, $reqCount);
-        }
-        if (!$data) break;
-        $pagesFetched++;
+    $url = 'https://maps.googleapis.com/maps/api/place/textsearch/json?' . http_build_query($baseParams);
+    $data = http_get_json($url, $reqCount);
+    if ($data) {
+        $pagesFetched = 1;
         foreach ((array) ($data['results'] ?? []) as $row) $all[] = $row;
-        $pageToken = $data['next_page_token'] ?? null;
-        // DEBUG: record whether Google offered another page. If token is present
-        // but we still stop at 20, pagination is broken; if absent, 20 is all
-        // Google has for this area (correct).
         if (function_exists('fd_debug_trace')) {
+            $hasMore = !empty($data['next_page_token']);
             fd_debug_trace(
-                sprintf('[page %d done: %d results, next_page_token=%s]',
-                    $page + 1, count((array) ($data['results'] ?? [])),
-                    $pageToken ? 'YES' : 'none'),
+                sprintf('[page 1: %d results%s]', count((array) ($data['results'] ?? [])),
+                    $hasMore ? ', more available (grid covers it)' : ''),
                 200, 'PAGEINFO', '', count((array) ($data['results'] ?? []))
             );
         }
-        if (!$pageToken) break;
     }
 
     // Fallback: legacy Text Search returned nothing. If the key has ONLY
@@ -762,7 +773,10 @@ function job_create(array $cities, array $queries): string {
     $specLabels = array_values(array_unique(array_map(static fn ($q) => $q['q'], $queries)));
     $cityNames = array_values(array_unique(array_column($cities, 'name')));
     $areaNames = array_values(array_filter(array_map(static fn ($c) => $c['area'] ?? null, $cities)));
-    if (count($areaNames) > 1) {
+    $isGrid = isset($areaNames[0]) && str_starts_with((string) $areaNames[0], 'grid ');
+    if ($isGrid) {
+        $areaLabel = 'full sweep (' . count($areaNames) . '-cell grid)';
+    } elseif (count($areaNames) > 1) {
         $areaLabel = count($areaNames) . ' areas';
     } elseif (count($areaNames) === 1) {
         $areaLabel = $areaNames[0];
@@ -1182,25 +1196,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['spec'], $_POST['fetch
             //   - '' (city-wide)→ legacy behaviour (probe + auto-grid fallback)
             $reqTmp = 0;
             if ($areaSel === '__all__') {
-                // Queue every area by NAME only — no upfront geocoding. The
-                // worker geocodes each area lazily when its chunk runs, so the
-                // form submit is instant (geocoding 40 areas here would time
-                // out). Each area carries lat/lng=null → worker resolves it.
-                $areas = fd_areas_for_city($city['name'], $JSON_DIR);
+                // Full sweep = a computed COVERAGE GRID over the whole city (no
+                // geocoding, no named areas, no pagination). Each grid cell is a
+                // small circle with known coords that returns its own ~20 in one
+                // page; the union (deduped by place_id) covers the entire city.
+                // This is reliable — it never depends on Google's flaky
+                // next_page_token, which rejects page 2 even after long waits.
+                $grid = generate_coverage_grid((float) $city['lat'], (float) $city['lng'], (int) $city['radius']);
                 $cityPoints = [];
-                foreach ($areas as $areaName) {
-                    // array_merge (NOT the + operator — + keeps the LEFT value on
-                    // key clash, so $city's real lat/lng would survive and the
-                    // lazy-geocode would never fire → every area ran city-wide).
+                foreach ($grid as $cell) {
                     $cityPoints[] = array_merge($city, [
                         'name'   => $city['name'],
-                        'lat'    => null,
-                        'lng'    => null,
-                        'radius' => FD_AREA_RADIUS,
-                        'area'   => $areaName,
+                        'lat'    => $cell['lat'],
+                        'lng'    => $cell['lng'],
+                        'radius' => $cell['radius'],
+                        'area'   => $cell['label'],   // "grid r3c5" — marks it as an area chunk
                     ]);
                 }
-                if (empty($cityPoints)) $err = 'This city has no area list yet.';
+                if (empty($cityPoints)) $err = 'Could not build a grid for this city.';
                 else {
                     $newJobId = job_create($cityPoints, [$query]);
                     header('Location: ?job=' . $newJobId);
@@ -1525,18 +1538,19 @@ h1{font-size:24px;font-weight:600;margin:0 0 8px}
     function qfCityChanged() {
         const city = document.getElementById('qf_city').value;
         const areaSel = document.getElementById('qf_area');
-        areaSel.innerHTML = '<option value="">City-wide (fewer, less accurate)</option>';
+        areaSel.innerHTML = '<option value="">City-wide (single query, ~20)</option>';
+        if (!city) return;
+        // Grid sweep works for EVERY city (computed, no named areas needed).
+        const all = document.createElement('option');
+        all.value = '__all__';
+        all.textContent = '★ All areas — full grid sweep (recommended)';
+        areaSel.appendChild(all);
+        // Named areas (if curated for this city) as optional single-area picks.
         const areas = QF_AREAS[city] || [];
-        if (areas.length) {
-            const all = document.createElement('option');
-            all.value = '__all__';
-            all.textContent = '★ All areas (' + areas.length + ') — full sweep';
-            areaSel.appendChild(all);
-            for (const a of areas) {
-                const o = document.createElement('option');
-                o.value = a; o.textContent = a;
-                areaSel.appendChild(o);
-            }
+        for (const a of areas) {
+            const o = document.createElement('option');
+            o.value = a; o.textContent = a;
+            areaSel.appendChild(o);
         }
     }
     </script>
