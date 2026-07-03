@@ -950,17 +950,21 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
         $skipNow > 0 ? sprintf(', %d skipped', $skipNow) : ''
     ));
 
-    // DEBUG: when the chunk saved nothing, dump exactly what Google was asked +
-    // replied (URL key-redacted, HTTP code, Google status, error, result count)
-    // straight into the log so you can copy a URL into a browser and compare.
-    if ($found === 0 && !empty($GLOBALS['fd_debug_trace'])) {
-        foreach (array_slice($GLOBALS['fd_debug_trace'], 0, 6) as $t) {
-            job_append_log($job, sprintf(
-                '   ↳ HTTP %d · %s%s · %d results · %s',
-                $t['http'], $t['status'],
-                $t['error'] !== '' ? ' ("' . $t['error'] . '")' : '',
-                $t['results'], $t['url']
-            ));
+    // DEBUG: ALWAYS log every Google call this chunk made (URL key-redacted,
+    // HTTP code, status, results) so we can see the EXACT location/radius/query
+    // sent — the only way to confirm area coords + pagination are really applied.
+    if (!empty($GLOBALS['fd_debug_trace'])) {
+        // Log the SEARCH calls (textsearch/geocode), not the per-place details,
+        // to keep the log readable — those carry the location/radius we need.
+        foreach ($GLOBALS['fd_debug_trace'] as $t) {
+            if (str_contains($t['url'], 'textsearch') || str_contains($t['url'], 'geocode') || str_contains($t['url'], 'searchText')) {
+                job_append_log($job, sprintf(
+                    '   ↳ HTTP %d · %s%s · %d results · %s',
+                    $t['http'], $t['status'],
+                    $t['error'] !== '' ? ' ("' . $t['error'] . '")' : '',
+                    $t['results'], $t['url']
+                ));
+            }
         }
     }
     $GLOBALS['fd_debug_trace'] = [];   // reset for next chunk

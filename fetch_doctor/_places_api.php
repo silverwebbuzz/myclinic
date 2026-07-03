@@ -133,12 +133,19 @@ function fd_http_post_json(string $url, array $body, array $headers, int &$reqCo
  */
 function fd_places_new_search_text(string $apiKey, string $query, float $lat, float $lng, int $radius, int &$reqCount): array
 {
+    // The New Text Search caps at 20 results and CANNOT paginate. With
+    // locationBias (a soft hint) every area returned the same prominent
+    // city-wide 20 → "same 20 every time, areas not working". locationRestriction
+    // is a HARD filter: results MUST be inside the circle, so each tight area
+    // returns its OWN doctors. Union of many areas → real coverage despite the
+    // 20/query cap. (The clean fix is enabling legacy Places API, which paginates
+    // to 60 — but this makes the New-API fallback actually usable.)
     $payload = [
         'textQuery' => $query,
         'regionCode' => 'IN',
         'languageCode' => 'en',
-        'maxResultCount' => 20,   // New API max per call (was 5 — starved results)
-        'locationBias' => [
+        'maxResultCount' => 20,   // New API hard max per call; no pagination
+        'locationRestriction' => [
             'circle' => [
                 'center' => ['latitude' => $lat, 'longitude' => $lng],
                 'radius' => (float) min($radius, 50000),
