@@ -7717,12 +7717,15 @@ body {
 .dp-hero-media {
   position: relative;
   width: 200px;
+  height: 200px;
   min-height: 200px;
 }
 
 .dp-hero-img {
-  width: 200px;
-  height: 200px;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   border-radius: 16px;
   display: block;
@@ -7731,8 +7734,10 @@ body {
 }
 
 .dp-hero-avatar {
-  width: 200px;
-  height: 200px;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   border-radius: 16px;
   overflow: hidden;
   display: flex;
@@ -8135,6 +8140,24 @@ body {
   font-weight: 700;
   color: #fff;
   font-size: 14px;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.dp-doctor-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dp-doctor-photo-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 
 .dp-doctor-photo.g1 {

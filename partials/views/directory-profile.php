@@ -3,6 +3,7 @@
 $gradient = (int) ($p['avatar_gradient'] ?? 1);
 $initials = (string) ($p['avatar_initials'] ?? 'DR');
 $primaryImage = $p['photo_url'] ?? null;
+$googlePhotoUrl = $p['google_photo_url'] ?? null;
 $hoursLines = $hoursLines ?? ecp_profile_hours_lines($p['opening_hours'] ?? null);
 $hoursRows = ecp_profile_hours_table_rows($p['opening_hours'] ?? null);
 $showTimingsTab = $hoursRows !== [];
@@ -39,7 +40,7 @@ if (!function_exists('dp_icon')) {
 
 $ratingVal = (float) ($p['rating'] ?? 0);
 ?>
-<main class="dp" x-data="{ tab: 'overview', heroBroken: false }">
+<main class="dp" x-data="{ tab: 'overview', heroBroken: false, heroUsedFallback: false }">
     <div class="wrap-wide dp-wrap">
         <nav class="dp-crumbs" aria-label="Breadcrumb">
             <a href="/">Home</a><span>›</span>
@@ -53,7 +54,7 @@ $ratingVal = (float) ($p['rating'] ?? 0);
                 <section class="dp-hero">
                     <div class="dp-hero-media">
                         <?php if ($primaryImage): ?>
-                            <img src="<?= e($primaryImage) ?>" alt="<?= e($p['display_name'] ?? '') ?>" class="dp-hero-img" loading="eager" x-show="!heroBroken" @error="heroBroken = true">
+                            <img src="<?= e($primaryImage) ?>" alt="<?= e($p['display_name'] ?? '') ?>" class="dp-hero-img" loading="eager" x-show="!heroBroken" @error="if (!heroUsedFallback && <?= $googlePhotoUrl && $googlePhotoUrl !== $primaryImage ? 'true' : 'false' ?>) { heroUsedFallback = true; $el.src = <?= json_encode((string) $googlePhotoUrl, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>; } else { heroBroken = true; }">
                         <?php endif; ?>
                         <div class="dp-hero-avatar g<?= $gradient ?>" x-show="<?= $primaryImage ? 'heroBroken' : 'true' ?>" <?= $primaryImage ? 'x-cloak' : '' ?>><img class="dp-hero-avatar-default" src="<?= e(ecp_default_doctor_avatar()) ?>" alt="<?= e($p['display_name'] ?? '') ?>"></div>
                     </div>
@@ -180,7 +181,12 @@ $ratingVal = (float) ($p['rating'] ?? 0);
                                 <div class="dp-doctor-grid">
                                     <?php foreach (($p['doctors'] ?? []) as $doc): ?>
                                         <a href="<?= e($doc['profile_url'] ?? '#') ?>" class="dp-doctor-card">
-                                            <div class="dp-doctor-photo g<?= (int) ($doc['avatar_gradient'] ?? 1) ?>"><?= e($doc['avatar_initials'] ?? 'DR') ?></div>
+                                            <div class="dp-doctor-photo g<?= (int) ($doc['avatar_gradient'] ?? 1) ?>" x-data="{ broken: false, usedFallback: false }">
+                                                <?php if (!empty($doc['photo_url'])): ?>
+                                                    <img src="<?= e((string) $doc['photo_url']) ?>" alt="<?= e($doc['name'] ?? '') ?>" class="dp-doctor-photo-img" loading="lazy" x-show="!broken" @error="if (!usedFallback && <?= !empty($doc['google_photo_url']) && ($doc['google_photo_url'] ?? '') !== ($doc['photo_url'] ?? '') ? 'true' : 'false' ?>) { usedFallback = true; $el.src = <?= json_encode((string) ($doc['google_photo_url'] ?? ''), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>; } else { broken = true; }">
+                                                <?php endif; ?>
+                                                <span class="dp-doctor-photo-fallback" x-show="<?= !empty($doc['photo_url']) ? 'broken' : 'true' ?>" <?= !empty($doc['photo_url']) ? 'x-cloak' : '' ?>><?= e($doc['avatar_initials'] ?? 'DR') ?></span>
+                                            </div>
                                             <div><div class="dp-doctor-name"><?= e($doc['name'] ?? '') ?></div><div class="dp-doctor-spec"><?= e($doc['spec_label'] ?? '') ?></div></div>
                                         </a>
                                     <?php endforeach; ?>

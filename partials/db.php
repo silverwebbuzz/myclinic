@@ -465,7 +465,54 @@ function ecp_default_doctor_avatar(): string
     return '/assets/img/eClinicpro-DefaultDoctorAvatar.png';
 }
 
-function ecp_directory_avatar(array $row, int $photoWidth = 400): array
+/** Turn a portal storage path or absolute URL into a public URL. */
+function ecp_upload_public_url(?string $path): ?string
+{
+    $path = trim((string) $path);
+    if ($path === '') {
+        return null;
+    }
+
+    return str_starts_with($path, 'http') ? $path : ecp_portal_url('/' . ltrim($path, '/'));
+}
+
+/** @return list<string> Google Places photo tokens from a directory row. */
+function ecp_directory_photo_refs(array $row): array
+{
+    $refs = [];
+    $primary = trim((string) ($row['photo_reference'] ?? ''));
+    if ($primary !== '') {
+        $refs[$primary] = true;
+    }
+
+    $raw = $row['photo_references'] ?? null;
+    if ($raw !== null && $raw !== '') {
+        $decoded = is_array($raw) ? $raw : json_decode((string) $raw, true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $ref) {
+                $ref = trim((string) $ref);
+                if ($ref !== '') {
+                    $refs[$ref] = true;
+                }
+            }
+        }
+    }
+
+    return array_keys($refs);
+}
+
+/**
+ * Resolve a listing/doctor avatar URL.
+ *
+ * Priority:
+ *   1. Clinic logo (when $opts['use_clinic_logo'] !== false)
+ *   2. User/doctor uploaded photo (photo_path / user_photo_path)
+ *   3. Google Places photo_reference from directory_doctors
+ *
+ * @param array{use_clinic_logo?: bool} $opts
+ * @return array{url: ?string, google_photo_url: ?string, initials: string, gradient: int}
+ */
+function ecp_directory_avatar(array $row, int $photoWidth = 400, array $opts = []): array
 {
     $clinicName = (string) ($row['name'] ?? '');
     $doctorName = trim((string) ($row['doctor_name'] ?? ''));
@@ -475,25 +522,29 @@ function ecp_directory_avatar(array $row, int $photoWidth = 400): array
     $first = mb_substr($parts[0] ?? '', 0, 1) ?: 'D';
     $last = count($parts) > 1 ? mb_substr($parts[count($parts) - 1], 0, 1) : '';
 
-    // Photo priority: a JOINED clinic's OWN uploaded logo/photo wins (it's their
-    // real branding). Only when they haven't uploaded one do we fall back to the
-    // Google Places photo we fetched. Then null → caller shows a default avatar.
-    $url = null;
-    // Accept either alias: the listing query selects `clinic_logo_path`,
-    // the profile query selects plain `logo_path`.
-    $logo = trim((string) ($row['clinic_logo_path'] ?? $row['logo_path'] ?? ''));
-    if ($logo !== '') {
-        $url = str_starts_with($logo, 'http') ? $logo : ecp_portal_url('/' . ltrim($logo, '/'));
-    }
-    // Fallback to the Google Places photo when no uploaded logo exists.
-    if ($url === null || $url === '') {
-        $url = ecp_doctor_photo_url($row['photo_reference'] ?? null, $photoWidth);
+    $googleUrl = null;
+    foreach (ecp_directory_photo_refs($row) as $ref) {
+        $googleUrl = ecp_doctor_photo_url($ref, $photoWidth);
+        if ($googleUrl !== null) {
+            break;
+        }
     }
 
+    $uploadUrl = null;
+    if (($opts['use_clinic_logo'] ?? true) === true) {
+        $uploadUrl = ecp_upload_public_url($row['clinic_logo_path'] ?? $row['logo_path'] ?? null);
+    }
+    if ($uploadUrl === null) {
+        $uploadUrl = ecp_upload_public_url($row['user_photo_path'] ?? $row['photo_path'] ?? null);
+    }
+
+    $url = $uploadUrl ?? $googleUrl;
+
     return [
-        'url'      => $url,
-        'initials' => strtoupper($first . $last),
-        'gradient' => 1 + ((int) ($row['id'] ?? 0) % 6),
+        'url'               => $url,
+        'google_photo_url'  => $googleUrl,
+        'initials'          => strtoupper($first . $last),
+        'gradient'          => 1 + ((int) ($row['id'] ?? 0) % 6),
     ];
 }
 

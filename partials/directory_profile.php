@@ -672,8 +672,20 @@ function ecp_profile_build_payload(PDO $db, array $row, string $entityType, stri
     }
 
     $images = [];
-    if ($avatar['url']) {
-        $images[] = ['url' => $avatar['url'], 'alt' => $displayName, 'type' => 'photo'];
+    $seenImageUrls = [];
+    $pushImage = static function (?string $url, string $alt) use (&$images, &$seenImageUrls): void {
+        if ($url === null || $url === '' || isset($seenImageUrls[$url])) {
+            return;
+        }
+        $seenImageUrls[$url] = true;
+        $images[] = ['url' => $url, 'alt' => $alt, 'type' => 'photo'];
+    };
+    $pushImage($avatar['url'], $displayName);
+    if (($avatar['google_photo_url'] ?? null) !== ($avatar['url'] ?? null)) {
+        $pushImage($avatar['google_photo_url'] ?? null, $displayName);
+    }
+    foreach (ecp_directory_photo_refs($row) as $ref) {
+        $pushImage(ecp_doctor_photo_url($ref, 800), $displayName);
     }
 
     $phone = trim((string) ($row['phone'] ?? ''));
@@ -739,7 +751,13 @@ function ecp_profile_build_payload(PDO $db, array $row, string $entityType, stri
                 if ($name === '') {
                     continue;
                 }
-                $avatar = ecp_directory_avatar(['doctor_name' => $name, 'id' => (int) ($u['id'] ?? 0)], 120);
+                $avatar = ecp_directory_avatar([
+                    'doctor_name' => $name,
+                    'id' => (int) ($u['id'] ?? 0),
+                    'photo_reference' => $row['photo_reference'] ?? null,
+                    'photo_references' => $row['photo_references'] ?? null,
+                    'name' => $row['name'] ?? '',
+                ], 120, ['use_clinic_logo' => false]);
                 $doctors[] = [
                     'name' => $name,
                     'spec_label' => ecp_specialty_label($u['specialization'] ?? ($row['specialty'] ?? null)),
@@ -747,6 +765,7 @@ function ecp_profile_build_payload(PDO $db, array $row, string $entityType, stri
                     'reviews' => 0,
                     'profile_url' => '#',
                     'photo_url' => $avatar['url'],
+                    'google_photo_url' => $avatar['google_photo_url'] ?? null,
                     'avatar_initials' => $avatar['initials'],
                     'avatar_gradient' => $avatar['gradient'],
                 ];
@@ -831,6 +850,7 @@ function ecp_profile_build_payload(PDO $db, array $row, string $entityType, stri
         'currency' => $currencySymbol,
         'images' => $images,
         'photo_url' => $avatar['url'],
+        'google_photo_url' => $avatar['google_photo_url'] ?? null,
         'avatar_initials' => $avatar['initials'],
         'avatar_gradient' => $avatar['gradient'],
         'treatments' => $treatments,
