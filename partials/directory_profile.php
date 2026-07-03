@@ -797,6 +797,9 @@ function ecp_profile_build_payload(PDO $db, array $row, string $entityType, stri
         ? $customServices
         : ecp_directory_treatments_for_specialty($row['specialty'] ?? null)['items'];
 
+    require_once __DIR__ . '/wordpress_blogs.php';
+    $blogPosts = ecp_wordpress_posts_for_listing($db, $row, $entityType);
+
     return [
         'id' => (int) $row['id'],
         'entity_type' => $entityType,
@@ -837,5 +840,6 @@ function ecp_profile_build_payload(PDO $db, array $row, string $entityType, stri
         'book_url' => ecp_directory_profile_url($row) . '#book',
         'meta_title' => $displayName . ' — ' . $specLabel . ' in ' . $cityName . ' | eClinicPro',
         'meta_description' => $displayName . ' — ' . $specLabel . ' in ' . $cityName . '. View timings, treatments and book online.',
+        'blog_posts' => $blogPosts,
     ];
 }

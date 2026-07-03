@@ -126,6 +126,22 @@ $ratingVal = (float) ($p['rating'] ?? 0);
                             <?php endif; ?>
                             <h2>About</h2>
                             <p class="dp-about"><?= !empty($p['bio']) ? nl2br(e($p['bio'])) : e(($p['display_name'] ?? '') . ' is a ' . strtolower($p['specialty_label'] ?? 'doctor') . ' in ' . ($p['city'] ?? '') . '.') ?></p>
+                            <?php if (!empty($p['blog_posts'])): ?>
+                            <h2 style="margin-top: 28px">Articles &amp; insights</h2>
+                            <ul class="dp-blog-list">
+                                <?php foreach ($p['blog_posts'] as $blog): ?>
+                                <li class="dp-blog-item">
+                                    <a href="<?= e((string) ($blog['link'] ?? '#')) ?>" target="_blank" rel="noopener" class="dp-blog-title"><?= e((string) ($blog['title'] ?? '')) ?></a>
+                                    <?php if (!empty($blog['date'])): ?>
+                                    <time class="dp-blog-date" datetime="<?= e((string) $blog['date']) ?>"><?= e(date('d M Y', strtotime((string) $blog['date']))) ?></time>
+                                    <?php endif; ?>
+                                    <?php if (!empty($blog['excerpt'])): ?>
+                                    <p class="dp-blog-excerpt"><?= e((string) $blog['excerpt']) ?></p>
+                                    <?php endif; ?>
+                                </li>
+                                <?php endforeach; ?>
+                            </ul>
+                            <?php endif; ?>
                         </section>
                         <?php if ($showTimingsTab): ?>
                             <section class="dp-panel" x-show="tab === 'timings'" x-cloak>

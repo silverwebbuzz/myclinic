@@ -150,7 +150,7 @@ final class RoleAccessService
             'doctor' => self::pathIn($path, [
                 '/dashboard', '/patients', '/visits', '/prescriptions', '/vitals',
                 '/appointments', '/queue', '/billing', '/follow-ups', '/help', '/staff/attendance',
-                '/doctor/schedule',
+                '/doctor/schedule', '/blogs',
             ]),
             'nurse' => self::pathIn($path, [
                 '/dashboard', '/patients', '/visits', '/vitals',
@@ -218,6 +218,7 @@ final class RoleAccessService
             '/vitals',
             '/staff/leaves',
             '/doctor/schedule',
+            '/blogs',
             '/api/v1/visits',
             '/api/v1/symptoms',
             '/api/v1/prescriptions',

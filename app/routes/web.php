@@ -39,6 +39,8 @@ use App\Controllers\EmailTemplateAdminController;
 use App\Controllers\SpecialtyAdminController;
 use App\Controllers\VitalsController;
 use App\Controllers\WebhookController;
+use App\Controllers\WordPressAdminController;
+use App\Controllers\BlogController;
 use App\Core\GroupedRouteRegistrar;
 use App\Core\RouteRegistrar;
 
@@ -93,6 +95,13 @@ return static function (RouteRegistrar $router): void {
         // Phase 4: follow-ups page + help page
         $app->get('/follow-ups', [FollowUpController::class, 'index']);
         $app->get('/help', [HelpController::class, 'index']);
+
+        $app->get('/blogs', [BlogController::class, 'index']);
+        $app->get('/blogs/new', [BlogController::class, 'create']);
+        $app->get('/blogs/{id}/edit', [BlogController::class, 'edit']);
+        $app->post('/blogs/save', [BlogController::class, 'save']);
+        $app->post('/blogs/{id}/delete', [BlogController::class, 'delete']);
+        $app->post('/blogs/{id}/publish', [BlogController::class, 'publish']);
 
         $app->get('/settings/leaves', static fn () => \App\Http\Response::redirect('/leaves'));
         $app->get('/settings', [ClinicSettingsController::class, 'index']);
@@ -452,6 +461,14 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/outreach', [\App\Controllers\OutreachAdminController::class, 'index']);
         $admin->get('/outreach/export', [\App\Controllers\OutreachAdminController::class, 'exportCsv']);
         $admin->post('/outreach/status', [\App\Controllers\OutreachAdminController::class, 'saveStatus']);
+
+        // WordPress blog access for doctors
+        $admin->get('/wordpress-settings', [WordPressAdminController::class, 'settings']);
+        $admin->post('/wordpress-settings/save', [WordPressAdminController::class, 'saveSettings']);
+        $admin->post('/wordpress-settings/test', [WordPressAdminController::class, 'testConnection']);
+        $admin->get('/wordpress-doctors', [WordPressAdminController::class, 'index']);
+        $admin->post('/wordpress-doctors/grant', [WordPressAdminController::class, 'grantAccess']);
+        $admin->post('/wordpress-doctors/revoke', [WordPressAdminController::class, 'revokeAccess']);
 
         // Partner / affiliate program management
         $admin->get('/partners', [PartnerAdminController::class, 'index']);
