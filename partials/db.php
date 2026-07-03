@@ -475,16 +475,19 @@ function ecp_directory_avatar(array $row, int $photoWidth = 400): array
     $first = mb_substr($parts[0] ?? '', 0, 1) ?: 'D';
     $last = count($parts) > 1 ? mb_substr($parts[count($parts) - 1], 0, 1) : '';
 
-    // Photo priority: Google Places photo → claimed clinic's uploaded logo
-    // (lives on the portal domain) → none (caller shows a default avatar).
-    $url = ecp_doctor_photo_url($row['photo_reference'] ?? null, $photoWidth);
+    // Photo priority: a JOINED clinic's OWN uploaded logo/photo wins (it's their
+    // real branding). Only when they haven't uploaded one do we fall back to the
+    // Google Places photo we fetched. Then null → caller shows a default avatar.
+    $url = null;
+    // Accept either alias: the listing query selects `clinic_logo_path`,
+    // the profile query selects plain `logo_path`.
+    $logo = trim((string) ($row['clinic_logo_path'] ?? $row['logo_path'] ?? ''));
+    if ($logo !== '') {
+        $url = str_starts_with($logo, 'http') ? $logo : ecp_portal_url('/' . ltrim($logo, '/'));
+    }
+    // Fallback to the Google Places photo when no uploaded logo exists.
     if ($url === null || $url === '') {
-        // Accept either alias: the listing query selects `clinic_logo_path`,
-        // the profile query selects plain `logo_path`.
-        $logo = trim((string) ($row['clinic_logo_path'] ?? $row['logo_path'] ?? ''));
-        if ($logo !== '') {
-            $url = str_starts_with($logo, 'http') ? $logo : ecp_portal_url('/' . ltrim($logo, '/'));
-        }
+        $url = ecp_doctor_photo_url($row['photo_reference'] ?? null, $photoWidth);
     }
 
     return [
