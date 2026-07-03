@@ -610,6 +610,17 @@ function fetch_text_search(string $apiKey, string $query, float $lat, float $lng
         if (!$data) break;
         foreach ((array) ($data['results'] ?? []) as $row) $all[] = $row;
         $pageToken = $data['next_page_token'] ?? null;
+        // DEBUG: record whether Google offered another page. If token is present
+        // but we still stop at 20, pagination is broken; if absent, 20 is all
+        // Google has for this area (correct).
+        if (function_exists('fd_debug_trace')) {
+            fd_debug_trace(
+                sprintf('[page %d done: %d results, next_page_token=%s]',
+                    $page + 1, count((array) ($data['results'] ?? [])),
+                    $pageToken ? 'YES' : 'none'),
+                200, 'PAGEINFO', '', count((array) ($data['results'] ?? []))
+            );
+        }
         if (!$pageToken) break;
     }
 
@@ -957,7 +968,7 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
         // Log the SEARCH calls (textsearch/geocode), not the per-place details,
         // to keep the log readable — those carry the location/radius we need.
         foreach ($GLOBALS['fd_debug_trace'] as $t) {
-            if (str_contains($t['url'], 'textsearch') || str_contains($t['url'], 'geocode') || str_contains($t['url'], 'searchText')) {
+            if (str_contains($t['url'], 'textsearch') || str_contains($t['url'], 'geocode') || str_contains($t['url'], 'searchText') || str_contains($t['url'], '[page')) {
                 job_append_log($job, sprintf(
                     '   ↳ HTTP %d · %s%s · %d results · %s',
                     $t['http'], $t['status'],
