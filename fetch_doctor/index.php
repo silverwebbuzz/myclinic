@@ -1136,13 +1136,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['spec'], $_POST['fetch
                 $areas = fd_areas_for_city($city['name'], $JSON_DIR);
                 $cityPoints = [];
                 foreach ($areas as $areaName) {
-                    $cityPoints[] = $city + [
+                    // array_merge (NOT the + operator — + keeps the LEFT value on
+                    // key clash, so $city's real lat/lng would survive and the
+                    // lazy-geocode would never fire → every area ran city-wide).
+                    $cityPoints[] = array_merge($city, [
                         'name'   => $city['name'],
                         'lat'    => null,
                         'lng'    => null,
                         'radius' => FD_AREA_RADIUS,
                         'area'   => $areaName,
-                    ];
+                    ]);
                 }
                 if (empty($cityPoints)) $err = 'This city has no area list yet.';
                 else {
@@ -1154,10 +1157,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['spec'], $_POST['fetch
                 $coords = fd_area_coords($apiKey, $areaSel, $city, $reqTmp);
                 if (!$coords) $err = 'Could not locate that area. Try another or use city-wide.';
                 else {
-                    $areaCity = $city + [
+                    // array_merge (NOT +) — the + operator keeps $city's existing
+                    // lat/lng on clash, so the geocoded AREA coords were being
+                    // discarded and every single-area fetch ran city-wide.
+                    $areaCity = array_merge($city, [
                         'lat' => $coords['lat'], 'lng' => $coords['lng'],
                         'radius' => $coords['radius'], 'area' => $areaSel,
-                    ];
+                    ]);
                     $newJobId = job_create([$areaCity], [$query]);
                     header('Location: ?job=' . $newJobId);
                     exit;
