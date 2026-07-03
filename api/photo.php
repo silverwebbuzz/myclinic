@@ -6,10 +6,17 @@ require_once __DIR__ . '/../partials/db.php';
 $ref = (string) ($_GET['ref'] ?? '');
 $width = max(80, min(1600, (int) ($_GET['w'] ?? 400)));
 
-if ($ref === '' || !preg_match('/^[A-Za-z0-9_\-]+$/', $ref)) {
+// Accept BOTH photo-reference formats:
+//   - legacy: [A-Za-z0-9_-]  (e.g. "AeeoHc...")
+//   - New Places API: "places/<id>/photos/<id>" — contains / and can contain .
+// The old regex rejected the New-API format, so any doctor whose photo_reference
+// came from the New API got a 404 → the profile hero fell back to the default
+// avatar (even though the listing showed it fine for legacy-format refs).
+if ($ref === '' || !preg_match('#^[A-Za-z0-9_\-/.]+$#', $ref)) {
     http_response_code(404);
     exit;
 }
+$isNewRef = str_contains($ref, '/');   // New-API refs look like places/.../photos/...
 
 // ---- 30-day disk cache (ToS-aligned: temporary, auto-refreshed) ------------
 // Google Places ToS allows only TEMPORARY caching of photo content, not
@@ -48,9 +55,19 @@ if ($key === '') {
     exit;
 }
 
-$url = 'https://maps.googleapis.com/maps/api/place/photo?' . http_build_query([
-    'maxwidth' => $width, 'photoreference' => $ref, 'key' => $key,
-]);
+if ($isNewRef) {
+    // New Places API media endpoint. The ref IS the resource name
+    // ("places/<id>/photos/<id>"); append /media. skipHttpRedirect=false lets
+    // it 302 to the actual image, which CURLOPT_FOLLOWLOCATION follows.
+    $url = 'https://places.googleapis.com/v1/' . $ref . '/media?' . http_build_query([
+        'maxWidthPx' => $width, 'key' => $key,
+    ]);
+} else {
+    // Legacy Place Photo endpoint.
+    $url = 'https://maps.googleapis.com/maps/api/place/photo?' . http_build_query([
+        'maxwidth' => $width, 'photoreference' => $ref, 'key' => $key,
+    ]);
+}
 
 $body = false;
 $contentType = 'image/jpeg';
