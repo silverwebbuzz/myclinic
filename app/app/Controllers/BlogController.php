@@ -104,7 +104,7 @@ final class BlogController
             }
         } else {
             $created = WordPressService::createPost($authorId, $payload);
-            AuditService::log($request, 'CREATE', 'wordpress_posts', (int) ($created['id'] ?? 0));
+            AuditService::log($request, 'INSERT', 'wordpress_posts', (int) ($created['id'] ?? 0));
             if ($created === null) {
                 return Response::redirect('/blogs/new?error=' . rawurlencode('Could not create post.'));
             }
