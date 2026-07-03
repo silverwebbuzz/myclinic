@@ -741,6 +741,7 @@ function job_create(array $cities, array $queries): string {
         'cursor'     => 0,
         'total'      => count($tasks),
         'tasks'      => $tasks,
+        'seen_pids'  => [],   // place_ids fetched this run — avoids re-paying for overlapping areas
         'totals'     => [
             'doctors_new'    => 0,
             'requests'       => 0,
@@ -829,11 +830,18 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
         if (!$pid || isset($seenThisChunk[$pid])) continue;
         $seenThisChunk[$pid] = true;
 
+        // Cost saver for "All areas": adjacent areas overlap, so the SAME doctor
+        // appears in many area searches. Only pay for the expensive Place Details
+        // call ONCE per job run — if a prior area in THIS sweep already fetched
+        // this place_id, skip it. (Same-run only; NOT a DB check.)
+        if (isset($job['seen_pids'][$pid])) { continue; }
+
         $types = $place['types'] ?? [];
         $biz = $place['business_status'] ?? 'OPERATIONAL';
         if (str_starts_with((string) $biz, 'CLOSED_')) { $job['totals']['skipped_closed']++; continue; }
         if (!places_type_acceptable($types))           { $job['totals']['skipped_type']++; continue; }
 
+        $job['seen_pids'][$pid] = true;   // mark before the paid detail call
         $details = fetch_place_details($apiKey, $pid, $reqs);
         if (!$details) { $job['totals']['detail_fail']++; continue; }
 
