@@ -1494,7 +1494,10 @@ require __DIR__ . '/partials/header.php';
             pageNumbers() {
                 const total = this.totalPages();
                 const out = [];
-                const win = 1;
+                // Show a run of consecutive numbers around the current page
+                // (e.g. 1 2 3 … 9 10 11 … 2153) plus first + last, with ellipses
+                // for the gaps. Window of 2 each side = up to 5 consecutive.
+                const win = 2;
                 for (let i = 1; i <= total; i++) {
                     if (i === 1 || i === total || (i >= this.page - win && i <= this.page + win)) {
                         out.push(i);
