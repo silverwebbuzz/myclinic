@@ -573,7 +573,7 @@ function http_get_json(string $url, int &$reqCount): ?array {
     return null;
 }
 
-function fetch_text_search(string $apiKey, string $query, float $lat, float $lng, int $radius, int &$reqCount): array {
+function fetch_text_search(string $apiKey, string $query, float $lat, float $lng, int $radius, int &$reqCount, ?int &$pagesFetched = null): array {
     $baseParams = [
         'query'    => $query,
         'location' => sprintf('%f,%f', $lat, $lng),
@@ -583,6 +583,7 @@ function fetch_text_search(string $apiKey, string $query, float $lat, float $lng
     ];
     $all = [];
     $pageToken = null;
+    $pagesFetched = 0;
     for ($page = 0; $page < 3; $page++) {
         if ($pageToken !== null) {
             // Google's next_page_token is NOT valid immediately — there's a
@@ -597,10 +598,20 @@ function fetch_text_search(string $apiKey, string $query, float $lat, float $lng
             $params = ['pagetoken' => $pageToken, 'key' => $apiKey];
             $url = 'https://maps.googleapis.com/maps/api/place/textsearch/json?' . http_build_query($params);
             $data = null;
-            foreach ([2, 3, 4, 5] as $wait) {   // up to ~14s total across tries
+            $tries = 0;
+            foreach ([3, 4, 5, 6, 8] as $wait) {   // up to ~26s across tries
                 sleep($wait);
+                $tries++;
                 $data = http_get_json($url, $reqCount);
-                if ($data !== null) break;   // token accepted → results returned
+                if ($data !== null && !empty($data['results'])) break;  // page ready
+                $data = null;  // INVALID_REQUEST/not-ready → keep polling
+            }
+            if (function_exists('fd_debug_trace')) {
+                fd_debug_trace(
+                    sprintf('[page %d fetch: %d poll tries, got %s]',
+                        $page + 1, $tries, $data ? (count($data['results'] ?? []) . ' results') : 'NOTHING'),
+                    200, 'PAGEFETCH', '', $data ? count($data['results'] ?? []) : 0
+                );
             }
         } else {
             $params = $baseParams;
@@ -608,6 +619,7 @@ function fetch_text_search(string $apiKey, string $query, float $lat, float $lng
             $data = http_get_json($url, $reqCount);
         }
         if (!$data) break;
+        $pagesFetched++;
         foreach ((array) ($data['results'] ?? []) as $row) $all[] = $row;
         $pageToken = $data['next_page_token'] ?? null;
         // DEBUG: record whether Google offered another page. If token is present
@@ -745,14 +757,35 @@ function job_create(array $cities, array $queries): string {
             ];
         }
     }
+    // Human-readable search summary for the progress header, e.g.
+    // "gynecologist · Ahmedabad · 30 areas" or "general physician · Surat · Adajan".
+    $specLabels = array_values(array_unique(array_map(static fn ($q) => $q['q'], $queries)));
+    $cityNames = array_values(array_unique(array_column($cities, 'name')));
+    $areaNames = array_values(array_filter(array_map(static fn ($c) => $c['area'] ?? null, $cities)));
+    if (count($areaNames) > 1) {
+        $areaLabel = count($areaNames) . ' areas';
+    } elseif (count($areaNames) === 1) {
+        $areaLabel = $areaNames[0];
+    } else {
+        $areaLabel = 'city-wide';
+    }
+    $searchSummary = [
+        'specialty' => implode(', ', $specLabels),
+        'city'      => implode(', ', $cityNames),
+        'area'      => $areaLabel,
+        'area_count'=> count($areaNames),
+    ];
+
     $job = [
         'id'         => $id,
         'created_at' => date('Y-m-d H:i:s'),
         'cities'     => array_column($cities, 'name'),
+        'search'     => $searchSummary,
         'cursor'     => 0,
         'total'      => count($tasks),
         'tasks'      => $tasks,
         'seen_pids'  => [],   // place_ids fetched this run — avoids re-paying for overlapping areas
+        'pages'      => ['total' => 0, 'page1' => 0, 'page2' => 0, 'page3' => 0],  // pagination summary
         'totals'     => [
             'doctors_new'    => 0,
             'requests'       => 0,
@@ -814,7 +847,14 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
     }
 
     // Step 1 — Text Search this sub-area
-    $places = fetch_text_search($apiKey, $q, $area['lat'], $area['lng'], $area['radius'], $reqs);
+    $pagesFetched = 0;
+    $places = fetch_text_search($apiKey, $q, $area['lat'], $area['lng'], $area['radius'], $reqs, $pagesFetched);
+    // Roll pagination stats into the job for the header display.
+    if (!isset($job['pages'])) $job['pages'] = ['total' => 0, 'page1' => 0, 'page2' => 0, 'page3' => 0];
+    $job['pages']['total'] += $pagesFetched;
+    if ($pagesFetched >= 1) $job['pages']['page1']++;
+    if ($pagesFetched >= 2) $job['pages']['page2']++;
+    if ($pagesFetched >= 3) $job['pages']['page3']++;
 
     // Snapshot cumulative skip/fail counters so we can log THIS chunk's deltas.
     $failBefore = (int) $job['totals']['detail_fail'];
@@ -968,7 +1008,7 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
         // Log the SEARCH calls (textsearch/geocode), not the per-place details,
         // to keep the log readable — those carry the location/radius we need.
         foreach ($GLOBALS['fd_debug_trace'] as $t) {
-            if (str_contains($t['url'], 'textsearch') || str_contains($t['url'], 'geocode') || str_contains($t['url'], 'searchText') || str_contains($t['url'], '[page')) {
+            if (str_contains($t['url'], 'textsearch') || str_contains($t['url'], 'geocode') || str_contains($t['url'], 'searchText') || str_contains($t['url'], '[page')) {  // includes [page N done] + [page N fetch]
                 job_append_log($job, sprintf(
                     '   ↳ HTTP %d · %s%s · %d results · %s',
                     $t['http'], $t['status'],
@@ -1096,6 +1136,8 @@ function _job_snapshot(array $job): array {
         'total'      => $total,
         'percent'    => $total > 0 ? round($cur / $total * 100, 1) : 100,
         'totals'     => $job['totals'],
+        'pages'      => $job['pages'] ?? ['total' => 0, 'page1' => 0, 'page2' => 0, 'page3' => 0],
+        'search'     => $job['search'] ?? null,
         'log'        => array_slice($job['log'], -30),  // last 30 lines only
         'current'    => $currentTask ? [
             'city'  => $currentTask['city'],
@@ -1610,9 +1652,18 @@ h1{font-size:22px;font-weight:600;margin:0 0 4px}
 
 <div class="wrap" x-data="progress(<?= htmlspecialchars(json_encode(['jobId' => $jobId]), ENT_QUOTES) ?>)" x-init="init()">
     <h1>🩺 Fetching doctors</h1>
+    <?php $srch = $job['search'] ?? null; ?>
+    <?php if ($srch): ?>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;margin:0 0 8px;font-size:15px;">
+        <strong style="color:#065f46;text-transform:capitalize;"><?= htmlspecialchars($srch['specialty']) ?></strong>
+        <span style="color:var(--mute);">in</span>
+        <strong><?= htmlspecialchars($srch['city']) ?></strong>
+        <span style="color:var(--mute);">·</span>
+        <strong><?= htmlspecialchars($srch['area']) ?></strong>
+    </div>
+    <?php endif; ?>
     <p class="sub">
-        Cities: <strong><?= htmlspecialchars(implode(', ', $job['cities'])) ?></strong>
-        · Job <code><?= htmlspecialchars($jobId) ?></code>
+        Job <code><?= htmlspecialchars($jobId) ?></code>
     </p>
 
     <template x-if="s.status === 'done'">
@@ -1652,6 +1703,7 @@ h1{font-size:22px;font-weight:600;margin:0 0 4px}
         <div class="stat"><div class="v" x-text="(s.totals.skipped_closed + s.totals.skipped_type + s.totals.skipped_addr + s.totals.skipped_city).toLocaleString()"></div><div class="l">Filtered out</div></div>
         <div class="stat"><div class="v" x-text="s.totals.flagged.toLocaleString()"></div><div class="l">Flagged low-quality</div></div>
         <div class="stat" :style="s.totals.detail_fail > 0 ? 'border-color:#dc2626' : ''"><div class="v" :style="s.totals.detail_fail > 0 ? 'color:#dc2626' : ''" x-text="s.totals.detail_fail.toLocaleString()"></div><div class="l">Detail fetch failed<span x-show="s.totals.detail_fail > 0"> ⚠</span></div></div>
+        <div class="stat" x-show="s.pages"><div class="v"><span x-text="(s.pages && s.pages.total) || 0"></span></div><div class="l">Pages fetched<br><small x-show="s.pages" style="color:var(--mute)">p2: <span x-text="(s.pages && s.pages.page2) || 0"></span> · p3: <span x-text="(s.pages && s.pages.page3) || 0"></span></small></div></div>
     </div>
 
     <div class="toolbar">
@@ -1679,7 +1731,7 @@ h1{font-size:22px;font-weight:600;margin:0 0 4px}
 function progress(cfg){
     return {
         jobId: cfg.jobId,
-        s: { status:'running', cursor:0, total:1, percent:0, totals:{doctors_new:0,requests:0,skipped_closed:0,skipped_type:0,skipped_addr:0,skipped_city:0,flagged:0,detail_fail:0}, log:[], current:null, cities:[], updated_at:'' },
+        s: { status:'running', cursor:0, total:1, percent:0, totals:{doctors_new:0,requests:0,skipped_closed:0,skipped_type:0,skipped_addr:0,skipped_city:0,flagged:0,detail_fail:0}, pages:{total:0,page1:0,page2:0,page3:0}, log:[], current:null, cities:[], updated_at:'' },
         running: false,
         init(){
             // Initial status load, then loop.
