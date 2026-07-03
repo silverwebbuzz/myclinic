@@ -750,7 +750,6 @@ function job_create(array $cities, array $queries): string {
             'skipped_city'   => 0,
             'flagged'        => 0,
             'detail_fail'    => 0,
-            'already'        => 0,
         ],
         'log'        => [],   // recent log lines (capped)
         'status'     => 'running',  // running | paused | done | error
@@ -783,8 +782,7 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
     $spec = $task['spec'];
 
     $reqs = 0;
-    $newRows = [];        // genuinely-new places
-    $refreshedRows = [];  // already-in-DB places, re-fetched to capture changes
+    $newRows = [];
 
     // Lazy geocode: "All areas" tasks are queued with just an area NAME (no
     // coords) so the form submit stays instant — geocoding all 40 areas upfront
@@ -810,34 +808,26 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
     $failBefore = (int) $job['totals']['detail_fail'];
     $skipBefore = (int) ($job['totals']['skipped_type'] + $job['totals']['skipped_addr']
                        + $job['totals']['skipped_city'] + $job['totals']['skipped_closed']);
-    $alreadyBefore = (int) $job['totals']['already'];
 
-    // Load existing city JSON for dedup against rows already saved
+    // Load existing city JSON only to MERGE new results into it (so multiple
+    // areas accumulate into one file). We do NOT skip or de-prioritise places
+    // already present — the fetcher captures EVERYTHING Google returns; the
+    // importer (insert_db.php) does insert-OR-update on place_id, so dedup and
+    // refresh are its job, not the fetcher's.
     $cityPath = $jsonDir . '/' . slugify($city['name']) . '.json';
     $existing = [];
-    $existingIds = [];
     if (is_file($cityPath)) {
         $raw = json_decode((string) file_get_contents($cityPath), true);
         if (isset($raw['doctors']) && is_array($raw['doctors'])) {
             $existing = $raw['doctors'];
-            foreach ($existing as $d) {
-                if (!empty($d['place_id'])) $existingIds[$d['place_id']] = true;
-            }
         }
     }
 
-    $seenThisChunk = [];   // dedup within this chunk only
+    $seenThisChunk = [];   // dedup within this chunk only (same page twice)
     foreach ($places as $place) {
         $pid = $place['place_id'] ?? null;
         if (!$pid || isset($seenThisChunk[$pid])) continue;
         $seenThisChunk[$pid] = true;
-
-        // Whether this place is already saved. We DON'T skip it — we re-fetch and
-        // REFRESH the row so changed data (new photo_references, hours, phone,
-        // rating) gets captured. Counted as "already" for visibility; the merge
-        // (dedupe_by_place_id keeps the LAST occurrence) replaces the old row.
-        $isExisting = isset($existingIds[$pid]);
-        if ($isExisting) { $job['totals']['already']++; }
 
         $types = $place['types'] ?? [];
         $biz = $place['business_status'] ?? 'OPERATIONAL';
@@ -864,20 +854,14 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
             $row['dropped_reason'] = $verdict;
             $job['totals']['flagged']++;
         }
-        // Only count as NEW when it wasn't already in the DB (keeps the "doctors
-        // saved" number meaning genuinely-new). Refreshed rows still get merged.
-        if (!$isExisting) {
-            $newRows[] = $row;
-        } else {
-            $refreshedRows[] = $row;
-        }
+        $newRows[] = $row;   // capture every valid place; importer upserts later
     }
 
-    // Save merged JSON for the city. Order matters: existing first, then new,
-    // then refreshed LAST — dedupe_by_place_id keeps the LAST occurrence, so a
-    // refreshed row overwrites its stale copy (new photos/hours/phone captured).
-    if (!empty($newRows) || !empty($refreshedRows)) {
-        $merged = dedupe_by_place_id(array_merge($existing, $newRows, $refreshedRows));
+    // Save merged JSON for the city. New rows go LAST so a re-fetched place's
+    // fresh data (new photos/hours/phone) overwrites its stale copy —
+    // dedupe_by_place_id keeps the last occurrence.
+    if (!empty($newRows)) {
+        $merged = dedupe_by_place_id(array_merge($existing, $newRows));
         file_put_contents($cityPath, json_encode([
             'city'       => $city['name'],
             'state'      => $city['state'],
@@ -938,7 +922,6 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
     $failNow = (int) $job['totals']['detail_fail'] - $failBefore;
     $skipNow = (int) ($job['totals']['skipped_type'] + $job['totals']['skipped_addr']
                     + $job['totals']['skipped_city'] + $job['totals']['skipped_closed']) - $skipBefore;
-    $alreadyNow = (int) $job['totals']['already'] - $alreadyBefore;
 
     // Label: area name for area chunks (more useful than "area 1/1"), else probe.
     if ($kind === 'probe') {
@@ -956,8 +939,7 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
         $city['name'], $q, $areaLabel, $found, $reqs,
         $probeComplete ? ', complete' : '',
         $failNow > 0 ? sprintf(', %d detail-fail⚠', $failNow) : '',
-        ($skipNow > 0 ? sprintf(', %d skipped', $skipNow) : '')
-        . ($alreadyNow > 0 ? sprintf(', %d already in DB', $alreadyNow) : '')
+        $skipNow > 0 ? sprintf(', %d skipped', $skipNow) : ''
     ));
 
     // DEBUG: when the chunk saved nothing, dump exactly what Google was asked +
@@ -1641,7 +1623,6 @@ h1{font-size:22px;font-weight:600;margin:0 0 4px}
         <div class="stat"><div class="v" x-text="(s.totals.skipped_closed + s.totals.skipped_type + s.totals.skipped_addr + s.totals.skipped_city).toLocaleString()"></div><div class="l">Filtered out</div></div>
         <div class="stat"><div class="v" x-text="s.totals.flagged.toLocaleString()"></div><div class="l">Flagged low-quality</div></div>
         <div class="stat" :style="s.totals.detail_fail > 0 ? 'border-color:#dc2626' : ''"><div class="v" :style="s.totals.detail_fail > 0 ? 'color:#dc2626' : ''" x-text="s.totals.detail_fail.toLocaleString()"></div><div class="l">Detail fetch failed<span x-show="s.totals.detail_fail > 0"> ⚠</span></div></div>
-        <div class="stat"><div class="v" x-text="(s.totals.already || 0).toLocaleString()"></div><div class="l">Already in DB</div></div>
     </div>
 
     <div class="toolbar">
@@ -1669,7 +1650,7 @@ h1{font-size:22px;font-weight:600;margin:0 0 4px}
 function progress(cfg){
     return {
         jobId: cfg.jobId,
-        s: { status:'running', cursor:0, total:1, percent:0, totals:{doctors_new:0,requests:0,skipped_closed:0,skipped_type:0,skipped_addr:0,skipped_city:0,flagged:0,detail_fail:0,already:0}, log:[], current:null, cities:[], updated_at:'' },
+        s: { status:'running', cursor:0, total:1, percent:0, totals:{doctors_new:0,requests:0,skipped_closed:0,skipped_type:0,skipped_addr:0,skipped_city:0,flagged:0,detail_fail:0}, log:[], current:null, cities:[], updated_at:'' },
         running: false,
         init(){
             // Initial status load, then loop.
