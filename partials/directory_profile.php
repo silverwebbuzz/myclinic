@@ -637,13 +637,54 @@ function ecp_profile_owner_working_hours(PDO $db, int $clinicId): ?array
     return $hours;
 }
 
+/** Max width for Google Places photos on profile hero (retina-sharp at ~200px display). */
+function ecp_profile_hero_photo_width(): int
+{
+    return 1200;
+}
+
+/** Max width for Google Places photos in the profile gallery grid. */
+function ecp_profile_gallery_photo_width(): int
+{
+    return 1200;
+}
+
+/**
+ * Hero photo for a directory profile — optimised for sharpness on retina screens.
+ *
+ * Listing cards prefer tenant logo → Google → placeholder. The large hero is
+ * displayed at ~200px CSS but needs ~600–1200px source on 2×/3× displays.
+ * Small uploaded logos blur when scaled; Google photos are fetched at full width.
+ *
+ * @return array{url: ?string, google_photo_url: ?string, initials: string, gradient: int}
+ */
+function ecp_profile_hero_photo(array $row): array
+{
+    $width = ecp_profile_hero_photo_width();
+    $avatar = ecp_directory_avatar($row, $width, ['use_clinic_logo' => false]);
+    $googleUrl = $avatar['google_photo_url'] ?? null;
+    $userPhoto = ecp_upload_public_url($row['user_photo_path'] ?? $row['photo_path'] ?? null);
+    $logoUrl = ecp_upload_public_url($row['clinic_logo_path'] ?? $row['logo_path'] ?? null);
+
+    // Prefer high-res Google photo for the hero; fall back to uploads, then logo.
+    $url = $googleUrl ?? $userPhoto ?? $logoUrl;
+
+    return [
+        'url'              => $url,
+        'google_photo_url' => $googleUrl,
+        'initials'         => $avatar['initials'],
+        'gradient'           => $avatar['gradient'],
+    ];
+}
+
 /** @param array<string, mixed> $row @param array<string, mixed> $cityMeta */
 function ecp_profile_build_payload(PDO $db, array $row, string $entityType, string $citySlug, array $cityMeta): array
 {
     $entityType = ecp_directory_entity_type($row);
     $displayName = $entityType === 'doctor' ? ecp_directory_display_name($row) : ecp_directory_clinic_base_name($row);
     $specLabel = $row['specialty_label'] ?? ecp_specialty_label($row['specialty'] ?? null);
-    $avatar = ecp_directory_avatar($row, 800);
+    $heroPhoto = ecp_profile_hero_photo($row);
+    $galleryWidth = ecp_profile_gallery_photo_width();
 
     $hours = null;
     $claimedTenantId = (int) ($row['claimed_tenant_id'] ?? 0);
@@ -680,12 +721,12 @@ function ecp_profile_build_payload(PDO $db, array $row, string $entityType, stri
         $seenImageUrls[$url] = true;
         $images[] = ['url' => $url, 'alt' => $alt, 'type' => 'photo'];
     };
-    $pushImage($avatar['url'], $displayName);
-    if (($avatar['google_photo_url'] ?? null) !== ($avatar['url'] ?? null)) {
-        $pushImage($avatar['google_photo_url'] ?? null, $displayName);
+    $pushImage($heroPhoto['url'], $displayName);
+    if (($heroPhoto['google_photo_url'] ?? null) !== ($heroPhoto['url'] ?? null)) {
+        $pushImage($heroPhoto['google_photo_url'] ?? null, $displayName);
     }
     foreach (ecp_directory_photo_refs($row) as $ref) {
-        $pushImage(ecp_doctor_photo_url($ref, 800), $displayName);
+        $pushImage(ecp_doctor_photo_url($ref, $galleryWidth), $displayName);
     }
 
     $phone = trim((string) ($row['phone'] ?? ''));
@@ -757,7 +798,7 @@ function ecp_profile_build_payload(PDO $db, array $row, string $entityType, stri
                     'photo_reference' => $row['photo_reference'] ?? null,
                     'photo_references' => $row['photo_references'] ?? null,
                     'name' => $row['name'] ?? '',
-                ], 120, ['use_clinic_logo' => false]);
+                ], 400, ['use_clinic_logo' => false]);
                 $doctors[] = [
                     'name' => $name,
                     'spec_label' => ecp_specialty_label($u['specialization'] ?? ($row['specialty'] ?? null)),
@@ -849,10 +890,10 @@ function ecp_profile_build_payload(PDO $db, array $row, string $entityType, stri
         'fee' => $fee,
         'currency' => $currencySymbol,
         'images' => $images,
-        'photo_url' => $avatar['url'],
-        'google_photo_url' => $avatar['google_photo_url'] ?? null,
-        'avatar_initials' => $avatar['initials'],
-        'avatar_gradient' => $avatar['gradient'],
+        'photo_url' => $heroPhoto['url'],
+        'google_photo_url' => $heroPhoto['google_photo_url'] ?? null,
+        'avatar_initials' => $heroPhoto['initials'],
+        'avatar_gradient' => $heroPhoto['gradient'],
         'treatments' => $treatments,
         'treatments_custom' => $customServices !== [],
         'doctors' => $doctors,
