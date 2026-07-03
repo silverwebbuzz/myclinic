@@ -66,11 +66,11 @@ final class WordPressAdminController
 
     public function grantAccess(Request $request): Response
     {
-        $userId = (int) ($request->post['user_id'] ?? 0);
+        $directoryDoctorId = (int) ($request->post['directory_doctor_id'] ?? $request->post['user_id'] ?? 0);
         $admin = RequestContext::superAdmin();
         $adminId = (int) ($admin['id'] ?? 0);
 
-        $result = WordPressDoctorService::grantAccess($userId, $adminId);
+        $result = WordPressDoctorService::grantAccess($directoryDoctorId, $adminId);
         if (!$result['ok']) {
             return Response::redirect('/admin/wordpress-doctors?error=' . rawurlencode((string) ($result['error'] ?? 'Failed')));
         }
@@ -82,12 +82,12 @@ final class WordPressAdminController
 
     public function revokeAccess(Request $request): Response
     {
-        $userId = (int) ($request->post['user_id'] ?? 0);
+        $directoryDoctorId = (int) ($request->post['directory_doctor_id'] ?? $request->post['user_id'] ?? 0);
         $admin = RequestContext::superAdmin();
         $adminId = (int) ($admin['id'] ?? 0);
         $deleteWpUser = ($request->post['delete_wp_user'] ?? '1') === '1';
 
-        $result = WordPressDoctorService::revokeAccess($userId, $adminId, $deleteWpUser);
+        $result = WordPressDoctorService::revokeAccess($directoryDoctorId, $adminId, $deleteWpUser);
         if (!$result['ok']) {
             return Response::redirect('/admin/wordpress-doctors?error=' . rawurlencode((string) ($result['error'] ?? 'Failed')));
         }

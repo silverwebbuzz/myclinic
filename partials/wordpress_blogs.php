@@ -83,11 +83,6 @@ function ecp_wordpress_is_configured(): bool
 /** @return list<int> */
 function ecp_wordpress_author_ids_for_listing(PDO $db, array $row, string $entityType): array
 {
-    $claimedTenantId = (int) ($row['claimed_tenant_id'] ?? 0);
-    if ($claimedTenantId <= 0) {
-        return [];
-    }
-
     try {
         $db->query('SELECT 1 FROM wordpress_doctor_links LIMIT 1');
     } catch (Throwable) {
@@ -96,17 +91,24 @@ function ecp_wordpress_author_ids_for_listing(PDO $db, array $row, string $entit
 
     if ($entityType === 'doctor') {
         $directoryId = (int) ($row['id'] ?? 0);
+        if ($directoryId <= 0) {
+            return [];
+        }
         $stmt = $db->prepare(
             "SELECT wp_user_id FROM wordpress_doctor_links
-             WHERE status = 'active'
-               AND (directory_doctor_id = :did OR (clinic_id = :cid AND directory_doctor_id IS NULL))
+             WHERE status = 'active' AND directory_doctor_id = :did
              LIMIT 5"
         );
-        $stmt->execute(['did' => $directoryId, 'cid' => $claimedTenantId]);
+        $stmt->execute(['did' => $directoryId]);
     } else {
+        $claimedTenantId = (int) ($row['claimed_tenant_id'] ?? 0);
+        if ($claimedTenantId <= 0) {
+            return [];
+        }
         $stmt = $db->prepare(
-            "SELECT wp_user_id FROM wordpress_doctor_links
-             WHERE status = 'active' AND clinic_id = :cid"
+            "SELECT wdl.wp_user_id FROM wordpress_doctor_links wdl
+             INNER JOIN directory_doctors dd ON dd.id = wdl.directory_doctor_id
+             WHERE wdl.status = 'active' AND dd.claimed_tenant_id = :cid"
         );
         $stmt->execute(['cid' => $claimedTenantId]);
     }

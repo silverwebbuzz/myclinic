@@ -25,8 +25,8 @@ $msg = isset($message) ? ($statusLabels[$message] ?? str_replace('_', ' ', (stri
             <div>
                 <h1 class="text-xl font-semibold">Doctor blog access</h1>
                 <p class="text-sm text-slate-500 mt-1">
-                    Grant WordPress author accounts to doctors. Posts appear on their public eClinicPro profile and in the doctor panel Blogs module.
-                    <strong><?= (int) $total ?></strong> doctors.
+                    Grant WordPress author accounts to directory listings. Posts appear on the public eClinicPro profile and in the doctor panel when the listing is claimed.
+                    <strong><?= (int) $total ?></strong> listings.
                 </p>
             </div>
             <?php if ($wpConfigured): ?>
@@ -63,7 +63,7 @@ $msg = isset($message) ? ($statusLabels[$message] ?? str_replace('_', ' ', (stri
         <?php endif; ?>
 
         <form method="get" action="/admin/wordpress-doctors" class="mt-4 flex gap-2">
-            <input type="search" name="q" value="<?= htmlspecialchars($search) ?>" placeholder="Search doctor, email, clinic…"
+            <input type="search" name="q" value="<?= htmlspecialchars($search) ?>" placeholder="Search name, city, clinic…"
                    class="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
             <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">Search</button>
         </form>
@@ -72,9 +72,9 @@ $msg = isset($message) ? ($statusLabels[$message] ?? str_replace('_', ' ', (stri
             <table class="min-w-full text-sm">
                 <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr>
-                        <th class="px-4 py-3">Doctor</th>
-                        <th class="px-4 py-3">Clinic</th>
-                        <th class="px-4 py-3">Role</th>
+                        <th class="px-4 py-3">Listing</th>
+                        <th class="px-4 py-3">Clinic / location</th>
+                        <th class="px-4 py-3">Status</th>
                         <th class="px-4 py-3">WordPress</th>
                         <th class="px-4 py-3 text-right">Action</th>
                     </tr>
@@ -87,12 +87,22 @@ $msg = isset($message) ? ($statusLabels[$message] ?? str_replace('_', ' ', (stri
                     <tr class="hover:bg-slate-50/80">
                         <td class="px-4 py-3">
                             <div class="font-medium text-slate-900"><?= htmlspecialchars((string) $doc['name']) ?></div>
-                            <div class="text-xs text-slate-500"><?= htmlspecialchars((string) $doc['email']) ?></div>
+                            <?php if (!empty($doc['listing_name']) && $doc['listing_name'] !== $doc['name']): ?>
+                            <div class="text-xs text-slate-500"><?= htmlspecialchars((string) $doc['listing_name']) ?></div>
+                            <?php endif; ?>
+                            <?php if (($doc['email'] ?? '') !== '—'): ?>
+                            <div class="text-xs text-slate-400"><?= htmlspecialchars((string) $doc['email']) ?></div>
+                            <?php endif; ?>
                         </td>
-                        <td class="px-4 py-3 text-slate-600"><?= htmlspecialchars((string) $doc['clinic_name']) ?></td>
+                        <td class="px-4 py-3 text-slate-600">
+                            <div><?= htmlspecialchars((string) $doc['clinic_name']) ?></div>
+                            <?php if (!empty($doc['location'])): ?>
+                            <div class="text-xs text-slate-400"><?= htmlspecialchars((string) $doc['location']) ?></div>
+                            <?php endif; ?>
+                        </td>
                         <td class="px-4 py-3">
-                            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
-                                <?= !empty($doc['is_owner']) ? 'Owner' : htmlspecialchars((string) $doc['role']) ?>
+                            <span class="rounded-full px-2 py-0.5 text-xs <?= !empty($doc['is_claimed']) ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600' ?>">
+                                <?= !empty($doc['is_claimed']) ? 'Claimed' : 'Listed' ?>
                             </span>
                         </td>
                         <td class="px-4 py-3">
@@ -109,7 +119,7 @@ $msg = isset($message) ? ($statusLabels[$message] ?? str_replace('_', ' ', (stri
                             <form method="post" action="/admin/wordpress-doctors/grant" class="inline"
                                   onsubmit="return confirm('Create a WordPress author account for <?= htmlspecialchars(addslashes((string) $doc['name'])) ?>?');">
                                 <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
-                                <input type="hidden" name="user_id" value="<?= (int) $doc['id'] ?>">
+                                <input type="hidden" name="directory_doctor_id" value="<?= (int) $doc['id'] ?>">
                                 <button type="submit" class="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700">
                                     WordPress access
                                 </button>
@@ -118,7 +128,7 @@ $msg = isset($message) ? ($statusLabels[$message] ?? str_replace('_', ' ', (stri
                             <form method="post" action="/admin/wordpress-doctors/revoke" class="inline"
                                   onsubmit="return confirm('Remove WordPress blog access for <?= htmlspecialchars(addslashes((string) $doc['name'])) ?>?\n\nThis will unlink them in eClinicPro and delete their WordPress author account.');">
                                 <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
-                                <input type="hidden" name="user_id" value="<?= (int) $doc['id'] ?>">
+                                <input type="hidden" name="directory_doctor_id" value="<?= (int) $doc['id'] ?>">
                                 <input type="hidden" name="delete_wp_user" value="1">
                                 <button type="submit" class="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50">
                                     Remove access
