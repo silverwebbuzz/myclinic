@@ -79,7 +79,7 @@ final class BlogController
         $postId = (int) ($request->post['post_id'] ?? 0);
         $title = trim((string) ($request->post['title'] ?? ''));
         $content = trim((string) ($request->post['content'] ?? ''));
-        $excerpt = trim((string) ($request->post['excerpt'] ?? ''));
+        $excerpt = trim(strip_tags(html_entity_decode(trim((string) ($request->post['excerpt'] ?? '')), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
         $status = (string) ($request->post['status'] ?? 'draft');
         $status = in_array($status, ['draft', 'publish', 'pending'], true) ? $status : 'draft';
 

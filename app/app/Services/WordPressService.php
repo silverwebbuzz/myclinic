@@ -270,7 +270,7 @@ final class WordPressService
         $posts = [];
         foreach ($resp['body'] as $post) {
             if (is_array($post)) {
-                $posts[] = self::normalizePost($post, true);
+                $posts[] = self::normalizePost($post);
             }
         }
 
@@ -378,18 +378,21 @@ final class WordPressService
 
         $excerpt = $post['excerpt'] ?? '';
         if (is_array($excerpt)) {
-            $excerpt = $excerpt['rendered'] ?? '';
+            $excerpt = $excerpt['raw'] ?? ($excerpt['rendered'] ?? '');
         }
 
         $content = $post['content'] ?? '';
         if (is_array($content)) {
-            $content = $content['rendered'] ?? ($content['raw'] ?? '');
+            // Prefer raw HTML when editing (context=edit); rendered for public reads.
+            $content = $content['raw'] ?? ($content['rendered'] ?? '');
         }
+
+        $excerptDecoded = trim(html_entity_decode((string) $excerpt, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
 
         $normalized = [
             'id' => (int) ($post['id'] ?? 0),
             'title' => html_entity_decode(strip_tags((string) $title), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
-            'excerpt' => trim(strip_tags(html_entity_decode((string) $excerpt, ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
+            'excerpt' => trim(strip_tags($excerptDecoded)),
             'link' => (string) ($post['link'] ?? ''),
             'date' => (string) ($post['date'] ?? ''),
             'status' => (string) ($post['status'] ?? ''),
