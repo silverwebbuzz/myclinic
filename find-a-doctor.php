@@ -848,13 +848,11 @@ require __DIR__ . '/partials/header.php';
             <!-- Pagination -->
             <div class="fd-pager" x-show="totalPages() > 1">
                 <button type="button" class="fd-pg" :disabled="page === 1" @click="goPage(page - 1)">← Prev</button>
-                <template x-for="p in pageNumbers()" :key="p + '-' + Math.random()">
-                    <template x-if="p === '…'">
-                        <span class="fd-pg-ellipsis">…</span>
-                    </template>
-                    <template x-if="p !== '…'">
-                        <button type="button" class="fd-pg" :class="p === page ? 'is-active' : ''" @click="goPage(p)" x-text="p"></button>
-                    </template>
+                <template x-for="(p, idx) in pageNumbers()" :key="idx">
+                    <span style="display:contents">
+                        <span x-show="p === '…'" class="fd-pg-ellipsis">…</span>
+                        <button x-show="p !== '…'" type="button" class="fd-pg" :class="p === page ? 'is-active' : ''" @click="goPage(p)" x-text="p"></button>
+                    </span>
                 </template>
                 <button type="button" class="fd-pg" :disabled="page === totalPages()" @click="goPage(page + 1)">Next →</button>
             </div>
