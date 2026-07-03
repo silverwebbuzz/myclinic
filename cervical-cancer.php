@@ -1542,6 +1542,11 @@ ob_start(); ?>
     min-height: 72px;
   }
 
+  .cc-how-card-ph img{height:100%;width:100%;object-fit:cover;max-width:100%;}
+.cc-how-card-ph{overflow:hidden;}
+
+.cc-how-footer-pills span:nth-child(3) img{filter: brightness(0) saturate(100%) invert(28%) sepia(63%) saturate(1045%) hue-rotate(134deg) brightness(92%) contrast(93%);}
+
   .cc-how-card h3 {
     font-size: 15px;
     font-weight: 700;
@@ -2511,10 +2516,10 @@ ob_start(); ?>
 
   .cc-gov-hero-ph {
     width: 100%;
-    aspect-ratio: 16/9;
-    border-radius: 22px;
-    border: 1px dashed #c6e3d9;
-    background: linear-gradient(135deg, #edf7f3 0%, #e6f2ee 55%, #f8fbfa 100%);
+    aspect-ratio: 16/0;
+    /* border-radius: 22px; */
+    /* border: 1px dashed #c6e3d9; */
+    background: transparent;
     display: grid;
     place-items: center;
     overflow: hidden;
@@ -4020,7 +4025,7 @@ require __DIR__ . '/partials/header.php';
       <div class="cc-how-arrow" aria-hidden="true">→</div>
       <article class="cc-how-card">
         <figure class="cc-how-card-media">
-          <div class="cc-how-card-ph" role="img" aria-label="Cervical cancer — add later"> <img src="assets/img/eclinicpro-Cervical-cancer.png" alt="Cervical cancer" loading="lazy">
+          <div class="cc-how-card-ph" role="img" aria-label="Cervical cancer — add later"> <img src="assets/img/eclinicpro-Cervical-Cancer.png" alt="Cervical cancer" loading="lazy">
           </div>
         </figure>
         <h3>Cervical cancer</h3>
@@ -4071,7 +4076,7 @@ require __DIR__ . '/partials/header.php';
             <path d="M12 8v8" />
             <path d="M8 12h8" />
           </svg> -->
-          <img src="/assets/img/eclinicpro-Early-detection-icon.png" alt="Early detection illustration" loading="lazy">
+          <img src="/assets/img/eclinicpro-early-detection.png" alt="Early detection illustration" loading="lazy">
           Early Detection</span>
         <span>
           <!-- <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -5003,7 +5008,7 @@ require __DIR__ . '/partials/header.php';
       <figure class="cc-gov-hero">
         <!-- Replace placeholder with your image: <img class="cc-gov-hero-img" src="/path/to/campaign-hero.jpg" alt="HPV vaccination campaign launch" loading="lazy"> -->
         <div class="cc-gov-hero-ph" role="img" aria-label="Campaign launch photo — image coming soon">
-          <img src="/assets/img/eclinicpro-Government-of-India-Hero-image.png" alt="Campaign launch photo" loading="lazy">
+          <img src="/assets/img/eclinicpro-Government-of-India-Hero-imagee.png" alt="Campaign launch photo" loading="lazy">
           <!-- <span>Hero image — add later</span> -->
         </div>
       </figure>
