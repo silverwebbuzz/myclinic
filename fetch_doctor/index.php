@@ -624,62 +624,27 @@ function fetch_text_search(string $apiKey, string $query, float $lat, float $lng
         'region'   => 'in',
         'key'      => $apiKey,
     ];
+    // SINGLE PAGE ONLY. Google's legacy next_page_token pagination is a proven
+    // dead end for these queries — it returns INVALID_REQUEST on page 2 even
+    // after 26s of polling (confirmed in logs). Chasing it wasted ~10 requests
+    // and ~26 seconds PER cell. Coverage instead comes from the COVERAGE GRID:
+    // many small cells, each returning its own ≤20 in one page. So we take page
+    // 1 and stop — fast + cheap, no token waiting.
     $all = [];
-    $pageToken = null;
     $pagesFetched = 0;
-    for ($page = 0; $page < 3; $page++) {
-        if ($pageToken !== null) {
-            // Google's next_page_token is NOT valid immediately — there's a
-            // propagation delay. Requesting too soon returns INVALID_REQUEST and
-            // (previously) silently capped us at page 1 = 20 results. Poll the
-            // token: wait, try, and if it's still "not ready" wait longer and
-            // retry a few times before giving up. This is what lets a saturated
-            // cell reach the full 60, which in turn triggers the sub-area grid.
-            // http_get_json() returns null when the token isn't ready yet
-            // (INVALID_REQUEST) — so poll with escalating waits until it returns
-            // real data or we exhaust the tries.
-            $params = ['pagetoken' => $pageToken, 'key' => $apiKey];
-            $url = 'https://maps.googleapis.com/maps/api/place/textsearch/json?' . http_build_query($params);
-            $data = null;
-            $tries = 0;
-            $lastStatus = '';
-            foreach ([3, 4, 5, 6, 8] as $wait) {   // up to ~26s across tries
-                sleep($wait);
-                $tries++;
-                $data = http_get_json($url, $reqCount);
-                $lastStatus = (string) ($GLOBALS['fd_last_places_status'] ?? '');
-                if ($data !== null && !empty($data['results'])) break;  // page ready
-                $data = null;  // INVALID_REQUEST/not-ready → keep polling
-            }
-            if (function_exists('fd_debug_trace')) {
-                fd_debug_trace(
-                    sprintf('[page %d fetch: %d tries, last status=%s, got %s]',
-                        $page + 1, $tries, $lastStatus !== '' ? $lastStatus : 'null',
-                        $data ? (count($data['results'] ?? []) . ' results') : 'NOTHING'),
-                    200, 'PAGEFETCH', '', $data ? count($data['results'] ?? []) : 0
-                );
-            }
-        } else {
-            $params = $baseParams;
-            $url = 'https://maps.googleapis.com/maps/api/place/textsearch/json?' . http_build_query($params);
-            $data = http_get_json($url, $reqCount);
-        }
-        if (!$data) break;
-        $pagesFetched++;
+    $url = 'https://maps.googleapis.com/maps/api/place/textsearch/json?' . http_build_query($baseParams);
+    $data = http_get_json($url, $reqCount);
+    if ($data) {
+        $pagesFetched = 1;
         foreach ((array) ($data['results'] ?? []) as $row) $all[] = $row;
-        $pageToken = $data['next_page_token'] ?? null;
-        // DEBUG: record whether Google offered another page. If token is present
-        // but we still stop at 20, pagination is broken; if absent, 20 is all
-        // Google has for this area (correct).
         if (function_exists('fd_debug_trace')) {
+            $hasMore = !empty($data['next_page_token']);
             fd_debug_trace(
-                sprintf('[page %d done: %d results, next_page_token=%s]',
-                    $page + 1, count((array) ($data['results'] ?? [])),
-                    $pageToken ? 'YES' : 'none'),
+                sprintf('[page 1: %d results%s]', count((array) ($data['results'] ?? [])),
+                    $hasMore ? ', more available (grid covers it)' : ''),
                 200, 'PAGEINFO', '', count((array) ($data['results'] ?? []))
             );
         }
-        if (!$pageToken) break;
     }
 
     // Fallback: legacy Text Search returned nothing. If the key has ONLY
