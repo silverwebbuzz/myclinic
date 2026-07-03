@@ -56,7 +56,7 @@ function ecp_wordpress_setting(string $key): string
     return ecp_wordpress_config()[$key] ?? '';
 }
 
-/** @return list<array{title: string, excerpt: string, link: string, date: string}> */
+/** @return list<array{title: string, excerpt: string, link: string, date: string, image: string, image_alt: string, category: string, category_slug: string, author_name: string, author_avatar: string}> */
 function ecp_wordpress_posts_for_listing(PDO $db, array $row, string $entityType, int $limit = 6): array
 {
     ecp_wordpress_sync_stale_links($db);
@@ -124,7 +124,7 @@ function ecp_wordpress_author_ids_for_listing(PDO $db, array $row, string $entit
     return array_values(array_unique($ids));
 }
 
-/** @param list<int> $authorIds @return list<array{title: string, excerpt: string, link: string, date: string}> */
+/** @param list<int> $authorIds @return list<array{title: string, excerpt: string, link: string, date: string, image: string, image_alt: string, category: string, category_slug: string, author_name: string, author_avatar: string}> */
 function ecp_wordpress_fetch_posts(array $authorIds, int $limit = 6): array
 {
     $base = rtrim(ecp_wordpress_setting('wordpress_api_url'), '/');
@@ -133,12 +133,13 @@ function ecp_wordpress_fetch_posts(array $authorIds, int $limit = 6): array
     $secret = ecp_wordpress_setting('wordpress_bridge_secret');
 
     $all = [];
+    $seenLinks = [];
     foreach ($authorIds as $authorId) {
         $query = http_build_query([
             'author' => $authorId,
             'status' => 'publish',
             'per_page' => min(10, $limit),
-            '_fields' => 'id,title,excerpt,link,date',
+            '_embed' => 'author,wp:featuredmedia,wp:term',
         ]);
         $url = $base . '/wp/v2/posts?' . $query;
 
@@ -174,26 +175,97 @@ function ecp_wordpress_fetch_posts(array $authorIds, int $limit = 6): array
             if (!is_array($post)) {
                 continue;
             }
-            $title = $post['title'] ?? '';
-            if (is_array($title)) {
-                $title = $title['rendered'] ?? '';
+            $shaped = ecp_wordpress_shape_post($post);
+            if ($shaped === null || $shaped['link'] === '' || isset($seenLinks[$shaped['link']])) {
+                continue;
             }
-            $excerpt = $post['excerpt'] ?? '';
-            if (is_array($excerpt)) {
-                $excerpt = $excerpt['rendered'] ?? '';
-            }
-            $all[] = [
-                'title' => html_entity_decode(strip_tags((string) $title), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
-                'excerpt' => trim(strip_tags(html_entity_decode((string) $excerpt, ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
-                'link' => (string) ($post['link'] ?? ''),
-                'date' => (string) ($post['date'] ?? ''),
-            ];
+            $seenLinks[$shaped['link']] = true;
+            $all[] = $shaped;
         }
     }
 
     usort($all, static fn (array $a, array $b) => strcmp($b['date'], $a['date']));
 
     return array_slice($all, 0, $limit);
+}
+
+/** @param array<string, mixed> $post @return array{title: string, excerpt: string, link: string, date: string, image: string, image_alt: string, category: string, category_slug: string, author_name: string, author_avatar: string}|null */
+function ecp_wordpress_shape_post(array $post): ?array
+{
+    $title = $post['title'] ?? '';
+    if (is_array($title)) {
+        $title = $title['rendered'] ?? '';
+    }
+    $excerpt = $post['excerpt'] ?? '';
+    if (is_array($excerpt)) {
+        $excerpt = $excerpt['rendered'] ?? '';
+    }
+    $title = html_entity_decode(strip_tags((string) $title), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $excerpt = trim(strip_tags(html_entity_decode((string) $excerpt, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+    if (mb_strlen($excerpt) > 140) {
+        $excerpt = rtrim(mb_substr($excerpt, 0, 137)) . '…';
+    }
+
+    $embedded = is_array($post['_embedded'] ?? null) ? $post['_embedded'] : [];
+    $image = '';
+    $imageAlt = $title;
+    $media = $embedded['wp:featuredmedia'][0] ?? null;
+    if (is_array($media)) {
+        $imageAlt = trim((string) ($media['alt_text'] ?? $title));
+        $sizes = is_array($media['media_details']['sizes'] ?? null) ? $media['media_details']['sizes'] : [];
+        foreach (['medium_large', 'large', 'neve-blog', 'medium'] as $sizeKey) {
+            if (!empty($sizes[$sizeKey]['source_url'])) {
+                $image = (string) $sizes[$sizeKey]['source_url'];
+                break;
+            }
+        }
+        if ($image === '') {
+            $image = (string) ($media['source_url'] ?? '');
+        }
+    }
+
+    $category = '';
+    $categorySlug = '';
+    foreach ((array) ($embedded['wp:term'] ?? []) as $termGroup) {
+        if (!is_array($termGroup)) {
+            continue;
+        }
+        foreach ($termGroup as $term) {
+            if (!is_array($term) || ($term['taxonomy'] ?? '') !== 'category') {
+                continue;
+            }
+            $category = (string) ($term['name'] ?? '');
+            $categorySlug = (string) ($term['slug'] ?? '');
+            break 2;
+        }
+    }
+
+    $authorName = '';
+    $authorAvatar = '';
+    $author = $embedded['author'][0] ?? null;
+    if (is_array($author)) {
+        $authorName = (string) ($author['name'] ?? '');
+        $avatars = is_array($author['avatar_urls'] ?? null) ? $author['avatar_urls'] : [];
+        $authorAvatar = (string) ($avatars['48'] ?? $avatars['96'] ?? $avatars['24'] ?? '');
+    }
+
+    $link = (string) ($post['link'] ?? '');
+    if ($title === '' && $link === '') {
+        return null;
+    }
+
+    return [
+        'title'          => $title,
+        'excerpt'        => $excerpt,
+        'link'           => $link,
+        'date'           => (string) ($post['date'] ?? ''),
+        'image'          => $image,
+        'image_alt'      => $imageAlt,
+        'category'       => $category,
+        'category_slug'  => $categorySlug,
+        'author_name'    => $authorName,
+        'author_avatar'  => $authorAvatar,
+    ];
 }
 
 /** Revoke links when the WordPress author was deleted outside eClinicPro. */

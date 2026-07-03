@@ -128,20 +128,53 @@ $ratingVal = (float) ($p['rating'] ?? 0);
                             <h2>About</h2>
                             <p class="dp-about"><?= !empty($p['bio']) ? nl2br(e($p['bio'])) : e(($p['display_name'] ?? '') . ' is a ' . strtolower($p['specialty_label'] ?? 'doctor') . ' in ' . ($p['city'] ?? '') . '.') ?></p>
                             <?php if (!empty($p['blog_posts'])): ?>
-                            <h2 style="margin-top: 28px">Articles &amp; insights</h2>
-                            <ul class="dp-blog-list">
+                            <h2 class="dp-section-title">Articles &amp; insights</h2>
+                            <div class="dp-blog-grid">
                                 <?php foreach ($p['blog_posts'] as $blog): ?>
-                                <li class="dp-blog-item">
-                                    <a href="<?= e((string) ($blog['link'] ?? '#')) ?>" target="_blank" rel="noopener" class="dp-blog-title"><?= e((string) ($blog['title'] ?? '')) ?></a>
-                                    <?php if (!empty($blog['date'])): ?>
-                                    <time class="dp-blog-date" datetime="<?= e((string) $blog['date']) ?>"><?= e(date('d M Y', strtotime((string) $blog['date']))) ?></time>
+                                <?php
+                                    $blogLink = (string) ($blog['link'] ?? '#');
+                                    $blogDate = !empty($blog['date']) ? date('M j, Y', strtotime((string) $blog['date'])) : '';
+                                    $catSlug = preg_replace('/[^a-z0-9-]+/', '-', strtolower((string) ($blog['category_slug'] ?? ''))) ?? '';
+                                    $catSlug = trim($catSlug, '-');
+                                ?>
+                                <article class="dp-blog-card">
+                                    <?php if (!empty($blog['image'])): ?>
+                                    <a href="<?= e($blogLink) ?>" target="_blank" rel="noopener" class="dp-blog-card-media">
+                                        <img src="<?= e((string) $blog['image']) ?>" alt="<?= e((string) ($blog['image_alt'] ?? $blog['title'] ?? '')) ?>" class="dp-blog-card-img" loading="lazy" decoding="async">
+                                    </a>
+                                    <?php else: ?>
+                                    <a href="<?= e($blogLink) ?>" target="_blank" rel="noopener" class="dp-blog-card-media dp-blog-card-media--placeholder" aria-label="<?= e((string) ($blog['title'] ?? 'Article')) ?>">
+                                        <span class="dp-blog-card-placeholder" aria-hidden="true"><?= dp_icon('stetho') ?></span>
+                                    </a>
                                     <?php endif; ?>
-                                    <?php if (!empty($blog['excerpt'])): ?>
-                                    <p class="dp-blog-excerpt"><?= e((string) $blog['excerpt']) ?></p>
-                                    <?php endif; ?>
-                                </li>
+                                    <div class="dp-blog-card-body">
+                                        <?php if (!empty($blog['category'])): ?>
+                                        <span class="dp-blog-card-cat<?= $catSlug !== '' ? ' dp-blog-cat-' . e($catSlug) : '' ?>"><?= e(strtoupper((string) $blog['category'])) ?></span>
+                                        <?php endif; ?>
+                                        <h3 class="dp-blog-card-title">
+                                            <a href="<?= e($blogLink) ?>" target="_blank" rel="noopener"><?= e((string) ($blog['title'] ?? '')) ?></a>
+                                        </h3>
+                                        <?php if (!empty($blog['excerpt'])): ?>
+                                        <p class="dp-blog-card-excerpt"><?= e((string) $blog['excerpt']) ?></p>
+                                        <?php endif; ?>
+                                        <div class="dp-blog-card-meta">
+                                            <?php if (!empty($blog['author_avatar'])): ?>
+                                            <img src="<?= e((string) $blog['author_avatar']) ?>" alt="" class="dp-blog-card-avatar" width="32" height="32" loading="lazy" decoding="async">
+                                            <?php endif; ?>
+                                            <?php if (!empty($blog['author_name'])): ?>
+                                            <span class="dp-blog-card-author"><?= e((string) $blog['author_name']) ?></span>
+                                            <?php endif; ?>
+                                            <?php if (!empty($blog['author_name']) && $blogDate !== ''): ?>
+                                            <span class="dp-blog-card-sep" aria-hidden="true">·</span>
+                                            <?php endif; ?>
+                                            <?php if ($blogDate !== ''): ?>
+                                            <time class="dp-blog-card-date" datetime="<?= e((string) ($blog['date'] ?? '')) ?>"><?= e($blogDate) ?></time>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </article>
                                 <?php endforeach; ?>
-                            </ul>
+                            </div>
                             <?php endif; ?>
                         </section>
                         <?php if ($showTimingsTab): ?>
