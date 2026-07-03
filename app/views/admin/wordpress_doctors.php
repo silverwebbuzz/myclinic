@@ -145,14 +145,31 @@ $msg = isset($message) ? ($statusLabels[$message] ?? str_replace('_', ' ', (stri
             </table>
         </div>
 
-        <?php if (($pages ?? 1) > 1): ?>
-        <div class="mt-4 flex justify-center gap-2 text-sm">
-            <?php for ($i = 1; $i <= (int) $pages; $i++): ?>
-            <a href="/admin/wordpress-doctors?page=<?= $i ?><?= $search ? '&q=' . rawurlencode($search) : '' ?>"
-               class="rounded px-3 py-1 <?= $i === (int) $page ? 'bg-slate-800 text-white' : 'bg-white border text-slate-600 hover:bg-slate-50' ?>">
-                <?= $i ?>
-            </a>
-            <?php endfor; ?>
+        <?php
+        $pageNum = (int) ($page ?? 1);
+        $pageTotal = (int) ($pages ?? 1);
+        $pageQs = static fn (int $p): string => '/admin/wordpress-doctors?' . http_build_query(array_filter([
+            'q' => $search !== '' ? $search : null,
+            'page' => $p > 1 ? $p : null,
+        ]));
+        ?>
+        <?php if ($pageTotal > 1): ?>
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+            <span class="text-slate-500">
+                Page <?= $pageNum ?> of <?= number_format($pageTotal) ?> · <?= number_format((int) $total) ?> listing<?= (int) $total === 1 ? '' : 's' ?>
+            </span>
+            <div class="flex items-center gap-2">
+                <?php if ($pageNum > 1): ?>
+                <a href="<?= htmlspecialchars($pageQs($pageNum - 1)) ?>" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50">← Previous</a>
+                <?php else: ?>
+                <span class="rounded-lg border border-slate-200 px-3 py-1.5 text-slate-300">← Previous</span>
+                <?php endif; ?>
+                <?php if ($pageNum < $pageTotal): ?>
+                <a href="<?= htmlspecialchars($pageQs($pageNum + 1)) ?>" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 hover:bg-slate-50">Next →</a>
+                <?php else: ?>
+                <span class="rounded-lg border border-slate-200 px-3 py-1.5 text-slate-300">Next →</span>
+                <?php endif; ?>
+            </div>
         </div>
         <?php endif; ?>
     </main>
