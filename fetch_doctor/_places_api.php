@@ -111,11 +111,17 @@ function fd_http_post_json(string $url, array $body, array $headers, int &$reqCo
         $errStatus = (string) ($data['error']['status'] ?? ('HTTP_' . $code));
         $errMsg = (string) ($data['error']['message'] ?? '');
         fd_places_set_status($errStatus, $errMsg);
+        if (function_exists('fd_debug_trace')) {
+            fd_debug_trace('[NEW API] ' . $url, $code, $errStatus, $errMsg, 0);
+        }
 
         return null;
     }
 
     fd_places_set_status('OK');
+    if (function_exists('fd_debug_trace')) {
+        fd_debug_trace('[NEW API] ' . $url, $code, 'OK', '', count((array) ($data['places'] ?? [])));
+    }
 
     return $data;
 }
@@ -127,12 +133,19 @@ function fd_http_post_json(string $url, array $body, array $headers, int &$reqCo
  */
 function fd_places_new_search_text(string $apiKey, string $query, float $lat, float $lng, int $radius, int &$reqCount): array
 {
+    // The New Text Search caps at 20 results and CANNOT paginate. With
+    // locationBias (a soft hint) every area returned the same prominent
+    // city-wide 20 → "same 20 every time, areas not working". locationRestriction
+    // is a HARD filter: results MUST be inside the circle, so each tight area
+    // returns its OWN doctors. Union of many areas → real coverage despite the
+    // 20/query cap. (The clean fix is enabling legacy Places API, which paginates
+    // to 60 — but this makes the New-API fallback actually usable.)
     $payload = [
         'textQuery' => $query,
         'regionCode' => 'IN',
         'languageCode' => 'en',
-        'maxResultCount' => 5,
-        'locationBias' => [
+        'maxResultCount' => 20,   // New API hard max per call; no pagination
+        'locationRestriction' => [
             'circle' => [
                 'center' => ['latitude' => $lat, 'longitude' => $lng],
                 'radius' => (float) min($radius, 50000),
@@ -172,6 +185,69 @@ function fd_places_new_search_text(string $apiKey, string $query, float $lat, fl
     }
 
     return (array) ($data['places'] ?? []);
+}
+
+/**
+ * Places API (New) — Place Details by ID. Fallback for when the LEGACY
+ * place/details/json endpoint is denied (key has only "Places API (New)"
+ * enabled). Returns a legacy-shaped `result` array so callers are unchanged,
+ * or null on failure.
+ *
+ * @return array<string, mixed>|null
+ */
+function fd_places_new_details(string $apiKey, string $placeId, int &$reqCount): ?array
+{
+    $fieldMask = implode(',', [
+        'id', 'displayName', 'formattedAddress', 'location', 'types',
+        'businessStatus', 'rating', 'userRatingCount', 'nationalPhoneNumber',
+        'internationalPhoneNumber', 'websiteUri', 'googleMapsUri',
+        'regularOpeningHours', 'photos', 'reviews', 'priceLevel', 'plusCode',
+    ]);
+
+    $reqCount++;
+    $ch = curl_init('https://places.googleapis.com/v1/places/' . rawurlencode($placeId));
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 25,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_HTTPHEADER => [
+            'X-Goog-Api-Key: ' . $apiKey,
+            'X-Goog-FieldMask: ' . $fieldMask,
+        ],
+        CURLOPT_USERAGENT => 'eClinicPro-Fetcher/1.0',
+    ]);
+    $body = curl_exec($ch);
+    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($body === false || $code >= 400) {
+        $data = json_decode((string) $body, true);
+        fd_places_set_status(
+            (string) ($data['error']['status'] ?? ('HTTP_' . $code)),
+            (string) ($data['error']['message'] ?? ''),
+        );
+        return null;
+    }
+    $p = json_decode((string) $body, true);
+    if (!is_array($p) || empty($p['id'])) {
+        return null;
+    }
+    fd_places_set_status('OK');
+
+    // Reuse the bundle converter to get the legacy `details` shape, then add the
+    // extra detail-only fields the search bundle doesn't carry.
+    $bundle = fd_places_new_to_legacy_bundle($p);
+    $details = $bundle['details'];
+    if (isset($p['plusCode']['compoundCode'])) {
+        $details['plus_code'] = ['compound_code' => (string) $p['plusCode']['compoundCode']];
+    }
+    if (isset($p['priceLevel'])) {
+        // New API returns an enum like PRICE_LEVEL_MODERATE → map to 0-4.
+        $map = ['PRICE_LEVEL_FREE' => 0, 'PRICE_LEVEL_INEXPENSIVE' => 1, 'PRICE_LEVEL_MODERATE' => 2, 'PRICE_LEVEL_EXPENSIVE' => 3, 'PRICE_LEVEL_VERY_EXPENSIVE' => 4];
+        $details['price_level'] = $map[$p['priceLevel']] ?? null;
+    }
+
+    return $details;
 }
 
 /**

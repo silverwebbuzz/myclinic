@@ -45,7 +45,8 @@ CREATE TABLE IF NOT EXISTS directory_doctors (
     opening_hours   JSON NULL,                                   -- weekday_text[]
 
     -- Photo (NEVER store the photo bytes; just the reference. Build URL at display time.)
-    photo_reference VARCHAR(500) NULL,
+    photo_reference  VARCHAR(500) NULL,                          -- first photo (backward compat)
+    photo_references JSON NULL,                                  -- up to 5 refs; gallery
 
     -- Self-submitted fields (filled in only when a clinic claims their profile)
     consultation_fee         DECIMAL(10,2) NULL,

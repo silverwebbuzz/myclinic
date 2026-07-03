@@ -408,6 +408,7 @@ function places_type_acceptable(array $types): bool {
 
 require_once __DIR__ . '/_helpers.php';
 require_once __DIR__ . '/_places_api.php';
+require_once __DIR__ . '/_areas.php';
 
 function format_doctor(array $place, array $details, array $city, string $spec): array {
     $loc = $details['geometry']['location'] ?? [];
@@ -420,9 +421,21 @@ function format_doctor(array $place, array $details, array $city, string $spec):
         }
         if ($latest > 0) $lastReviewAt = date('Y-m-d H:i:s', $latest);
     }
+    // Collect up to 5 photo references. photo_reference (singular) stays the
+    // FIRST one for backward compatibility (existing find-a-doctor page +
+    // importer read it); photo_references (plural) holds the gallery. Note: a
+    // reference is a TOKEN, not a URL — exchange it via the Places Photo API to
+    // render (that render call is billed per image, so display 1, lazy-load rest).
     $photoRef = null;
-    if (isset($details['photos'][0]['photo_reference'])) {
-        $photoRef = (string) $details['photos'][0]['photo_reference'];
+    $photoRefs = [];
+    if (isset($details['photos']) && is_array($details['photos'])) {
+        foreach ($details['photos'] as $ph) {
+            if (!empty($ph['photo_reference'])) {
+                $photoRefs[] = (string) $ph['photo_reference'];
+                if (count($photoRefs) >= 5) break;
+            }
+        }
+        $photoRef = $photoRefs[0] ?? null;
     }
     $rawName = (string) ($details['name'] ?? $place['name'] ?? '');
     $address = $details['formatted_address'] ?? null;
@@ -452,6 +465,7 @@ function format_doctor(array $place, array $details, array $city, string $spec):
         'types'           => array_values((array) ($details['types'] ?? [])),
         'opening_hours'   => $details['opening_hours']['weekday_text'] ?? null,
         'photo_reference' => $photoRef,
+        'photo_references'=> $photoRefs,          // up to 5; gallery
         'fetched_at'      => date('Y-m-d H:i:s'),
     ];
 }
@@ -472,13 +486,22 @@ function quality_check(array $row, array $city): string {
 }
 
 function dedupe_by_place_id(array $rows): array {
-    $seen = [];
-    $out = [];
+    // Keep the LAST occurrence per place_id so a refreshed row (appended after
+    // its stale copy) wins — capturing changed photos/hours/phone. Preserves
+    // original ordering of first-seen positions.
+    $byId = [];
+    $order = [];
     foreach ($rows as $r) {
         $k = $r['place_id'] ?? null;
-        if (!$k || isset($seen[$k])) continue;
-        $seen[$k] = true;
-        $out[] = $r;
+        if (!$k) continue;
+        if (!isset($byId[$k])) {
+            $order[] = $k;
+        }
+        $byId[$k] = $r;   // later occurrence overwrites earlier
+    }
+    $out = [];
+    foreach ($order as $k) {
+        $out[] = $byId[$k];
     }
     return $out;
 }
@@ -486,6 +509,25 @@ function dedupe_by_place_id(array $rows): array {
 // =====================================================================
 // HTTP — Google Places calls (per-chunk; brief enough to fit in one PHP call)
 // =====================================================================
+
+/**
+ * Record one Google call for debugging. URL has the key redacted. The last N
+ * entries are surfaced in the job log + the ?debug view so we can see EXACTLY
+ * what was sent and what Google replied — no more guessing.
+ */
+function fd_debug_trace(string $url, int $httpCode, string $status, string $errMsg, int $resultCount): void {
+    if (!isset($GLOBALS['fd_debug_trace'])) {
+        $GLOBALS['fd_debug_trace'] = [];
+    }
+    $safeUrl = preg_replace('/([?&](?:key|X-Goog-Api-Key)=)[^&]+/i', '$1REDACTED', $url) ?? $url;
+    $GLOBALS['fd_debug_trace'][] = [
+        'url'     => $safeUrl,
+        'http'    => $httpCode,
+        'status'  => $status,
+        'error'   => $errMsg,
+        'results' => $resultCount,
+    ];
+}
 
 function http_get_json(string $url, int &$reqCount): ?array {
     for ($attempt = 1; $attempt <= 2; $attempt++) {
@@ -503,15 +545,19 @@ function http_get_json(string $url, int &$reqCount): ?array {
         curl_close($ch);
 
         if ($body === false || $code === 0 || ($code >= 500 && $code < 600)) {
+            fd_debug_trace($url, $code, 'NETWORK/5xx', $body === false ? 'curl failed' : '', 0);
             if ($attempt === 1) { sleep(2); continue; }
             return null;
         }
-        if ($code !== 200) return null;
         $data = json_decode((string) $body, true);
-        if (!is_array($data)) return null;
+        if ($code !== 200 || !is_array($data)) {
+            fd_debug_trace($url, $code, 'HTTP_' . $code, is_array($data) ? (string) ($data['error_message'] ?? '') : substr((string) $body, 0, 120), 0);
+            return null;
+        }
 
         $status = $data['status'] ?? '';
         $errMsg = (string) ($data['error_message'] ?? '');
+        fd_debug_trace($url, $code, $status !== '' ? $status : 'UNKNOWN', $errMsg, count((array) ($data['results'] ?? [])));
         if ($status !== '' || $errMsg !== '') {
             fd_places_set_status(
                 $status !== '' ? $status : ($code !== 200 ? 'HTTP_' . $code : 'UNKNOWN'),
@@ -527,7 +573,7 @@ function http_get_json(string $url, int &$reqCount): ?array {
     return null;
 }
 
-function fetch_text_search(string $apiKey, string $query, float $lat, float $lng, int $radius, int &$reqCount): array {
+function fetch_text_search(string $apiKey, string $query, float $lat, float $lng, int $radius, int &$reqCount, ?int &$pagesFetched = null): array {
     $baseParams = [
         'query'    => $query,
         'location' => sprintf('%f,%f', $lat, $lng),
@@ -537,20 +583,75 @@ function fetch_text_search(string $apiKey, string $query, float $lat, float $lng
     ];
     $all = [];
     $pageToken = null;
+    $pagesFetched = 0;
     for ($page = 0; $page < 3; $page++) {
         if ($pageToken !== null) {
-            sleep(3);
+            // Google's next_page_token is NOT valid immediately — there's a
+            // propagation delay. Requesting too soon returns INVALID_REQUEST and
+            // (previously) silently capped us at page 1 = 20 results. Poll the
+            // token: wait, try, and if it's still "not ready" wait longer and
+            // retry a few times before giving up. This is what lets a saturated
+            // cell reach the full 60, which in turn triggers the sub-area grid.
+            // http_get_json() returns null when the token isn't ready yet
+            // (INVALID_REQUEST) — so poll with escalating waits until it returns
+            // real data or we exhaust the tries.
             $params = ['pagetoken' => $pageToken, 'key' => $apiKey];
+            $url = 'https://maps.googleapis.com/maps/api/place/textsearch/json?' . http_build_query($params);
+            $data = null;
+            $tries = 0;
+            foreach ([3, 4, 5, 6, 8] as $wait) {   // up to ~26s across tries
+                sleep($wait);
+                $tries++;
+                $data = http_get_json($url, $reqCount);
+                if ($data !== null && !empty($data['results'])) break;  // page ready
+                $data = null;  // INVALID_REQUEST/not-ready → keep polling
+            }
+            if (function_exists('fd_debug_trace')) {
+                fd_debug_trace(
+                    sprintf('[page %d fetch: %d poll tries, got %s]',
+                        $page + 1, $tries, $data ? (count($data['results'] ?? []) . ' results') : 'NOTHING'),
+                    200, 'PAGEFETCH', '', $data ? count($data['results'] ?? []) : 0
+                );
+            }
         } else {
             $params = $baseParams;
+            $url = 'https://maps.googleapis.com/maps/api/place/textsearch/json?' . http_build_query($params);
+            $data = http_get_json($url, $reqCount);
         }
-        $url = 'https://maps.googleapis.com/maps/api/place/textsearch/json?' . http_build_query($params);
-        $data = http_get_json($url, $reqCount);
         if (!$data) break;
+        $pagesFetched++;
         foreach ((array) ($data['results'] ?? []) as $row) $all[] = $row;
         $pageToken = $data['next_page_token'] ?? null;
+        // DEBUG: record whether Google offered another page. If token is present
+        // but we still stop at 20, pagination is broken; if absent, 20 is all
+        // Google has for this area (correct).
+        if (function_exists('fd_debug_trace')) {
+            fd_debug_trace(
+                sprintf('[page %d done: %d results, next_page_token=%s]',
+                    $page + 1, count((array) ($data['results'] ?? [])),
+                    $pageToken ? 'YES' : 'none'),
+                200, 'PAGEINFO', '', count((array) ($data['results'] ?? []))
+            );
+        }
         if (!$pageToken) break;
     }
+
+    // Fallback: legacy Text Search returned nothing. If the key has ONLY
+    // "Places API (New)" enabled, legacy is DENIED and silently yields 0 places
+    // → 0 saved (this exact symptom). Retry via the New API, converting each
+    // result to the legacy `place` shape the worker expects.
+    if ($all === []) {
+        $lastStatus = (string) ($GLOBALS['fd_last_places_status'] ?? '');
+        if (fd_places_status_denied($lastStatus) || $lastStatus === '' || $lastStatus === 'ZERO_RESULTS') {
+            foreach (fd_places_new_search_text($apiKey, $query, $lat, $lng, $radius, $reqCount) as $p) {
+                $bundle = fd_places_new_to_legacy_bundle($p);
+                if (!empty($bundle['place']['place_id'])) {
+                    $all[] = $bundle['place'];
+                }
+            }
+        }
+    }
+
     return $all;
 }
 
@@ -581,7 +682,22 @@ function fetch_place_details(string $apiKey, string $placeId, int &$reqCount): ?
         'key'      => $apiKey,
     ]);
     $data = http_get_json($url, $reqCount);
-    return is_array($data['result'] ?? null) ? $data['result'] : null;
+    if (is_array($data['result'] ?? null)) {
+        return $data['result'];
+    }
+
+    // Legacy Place Details denied/empty (common when the key has ONLY
+    // "Places API (New)" enabled). This was silently dropping EVERY place as
+    // detail_fail → 0 saved even when search found dozens. Fall back to the New
+    // API's Place Details so results actually get saved.
+    $lastStatus = (string) ($GLOBALS['fd_last_places_status'] ?? '');
+    if ($data === null || fd_places_status_denied($lastStatus) || $lastStatus === 'NOT_FOUND' || $lastStatus === '') {
+        $new = fd_places_new_details($apiKey, $placeId, $reqCount);
+        if (is_array($new)) {
+            return $new;
+        }
+    }
+    return null;
 }
 
 // =====================================================================
@@ -616,12 +732,18 @@ function job_create(array $cities, array $queries): string {
     // grid tasks dynamically. Saves ~40% of API calls for small specialties.
     foreach ($cities as $city) {
         foreach ($queries as $qIdx => $qrow) {
+            // A pre-tightened area point (city carries an 'area' name + its own
+            // small radius) is already precise → 'grid' kind so it does NOT
+            // auto-expand into a geometric sub-grid. A bare city point stays a
+            // 'probe' that may expand. This keeps area-wise fetches tight.
+            $isArea = !empty($city['area']);
             $tasks[] = [
-                'kind'    => 'probe',
+                'kind'    => $isArea ? 'grid' : 'probe',
                 'city'    => $city['name'],
                 'state'   => $city['state'],
                 'q'       => $qrow['q'],
                 'spec'    => $qrow['spec'],
+                'areaName'=> $isArea ? (string) $city['area'] : null,
                 'area'    => [
                     'lat'    => $city['lat'],
                     'lng'    => $city['lng'],
@@ -635,13 +757,35 @@ function job_create(array $cities, array $queries): string {
             ];
         }
     }
+    // Human-readable search summary for the progress header, e.g.
+    // "gynecologist · Ahmedabad · 30 areas" or "general physician · Surat · Adajan".
+    $specLabels = array_values(array_unique(array_map(static fn ($q) => $q['q'], $queries)));
+    $cityNames = array_values(array_unique(array_column($cities, 'name')));
+    $areaNames = array_values(array_filter(array_map(static fn ($c) => $c['area'] ?? null, $cities)));
+    if (count($areaNames) > 1) {
+        $areaLabel = count($areaNames) . ' areas';
+    } elseif (count($areaNames) === 1) {
+        $areaLabel = $areaNames[0];
+    } else {
+        $areaLabel = 'city-wide';
+    }
+    $searchSummary = [
+        'specialty' => implode(', ', $specLabels),
+        'city'      => implode(', ', $cityNames),
+        'area'      => $areaLabel,
+        'area_count'=> count($areaNames),
+    ];
+
     $job = [
         'id'         => $id,
         'created_at' => date('Y-m-d H:i:s'),
         'cities'     => array_column($cities, 'name'),
+        'search'     => $searchSummary,
         'cursor'     => 0,
         'total'      => count($tasks),
         'tasks'      => $tasks,
+        'seen_pids'  => [],   // place_ids fetched this run — avoids re-paying for overlapping areas
+        'pages'      => ['total' => 0, 'page1' => 0, 'page2' => 0, 'page3' => 0],  // pagination summary
         'totals'     => [
             'doctors_new'    => 0,
             'requests'       => 0,
@@ -685,32 +829,70 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
     $reqs = 0;
     $newRows = [];
 
-    // Step 1 — Text Search this sub-area
-    $places = fetch_text_search($apiKey, $q, $area['lat'], $area['lng'], $area['radius'], $reqs);
+    // Lazy geocode: "All areas" tasks are queued with just an area NAME (no
+    // coords) so the form submit stays instant — geocoding all 40 areas upfront
+    // would time out the page. Resolve THIS area's coordinates now, one per
+    // chunk (cached forever after). If geocoding fails, skip this area cleanly.
+    if (!empty($task['areaName']) && (empty($area['lat']) || empty($area['lng']))) {
+        $coords = fd_area_coords($apiKey, (string) $task['areaName'], $city, $reqs);
+        if (!$coords) {
+            job_append_log($job, sprintf('%s · %s · could not geocode "%s" — skipped',
+                $city['name'], $q, $task['areaName']));
+            $job['cursor']++;
+            $job['updated_at'] = date('Y-m-d H:i:s');
+            if ($job['cursor'] >= $job['total']) $job['status'] = 'done';
+            return;
+        }
+        $area = $coords;   // {lat, lng, radius}
+    }
 
-    // Load existing city JSON for dedup against rows already saved
+    // Step 1 — Text Search this sub-area
+    $pagesFetched = 0;
+    $places = fetch_text_search($apiKey, $q, $area['lat'], $area['lng'], $area['radius'], $reqs, $pagesFetched);
+    // Roll pagination stats into the job for the header display.
+    if (!isset($job['pages'])) $job['pages'] = ['total' => 0, 'page1' => 0, 'page2' => 0, 'page3' => 0];
+    $job['pages']['total'] += $pagesFetched;
+    if ($pagesFetched >= 1) $job['pages']['page1']++;
+    if ($pagesFetched >= 2) $job['pages']['page2']++;
+    if ($pagesFetched >= 3) $job['pages']['page3']++;
+
+    // Snapshot cumulative skip/fail counters so we can log THIS chunk's deltas.
+    $failBefore = (int) $job['totals']['detail_fail'];
+    $skipBefore = (int) ($job['totals']['skipped_type'] + $job['totals']['skipped_addr']
+                       + $job['totals']['skipped_city'] + $job['totals']['skipped_closed']);
+
+    // Load existing city JSON only to MERGE new results into it (so multiple
+    // areas accumulate into one file). We do NOT skip or de-prioritise places
+    // already present — the fetcher captures EVERYTHING Google returns; the
+    // importer (insert_db.php) does insert-OR-update on place_id, so dedup and
+    // refresh are its job, not the fetcher's.
     $cityPath = $jsonDir . '/' . slugify($city['name']) . '.json';
     $existing = [];
-    $existingIds = [];
     if (is_file($cityPath)) {
         $raw = json_decode((string) file_get_contents($cityPath), true);
         if (isset($raw['doctors']) && is_array($raw['doctors'])) {
             $existing = $raw['doctors'];
-            foreach ($existing as $d) {
-                if (!empty($d['place_id'])) $existingIds[$d['place_id']] = true;
-            }
         }
     }
 
+    $seenThisChunk = [];   // dedup within this chunk only (same page twice)
     foreach ($places as $place) {
         $pid = $place['place_id'] ?? null;
-        if (!$pid || isset($existingIds[$pid])) continue;
+        if (!$pid || isset($seenThisChunk[$pid])) continue;
+        $seenThisChunk[$pid] = true;
+
+        // Cost saver for "All areas": adjacent areas overlap, so the SAME doctor
+        // appears in many area searches. Only pay for the expensive Place Details
+        // call ONCE per job run — if a prior area in THIS sweep already fetched
+        // this place_id, skip it. (Same-run only; NOT a DB check.)
+        if (isset($job['seen_pids'][$pid])) { continue; }
 
         $types = $place['types'] ?? [];
         $biz = $place['business_status'] ?? 'OPERATIONAL';
         if (str_starts_with((string) $biz, 'CLOSED_')) { $job['totals']['skipped_closed']++; continue; }
         if (!places_type_acceptable($types))           { $job['totals']['skipped_type']++; continue; }
 
+        $job['seen_pids'][$pid] = true;   // mark before the paid detail call
         $details = fetch_place_details($apiKey, $pid, $reqs);
         if (!$details) { $job['totals']['detail_fail']++; continue; }
 
@@ -731,11 +913,12 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
             $row['dropped_reason'] = $verdict;
             $job['totals']['flagged']++;
         }
-        $newRows[] = $row;
-        $existingIds[$pid] = true; // also dedup within this chunk
+        $newRows[] = $row;   // capture every valid place; importer upserts later
     }
 
-    // Save merged JSON for the city
+    // Save merged JSON for the city. New rows go LAST so a re-fetched place's
+    // fresh data (new photos/hours/phone) overwrites its stale copy —
+    // dedupe_by_place_id keeps the last occurrence.
     if (!empty($newRows)) {
         $merged = dedupe_by_place_id(array_merge($existing, $newRows));
         file_put_contents($cityPath, json_encode([
@@ -755,12 +938,18 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
     $job['updated_at'] = date('Y-m-d H:i:s');
 
     // ---- Adaptive grid expansion ----
-    // If this was the city-wide probe AND we hit Google's 60-result ceiling,
-    // the area definitely has more doctors hidden behind the cap. Expand
-    // the search into the sub-area grid for THIS (city, query) pair only.
+    // Expand a city-wide probe into the sub-area grid. We used to only expand
+    // when the probe hit Google's hard 60 cap — but broad Text Search queries
+    // (e.g. "gynecologist" over a 15km radius) rank by prominence and often
+    // return WELL under 60 even when a city has hundreds. That left the grid
+    // un-triggered and the fetch stuck at a handful. So: for a city-wide probe
+    // that returns a non-trivial number, ALWAYS expand into sub-areas — each
+    // gets its own 60-cap, which is the only way to get past the per-query
+    // ceiling. Threshold kept low (>=10) so tiny towns don't over-scan.
     $kind = $task['kind'] ?? 'grid';
-    $hitCap = count($places) >= 60;   // 3 pages × 20 = Google's hard cap
-    if ($kind === 'probe' && $hitCap) {
+    $probeCount = count($places);
+    $shouldExpand = ($kind === 'probe') && ($probeCount >= 10);
+    if ($shouldExpand) {
         $subAreas = generate_sub_areas($city['lat'], $city['lng'], $city['radius']);
         $newTasks = [];
         foreach ($subAreas as $aIdx => $area) {
@@ -783,19 +972,53 @@ function run_one_chunk(array &$job, string $apiKey, string $jsonDir): void {
         array_splice($job['tasks'], $job['cursor'], 0, $newTasks);
         $job['total'] += count($newTasks);
         job_append_log($job, sprintf(
-            '%s · %s · probe hit cap (60) → expanding into %d sub-areas',
-            $city['name'], $q, count($subAreas)
+            '%s · %s · probe returned %d → expanding into %d sub-areas',
+            $city['name'], $q, $probeCount, count($subAreas)
         ));
     }
 
-    $areaLabel = $kind === 'probe'
-        ? sprintf('probe (city-wide, r=%.1fkm)', $area['radius'] / 1000)
-        : sprintf('area %d/%d', $task['aIdx'] + 1, $task['aCount']);
+    // Per-chunk quality signals: how many places were dropped this chunk.
+    $failNow = (int) $job['totals']['detail_fail'] - $failBefore;
+    $skipNow = (int) ($job['totals']['skipped_type'] + $job['totals']['skipped_addr']
+                    + $job['totals']['skipped_city'] + $job['totals']['skipped_closed']) - $skipBefore;
+
+    // Label: area name for area chunks (more useful than "area 1/1"), else probe.
+    if ($kind === 'probe') {
+        $areaLabel = sprintf('probe (city-wide, r=%.1fkm)', $area['radius'] / 1000);
+    } elseif (!empty($task['areaName'])) {
+        $areaLabel = 'area: ' . $task['areaName'];
+    } else {
+        $areaLabel = sprintf('area %d/%d', ($task['aIdx'] ?? 0) + 1, $task['aCount'] ?? 1);
+    }
+
+    // $probeCount>=60 means a probe saturated Google's cap (more may be hidden).
+    $probeComplete = ($kind === 'probe' && $probeCount < 60);
     job_append_log($job, sprintf(
-        '%s · %s · %s → +%d doctors (%d req%s)',
+        '%s · %s · %s → +%d doctors (%d req%s%s%s)',
         $city['name'], $q, $areaLabel, $found, $reqs,
-        ($kind === 'probe' && !$hitCap) ? ', complete' : ''
+        $probeComplete ? ', complete' : '',
+        $failNow > 0 ? sprintf(', %d detail-fail⚠', $failNow) : '',
+        $skipNow > 0 ? sprintf(', %d skipped', $skipNow) : ''
     ));
+
+    // DEBUG: ALWAYS log every Google call this chunk made (URL key-redacted,
+    // HTTP code, status, results) so we can see the EXACT location/radius/query
+    // sent — the only way to confirm area coords + pagination are really applied.
+    if (!empty($GLOBALS['fd_debug_trace'])) {
+        // Log the SEARCH calls (textsearch/geocode), not the per-place details,
+        // to keep the log readable — those carry the location/radius we need.
+        foreach ($GLOBALS['fd_debug_trace'] as $t) {
+            if (str_contains($t['url'], 'textsearch') || str_contains($t['url'], 'geocode') || str_contains($t['url'], 'searchText') || str_contains($t['url'], '[page')) {  // includes [page N done] + [page N fetch]
+                job_append_log($job, sprintf(
+                    '   ↳ HTTP %d · %s%s · %d results · %s',
+                    $t['http'], $t['status'],
+                    $t['error'] !== '' ? ' ("' . $t['error'] . '")' : '',
+                    $t['results'], $t['url']
+                ));
+            }
+        }
+    }
+    $GLOBALS['fd_debug_trace'] = [];   // reset for next chunk
 
     if ($job['cursor'] >= $job['total']) $job['status'] = 'done';
 }
@@ -913,6 +1136,8 @@ function _job_snapshot(array $job): array {
         'total'      => $total,
         'percent'    => $total > 0 ? round($cur / $total * 100, 1) : 100,
         'totals'     => $job['totals'],
+        'pages'      => $job['pages'] ?? ['total' => 0, 'page1' => 0, 'page2' => 0, 'page3' => 0],
+        'search'     => $job['search'] ?? null,
         'log'        => array_slice($job['log'], -30),  // last 30 lines only
         'current'    => $currentTask ? [
             'city'  => $currentTask['city'],
@@ -927,6 +1152,82 @@ function _job_snapshot(array $job): array {
         'updated_at' => $job['updated_at'],
         'cities'     => $job['cities'],
     ];
+}
+
+// ----- POST: targeted single specialty + single city fetch -----
+// One dropdown each (specialty from $QUERIES, city from $STATES). Reuses the
+// same job pipeline as the full matrix — just scoped to ONE (city, query) pair
+// — so the worker, JSON save, and insert_db.php upsert all work unchanged.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['spec'], $_POST['fetch_city'])) {
+    if ($apiKey === '') {
+        $err = 'GOOGLE_MAPS_API_KEY missing in fetch_doctor/.env';
+    } else {
+        $spec = (string) $_POST['spec'];
+        $city = find_city($STATES, (string) $_POST['fetch_city']);
+
+        // Match the chosen specialty against $QUERIES by its 'spec' code.
+        $query = null;
+        foreach ($QUERIES as $qrow) {
+            if ($qrow['spec'] === $spec) { $query = $qrow; break; }
+        }
+
+        $areaSel = trim((string) ($_POST['area'] ?? ''));   // '' = city-wide, '__all__' = every area
+
+        if (!$city)       $err = 'Please select a valid city.';
+        elseif (!$query)  $err = 'Please select a valid specialty.';
+        else {
+            // Quality-first: tight area queries beat one wide city probe.
+            //   - specific area → geocode it, one tight ~3.5km job
+            //   - '__all__'     → every known area of the city as its own chunk
+            //   - '' (city-wide)→ legacy behaviour (probe + auto-grid fallback)
+            $reqTmp = 0;
+            if ($areaSel === '__all__') {
+                // Queue every area by NAME only — no upfront geocoding. The
+                // worker geocodes each area lazily when its chunk runs, so the
+                // form submit is instant (geocoding 40 areas here would time
+                // out). Each area carries lat/lng=null → worker resolves it.
+                $areas = fd_areas_for_city($city['name'], $JSON_DIR);
+                $cityPoints = [];
+                foreach ($areas as $areaName) {
+                    // array_merge (NOT the + operator — + keeps the LEFT value on
+                    // key clash, so $city's real lat/lng would survive and the
+                    // lazy-geocode would never fire → every area ran city-wide).
+                    $cityPoints[] = array_merge($city, [
+                        'name'   => $city['name'],
+                        'lat'    => null,
+                        'lng'    => null,
+                        'radius' => FD_AREA_RADIUS,
+                        'area'   => $areaName,
+                    ]);
+                }
+                if (empty($cityPoints)) $err = 'This city has no area list yet.';
+                else {
+                    $newJobId = job_create($cityPoints, [$query]);
+                    header('Location: ?job=' . $newJobId);
+                    exit;
+                }
+            } elseif ($areaSel !== '') {
+                $coords = fd_area_coords($apiKey, $areaSel, $city, $reqTmp);
+                if (!$coords) $err = 'Could not locate that area. Try another or use city-wide.';
+                else {
+                    // array_merge (NOT +) — the + operator keeps $city's existing
+                    // lat/lng on clash, so the geocoded AREA coords were being
+                    // discarded and every single-area fetch ran city-wide.
+                    $areaCity = array_merge($city, [
+                        'lat' => $coords['lat'], 'lng' => $coords['lng'],
+                        'radius' => $coords['radius'], 'area' => $areaSel,
+                    ]);
+                    $newJobId = job_create([$areaCity], [$query]);
+                    header('Location: ?job=' . $newJobId);
+                    exit;
+                }
+            } else {
+                $newJobId = job_create([$city], [$query]);
+                header('Location: ?job=' . $newJobId);
+                exit;
+            }
+        }
+    }
 }
 
 // ----- POST: create job from picker -----
@@ -1112,6 +1413,18 @@ function render_picker_ui(array $STATES, array $QUERIES, string $apiKey, string 
         $raw = json_decode((string) file_get_contents($f), true);
         $existingJson[basename($f)] = (int) ($raw['count'] ?? 0);
     }
+
+    // Area list per city (curated seed ∪ areas already saved), for the dependent
+    // Area dropdown in Quick Fetch. Cities with no areas simply show city-wide.
+    $areaMap = [];
+    foreach ($STATES as $cities) {
+        foreach ($cities as $c) {
+            $areas = fd_areas_for_city($c['name'], $jsonDir);
+            if ($areas !== []) {
+                $areaMap[$c['name']] = $areas;
+            }
+        }
+    }
     ?><!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1164,6 +1477,69 @@ h1{font-size:24px;font-weight:600;margin:0 0 8px}
     <span>States: <strong><?= count($STATES) ?></strong></span>
     <span>Specialty queries per city: <strong><?= count($QUERIES) ?></strong></span>
     <span>JSON files saved: <strong><?= count($existingJson) ?></strong></span>
+</div>
+
+<!-- ===================== TARGETED: ONE SPECIALTY + ONE CITY ===================== -->
+<div class="state" style="margin-bottom: 24px; border: 2px solid var(--teal);">
+    <div class="state-head">
+        <span class="state-name">🎯 Quick fetch <small style="color:var(--mute);font-weight:400;">— one specialty in one city (e.g. Gynecologist in Ahmedabad)</small></span>
+    </div>
+    <form method="post" style="padding: 14px 16px; display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+        <div>
+            <label style="display:block;font-size:12px;font-weight:500;color:var(--ink);margin-bottom:4px;">Specialty</label>
+            <select name="spec" required style="min-width:220px;padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:#fff;">
+                <option value="">— Select specialty —</option>
+                <?php foreach ($QUERIES as $qrow): ?>
+                    <option value="<?= htmlspecialchars($qrow['spec']) ?>"><?= htmlspecialchars(ucfirst($qrow['q'])) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div>
+            <label style="display:block;font-size:12px;font-weight:500;color:var(--ink);margin-bottom:4px;">City</label>
+            <select name="fetch_city" id="qf_city" required onchange="qfCityChanged()" style="min-width:200px;padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:#fff;">
+                <option value="">— Select city —</option>
+                <?php foreach ($STATES as $stateName => $cities): ?>
+                    <optgroup label="<?= htmlspecialchars($stateName) ?>">
+                        <?php foreach ($cities as $c): ?>
+                            <option value="<?= htmlspecialchars($c['name']) ?>"><?= htmlspecialchars($c['name']) ?></option>
+                        <?php endforeach; ?>
+                    </optgroup>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div>
+            <label style="display:block;font-size:12px;font-weight:500;color:var(--ink);margin-bottom:4px;">Area <small style="color:var(--mute);font-weight:400;">(recommended)</small></label>
+            <select name="area" id="qf_area" style="min-width:200px;padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:#fff;">
+                <option value="">City-wide (fewer, less accurate)</option>
+            </select>
+        </div>
+        <button type="submit" class="submit" style="position:static;width:auto;margin:0;padding:9px 20px;box-shadow:none;">▶ Fetch</button>
+    </form>
+    <div class="note" style="margin: 0 16px 14px;">
+        <strong>Pick an Area for proper data.</strong> A wide city query returns very few (Google ranks by prominence + caps at 60); tight area queries return dense, accurate results. Use <strong>All areas</strong> to sweep the whole city (queued area-by-area, no timeout). Then upsert via <a href="insert_db.php">the importer</a>.
+    </div>
+    <script>
+    // Areas per city (curated seed ∪ areas already in saved JSON), for the
+    // dependent Area dropdown. '__all__' sweeps every area of the city.
+    const QF_AREAS = <?= json_encode($areaMap ?: new stdClass(), JSON_UNESCAPED_UNICODE) ?>;
+    function qfCityChanged() {
+        const city = document.getElementById('qf_city').value;
+        const areaSel = document.getElementById('qf_area');
+        areaSel.innerHTML = '<option value="">City-wide (fewer, less accurate)</option>';
+        const areas = QF_AREAS[city] || [];
+        if (areas.length) {
+            const all = document.createElement('option');
+            all.value = '__all__';
+            all.textContent = '★ All areas (' + areas.length + ') — full sweep';
+            areaSel.appendChild(all);
+            for (const a of areas) {
+                const o = document.createElement('option');
+                o.value = a; o.textContent = a;
+                areaSel.appendChild(o);
+            }
+        }
+    }
+    </script>
 </div>
 
 <form method="post">
@@ -1276,9 +1652,18 @@ h1{font-size:22px;font-weight:600;margin:0 0 4px}
 
 <div class="wrap" x-data="progress(<?= htmlspecialchars(json_encode(['jobId' => $jobId]), ENT_QUOTES) ?>)" x-init="init()">
     <h1>🩺 Fetching doctors</h1>
+    <?php $srch = $job['search'] ?? null; ?>
+    <?php if ($srch): ?>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;margin:0 0 8px;font-size:15px;">
+        <strong style="color:#065f46;text-transform:capitalize;"><?= htmlspecialchars($srch['specialty']) ?></strong>
+        <span style="color:var(--mute);">in</span>
+        <strong><?= htmlspecialchars($srch['city']) ?></strong>
+        <span style="color:var(--mute);">·</span>
+        <strong><?= htmlspecialchars($srch['area']) ?></strong>
+    </div>
+    <?php endif; ?>
     <p class="sub">
-        Cities: <strong><?= htmlspecialchars(implode(', ', $job['cities'])) ?></strong>
-        · Job <code><?= htmlspecialchars($jobId) ?></code>
+        Job <code><?= htmlspecialchars($jobId) ?></code>
     </p>
 
     <template x-if="s.status === 'done'">
@@ -1317,6 +1702,8 @@ h1{font-size:22px;font-weight:600;margin:0 0 4px}
         <div class="stat"><div class="v" x-text="'$' + (s.totals.requests * 0.024).toFixed(2)"></div><div class="l">Est. cost</div></div>
         <div class="stat"><div class="v" x-text="(s.totals.skipped_closed + s.totals.skipped_type + s.totals.skipped_addr + s.totals.skipped_city).toLocaleString()"></div><div class="l">Filtered out</div></div>
         <div class="stat"><div class="v" x-text="s.totals.flagged.toLocaleString()"></div><div class="l">Flagged low-quality</div></div>
+        <div class="stat" :style="s.totals.detail_fail > 0 ? 'border-color:#dc2626' : ''"><div class="v" :style="s.totals.detail_fail > 0 ? 'color:#dc2626' : ''" x-text="s.totals.detail_fail.toLocaleString()"></div><div class="l">Detail fetch failed<span x-show="s.totals.detail_fail > 0"> ⚠</span></div></div>
+        <div class="stat" x-show="s.pages"><div class="v"><span x-text="(s.pages && s.pages.total) || 0"></span></div><div class="l">Pages fetched<br><small x-show="s.pages" style="color:var(--mute)">p2: <span x-text="(s.pages && s.pages.page2) || 0"></span> · p3: <span x-text="(s.pages && s.pages.page3) || 0"></span></small></div></div>
     </div>
 
     <div class="toolbar">
@@ -1344,7 +1731,7 @@ h1{font-size:22px;font-weight:600;margin:0 0 4px}
 function progress(cfg){
     return {
         jobId: cfg.jobId,
-        s: { status:'running', cursor:0, total:1, percent:0, totals:{doctors_new:0,requests:0,skipped_closed:0,skipped_type:0,skipped_addr:0,skipped_city:0,flagged:0,detail_fail:0}, log:[], current:null, cities:[], updated_at:'' },
+        s: { status:'running', cursor:0, total:1, percent:0, totals:{doctors_new:0,requests:0,skipped_closed:0,skipped_type:0,skipped_addr:0,skipped_city:0,flagged:0,detail_fail:0}, pages:{total:0,page1:0,page2:0,page3:0}, log:[], current:null, cities:[], updated_at:'' },
         running: false,
         init(){
             // Initial status load, then loop.
