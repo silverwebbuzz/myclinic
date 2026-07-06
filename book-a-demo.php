@@ -20,22 +20,49 @@ $form = [
     'message' => '',
 ];
 
+$isModalRequest = false;
+$wantsJson = false;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($form as $k => $_) {
         $form[$k] = trim((string) ($_POST[$k] ?? ''));
     }
-    if ($form['name'] === '' || $form['email'] === '') {
+
+    $isModalRequest = !empty($_POST['modal']);
+    $wantsJson = $isModalRequest || (
+        isset($_SERVER['HTTP_ACCEPT']) && str_contains((string) $_SERVER['HTTP_ACCEPT'], 'application/json')
+    ) || (
+        !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
+        && strtolower((string) $_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'
+    );
+
+    if ($isModalRequest) {
+        if ($form['name'] === '' || $form['phone'] === '' || $form['specialty'] === '') {
+            $formError = 'Please enter your name, contact number, and specialty.';
+        }
+    } elseif ($form['name'] === '' || $form['email'] === '') {
         $formError = 'Please share your name and a work email so we can confirm the demo.';
     } elseif (!filter_var($form['email'], FILTER_VALIDATE_EMAIL)) {
         $formError = 'That email looks off — could you double-check?';
-    } elseif (ecp_save_demo_request($form)) {
+    }
+
+    if ($formError === null && ecp_save_demo_request($form)) {
         $submitted = true;
         // Fire confirmation + internal notification. Mail failures are logged
         // inside the mailer and must NOT change the success state — the lead is
         // already saved, so the visitor still sees the thank-you screen.
-        ecp_demo_emails($form);
-    } else {
+        ecp_demo_emails($form, $isModalRequest);
+    } elseif ($formError === null) {
         $formError = 'Something went wrong saving your request. Email us at wecare@eclinicpro.com instead.';
+    }
+
+    if ($wantsJson) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'ok' => $submitted,
+            'error' => $formError,
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 }
 
@@ -45,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  *
  * @param array<string,string> $form
  */
-function ecp_demo_emails(array $form): void
+function ecp_demo_emails(array $form, bool $modalRequest = false): void
 {
     $name = $form['name'] ?? '';
     $email = $form['email'] ?? '';
@@ -56,44 +83,52 @@ function ecp_demo_emails(array $form): void
 
     $e = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
     $cfg = ecp_smtp_config();
-    $inbox = $cfg['SMTP_TO_EMAIL'] ?? 'wecare@eclinicpro.com';
+    $inbox = $modalRequest
+        ? trim($cfg['DEMO_MODAL_TO_EMAIL'] ?? 'eclinicpro.com@gmail.com')
+        : ($cfg['SMTP_TO_EMAIL'] ?? 'wecare@eclinicpro.com');
 
-    // 1) Confirmation to the visitor.
-    $visitorBody = '<p style="margin:0 0 16px; font-size:15px; line-height:1.65; color:#1c1c1e;">'
-        . 'Hi ' . $e($name) . ',</p>'
-        . '<p style="margin:0 0 16px; font-size:15px; line-height:1.65; color:#1c1c1e;">'
-        . 'Thanks for requesting a demo of eClinicPro. We\'ve received your request and our team '
-        . 'will email you within 24 hours with available 15-minute demo times tailored to your specialty.</p>'
-        . '<p style="margin:0 0 8px; font-size:13px; color:#6e6e73;">What you sent us:</p>'
-        . '<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px; color:#1c1c1e;">'
-        . ($clinic !== '' ? '<tr><td style="padding:2px 12px 2px 0; color:#6e6e73;">Clinic</td><td>' . $e($clinic) . '</td></tr>' : '')
-        . ($specialty !== '' ? '<tr><td style="padding:2px 12px 2px 0; color:#6e6e73;">Specialty</td><td>' . $e($specialty) . '</td></tr>' : '')
-        . ($phone !== '' ? '<tr><td style="padding:2px 12px 2px 0; color:#6e6e73;">Phone</td><td>' . $e($phone) . '</td></tr>' : '')
-        . '</table>';
-    ecp_send_mail(
-        $email,
-        'We received your eClinicPro demo request',
-        ecp_email_template('Your demo request is in 🎉', $visitorBody),
-        $name,
-        $inbox
-    );
+    // 1) Confirmation to the visitor (full form only — modal leads are phone callbacks).
+    if (!$modalRequest && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $visitorBody = '<p style="margin:0 0 16px; font-size:15px; line-height:1.65; color:#1c1c1e;">'
+            . 'Hi ' . $e($name) . ',</p>'
+            . '<p style="margin:0 0 16px; font-size:15px; line-height:1.65; color:#1c1c1e;">'
+            . 'Thanks for requesting a demo of eClinicPro. We\'ve received your request and our team '
+            . 'will email you within 24 hours with available 15-minute demo times tailored to your specialty.</p>'
+            . '<p style="margin:0 0 8px; font-size:13px; color:#6e6e73;">What you sent us:</p>'
+            . '<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px; color:#1c1c1e;">'
+            . ($clinic !== '' ? '<tr><td style="padding:2px 12px 2px 0; color:#6e6e73;">Clinic</td><td>' . $e($clinic) . '</td></tr>' : '')
+            . ($specialty !== '' ? '<tr><td style="padding:2px 12px 2px 0; color:#6e6e73;">Specialty</td><td>' . $e($specialty) . '</td></tr>' : '')
+            . ($phone !== '' ? '<tr><td style="padding:2px 12px 2px 0; color:#6e6e73;">Phone</td><td>' . $e($phone) . '</td></tr>' : '')
+            . '</table>';
+        ecp_send_mail(
+            $email,
+            'We received your eClinicPro demo request',
+            ecp_email_template('Your demo request is in 🎉', $visitorBody),
+            $name,
+            $inbox
+        );
+    }
 
     // 2) Internal notification to the eClinicPro inbox.
-    $adminBody = '<p style="margin:0 0 16px; font-size:15px; line-height:1.65;">New demo request from the website:</p>'
+    $sourceLabel = $modalRequest ? 'specialty page modal (Request For Demo)' : 'website form';
+    $adminBody = '<p style="margin:0 0 16px; font-size:15px; line-height:1.65;">New demo request from the ' . $e($sourceLabel) . ':</p>'
         . '<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px; color:#1c1c1e;">'
         . '<tr><td style="padding:3px 12px 3px 0; color:#6e6e73;">Name</td><td>' . $e($name) . '</td></tr>'
-        . '<tr><td style="padding:3px 12px 3px 0; color:#6e6e73;">Email</td><td>' . $e($email) . '</td></tr>'
         . '<tr><td style="padding:3px 12px 3px 0; color:#6e6e73;">Phone</td><td>' . $e($phone ?: '—') . '</td></tr>'
-        . '<tr><td style="padding:3px 12px 3px 0; color:#6e6e73;">Clinic</td><td>' . $e($clinic ?: '—') . '</td></tr>'
-        . '<tr><td style="padding:3px 12px 3px 0; color:#6e6e73;">Specialty</td><td>' . $e($specialty ?: '—') . '</td></tr>'
-        . '</table>'
+        . '<tr><td style="padding:3px 12px 3px 0; color:#6e6e73;">Specialty</td><td>' . $e($specialty ?: '—') . '</td></tr>';
+    if (!$modalRequest) {
+        $adminBody .= '<tr><td style="padding:3px 12px 3px 0; color:#6e6e73;">Email</td><td>' . $e($email) . '</td></tr>'
+            . '<tr><td style="padding:3px 12px 3px 0; color:#6e6e73;">Clinic</td><td>' . $e($clinic ?: '—') . '</td></tr>';
+    }
+    $adminBody .= '</table>'
         . ($message !== '' ? '<p style="margin:16px 0 0; font-size:14px; line-height:1.6;"><strong>Message:</strong><br>' . nl2br($e($message)) . '</p>' : '');
+    $replyTo = filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null;
     ecp_send_mail(
         $inbox,
-        'New demo request: ' . $name,
+        ($modalRequest ? 'Demo modal request: ' : 'New demo request: ') . $name,
         ecp_email_template('New demo request', $adminBody),
         'eClinicPro',
-        $email
+        $replyTo
     );
 }
 
