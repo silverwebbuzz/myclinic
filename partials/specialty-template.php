@@ -218,7 +218,7 @@ $faqItems = $faq['items'] ?? [
                     <!-- Add hero image: <img src="/assets/img/your-hero.webp" alt="eClinicPro dashboard for <?= e($spec['label']) ?>" loading="eager"> -->
                     <!-- <div class="spec-hero-img-ph" role="img" aria-label="Hero image — add later">
                         </div> -->
-                    <img src="/assets/img/Smart-Software-for-Homeopathy-Clinics-bg.png" alt="eClinicPro dashboard for <?= e($spec['label']) ?>" loading="eager">
+                    <img src="<?= e($spec['heroImage'] ?? '/assets/img/eClinicPro-on-laptop-bg.png') ?>" alt="eClinicPro dashboard for <?= e($spec['label']) ?>" loading="eager">
                 </figure>
             </div>
         </div>
