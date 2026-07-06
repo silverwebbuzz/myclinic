@@ -4,6 +4,9 @@
 // Open via: data-open-demo-modal on a link/button, or window.ecpDemo.open()
 // =====================================================================
 $demoDefaultSpecialty = $demoDefaultSpecialty ?? ($spec['label'] ?? 'General practice');
+// Page specialty key (e.g. 'homeopathy') — used server-side to build a stable
+// email subject like "homeopathy book a demo", independent of the editable field.
+$demoSpecKey = $specKey ?? ($demoSpecKey ?? '');
 ?>
 <div id="ecp-demo-modal" class="demo-modal-overlay" x-data="ecpDemoModal()" x-show="open" x-cloak
      @open-demo-modal.window="openModal()"
@@ -237,6 +240,7 @@ function ecpDemoModal() {
         phone: '',
         specialty: <?= json_encode($demoDefaultSpecialty, JSON_HEX_TAG | JSON_HEX_AMP) ?>,
         defaultSpecialty: <?= json_encode($demoDefaultSpecialty, JSON_HEX_TAG | JSON_HEX_AMP) ?>,
+        specKey: <?= json_encode($demoSpecKey, JSON_HEX_TAG | JSON_HEX_AMP) ?>,
 
         openModal() {
             this.open = true;
@@ -276,6 +280,7 @@ function ecpDemoModal() {
                 body.append('name', this.name.trim());
                 body.append('phone', this.phone.trim());
                 body.append('specialty', this.specialty.trim());
+                body.append('spec_key', this.specKey);
                 body.append('message', 'Demo request via specialty page modal');
 
                 const res = await fetch('/book-a-demo', {

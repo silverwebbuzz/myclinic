@@ -50,10 +50,12 @@ function ecp_smtp_config(): array
  * @param string      $htmlBody full HTML body (use ecp_email_template())
  * @param string|null $toName   optional recipient display name
  * @param string|null $replyTo  optional Reply-To address
+ * @param string|null $fromEmail optional From address override (else SMTP_FROM_EMAIL)
+ * @param string|null $fromName  optional From display name override (else SMTP_FROM_NAME)
  *
  * @return bool true on a clean 250 from the server after DATA
  */
-function ecp_send_mail(string $toEmail, string $subject, string $htmlBody, ?string $toName = null, ?string $replyTo = null): bool
+function ecp_send_mail(string $toEmail, string $subject, string $htmlBody, ?string $toName = null, ?string $replyTo = null, ?string $fromEmail = null, ?string $fromName = null): bool
 {
     $cfg = ecp_smtp_config();
 
@@ -64,8 +66,14 @@ function ecp_send_mail(string $toEmail, string $subject, string $htmlBody, ?stri
     $verify = !in_array(strtolower($cfg['SMTP_VERIFY_PEER'] ?? '1'), ['0', 'false', 'no'], true);
     $user = $cfg['SMTP_USERNAME'] ?? '';
     $pass = $cfg['SMTP_PASSWORD'] ?? '';
-    $fromEmail = $cfg['SMTP_FROM_EMAIL'] ?? ($user ?: 'wecare@eclinicpro.com');
-    $fromName = $cfg['SMTP_FROM_NAME'] ?? 'eClinicPro Care Team';
+    // Per-send From override (e.g. noreply@eclinicpro.com for the demo modal).
+    // Falls back to the configured default, and only honoured for a valid address.
+    $fromEmail = ($fromEmail !== null && filter_var($fromEmail, FILTER_VALIDATE_EMAIL))
+        ? $fromEmail
+        : ($cfg['SMTP_FROM_EMAIL'] ?? ($user ?: 'wecare@eclinicpro.com'));
+    $fromName = ($fromName !== null && $fromName !== '')
+        ? $fromName
+        : ($cfg['SMTP_FROM_NAME'] ?? 'eClinicPro Care Team');
 
     if ($host === '' || $user === '' || $pass === '') {
         error_log('[mailer] SMTP not configured (missing host/username/password in app/.env)');

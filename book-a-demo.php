@@ -17,6 +17,7 @@ $form = [
     'phone' => '',
     'clinic_name' => '',
     'specialty' => 'gp',
+    'spec_key' => '',
     'message' => '',
 ];
 
@@ -123,13 +124,36 @@ function ecp_demo_emails(array $form, bool $modalRequest = false): void
     $adminBody .= '</table>'
         . ($message !== '' ? '<p style="margin:16px 0 0; font-size:14px; line-height:1.6;"><strong>Message:</strong><br>' . nl2br($e($message)) . '</p>' : '');
     $replyTo = filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null;
-    ecp_send_mail(
-        $inbox,
-        ($modalRequest ? 'Demo modal request: ' : 'New demo request: ') . $name,
-        ecp_email_template('New demo request', $adminBody),
-        'eClinicPro',
-        $replyTo
-    );
+
+    // Modal (specialty-page) leads: send FROM noreply@eclinicpro.com and use a
+    // specialty-prefixed subject, e.g. "homeopathy book a demo". Full website
+    // form keeps the default From + subject.
+    if ($modalRequest) {
+        $noreplyFrom = trim($cfg['NOREPLY_FROM'] ?? 'noreply@eclinicpro.com');
+        // Prefer the page's specialty KEY (e.g. "homeopathy") for a stable subject;
+        // fall back to the editable specialty field, then a generic default.
+        $specKey  = strtolower(trim((string) ($form['spec_key'] ?? '')));
+        $specSlug = $specKey !== '' ? $specKey : strtolower(trim($specialty));
+        if ($specSlug === '') $specSlug = 'general';
+        $subject  = $specSlug . ' book a demo';
+        ecp_send_mail(
+            $inbox,
+            $subject,
+            ecp_email_template('New demo request', $adminBody),
+            'eClinicPro',
+            $replyTo,
+            $noreplyFrom,
+            'eClinicPro'
+        );
+    } else {
+        ecp_send_mail(
+            $inbox,
+            'New demo request: ' . $name,
+            ecp_email_template('New demo request', $adminBody),
+            'eClinicPro',
+            $replyTo
+        );
+    }
 }
 
 require __DIR__ . '/partials/header.php';
