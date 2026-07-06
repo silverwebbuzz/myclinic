@@ -66,11 +66,12 @@ final class WordPressService
     }
 
     /**
+     * @param array{first_name?: string, last_name?: string, name?: string, url?: string, description?: string} $profile
      * @return array{ok: bool, wp_user_id?: int, wp_username?: string, wp_email?: string, error?: string, linked_existing?: bool}
      */
-    public static function createOrLinkAuthor(string $username, string $email, string $displayName, string $password): array
+    public static function createOrLinkAuthor(string $username, string $email, string $displayName, string $password, array $profile = []): array
     {
-        $created = self::createAuthor($username, $email, $displayName, $password);
+        $created = self::createAuthor($username, $email, $displayName, $password, $profile);
         if ($created['ok']) {
             return $created;
         }
@@ -92,11 +93,15 @@ final class WordPressService
             ];
         }
 
-        self::ensureAuthorRole((int) $existing['id']);
+        $wpUserId = (int) $existing['id'];
+        self::ensureAuthorRole($wpUserId);
+        if ($profile !== []) {
+            self::updateUserProfile($wpUserId, $profile);
+        }
 
         return [
             'ok' => true,
-            'wp_user_id' => (int) $existing['id'],
+            'wp_user_id' => $wpUserId,
             'wp_username' => (string) ($existing['slug'] ?? $username),
             'wp_email' => (string) ($existing['email'] ?? $email),
             'linked_existing' => true,
@@ -104,17 +109,25 @@ final class WordPressService
     }
 
     /**
+     * @param array{first_name?: string, last_name?: string, name?: string, url?: string, description?: string} $profile
      * @return array{ok: bool, wp_user_id?: int, wp_username?: string, wp_email?: string, error?: string, code?: string}
      */
-    public static function createAuthor(string $username, string $email, string $displayName, string $password): array
+    public static function createAuthor(string $username, string $email, string $displayName, string $password, array $profile = []): array
     {
-        $resp = self::request('POST', '/wp/v2/users', [
+        $payload = [
             'username' => $username,
             'email' => $email,
             'password' => $password,
-            'name' => $displayName,
+            'name' => (string) ($profile['name'] ?? $displayName),
             'roles' => ['author'],
-        ]);
+        ];
+        foreach (['first_name', 'last_name', 'url', 'description'] as $key) {
+            if (!empty($profile[$key])) {
+                $payload[$key] = (string) $profile[$key];
+            }
+        }
+
+        $resp = self::request('POST', '/wp/v2/users', $payload);
 
         if (!$resp['ok'] || !is_array($resp['body'])) {
             $code = is_array($resp['body']) ? (string) ($resp['body']['code'] ?? '') : '';
@@ -171,6 +184,31 @@ final class WordPressService
         }
 
         return null;
+    }
+
+    /**
+     * @param array{first_name?: string, last_name?: string, name?: string, url?: string, description?: string} $profile
+     */
+    public static function updateUserProfile(int $wpUserId, array $profile): bool
+    {
+        if ($wpUserId <= 0) {
+            return false;
+        }
+
+        $payload = [];
+        foreach (['first_name', 'last_name', 'name', 'url', 'description'] as $key) {
+            if (array_key_exists($key, $profile) && (string) $profile[$key] !== '') {
+                $payload[$key] = (string) $profile[$key];
+            }
+        }
+
+        if ($payload === []) {
+            return true;
+        }
+
+        $resp = self::request('POST', '/wp/v2/users/' . $wpUserId, $payload);
+
+        return $resp['ok'];
     }
 
     public static function ensureAuthorRole(int $wpUserId): void

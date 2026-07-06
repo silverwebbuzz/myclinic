@@ -101,6 +101,14 @@ final class DirectoryProfileUrlService
     }
 
     /** @param array<string, mixed> $row */
+    public static function publicProfileUrlFromRow(array $row): ?string
+    {
+        $path = self::profilePathFromRow($row);
+
+        return $path !== null ? self::siteBase() . $path : null;
+    }
+
+    /** @param array<string, mixed> $row */
     private static function entityType(array $row): string
     {
         $stored = strtolower(trim((string) ($row['entity_type'] ?? '')));

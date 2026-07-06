@@ -42,8 +42,9 @@ final class WordPressAdminController
     {
         $search = trim((string) ($request->query['q'] ?? ''));
         $page = max(1, (int) ($request->query['page'] ?? 1));
+        $access = (string) ($request->query['access'] ?? 'all');
         $synced = WordPressDoctorService::syncActiveLinks();
-        $data = WordPressDoctorService::doctorsForAdmin($search, $page);
+        $data = WordPressDoctorService::doctorsForAdmin($search, $page, 50, $access);
 
         $message = $request->query['message'] ?? null;
         if ($message === null && $synced > 0) {
@@ -58,6 +59,7 @@ final class WordPressAdminController
             'page' => $data['page'],
             'pages' => $data['pages'],
             'search' => $search,
+            'access' => $access,
             'wpConfigured' => WordPressSettings::isConfigured(),
             'message' => $message,
             'error' => $request->query['error'] ?? null,
