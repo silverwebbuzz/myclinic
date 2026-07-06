@@ -52,7 +52,7 @@ $marketing = [
     ['/dentists',          0.7, 'monthly'],
     ['/dermatologists',    0.7, 'monthly'],
     ['/pediatricians',     0.7, 'monthly'],
-    ['/homeopaths',        0.7, 'monthly'],
+    ['/homeopathy-clinic-management-software',        0.7, 'monthly'],
     ['/physiotherapists',  0.7, 'monthly'],
     // NOTE: /patient is private (noindex) — excluded from sitemap.
 ];

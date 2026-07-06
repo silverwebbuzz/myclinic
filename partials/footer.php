@@ -93,7 +93,7 @@ try {
                 <ul>
                     <li><a href="/gps">General practice</a></li>
                     <li><a href="/dentists">Dentistry</a></li>
-                    <li><a href="/homeopaths">Homeopathy</a></li>
+                    <li><a href="/homeopathy-clinic-management-software">Homeopathy</a></li>
                     <li><a href="/dermatologists">Dermatology</a></li>
                     <li><a href="/pediatricians">Pediatrics</a></li>
                     <li><a href="/physiotherapists">Physiotherapy</a></li>
