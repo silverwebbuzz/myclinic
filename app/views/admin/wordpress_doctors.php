@@ -9,6 +9,21 @@ $statusLabels = [
     'wordpress_connection_ok' => 'WordPress API connection is working.',
 ];
 $msg = isset($message) ? ($statusLabels[$message] ?? str_replace('_', ' ', (string) $message)) : null;
+$accessFilter = match ($access ?? 'all') {
+    'with', 'without' => $access,
+    default => 'all',
+};
+$filterQs = static function (string $filter) use ($search): string {
+    $params = [];
+    if ($search !== '') {
+        $params['q'] = $search;
+    }
+    if ($filter !== 'all') {
+        $params['access'] = $filter;
+    }
+
+    return '/admin/wordpress-doctors' . ($params !== [] ? '?' . http_build_query($params) : '');
+};
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -62,7 +77,21 @@ $msg = isset($message) ? ($statusLabels[$message] ?? str_replace('_', ' ', (stri
         <div class="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"><?= htmlspecialchars((string) $error) ?></div>
         <?php endif; ?>
 
-        <form method="get" action="/admin/wordpress-doctors" class="mt-4 flex gap-2">
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex gap-2 text-sm">
+                <?php foreach (['all' => 'All', 'without' => 'Access Required', 'with' => 'Access Granted'] as $val => $label): ?>
+                <a href="<?= htmlspecialchars($filterQs($val)) ?>"
+                   class="rounded-lg px-3 py-1.5 font-medium <?= $accessFilter === $val ? 'bg-slate-800 text-white' : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50' ?>">
+                    <?= htmlspecialchars($label) ?>
+                </a>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
+        <form method="get" action="/admin/wordpress-doctors" class="mt-3 flex gap-2">
+            <?php if ($accessFilter !== 'all'): ?>
+            <input type="hidden" name="access" value="<?= htmlspecialchars($accessFilter) ?>">
+            <?php endif; ?>
             <input type="search" name="q" value="<?= htmlspecialchars($search) ?>" placeholder="Search name, city, clinic…"
                    class="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
             <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">Search</button>
@@ -81,15 +110,20 @@ $msg = isset($message) ? ($statusLabels[$message] ?? str_replace('_', ' ', (stri
                 </thead>
                 <tbody class="divide-y">
                     <?php if (empty($doctors)): ?>
-                    <tr><td colspan="5" class="px-4 py-8 text-center text-slate-500">No doctors found.</td></tr>
+                    <tr><td colspan="5" class="px-4 py-8 text-center text-slate-500">
+                        <?php if ($accessFilter === 'without'): ?>
+                        No listings require WordPress access right now.
+                        <?php elseif ($accessFilter === 'with'): ?>
+                        No listings have WordPress access granted yet.
+                        <?php else: ?>
+                        No doctors found.
+                        <?php endif; ?>
+                    </td></tr>
                     <?php else: ?>
                     <?php foreach ($doctors as $doc): ?>
                     <tr class="hover:bg-slate-50/80">
                         <td class="px-4 py-3">
                             <div class="font-medium text-slate-900"><?= htmlspecialchars((string) $doc['name']) ?></div>
-                            <?php if (!empty($doc['listing_name']) && $doc['listing_name'] !== $doc['name']): ?>
-                            <div class="text-xs text-slate-500"><?= htmlspecialchars((string) $doc['listing_name']) ?></div>
-                            <?php endif; ?>
                             <?php if (($doc['email'] ?? '') !== '—'): ?>
                             <div class="text-xs text-slate-400"><?= htmlspecialchars((string) $doc['email']) ?></div>
                             <?php endif; ?>
@@ -150,6 +184,7 @@ $msg = isset($message) ? ($statusLabels[$message] ?? str_replace('_', ' ', (stri
         $pageTotal = (int) ($pages ?? 1);
         $pageQs = static fn (int $p): string => '/admin/wordpress-doctors?' . http_build_query(array_filter([
             'q' => $search !== '' ? $search : null,
+            'access' => $accessFilter !== 'all' ? $accessFilter : null,
             'page' => $p > 1 ? $p : null,
         ]));
         ?>

@@ -6,29 +6,41 @@ namespace App\Services;
 
 use App\Core\Database;
 use App\Core\QueryBuilder;
+use App\Support\SpecialtyCatalog;
 use App\Support\WordPressSettings;
 use PDO;
 
 final class WordPressDoctorService
 {
   /** @return array{doctors: list<array<string, mixed>>, total: int, page: int, pages: int} */
-    public static function doctorsForAdmin(string $search = '', int $page = 1, int $perPage = 50): array
+    public static function doctorsForAdmin(string $search = '', int $page = 1, int $perPage = 50, string $accessFilter = 'all'): array
     {
         $page = max(1, $page);
         $offset = ($page - 1) * $perPage;
         $search = trim($search);
+        $accessFilter = match ($accessFilter) {
+            'with', 'without' => $accessFilter,
+            default => 'all',
+        };
 
         $pdo = Database::connection();
         $params = [];
         $where = "dd.is_active = 1 AND dd.status = 'OPERATIONAL'";
 
+        if ($accessFilter === 'with') {
+            $where .= ' AND wdl.id IS NOT NULL';
+        } elseif ($accessFilter === 'without') {
+            $where .= ' AND wdl.id IS NULL';
+        }
+
         if ($search !== '') {
-            $where .= ' AND (dd.name LIKE :q1 OR dd.doctor_name LIKE :q2 OR dd.city LIKE :q3 OR t.name LIKE :q4)';
+            $where .= ' AND (dd.name LIKE :q1 OR dd.doctor_name LIKE :q2 OR dd.city LIKE :q3 OR t.name LIKE :q4 OR u.name LIKE :q5)';
             $like = '%' . $search . '%';
             $params['q1'] = $like;
             $params['q2'] = $like;
             $params['q3'] = $like;
             $params['q4'] = $like;
+            $params['q5'] = $like;
         }
 
         $from = "FROM directory_doctors dd
@@ -51,6 +63,7 @@ final class WordPressDoctorService
                     dd.claimed_tenant_id,
                     t.name AS tenant_name,
                     u.id AS portal_user_id,
+                    u.name AS portal_user_name,
                     u.email AS portal_email,
                     wdl.id AS link_id,
                     wdl.wp_user_id,
@@ -61,7 +74,7 @@ final class WordPressDoctorService
              WHERE {$where}
              ORDER BY wdl.id IS NULL DESC,
                       dd.is_claimed DESC,
-                      COALESCE(NULLIF(TRIM(dd.doctor_name), ''), dd.name) ASC
+                      COALESCE(NULLIF(TRIM(u.name), ''), NULLIF(TRIM(dd.doctor_name), ''), dd.name) ASC
              LIMIT {$perPage} OFFSET {$offset}"
         );
         $stmt->execute($params);
@@ -82,9 +95,8 @@ final class WordPressDoctorService
     /** @param array<string, mixed> $row @return array<string, mixed> */
     private static function normalizeDirectoryAdminRow(array $row): array
     {
-        $doctorName = trim((string) ($row['doctor_name'] ?? ''));
         $listingName = trim((string) ($row['name'] ?? ''));
-        $displayName = $doctorName !== '' ? ($doctorName !== $listingName && $listingName !== '' ? $doctorName : ($doctorName ?: $listingName)) : $listingName;
+        $displayName = self::portalDoctorNameFromRow($row);
         if ($displayName === '') {
             $displayName = 'Directory listing #' . (int) ($row['id'] ?? 0);
         }
@@ -144,7 +156,8 @@ final class WordPressDoctorService
         $portalUserId = $portalUser !== null ? (int) ($portalUser['id'] ?? 0) : null;
         $clinicId = (int) ($listing['claimed_tenant_id'] ?? 0) ?: null;
 
-        $displayName = self::directoryDisplayName($listing);
+        $profile = self::wpProfileFromListing($listing, $portalUser);
+        $displayName = $profile['name'];
         $email = trim((string) ($portalUser['email'] ?? ''));
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $email = 'listing-' . $directoryDoctorId . '@authors.eclinicpro.internal';
@@ -153,7 +166,7 @@ final class WordPressDoctorService
         $username = self::uniqueUsername($displayName, $directoryDoctorId);
         $password = bin2hex(random_bytes(16));
 
-        $created = WordPressService::createOrLinkAuthor($username, $email, $displayName, $password);
+        $created = WordPressService::createOrLinkAuthor($username, $email, $displayName, $password, $profile);
         if (!$created['ok']) {
             return [
                 'ok' => false,
@@ -381,13 +394,109 @@ final class WordPressDoctorService
             ->first();
     }
 
-    /** @param array<string, mixed> $listing */
-    private static function directoryDisplayName(array $listing): string
+    /** @param array<string, mixed>|null $portalUser @param array<string, mixed> $listing */
+    private static function portalDoctorName(?array $portalUser, array $listing): string
     {
-        $doctorName = trim((string) ($listing['doctor_name'] ?? ''));
-        $name = trim((string) ($listing['name'] ?? ''));
+        $portalName = trim((string) ($portalUser['name'] ?? ''));
+        if ($portalName !== '') {
+            return $portalName;
+        }
 
-        return $doctorName !== '' ? $doctorName : ($name !== '' ? $name : 'Doctor');
+        $doctorName = trim((string) ($listing['doctor_name'] ?? ''));
+        if ($doctorName !== '') {
+            return $doctorName;
+        }
+
+        $listingName = trim((string) ($listing['name'] ?? ''));
+
+        return $listingName !== '' ? $listingName : 'Doctor';
+    }
+
+    /** @param array<string, mixed> $row */
+    private static function portalDoctorNameFromRow(array $row): string
+    {
+        $portalName = trim((string) ($row['portal_user_name'] ?? ''));
+        if ($portalName !== '') {
+            return $portalName;
+        }
+
+        $doctorName = trim((string) ($row['doctor_name'] ?? ''));
+        if ($doctorName !== '') {
+            return $doctorName;
+        }
+
+        return trim((string) ($row['name'] ?? ''));
+    }
+
+    /**
+     * WordPress author profile fields derived from a directory listing.
+     *
+     * @param array<string, mixed> $listing
+     * @param array<string, mixed>|null $portalUser
+     * @return array{first_name: string, last_name: string, name: string, url: string, description: string}
+     */
+    private static function wpProfileFromListing(array $listing, ?array $portalUser = null): array
+    {
+        $rawName = self::portalDoctorName($portalUser, $listing);
+        [$firstName, $lastName] = self::splitDoctorName($rawName);
+        $displayName = $lastName !== ''
+            ? trim($firstName . ' ' . $lastName)
+            : $firstName;
+
+        $specialtySlug = trim((string) ($listing['specialty'] ?? ''));
+        $bio = $specialtySlug !== '' ? SpecialtyCatalog::label($specialtySlug) : '';
+        if ($bio === '') {
+            $bio = trim((string) ($listing['bio'] ?? ''));
+        }
+
+        $url = DirectoryProfileUrlService::publicProfileUrlFromRow($listing) ?? '';
+
+        return [
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'name' => $displayName,
+            'url' => $url,
+            'description' => $bio,
+        ];
+    }
+
+    private static function stripDoctorTitlePrefix(string $name): string
+    {
+        $name = trim(preg_replace('/\s+/u', ' ', $name) ?? $name);
+        if ($name === '') {
+            return '';
+        }
+
+        return trim(preg_replace('/^(?:doctor|dr\.?)\s+/iu', '', $name) ?? $name);
+    }
+
+    private static function formatDoctorFirstName(string $givenName): string
+    {
+        $givenName = self::stripDoctorTitlePrefix($givenName);
+        if ($givenName === '') {
+            return '';
+        }
+
+        return 'Dr. ' . $givenName;
+    }
+
+    /** @return array{0: string, 1: string} */
+    private static function splitDoctorName(string $fullName): array
+    {
+        $stripped = self::stripDoctorTitlePrefix($fullName);
+        if ($stripped === '') {
+            return ['', ''];
+        }
+
+        $parts = explode(' ', $stripped);
+        if (count($parts) === 1) {
+            return [self::formatDoctorFirstName($parts[0]), ''];
+        }
+
+        $lastName = (string) array_pop($parts);
+        $givenName = implode(' ', $parts);
+
+        return [self::formatDoctorFirstName($givenName), $lastName];
     }
 
     /** @return list<int> */

@@ -1179,16 +1179,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['spec'], $_POST['fetch
         $spec = (string) $_POST['spec'];
         $city = find_city($STATES, (string) $_POST['fetch_city']);
 
-        // Match the chosen specialty against $QUERIES by its 'spec' code.
-        $query = null;
-        foreach ($QUERIES as $qrow) {
-            if ($qrow['spec'] === $spec) { $query = $qrow; break; }
+        // Resolve the chosen specialty into a list of $QUERIES rows to run.
+        //   '__all__' → every query (loops through all specialties in this city)
+        //   otherwise → the single query whose 'spec' code matches
+        $queries = [];
+        if ($spec === '__all__') {
+            $queries = $QUERIES;
+        } else {
+            foreach ($QUERIES as $qrow) {
+                if ($qrow['spec'] === $spec) { $queries = [$qrow]; break; }
+            }
         }
 
         $areaSel = trim((string) ($_POST['area'] ?? ''));   // '' = city-wide, '__all__' = every area
 
-        if (!$city)       $err = 'Please select a valid city.';
-        elseif (!$query)  $err = 'Please select a valid specialty.';
+        if (!$city)            $err = 'Please select a valid city.';
+        elseif (empty($queries)) $err = 'Please select a valid specialty.';
         else {
             // Quality-first: tight area queries beat one wide city probe.
             //   - specific area → geocode it, one tight ~3.5km job
@@ -1215,7 +1221,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['spec'], $_POST['fetch
                 }
                 if (empty($cityPoints)) $err = 'Could not build a grid for this city.';
                 else {
-                    $newJobId = job_create($cityPoints, [$query]);
+                    // All specialties × all grid cells: job_create fans out one
+                    // task per (cell × query), and the worker loops through them
+                    // sequentially in tiny chunks — so the specialty loop
+                    // continues automatically across the whole sweep.
+                    $newJobId = job_create($cityPoints, $queries);
                     header('Location: ?job=' . $newJobId);
                     exit;
                 }
@@ -1230,12 +1240,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['spec'], $_POST['fetch
                         'lat' => $coords['lat'], 'lng' => $coords['lng'],
                         'radius' => $coords['radius'], 'area' => $areaSel,
                     ]);
-                    $newJobId = job_create([$areaCity], [$query]);
+                    $newJobId = job_create([$areaCity], $queries);
                     header('Location: ?job=' . $newJobId);
                     exit;
                 }
             } else {
-                $newJobId = job_create([$city], [$query]);
+                $newJobId = job_create([$city], $queries);
                 header('Location: ?job=' . $newJobId);
                 exit;
             }
@@ -1502,6 +1512,7 @@ h1{font-size:24px;font-weight:600;margin:0 0 8px}
             <label style="display:block;font-size:12px;font-weight:500;color:var(--ink);margin-bottom:4px;">Specialty</label>
             <select name="spec" required style="min-width:220px;padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:#fff;">
                 <option value="">— Select specialty —</option>
+                <option value="__all__">★ All specialties — every query (<?= count($QUERIES) ?>)</option>
                 <?php foreach ($QUERIES as $qrow): ?>
                     <option value="<?= htmlspecialchars($qrow['spec']) ?>"><?= htmlspecialchars(ucfirst($qrow['q'])) ?></option>
                 <?php endforeach; ?>
