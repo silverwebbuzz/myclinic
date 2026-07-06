@@ -113,6 +113,7 @@ require __DIR__ . '/partials/header.php';
                 <div class="hp-paths">
                     <a href="/find-a-doctor" class="hp-path hp-path-patient">
                         <div class="hp-path-ic">🔍</div>
+                        <!-- <div class="hp-path-ic"><img src="/assets/img/icon/search-icon.svg" alt="Search" /></div> -->
                         <div class="hp-path-body">
                             <div class="hp-path-title">Find a Doctor</div>
                             <div class="hp-path-sub">Find &amp; book a doctor in 60 seconds</div>
@@ -217,19 +218,19 @@ require __DIR__ . '/partials/header.php';
         <div class="hp-spec-tabs reveal">
             <button class="tab active" data-filter="all">All Specialties</button>
             <button class="tab" data-filter="medical">
-                <span class="tab-ic">🩺</span> Medical
+                <span class="tab-ic"></span> Medical
             </button>
             <button class="tab" data-filter="surgical">
-                <span class="tab-ic">🔪</span> Surgical
+                <span class="tab-ic"></span> Surgical
             </button>
             <button class="tab" data-filter="dental">
-                <span class="tab-ic">🦷</span> Dental
+                <span class="tab-ic"></span> Dental
             </button>
             <button class="tab" data-filter="wellness">
-                <span class="tab-ic">🌿</span> Wellness
+                <span class="tab-ic"></span> Wellness
             </button>
             <button class="tab" data-filter="mental">
-                <span class="tab-ic">🧩</span> Mental Health
+                <span class="tab-ic"></span> Mental Health
             </button>
         </div>
 
@@ -238,7 +239,7 @@ require __DIR__ . '/partials/header.php';
 
             <!-- ── Medical ── -->
             <div class="hp-spec-card" data-group="medical">
-                <span class="card-ic">🩺</span>
+                <span class="card-ic"><img src="/assets/img/icon/general-physician.svg" alt="General Physician" /></span>
                 <div class="card-body">
                     <h4>General Physician</h4>
                     <p>Your first stop for fever, infections, and everyday health concerns.</p>
@@ -247,7 +248,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="medical">
-                <span class="card-ic">❤️</span>
+                <span class="card-ic"><img src="/assets/img/icon/cardiologist.svg" alt="Cardiologist" /></span>
                 <div class="card-body">
                     <h4>Cardiologist</h4>
                     <p>Expert care for heart conditions, BP, cholesterol and more.</p>
@@ -256,7 +257,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="medical">
-                <span class="card-ic">✨</span>
+                <span class="card-ic"><img src="/assets/img/icon/dermatologist.svg" alt="Dermatologist" /></span>
                 <div class="card-body">
                     <h4>Dermatologist</h4>
                     <p>Skin, hair and nail treatments — acne to eczema and beyond.</p>
@@ -265,7 +266,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="medical">
-                <span class="card-ic">🧠</span>
+                <span class="card-ic"><img src="/assets/img/icon/neurologist.png" alt="Neurologist" /></span>
                 <div class="card-body">
                     <h4>Neurologist</h4>
                     <p>Brain and nervous system specialist for migraines, epilepsy and more.</p>
@@ -274,7 +275,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="medical">
-                <span class="card-ic">🫁</span>
+                <span class="card-ic"><img src="/assets/img/icon/pulmonologist.png" alt="Pulmonologist" /></span>
                 <div class="card-body">
                     <h4>Pulmonologist</h4>
                     <p>Lung and respiratory specialist for asthma, COPD and infections.</p>
@@ -283,7 +284,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="medical">
-                <span class="card-ic">🍽️</span>
+                <span class="card-ic"><img src="/assets/img/icon/gastroenterologist.png" alt="Gastroenterologist" /></span>
                 <div class="card-body">
                     <h4>Gastroenterologist</h4>
                     <p>Digestive health expert — stomach, liver, intestine care.</p>
@@ -292,7 +293,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="medical">
-                <span class="card-ic">⚖️</span>
+                <span class="card-ic"><img src="/assets/img/icon/endocrinologist.png" alt="Endocrinologist" /></span>
                 <div class="card-body">
                     <h4>Endocrinologist</h4>
                     <p>Hormones, diabetes, thyroid and metabolic disorder specialist.</p>
@@ -301,7 +302,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="medical">
-                <span class="card-ic">💧</span>
+                <span class="card-ic"><img src="/assets/img/icon/nephrologist.png" alt="Nephrologist" /></span>
                 <div class="card-body">
                     <h4>Nephrologist</h4>
                     <p>Kidney disease management including CKD and dialysis support.</p>
@@ -310,7 +311,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="medical">
-                <span class="card-ic">🎗️</span>
+                <span class="card-ic"><img src="/assets/img/icon/oncologist.png" alt="Oncologist" /></span>
                 <div class="card-body">
                     <h4>Oncologist</h4>
                     <p>Cancer diagnosis, treatment planning and ongoing care.</p>
@@ -319,7 +320,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="medical">
-                <span class="card-ic">🚹</span>
+                <span class="card-ic"><img src="/assets/img/icon/urologist.png" alt="Urologist" /></span>
                 <div class="card-body">
                     <h4>Urologist</h4>
                     <p>Urinary tract and prostate health for men and women.</p>
@@ -329,7 +330,7 @@ require __DIR__ . '/partials/header.php';
 
             <!-- ── Surgical ── -->
             <div class="hp-spec-card" data-group="surgical">
-                <span class="card-ic">🔪</span>
+                <span class="card-ic"><img src="/assets/img/icon/general-surgeon.png" alt="General Surgeon" /></span>
                 <div class="card-body">
                     <h4>General Surgeon</h4>
                     <p>Appendix, hernia, gallbladder and other common surgeries.</p>
@@ -338,7 +339,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="surgical">
-                <span class="card-ic">🧠</span>
+                <span class="card-ic"><img src="/assets/img/icon/neurologist.png" alt="Neurosurgeon" /></span>
                 <div class="card-body">
                     <h4>Neurosurgeon</h4>
                     <p>Brain and spine surgical interventions by top specialists.</p>
@@ -347,7 +348,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="surgical">
-                <span class="card-ic">🦴</span>
+                <span class="card-ic"><img src="/assets/img/icon/orthopaedics.png" alt="Orthopedic" /></span>
                 <div class="card-body">
                     <h4>Orthopaedic</h4>
                     <p>Bone, joint and muscle surgeries including replacements.</p>
@@ -356,7 +357,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="surgical">
-                <span class="card-ic">💉</span>
+                <span class="card-ic"><img src="/assets/img/icon/plastic-surgeon.png" alt="Plastic Surgeon" /></span>
                 <div class="card-body">
                     <h4>Plastic Surgeon</h4>
                     <p>Reconstructive and cosmetic surgeries with precision care.</p>
@@ -365,7 +366,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="surgical">
-                <span class="card-ic">🚑</span>
+                <span class="card-ic"><img src="/assets/img/icon/critical-care.png" alt="Critical Care" /></span>
                 <div class="card-body">
                     <h4>Critical Care</h4>
                     <p>Intensive care specialists for life-threatening conditions.</p>
@@ -375,7 +376,7 @@ require __DIR__ . '/partials/header.php';
 
             <!-- ── Dental ── -->
             <div class="hp-spec-card" data-group="dental">
-                <span class="card-ic">🦷</span>
+                <span class="card-ic"><img src="/assets/img/icon/dental.svg" alt="Dentist" /></span>
                 <div class="card-body">
                     <h4>Dentist</h4>
                     <p>Routine cleanings, fillings, extractions and oral hygiene.</p>
@@ -384,7 +385,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="dental">
-                <span class="card-ic">😁</span>
+                <span class="card-ic"><img src="/assets/img/icon/orthodontist.png" alt="Orthodontist" /></span>
                 <div class="card-body">
                     <h4>Orthodontist</h4>
                     <p>Braces, aligners and teeth-straightening solutions.</p>
@@ -393,7 +394,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="dental">
-                <span class="card-ic">🪥</span>
+                <span class="card-ic"><img src="/assets/img/icon/pediatric-dentist.png" alt="Pediatric Dentist" /></span>
                 <div class="card-body">
                     <h4>Pediatric Dentist</h4>
                     <p>Child-friendly dental care from first tooth to teens.</p>
@@ -403,7 +404,7 @@ require __DIR__ . '/partials/header.php';
 
             <!-- ── Wellness ── -->
             <div class="hp-spec-card" data-group="wellness">
-                <span class="card-ic">🌸</span>
+                <span class="card-ic"><img src="/assets/img/icon/gynaecologist.png" alt="Gynaecologist" /></span>
                 <div class="card-body">
                     <h4>Gynaecologist</h4>
                     <p>Women's health, pregnancy, fertility and hormonal care.</p>
@@ -412,7 +413,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="wellness">
-                <span class="card-ic">👶</span>
+                <span class="card-ic"><img src="/assets/img/icon/pediatrics.png" alt="Paediatrician" /></span>
                 <div class="card-body">
                     <h4>Paediatrician</h4>
                     <p>Child health and development from newborns to adolescents.</p>
@@ -421,7 +422,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="wellness">
-                <span class="card-ic">👁️</span>
+                <span class="card-ic"><img src="/assets/img/icon/ophthalmology.png" alt="Ophthalmologist" /></span>
                 <div class="card-body">
                     <h4>Ophthalmologist</h4>
                     <p>Eye exams, glasses, LASIK and retinal care specialists.</p>
@@ -430,7 +431,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="wellness">
-                <span class="card-ic">👂</span>
+                <span class="card-ic"><img src="/assets/img/icon/ent-specialist.png" alt="ENT Specialist" /></span>
                 <div class="card-body">
                     <h4>ENT Specialist</h4>
                     <p>Ear, nose and throat conditions including sinusitis and hearing loss.</p>
@@ -439,7 +440,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="wellness">
-                <span class="card-ic">🌿</span>
+                <span class="card-ic"><img src="/assets/img/icon/homeopathy.png" alt="Homeopathy" /></span>
                 <div class="card-body">
                     <h4>Homeopathy</h4>
                     <p>Holistic treatment with natural remedies and personalised care.</p>
@@ -448,7 +449,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="wellness">
-                <span class="card-ic">🪔</span>
+                <span class="card-ic"><img src="/assets/img/icon/ayurveda.png" alt="Ayurveda" /></span>
                 <div class="card-body">
                     <h4>Ayurveda</h4>
                     <p>Ancient Indian healing — herbs, therapies and detox plans.</p>
@@ -457,7 +458,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="wellness">
-                <span class="card-ic">🤸</span>
+                <span class="card-ic"><img src="/assets/img/icon/physiotherapist.png" alt="Physiotherapist" /></span>
                 <div class="card-body">
                     <h4>Physiotherapist</h4>
                     <p>Rehabilitation and movement therapy for pain and injuries.</p>
@@ -466,7 +467,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="wellness">
-                <span class="card-ic">🥗</span>
+                <span class="card-ic"><img src="/assets/img/icon/dietitian.png" alt="Dietitian" /></span>
                 <div class="card-body">
                     <h4>Dietitian</h4>
                     <p>Personalised nutrition plans for weight, diabetes and gut health.</p>
@@ -476,7 +477,7 @@ require __DIR__ . '/partials/header.php';
 
             <!-- ── Mental Health ── -->
             <div class="hp-spec-card" data-group="mental">
-                <span class="card-ic">🧩</span>
+                <span class="card-ic"><img src="/assets/img/icon/psychiatrist.png" alt="Psychiatrist" /></span>
                 <div class="card-body">
                     <h4>Psychiatrist</h4>
                     <p>Medical mental health care — anxiety, depression, bipolar and more.</p>
@@ -485,7 +486,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="mental">
-                <span class="card-ic">💭</span>
+                <span class="card-ic"><img src="/assets/img/icon/psychologist.png" alt="Psychologist" /></span>
                 <div class="card-body">
                     <h4>Psychologist</h4>
                     <p>Talk therapy and counselling for emotional wellbeing.</p>
@@ -730,12 +731,12 @@ require __DIR__ . '/partials/header.php';
                 <div class="hp-feat-grid">
                     <?php foreach (
                         [
-                            ['📅', 'Online bookings', 'Patients book from your public profile. WhatsApp confirmations and reminders included.'],
-                            ['📋', 'Patient records', 'Encrypted records, history and contact info — always one search away.'],
-                            ['℞', 'Prescriptions', 'Signed digital Rx, delivered to the patient on WhatsApp before they leave.'],
-                            ['🧾', 'Billing & invoices', 'Clean, GST-ready invoices in seconds. WhatsApp delivery.'],
-                            ['🔁', 'Follow-ups', 'Never lose a follow-up. Automatic reminders, overdue tracking, a calm queue.'],
-                            ['📊', 'Reports', 'Revenue, top diagnoses, patient retention. Numbers that matter, nothing else.'],
+                            ['<img src="/assets/img/icon/online-booking-page.png" alt="Online bookings">', 'Online bookings', 'Patients book from your public profile. WhatsApp confirmations and reminders included.'],
+                            ['<img src="/assets/img/icon/structured-visit-notes.png" alt="Patient records">', 'Patient records', 'Encrypted records, history and contact info — always one search away.'],
+                            ['<img src="/assets/img/icon/prescriptionl.svg" alt="Prescriptions">', 'Prescriptions', 'Signed digital Rx, delivered to the patient on WhatsApp before they leave.'],
+                            ['<img src="/assets/img/icon/invoicing.png" alt="Billing & invoices">', 'Billing & invoices', 'Clean, GST-ready invoices in seconds. WhatsApp delivery.'],
+                            ['<img src="/assets/img/icon/refill-requests.svg" alt="Follow-ups">', 'Follow-ups', 'Never lose a follow-up. Automatic reminders, overdue tracking, a calm queue.'],
+                            ['<img src="/assets/img/icon/vitals-trend-charts.png" alt="Reports">', 'Reports', 'Revenue, top diagnoses, patient retention. Numbers that matter, nothing else.'],
                         ] as [$ic, $t, $d]
                     ): ?>
                         <div class="hp-feat">
