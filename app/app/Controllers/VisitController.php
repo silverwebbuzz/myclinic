@@ -13,7 +13,9 @@ use App\Services\ClinicSettingsService;
 use App\Services\DietService;
 use App\Services\DrugService;
 use App\Services\Icd10Service;
+use App\Core\QueryBuilder;
 use App\Services\PatientImmunizationService;
+use App\Services\PatientPrescriptionShareService;
 use App\Services\PatientService;
 use App\Services\PrescriptionService;
 use App\Services\RemedyService;
@@ -230,6 +232,23 @@ final class VisitController
 
         VisitService::complete($clinicId, $visitId);
         AuditService::log($request, 'UPDATE', 'visits', $visitId);
+
+        // Optionally push the prescription to the patient's eClinicPro panel.
+        // Only fires when the doctor ticked the box AND the patient has a panel
+        // account (identity_id). Failures here must never block completion.
+        if (!empty($request->post['share_to_patient_app'])) {
+            try {
+                $visit = VisitService::findDetailed($clinicId, $visitId);
+                $patient = $visit ? PatientService::find($clinicId, (int) $visit['patient_id']) : null;
+                if ($visit && $patient && !empty($patient['identity_id'])) {
+                    $clinic = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first() ?? [];
+                    $lines = PrescriptionService::forVisit($clinicId, $visitId);
+                    PatientPrescriptionShareService::share($visit, $patient, $clinic, $lines);
+                }
+            } catch (\Throwable $e) {
+                error_log('[visit complete] Rx share failed: ' . $e->getMessage());
+            }
+        }
 
         return Response::redirect('/dashboard?visit_completed=1');
     }

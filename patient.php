@@ -90,6 +90,12 @@ require __DIR__ . '/partials/header.php';
               👨‍👩‍👧 Family
               <span class="pt-tab-count" x-show="family.members.length > 0" x-text="family.members.length"></span>
             </button>
+            <button type="button" role="tab"
+                    :class="tab === 'rx' ? 'is-active' : ''"
+                    @click="tab = 'rx'; rx.loadOnce()">
+              💊 E-prescriptions
+              <span class="pt-tab-count" x-show="rx.items.length > 0" x-text="rx.items.length"></span>
+            </button>
           </div>
 
           <!-- ============ BOOKINGS TAB ============ -->
@@ -347,16 +353,102 @@ require __DIR__ . '/partials/header.php';
               </div>
             </template>
           </div>
+
+          <!-- ============ E-PRESCRIPTIONS TAB ============ -->
+          <div x-show="tab === 'rx'" class="pt-tab-pane">
+            <div class="pt-section-head">
+              <h3>E-prescriptions</h3>
+              <button type="button" class="btn-mini primary" @click="rx.startAdd()" x-show="!rx.adding">+ Add prescription</button>
+            </div>
+            <p class="pt-section-note">
+              Keep every prescription in one place — upload a photo or PDF of one you already have,
+              and doctors on eClinicPro can share new ones straight to your panel.
+            </p>
+
+            <div x-show="rx.loading" class="pt-loading">Loading your prescriptions…</div>
+
+            <!-- Add form (patient self-upload) -->
+            <template x-if="rx.adding">
+              <div class="pt-fam-edit">
+                <div class="pt-fam-edit-grid">
+                  <label class="pt-fld"><span>For</span>
+                    <select x-model="rx.form.family_member_id">
+                      <option value="">Myself</option>
+                      <template x-for="m in family.members" :key="'rxm-' + m.id">
+                        <template x-if="!m.is_self">
+                          <option :value="m.id" x-text="m.name"></option>
+                        </template>
+                      </template>
+                    </select>
+                  </label>
+                  <label class="pt-fld"><span>Title *</span>
+                    <input type="text" x-model="rx.form.label" placeholder="e.g. Dr. Jayesh — May 2026 — BP">
+                  </label>
+                  <label class="pt-fld"><span>Doctor <em>(optional)</em></span>
+                    <input type="text" x-model="rx.form.doctor_name" placeholder="Doctor's name">
+                  </label>
+                  <label class="pt-fld"><span>Date <em>(optional)</em></span>
+                    <input type="date" x-model="rx.form.issued_on">
+                  </label>
+                  <label class="pt-fld"><span>Reason / notes <em>(optional)</em></span>
+                    <input type="text" x-model="rx.form.notes" placeholder="e.g. Blood pressure">
+                  </label>
+                  <label class="pt-fld"><span>Prescription file <em>(photo or PDF)</em></span>
+                    <input type="file" accept="image/*,application/pdf" @change="rx.pickFile($event)">
+                  </label>
+                </div>
+
+                <p class="pt-fam-err" x-show="rx.formError" x-text="rx.formError"></p>
+                <div class="pt-fam-edit-actions">
+                  <button type="button" class="btn-mini" @click="rx.cancelAdd()">Cancel</button>
+                  <button type="button" class="btn-mini primary" :disabled="rx.saving"
+                          @click="rx.save()" x-text="rx.saving ? 'Saving…' : 'Save prescription'"></button>
+                </div>
+              </div>
+            </template>
+
+            <!-- List (both sources) -->
+            <div class="pt-fam-list" x-show="!rx.loading && rx.items.length > 0">
+              <template x-for="p in rx.items" :key="'rx-' + p.id">
+                <div class="pt-fam-card">
+                  <div class="pt-fam-head">
+                    <span class="pt-fam-avatar">💊</span>
+                    <span class="pt-fam-id">
+                      <span class="pt-fam-name" x-text="p.label"></span>
+                      <span class="pt-fam-rel">
+                        <template x-if="p.is_clinic"><span class="pt-fam-blood">From clinic</span></template>
+                        <template x-if="p.doctor_name"><span x-text="' · ' + p.doctor_name"></span></template>
+                        <template x-if="p.clinic_name"><span x-text="' · ' + p.clinic_name"></span></template>
+                        <template x-if="p.issued_on"><span x-text="' · ' + rx.fmtDate(p.issued_on)"></span></template>
+                        <template x-if="p.notes"><span x-text="' · ' + p.notes"></span></template>
+                      </span>
+                    </span>
+                    <div class="pt-fam-actions">
+                      <template x-if="p.has_file">
+                        <a class="btn-mini" :href="'/api/patient_prescriptions?action=file&id=' + p.id" target="_blank" rel="noopener">View</a>
+                      </template>
+                      <button type="button" class="btn-mini" @click="rx.remove(p)">Remove</button>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <template x-if="!rx.loading && rx.items.length === 0 && !rx.adding">
+              <div class="pt-empty">
+                <div class="glyph">💊</div>
+                <h3>No prescriptions yet</h3>
+                <p>Upload a photo of a prescription you already have, or ask your eClinicPro doctor to share one during your next visit.</p>
+                <button type="button" class="btn btn-primary" @click="rx.startAdd()">+ Add a prescription</button>
+              </div>
+            </template>
+          </div>
         </div>
 
         <!-- Coming soon sidebar -->
         <aside class="pt-soon">
           <h3>Coming soon</h3>
           <ul>
-            <li>
-              <span class="ic">💊</span>
-              <div><b>E-prescriptions</b><span>From any visited clinic</span></div>
-            </li>
             <li>
               <span class="ic">🧪</span>
               <div><b>Lab reports</b><span>All your results in one place</span></div>
@@ -917,6 +1009,91 @@ function patientPanel(isLoggedIn) {
           });
           await this.load();
         } catch (e) {}
+      },
+    },
+
+    // ---- E-prescriptions (Rx tab) ----
+    rx: {
+      loaded: false,
+      loading: false,
+      items: [],
+      adding: false,
+      saving: false,
+      formError: '',
+      form: {},
+      file: null,
+
+      async loadOnce() {
+        if (this.loaded) return;
+        await this.load();
+      },
+      async load() {
+        this.loading = true;
+        try {
+          const r = await fetch('/api/patient_prescriptions', { credentials: 'same-origin' });
+          const j = await r.json();
+          this.items = j.ok ? (j.items || []) : [];
+        } catch (e) { this.items = []; }
+        finally { this.loading = false; this.loaded = true; }
+      },
+
+      blankForm() {
+        return { family_member_id: '', label: '', doctor_name: '', issued_on: '', notes: '' };
+      },
+      startAdd() {
+        this.formError = '';
+        this.file = null;
+        this.form = this.blankForm();
+        this.adding = true;
+        // Family members feed the "For" dropdown — make sure they're loaded.
+        this.$data.family.loadOnce();
+      },
+      cancelAdd() { this.adding = false; this.formError = ''; this.file = null; },
+      pickFile(e) { this.file = (e.target.files && e.target.files[0]) || null; },
+
+      async save() {
+        if (!this.form.label.trim()) { this.formError = 'Please enter a title.'; return; }
+        this.saving = true; this.formError = '';
+        try {
+          const fd = new FormData();
+          fd.append('label', this.form.label);
+          if (this.form.family_member_id) fd.append('family_member_id', this.form.family_member_id);
+          if (this.form.doctor_name) fd.append('doctor_name', this.form.doctor_name);
+          if (this.form.issued_on) fd.append('issued_on', this.form.issued_on);
+          if (this.form.notes) fd.append('notes', this.form.notes);
+          if (this.file) fd.append('file', this.file);
+
+          const r = await fetch('/api/patient_prescriptions?action=add', {
+            method: 'POST', credentials: 'same-origin', body: fd,
+          });
+          const j = await r.json();
+          if (j.ok) { this.adding = false; this.file = null; await this.load(); }
+          else {
+            this.formError = ({
+              label_required: 'Please enter a title.',
+              file_too_large: 'That file is too large (max ' + (j.max_mb || 10) + ' MB).',
+              file_type_not_allowed: 'Only images or PDF files are allowed.',
+              member_not_found: 'That family member could not be found.',
+            })[j.error] || ('Could not save. ' + (j.error || ''));
+          }
+        } catch (e) { this.formError = 'Network error — please try again.'; }
+        finally { this.saving = false; }
+      },
+      async remove(p) {
+        if (!confirm('Remove "' + p.label + '" from your prescriptions?')) return;
+        try {
+          await fetch('/api/patient_prescriptions?action=remove', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: p.id }),
+          });
+          await this.load();
+        } catch (e) {}
+      },
+      fmtDate(d) {
+        try {
+          return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        } catch (e) { return d; }
       },
     },
 

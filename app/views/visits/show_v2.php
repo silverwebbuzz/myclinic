@@ -861,9 +861,19 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                     </button>
                 </div>
                 <?php if ($editable): ?>
-                    <form method="post" action="/visits/<?= $visitId ?>/complete" @submit="confirmComplete($event)">
+                    <form method="post" action="/visits/<?= $visitId ?>/complete" @submit="confirmComplete($event)"
+                          class="flex flex-col items-end gap-2">
                         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
                         <input type="hidden" name="_visit_payload" value="">
+                        <?php if (!empty($patient['identity_id'])): ?>
+                            <!-- Patient has an eClinicPro account → offer to push the Rx to their panel. -->
+                            <label class="flex items-center gap-2 text-xs text-slate-600"
+                                   x-show="(prescriptions || []).some(p => p.drug_id || p.remedy_id || p.drug_name)">
+                                <input type="checkbox" name="share_to_patient_app" value="1" checked
+                                       class="rounded border-slate-300 text-brand focus:ring-brand">
+                                <span>Share this prescription to the patient's eClinicPro app</span>
+                            </label>
+                        <?php endif; ?>
                         <button type="submit" class="ui-btn ui-btn-primary">
                             Complete visit
                         </button>
