@@ -424,6 +424,7 @@ require __DIR__ . '/partials/header.php';
         background: #d2f0e2;
         transform: scale(1.08);
     }
+    .feat-card-ic img{width:25px;height:auto;object-fit: contain;filter: brightness(0) saturate(100%) invert(28%) sepia(63%) saturate(1045%) hue-rotate(134deg) brightness(92%) contrast(93%);}
 
     .feat-card h4 {
         font-size: 14.5px;
@@ -651,8 +652,17 @@ require __DIR__ . '/partials/header.php';
     .addon-icon {
         font-size: 32px;
         flex-shrink: 0;
+        width: 48px;
+        height: 48px;
+        background: #edf8f3;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: background 0.2s ease, transform 0.2s ease;
     }
-
+.addon-icon img{width:32px;height:auto;object-fit: contain;filter: brightness(0) saturate(100%) invert(28%) sepia(63%) saturate(1045%) hue-rotate(134deg) brightness(92%) contrast(93%);}
     .addon-name {
         font-size: 15px;
         font-weight: 700;
@@ -819,7 +829,7 @@ require __DIR__ . '/partials/header.php';
                     <div>
                         <span class="cat-count"><?php echo count($cat['items']); ?> features</span>
                         <h2 class="cat-title">
-                            <span class="cat-icon"><?php echo $cat['icon']; ?></span>
+                            <!-- <span class="cat-icon"><?php echo $cat['icon']; ?></span> -->
                             <?php echo htmlspecialchars($cat['title']); ?>
                         </h2>
                     </div>
@@ -884,7 +894,7 @@ require __DIR__ . '/partials/header.php';
             <div class="addon-column">
                 <h3 class="addon-heading">Optional add-ons</h3>
                 <div class="addon-card">
-                    <div class="addon-icon">💬</div>
+                    <div class="addon-icon"><img src="/assets/img/icon/whatsapp-summaries.png" alt="Patient Connect"></div>
                     <div>
                         <div class="addon-name">Patient Connect</div>
                         <p class="addon-desc">WhatsApp automation: appointment reminders, prescription delivery, follow-up nudges. Cuts no-show rates in half.</p>
@@ -892,7 +902,7 @@ require __DIR__ . '/partials/header.php';
                     </div>
                 </div>
                 <div class="addon-card">
-                    <div class="addon-icon">🌿</div>
+                    <div class="addon-icon"><img src="/assets/img/icon/clinic-network.png" alt="Clinic network"></div>
                     <div>
                         <div class="addon-name">Clinic Network</div>
                         <p class="addon-desc">Add an extra clinic branch under one account. Unified patient records, separate queues per branch.</p>

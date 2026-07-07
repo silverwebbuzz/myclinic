@@ -9,15 +9,15 @@ $metaDesc = 'Real encryption, real compliance, real audit logs. HIPAA, GDPR, DPD
 $activePage = 'security';
 
 $pillars = [
-    ['🛡️', 'Encryption everywhere', 'AES-256 at rest. TLS 1.3 in transit. Per-clinic keys, rotated quarterly. Field-level encryption for the most sensitive data (allergies, diagnoses, mental health notes).'],
-    ['✓', 'Compliant by default', 'HIPAA (US), GDPR (EU/UK), DPDP (India), PIPEDA (Canada), POPIA (South Africa), HDS (France). Region-aware data residency.'],
-    ['📋', 'You own your data', 'Export everything as portable JSON, CSV, or HL7 FHIR — anytime, free. Delete your account and we erase within 30 days, audit-logged.'],
-    ['🔐', 'Granular access control', 'Roles for doctor, nurse, receptionist, accountant, owner. Per-action permissions. Time-limited access for locums.'],
-    ['📊', 'Audit trail forever', 'Every read, write, and export is logged with user, IP, device, and timestamp. Tamper-evident, exportable on demand.'],
-    ['🌐', 'Data residency you choose', 'Pick where your data lives: US, EU, India, UAE, Singapore. It never leaves that region — not for backups, not for analytics.'],
-    ['⚡', 'Resilient infrastructure', '99.95% uptime SLA (Hospital plan). Three-region failover. Backups every 15 minutes, restorable to any point in the last 90 days.'],
-    ['🧪', 'Independently tested', 'Quarterly third-party penetration tests. Annual SOC 2 Type II audit. Public bug bounty up to $25,000 per critical finding.'],
-    ['📜', 'Vendor & sub-processor list', 'A short, public list of every vendor that touches your data. We notify you 30 days before any change.'],
+    ['<img src="/assets/img/icon/encryption-everywhere.svg" alt="Encryption Everywhere" />', 'Encryption everywhere', 'AES-256 at rest. TLS 1.3 in transit. Per-clinic keys, rotated quarterly. Field-level encryption for the most sensitive data (allergies, diagnoses, mental health notes).'],
+    ['<img src="/assets/img/icon/compliant-by-default.png" alt="Encryption Everywhere" />', 'Compliant by default', 'HIPAA (US), GDPR (EU/UK), DPDP (India), PIPEDA (Canada), POPIA (South Africa), HDS (France). Region-aware data residency.'],
+    ['<img src="/assets/img/icon/your-own-data.png" alt="You Own Your Data" />', 'You own your data', 'Export everything as portable JSON, CSV, or HL7 FHIR — anytime, free. Delete your account and we erase within 30 days, audit-logged.'],
+    ['<img src="/assets/img/icon/granular-access-control.png" alt="Granular Access Control" />', 'Granular access control', 'Roles for doctor, nurse, receptionist, accountant, owner. Per-action permissions. Time-limited access for locums.'],
+    ['<img src="/assets/img/icon/audit.png" alt="Audit Trail Forever" />', 'Audit trail forever', 'Every read, write, and export is logged with user, IP, device, and timestamp. Tamper-evident, exportable on demand.'],
+    ['<img src="/assets/img/icon/data-residency.png" alt="Data Residency You Choose" />', 'Data residency you choose', 'Pick where your data lives: US, EU, India, UAE, Singapore. It never leaves that region — not for backups, not for analytics.'],
+    ['<img src="/assets/img/icon/resilient-infrastructure.svg" alt="Resilient Infrastructure" />', 'Resilient infrastructure', '99.95% uptime SLA (Hospital plan). Three-region failover. Backups every 15 minutes, restorable to any point in the last 90 days.'],
+    ['<img src="/assets/img/icon/independently-tested.png" alt="Independently Tested" />', 'Independently tested', 'Quarterly third-party penetration tests. Annual SOC 2 Type II audit. Public bug bounty up to $25,000 per critical finding.'],
+    ['<img src="/assets/img/icon/vendor-sub-processor-list.png" alt="Vendor & Sub-Processor List" />', 'Vendor & sub-processor list', 'A short, public list of every vendor that touches your data. We notify you 30 days before any change.'],
 ];
 
 $certs = ['HIPAA', 'GDPR', 'DPDP 2023', 'SOC 2 Type II', 'ISO 27001', 'HL7 FHIR R4', 'PIPEDA', 'POPIA', 'HDS (FR)'];
@@ -74,10 +74,10 @@ require __DIR__ . '/partials/header.php';
     <div class="wrap">
         <div class="stats">
             <?php foreach ($facts as [$num, $label]): ?>
-            <div class="stat reveal">
-                <div class="stat-num" style="font-size: 36px;"><?= e($num) ?></div>
-                <div class="stat-label"><?= e($label) ?></div>
-            </div>
+                <div class="stat reveal">
+                    <div class="stat-num" style="font-size: 36px;"><?= e($num) ?></div>
+                    <div class="stat-label"><?= e($label) ?></div>
+                </div>
             <?php endforeach; ?>
         </div>
     </div>
@@ -92,9 +92,9 @@ require __DIR__ . '/partials/header.php';
         </div>
         <div class="cert-row reveal" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
             <?php foreach ($certs as $c): ?>
-            <div class="cert" style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; background: var(--bg-2); border-radius: 999px; font-size: 13px; font-weight: 500;">
-                <span class="ico">🛡️</span><?= e($c) ?>
-            </div>
+                <div class="cert" style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; background: var(--bg-2); border-radius: 999px; font-size: 13px; font-weight: 500;">
+                    <span class="ico"><img src="/assets/img/icon/encryption-everywhere.svg" alt="Encryption Everywhere"></span><?= e($c) ?>
+                </div>
             <?php endforeach; ?>
         </div>
     </div>
@@ -108,11 +108,11 @@ require __DIR__ . '/partials/header.php';
         </div>
         <div class="sec-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
             <?php foreach ($pillars as $i => [$ic, $t, $d]): ?>
-            <div class="sec-card reveal" style="background: #fff; border: 0.5px solid var(--line); border-radius: 16px; padding: 28px; transition-delay: <?= ($i % 3) * 60 ?>ms;">
-                <div class="ico" style="width: 40px; height: 40px; border-radius: 10px; background: var(--teal-50); color: var(--teal-700); display: grid; place-items: center; font-size: 18px; margin-bottom: 14px;"><?= $ic ?></div>
-                <h4 style="font-size: 16px; font-weight: 500; margin-bottom: 8px;"><?= e($t) ?></h4>
-                <p style="font-size: 13.5px; color: var(--mute); line-height: 1.6;"><?= e($d) ?></p>
-            </div>
+                <div class="sec-card reveal" style="background: #fff; border: 0.5px solid var(--line); border-radius: 16px; padding: 28px; transition-delay: <?= ($i % 3) * 60 ?>ms;">
+                    <div class="ico" style="width: 40px; height: 40px; border-radius: 10px; background: var(--teal-50); color: var(--teal-700); display: grid; place-items: center; font-size: 18px; margin-bottom: 14px;"><?= $ic ?></div>
+                    <h4 style="font-size: 16px; font-weight: 500; margin-bottom: 8px;"><?= e($t) ?></h4>
+                    <p style="font-size: 13.5px; color: var(--mute); line-height: 1.6;"><?= e($d) ?></p>
+                </div>
             <?php endforeach; ?>
         </div>
     </div>
@@ -127,13 +127,13 @@ require __DIR__ . '/partials/header.php';
         </div>
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;" class="practice-grid">
             <?php foreach ($practices as [$t, $d]): ?>
-            <div class="reveal" style="background: #fff; border-radius: 16px; padding: 28px; border: 0.5px solid var(--line);">
-                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                    <div style="width: 28px; height: 28px; border-radius: 8px; background: var(--teal-50); color: var(--teal-700); display: grid; place-items: center;">✓</div>
-                    <h4 style="font-size: 16px; font-weight: 500;"><?= e($t) ?></h4>
+                <div class="reveal" style="background: #fff; border-radius: 16px; padding: 28px; border: 0.5px solid var(--line);">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                        <div style="width: 28px; height: 28px; border-radius: 8px; background: var(--teal-50); color: var(--teal-700); display: grid; place-items: center;">✓</div>
+                        <h4 style="font-size: 16px; font-weight: 500;"><?= e($t) ?></h4>
+                    </div>
+                    <p style="font-size: 14px; color: var(--mute); line-height: 1.6;"><?= e($d) ?></p>
                 </div>
-                <p style="font-size: 14px; color: var(--mute); line-height: 1.6;"><?= e($d) ?></p>
-            </div>
             <?php endforeach; ?>
         </div>
     </div>
@@ -148,14 +148,16 @@ require __DIR__ . '/partials/header.php';
         </div>
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; max-width: 800px; margin: 0 auto;" class="docs-grid">
             <?php foreach ($docs as [$title, $sub]): ?>
-            <a href="#" class="reveal" style="background: #fff; border: 0.5px solid var(--line); border-radius: 12px; padding: 16px 18px; display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit;">
-                <div style="width: 32px; height: 40px; background: var(--bg-2); border-radius: 4px; display: grid; place-items: center; font-size: 9px; font-weight: 700; color: var(--red, #c00); flex-shrink: 0;">PDF</div>
-                <div style="flex: 1;">
-                    <div style="font-size: 14px; font-weight: 500;"><?= e($title) ?></div>
-                    <div style="font-size: 12px; color: var(--mute); margin-top: 2px;"><?= e($sub) ?></div>
-                </div>
-                <span>→</span>
-            </a>
+                <a href="#" class="reveal" style="background: #fff; border: 0.5px solid var(--line); border-radius: 12px; padding: 16px 18px; display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit;">
+                    <div class="pdf-icon" style="width: 32px; height: 40px; background: var(--bg-2); border-radius: 4px; display: grid; place-items: center; font-size: 9px; font-weight: 700; color: var(--red, #c00); flex-shrink: 0;">
+                        <img src="/assets/img/icon/pdf.png" alt="PDF">
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 14px; font-weight: 500;"><?= e($title) ?></div>
+                        <div style="font-size: 12px; color: var(--mute); margin-top: 2px;"><?= e($sub) ?></div>
+                    </div>
+                    <span>→</span>
+                </a>
             <?php endforeach; ?>
         </div>
     </div>
@@ -169,21 +171,26 @@ require __DIR__ . '/partials/header.php';
         </div>
         <div class="faq-list reveal">
             <?php foreach ($faqs as $i => [$q, $a]): ?>
-            <div class="faq-item" :class="open === <?= $i ?> ? 'open' : ''">
-                <button type="button" class="faq-q" @click="open = open === <?= $i ?> ? -1 : <?= $i ?>">
-                    <span><?= e($q) ?></span><span class="plus"></span>
-                </button>
-                <div class="faq-a" x-show="open === <?= $i ?>" x-collapse><?= e($a) ?></div>
-            </div>
+                <div class="faq-item" :class="open === <?= $i ?> ? 'open' : ''">
+                    <button type="button" class="faq-q" @click="open = open === <?= $i ?> ? -1 : <?= $i ?>">
+                        <span><?= e($q) ?></span><span class="plus"></span>
+                    </button>
+                    <div class="faq-a" x-show="open === <?= $i ?>" x-collapse><?= e($a) ?></div>
+                </div>
             <?php endforeach; ?>
         </div>
     </div>
 </section>
 
 <style>
-@media (max-width: 800px) {
-    .sec-grid, .practice-grid, .docs-grid { grid-template-columns: 1fr !important; }
-}
+    @media (max-width: 800px) {
+
+        .sec-grid,
+        .practice-grid,
+        .docs-grid {
+            grid-template-columns: 1fr !important;
+        }
+    }
 </style>
 
 <?php require __DIR__ . '/partials/footer.php'; ?>

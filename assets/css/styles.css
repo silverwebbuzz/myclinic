@@ -1544,7 +1544,7 @@ footer.foot {
 
 .feat-cat-head h2 {
   font-size: 36px;
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.8px;
   line-height: 1.1;
 }
@@ -1700,6 +1700,13 @@ footer.foot {
   place-items: center;
 }
 
+.sec-card .ico img {
+  width: 25px;
+  height: auto;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(28%) sepia(63%) saturate(1045%) hue-rotate(134deg) brightness(92%) contrast(93%);
+}
+
 .sec-card h4 {
   font-size: 16px;
   font-weight: 500;
@@ -1740,6 +1747,13 @@ footer.foot {
   color: var(--teal-700);
   display: grid;
   place-items: center;
+}
+
+.cert .ico img {
+  width: 33px;
+  height: auto;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(28%) sepia(63%) saturate(1045%) hue-rotate(134deg) brightness(92%) contrast(93%);
 }
 
 /* ----- Product Tour ----- */
@@ -2483,6 +2497,13 @@ footer.foot {
   flex-shrink: 0;
 }
 
+.fd-sfield .ico img {
+  width: 22px;
+  height: auto;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(28%) sepia(63%) saturate(1045%) hue-rotate(134deg) brightness(92%) contrast(93%);
+}
+
 .fd-sfield .col {
   flex: 1;
   min-width: 0;
@@ -2546,6 +2567,13 @@ footer.foot {
   place-items: center;
   flex-shrink: 0;
   font-size: 14px;
+}
+
+.fd-ac-item .ic img {
+  width: 18px;
+  height: auto;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(28%) sepia(63%) saturate(1045%) hue-rotate(134deg) brightness(92%) contrast(93%);
 }
 
 .fd-ac-item .nm {
@@ -3069,6 +3097,13 @@ footer.foot {
   font-size: 13px;
   line-height: 1;
   opacity: 0.85;
+}
+
+.fd-meta-row .mi img {
+  width: 16px;
+  height: auto;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(28%) sepia(63%) saturate(1045%) hue-rotate(134deg) brightness(92%) contrast(93%);
 }
 
 .fd-meta-row>span,
@@ -3876,6 +3911,18 @@ footer.foot {
   color: var(--ink);
 }
 
+.fd-btn img {
+  width: 15px;
+  height: auto;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(28%) sepia(63%) saturate(1045%) hue-rotate(134deg) brightness(92%) contrast(93%);
+}
+
+.fd-btn.primary img {
+  filter: brightness(0) invert(1);
+  width: 18px;
+}
+
 .fd-btn.primary {
   background: var(--teal-600);
   color: #fff;
@@ -4647,6 +4694,13 @@ table {
   font-size: 24px;
 }
 
+.hp-path-ic img {
+  width: 26px;
+  height: auto;
+  object-fit: contain;
+  padding-top: 6px;
+}
+
 .hp-path-body {
   flex: 1;
 }
@@ -5015,6 +5069,13 @@ table {
 
 .hp-feat-ic {
   font-size: 22px;
+}
+
+.hp-feat-ic img {
+  width: auto;
+  height: 30px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
 }
 
 .hp-feat-t {
@@ -5539,6 +5600,17 @@ table {
   font-size: 17px;
 }
 
+.hp-faq-ic img {
+  width: 25px;
+  height: auto;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(28%) sepia(63%) saturate(1045%) hue-rotate(134deg) brightness(92%) contrast(93%);
+}
+
+.hp-faq-col:first-child .hp-faq-ic img {
+  width: 20px;
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 920px) {
 
@@ -6040,6 +6112,7 @@ body {
 .tab-ic {
   font-size: 14px;
   line-height: 1;
+  display: none;
 }
 
 /* ═══════════════════════════════════════════
@@ -6117,6 +6190,22 @@ body {
   transform: scale(1.08);
 }
 
+.card-ic img {
+  width: 40px;
+  height: auto;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(28%) sepia(63%) saturate(1045%) hue-rotate(134deg) brightness(92%) contrast(93%);
+}
+
+.hp-spec-card:nth-child(2) .card-ic img,
+.hp-spec-card:nth-child(14) .card-ic img {
+  width: 30px;
+}
+
+.hp-spec-card:nth-child(15) .card-ic img {
+  width: 35px;
+}
+
 /* Card text body */
 .card-body {
   flex: 1;
@@ -6185,6 +6274,13 @@ body {
   font-size: 52px;
   flex-shrink: 0;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.10));
+}
+
+.banner-emoji img {
+  width: 50px;
+  height: auto;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(28%) sepia(63%) saturate(1045%) hue-rotate(134deg) brightness(92%) contrast(93%);
 }
 
 .banner-left h3 {
@@ -6262,6 +6358,13 @@ body {
 .reveal.visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+.reveal .pdf-icon img {
+  width: 25px;
+  height: auto;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(28%) sepia(63%) saturate(1045%) hue-rotate(134deg) brightness(92%) contrast(93%);
 }
 
 /* ═══════════════════════════════════════════

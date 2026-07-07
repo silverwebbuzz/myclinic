@@ -324,7 +324,7 @@ require __DIR__ . '/partials/header.php';
                 <!-- Search bar -->
                 <div class="fd-search">
                     <label class="fd-sfield">
-                        <span class="ico">🔍</span>
+                        <span class="ico"><img src="/assets/img/icon/search-icon.svg" alt="Search"></span>
                         <div class="col">
                             <div class="lbl">Doctor / Hospital</div>
                             <input type="text" x-model="q" placeholder="e.g. Dr. Mehta or Apollo Hospitals">
@@ -332,7 +332,7 @@ require __DIR__ . '/partials/header.php';
                     </label>
 
                     <label class="fd-sfield" style="position: relative;" @click.outside="acOpen = false">
-                        <span class="ico">📍</span>
+                        <span class="ico"><img src="/assets/img/icon/maps.png" alt="map pin"></span>
                         <div class="col">
                             <div class="lbl">Area, city, state or country</div>
                             <input type="text" x-model="loc"
@@ -344,7 +344,7 @@ require __DIR__ . '/partials/header.php';
                         <div class="fd-ac" x-show="acOpen" @mousedown.prevent x-transition.opacity>
                             <div class="fd-ac-item use-loc"
                                 @click="loc = ''; locValue = null; acOpen = false">
-                                <div class="ic">📌</div>
+                                <div class="ic"><img src="/assets/img/icon/office-push-pin.png" alt="Office Push Pin"></div>
                                 <div>
                                     <div class="nm">Use my precise location</div>
                                     <div class="sb">Allow browser to share where you are</div>
@@ -388,7 +388,7 @@ require __DIR__ . '/partials/header.php';
                     <!-- Show top ~6 most common as quick chips -->
                     <template x-for="s in specialties.slice(0, 6)" :key="s.id">
                         <button type="button" class="fd-spec" :class="spec === s.id ? 'active' : ''" @click="setSpec(s.id)">
-                            <span class="ic" x-text="s.icon"></span>
+                            <!-- <span class="ic" x-text="s.icon"></span> -->
                             <span x-text="s.label"></span>
                         </button>
                     </template>
@@ -456,7 +456,7 @@ require __DIR__ . '/partials/header.php';
 
                     <div class="fd-ac" x-show="acOpen" @mousedown.prevent x-transition.opacity>
                         <div class="fd-ac-item use-loc" @click="loc = ''; locValue = null; acOpen = false; mLocOpen = true">
-                            <div class="ic">📌</div>
+                            <div class="ic"><img src="/assets/img/icon/location-pin.png" alt="Location Pin"></div>
                             <div><div class="nm">Use my precise location</div><div class="sb">Allow browser to share where you are</div></div>
                         </div>
                         <template x-if="filteredLocations().length === 0">
@@ -548,7 +548,7 @@ require __DIR__ . '/partials/header.php';
 
                 <!-- Video -->
                 <button type="button" class="fd-chip" :class="video ? 'on' : ''" @click="video = !video">
-                    🎥 Video consult
+                    Video consult
                 </button>
 
                 <!-- Gender -->
@@ -587,15 +587,15 @@ require __DIR__ . '/partials/header.php';
                 <div style="position: relative;">
                     <button type="button" class="fd-chip" :class="maxDistanceKm > 0 ? 'has-val' : ''"
                         @click="distanceOpen = !distanceOpen">
-                        <span x-show="!userLoc">📍 Distance</span>
-                        <span x-show="userLoc && maxDistanceKm === 0">📍 Any distance</span>
-                        <span x-show="userLoc && maxDistanceKm > 0" x-text="'📍 Within ' + maxDistanceKm + ' km'"></span>
+                        <span x-show="!userLoc">Distance</span>
+                        <span x-show="userLoc && maxDistanceKm === 0">Any distance</span>
+                        <span x-show="userLoc && maxDistanceKm > 0" x-text="'Within ' + maxDistanceKm + ' km'"></span>
                         <span class="caret"></span>
                     </button>
                     <div class="fd-pop" x-show="distanceOpen" @click.outside="distanceOpen = false" x-transition.opacity>
                         <template x-if="!userLoc">
                             <div class="row" @click="requestLocation(); distanceOpen = false">
-                                <span class="ck">📌</span>
+                                <span class="ck"><img src="/assets/img/icon/location-pin.png" alt="location pin"></span>
                                 <span>Use my location</span>
                             </div>
                         </template>
@@ -737,7 +737,7 @@ require __DIR__ . '/partials/header.php';
                             </div>
                             <div class="fd-meta">
                                 <div class="fd-meta-row">
-                                    <span class="mi">📍</span>
+                                    <span class="mi"><img src="/assets/img/icon/maps.png" alt="Map Pin"></span>
                                     <span class="fd-wrap">
                                         <template x-if="d.address">
                                             <span x-text="d.address"></span>
@@ -752,13 +752,13 @@ require __DIR__ . '/partials/header.php';
                                 </div>
                                 <template x-if="d.phone">
                                     <div class="fd-meta-row">
-                                        <span class="mi">📞</span>
+                                        <span class="mi"><img src="/assets/img/icon/phone-call.png" alt="Phone Call"></span>
                                         <a :href="'tel:' + d.phone" x-text="d.phone"></a>
                                     </div>
                                 </template>
                                 <template x-if="todayHours(d)">
                                     <div class="fd-meta-row fd-hours-row">
-                                        <span class="mi">🕒</span>
+                                        <span class="mi"><img src="/assets/img/icon/clock-icon.svg" alt="Clock Icon"></span>
                                         <div class="fd-hours">
                                             <button type="button" class="fd-hours-toggle"
                                                 @click="hoursOpen[d.id] = !hoursOpen[d.id]"
@@ -804,10 +804,10 @@ require __DIR__ . '/partials/header.php';
                                 </template>
                                 <!-- Book is always available; Call only when we have a number. -->
                                 <button type="button" class="fd-btn primary"
-                                    @click="bookDoctor(d)">📅 Book</button>
+                                    @click="bookDoctor(d)"><img src="/assets/img/icon/book-appointment.png" alt="Smart Scheduling"> Book</button>
                                 <template x-if="d.phone">
                                     <a :href="'tel:' + d.phone" class="fd-btn"
-                                        @click="trackCall(d)">📞 Call</a>
+                                        @click="trackCall(d)"><img src="/assets/img/icon/phone-call.png" alt="phone"> Call</a>
                                 </template>
                             </div>
 

@@ -112,8 +112,8 @@ require __DIR__ . '/partials/header.php';
                 <!-- The two paths. Each goes to an existing, working flow. -->
                 <div class="hp-paths">
                     <a href="/find-a-doctor" class="hp-path hp-path-patient">
-                        <div class="hp-path-ic">🔍</div>
-                        <!-- <div class="hp-path-ic"><img src="/assets/img/icon/search-icon.svg" alt="Search" /></div> -->
+                        <!-- <div class="hp-path-ic">🔍</div> -->
+                        <div class="hp-path-ic"><img src="/assets/img/icon/search-icon.svg" alt="Search" /></div>
                         <div class="hp-path-body">
                             <div class="hp-path-title">Find a Doctor</div>
                             <div class="hp-path-sub">Find &amp; book a doctor in 60 seconds</div>
@@ -257,7 +257,7 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="hp-spec-card" data-group="medical">
-                <span class="card-ic"><img src="/assets/img/icon/dermatologist.svg" alt="Dermatologist" /></span>
+                <span class="card-ic"><img src="/assets/img/icon/dermotologist.png" alt="Dermatologist" /></span>
                 <div class="card-body">
                     <h4>Dermatologist</h4>
                     <p>Skin, hair and nail treatments — acne to eczema and beyond.</p>
@@ -508,7 +508,7 @@ require __DIR__ . '/partials/header.php';
         <!-- ── Footer Banner ── -->
         <div class="hp-spec-banner reveal">
             <div class="banner-left">
-                <span class="banner-emoji">🏥</span>
+                <span class="banner-emoji"><img src="/assets/img/icon/clinic-network.png" alt="Clinic"></span>
                 <div>
                     <h3>Everything works together</h3>
                     <p>All specialties are connected under one seamless booking flow — find, compare
@@ -1200,7 +1200,8 @@ $faqDoctors = [
         </div>
         <div class="hp-faq-cols">
             <div class="hp-faq-col reveal">
-                <h3 class="hp-faq-h"><span class="hp-faq-ic">🔍</span> For patients</h3>
+                <!-- <h3 class="hp-faq-h"><span class="hp-faq-ic">🔍</span> For patients</h3> -->
+                <h3 class="hp-faq-h"><span class="hp-faq-ic"><img src="/assets/img/icon/search-icon.svg" alt="Search" /></span>For patients</h3>
                 <div class="faq-list">
                     <?php foreach ($faqPatients as $i => [$q, $a]): $k = 'p' . $i; ?>
                         <div class="faq-item" :class="open === '<?= $k ?>' ? 'open' : ''">
@@ -1213,7 +1214,8 @@ $faqDoctors = [
                 </div>
             </div>
             <div class="hp-faq-col reveal">
-                <h3 class="hp-faq-h"><span class="hp-faq-ic">🩺</span> For doctors</h3>
+                <!-- <h3 class="hp-faq-h"><span class="hp-faq-ic">🩺</span> For doctors</h3> -->
+                <h3 class="hp-faq-h"><span class="hp-faq-ic"><img src="/assets/img/icon/general-physician.svg" alt="Search" /></span>For doctors</h3>
                 <div class="faq-list">
                     <?php foreach ($faqDoctors as $i => [$q, $a]): $k = 'd' . $i; ?>
                         <div class="faq-item" :class="open === '<?= $k ?>' ? 'open' : ''">

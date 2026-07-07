@@ -398,7 +398,8 @@ ob_start(); ?>
     place-items: center;
     overflow: hidden;
   }
-  .cc-facts-img-ph img{
+
+  .cc-facts-img-ph img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -427,7 +428,7 @@ ob_start(); ?>
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    height:100%;
+    height: 100%;
   }
 
   .cc-stat::before {
@@ -437,14 +438,42 @@ ob_start(); ?>
     height: 4px;
     background: linear-gradient(90deg, var(--teal-500), var(--teal-700));
   }
-  .cc-stat-ico-wrap{display:flex;align-items:flex-start;gap:15px;padding-bottom:35px;}
-  .cc-stat-ico-desc{flex:1 1 auto;display:flex;flex-direction:column;justify-content:flex-start;}
 
-  .cc-stat-ico {
+  .cc-stat-ico-wrap {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    padding-bottom: 35px;
+  }
+
+  .cc-stat-ico-desc {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  .cc-stat-ico, .cc-remember-ico {
     width: 50px;
     height: 50px;
     margin-bottom: 12px;
     flex: 0 0 auto;
+    border-radius: 50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+    margin-top:2px;
+    background: #E0F5E9;
+    padding:10px;
+  }
+
+  .cc-stat-ico img, .cc-remember-ico img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    max-width: 100%;
+    filter: brightness(0) saturate(100%) invert(28%) sepia(63%) saturate(1045%) hue-rotate(134deg) brightness(92%) contrast(93%);
   }
 
   .cc-stat-ico svg {
@@ -480,11 +509,12 @@ ob_start(); ?>
     color: var(--mute);
     position: relative;
   }
-  .cc-stat-src::before{
+
+  .cc-stat-src::before {
     content: "";
     position: absolute;
-    left:0;
-    top:-10px;
+    left: 0;
+    top: -10px;
     width: 50px;
     height: 2px;
     background: var(--teal-700);
@@ -501,17 +531,6 @@ ob_start(); ?>
     display: flex;
     gap: 16px;
     align-items: flex-start;
-  }
-
-  .cc-remember-ico {
-    flex: 0 0 auto;
-    width: 44px;
-    height: 44px;
-  }
-
-  .cc-remember-ico svg {
-    width: 100%;
-    height: 100%;
   }
 
   .cc-remember h3 {
@@ -683,7 +702,8 @@ ob_start(); ?>
     place-items: center;
     overflow: hidden;
   }
-  .cc-prev-hero-ph img{
+
+  .cc-prev-hero-ph img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -958,7 +978,8 @@ ob_start(); ?>
     place-items: center;
     overflow: hidden;
   }
-  .cc-tests-hero-ph img{
+
+  .cc-tests-hero-ph img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -1079,7 +1100,7 @@ ob_start(); ?>
     color: var(--teal-700);
     object-fit: contain;
     max-width: 100%;
-    border:2px solid var(--teal-700);
+    border: 2px solid var(--teal-700);
     border-radius: 50%;
     padding: 6px;
     background: #fff;
@@ -1203,7 +1224,7 @@ ob_start(); ?>
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 10px;
     position: relative;
-    margin-top:60px;
+    margin-top: 60px;
   }
 
   .cc-age-track::before {
@@ -1230,7 +1251,8 @@ ob_start(); ?>
     border-radius: 10px;
     padding: 18px 10px 12px;
   }
-  .cc-age-item:before{
+
+  .cc-age-item:before {
     content: "";
     position: absolute;
     inset: 0;
@@ -1243,7 +1265,8 @@ ob_start(); ?>
     background: var(--teal-700);
     z-index: 2;
   }
-  .cc-age-item:after{
+
+  .cc-age-item:after {
     content: "";
     position: absolute;
     inset: 0;
@@ -1256,13 +1279,18 @@ ob_start(); ?>
     background: #dce6e2;
     z-index: 1;
   }
+
   .cc-age-item img {
     width: 30px;
     height: auto;
     object-fit: contain;
-    max-width:100%;
+    max-width: 100%;
   }
-  .cc-age-item:nth-child(4) img{width:50px;}
+
+  .cc-age-item:nth-child(4) img {
+    width: 50px;
+  }
+
   .cc-age-dot {
     width: 10px;
     height: 10px;
@@ -1382,16 +1410,42 @@ ob_start(); ?>
     .cc-age-track::before {
       display: none;
     }
-    .cc-tests-intro, .cc-prev-intro, .treated-description,.cc-risk-intro,.cc-how-intro,
-    .cc-tests-note, .cc-gov-intro, .cc-faq-intro {
+
+    .cc-tests-intro,
+    .cc-prev-intro,
+    .treated-description,
+    .cc-risk-intro,
+    .cc-how-intro,
+    .cc-tests-note,
+    .cc-gov-intro,
+    .cc-faq-intro {
       max-width: 100% !important;
     }
-    .cc-tests-card-media{aspect-ratio: auto;}
-    .cc-tests-card-media img{height:100%;}
-    .cc-tests-card-body{margin-top:-40px;}
-    .cc-vax-name{font-size:20px;}
-    .cc-age-item:before, .cc-age-item:after{display:none;}
-    .cc-age-track{margin-top:20px;}
+
+    .cc-tests-card-media {
+      aspect-ratio: auto;
+    }
+
+    .cc-tests-card-media img {
+      height: 100%;
+    }
+
+    .cc-tests-card-body {
+      margin-top: -40px;
+    }
+
+    .cc-vax-name {
+      font-size: 20px;
+    }
+
+    .cc-age-item:before,
+    .cc-age-item:after {
+      display: none;
+    }
+
+    .cc-age-track {
+      margin-top: 20px;
+    }
 
   }
 
@@ -1409,8 +1463,14 @@ ob_start(); ?>
     .cc-vax-card:last-child {
       grid-column: auto;
     }
-    .cc-age-item:nth-child(4) img{width:30px;}
-    .cc-cost-item strong{width:20px;}
+
+    .cc-age-item:nth-child(4) img {
+      width: 30px;
+    }
+
+    .cc-cost-item strong {
+      width: 20px;
+    }
   }
 
   /* How it starts / progression (mockup-style) */
@@ -1542,10 +1602,20 @@ ob_start(); ?>
     min-height: 72px;
   }
 
-  .cc-how-card-ph img{height:100%;width:100%;object-fit:cover;max-width:100%;}
-.cc-how-card-ph{overflow:hidden;}
+  .cc-how-card-ph img {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    max-width: 100%;
+  }
 
-.cc-how-footer-pills span:nth-child(3) img{filter: brightness(0) saturate(100%) invert(28%) sepia(63%) saturate(1045%) hue-rotate(134deg) brightness(92%) contrast(93%);}
+  .cc-how-card-ph {
+    overflow: hidden;
+  }
+
+  .cc-how-footer-pills span:nth-child(3) img {
+    filter: brightness(0) saturate(100%) invert(28%) sepia(63%) saturate(1045%) hue-rotate(134deg) brightness(92%) contrast(93%);
+  }
 
   .cc-how-card h3 {
     font-size: 15px;
@@ -1610,7 +1680,7 @@ ob_start(); ?>
     position: absolute;
     inset: 0;
     background: linear-gradient(90deg, var(--teal-600), var(--teal-400));
-    border-radius:999px;
+    border-radius: 999px;
   }
 
   .cc-how-bar-labels {
@@ -1629,16 +1699,17 @@ ob_start(); ?>
     flex: 1;
     position: relative;
   }
+
   .cc-how-bar-labels span::before {
     content: "";
     position: absolute;
     inset: 0;
-    border-radius:100%;
-    width:15px;
-    height:15px;
-    top:-26px;
-    left:50%;
-    transform:translate(-50%, 0%);
+    border-radius: 100%;
+    width: 15px;
+    height: 15px;
+    top: -26px;
+    left: 50%;
+    transform: translate(-50%, 0%);
     background: var(--teal-700);
     z-index: 1;
   }
@@ -1723,7 +1794,11 @@ ob_start(); ?>
     .cc-how-arrow {
       display: none;
     }
-    .cc-how-bar::after, .cc-how-bar-labels span::before{display:none;}
+
+    .cc-how-bar::after,
+    .cc-how-bar-labels span::before {
+      display: none;
+    }
   }
 
   @media (max-width:880px) {
@@ -1810,7 +1885,8 @@ ob_start(); ?>
     place-items: center;
     overflow: hidden;
   }
-  .cc-risk-hero-ph img{
+
+  .cc-risk-hero-ph img {
     width: 100%;
     height: 100%;
     object-fit: contain;
@@ -2044,7 +2120,8 @@ ob_start(); ?>
     place-items: center;
     overflow: hidden;
   }
-  .cc-risk-banner-ph img{
+
+  .cc-risk-banner-ph img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -2524,6 +2601,7 @@ ob_start(); ?>
     place-items: center;
     overflow: hidden;
   }
+
   .cc-gov-hero-ph img {
     width: 100%;
     height: 100%;
@@ -2550,7 +2628,7 @@ ob_start(); ?>
     border-radius: 16px;
     padding: 22px 20px 20px;
     margin-bottom: 14px;
-    margin-top:35px;
+    margin-top: 35px;
   }
 
   .cc-gov-features h3 {
@@ -2776,7 +2854,8 @@ ob_start(); ?>
     place-items: center;
     overflow: hidden;
   }
-  .cc-faq-img-ph img{
+
+  .cc-faq-img-ph img {
     width: 100%;
     height: 100%;
     object-fit: contain;
@@ -3535,7 +3614,7 @@ ob_start(); ?>
 
   /* Header Icon circle */
   .tcard-header-icon {
-    width:50px;
+    width: 50px;
     height: 50px;
     border-radius: 50%;
     display: flex;
@@ -3543,9 +3622,10 @@ ob_start(); ?>
     justify-content: center;
     flex-shrink: 0;
     margin-top: 2px;
-    background:#f8fbfa;
-    padding:10px;
+    background: #f8fbfa;
+    padding: 10px;
   }
+
   .tcard-header-icon img {
     width: 100%;
     height: 100%;
@@ -3638,7 +3718,11 @@ ob_start(); ?>
     align-items: center;
     justify-content: center;
   }
-  #tcard-invasive .tcard-illustration{width:130px;}
+
+  #tcard-invasive .tcard-illustration {
+    width: 130px;
+  }
+
   .tcard-illus-img {
     width: auto;
     height: 130px;
@@ -3703,9 +3787,13 @@ ob_start(); ?>
     .treated-text,
     .treated-image {
       flex: 1 1 100%;
-      width:100%;
+      width: 100%;
     }
-    .treated-image img{max-width:100%;}
+
+    .treated-image img {
+      max-width: 100%;
+    }
+
     .treated-image {
       justify-content: center;
     }
@@ -3726,8 +3814,13 @@ ob_start(); ?>
   }
 
   @media (max-width: 640px) {
-    .basics-section{padding:40px 20px 0px;}
-    .treated-section{padding:40px 20px 40px;}
+    .basics-section {
+      padding: 40px 20px 0px;
+    }
+
+    .treated-section {
+      padding: 40px 20px 40px;
+    }
   }
 </style>
 <?php
@@ -4458,9 +4551,10 @@ require __DIR__ . '/partials/header.php';
       <div class="cc-stat">
         <div class="cc-stat-ico-wrap">
           <div class="cc-stat-ico" aria-hidden="true">
-            <svg viewBox="0 0 40 40" fill="none">
+            <img src="/assets/img/eclinicpro-icon-1.png" alt="Figures & Facts icon 1" loading="lazy">
+            <!-- <svg viewBox="0 0 40 40" fill="none">
               <circle cx="20" cy="20" r="20" fill="#fce7f3" /><text x="20" y="27" text-anchor="middle" font-size="20" font-weight="700" fill="#db2777">♀</text>
-            </svg>
+            </svg> -->
           </div>
           <div class="cc-stat-ico-desc">
             <div class="cc-stat-num">2<span>nd</span></div>
@@ -4470,107 +4564,113 @@ require __DIR__ . '/partials/header.php';
         <div class="cc-stat-src">Source: GLOBOCAN 2022 / PIB</div>
       </div>
       <div class="cc-stat">
-      <div class="cc-stat-ico-wrap">
-        <div class="cc-stat-ico" aria-hidden="true">
-          <svg viewBox="0 0 40 40" fill="none">
-            <rect width="40" height="40" rx="10" fill="#fef2f2" />
-            <rect x="8" y="22" width="5" height="10" rx="1" fill="#f87171" />
-            <rect x="15" y="16" width="5" height="16" rx="1" fill="#ef4444" />
-            <rect x="22" y="10" width="5" height="22" rx="1" fill="#dc2626" />
-            <path d="M28 8l4 4-2 2" stroke="#dc2626" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </div>
-        <div class="cc-stat-ico-desc">
-        <div class="cc-stat-num">1.2<span>lakh+</span></div>
-        <div class="cc-stat-label">new cases and nearly 80,000 deaths in India every year.</div>
-        </div>
+        <div class="cc-stat-ico-wrap">
+          <div class="cc-stat-ico" aria-hidden="true">
+            <img src="/assets/img/eclinicpro-icon-2.png" alt="Figures & Facts icon 2" loading="lazy"> 
+            <!-- <svg viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="10" fill="#fef2f2" />
+              <rect x="8" y="22" width="5" height="10" rx="1" fill="#f87171" />
+              <rect x="15" y="16" width="5" height="16" rx="1" fill="#ef4444" />
+              <rect x="22" y="10" width="5" height="22" rx="1" fill="#dc2626" />
+              <path d="M28 8l4 4-2 2" stroke="#dc2626" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg> -->
+          </div>
+          <div class="cc-stat-ico-desc">
+            <div class="cc-stat-num">1.2<span>lakh+</span></div>
+            <div class="cc-stat-label">new cases and nearly 80,000 deaths in India every year.</div>
+          </div>
         </div>
         <div class="cc-stat-src">Source: GLOBOCAN 2022</div>
       </div>
       <div class="cc-stat">
-      <div class="cc-stat-ico-wrap">
-        <div class="cc-stat-ico" aria-hidden="true">
-          <svg viewBox="0 0 40 40" fill="none">
-            <rect width="40" height="40" rx="10" fill="#e0f2f1" />
-            <circle cx="12" cy="14" r="4" fill="#0d9488" />
-            <path d="M6 26c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="#0d9488" stroke-width="2" stroke-linecap="round" />
-            <circle cx="22" cy="12" r="3.5" fill="#ec4899" />
-            <path d="M17 24c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke="#ec4899" stroke-width="1.8" stroke-linecap="round" />
-            <circle cx="30" cy="14" r="3.5" fill="#0d9488" />
-            <path d="M25 26c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke="#0d9488" stroke-width="1.8" stroke-linecap="round" />
-          </svg>
+        <div class="cc-stat-ico-wrap">
+          <div class="cc-stat-ico" aria-hidden="true">  
+            <img src="/assets/img/eclinicpro-icon-3.png" alt="Figures & Facts icon 3" loading="lazy">
+            <!-- <svg viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="10" fill="#e0f2f1" />
+              <circle cx="12" cy="14" r="4" fill="#0d9488" />
+              <path d="M6 26c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="#0d9488" stroke-width="2" stroke-linecap="round" />
+              <circle cx="22" cy="12" r="3.5" fill="#ec4899" />
+              <path d="M17 24c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke="#ec4899" stroke-width="1.8" stroke-linecap="round" />
+              <circle cx="30" cy="14" r="3.5" fill="#0d9488" />
+              <path d="M25 26c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke="#0d9488" stroke-width="1.8" stroke-linecap="round" />
+            </svg> -->
+          </div>
+          <div class="cc-stat-ico-desc">
+            <div class="cc-stat-num">25<span>%</span></div>
+            <div class="cc-stat-label">of the world’s cervical cancer deaths occur in India — 1 in 5 patients globally is Indian.</div>
+          </div>
         </div>
-        <div class="cc-stat-ico-desc">
-        <div class="cc-stat-num">25<span>%</span></div>
-        <div class="cc-stat-label">of the world’s cervical cancer deaths occur in India — 1 in 5 patients globally is Indian.</div>
-        </div>
-      </div>
         <div class="cc-stat-src">Source: WHO / PIB</div>
       </div>
       <div class="cc-stat">
-      <div class="cc-stat-ico-wrap">
-        <div class="cc-stat-ico" aria-hidden="true">
-          <svg viewBox="0 0 40 40" fill="none">
-            <rect width="40" height="40" rx="10" fill="#fce7f3" />
-            <circle cx="20" cy="20" r="9" fill="#f9a8d4" opacity=".5" />
-            <circle cx="20" cy="20" r="5" fill="#ec4899" />
-            <path d="M14 14c2-1 4-1 6 0M26 26c-2 1-4 1-6 0" stroke="#be185d" stroke-width="1.2" stroke-linecap="round" />
-            <circle cx="17" cy="18" r="1" fill="#be185d" />
-            <circle cx="23" cy="22" r="1" fill="#be185d" />
-          </svg>
-        </div>
-        <div class="cc-stat-ico-desc">
-        <div class="cc-stat-num">80<span>%+</span></div>
-        <div class="cc-stat-label">of India’s cases are caused by high-risk HPV types 16 &amp; 18.</div>
-        </div>
+        <div class="cc-stat-ico-wrap">
+          <div class="cc-stat-ico" aria-hidden="true">
+            <img src="/assets/img/eclinicpro-icon-4.png" alt="Figures & Facts icon 4" loading="lazy">
+            <!-- <svg viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="10" fill="#fce7f3" />
+              <circle cx="20" cy="20" r="9" fill="#f9a8d4" opacity=".5" />
+              <circle cx="20" cy="20" r="5" fill="#ec4899" />
+              <path d="M14 14c2-1 4-1 6 0M26 26c-2 1-4 1-6 0" stroke="#be185d" stroke-width="1.2" stroke-linecap="round" />
+              <circle cx="17" cy="18" r="1" fill="#be185d" />
+              <circle cx="23" cy="22" r="1" fill="#be185d" />
+            </svg> -->
+          </div>
+          <div class="cc-stat-ico-desc">
+            <div class="cc-stat-num">80<span>%+</span></div>
+            <div class="cc-stat-label">of India’s cases are caused by high-risk HPV types 16 &amp; 18.</div>
+          </div>
         </div>
         <div class="cc-stat-src">Source: PIB</div>
       </div>
       <div class="cc-stat">
-      <div class="cc-stat-ico-wrap">
-        <div class="cc-stat-ico" aria-hidden="true">
-          <svg viewBox="0 0 40 40" fill="none">
-            <rect width="40" height="40" rx="10" fill="#e0f2f1" />
-            <path d="M20 6l12 4v10c0 7.5-5.2 14.5-12 16-6.8-1.5-12-8.5-12-16V10l12-4z" fill="#0d9488" />
-            <path d="M15 18l3.5 3.5L26 14" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
+        <div class="cc-stat-ico-wrap">
+          <div class="cc-stat-ico" aria-hidden="true">
+            <img src="/assets/img/eclinicpro-icon-5.png" alt="Figures & Facts icon 6" loading="lazy">
+            <!-- <svg viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="10" fill="#e0f2f1" />
+              <path d="M20 6l12 4v10c0 7.5-5.2 14.5-12 16-6.8-1.5-12-8.5-12-16V10l12-4z" fill="#0d9488" />
+              <path d="M15 18l3.5 3.5L26 14" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg> -->
+          </div>
+          <div class="cc-stat-ico-desc">
+            <div class="cc-stat-num">93–100<span>%</span></div>
+            <div class="cc-stat-label">effectiveness of a Gardasil-4 dose against the HPV types it covers.</div>
+          </div>
         </div>
-        <div class="cc-stat-ico-desc">
-        <div class="cc-stat-num">93–100<span>%</span></div>
-        <div class="cc-stat-label">effectiveness of a Gardasil-4 dose against the HPV types it covers.</div>
-        </div> 
-      </div>
         <div class="cc-stat-src">Source: PIB, 2026</div>
       </div>
       <div class="cc-stat">
-      <div class="cc-stat-ico-wrap">
-        <div class="cc-stat-ico" aria-hidden="true">
-          <svg viewBox="0 0 40 40" fill="none">
-            <rect width="40" height="40" rx="10" fill="#fef9c3" />
-            <circle cx="16" cy="16" r="7" fill="#fde68a" />
-            <path d="M11 24c0-2.8 2.2-5 5-5s5 2.2 5 5" fill="#fde68a" />
-            <circle cx="16" cy="15" r="1.2" fill="#92400e" />
-            <path d="M14 17.5c.8.5 1.7.5 2.5 0" stroke="#92400e" stroke-width=".8" stroke-linecap="round" />
-            <path d="M26 10l8 4v6c0 4-2.8 7.8-6 9-3.2-1.2-6-5-6-9v-6l6-2.5" fill="#0d9488" opacity=".85" />
-            <path d="M27 16l1.5 1.5 3-3" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </div>
-        <div class="cc-stat-ico-desc">
-        <div class="cc-stat-num">1.15<span>crore</span></div>
-        <div class="cc-stat-label">girls aged 14 to be vaccinated free under India’s 2026 campaign.</div>
-        </div>
+        <div class="cc-stat-ico-wrap">
+          <div class="cc-stat-ico" aria-hidden="true">
+            <img src="/assets/img/eclinicpro-icon-6.png" alt="Figures & Facts icon 5" loading="lazy">
+                <!-- <svg viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="10" fill="#fef9c3" />
+              <circle cx="16" cy="16" r="7" fill="#fde68a" />
+              <path d="M11 24c0-2.8 2.2-5 5-5s5 2.2 5 5" fill="#fde68a" />
+              <circle cx="16" cy="15" r="1.2" fill="#92400e" />
+              <path d="M14 17.5c.8.5 1.7.5 2.5 0" stroke="#92400e" stroke-width=".8" stroke-linecap="round" />
+              <path d="M26 10l8 4v6c0 4-2.8 7.8-6 9-3.2-1.2-6-5-6-9v-6l6-2.5" fill="#0d9488" opacity=".85" />
+              <path d="M27 16l1.5 1.5 3-3" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg> -->
+          </div>
+          <div class="cc-stat-ico-desc">
+            <div class="cc-stat-num">1.15<span>crore</span></div>
+            <div class="cc-stat-label">girls aged 14 to be vaccinated free under India’s 2026 campaign.</div>
+          </div>
         </div>
         <div class="cc-stat-src">Source: PIB, Feb 2026</div>
       </div>
 
       <aside class="cc-remember">
         <div class="cc-remember-ico" aria-hidden="true">
-          <svg viewBox="0 0 44 44" fill="none">
+          <img src="/assets/img/eclinicpro-icon-7.png" alt="Remember icon" loading="lazy">
+          <!-- <svg viewBox="0 0 44 44" fill="none">
             <circle cx="22" cy="22" r="22" fill="#fef9c3" />
             <path d="M22 8c-1 4-4 6-7 7 1 5 3 8 7 9 4-1 6-4 7-9-3-1-6-3-7-7z" fill="#facc15" />
             <rect x="19" y="24" width="6" height="3" rx="1" fill="#0d9488" />
             <rect x="17" y="27" width="10" height="4" rx="2" fill="#0d9488" />
-          </svg>
+          </svg> -->
         </div>
         <div>
           <h3>Remember</h3>
@@ -4919,41 +5019,41 @@ require __DIR__ . '/partials/header.php';
           <!-- <span class="cc-age-dot"> -->
           <img src="/assets/img/eclinicpro-nine-years.png" alt="Age-wise prevention schedule icon" loading="lazy">
           <!-- </span> -->
-           <div class="cc-age-item-content">
-          <h4>9–14 years</h4>
-          <p>HPV vaccine<br>(best protection)</p>
+          <div class="cc-age-item-content">
+            <h4>9–14 years</h4>
+            <p>HPV vaccine<br>(best protection)</p>
           </div>
         </article>
         <article class="cc-age-item">
           <!-- <span class="cc-age-dot"></span> -->
           <img src="/assets/img/eclinicpro-fiftyfive–twentyfive-years.png" alt="Age-wise prevention schedule icon" loading="lazy">
           <div class="cc-age-item-content">
-          <h4>15–26 years</h4>
-          <p>Catch-up<br>HPV vaccine</p>
+            <h4>15–26 years</h4>
+            <p>Catch-up<br>HPV vaccine</p>
           </div>
         </article>
         <article class="cc-age-item">
           <!-- <span class="cc-age-dot"></span> -->
           <img src="/assets/img/eclinicpro-fiftyfive–twentyfive-years.png" alt="Age-wise prevention schedule icon" loading="lazy">
           <div class="cc-age-item-content">
-          <h4>27–45 years</h4>
-          <p>HPV vaccine on<br>doctor’s advice</p>  
+            <h4>27–45 years</h4>
+            <p>HPV vaccine on<br>doctor’s advice</p>
           </div>
         </article>
         <article class="cc-age-item">
           <!-- <span class="cc-age-dot"></span> -->
           <img src="/assets/img/eclinicpro-thertyfive–sixtyfive-years.png" alt="Age-wise prevention schedule icon" loading="lazy">
           <div class="cc-age-item-content">
-          <h4>30–65 years</h4>
-          <p>Pap smear every 3 years /<br>HPV DNA test every 5 years</p>
+            <h4>30–65 years</h4>
+            <p>Pap smear every 3 years /<br>HPV DNA test every 5 years</p>
           </div>
         </article>
         <article class="cc-age-item">
           <!-- <span class="cc-age-dot"></span> -->
           <img src="/assets/img/eclinicpro-after-sixtyfive-year.png" alt="Age-wise prevention schedule icon" loading="lazy">
           <div class="cc-age-item-content">
-          <h4>After 65 years</h4>
-          <p>Screening may stop if last 10 years reports were normal</p>
+            <h4>After 65 years</h4>
+            <p>Screening may stop if last 10 years reports were normal</p>
           </div>
         </article>
       </div>
