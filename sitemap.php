@@ -38,6 +38,7 @@ echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
 $marketing = [
     ['',                   1.0, 'weekly'],
     ['/find-a-doctor',     0.9, 'daily'],
+    ['/for-patients',      0.8, 'monthly'],
     ['/features',          0.8, 'monthly'],
     ['/product-tour',      0.7, 'monthly'],
     ['/security',          0.6, 'monthly'],

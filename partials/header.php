@@ -196,7 +196,7 @@ $ecpPatientJson = $ecpPatient
                     <svg class="nav-user-caret" :class="patientMenuOpen ? 'open' : ''" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                 </button>
                 <div class="nav-user-menu" x-show="patientMenuOpen" x-transition.opacity>
-                    <a href="/patient" class="nav-user-item">My panel</a>
+                    <a href="/patient" class="nav-user-item">My Health</a>
                     <a href="/find-a-doctor" class="nav-user-item">Find a doctor</a>
                     <button type="button" class="nav-user-item danger" @click="signOut()">Sign out</button>
                 </div>
@@ -241,7 +241,7 @@ function ecpHeader() {
     patientFirstName() {
       if (!this.patient) return '';
       const n = this.patient.first_name || this.patient.name || this.patient.handle || '';
-      return n.split(/\s+/)[0] || 'Patient';
+      return n.split(/\s+/)[0] || 'there';
     },
 
     patientInitial() {

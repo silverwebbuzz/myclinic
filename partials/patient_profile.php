@@ -52,7 +52,7 @@ function ecp_profile_get(int $ownerId): ?array
                 address_line1, address_line2, address_city, address_state,
                 address_postal_code, address_country,
                 emergency_contact_name, emergency_contact_phone, emergency_contact_relation,
-                abha_id, gov_id_last4, photo_path
+                abha_id, health_policy_number, photo_path
          FROM patient_identities
          WHERE id = :id AND is_active = 1 LIMIT 1'
     );
@@ -197,9 +197,11 @@ function ecp_profile_map_fields(array $data): array
     if (array_key_exists('abha_id', $data)) {
         $out['abha_id'] = ecp_profile_clean_abha($data['abha_id']);
     }
-    if (array_key_exists('gov_id_last4', $data)) {
-        $d = preg_replace('/[^0-9]/', '', (string) $data['gov_id_last4']) ?? '';
-        $out['gov_id_last4'] = strlen($d) === 4 ? $d : null;
+    if (array_key_exists('health_policy_number', $data)) {
+        // Policy numbers are alphanumeric and may include - / spaces. Keep the
+        // raw-ish value (trimmed, uppercased, capped to the column width).
+        $p = strtoupper(trim(preg_replace('/[^A-Za-z0-9\/\- ]/', '', (string) $data['health_policy_number']) ?? ''));
+        $out['health_policy_number'] = $p === '' ? null : mb_substr($p, 0, 40);
     }
 
     return $out;

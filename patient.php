@@ -12,7 +12,7 @@ require_once __DIR__ . '/partials/patient_auth.php';
 header('Cache-Control: private, no-store, max-age=0');
 header('Vary: Cookie');
 
-$pageTitle  = 'Patient panel — eClinicPro';
+$pageTitle  = 'My Health — eClinicPro';
 $metaDesc   = 'Save your shortlist of doctors and book faster next time.';
 $activePage = '';
 $noindex    = true;                  // private — don't index logged-in/empty state
@@ -30,7 +30,7 @@ require __DIR__ . '/partials/header.php';
     <div class="wrap">
       <div class="pt-card">
         <div class="pt-card-head">
-          <h1>Patient panel</h1>
+          <h1>My Health</h1>
           <p class="lede">Save up to <strong>5 doctors</strong> to your shortlist and access your prescriptions in one place.</p>
         </div>
         <button type="button" class="btn btn-primary pt-cta-signin"
@@ -54,7 +54,7 @@ require __DIR__ . '/partials/header.php';
           <div class="pt-bigavatar"><?= e(ecp_patient_initials($me)) ?></div>
           <div>
             <div class="pt-greet">Welcome back</div>
-            <h1><?= e($me['name'] ?: 'Patient') ?></h1>
+            <h1><?= e($me['name'] ?: 'there') ?></h1>
             <div class="pt-handle"><?= e($me['phone']) ?></div>
           </div>
         </div>
@@ -581,8 +581,8 @@ require __DIR__ . '/partials/header.php';
                   <label class="pt-fld"><span>ABHA number</span>
                     <input type="text" x-model="profile.form.abha_id" placeholder="14-digit ABHA" inputmode="numeric">
                   </label>
-                  <label class="pt-fld"><span>Gov ID (last 4)</span>
-                    <input type="text" x-model="profile.form.gov_id_last4" maxlength="4" inputmode="numeric" placeholder="••••">
+                  <label class="pt-fld"><span>Health Policy Number</span>
+                    <input type="text" x-model="profile.form.health_policy_number" maxlength="40" placeholder="Insurance / health policy no." style="text-transform:uppercase">
                   </label>
                 </div>
 
@@ -1318,7 +1318,7 @@ function patientPanel(isLoggedIn) {
           emergency_contact_phone: f.emergency_contact_phone,
           emergency_contact_relation: f.emergency_contact_relation,
           allergies: f.allergies, chronic_conditions: f.chronic_conditions,
-          abha_id: f.abha_id, gov_id_last4: f.gov_id_last4,
+          abha_id: f.abha_id, health_policy_number: f.health_policy_number,
         };
         try {
           const r = await fetch('/api/patient_profile?action=save', {
