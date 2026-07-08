@@ -1,20 +1,16 @@
 -- ============================================================================
--- doctor_confirmed — sent when an admin APPROVES a doctor's claim.
--- (DoctorClaimService calls WhatsAppService::send(..., 'doctor_confirmed', ...).)
+-- Replace doctor_approved + doctor_credentials with doctor_confirmed.
 --
--- Variable order MUST match the payload the app passes:
+-- Sent when an admin approves a doctor's listing/claim request.
+-- Variable order MUST match the payload DoctorClaimService passes:
 --   {{1}} doctor_name, {{2}} registered_email
 --
--- STATUS: inserted as 'draft'. WhatsApp will NOT send until:
---   (a) you create the matching template in Meta Business Manager, AND
---   (b) you set this row's status to 'approved' (via /admin/messaging or SQL).
--- Until then the system uses sms_fallback_text over SMS.
---
--- Idempotent: uses INSERT ... WHERE NOT EXISTS keyed on template_key.
---
 -- Run once:
---   mysql -u USER -p DB < app/database/patches/2026_07_03_doctor_templates.sql
+--   mysql -u USER -p DB < app/database/patches/2026_07_08_doctor_confirmed_template.sql
 -- ============================================================================
+
+DELETE FROM `wa_templates`
+WHERE `template_key` IN ('doctor_approved', 'doctor_credentials');
 
 INSERT INTO `wa_templates`
     (`template_key`, `meta_name`, `language`, `category`, `body_text`, `variables`, `sms_fallback_text`, `status`, `is_active`)

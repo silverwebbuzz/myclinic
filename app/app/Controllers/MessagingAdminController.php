@@ -151,6 +151,16 @@ final class MessagingAdminController
                 'vars' => ['{{1}}' => 'Patient name', '{{2}}' => 'Doctor name', '{{3}}' => 'Context / note', '{{4}}' => 'Re-book link'],
                 'cap' => 'Counts against the clinic\'s monthly quota + the matching rule.',
             ],
+            'doctor_confirmed' => [
+                'title' => 'Doctor account confirmed',
+                'trigger' => 'A super-admin approves a doctor listing/claim request.',
+                'to' => 'The approved doctor',
+                'vars' => [
+                    '{{1}}' => 'Doctor name',
+                    '{{2}}' => 'Registered email address (where sign-in details were sent)',
+                ],
+                'cap' => 'Platform transactional — not capped against clinic quota.',
+            ],
         ];
     }
 
@@ -182,6 +192,12 @@ final class MessagingAdminController
                 'desc' => 'Messages a paying/joined clinic sends to its own patients. These consume the clinic\'s monthly quota.',
                 'color' => 'text-slate-700',
                 'keys' => ['prescription_ready', 'rx_delivery', 'diet_plan_shared', 'follow_up_reminder'],
+            ],
+            [
+                'title' => 'Doctor onboarding',
+                'desc' => 'Platform messages sent when a doctor\'s listing request is approved.',
+                'color' => 'text-indigo-600',
+                'keys' => ['doctor_confirmed'],
             ],
         ];
     }

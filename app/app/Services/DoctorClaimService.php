@@ -276,9 +276,8 @@ final class DoctorClaimService
 
     /**
      * Approval notification to the doctor, fanned out across every channel we
-     * have a destination for: email, SMS, and WhatsApp. Login is passwordless
-     * (phone OTP), so every channel points them to the doctor login page to
-     * sign in with their verified number — no password is generated or sent.
+     * have a destination for: email, SMS, and WhatsApp. Sign-in credentials
+     * are delivered by email; SMS/WhatsApp point the doctor to that inbox.
      *
      * Design per requirement:
      *   - SMS/WhatsApp may not be live yet. When their provider isn't
@@ -299,24 +298,28 @@ final class DoctorClaimService
         $name      = (string) ($req['full_name'] ?? 'Doctor');
         $clinic    = (string) ($req['clinic_name'] ?? '');
 
-        // Shared payload for SMS/WhatsApp template rendering.
-        $payload = [
+        $emailPayload = [
             'doctor_name' => $name,
             'clinic_name' => $clinic,
             'phone'       => $phone,
             'login_url'   => $loginUrl,
         ];
 
+        $waPayload = [
+            'doctor_name'       => $name,
+            'registered_email'  => $email,
+        ];
+
         // Plain text used for SMS and as the WhatsApp body. Self-contained so
         // it reads sensibly even with no wa_templates row registered.
-        $plain = 'Hello ' . $name . ', your eClinicPro clinic panel is now active. '
-            . 'Sign in at ' . $loginUrl . ' with your phone ' . $phone
-            . ' — no password needed, we send a one-time SMS code.';
+        $plain = 'Hello ' . $name . ', your eClinicPro account has been set up successfully. '
+            . 'Sign-in details were sent to your registered email address (' . $email . '). '
+            . 'Please check Spam or Junk if you can\'t find it.';
 
         $lines = [];
-        $lines[] = self::notifyByEmail($email, $tenantId, $payload);
+        $lines[] = self::notifyByEmail($email, $tenantId, $emailPayload);
         $lines[] = self::notifyBySms($phone, $plain);
-        $lines[] = self::notifyByWhatsApp($phone, $payload, $plain);
+        $lines[] = self::notifyByWhatsApp($phone, $waPayload, $plain);
 
         return $lines;
     }
@@ -371,7 +374,7 @@ final class DoctorClaimService
         try {
             // WhatsAppService renders via WaTemplateService; pass the plain body
             // through the payload so a missing wa_templates row still has text.
-            $r = WhatsAppService::send($phone, 'doctor_approved', $payload + ['body' => $plain]);
+            $r = WhatsAppService::send($phone, 'doctor_confirmed', $payload + ['body' => $plain]);
             return ($r['ok'] ?? false)
                 ? 'WhatsApp: sent to ' . $phone . '.'
                 : 'WhatsApp: NOT sent — ' . ($r['message'] ?? 'unknown error');
