@@ -69,40 +69,6 @@ require __DIR__ . '/partials/header.php';
 
         <div class="pt-section pt-section-tabbed">
 
-          <!-- Tab switcher -->
-          <div class="pt-tabbar" role="tablist">
-            <button type="button" role="tab"
-                    :class="tab === 'bookings' ? 'is-active' : ''"
-                    @click="tab = 'bookings'">
-              📅 My bookings
-              <span class="pt-tab-count" x-show="bookings.upcoming.length + bookings.pending.length > 0"
-                    x-text="bookings.upcoming.length + bookings.pending.length"></span>
-            </button>
-            <button type="button" role="tab"
-                    :class="tab === 'shortlist' ? 'is-active' : ''"
-                    @click="tab = 'shortlist'">
-              ❤️ Shortlist
-              <span class="pt-tab-count" x-show="wishlist.length > 0" x-text="wishlist.length + '/5'"></span>
-            </button>
-            <button type="button" role="tab"
-                    :class="tab === 'family' ? 'is-active' : ''"
-                    @click="tab = 'family'; family.loadOnce()">
-              👨‍👩‍👧 Family
-              <span class="pt-tab-count" x-show="family.members.length > 0" x-text="family.members.length"></span>
-            </button>
-            <button type="button" role="tab"
-                    :class="tab === 'rx' ? 'is-active' : ''"
-                    @click="tab = 'rx'; rx.loadOnce()">
-              💊 E-prescriptions
-              <span class="pt-tab-count" x-show="rx.items.length > 0" x-text="rx.items.length"></span>
-            </button>
-            <button type="button" role="tab"
-                    :class="tab === 'profile' ? 'is-active' : ''"
-                    @click="tab = 'profile'; profile.loadOnce()">
-              👤 My Profile
-            </button>
-          </div>
-
           <!-- ============ BOOKINGS TAB ============ -->
           <div x-show="tab === 'bookings'" class="pt-tab-pane">
 
@@ -596,19 +562,62 @@ require __DIR__ . '/partials/header.php';
           </div>
         </div>
 
-        <!-- Coming soon sidebar -->
-        <aside class="pt-soon">
-          <h3>Coming soon</h3>
-          <ul>
-            <li>
-              <span class="ic">🧪</span>
-              <div><b>Lab reports</b><span>All your results in one place</span></div>
-            </li>
-            <li>
-              <span class="ic">🩺</span>
-              <div><b>Video consult</b><span>Talk to a doctor from home</span></div>
-            </li>
-          </ul>
+        <!-- Right sidebar: vertical nav + coming-soon -->
+        <aside class="pt-side">
+
+          <!-- Vertical tab nav -->
+          <nav class="pt-navmenu" role="tablist" aria-label="Patient panel sections">
+            <button type="button" role="tab"
+                    :class="tab === 'bookings' ? 'is-active' : ''"
+                    @click="tab = 'bookings'">
+              <span class="pt-nav-ic">📅</span>
+              <span class="pt-nav-label">My bookings</span>
+              <span class="pt-tab-count" x-show="bookings.upcoming.length + bookings.pending.length > 0"
+                    x-text="bookings.upcoming.length + bookings.pending.length"></span>
+            </button>
+            <button type="button" role="tab"
+                    :class="tab === 'shortlist' ? 'is-active' : ''"
+                    @click="tab = 'shortlist'">
+              <span class="pt-nav-ic">❤️</span>
+              <span class="pt-nav-label">Shortlist</span>
+              <span class="pt-tab-count" x-show="wishlist.length > 0" x-text="wishlist.length + '/5'"></span>
+            </button>
+            <button type="button" role="tab"
+                    :class="tab === 'family' ? 'is-active' : ''"
+                    @click="tab = 'family'; family.loadOnce()">
+              <span class="pt-nav-ic">👨‍👩‍👧</span>
+              <span class="pt-nav-label">Family</span>
+              <span class="pt-tab-count" x-show="family.members.length > 0" x-text="family.members.length"></span>
+            </button>
+            <button type="button" role="tab"
+                    :class="tab === 'rx' ? 'is-active' : ''"
+                    @click="tab = 'rx'; rx.loadOnce()">
+              <span class="pt-nav-ic">💊</span>
+              <span class="pt-nav-label">E-prescriptions</span>
+              <span class="pt-tab-count" x-show="rx.items.length > 0" x-text="rx.items.length"></span>
+            </button>
+            <button type="button" role="tab"
+                    :class="tab === 'profile' ? 'is-active' : ''"
+                    @click="tab = 'profile'; profile.loadOnce()">
+              <span class="pt-nav-ic">👤</span>
+              <span class="pt-nav-label">My Profile</span>
+            </button>
+          </nav>
+
+          <!-- Coming soon -->
+          <div class="pt-soon">
+            <h3>Coming soon</h3>
+            <ul>
+              <li>
+                <span class="ic">🧪</span>
+                <div><b>Lab reports</b><span>All your results in one place</span></div>
+              </li>
+              <li>
+                <span class="ic">🩺</span>
+                <div><b>Video consult</b><span>Talk to a doctor from home</span></div>
+              </li>
+            </ul>
+          </div>
         </aside>
       </div>
     </div>
@@ -746,10 +755,10 @@ require __DIR__ . '/partials/header.php';
 .btn-ghost { background: var(--bg-2); border: 1px solid transparent; color: var(--ink-2); }
 .btn-ghost:hover { background: var(--teal-50); color: var(--teal-700); }
 
-/* -------- 2-column grid: shortlist + sidebar -------- */
+/* -------- 2-column grid: main content + nav sidebar -------- */
 .pt-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(0, 1fr) 260px;
   gap: 16px;
   align-items: start;
 }
@@ -759,6 +768,15 @@ require __DIR__ . '/partials/header.php';
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 22px 24px;
+}
+
+/* Right sidebar wrapper — nav + coming-soon, sticks while scrolling. */
+.pt-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 88px;
 }
 .pt-section-head {
   display: flex; align-items: center; justify-content: space-between;
@@ -873,35 +891,44 @@ require __DIR__ . '/partials/header.php';
 
 /* -------- Tabs (Bookings / Shortlist) -------- */
 .pt-section-tabbed { padding: 0; }
-.pt-tabbar {
+
+/* Vertical nav menu in the right sidebar. */
+.pt-navmenu {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 8px;
   display: flex;
-  border-bottom: 1px solid var(--line);
-  padding: 6px 12px 0;
-  gap: 4px;
+  flex-direction: column;
+  gap: 2px;
 }
-.pt-tabbar button {
-  display: inline-flex; align-items: center; gap: 6px;
+.pt-navmenu button {
+  display: flex; align-items: center; gap: 11px;
+  width: 100%;
   background: none; border: 0;
-  padding: 12px 16px;
+  padding: 11px 12px;
+  border-radius: 11px;
   font: inherit; font-size: 14px; font-weight: 600;
-  color: var(--mute); cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  transition: color .15s, border-color .15s;
+  color: var(--ink-2); cursor: pointer;
+  text-align: left;
+  transition: background .15s, color .15s;
 }
-.pt-tabbar button:hover { color: var(--ink-2); }
-.pt-tabbar button.is-active {
-  color: var(--ink);
-  border-bottom-color: var(--teal-600);
+.pt-navmenu button:hover { background: var(--bg-2); color: var(--ink); }
+.pt-navmenu button.is-active {
+  background: var(--teal-50);
+  color: var(--teal-800);
 }
+.pt-nav-ic { font-size: 16px; line-height: 1; width: 20px; text-align: center; flex-shrink: 0; }
+.pt-nav-label { flex: 1 1 auto; }
 .pt-tab-count {
   font-size: 11px; font-weight: 700;
   background: var(--bg-2); color: var(--ink-2);
   padding: 2px 7px; border-radius: 999px;
   min-width: 18px; text-align: center;
+  flex-shrink: 0;
 }
-.pt-tabbar button.is-active .pt-tab-count {
-  background: var(--teal-50); color: var(--teal-800);
+.pt-navmenu button.is-active .pt-tab-count {
+  background: var(--teal-100, #cceee0); color: var(--teal-800);
 }
 .pt-tab-pane { padding: 22px 24px 24px; }
 
@@ -1030,6 +1057,14 @@ require __DIR__ . '/partials/header.php';
 /* -------- Responsive -------- */
 @media (max-width: 820px) {
   .pt-grid { grid-template-columns: 1fr; }
+  /* Nav sidebar stacks ABOVE the content and stops sticking. */
+  .pt-side { position: static; order: -1; }
+  /* Nav becomes a horizontal, scrollable row so it doesn't eat height. */
+  .pt-navmenu { flex-direction: row; overflow-x: auto; gap: 4px; padding: 6px; }
+  .pt-navmenu button { flex-direction: column; gap: 4px; padding: 8px 12px; font-size: 12px; white-space: nowrap; }
+  .pt-nav-ic { font-size: 18px; width: auto; }
+  .pt-navmenu button .pt-tab-count { position: absolute; top: 4px; right: 6px; }
+  .pt-navmenu button { position: relative; }
 }
 @media (max-width: 600px) {
   .patient-page { padding: 24px 0 60px; }
@@ -1042,8 +1077,6 @@ require __DIR__ . '/partials/header.php';
   .pt-section, .pt-soon { padding: 18px 16px; }
   .pt-section-tabbed { padding: 0; }
   .pt-tab-pane { padding: 16px; }
-  .pt-tabbar { padding: 4px 8px 0; }
-  .pt-tabbar button { padding: 12px 10px; font-size: 13px; }
   .pt-row { padding: 12px; }
   .pt-row-actions .btn-mini { padding: 8px 10px; }
   .pt-booking { gap: 10px; padding: 12px; }
