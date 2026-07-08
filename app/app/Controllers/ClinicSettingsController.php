@@ -15,6 +15,8 @@ use App\Services\LeaveService;
 use App\Services\OnboardingService;
 use App\Services\PlanService;
 use App\Services\ApiKeyService;
+use App\Services\DoctorOtpService;
+use App\Services\TwilioSmsService;
 use App\Services\WhiteLabelService;
 use App\Support\Layout;
 use App\Support\View;
@@ -110,6 +112,9 @@ final class ClinicSettingsController
             'message' => $request->query['message'] ?? null,
             'error' => $request->query['error'] ?? null,
             'warning' => $request->query['warning'] ?? null,
+            'phoneStep' => (string) ($request->query['phone_step'] ?? 'none'),
+            'pendingPhone' => (string) ($request->query['phone'] ?? ''),
+            'phoneDevCode' => $request->query['phone_dev_code'] ?? null,
             'apiKeys' => ApiKeyService::listForClinic($clinicId),
             'apiScopes' => ApiKeyService::SCOPES,
             'newApiKey' => $request->query['new_key'] ?? null,
@@ -202,9 +207,142 @@ final class ClinicSettingsController
             return Response::redirect('/login');
         }
 
+        $clinic = RequestContext::clinic() ?? [];
+        $currentPhone = DoctorOtpService::normalizePhone((string) ($clinic['phone'] ?? ''));
+        $newPhone = DoctorOtpService::normalizePhone((string) ($request->post['phone'] ?? ''));
+
+        if ($newPhone !== '' && $newPhone !== $currentPhone) {
+            if (!$this->isPhoneChangeVerified($clinicId, $newPhone)) {
+                return Response::redirect('/settings?tab=general&error=' . urlencode('Please verify the new phone number with OTP before saving.'));
+            }
+            if ($this->phoneBelongsToAnotherClinic($clinicId, $newPhone)) {
+                return Response::redirect('/settings?tab=general&error=' . urlencode('This phone number is already used by another account.'));
+            }
+        }
+
         ClinicSettingsService::saveGeneral($clinicId, $request->post, $_FILES['logo'] ?? null);
+        $this->clearVerifiedPhoneChange($clinicId);
 
         return Response::redirect('/settings?tab=general&message=saved');
+    }
+
+    public function sendGeneralPhoneOtp(Request $request): Response
+    {
+        $clinicId = RequestContext::clinicId();
+        if ($clinicId === null) {
+            return Response::redirect('/login');
+        }
+
+        $raw = (string) ($request->post['new_phone'] ?? '');
+        $phone = DoctorOtpService::normalizePhone($raw);
+        if ($phone === '' || strlen($phone) < 10) {
+            return Response::redirect('/settings?tab=general&error=' . urlencode('Enter a valid mobile number for OTP verification.'));
+        }
+
+        $clinic = RequestContext::clinic() ?? [];
+        $currentPhone = DoctorOtpService::normalizePhone((string) ($clinic['phone'] ?? ''));
+        if ($phone === $currentPhone) {
+            return Response::redirect('/settings?tab=general&message=' . urlencode('This is already your current phone number.'));
+        }
+
+        if ($this->phoneBelongsToAnotherClinic($clinicId, $phone)) {
+            return Response::redirect('/settings?tab=general&error=' . urlencode('This phone number is already used by another account.'));
+        }
+
+        $retry = $this->retryAfterForPhoneOtp($phone);
+        if ($retry > 0) {
+            return Response::redirect('/settings?tab=general&error=' . urlencode("Please wait {$retry}s before requesting another OTP.") . '&phone=' . rawurlencode($phone) . '&phone_step=code');
+        }
+
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        QueryBuilder::table('doctor_otp_codes')->insert([
+            'phone' => $phone,
+            'purpose' => 'register',
+            'code_hash' => hash('sha256', $code),
+            'expires_at' => date('Y-m-d H:i:s', time() + 600),
+        ]);
+
+        $body = "Your eClinicPro phone-change code is: {$code}\nValid for 10 minutes.";
+        $sent = TwilioSmsService::send($phone, $body);
+        $devMode = (($_ENV['TWILIO_ACCOUNT_SID'] ?? '') === ''
+            || ($_ENV['TWILIO_AUTH_TOKEN'] ?? '') === ''
+            || ($_ENV['TWILIO_FROM_NUMBER'] ?? '') === '');
+
+        if (!$sent['ok']) {
+            return Response::redirect('/settings?tab=general&error=' . urlencode('Could not send OTP right now. Please try again.'));
+        }
+
+        $url = '/settings?tab=general&phone_step=code&phone=' . rawurlencode($phone)
+            . '&message=' . urlencode('OTP sent to your new phone number.');
+        if ($devMode) {
+            $url .= '&phone_dev_code=' . rawurlencode($code);
+        }
+        return Response::redirect($url);
+    }
+
+    public function verifyGeneralPhoneOtp(Request $request): Response
+    {
+        $clinicId = RequestContext::clinicId();
+        if ($clinicId === null) {
+            return Response::redirect('/login');
+        }
+
+        $phone = DoctorOtpService::normalizePhone((string) ($request->post['new_phone'] ?? ''));
+        $code = preg_replace('/\D/', '', (string) ($request->post['otp_code'] ?? '')) ?? '';
+        if ($phone === '' || strlen($code) !== 6) {
+            return Response::redirect('/settings?tab=general&phone_step=code&phone=' . rawurlencode($phone) . '&error=' . urlencode('Enter a valid 6-digit OTP.'));
+        }
+
+        // Disallow taking another clinic's phone.
+        if ($this->phoneBelongsToAnotherClinic($clinicId, $phone)) {
+            return Response::redirect('/settings?tab=general&error=' . urlencode('This phone number is already used by another account.'));
+        }
+
+        $row = QueryBuilder::table('doctor_otp_codes')
+            ->where('phone', '=', $phone)
+            ->where('purpose', '=', 'register')
+            ->where('consumed_at', 'IS', null)
+            ->orderBy('id', 'DESC')
+            ->first();
+
+        if ($row === null) {
+            return Response::redirect('/settings?tab=general&phone_step=code&phone=' . rawurlencode($phone) . '&error=' . urlencode('No active OTP found. Send OTP again.'));
+        }
+        if (strtotime((string) $row['expires_at']) < time()) {
+            return Response::redirect('/settings?tab=general&phone_step=code&phone=' . rawurlencode($phone) . '&error=' . urlencode('OTP expired. Send a new OTP.'));
+        }
+        if ((int) ($row['attempts'] ?? 0) >= 5) {
+            return Response::redirect('/settings?tab=general&phone_step=code&phone=' . rawurlencode($phone) . '&error=' . urlencode('Too many failed attempts. Send a new OTP.'));
+        }
+
+        QueryBuilder::table('doctor_otp_codes')->where('id', '=', (int) $row['id'])->update([
+            'attempts' => (int) ($row['attempts'] ?? 0) + 1,
+        ]);
+
+        if (!hash_equals((string) $row['code_hash'], hash('sha256', $code))) {
+            return Response::redirect('/settings?tab=general&phone_step=code&phone=' . rawurlencode($phone) . '&error=' . urlencode('Invalid OTP.'));
+        }
+
+        QueryBuilder::table('doctor_otp_codes')->where('id', '=', (int) $row['id'])->update([
+            'consumed_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        // Apply immediately: update tenant + listing + owner user phone.
+        QueryBuilder::table('tenants')->where('id', '=', $clinicId)->update([
+            'phone' => $phone,
+        ]);
+        QueryBuilder::table('users')
+            ->where('clinic_id', '=', $clinicId)
+            ->where('is_owner', '=', 1)
+            ->update(['phone' => $phone]);
+        QueryBuilder::table('directory_doctors')
+            ->where('claimed_tenant_id', '=', $clinicId)
+            ->where('is_active', '=', 1)
+            ->update(['phone' => $phone]);
+
+        $this->clearVerifiedPhoneChange($clinicId);
+
+        return Response::redirect('/settings?tab=general&message=' . urlencode('Phone number updated.'));
     }
 
     public function saveServices(Request $request): Response
@@ -510,5 +648,74 @@ final class ClinicSettingsController
             'IN' => 'India', 'US' => 'United States', 'GB' => 'United Kingdom',
             'AE' => 'UAE', 'SG' => 'Singapore', 'MY' => 'Malaysia', 'CA' => 'Canada',
         ];
+    }
+
+    private function retryAfterForPhoneOtp(string $phone): int
+    {
+        $last = QueryBuilder::table('doctor_otp_codes')
+            ->where('phone', '=', $phone)
+            ->where('purpose', '=', 'register')
+            ->where('consumed_at', 'IS', null)
+            ->orderBy('id', 'DESC')
+            ->first();
+        if ($last === null || empty($last['created_at'])) {
+            return 0;
+        }
+        $age = time() - strtotime((string) $last['created_at']);
+        return $age < 30 ? 30 - $age : 0;
+    }
+
+    private function phoneBelongsToAnotherClinic(int $clinicId, string $phone): bool
+    {
+        $existing = QueryBuilder::table('users')
+            ->where('phone', '=', $phone)
+            ->where('clinic_id', '!=', $clinicId)
+            ->first();
+        return $existing !== null;
+    }
+
+    private function markPhoneChangeVerified(int $clinicId, string $phone): void
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_start();
+        }
+        $_SESSION['settings_phone_verify'] = [
+            'clinic_id' => $clinicId,
+            'phone' => $phone,
+            'at' => time(),
+        ];
+    }
+
+    private function isPhoneChangeVerified(int $clinicId, string $phone): bool
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_start();
+        }
+        $d = $_SESSION['settings_phone_verify'] ?? null;
+        if (!is_array($d)) {
+            return false;
+        }
+        if ((int) ($d['clinic_id'] ?? 0) !== $clinicId) {
+            return false;
+        }
+        if ((string) ($d['phone'] ?? '') !== $phone) {
+            return false;
+        }
+        if (time() - (int) ($d['at'] ?? 0) > 900) {
+            unset($_SESSION['settings_phone_verify']);
+            return false;
+        }
+        return true;
+    }
+
+    private function clearVerifiedPhoneChange(int $clinicId): void
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_start();
+        }
+        $d = $_SESSION['settings_phone_verify'] ?? null;
+        if (is_array($d) && (int) ($d['clinic_id'] ?? 0) === $clinicId) {
+            unset($_SESSION['settings_phone_verify']);
+        }
     }
 }

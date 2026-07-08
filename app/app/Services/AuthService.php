@@ -88,6 +88,87 @@ final class AuthService
         return ['tenant_id' => $tenantId, 'user_id' => $userId];
     }
 
+    /**
+     * Register via verified mobile number (phone + password).
+     *
+     * @return array{tenant_id: int, user_id: int}
+     */
+    public static function registerClinicViaPhone(
+        string $clinicName,
+        string $ownerName,
+        string $slug,
+        string $phone,
+        string $password,
+        ?string $email = null,
+    ): array {
+        $ownerName = trim($ownerName) !== '' ? trim($ownerName) : $clinicName;
+        $phone = DoctorOtpService::normalizePhone($phone);
+        $email = $email !== null ? strtolower(trim($email)) : '';
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $email = '';
+        }
+
+        $pdo = Database::connection();
+        $pdo->beginTransaction();
+        try {
+            $tenantId = QueryBuilder::table('tenants')->insert([
+                'name' => $clinicName,
+                'slug' => $slug,
+                'phone' => $phone,
+                'email' => $email !== '' ? $email : null,
+                'trial_ends_at' => date('Y-m-d', strtotime('+1 month')),
+            ]);
+
+            QueryBuilder::table('specialty_configs')->insert([
+                'clinic_id' => $tenantId,
+                'uhid_prefix' => strtoupper(substr(preg_replace('/[^a-z]/', '', strtolower($slug)), 0, 6) ?: 'MC'),
+            ]);
+
+            $userId = QueryBuilder::table('users')->insert([
+                'clinic_id' => $tenantId,
+                'name' => $ownerName,
+                'email' => $email !== '' ? $email : null,
+                'phone' => $phone,
+                'password_hash' => password_hash($password, PASSWORD_BCRYPT),
+                'role' => 'admin',
+                'is_owner' => 1,
+                'is_active' => 1,
+            ]);
+
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+
+        PlanService::applyPlanToTenant($tenantId, 'standard', true);
+
+        if ($email !== '') {
+            try {
+                MailService::send($email, 'welcome', [
+                    'clinic_name' => $clinicName,
+                    'login_url' => rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/') . '/doctor/login',
+                ], $tenantId);
+            } catch (\Throwable $e) {
+                error_log('[registerClinicViaPhone] welcome mail failed: ' . $e->getMessage());
+            }
+        }
+
+        return ['tenant_id' => $tenantId, 'user_id' => $userId];
+    }
+
+    public static function findUserByPhone(string $phone): ?array
+    {
+        $normalized = DoctorOtpService::normalizePhone($phone);
+        if ($normalized === '') {
+            return null;
+        }
+        return QueryBuilder::table('users')
+            ->where('phone', '=', $normalized)
+            ->where('is_active', '=', 1)
+            ->first();
+    }
+
     public static function findUserByEmail(string $email): ?array
     {
         return QueryBuilder::table('users')->where('email', '=', $email)->where('is_active', '=', 1)->first();

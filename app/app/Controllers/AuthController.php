@@ -12,6 +12,7 @@ use App\Http\Response;
 use App\Services\AuditService;
 use App\Services\AuthService;
 use App\Services\CsrfService;
+use App\Services\DoctorOtpService;
 use App\Services\GoogleOAuthService;
 use App\Services\JwtService;
 use App\Services\OnboardingService;
@@ -26,14 +27,85 @@ final class AuthController
 {
     public function showRegister(Request $request): Response
     {
-        $google = GoogleOAuthService::pendingRegistration();
+        $verifiedPhone = DoctorOtpService::verifiedRegisterPhone();
+
+        $phoneStep = 'phone'; // phone | code | details
+        if ($verifiedPhone !== null) {
+            $phoneStep = 'details';
+        } elseif (!empty($request->query['phone'])) {
+            $phoneStep = 'code';
+        }
 
         return Response::html($this->view('auth/register', [
             'csrf' => CsrfService::token(),
-            'error' => null,
-            'google' => $google,
-            'googleEnabled' => GoogleOAuthService::isConfigured(),
+            'error' => SessionFlash::pull('register_error') ?? null,
+            'info' => SessionFlash::pull('register_info') ?? null,
+            'phoneStep' => $phoneStep,
+            'verifiedPhone' => $verifiedPhone,
+            'pendingPhone' => (string) ($request->query['phone'] ?? ''),
+            'devCode' => SessionFlash::pull('register_dev_code'),
+            'old' => [],
         ]));
+    }
+
+    /** POST /register/send-otp */
+    public function sendRegisterOtp(Request $request): Response
+    {
+        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
+            SessionFlash::put('register_error', 'Session expired. Please try again.');
+            return Response::redirect('/register');
+        }
+
+        $phone = (string) ($request->post['phone'] ?? '');
+        $res = DoctorOtpService::issueRegister($phone);
+        $normalized = DoctorOtpService::normalizePhone($phone);
+
+        if (!$res['ok']) {
+            SessionFlash::put('register_error', match ($res['error'] ?? '') {
+                'already_registered' => 'This mobile number is already registered. Please log in.',
+                'invalid_phone' => 'Please enter a valid 10-digit mobile number.',
+                'resend_too_soon' => 'Please wait a moment before requesting another code.',
+                'not_whatsapp' => 'This number does not appear to have WhatsApp active. Please enter a WhatsApp number.',
+                'whatsapp_unavailable' => 'WhatsApp OTP is not configured yet. Please contact support.',
+                'wa_send_failed' => 'Could not send WhatsApp code right now. Please try again.',
+                default => 'Could not send the code. Please try again.',
+            });
+            return Response::redirect('/register');
+        }
+
+        if (!empty($res['dev_code'])) {
+            SessionFlash::put('register_dev_code', $res['dev_code']);
+        }
+        return Response::redirect('/register?phone=' . rawurlencode($normalized));
+    }
+
+    /** POST /register/verify-otp */
+    public function verifyRegisterOtp(Request $request): Response
+    {
+        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
+            SessionFlash::put('register_error', 'Session expired. Please try again.');
+            return Response::redirect('/register');
+        }
+
+        $phone = (string) ($request->post['phone'] ?? '');
+        $code = (string) ($request->post['code'] ?? '');
+        $res = DoctorOtpService::verifyRegister($phone, $code);
+        $normalized = DoctorOtpService::normalizePhone($phone);
+
+        if (!$res['ok']) {
+            SessionFlash::put('register_error', match ($res['error'] ?? '') {
+                'invalid_code' => 'That code is incorrect. Try again.',
+                'expired' => 'Code expired. Request a new one.',
+                'too_many_attempts' => 'Too many attempts. Request a new code.',
+                'already_registered' => 'This mobile number is already registered. Please log in.',
+                'no_code_issued' => 'No active code. Send a new one.',
+                default => 'Could not verify the code. Please try again.',
+            });
+            return Response::redirect('/register?phone=' . rawurlencode($normalized));
+        }
+
+        SessionFlash::put('register_info', 'Phone verified. Complete your clinic details below.');
+        return Response::redirect('/register');
     }
 
     public function register(Request $request): Response
@@ -41,71 +113,116 @@ final class AuthController
         if (!Database::ping()) {
             return Response::json(['error' => 'Database unavailable'], 503);
         }
+        return $this->registerViaPhone($request);
+    }
+
+    private function registerViaPhone(Request $request): Response
+    {
+        $verifiedPhone = DoctorOtpService::verifiedRegisterPhone();
+        if ($verifiedPhone === null) {
+            SessionFlash::put('register_error', 'Please verify your mobile number before creating an account.');
+            return Response::redirect('/register');
+        }
 
         $clinicName = trim($request->post['clinic_name'] ?? '');
         $ownerName = trim($request->post['owner_name'] ?? '');
         $slug = strtolower(trim($request->post['slug'] ?? ''));
-        $email = strtolower(trim($request->post['email'] ?? ''));
-        $password = $request->post['password'] ?? '';
-        $confirm = $request->post['password_confirm'] ?? '';
-        $google = GoogleOAuthService::pendingRegistration();
-        $googleId = $google['google_id'] ?? null;
+        $optionalEmail = strtolower(trim((string) ($request->post['email'] ?? '')));
+        $password = (string) ($request->post['password'] ?? '');
+        $confirm = (string) ($request->post['password_confirm'] ?? '');
 
-        if ($google !== null) {
-            $email = $google['email'];
-            if ($ownerName === '') {
-                $ownerName = trim((string) ($google['name'] ?? ''));
-            }
-            if ($password === '') {
-                $password = bin2hex(random_bytes(16)) . 'A1';
-                $confirm = $password;
-            }
-        }
-
-        // Slug is auto-derived from the clinic name (hidden field in the form).
-        // If the client didn't send one, derive it now. Then resolve collisions
-        // by appending -2, -3, ... so the user never sees "already taken".
         if ($slug === '' && $clinicName !== '') {
             $slug = preg_replace('/[^a-z0-9]+/', '-', strtolower($clinicName)) ?: '';
             $slug = trim($slug, '-');
-            $slug = substr($slug, 0, 56);   // leave room for "-NN" suffix
-            if (strlen($slug) < 3) $slug = 'clinic-' . substr((string) time(), -5);
+            $slug = substr($slug, 0, 56);
+            if (strlen($slug) < 3) {
+                $slug = 'clinic-' . substr((string) time(), -5);
+            }
         }
         $slug = $this->resolveUniqueSlug($slug);
 
-        $error = $this->validateRegistration($clinicName, $ownerName, $slug, $email, $password, $confirm, $google !== null);
+        if ($ownerName === '' || strlen($ownerName) < 2) {
+            $error = 'Your name is required.';
+        } elseif ($clinicName === '' || strlen($clinicName) < 2) {
+            $error = 'Clinic name is required.';
+        } elseif (!preg_match('/^[a-z0-9-]{3,60}$/', $slug)) {
+            $error = 'Clinic name needs at least 3 letters or numbers.';
+        } elseif (strlen($password) < 8 || !preg_match('/[A-Z]/', $password) || !preg_match('/[0-9]/', $password)) {
+            $error = 'Password must be 8+ characters with 1 uppercase and 1 number.';
+        } elseif ($password !== $confirm) {
+            $error = 'Passwords do not match.';
+        } elseif ($optionalEmail !== '' && !filter_var($optionalEmail, FILTER_VALIDATE_EMAIL)) {
+            $error = 'Email address looks invalid.';
+        } elseif ($optionalEmail !== '' && AuthService::emailRegistered($optionalEmail)) {
+            $error = 'An account with this email already exists. Use a different email.';
+        } elseif (DoctorOtpService::phoneRegistered($verifiedPhone)) {
+            $error = 'This mobile number is already registered. Please log in.';
+        } else {
+            $error = null;
+        }
+
         if ($error !== null) {
             return Response::html($this->view('auth/register', [
                 'csrf' => CsrfService::token(),
                 'error' => $error,
-                'old' => compact('clinicName', 'ownerName', 'slug', 'email'),
-                'google' => $google,
-                'googleEnabled' => GoogleOAuthService::isConfigured(),
+                'info' => null,
+                'old' => compact('clinicName', 'ownerName', 'slug') + ['email' => $optionalEmail],
+                'phoneStep' => 'details',
+                'verifiedPhone' => $verifiedPhone,
+                'pendingPhone' => '',
+                'devCode' => null,
             ]), 422);
         }
 
         try {
-            $result = AuthService::registerClinic($clinicName, $ownerName, $slug, $email, $password, $googleId);
+            $result = AuthService::registerClinicViaPhone(
+                $clinicName,
+                $ownerName,
+                $slug,
+                $verifiedPhone,
+                $password,
+                $optionalEmail !== '' ? $optionalEmail : null,
+            );
         } catch (\Throwable $e) {
-            error_log('[register] registerClinic failed: ' . $e->getMessage());
-            $isDuplicate = str_contains($e->getMessage(), '1062') || stripos($e->getMessage(), 'duplicate') !== false;
-
+            error_log('[register] registerClinicViaPhone failed: ' . $e->getMessage());
             return Response::html($this->view('auth/register', [
                 'csrf' => CsrfService::token(),
-                'error' => $isDuplicate
-                    ? 'An account with this email already exists. Please log in instead.'
-                    : 'We could not create your account right now. Please try again.',
-                'old' => compact('clinicName', 'ownerName', 'slug', 'email'),
-                'google' => $google,
-                'googleEnabled' => GoogleOAuthService::isConfigured(),
+                'error' => 'We could not create your account right now. Please try again.',
+                'info' => null,
+                'old' => compact('clinicName', 'ownerName', 'slug') + ['email' => $optionalEmail],
+                'phoneStep' => 'details',
+                'verifiedPhone' => $verifiedPhone,
+                'pendingPhone' => '',
+                'devCode' => null,
             ]), 422);
         }
-        GoogleOAuthService::clearPendingRegistration();
 
-        // Partner program: attribute this clinic to a referring partner if a
-        // referral code was typed (wins) or carried in the mc_ref cookie.
-        // Best-effort — the clinic is already created; a partner-program
-        // hiccup (missing tables, bad code) must not break registration.
+        DoctorOtpService::clearPhoneVerified();
+        $this->attributePartner($request, $result);
+
+        return $this->finishRegistration($request, $result);
+    }
+
+    /**
+     * @param array{tenant_id: int, user_id: int} $result
+     */
+    private function finishRegistration(Request $request, array $result): Response
+    {
+        $user = QueryBuilder::table('users')->where('id', '=', $result['user_id'])->first();
+        $token = JwtService::issue($user, $result['tenant_id']);
+        $refresh = AuthService::establishSession($user, $request, true);
+        JwtService::setAuthCookies($token, $refresh);
+
+        AuditService::log($request, 'INSERT', 'users', $result['user_id']);
+
+        return Response::redirect('/onboarding/clinic-setup');
+    }
+
+    /**
+     * @param array{tenant_id: int, user_id: int} $result
+     */
+    private function attributePartner(Request $request, array $result): void
+    {
         try {
             $referral = PartnerReferralService::resolveForRegistration(
                 $request->post['referral_code'] ?? null,
@@ -122,27 +239,15 @@ final class AuthController
         } catch (\Throwable $e) {
             error_log('[register] partner attribution failed: ' . $e->getMessage());
         }
-
-        $user = QueryBuilder::table('users')->where('id', '=', $result['user_id'])->first();
-        $token = JwtService::issue($user, $result['tenant_id']);
-        $refresh = AuthService::establishSession($user, $request, true);
-        JwtService::setAuthCookies($token, $refresh);
-
-        AuditService::log($request, 'INSERT', 'users', $result['user_id']);
-
-        return Response::redirect('/onboarding/clinic-setup');
     }
 
     public function showLogin(Request $request): Response
     {
-        $login = strtolower(trim($request->query['login'] ?? $request->query['email'] ?? ''));
-        $failures = $login !== '' ? AuthService::failedLoginCount($login) : 0;
-
         return Response::html($this->view('auth/login', [
             'csrf' => CsrfService::token(),
-            'error' => $request->query['error'] ?? null,
-            'captchaRequired' => $failures >= 3,
-            'googleEnabled' => GoogleOAuthService::isConfigured(),
+            'error' => SessionFlash::pull('login_error') ?? ($request->query['error'] ?? null),
+            'captchaRequired' => false,
+            'googleEnabled' => false,
         ]));
     }
 
@@ -152,41 +257,31 @@ final class AuthController
             return Response::json(['error' => 'Database unavailable'], 503);
         }
 
-        $login = strtolower(trim($request->post['login'] ?? $request->post['email'] ?? ''));
+        $phone = (string) ($request->post['phone'] ?? '');
+        $normalizedPhone = DoctorOtpService::normalizePhone($phone);
         $password = $request->post['password'] ?? '';
         $remember = !empty($request->post['remember_me']);
-        $failures = AuthService::failedLoginCount($login);
-
-        if ($failures >= 3 && empty($request->post['captcha_confirm'])) {
-            return Response::html($this->view('auth/login', [
-                'csrf' => CsrfService::token(),
-                'error' => 'Please confirm you are not a robot.',
-                'captchaRequired' => true,
-                'googleEnabled' => GoogleOAuthService::isConfigured(),
-            ]), 422);
-        }
-
-        $attemptFailures = AuthService::recordFailedLogin($login);
+        $attemptFailures = AuthService::recordFailedLogin($normalizedPhone);
         if ($attemptFailures >= 5) {
             return Response::html($this->view('auth/login', [
                 'csrf' => CsrfService::token(),
                 'error' => 'Too many attempts. Try again in 15 minutes.',
                 'captchaRequired' => true,
-                'googleEnabled' => GoogleOAuthService::isConfigured(),
+                'googleEnabled' => false,
             ]), 429);
         }
 
-        $user = AuthService::findUserByLogin($login);
+        $user = AuthService::findUserByPhone($normalizedPhone);
         if ($user === null || !password_verify($password, $user['password_hash'] ?? '')) {
             return Response::html($this->view('auth/login', [
                 'csrf' => CsrfService::token(),
-                'error' => 'Invalid email/username or password.',
+                'error' => 'Invalid mobile number or password.',
                 'captchaRequired' => $attemptFailures >= 3,
-                'googleEnabled' => GoogleOAuthService::isConfigured(),
+                'googleEnabled' => false,
             ]), 401);
         }
 
-        AuthService::clearFailedLogins($login);
+        AuthService::clearFailedLogins($normalizedPhone);
         $clinicId = (int) $user['clinic_id'];
         $token = JwtService::issue($user, $clinicId);
         $refresh = AuthService::establishSession($user, $request, $remember);

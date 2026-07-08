@@ -276,8 +276,8 @@ final class DoctorClaimService
 
     /**
      * Approval notification to the doctor, fanned out across every channel we
-     * have a destination for: email, SMS, and WhatsApp. Sign-in credentials
-     * are delivered by email; SMS/WhatsApp point the doctor to that inbox.
+     * have a destination for: email, SMS, and WhatsApp. WhatsApp uses
+     * doctor_approved.
      *
      * Design per requirement:
      *   - SMS/WhatsApp may not be live yet. When their provider isn't
@@ -291,12 +291,13 @@ final class DoctorClaimService
      */
     private static function notifyApproved(array $req, int $tenantId): array
     {
-        $base      = rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/');
-        $loginUrl  = $base . '/doctor/login';
-        $email     = trim((string) ($req['email'] ?? ''));
-        $phone     = trim((string) ($req['phone'] ?? ''));
-        $name      = (string) ($req['full_name'] ?? 'Doctor');
-        $clinic    = (string) ($req['clinic_name'] ?? '');
+        $base         = rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/');
+        $loginUrl     = $base . '/doctor/login';
+        $email        = trim((string) ($req['email'] ?? ''));
+        $phone        = trim((string) ($req['phone'] ?? ''));
+        $name         = (string) ($req['full_name'] ?? 'Doctor');
+        $clinic       = (string) ($req['clinic_name'] ?? '');
+        $supportPhone = trim((string) ($_ENV['SUPPORT_PHONE'] ?? $_ENV['HELP_PHONE'] ?? '+91 98765 43210'));
 
         $emailPayload = [
             'doctor_name' => $name,
@@ -306,15 +307,18 @@ final class DoctorClaimService
         ];
 
         $waPayload = [
-            'doctor_name'       => $name,
-            'registered_email'  => $email,
+            'doctor_name'   => $name,
+            'login_url'     => $loginUrl,
+            'support_phone' => $supportPhone,
         ];
 
         // Plain text used for SMS and as the WhatsApp body. Self-contained so
         // it reads sensibly even with no wa_templates row registered.
-        $plain = 'Hello ' . $name . ', your eClinicPro account has been set up successfully. '
-            . 'Sign-in details were sent to your registered email address (' . $email . '). '
-            . 'Please check Spam or Junk if you can\'t find it.';
+        $plain = 'Hello ' . $name . ",\n\n"
+            . 'Your eClinicPro account has been approved and activated.' . "\n\n"
+            . "You can now sign in to your clinic portal:\n" . $loginUrl . "\n\n"
+            . 'Please let us know your preferred date and time for a short demo session, and our team will arrange it accordingly.' . "\n\n"
+            . 'Need help? Connect with us on WhatsApp or call: ' . $supportPhone;
 
         $lines = [];
         $lines[] = self::notifyByEmail($email, $tenantId, $emailPayload);
@@ -374,7 +378,7 @@ final class DoctorClaimService
         try {
             // WhatsAppService renders via WaTemplateService; pass the plain body
             // through the payload so a missing wa_templates row still has text.
-            $r = WhatsAppService::send($phone, 'doctor_confirmed', $payload + ['body' => $plain]);
+            $r = WhatsAppService::send($phone, 'doctor_approved', $payload + ['body' => $plain]);
             return ($r['ok'] ?? false)
                 ? 'WhatsApp: sent to ' . $phone . '.'
                 : 'WhatsApp: NOT sent — ' . ($r['message'] ?? 'unknown error');

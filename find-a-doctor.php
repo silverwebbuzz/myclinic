@@ -838,10 +838,10 @@ require __DIR__ . '/partials/header.php';
                         <h3>Are you a doctor not listed here?</h3>
                         <p>Add your clinic in a minute — we'll review and get back to you.</p>
                     </div>
-                    <button type="button" class="fd-listme-btn"
-                        @click="window.ecpClaim && window.ecpClaim.open('new_listing')">
+                    <a class="fd-listme-btn"
+                       href="<?= htmlspecialchars(rtrim($_ENV['APP_URL'] ?? 'http://localhost:8081', '/')) ?>/register">
                         List my clinic
-                    </button>
+                    </a>
                 </div>
             </div>
 

@@ -285,7 +285,9 @@
                              class="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
                             <div class="border-b border-slate-100 px-4 py-3">
                                 <p class="truncate text-sm font-semibold text-slate-900"><?= htmlspecialchars($user['name'] ?? '') ?></p>
-                                <p class="truncate text-xs text-slate-500"><?= htmlspecialchars($user['email'] ?? '') ?></p>
+                                <p class="truncate text-xs text-slate-500">
+                                    <?= htmlspecialchars($user['email'] ?? ($user['phone'] ?? '')) ?>
+                                </p>
                             </div>
                             <?php if (\App\Services\RoleAccessService::isClinicAdmin($user ?? [])): ?>
                             <a href="/settings?tab=general" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Clinic settings</a>

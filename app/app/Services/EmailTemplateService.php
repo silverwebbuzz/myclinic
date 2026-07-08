@@ -42,6 +42,10 @@ final class EmailTemplateService
             'label' => 'Password reset',
             'vars' => ['reset_url'],
         ],
+        'register_verify' => [
+            'label' => 'Register email verification',
+            'vars' => ['verify_url'],
+        ],
         'staff_invite' => [
             'label' => 'Staff invite',
             'vars' => ['name', 'clinic_name', 'role', 'accept_url'],

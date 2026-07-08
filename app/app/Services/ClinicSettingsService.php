@@ -53,7 +53,10 @@ final class ClinicSettingsService
         QueryBuilder::table('directory_doctors')
             ->where('claimed_tenant_id', '=', $clinicId)
             ->where('is_active', '=', 1)
-            ->update(['name' => $clinicName]);
+            ->update([
+                'name' => $clinicName,
+                'phone' => trim($post['phone'] ?? '') ?: null,
+            ]);
 
         self::ensureSpecialtyConfigRow($clinicId);
         $configUpdate = [

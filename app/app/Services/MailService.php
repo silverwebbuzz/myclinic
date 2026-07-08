@@ -36,6 +36,7 @@ final class MailService
 
         return match ($template) {
             'password_reset',
+            'register_verify',
             'welcome',
             'telemedicine_link',
             'appointment_reminder',
@@ -134,6 +135,7 @@ final class MailService
         $clinicName = (string) ($payload['clinic_name'] ?? 'your clinic');
         $subject = match ($template) {
             'password_reset' => 'Reset your eClinicPro password',
+            'register_verify' => 'Verify your email to start your eClinicPro clinic',
             'welcome' => 'Welcome to eClinicPro',
             'staff_invite' => 'You are invited to join ' . ($payload['clinic_name'] ?? 'a clinic'),
             'churn_outreach' => 'We are here to help — ' . ($payload['clinic_name'] ?? 'your clinic'),
@@ -446,6 +448,15 @@ final class MailService
                 'cta' => ['label' => 'Open dashboard', 'url' => $appUrl . '/login'],
                 'sign_off' => "Best regards,\nThe eClinicPro Team",
             ],
+            'register_verify' => [
+                'greeting' => 'Hello,',
+                'paragraphs' => [
+                    'Thanks for starting your eClinicPro clinic. Please verify this email address to continue registration.',
+                    'This link expires in 24 hours. If you did not request this, you can ignore this email.',
+                ],
+                'cta' => ['label' => 'Verify email & continue', 'url' => (string) ($payload['verify_url'] ?? '')],
+                'sign_off' => "Best regards,\nThe eClinicPro Team",
+            ],
             'doctor_approved' => [
                 'greeting' => 'Hello ' . ($payload['doctor_name'] ?? 'Doctor') . ',',
                 'paragraphs' => [
@@ -538,6 +549,8 @@ final class MailService
         return match ($template) {
             'password_reset' => "Hello,\n\nReset your password using this link (valid 1 hour):\n"
                 . ($payload['reset_url'] ?? '') . "\n\nIf you did not request this, ignore this email.",
+            'register_verify' => "Hello,\n\nVerify your email to continue setting up your eClinicPro clinic:\n"
+                . ($payload['verify_url'] ?? '') . "\n\nThis link expires in 24 hours. If you did not request this, ignore this email.",
             'welcome' => "Hello,\n\nWelcome to eClinicPro — your clinic \""
                 . ($payload['clinic_name'] ?? '') . "\" is ready.\n\n"
                 . "Log in anytime at {$appUrl}/login\n\n— Team eClinicPro",

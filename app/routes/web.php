@@ -58,6 +58,8 @@ return static function (RouteRegistrar $router): void {
     $router->group(['middleware' => ['csrf', 'rate']], static function (GroupedRouteRegistrar $auth): void {
         $auth->get('/register', [AuthController::class, 'showRegister']);
         $auth->post('/register', [AuthController::class, 'register']);
+        $auth->post('/register/send-otp', [AuthController::class, 'sendRegisterOtp']);
+        $auth->post('/register/verify-otp', [AuthController::class, 'verifyRegisterOtp']);
         $auth->get('/login', [AuthController::class, 'showLogin']);
         $auth->post('/login', [AuthController::class, 'login']);
         $auth->post('/logout', [AuthController::class, 'logout']);
@@ -114,6 +116,8 @@ return static function (RouteRegistrar $router): void {
         // Backwards-compat for old tab deep-links.
         $app->get('/settings/subscription', static fn () => \App\Http\Response::redirect('/subscription'));
         $app->post('/settings/general', [ClinicSettingsController::class, 'saveGeneral']);
+        $app->post('/settings/general/phone/send-otp', [ClinicSettingsController::class, 'sendGeneralPhoneOtp']);
+        $app->post('/settings/general/phone/verify-otp', [ClinicSettingsController::class, 'verifyGeneralPhoneOtp']);
         $app->post('/settings/services', [ClinicSettingsController::class, 'saveServices']);
         $app->post('/settings/hours', [ClinicSettingsController::class, 'saveHours']);
         $app->post('/settings/specialty', [ClinicSettingsController::class, 'saveSpecialty']);

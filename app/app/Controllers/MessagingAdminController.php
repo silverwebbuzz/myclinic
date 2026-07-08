@@ -151,13 +151,14 @@ final class MessagingAdminController
                 'vars' => ['{{1}}' => 'Patient name', '{{2}}' => 'Doctor name', '{{3}}' => 'Context / note', '{{4}}' => 'Re-book link'],
                 'cap' => 'Counts against the clinic\'s monthly quota + the matching rule.',
             ],
-            'doctor_confirmed' => [
-                'title' => 'Doctor account confirmed',
-                'trigger' => 'A super-admin approves a doctor listing/claim request.',
+            'doctor_approved' => [
+                'title' => 'Doctor account approved',
+                'trigger' => 'A super-admin approves a doctor listing/claim request (current flow).',
                 'to' => 'The approved doctor',
                 'vars' => [
                     '{{1}}' => 'Doctor name',
-                    '{{2}}' => 'Registered email address (where sign-in details were sent)',
+                    '{{2}}' => 'Doctor portal login URL',
+                    '{{3}}' => 'eClinicPro support phone / WhatsApp number',
                 ],
                 'cap' => 'Platform transactional — not capped against clinic quota.',
             ],
@@ -197,7 +198,7 @@ final class MessagingAdminController
                 'title' => 'Doctor onboarding',
                 'desc' => 'Platform messages sent when a doctor\'s listing request is approved.',
                 'color' => 'text-indigo-600',
-                'keys' => ['doctor_confirmed'],
+                'keys' => ['doctor_approved'],
             ],
         ];
     }

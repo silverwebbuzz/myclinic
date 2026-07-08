@@ -1,11 +1,30 @@
 <?php
 use App\Services\DirectoryProfileUrlService;
+use App\Services\DoctorOtpService;
 
 $slug = (string) ($clinic['slug'] ?? '');
 $clinicId = (int) ($clinic['id'] ?? 0);
 
 $bookingUrl = DirectoryProfileUrlService::publicBookingUrlForTenant($clinicId, $slug);
 $hasProfile = DirectoryProfileUrlService::hasPublicProfile($clinicId);
+$phoneStep = (string) ($phoneStep ?? 'none'); // none|code|verified
+$pendingPhone = (string) ($pendingPhone ?? '');
+$phoneDevCode = (string) ($phoneDevCode ?? '');
+$effectivePhone = (string) ($clinic['phone'] ?? '');
+$countries = (isset($countries) && is_array($countries)) ? $countries : [];
+
+$formatIndianPhone = static function (string $raw): string {
+    $digits = preg_replace('/\D/', '', $raw) ?? '';
+    if (strlen($digits) >= 10) {
+        return '+91' . substr($digits, -10);
+    }
+    return $raw;
+};
+
+$effectivePhoneDisplay = $formatIndianPhone(DoctorOtpService::normalizePhone($effectivePhone));
+$pendingPhoneDisplay = $pendingPhone !== '' ? $formatIndianPhone(DoctorOtpService::normalizePhone($pendingPhone)) : '';
+$pendingDigits = $pendingPhoneDisplay !== '' ? (preg_replace('/\D/', '', $pendingPhoneDisplay) ?? '') : '';
+$pendingDigits10 = strlen($pendingDigits) >= 10 ? substr($pendingDigits, -10) : '';
 
 $clinicName  = $clinic['name'] ?? 'our clinic';
 $shareText   = "Book your appointment at {$clinicName} online — quick, no calls needed: {$bookingUrl}";
@@ -104,6 +123,7 @@ $qrSrc       = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=
     </div>
 </div>
 
+<div x-data="{ phoneModal: <?= json_encode(in_array($phoneStep, ['code', 'verified'], true)) ?> }">
 <form method="post" action="/settings/general" enctype="multipart/form-data" class="space-y-4 ui-card ui-card-pad">
     <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
     <div class="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -113,7 +133,16 @@ $qrSrc       = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=
         </div>
         <div>
             <label class="ui-label mb-1 block">Phone</label>
-            <input name="phone" value="<?= htmlspecialchars($clinic['phone'] ?? '') ?>" class="ui-input">
+            <div class="flex gap-2">
+                <input name="phone" value="<?= htmlspecialchars($effectivePhoneDisplay) ?>" class="ui-input"
+                       readonly @click.prevent="phoneModal = true" @focus.prevent="phoneModal = true"
+                       title="Click to change phone">
+                <button type="button" class="ui-btn ui-btn-secondary whitespace-nowrap" @click="phoneModal = true">Change</button>
+            </div>
+            <p class="mt-1 text-[11px] text-slate-500">Phone changes require OTP verification.</p>
+            <?php if ($pendingPhone !== '' && $phoneStep === 'verified'): ?>
+            <p class="mt-1 text-[11px] font-medium text-emerald-700">Verified: <?= htmlspecialchars($pendingPhoneDisplay) ?>.</p>
+            <?php endif; ?>
         </div>
         <div class="sm:col-span-2">
             <label class="ui-label mb-1 block">Email</label>
@@ -188,6 +217,57 @@ $qrSrc       = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=
     </div>
     <button type="submit" class="ui-btn ui-btn-primary">Save general</button>
 </form>
+
+<div x-show="phoneModal" x-cloak class="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/40 p-4" @click.self="phoneModal = false">
+    <div class="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
+        <div class="flex items-center justify-between">
+            <h3 class="text-base font-semibold text-slate-900">Verify new phone number</h3>
+            <button type="button" class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" @click="phoneModal = false">✕</button>
+        </div>
+        <p class="mt-1 text-xs text-slate-500">Send OTP to the new number and verify it. Your phone number will update automatically after successful verification.</p>
+
+        <?php if ($phoneStep === 'code' && $pendingPhone !== ''): ?>
+            <form method="post" action="/settings/general/phone/verify-otp" class="mt-4 space-y-3">
+                <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+                <input type="hidden" name="new_phone" value="<?= htmlspecialchars($pendingPhoneDisplay) ?>">
+                <div class="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">OTP sent to <strong><?= htmlspecialchars($pendingPhoneDisplay) ?></strong></div>
+                <input name="otp_code" maxlength="6" inputmode="numeric" placeholder="Enter 6-digit OTP" class="ui-input">
+                <button type="submit" class="ui-btn ui-btn-primary w-full">Verify OTP</button>
+            </form>
+            <form method="post" action="/settings/general/phone/send-otp" class="mt-2">
+                <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+                <input type="hidden" name="new_phone" value="<?= htmlspecialchars($pendingPhoneDisplay) ?>">
+                <button type="submit" class="ui-btn ui-btn-secondary w-full">Resend OTP</button>
+            </form>
+            <?php if ($phoneDevCode !== ''): ?>
+            <p class="mt-2 text-xs text-amber-700">DEV OTP: <strong><?= htmlspecialchars($phoneDevCode) ?></strong></p>
+            <?php endif; ?>
+        <?php elseif ($phoneStep === 'verified' && $pendingPhone !== ''): ?>
+            <div class="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                Verified successfully. Updating your phone number…
+            </div>
+            <button type="button" class="ui-btn ui-btn-primary mt-3 w-full" @click="phoneModal = false">Done</button>
+        <?php else: ?>
+            <form method="post" action="/settings/general/phone/send-otp" class="mt-4 space-y-3"
+                  x-data="{ digits: <?= json_encode($pendingDigits10) ?> }">
+                <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+                <div class="flex overflow-hidden rounded-lg border border-slate-300 bg-white focus-within:ring-2 focus-within:ring-emerald-200">
+                    <span class="flex items-center bg-slate-50 px-3 text-sm font-semibold text-slate-700">+91</span>
+                    <input name="new_phone"
+                           x-model="digits"
+                           inputmode="numeric"
+                           pattern="[0-9]{10}"
+                           maxlength="10"
+                           placeholder="10-digit mobile number"
+                           class="min-w-0 flex-1 px-3 py-2 text-sm outline-none"
+                           autofocus>
+                </div>
+                <button type="submit" class="ui-btn ui-btn-primary w-full">Send OTP</button>
+            </form>
+        <?php endif; ?>
+    </div>
+</div>
+</div>
 
 <?php /* "Services offered" moved to the "Listed on eClinicPro" page (/listing),
         where the whole public profile is edited in one place. */ ?>
