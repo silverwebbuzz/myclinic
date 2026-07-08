@@ -13,3 +13,11 @@ document/silverwebbuzz_in_myclinic*.sql
 app/database/install.sql
 *.sql.gz
 *.dump
+
+# fetch_blog internal tool — server-only secrets & generated state
+fetch_blog/.env
+fetch_blog/state/
+fetch_blog/output/
+
+# 90-day campaign workbook — planning doc, keep local only
+document/eClinicPro_90Day_7City_Workbook.xlsx

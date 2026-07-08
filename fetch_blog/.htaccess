@@ -1,0 +1,15 @@
+# =====================================================================
+# fetch_blog/.htaccess
+# Allows index.php and generate.php; blocks .env, blogs.json and the
+# state/ folder from direct web access.
+# =====================================================================
+
+<FilesMatch "(^\.|\.json$|\.example$|\.htaccess$|\.md$)">
+    Require all denied
+</FilesMatch>
+
+# state/ holds internal status JSON — never web-readable.
+# output/ (local HTML previews + hero images) stays browsable on purpose.
+RedirectMatch 403 ^/fetch_blog/state/.*$
+
+Options -Indexes
