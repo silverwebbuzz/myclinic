@@ -96,6 +96,11 @@ require __DIR__ . '/partials/header.php';
               💊 E-prescriptions
               <span class="pt-tab-count" x-show="rx.items.length > 0" x-text="rx.items.length"></span>
             </button>
+            <button type="button" role="tab"
+                    :class="tab === 'profile' ? 'is-active' : ''"
+                    @click="tab = 'profile'; profile.loadOnce()">
+              👤 My Profile
+            </button>
           </div>
 
           <!-- ============ BOOKINGS TAB ============ -->
@@ -440,6 +445,152 @@ require __DIR__ . '/partials/header.php';
                 <h3>No prescriptions yet</h3>
                 <p>Upload a photo of a prescription you already have, or ask your eClinicPro doctor to share one during your next visit.</p>
                 <button type="button" class="btn btn-primary" @click="rx.startAdd()">+ Add a prescription</button>
+              </div>
+            </template>
+          </div>
+
+          <!-- ============ MY PROFILE TAB ============ -->
+          <div x-show="tab === 'profile'" class="pt-tab-pane">
+            <div class="pt-section-head">
+              <h3>My profile</h3>
+              <span class="pt-save-hint" x-show="profile.savedAt" x-text="'Saved ' + profile.savedAt"></span>
+            </div>
+            <p class="pt-section-note">
+              Everything here is optional — add whatever you like and we’ll keep it safe.
+              These are your own details; family members are managed in the Family tab.
+            </p>
+
+            <div x-show="profile.loading" class="pt-loading">Loading your profile…</div>
+
+            <template x-if="!profile.loading && profile.form">
+              <div class="pt-profile">
+
+                <!-- Photo -->
+                <div class="pt-profile-photo">
+                  <template x-if="profile.form.has_photo && !profile.photoBusted">
+                    <img :src="'/api/patient_profile?action=photo&t=' + profile.photoVer" alt="Profile photo" class="pt-avatar-img">
+                  </template>
+                  <template x-if="!profile.form.has_photo || profile.photoBusted">
+                    <span class="pt-bigavatar" x-text="profile.initials()"></span>
+                  </template>
+                  <div class="pt-photo-actions">
+                    <label class="btn-mini primary">
+                      <span x-text="profile.uploadingPhoto ? 'Uploading…' : (profile.form.has_photo ? 'Change photo' : 'Add photo')"></span>
+                      <input type="file" accept="image/jpeg,image/png,image/webp" class="pt-hidden-file"
+                             @change="profile.uploadPhoto($event)" :disabled="profile.uploadingPhoto">
+                    </label>
+                    <p class="pt-photo-hint">JPG, PNG or WebP · up to 4&nbsp;MB</p>
+                  </div>
+                </div>
+
+                <!-- Personal -->
+                <h4 class="pt-profile-group">Personal</h4>
+                <div class="pt-fam-edit-grid">
+                  <label class="pt-fld"><span>Full name *</span>
+                    <input type="text" x-model="profile.form.name" placeholder="Your name">
+                  </label>
+                  <label class="pt-fld"><span>Preferred name</span>
+                    <input type="text" x-model="profile.form.preferred_name" placeholder="What we should call you">
+                  </label>
+                  <label class="pt-fld"><span>Date of birth</span>
+                    <input type="date" x-model="profile.form.dob">
+                  </label>
+                  <label class="pt-fld"><span>Gender</span>
+                    <select x-model="profile.form.gender">
+                      <option value="">—</option><option value="M">Male</option>
+                      <option value="F">Female</option><option value="Other">Other</option>
+                    </select>
+                  </label>
+                  <label class="pt-fld"><span>Blood group</span>
+                    <select x-model="profile.form.blood_group">
+                      <option value="">—</option>
+                      <template x-for="b in profile.bloods" :key="b"><option :value="b" x-text="b"></option></template>
+                    </select>
+                  </label>
+                  <label class="pt-fld"><span>Food preference</span>
+                    <select x-model="profile.form.veg_type">
+                      <option value="">—</option><option value="veg">Vegetarian</option>
+                      <option value="nonveg">Non-vegetarian</option><option value="eggetarian">Eggetarian</option>
+                      <option value="vegan">Vegan</option>
+                    </select>
+                  </label>
+                </div>
+
+                <!-- Contact -->
+                <h4 class="pt-profile-group">Contact</h4>
+                <div class="pt-fam-edit-grid">
+                  <label class="pt-fld"><span>Primary phone</span>
+                    <input type="text" :value="profile.form.phone" disabled>
+                    <em class="pt-fld-note" x-show="profile.form.phone_verified">✓ Verified</em>
+                  </label>
+                  <label class="pt-fld"><span>Alternate phone</span>
+                    <input type="tel" x-model="profile.form.phone_alt" placeholder="Another number" inputmode="tel">
+                  </label>
+                  <label class="pt-fld"><span>Email</span>
+                    <input type="email" x-model="profile.form.email" placeholder="you@example.com">
+                    <em class="pt-fld-note" x-show="profile.form.email && profile.form.email_verified">✓ Verified</em>
+                  </label>
+                </div>
+
+                <!-- Address -->
+                <h4 class="pt-profile-group">Address</h4>
+                <div class="pt-fam-edit-grid">
+                  <label class="pt-fld pt-fld-wide"><span>Address line 1</span>
+                    <input type="text" x-model="profile.form.address_line1" placeholder="House / flat, street">
+                  </label>
+                  <label class="pt-fld pt-fld-wide"><span>Address line 2</span>
+                    <input type="text" x-model="profile.form.address_line2" placeholder="Area, landmark">
+                  </label>
+                  <label class="pt-fld"><span>City</span>
+                    <input type="text" x-model="profile.form.address_city">
+                  </label>
+                  <label class="pt-fld"><span>State</span>
+                    <input type="text" x-model="profile.form.address_state">
+                  </label>
+                  <label class="pt-fld"><span>PIN / postal code</span>
+                    <input type="text" x-model="profile.form.address_postal_code" inputmode="numeric">
+                  </label>
+                  <label class="pt-fld"><span>Country</span>
+                    <input type="text" x-model="profile.form.address_country" maxlength="2" placeholder="IN" style="text-transform:uppercase">
+                  </label>
+                </div>
+
+                <!-- Emergency contact -->
+                <h4 class="pt-profile-group">Emergency contact</h4>
+                <div class="pt-fam-edit-grid">
+                  <label class="pt-fld"><span>Name</span>
+                    <input type="text" x-model="profile.form.emergency_contact_name" placeholder="Who to call in an emergency">
+                  </label>
+                  <label class="pt-fld"><span>Phone</span>
+                    <input type="tel" x-model="profile.form.emergency_contact_phone" inputmode="tel">
+                  </label>
+                  <label class="pt-fld"><span>Relation</span>
+                    <input type="text" x-model="profile.form.emergency_contact_relation" placeholder="e.g. Spouse, Parent">
+                  </label>
+                </div>
+
+                <!-- Medical -->
+                <h4 class="pt-profile-group">Medical</h4>
+                <div class="pt-fam-edit-grid">
+                  <label class="pt-fld pt-fld-wide"><span>Allergies</span>
+                    <textarea x-model="profile.form.allergies" rows="2" placeholder="e.g. Penicillin, peanuts"></textarea>
+                  </label>
+                  <label class="pt-fld pt-fld-wide"><span>Chronic conditions</span>
+                    <textarea x-model="profile.form.chronic_conditions" rows="2" placeholder="e.g. Diabetes, hypertension"></textarea>
+                  </label>
+                  <label class="pt-fld"><span>ABHA number</span>
+                    <input type="text" x-model="profile.form.abha_id" placeholder="14-digit ABHA" inputmode="numeric">
+                  </label>
+                  <label class="pt-fld"><span>Gov ID (last 4)</span>
+                    <input type="text" x-model="profile.form.gov_id_last4" maxlength="4" inputmode="numeric" placeholder="••••">
+                  </label>
+                </div>
+
+                <p class="pt-fam-err" x-show="profile.formError" x-text="profile.formError"></p>
+                <div class="pt-fam-edit-actions">
+                  <button type="button" class="btn btn-primary" :disabled="profile.saving"
+                          @click="profile.save()" x-text="profile.saving ? 'Saving…' : 'Save profile'"></button>
+                </div>
               </div>
             </template>
           </div>
@@ -860,6 +1011,22 @@ require __DIR__ . '/partials/header.php';
 .pt-fam-limit { color: #b45309; font-size: 13px; margin: 0 0 12px; }
 .pt-fam-edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 
+/* -------- My Profile -------- */
+.pt-fld textarea { border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; font: inherit; font-size: 14px; background: #fff; outline: none; width: 100%; resize: vertical; }
+.pt-fld textarea:focus { border-color: var(--teal-400); }
+.pt-fld input:disabled { background: var(--bg-3, #f5f5f5); color: var(--mute); }
+.pt-fld-note { font-size: 11px; color: var(--teal-700); font-style: normal; }
+.pt-fld-wide { flex-basis: 320px; }
+.pt-profile-group { font-size: 13px; font-weight: 700; color: var(--ink-2, #444); margin: 22px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.pt-profile-group:first-of-type { margin-top: 8px; }
+.pt-profile-photo { display: flex; align-items: center; gap: 16px; margin-bottom: 4px; }
+.pt-avatar-img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 1px solid var(--line); }
+.pt-photo-actions { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.pt-photo-actions label { cursor: pointer; }
+.pt-photo-hint { font-size: 11px; color: var(--mute); margin: 0; }
+.pt-hidden-file { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.pt-save-hint { font-size: 12px; color: var(--teal-700); }
+
 /* -------- Responsive -------- */
 @media (max-width: 820px) {
   .pt-grid { grid-template-columns: 1fr; }
@@ -1094,6 +1261,115 @@ function patientPanel(isLoggedIn) {
         try {
           return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
         } catch (e) { return d; }
+      },
+    },
+
+    // ---- My Profile (Profile tab) ----
+    profile: {
+      loaded: false,
+      loading: false,
+      saving: false,
+      uploadingPhoto: false,
+      formError: '',
+      savedAt: '',
+      form: null,
+      photoVer: Date.now(),   // cache-buster for the avatar <img>
+      photoBusted: false,     // set true if a stored photo fails to load
+      bloods: ['A+','A-','B+','B-','O+','O-','AB+','AB-'],
+
+      async loadOnce() {
+        if (this.loaded) return;
+        await this.load();
+      },
+      async load() {
+        this.loading = true;
+        try {
+          const r = await fetch('/api/patient_profile', { credentials: 'same-origin' });
+          const j = await r.json();
+          this.form = (j.ok && j.profile) ? j.profile : {};
+          this.loaded = true;
+        } catch (e) {
+          this.formError = 'Could not load your profile. Please try again.';
+        } finally {
+          this.loading = false;
+        }
+      },
+      initials() {
+        const n = (this.form && this.form.name || '').trim();
+        if (!n) return '🙂';
+        const p = n.split(/\s+/);
+        return ((p[0][0] || '') + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase();
+      },
+      async save() {
+        if (!this.form) return;
+        if (!(this.form.name || '').trim()) { this.formError = 'Please enter your name.'; return; }
+        this.saving = true;
+        this.formError = '';
+        // Send only editable fields — never the read-only/derived ones.
+        const f = this.form;
+        const payload = {
+          name: f.name, preferred_name: f.preferred_name,
+          dob: f.dob, gender: f.gender, blood_group: f.blood_group, veg_type: f.veg_type,
+          phone_alt: f.phone_alt, email: f.email,
+          address_line1: f.address_line1, address_line2: f.address_line2,
+          address_city: f.address_city, address_state: f.address_state,
+          address_postal_code: f.address_postal_code, address_country: f.address_country,
+          emergency_contact_name: f.emergency_contact_name,
+          emergency_contact_phone: f.emergency_contact_phone,
+          emergency_contact_relation: f.emergency_contact_relation,
+          allergies: f.allergies, chronic_conditions: f.chronic_conditions,
+          abha_id: f.abha_id, gov_id_last4: f.gov_id_last4,
+        };
+        try {
+          const r = await fetch('/api/patient_profile?action=save', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const j = await r.json();
+          if (!j.ok) {
+            this.formError = ({
+              email_in_use: 'That email is already used by another account.',
+              name_required: 'Please enter your name.',
+            })[j.error] || 'Could not save. Please try again.';
+            return;
+          }
+          if (j.profile) this.form = j.profile;
+          this.savedAt = new Date().toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+        } catch (e) {
+          this.formError = 'Network error. Please try again.';
+        } finally {
+          this.saving = false;
+        }
+      },
+      async uploadPhoto(ev) {
+        const file = ev.target.files && ev.target.files[0];
+        ev.target.value = '';
+        if (!file) return;
+        this.uploadingPhoto = true;
+        this.formError = '';
+        try {
+          const fd = new FormData();
+          fd.append('photo', file);
+          const r = await fetch('/api/patient_profile?action=photo', {
+            method: 'POST', credentials: 'same-origin', body: fd,
+          });
+          const j = await r.json();
+          if (!j.ok) {
+            this.formError = ({
+              file_too_large: 'That image is too large (max 4 MB).',
+              file_type_not_allowed: 'Please upload a JPG, PNG or WebP image.',
+            })[j.error] || 'Could not upload photo. Please try again.';
+            return;
+          }
+          this.form.has_photo = true;
+          this.photoBusted = false;
+          this.photoVer = Date.now(); // force the <img> to refetch
+        } catch (e) {
+          this.formError = 'Network error while uploading. Please try again.';
+        } finally {
+          this.uploadingPhoto = false;
+        }
       },
     },
 
