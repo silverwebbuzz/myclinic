@@ -98,7 +98,7 @@ $cats = [
         'blurb' => 'Everything underneath the surface — engineered for clinics, not enterprises.',
         'icon'  => '',
         'items' => [
-            ['<img src="/assets/img/icon/india-dpdp-ready.svg" alt="India DPDP ready" />', 'India DPDP ready', 'Encrypted at rest & in transit, per-clinic isolation, real audit logs.'],
+            ['<img src="/assets/img/icon/india-DPDP-ready.svg" alt="India DPDP ready" />', 'India DPDP ready', 'Encrypted at rest & in transit, per-clinic isolation, real audit logs.'],
             ['<img src="/assets/img/icon/fast-and-reliable.svg" alt="Fast & reliable" />',  'Fast & reliable',  'Built for Indian clinics and networks — quick even on patchy connections.'],
             ['<img src="/assets/img/icon/multi-language.png" alt="Multi-language" />', 'Multi-language',   'Interface and prescriptions in English, Hindi, Gujarati and more.'],
             ['<img src="/assets/img/icon/easy-migration.svg" alt="Easy migration" />', 'Easy migration',   'Import from Practo, spreadsheets, or your existing system.'],
