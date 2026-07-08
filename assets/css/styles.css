@@ -336,6 +336,14 @@ button {
   font-weight: 700;
   font-size: 13px;
   letter-spacing: -0.3px;
+  overflow: hidden;
+}
+.nav-user-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 
 .nav-user-hi {

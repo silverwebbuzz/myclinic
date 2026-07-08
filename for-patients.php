@@ -44,6 +44,47 @@ $patientTrust = [
         'ABHA-ready, works on any phone, and made for how Indian families actually manage health together.'],
 ];
 
+// FAQ — single source of truth: rendered as the visible accordion AND
+// fed into FAQPage JSON-LD for Google rich results.
+$patientFaqs = [
+    ['Is the patient account really free?',
+        'Yes — completely free, forever. There is no card required, no subscription and no hidden fees. You can book doctors, add family members, store prescriptions and manage your health details at no cost.'],
+    ['Do I need to create a password?',
+        'No. You sign in with just your mobile number and a one-time code (OTP) sent by SMS. Your free account is created automatically the first time you verify — there is nothing to remember.'],
+    ['Is my health data safe and private?',
+        'Your data is private by default. A clinic only ever sees what you choose to share when you book an appointment, and your information is isolated per clinic. We never sell your data or send you spam.'],
+    ['Do I need to download an app?',
+        'No app needed. eClinicPro works right in your phone or computer browser — just open the site and sign in. It is built to work smoothly on any phone.'],
+    ['Can I manage my family’s health too?',
+        'Yes. You can add up to 6 family members with their date of birth, gender, blood group and ABHA number, book appointments for them, and share their details with the clinic instantly.'],
+    ['Can I book a doctor who is not yet on eClinicPro?',
+        'Yes. If a clinic has not joined yet, you can still send a booking request — we notify the clinic and track it for you until they confirm.'],
+    ['What can I do with my prescriptions?',
+        'Your e-prescription vault keeps everything in one place. You can upload prescriptions you already have, and receive new ones straight from your eClinicPro doctor — always with you, whenever you need them.'],
+    ['What is ABHA and do I need it?',
+        'ABHA (Ayushman Bharat Health Account) is India’s digital health ID. It is optional — you can add it to your profile and family members if you have one, but you can use every feature without it.'],
+];
+
+// FAQPage structured data (rich results) built from the same array.
+$faqLd = [
+    '@context'   => 'https://schema.org',
+    '@type'      => 'FAQPage',
+    'mainEntity' => array_map(static function (array $f): array {
+        return [
+            '@type'          => 'Question',
+            'name'           => $f[0],
+            'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f[1]],
+        ];
+    }, $patientFaqs),
+];
+
+ob_start(); ?>
+<script type="application/ld+json">
+<?= json_encode($faqLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?>
+</script>
+<?php
+$extraHead = ob_get_clean();
+
 require __DIR__ . '/partials/header.php';
 ?>
 
@@ -138,10 +179,36 @@ require __DIR__ . '/partials/header.php';
     .fp-final .btn-primary { background: #fff; color: #10603b; }
     .fp-final .btn-primary:hover { background: #f0f4f1; }
 
+    /* FAQ accordion (native <details>, no JS) */
+    .fp-faq { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+    .fp-faq-item {
+        background: #fff;
+        border: 1px solid #e6ece8;
+        border-radius: 14px;
+        overflow: hidden;
+        transition: border-color .18s ease, box-shadow .18s ease;
+    }
+    .fp-faq-item[open] { border-color: #cfe0d6; box-shadow: 0 8px 24px rgba(26,122,78,0.06); }
+    .fp-faq-item summary {
+        list-style: none;
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: space-between; gap: 16px;
+        padding: 18px 20px;
+        font-size: 16px; font-weight: 600; color: #1c2a22;
+    }
+    .fp-faq-item summary::-webkit-details-marker { display: none; }
+    .fp-faq-item summary:hover { color: #1a7a4e; }
+    .fp-faq-chev { flex-shrink: 0; color: #6b7d73; transition: transform .2s ease; }
+    .fp-faq-item[open] .fp-faq-chev { transform: rotate(180deg); color: #1a7a4e; }
+    .fp-faq-a { padding: 0 20px 18px; }
+    .fp-faq-a p { margin: 0; color: #55655c; font-size: 15px; line-height: 1.6; }
+
     @media (max-width: 600px) {
         .fp-hero { padding: 84px 0 52px; }
         .fp-section { padding: 48px 0; }
         .fp-final { padding: 40px 20px; border-radius: 18px; }
+        .fp-faq-item summary { font-size: 15px; padding: 16px; }
+        .fp-faq-a { padding: 0 16px 16px; }
     }
 </style>
 
@@ -230,8 +297,32 @@ require __DIR__ . '/partials/header.php';
     </div>
 </section>
 
+<!-- ═══════════════ FAQ ═══════════════ -->
+<section class="fp-section alt" id="faq">
+    <div class="wrap">
+        <div class="fp-section-head reveal">
+            <span class="hp-eyebrow">Questions</span>
+            <h2>Frequently asked questions</h2>
+            <p>Everything patients usually ask before creating a free account.</p>
+        </div>
+        <div class="fp-faq reveal">
+            <?php foreach ($patientFaqs as $i => [$q, $a]): ?>
+                <details class="fp-faq-item"<?= $i === 0 ? ' open' : '' ?>>
+                    <summary>
+                        <span><?= e($q) ?></span>
+                        <svg class="fp-faq-chev" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
+                             aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                    </summary>
+                    <div class="fp-faq-a"><p><?= e($a) ?></p></div>
+                </details>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+
 <!-- ═══════════════ FINAL CTA ═══════════════ -->
-<section class="fp-section alt">
+<section class="fp-section">
     <div class="wrap">
         <div class="fp-final reveal">
             <h2>Create your free patient account today</h2>

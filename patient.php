@@ -51,7 +51,14 @@ require __DIR__ . '/partials/header.php';
       <!-- Hero / profile strip -->
       <div class="pt-hero-strip">
         <div class="pt-hero-id">
-          <div class="pt-bigavatar"><?= e(ecp_patient_initials($me)) ?></div>
+          <div class="pt-bigavatar">
+            <template x-if="heroHasPhoto">
+              <img :src="'/api/patient_profile?action=photo&t=' + heroPhotoVer" alt="Profile photo" class="pt-bigavatar-img">
+            </template>
+            <template x-if="!heroHasPhoto">
+              <span><?= e(ecp_patient_initials($me)) ?></span>
+            </template>
+          </div>
           <div>
             <div class="pt-greet">Welcome back</div>
             <h1><?= e($me['name'] ?: 'there') ?></h1>
@@ -553,6 +560,7 @@ require __DIR__ . '/partials/header.php';
                 </div>
 
                 <p class="pt-fam-err" x-show="profile.formError" x-text="profile.formError"></p>
+                <p class="pt-save-ok" x-show="profile.saveSuccess" x-transition>✓ Your profile was saved successfully.</p>
                 <div class="pt-fam-edit-actions">
                   <button type="button" class="btn btn-primary" :disabled="profile.saving"
                           @click="profile.save()" x-text="profile.saving ? 'Saving…' : 'Save profile'"></button>
@@ -725,7 +733,9 @@ require __DIR__ . '/partials/header.php';
   letter-spacing: -0.5px;
   flex-shrink: 0;
   box-shadow: 0 4px 12px rgba(15,155,110,0.20);
+  overflow: hidden;
 }
+.pt-bigavatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
 .pt-greet {
   font-size: 11px; font-weight: 600;
   letter-spacing: 0.08em; text-transform: uppercase;
@@ -1053,6 +1063,12 @@ require __DIR__ . '/partials/header.php';
 .pt-photo-hint { font-size: 11px; color: var(--mute); margin: 0; }
 .pt-hidden-file { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
 .pt-save-hint { font-size: 12px; color: var(--teal-700); }
+.pt-save-ok {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 600; color: var(--teal-800);
+  background: var(--teal-50); border: 1px solid var(--teal-100, #cceee0);
+  border-radius: 10px; padding: 11px 14px; margin: 8px 0 0;
+}
 
 /* -------- Responsive -------- */
 @media (max-width: 820px) {
@@ -1094,6 +1110,9 @@ function patientPanel(isLoggedIn) {
     tab: 'bookings',       // 'bookings' | 'shortlist'
     wishlist: [],
     loading: false,
+    // Hero avatar photo state — seeded from the server, updated live on upload.
+    heroHasPhoto: <?= !empty($me['photo_path']) ? 'true' : 'false' ?>,
+    heroPhotoVer: Date.now(),
     bookings: {
       upcoming: [],
       pending:  [],
@@ -1305,6 +1324,7 @@ function patientPanel(isLoggedIn) {
       uploadingPhoto: false,
       formError: '',
       savedAt: '',
+      saveSuccess: false,
       form: null,
       photoVer: Date.now(),   // cache-buster for the avatar <img>
       photoBusted: false,     // set true if a stored photo fails to load
@@ -1338,6 +1358,7 @@ function patientPanel(isLoggedIn) {
         if (!(this.form.name || '').trim()) { this.formError = 'Please enter your name.'; return; }
         this.saving = true;
         this.formError = '';
+        this.saveSuccess = false;
         // Send only editable fields — never the read-only/derived ones.
         const f = this.form;
         const payload = {
@@ -1369,6 +1390,9 @@ function patientPanel(isLoggedIn) {
           }
           if (j.profile) this.form = j.profile;
           this.savedAt = new Date().toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+          this.saveSuccess = true;
+          // Auto-dismiss the banner after a few seconds.
+          setTimeout(() => { this.saveSuccess = false; }, 4000);
         } catch (e) {
           this.formError = 'Network error. Please try again.';
         } finally {
@@ -1397,7 +1421,10 @@ function patientPanel(isLoggedIn) {
           }
           this.form.has_photo = true;
           this.photoBusted = false;
-          this.photoVer = Date.now(); // force the <img> to refetch
+          this.photoVer = Date.now(); // force the profile-tab <img> to refetch
+          // Update the hero avatar live too (header updates on next page load).
+          this.$root.heroHasPhoto = true;
+          this.$root.heroPhotoVer = Date.now();
         } catch (e) {
           this.formError = 'Network error while uploading. Please try again.';
         } finally {
