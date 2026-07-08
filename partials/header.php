@@ -64,6 +64,7 @@ $ecpPatientJson = $ecpPatient
         'name'       => $ecpPatient['name'],
         'first_name' => $ecpPatient['first_name'] ?? null,
         'handle'     => $ecpPatient['phone'],
+        'has_photo'  => !empty($ecpPatient['photo_path']),
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
     : 'null';
 ?><!doctype html>
@@ -191,7 +192,14 @@ $ecpPatientJson = $ecpPatient
             <!-- Logged in: greeting + avatar dropdown -->
             <div class="nav-user" x-show="patient" @click.outside="patientMenuOpen = false">
                 <button type="button" class="nav-user-btn" @click="patientMenuOpen = !patientMenuOpen">
-                    <span class="nav-user-avatar" x-text="patientInitial()"></span>
+                    <span class="nav-user-avatar">
+                        <template x-if="patient && patient.has_photo">
+                            <img src="/api/patient_profile?action=photo" alt="" class="nav-user-photo">
+                        </template>
+                        <template x-if="!patient || !patient.has_photo">
+                            <span x-text="patientInitial()"></span>
+                        </template>
+                    </span>
                     <span class="nav-user-hi">Hi, <strong x-text="patientFirstName()"></strong></span>
                     <svg class="nav-user-caret" :class="patientMenuOpen ? 'open' : ''" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                 </button>
