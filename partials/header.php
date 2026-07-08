@@ -185,7 +185,7 @@ $ecpPatientJson = $ecpPatient
             <button type="button" class="nav-signin" x-show="!patient"
                     @click="window.ecpAuth && window.ecpAuth.open('default')"
                     style="background: none; border: 0; cursor: pointer; padding: 0; font: inherit;">
-                Sign in
+                Patient login
             </button>
 
             <!-- Logged in: greeting + avatar dropdown -->
