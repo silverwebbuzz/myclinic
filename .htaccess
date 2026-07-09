@@ -84,10 +84,15 @@ RewriteRule ^ /%1 [R=301,L]
 # -------- Block direct access to /partials/ --------
 RewriteRule ^partials/ - [F,L]
 
-# -------- Block access to backup / hidden files --------
-<FilesMatch "(^\.|~$|\.bak$|\.swp$|\.orig$)">
+# -------- Block access to backup / hidden / secret / data files --------
+# Covers dotfiles (.env, .git), editor backups, and raw data dumps that
+# scanners routinely probe for (/.env, /*.sql, /*.json, /*.log).
+<FilesMatch "(^\.|~$|\.bak$|\.swp$|\.orig$|\.env$|\.sql$|\.log$|\.ini$|composer\.(json|lock)$|package(-lock)?\.json$)">
     Require all denied
 </FilesMatch>
+
+# Block the whole .git directory if it was ever deployed by mistake.
+RewriteRule ^\.git/ - [F,L]
 
 # -------- Cache static assets aggressively --------
 <IfModule mod_expires.c>
