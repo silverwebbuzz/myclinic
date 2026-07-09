@@ -43,6 +43,15 @@ function fb_render_html(array $row, array $b): string {
             . '<p style="margin:8px 0 0;line-height:1.5;">' . fb_e($b['quick_answer']) . '</p></div>';
     }
 
+    // --- Intro paragraphs ---------------------------------------------
+    if (!empty($b['intro'])) {
+        $paras = '';
+        foreach ((array) $b['intro'] as $p) {
+            if (is_string($p) && $p !== '') $paras .= '<p>' . fb_e($p) . '</p>';
+        }
+        if ($paras !== '') $out[] = fb_section_full($paras);
+    }
+
     // --- Symptom checklist ------------------------------------------
     if (!empty($b['symptom_checklist'])) {
         $items = '';
@@ -64,6 +73,20 @@ function fb_render_html(array $row, array $b): string {
                 . fb_e((string) ($c['line'] ?? '')) . '</li>';
         }
         $out[] = fb_section_full('<h2>What causes it?</h2><ul class="implant-list">' . $items . '</ul>');
+    }
+
+    // --- Deep-dive prose sections (bring the article to 2000+ words) --
+    if (!empty($b['sections'])) {
+        foreach ((array) $b['sections'] as $sec) {
+            if (!is_array($sec)) continue;
+            $heading = (string) ($sec['heading'] ?? '');
+            $paras = '';
+            foreach ((array) ($sec['paragraphs'] ?? []) as $p) {
+                if (is_string($p) && $p !== '') $paras .= '<p>' . fb_e($p) . '</p>';
+            }
+            if ($paras === '') continue;
+            $out[] = fb_section_full(($heading !== '' ? '<h2>' . fb_e($heading) . '</h2>' : '') . $paras);
+        }
     }
 
     // --- Tests you may need (differentiator) -------------------------

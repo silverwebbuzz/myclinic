@@ -60,6 +60,7 @@ foreach ($state as $s) { if (($s['status'] ?? '') === 'created') $created++; }
   <div>
     <span class="count"><?= $created ?> / <?= count($rows) ?> drafted</span>
     &nbsp; <button id="testBtn" onclick="testConnections()" style="background:#fff;color:var(--teal);">Test connections</button>
+    &nbsp; <a href="img_test.php?key=<?= rawurlencode($toolKey) ?>" style="color:#c8ece6;font-size:13px;">Image debug</a>
   </div>
 </header>
 <main>

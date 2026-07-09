@@ -38,6 +38,12 @@ function fb_gemini_hero(string $themePrompt): array {
         'contents' => [[
             'parts' => [['text' => FB_GEMINI_STYLE . $themePrompt]],
         ]],
+        // Without responseModalities the API can answer with TEXT ONLY,
+        // which shows up as "Gemini returned no image data". Asking for
+        // both keeps compatibility (a text part may accompany the image).
+        'generationConfig' => [
+            'responseModalities' => ['TEXT', 'IMAGE'],
+        ],
     ];
 
     [$code, $body] = fb_http('POST', $url, [
@@ -62,7 +68,20 @@ function fb_gemini_hero(string $themePrompt): array {
             ];
         }
     }
-    throw new RuntimeException('Gemini returned no image data (model may have refused the prompt).');
+    // No image — explain why as precisely as the response allows.
+    $why = [];
+    if (!empty($resp['promptFeedback']['blockReason'])) {
+        $why[] = 'blockReason=' . $resp['promptFeedback']['blockReason'];
+    }
+    if (!empty($resp['candidates'][0]['finishReason'])) {
+        $why[] = 'finishReason=' . $resp['candidates'][0]['finishReason'];
+    }
+    foreach ($resp['candidates'][0]['content']['parts'] ?? [] as $part) {
+        if (!empty($part['text'])) { $why[] = 'model said: ' . substr((string) $part['text'], 0, 200); break; }
+    }
+    throw new RuntimeException('Gemini returned no image data. '
+        . ($why ? implode(' | ', $why) : 'Empty response.')
+        . ' — open fetch_blog/img_test.php to debug.');
 }
 
 /**

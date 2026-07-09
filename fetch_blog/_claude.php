@@ -36,6 +36,13 @@ LEGAL / AD-POLICY COMPLIANCE (India Drugs & Magic Remedies Act)
 - Always include red-flag symptoms that need urgent in-person care where relevant.
 - No fear-mongering, no miracle language, no before/after claims.
 
+ARTICLE LENGTH — REQUIRED
+The complete article (intro + sections + all blocks together) must be AT LEAST 2000 words. Reach that length with genuinely useful depth, never padding:
+- "intro": 2-3 full paragraphs setting up the problem in everyday Indian life.
+- "sections": 4-6 deep-dive prose sections of 200-300 words each (like a good health magazine article), covering angles the structured blocks don't: how daily life is affected, home care and prevention, when to see a doctor urgently (red flags), what happens at the first consultation, living with the condition long-term, cost/insurance guidance, etc.
+- FAQ answers: 3-5 sentences each, not one-liners.
+- Causes lines and checklist items can stay short.
+
 OUTPUT FORMAT
 Return ONLY one JSON object, no markdown fences, no commentary. Schema:
 
@@ -48,6 +55,9 @@ Return ONLY one JSON object, no markdown fences, no commentary. Schema:
     "tags": ["4-6 short WordPress tags, lowercase, e.g. \"sinusitis\", \"homeopathy\", \"nasal congestion\""]
   },
   "quick_answer": "3-4 sentence direct answer to the searcher's question.",
+  "intro": ["paragraph 1", "paragraph 2", "..."],
+  "sections": [{"heading": "Section heading", "paragraphs": ["para 1", "para 2"]}],   // 4-6 deep-dive sections, 200-300 words each
+
   "symptom_checklist": ["symptom 1", "..."],                    // 6-10 items. Condition & Screening guides only, else []
   "causes": [{"title": "Cause", "line": "one plain sentence"}], // 4-6 items. Condition guides only, else []
   "lab_tests": [{"name": "Test name", "what_it_shows": "one line"}],   // from the lab tests given; add none beyond them unless standard
@@ -63,7 +73,7 @@ Return ONLY one JSON object, no markdown fences, no commentary. Schema:
   "review_flags": ["every cost line", "any claim you were unsure about", "..."]
 }
 
-Template block usage — include only the arrays for the given template, send [] for the rest:
+Template block usage — intro, sections, image_brief and meta are ALWAYS included; of the other arrays include only the ones for the given template, send [] for the rest:
 - Condition Guide:  quick_answer, symptom_checklist, causes, lab_tests, treatment_options, myths, faq
 - Procedure Guide:  quick_answer, lab_tests, treatment_options, procedure_steps, recovery_timeline, faq
 - Screening/Test Guide: quick_answer, symptom_checklist, lab_tests, treatment_options, faq
@@ -90,7 +100,7 @@ function fb_claude_generate(array $row): array {
 
     $payload = [
         'model'      => $model,
-        'max_tokens' => 16000,
+        'max_tokens' => 20000, // 2000+ word article + thinking headroom
         'thinking'   => ['type' => 'adaptive'],
         // cache_control: if you generate several blogs within ~5 minutes,
         // the big system prompt is billed at ~10% for the repeats.
@@ -106,7 +116,7 @@ function fb_claude_generate(array $row): array {
         'x-api-key: ' . $apiKey,
         'anthropic-version: 2023-06-01',
         'content-type: application/json',
-    ], json_encode($payload, JSON_UNESCAPED_UNICODE), 300);
+    ], json_encode($payload, JSON_UNESCAPED_UNICODE), 420);
 
     $resp = json_decode($body, true);
     if ($code !== 200 || !is_array($resp)) {
