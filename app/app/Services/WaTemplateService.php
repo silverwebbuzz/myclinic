@@ -101,6 +101,17 @@ final class WaTemplateService
         return $tpl['language'] ?? 'en';
     }
 
+    public static function category(string $templateKey): string
+    {
+        $tpl = self::find($templateKey);
+        return $tpl['category'] ?? 'utility';
+    }
+
+    public static function isAuthentication(string $templateKey): bool
+    {
+        return self::category($templateKey) === 'authentication';
+    }
+
     /** Only 'approved' templates may be sent as WhatsApp template messages. */
     public static function isApproved(string $templateKey): bool
     {

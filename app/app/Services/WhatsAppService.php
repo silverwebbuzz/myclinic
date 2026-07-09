@@ -100,21 +100,19 @@ final class WhatsAppService
     }
 
     /**
-     * Meta template-message payload with positional body components.
+     * Meta template-message payload.
+     *
+     * Utility/marketing: positional body {{n}} parameters.
+     * Authentication (copy_code): OTP in body + button (sub_type url, index 0).
+     *
      * @param array<string, mixed> $payload
      * @return array<string, mixed>
      */
     private static function templatePayload(string $to, string $template, array $payload): array
     {
-        $params = array_map(
-            static fn ($v) => ['type' => 'text', 'text' => (string) $v],
-            WaTemplateService::params($template, $payload),
-        );
-
-        $components = [];
-        if ($params !== []) {
-            $components[] = ['type' => 'body', 'parameters' => $params];
-        }
+        $components = WaTemplateService::isAuthentication($template)
+            ? self::authenticationComponents($template, $payload)
+            : self::utilityComponents($template, $payload);
 
         return [
             'messaging_product' => 'whatsapp',
@@ -124,6 +122,47 @@ final class WhatsAppService
                 'name' => WaTemplateService::metaName($template) ?? $template,
                 'language' => ['code' => WaTemplateService::language($template)],
                 'components' => $components,
+            ],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return list<array<string, mixed>>
+     */
+    private static function utilityComponents(string $template, array $payload): array
+    {
+        $params = array_map(
+            static fn ($v) => ['type' => 'text', 'text' => (string) $v],
+            WaTemplateService::params($template, $payload),
+        );
+
+        return $params === [] ? [] : [['type' => 'body', 'parameters' => $params]];
+    }
+
+    /**
+     * Authentication copy_code templates require the OTP in both body and button.
+     *
+     * @param array<string, mixed> $payload
+     * @return list<array<string, mixed>>
+     */
+    private static function authenticationComponents(string $template, array $payload): array
+    {
+        $params = WaTemplateService::params($template, $payload);
+        $code = (string) ($params[0] ?? $payload['code'] ?? '');
+        if ($code === '') {
+            return [];
+        }
+
+        $otp = ['type' => 'text', 'text' => $code];
+
+        return [
+            ['type' => 'body', 'parameters' => [$otp]],
+            [
+                'type' => 'button',
+                'sub_type' => 'url',
+                'index' => '0',
+                'parameters' => [$otp],
             ],
         ];
     }
