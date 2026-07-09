@@ -122,9 +122,6 @@ function fb_render_html(array $row, array $b): string {
             . '<p>' . fb_md($b['quick_answer']) . '</p></div>';
     }
 
-    // Table of contents is injected here after all H2s get anchor ids (see below).
-    $out[] = '<!--ECP_TOC-->';
-
     // --- Symptom checklist ----------------------------------------------
     if (!empty($b['symptom_checklist'])) {
         $items = '';
@@ -335,42 +332,13 @@ function fb_render_html(array $row, array $b): string {
 
     $html = implode("\n", $out);
 
-    // --- SEO post-pass 1: anchor ids on every H2 + collect them for the TOC
-    $toc = [];
-    $seen = [];
-    $html = (string) preg_replace_callback(
-        '/<h2(?![^>]*\bid=)([^>]*)>(.*?)<\/h2>/s',
-        function (array $m) use (&$toc, &$seen): string {
-            $label = trim(strip_tags($m[2]));
-            $anchor = fb_slugify($label) ?: 'section';
-            if (isset($seen[$anchor])) { $seen[$anchor]++; $anchor .= '-' . $seen[$anchor]; }
-            else { $seen[$anchor] = 1; }
-            $toc[] = ['id' => $anchor, 'label' => $label];
-            return '<h2 id="' . $anchor . '"' . $m[1] . '>' . $m[2] . '</h2>';
-        },
-        $html
-    );
-
-    // --- SEO post-pass 2: table of contents (only when the article is long enough)
-    $tocHtml = '';
-    if (count($toc) >= 4) {
-        $lis = '';
-        foreach ($toc as $t) {
-            $lis .= "\n \t" . '<li><a href="#' . fb_e($t['id']) . '">' . fb_e($t['label']) . '</a></li>';
-        }
-        $tocHtml = '<nav class="ecp-toc">' . "\n"
-            . '<h4>In this guide</h4>' . "\n"
-            . '<ol>' . $lis . "\n" . '</ol>' . "\n" . '</nav>';
-    }
-    $html = str_replace('<!--ECP_TOC-->', $tocHtml, $html);
-
-    // --- SEO post-pass 3: reading-time line at the very top
+    // --- SEO post-pass: reading-time line at the very top
     $words = str_word_count(strip_tags($html));
     $minutes = max(1, (int) ceil($words / 200));
     $html = '<p class="ecp-meta-line">&#128337; ' . $minutes . ' min read &middot; '
         . 'Reviewed for general accuracy &middot; Not a substitute for medical advice</p>' . "\n" . $html;
 
-    // --- SEO post-pass 4: MedicalWebPage JSON-LD (workbook: "MedicalWebPage-
+    // --- SEO post-pass: MedicalWebPage JSON-LD (workbook: "MedicalWebPage-
     //     appropriate schema"; Yoast's Article schema sits alongside this)
     $meta = is_array($b['meta'] ?? null) ? $b['meta'] : [];
     $medSchema = json_encode([
