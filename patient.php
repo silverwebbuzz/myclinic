@@ -38,7 +38,7 @@ require __DIR__ . '/partials/header.php';
           Sign in with mobile number
         </button>
         <p class="pt-hint" style="text-align:center; margin-top:14px;">
-          One-time code via SMS. No password to remember.
+          One-time code via WhatsApp message. No password to remember.
         </p>
       </div>
     </div>
@@ -492,9 +492,12 @@ require __DIR__ . '/partials/header.php';
                 <!-- Contact -->
                 <h4 class="pt-profile-group">Contact</h4>
                 <div class="pt-fam-edit-grid">
-                  <label class="pt-fld"><span>Primary phone</span>
-                    <input type="text" :value="profile.form.phone" disabled>
-                    <em class="pt-fld-note" x-show="profile.form.phone_verified">✓ Verified</em>
+                  <label class="pt-fld"><span>Primary phone <em class="pt-fld-note" x-show="profile.form.phone_verified">✓ Verified</em></span>
+                    <input type="text" :value="profile.form.phone || ''" readonly
+                           @click="profile.openPhoneModal()"
+                           class="pt-clickable-input"
+                           placeholder="+91XXXXXXXXXX">
+                    
                   </label>
                   <label class="pt-fld"><span>Alternate phone</span>
                     <input type="tel" x-model="profile.form.phone_alt" placeholder="Another number" inputmode="tel">
@@ -564,6 +567,53 @@ require __DIR__ . '/partials/header.php';
                 <div class="pt-fam-edit-actions">
                   <button type="button" class="btn btn-primary" :disabled="profile.saving"
                           @click="profile.save()" x-text="profile.saving ? 'Saving…' : 'Save profile'"></button>
+                </div>
+
+                <!-- Primary phone change modal -->
+                <div class="pt-modal-backdrop" x-show="profile.phoneChange.open" x-transition.opacity @click.self="profile.closePhoneModal()">
+                  <div class="pt-modal-card" x-transition>
+                    <button type="button" class="pt-modal-close" @click="profile.closePhoneModal()">×</button>
+                    <h4 class="pt-modal-title">Verify new phone number</h4>
+                    <p class="pt-modal-sub">Send a WhatsApp OTP to the new number and verify it. Your primary phone updates only after successful verification.</p>
+
+                    <label class="pt-fld" x-show="!profile.phoneChange.awaitingOtp">
+                      <span>New primary phone</span>
+                      <div class="pt-phone-row">
+                        <span class="pt-cc">+91</span>
+                        <input type="text" x-model="profile.phoneChange.phoneDigits" inputmode="numeric" maxlength="10"
+                               @input="profile.phoneChange.phoneDigits = profile.phoneChange.phoneDigits.replace(/\D/g, '').slice(0,10)"
+                               @input.debounce.400ms="profile.checkPhoneAvailability()"
+                               placeholder="10-digit mobile number">
+                      </div>
+                    </label>
+                    <p class="pt-fam-err" x-show="profile.phoneChange.availabilityText" x-text="profile.phoneChange.availabilityText"></p>
+                    <p class="pt-fam-err" x-show="profile.phoneChange.error" x-text="profile.phoneChange.error"></p>
+
+                    <button type="button" class="btn btn-primary pt-modal-btn" x-show="!profile.phoneChange.awaitingOtp" @click="profile.sendPhoneOtp()"
+                            :disabled="profile.phoneChange.sending || profile.phoneChange.phoneDigits.length !== 10">
+                      <span x-show="!profile.phoneChange.sending">Send WhatsApp OTP</span>
+                      <span x-show="profile.phoneChange.sending">Sending…</span>
+                    </button>
+
+                    <div class="pt-otp-box" x-show="profile.phoneChange.awaitingOtp">
+                      <p class="pt-otp-sent">WhatsApp OTP sent to <strong x-text="'+91' + profile.phoneChange.phoneDigits"></strong></p>
+                      <input type="text" class="pt-otp-input pt-otp-full" x-model="profile.phoneChange.code" inputmode="numeric" maxlength="6"
+                             @input="profile.phoneChange.code = profile.phoneChange.code.replace(/\D/g, '').slice(0,6)"
+                             placeholder="Enter 6-digit WhatsApp OTP">
+                      <button type="button" class="btn btn-primary pt-modal-btn" @click="profile.verifyPhoneOtp()"
+                              :disabled="profile.phoneChange.verifying || profile.phoneChange.code.length !== 6">
+                        <span x-show="!profile.phoneChange.verifying">Verify WhatsApp OTP</span>
+                        <span x-show="profile.phoneChange.verifying">Verifying…</span>
+                      </button>
+                      <button type="button" class="btn pt-modal-btn pt-resend-btn" @click="profile.sendPhoneOtp()"
+                              :disabled="profile.phoneChange.sending || profile.phoneChange.resendCountdown > 0">
+                        <span x-show="!profile.phoneChange.sending && profile.phoneChange.resendCountdown === 0">Resend WhatsApp OTP</span>
+                        <span x-show="!profile.phoneChange.sending && profile.phoneChange.resendCountdown > 0">Resend in <span x-text="profile.phoneChange.resendCountdown"></span>s</span>
+                        <span x-show="profile.phoneChange.sending">Sending…</span>
+                      </button>
+                    </div>
+                    <em class="pt-fld-note" x-show="profile.phoneChange.devCode">DEV OTP: <span x-text="profile.phoneChange.devCode"></span></em>
+                  </div>
                 </div>
               </div>
             </template>
@@ -1053,6 +1103,59 @@ require __DIR__ . '/partials/header.php';
 .pt-fld textarea:focus { border-color: var(--teal-400); }
 .pt-fld input:disabled { background: var(--bg-3, #f5f5f5); color: var(--mute); }
 .pt-fld-note { font-size: 11px; color: var(--teal-700); font-style: normal; }
+.pt-clickable-input { cursor: pointer; }
+.pt-inline-actions { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.pt-otp-input { max-width: 150px; }
+.pt-otp-box { display: grid; gap: 10px; margin-top: 6px; }
+.pt-otp-sent { margin: 0; font-size: 12px; color: var(--ink-2); background: var(--bg-2); border-radius: 8px; padding: 8px 10px; }
+.pt-otp-full {
+  max-width: 100%;
+  width: 100%;
+  min-height: 32px;
+  padding: 7px 12px;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 9px;
+  background: #fff;
+  color: #111827;
+  font-size: 13px;
+  line-height: 1.2;
+  box-shadow: none !important;
+  outline: none !important;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.pt-otp-full:focus {
+  border-color: #d1d5db !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+.pt-resend-btn {
+  width: 100%;
+  min-height: 32px;
+  padding: 7px 12px;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 9px;
+  background: #fff;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  box-shadow: none !important;
+}
+.pt-resend-btn:hover:not(:disabled) {
+  border-color: #d1d5db !important;
+  background: #fff;
+  color: #4b5563;
+}
+.pt-modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,30,.45); display: grid; place-items: center; z-index: 1200; padding: 16px; }
+.pt-modal-card { width: 100%; max-width: 520px; background: #fff; border-radius: 14px; padding: 16px; border: 1px solid var(--line); box-shadow: 0 20px 48px rgba(0,0,0,.22); position: relative; }
+.pt-modal-close { position: absolute; top: 8px; right: 10px; border: 0; background: transparent; font-size: 22px; line-height: 1; color: var(--mute); cursor: pointer; }
+.pt-modal-title { margin: 0; font-size: 20px; font-weight: 700; }
+.pt-modal-sub { margin: 6px 0 12px; font-size: 13px; color: var(--mute); }
+.pt-modal-btn { width: 100%; margin-top: 4px; }
+.pt-phone-row { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: #fff; }
+.pt-phone-row .pt-cc { padding: 9px 10px; border-right: 1px solid var(--line); color: var(--ink-2); background: var(--bg-3, #f5f5f5); font-size: 13px; font-weight: 600; }
+.pt-phone-row input { border: 0; border-radius: 0; }
 .pt-fld-wide { flex-basis: 320px; }
 .pt-profile-group { font-size: 13px; font-weight: 700; color: var(--ink-2, #444); margin: 22px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
 .pt-profile-group:first-of-type { margin-top: 8px; }
@@ -1326,6 +1429,19 @@ function patientPanel(isLoggedIn) {
       savedAt: '',
       saveSuccess: false,
       form: null,
+      phoneChange: {
+        open: false,
+        phoneDigits: '',
+        code: '',
+        sending: false,
+        verifying: false,
+        awaitingOtp: false,
+        availabilityText: '',
+        error: '',
+        devCode: '',
+        resendCountdown: 0,
+        resendTimer: null,
+      },
       photoVer: Date.now(),   // cache-buster for the avatar <img>
       photoBusted: false,     // set true if a stored photo fails to load
       bloods: ['A+','A-','B+','B-','O+','O-','AB+','AB-'],
@@ -1340,6 +1456,8 @@ function patientPanel(isLoggedIn) {
           const r = await fetch('/api/patient_profile', { credentials: 'same-origin' });
           const j = await r.json();
           this.form = (j.ok && j.profile) ? j.profile : {};
+          const digits = ((this.form.phone || '').replace(/\D/g, '') || '');
+          this.phoneChange.phoneDigits = digits.startsWith('91') && digits.length === 12 ? digits.slice(2) : digits.slice(-10);
           this.loaded = true;
         } catch (e) {
           this.formError = 'Could not load your profile. Please try again.';
@@ -1397,6 +1515,145 @@ function patientPanel(isLoggedIn) {
           this.formError = 'Network error. Please try again.';
         } finally {
           this.saving = false;
+        }
+      },
+      async checkPhoneAvailability() {
+        const digits = (this.phoneChange.phoneDigits || '').replace(/\D/g, '');
+        if (digits.length !== 10) {
+          this.phoneChange.availabilityText = '';
+          return true;
+        }
+        const current = ((this.form.phone || '').replace(/\D/g, '') || '').slice(-10);
+        if (digits === current) {
+          this.phoneChange.availabilityText = 'This is your current verified number.';
+          return true;
+        }
+        try {
+          const r = await fetch('/api/patient_profile?action=check_phone&phone=' + encodeURIComponent('+91' + digits), {
+            credentials: 'same-origin',
+          });
+          const j = await r.json();
+          if (j && j.ok && !j.available) {
+            this.phoneChange.availabilityText = 'This number is already in use.';
+            return false;
+          }
+          this.phoneChange.availabilityText = '';
+          return true;
+        } catch (e) {
+          this.phoneChange.availabilityText = '';
+          return true;
+        }
+      },
+      openPhoneModal() {
+        this.phoneChange.phoneDigits = '';
+        this.phoneChange.code = '';
+        this.phoneChange.awaitingOtp = false;
+        this.phoneChange.availabilityText = '';
+        this.phoneChange.error = '';
+        this.phoneChange.devCode = '';
+        this.phoneChange.open = true;
+      },
+      closePhoneModal() {
+        this.phoneChange.open = false;
+        this.phoneChange.error = '';
+        if (this.phoneChange.resendTimer) {
+          clearInterval(this.phoneChange.resendTimer);
+          this.phoneChange.resendTimer = null;
+        }
+        this.phoneChange.resendCountdown = 0;
+      },
+      startResendCountdown(secs = 30) {
+        if (this.phoneChange.resendTimer) {
+          clearInterval(this.phoneChange.resendTimer);
+          this.phoneChange.resendTimer = null;
+        }
+        this.phoneChange.resendCountdown = secs;
+        this.phoneChange.resendTimer = setInterval(() => {
+          this.phoneChange.resendCountdown -= 1;
+          if (this.phoneChange.resendCountdown <= 0) {
+            clearInterval(this.phoneChange.resendTimer);
+            this.phoneChange.resendTimer = null;
+            this.phoneChange.resendCountdown = 0;
+          }
+        }, 1000);
+      },
+      async sendPhoneOtp() {
+        const okAvailable = await this.checkPhoneAvailability();
+        if (!okAvailable) {
+          this.phoneChange.error = 'This number is already in use. Please use another number.';
+          return;
+        }
+        this.phoneChange.sending = true;
+        this.phoneChange.error = '';
+        this.formError = '';
+        this.phoneChange.devCode = '';
+        try {
+          const r = await fetch('/api/patient_profile?action=send_phone_otp', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: '+91' + this.phoneChange.phoneDigits }),
+          });
+          const j = await r.json();
+          if (!j.ok) {
+            this.phoneChange.error = ({
+              invalid_phone: 'Please enter a valid phone number.',
+              phone_in_use: 'This number is already in use.',
+              otp_locked: j.retry_after ? `Too many OTP requests. Try again in ${Math.ceil(j.retry_after / 60)} minute(s).` : 'Too many OTP requests. Try again later.',
+              resend_too_soon: j.retry_after ? `Please wait ${j.retry_after}s before requesting another OTP.` : 'Please wait before requesting another OTP.',
+              whatsapp_not_configured: 'WhatsApp OTP is not configured.',
+              wa_template_missing: 'WhatsApp OTP template is missing.',
+              wa_template_unapproved: 'WhatsApp OTP template is not approved.',
+              not_whatsapp: 'This number does not appear to have WhatsApp active.',
+              wa_send_failed: 'Could not send WhatsApp OTP. Please try again.',
+            })[j.error] || 'Could not send OTP. Please try again.';
+            return;
+          }
+          this.phoneChange.awaitingOtp = true;
+          this.phoneChange.code = '';
+          this.phoneChange.devCode = j.dev_code || '';
+          this.startResendCountdown(30);
+        } catch (e) {
+          this.formError = 'Network error. Please try again.';
+        } finally {
+          this.phoneChange.sending = false;
+        }
+      },
+      async verifyPhoneOtp() {
+        this.phoneChange.verifying = true;
+        this.phoneChange.error = '';
+        this.formError = '';
+        try {
+          const r = await fetch('/api/patient_profile?action=verify_phone_otp', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: '+91' + this.phoneChange.phoneDigits, code: this.phoneChange.code }),
+          });
+          const j = await r.json();
+          if (!j.ok) {
+            this.phoneChange.error = ({
+              invalid_input: 'Please enter a valid OTP.',
+              invalid_code: 'That OTP is incorrect.',
+              expired: 'OTP expired. Please send again.',
+              no_code_issued: 'No active OTP. Please send again.',
+              too_many_attempts: 'Too many attempts. Please request a new OTP.',
+              phone_in_use: 'This number is already in use.',
+            })[j.error] || 'Could not verify OTP.';
+            return;
+          }
+          if (j.profile) {
+            this.form = j.profile;
+          }
+          this.phoneChange.awaitingOtp = false;
+          this.phoneChange.code = '';
+          this.phoneChange.devCode = '';
+          this.phoneChange.availabilityText = 'Primary phone updated and verified.';
+          this.phoneChange.open = false;
+          this.saveSuccess = true;
+          setTimeout(() => { this.saveSuccess = false; }, 4000);
+        } catch (e) {
+          this.formError = 'Network error. Please try again.';
+        } finally {
+          this.phoneChange.verifying = false;
         }
       },
       async uploadPhoto(ev) {

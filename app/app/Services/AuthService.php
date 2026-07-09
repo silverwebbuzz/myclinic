@@ -91,7 +91,7 @@ final class AuthService
     /**
      * Register via verified mobile number (phone + password).
      *
-     * @return array{tenant_id: int, user_id: int}
+     * @return array{tenant_id: int, user_id: int, username: string}
      */
     public static function registerClinicViaPhone(
         string $clinicName,
@@ -100,6 +100,7 @@ final class AuthService
         string $phone,
         string $password,
         ?string $email = null,
+        ?string $username = null,
     ): array {
         $ownerName = trim($ownerName) !== '' ? trim($ownerName) : $clinicName;
         $phone = DoctorOtpService::normalizePhone($phone);
@@ -107,6 +108,8 @@ final class AuthService
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $email = '';
         }
+
+        $username = $username ?? UsernameService::resolveForRegistration('', $phone, $ownerName);
 
         $pdo = Database::connection();
         $pdo->beginTransaction();
@@ -128,6 +131,7 @@ final class AuthService
                 'clinic_id' => $tenantId,
                 'name' => $ownerName,
                 'email' => $email !== '' ? $email : null,
+                'username' => $username,
                 'phone' => $phone,
                 'password_hash' => password_hash($password, PASSWORD_BCRYPT),
                 'role' => 'admin',
@@ -147,14 +151,27 @@ final class AuthService
             try {
                 MailService::send($email, 'welcome', [
                     'clinic_name' => $clinicName,
-                    'login_url' => rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/') . '/doctor/login',
+                    'login_url' => rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/') . '/login',
                 ], $tenantId);
             } catch (\Throwable $e) {
                 error_log('[registerClinicViaPhone] welcome mail failed: ' . $e->getMessage());
             }
         }
 
-        return ['tenant_id' => $tenantId, 'user_id' => $userId];
+        return ['tenant_id' => $tenantId, 'user_id' => $userId, 'username' => $username];
+    }
+
+    public static function findUserByUsername(string $username): ?array
+    {
+        $username = strtolower(trim($username));
+        if ($username === '') {
+            return null;
+        }
+
+        return QueryBuilder::table('users')
+            ->where('username', '=', $username)
+            ->where('is_active', '=', 1)
+            ->first();
     }
 
     public static function findUserByPhone(string $phone): ?array

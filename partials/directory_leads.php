@@ -250,6 +250,17 @@ function ecp_directory_doctor_alert_cap(int $doctorId): int {
     $db = ecp_db();
     if (!$db) return 10;
 
+    // Admin switch: when doctor messaging limits are disabled, never suppress.
+    try {
+        $enabled = $db->query("SELECT setting_value FROM platform_settings WHERE setting_key = 'doctor_messaging_limits_enabled' LIMIT 1")
+            ->fetchColumn();
+        if ($enabled === '0') {
+            return 999999999;
+        }
+    } catch (\Throwable $e) {
+        // ignore
+    }
+
     try {
         $stmt = $db->prepare('SELECT per_month FROM directory_sms_quotas WHERE directory_doctor_id = :id');
         $stmt->execute(['id' => $doctorId]);

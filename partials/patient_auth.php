@@ -3,7 +3,7 @@
 // patient_auth.php — passwordless patient authentication.
 //
 // Two-step flow:
-//   1) send_otp(phone)              -> writes patient_otp_codes row, sends SMS
+//   1) send_otp(phone)              -> writes patient_otp_codes row, sends WhatsApp OTP
 //   2) verify_otp(phone, code, name?) -> creates or returns patient_identities,
 //                                         opens a patient_sessions row,
 //                                         sets the ecp_pid cookie
@@ -36,17 +36,25 @@ const ECP_PAT_OTP_RESEND_SECONDS = 30; // throttle re-issue
  *   ['ok' => bool, 'phone' => '+91...', 'mode' => 'dev'|'live',
  *    'dev_code' => string|null, 'error' => string|null]
  */
-function ecp_patient_send_otp(string $rawPhone): array {
+function ecp_patient_send_otp(string $rawPhone, string $intent = 'signin'): array {
     $phone = ecp_normalize_phone($rawPhone);
     if ($phone === '' || strlen($phone) < 8) {
         return ['ok' => false, 'phone' => $phone, 'mode' => 'n/a',
                 'dev_code' => null, 'error' => 'invalid_phone'];
     }
+    $intent = in_array($intent, ['signin', 'signup', 'profile_change'], true) ? $intent : 'signin';
 
     $db = ecp_db();
     if (!$db) {
         return ['ok' => false, 'phone' => $phone, 'mode' => 'n/a',
                 'dev_code' => null, 'error' => 'db_unavailable'];
+    }
+
+    $lock = ecp_patient_otp_lock_check($db, $phone, $intent);
+    if (!$lock['ok']) {
+        return ['ok' => false, 'phone' => $phone, 'mode' => 'n/a',
+                'dev_code' => null, 'error' => 'otp_locked',
+                'retry_after' => $lock['retry_after'] ?? null];
     }
 
     // Throttle: don't allow another OTP for this handle within RESEND_SECONDS.
@@ -72,7 +80,7 @@ function ecp_patient_send_otp(string $rawPhone): array {
 
     $ins = $db->prepare(
         'INSERT INTO patient_otp_codes (handle, channel, code_hash, expires_at)
-         VALUES (:h, "sms", :hash, DATE_ADD(NOW(), INTERVAL :ttl SECOND))'
+         VALUES (:h, "whatsapp", :hash, DATE_ADD(NOW(), INTERVAL :ttl SECOND))'
     );
     $ins->execute([
         'h'    => $phone,
@@ -80,8 +88,11 @@ function ecp_patient_send_otp(string $rawPhone): array {
         'ttl'  => ECP_PAT_OTP_TTL_SECONDS,
     ]);
 
-    // Send it.
-    $sent = ecp_sms_send_otp($phone, $code);
+    // Send WhatsApp OTP only.
+    $sent = ecp_whatsapp_send_otp($phone, $code);
+    if (!empty($sent['ok'])) {
+        ecp_patient_otp_lock_record($db, $phone, $intent);
+    }
 
     return [
         'ok'       => $sent['ok'],
@@ -90,6 +101,161 @@ function ecp_patient_send_otp(string $rawPhone): array {
         'dev_code' => $sent['dev_code'],   // only set in dev mode
         'error'    => $sent['error'],
     ];
+}
+
+/**
+ * @return array{attempts:int,lockout_minutes:int}
+ */
+function ecp_patient_otp_policy(PDO $db): array
+{
+    static $cache = null;
+    if ($cache !== null) {
+        return $cache;
+    }
+    $cache = ['attempts' => 2, 'lockout_minutes' => 60];
+    try {
+        $stmt = $db->query("SELECT setting_key, setting_value FROM platform_settings WHERE setting_key IN ('patient_otp_attempts','patient_otp_lockout_minutes')");
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $k = (string) ($row['setting_key'] ?? '');
+            $v = (int) ($row['setting_value'] ?? 0);
+            if ($k === 'patient_otp_attempts' && $v > 0) {
+                $cache['attempts'] = max(1, min(10, $v));
+            }
+            if ($k === 'patient_otp_lockout_minutes' && $v > 0) {
+                $cache['lockout_minutes'] = max(1, min(1440, $v));
+            }
+        }
+    } catch (\Throwable $e) {
+        // keep defaults
+    }
+
+    return $cache;
+}
+
+function ecp_patient_otp_lock_table(PDO $db): void
+{
+    static $ready = false;
+    if ($ready) {
+        return;
+    }
+    try {
+        $db->exec(
+            'CREATE TABLE IF NOT EXISTS patient_otp_rate_limits (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                phone VARCHAR(32) NOT NULL,
+                intent VARCHAR(16) NOT NULL,
+                attempts INT UNSIGNED NOT NULL DEFAULT 0,
+                window_started_at DATETIME NOT NULL,
+                locked_until DATETIME NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY uniq_phone_intent (phone, intent)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+        );
+        $ready = true;
+    } catch (\Throwable $e) {
+        // ignore; lock check will fail open
+    }
+}
+
+/**
+ * @return array{ok:bool,retry_after?:int}
+ */
+function ecp_patient_otp_lock_check(PDO $db, string $phone, string $intent): array
+{
+    ecp_patient_otp_lock_table($db);
+    if (!ecp_patient_otp_limits_enabled($db)) {
+        return ['ok' => true];
+    }
+    $policy = ecp_patient_otp_policy($db);
+    try {
+        $stmt = $db->prepare(
+            'SELECT attempts, window_started_at, locked_until
+             FROM patient_otp_rate_limits
+             WHERE phone = :p AND intent = :i
+             LIMIT 1'
+        );
+        $stmt->execute(['p' => $phone, 'i' => $intent]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return ['ok' => true];
+        }
+        $now = time();
+        $lockedUntil = !empty($row['locked_until']) ? strtotime((string) $row['locked_until']) : null;
+        if ($lockedUntil !== null && $lockedUntil > $now) {
+            return ['ok' => false, 'retry_after' => max(1, $lockedUntil - $now)];
+        }
+        $windowAt = strtotime((string) ($row['window_started_at'] ?? ''));
+        $windowSeconds = $policy['lockout_minutes'] * 60;
+        if ($windowAt > 0 && ($now - $windowAt) > $windowSeconds) {
+            $db->prepare(
+                'UPDATE patient_otp_rate_limits
+                 SET attempts = 0, window_started_at = NOW(), locked_until = NULL
+                 WHERE phone = :p AND intent = :i'
+            )->execute(['p' => $phone, 'i' => $intent]);
+            return ['ok' => true];
+        }
+        if ((int) ($row['attempts'] ?? 0) >= $policy['attempts']) {
+            $db->prepare(
+                'UPDATE patient_otp_rate_limits
+                 SET locked_until = DATE_ADD(NOW(), INTERVAL :mins MINUTE)
+                 WHERE phone = :p AND intent = :i'
+            )->execute(['mins' => $policy['lockout_minutes'], 'p' => $phone, 'i' => $intent]);
+            return ['ok' => false, 'retry_after' => $windowSeconds];
+        }
+    } catch (\Throwable $e) {
+        return ['ok' => true];
+    }
+
+    return ['ok' => true];
+}
+
+function ecp_patient_otp_lock_record(PDO $db, string $phone, string $intent): void
+{
+    ecp_patient_otp_lock_table($db);
+    if (!ecp_patient_otp_limits_enabled($db)) {
+        return;
+    }
+    $policy = ecp_patient_otp_policy($db);
+    try {
+        $stmt = $db->prepare(
+            'INSERT INTO patient_otp_rate_limits (phone, intent, attempts, window_started_at, locked_until)
+             VALUES (:p, :i, 1, NOW(), NULL)
+             ON DUPLICATE KEY UPDATE
+                 attempts = attempts + 1,
+                 locked_until = CASE
+                     WHEN (attempts + 1) >= :max_attempts THEN DATE_ADD(NOW(), INTERVAL :mins MINUTE)
+                     ELSE locked_until
+                 END'
+        );
+        $stmt->execute([
+            'p' => $phone,
+            'i' => $intent,
+            'max_attempts' => $policy['attempts'],
+            'mins' => $policy['lockout_minutes'],
+        ]);
+    } catch (\Throwable $e) {
+        // ignore lock counter failures
+    }
+}
+
+function ecp_patient_otp_limits_enabled(PDO $db): bool
+{
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
+    try {
+        $v = $db->query("SELECT setting_value FROM platform_settings WHERE setting_key = 'patient_otp_limits_enabled' LIMIT 1")
+            ->fetchColumn();
+        if ($v === false || $v === null || $v === '') {
+            return $cached = true;
+        }
+        return $cached = ($v === '1');
+    } catch (\Throwable $e) {
+        return $cached = true;
+    }
 }
 
 // ---------------------------------------------------------------------

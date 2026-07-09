@@ -15,6 +15,7 @@ use App\Services\DoctorScheduleService;
 use App\Services\OnboardingService;
 use App\Services\PlanService;
 use App\Services\StorageService;
+use App\Support\SessionFlash;
 use App\Support\View;
 
 final class OnboardingController
@@ -118,6 +119,7 @@ final class OnboardingController
         return $this->page('onboarding/clinic-setup', [
             'csrf' => CsrfService::token(),
             'clinic' => $clinic,
+            'newUsername' => SessionFlash::pull('new_username'),
             'config' => $config,
             'consultationFee' => ClinicSettingsService::consultationFeeForClinic((int) $clinic['id']),
             'consultationFeeCurrency' => ClinicSettingsService::consultationFeeCurrencyForClinic((int) $clinic['id']),
@@ -457,31 +459,14 @@ final class OnboardingController
             'appointment_reminder_24h' => !empty($request->post['appointment_reminder_24h']),
             'appointment_reminder_1h' => !empty($request->post['appointment_reminder_1h']),
             'rx_delivery' => !empty($request->post['rx_delivery']),
-            'lab_report_ready' => !empty($request->post['lab_report_ready']),
             'follow_up_reminder' => !empty($request->post['follow_up_reminder']),
-            'whatsapp_mode' => $request->post['whatsapp_mode'] ?? 'shared',
         ];
-
-        $update = [
-            'notification_prefs' => json_encode($prefs),
-            'whatsapp_number' => trim($request->post['whatsapp_number'] ?? '') ?: null,
-        ];
-
-        $token = trim($request->post['whatsapp_token'] ?? '');
-        if ($token !== '') {
-            $update['whatsapp_token'] = $token;
-        }
-
-        if (!empty($request->post['razorpay_key'])) {
-            $update['razorpay_key'] = trim((string) $request->post['razorpay_key']);
-        }
-        if (!empty($request->post['razorpay_secret'])) {
-            $update['razorpay_secret'] = trim((string) $request->post['razorpay_secret']);
-        }
 
         QueryBuilder::table('specialty_configs')
             ->where('clinic_id', '=', $clinicId)
-            ->update($update);
+            ->update([
+                'notification_prefs' => json_encode($prefs),
+            ]);
     }
 
     private function guardStep(int $expectedStep): ?Response
@@ -530,9 +515,7 @@ final class OnboardingController
             'appointment_reminder_24h' => true,
             'appointment_reminder_1h' => true,
             'rx_delivery' => true,
-            'lab_report_ready' => true,
             'follow_up_reminder' => true,
-            'whatsapp_mode' => 'shared',
         ];
     }
 
@@ -571,45 +554,6 @@ final class OnboardingController
     /** @param array<string, mixed> $post @return array<string, mixed> */
     private function parseSpecialtyOptions(string $specialty, array $post): array
     {
-        $base = ['slot_duration' => (int) ($post['slot_duration'] ?? 15)];
-
-        return match ($specialty) {
-            'gp' => array_merge($base, [
-                'icd10_enabled' => !empty($post['icd10_enabled']),
-                'drug_db' => $post['drug_db'] ?? 'global',
-                'default_frequencies' => $post['default_frequencies'] ?? ['OD', 'BD', 'TDS', 'QID', 'SOS'],
-            ]),
-            'homeopathy' => array_merge($base, [
-                'case_fields' => [
-                    'mental_generals' => !empty($post['mental_generals']),
-                    'physical_generals' => !empty($post['physical_generals']),
-                    'peculiar_symptoms' => !empty($post['peculiar_symptoms']),
-                    'modalities' => !empty($post['modalities']),
-                    'miasmatic_analysis' => !empty($post['miasmatic_analysis']),
-                ],
-                'potency_system' => $post['potency_system'] ?? 'centesimal',
-                'dietary_antidote_warnings' => !empty($post['dietary_antidote_warnings']),
-            ]),
-            'dental' => array_merge($base, [
-                'tooth_numbering' => $post['tooth_numbering'] ?? 'FDI',
-                'procedures' => array_filter(array_map('trim', explode(',', $post['procedures'] ?? ''))),
-            ]),
-            'derma' => array_merge($base, [
-                'skin_score_enabled' => !empty($post['skin_score_enabled']),
-                'photo_tracking' => !empty($post['photo_tracking']),
-                'body_map' => !empty($post['body_map']),
-            ]),
-            'peds' => array_merge($base, [
-                'growth_chart_region' => $post['growth_chart_region'] ?? 'global',
-                'vaccine_schedule' => $post['vaccine_schedule'] ?? 'iap',
-                'growth_params' => ['weight', 'height', 'head_circumference'],
-            ]),
-            'physio' => array_merge($base, [
-                'rom_joints' => !empty($post['rom_joints']),
-                'pain_scale' => $post['pain_scale'] ?? 'nrs',
-                'default_session_duration' => (int) ($post['default_session_duration'] ?? 45),
-            ]),
-            default => $base,
-        };
+        return ['slot_duration' => (int) ($post['slot_duration'] ?? 15)];
     }
 }

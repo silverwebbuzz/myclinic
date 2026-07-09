@@ -56,15 +56,11 @@ final class DoctorOtpService
         // Enforce WhatsApp-only OTP for registration.
         // Template key is namespaced to avoid collisions across modules.
         $tpl = 'auth_doctor_register_otp';
-        if (MessagingSettings::whatsappConfigured() && WaTemplateService::isApproved($tpl)) {
-            $res = self::issueForPurposeWhatsApp($phone, 'register', $tpl);
-            if (!$res['ok']) {
-                return $res;
-            }
-            return $res;
+        if (!MessagingSettings::whatsappConfigured() || WaTemplateService::isApproved($tpl)) {
+            return self::issueForPurposeWhatsApp($phone, 'register', $tpl);
         }
 
-        // If WhatsApp isn't configured/approved, we cannot validate WhatsApp activation.
+        // Live WhatsApp configured but OTP template not approved in Meta yet.
         return ['ok' => false, 'error' => 'whatsapp_unavailable'];
     }
 
@@ -199,9 +195,7 @@ final class DoctorOtpService
 
         $body = str_replace('{code}', $code, $bodyTemplate);
         $sent = TwilioSmsService::send($phone, $body);
-        $devMode = (($_ENV['TWILIO_ACCOUNT_SID'] ?? '') === ''
-                 || ($_ENV['TWILIO_AUTH_TOKEN']   ?? '') === ''
-                 || ($_ENV['TWILIO_FROM_NUMBER'] ?? '') === '');
+        $devMode = self::isLocalEnv();
 
         return [
             'ok'       => (bool) $sent['ok'],
@@ -248,6 +242,7 @@ final class DoctorOtpService
         ]);
 
         $wa = WhatsAppService::send($phone, $templateKey, ['code' => $code, 'body' => "OTP: {$code}"]);
+        $devMode = self::isLocalEnv();
         if (!$wa['ok']) {
             $msg = strtolower((string) ($wa['message'] ?? ''));
             // Common Meta wording when recipient isn't a WhatsApp user.
@@ -257,7 +252,11 @@ final class DoctorOtpService
             return ['ok' => false, 'error' => 'wa_send_failed'];
         }
 
-        return ['ok' => true, 'mode' => 'live', 'dev_code' => null];
+        return [
+            'ok'       => true,
+            'mode'     => $devMode ? 'dev' : 'live',
+            'dev_code' => $devMode ? $code : null,
+        ];
     }
 
     /**
@@ -316,5 +315,10 @@ final class DoctorOtpService
         if (session_status() !== PHP_SESSION_ACTIVE) {
             session_start();
         }
+    }
+
+    private static function isLocalEnv(): bool
+    {
+        return strtolower((string) ($_ENV['APP_ENV'] ?? 'local')) === 'local';
     }
 }

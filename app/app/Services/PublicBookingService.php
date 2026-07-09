@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Core\Database;
 use App\Core\QueryBuilder;
 
 final class PublicBookingService
@@ -237,6 +238,8 @@ final class PublicBookingService
             }
         }
 
+        self::ensureDailyBookingLimitNotExceeded($identityId ?? null, $phone);
+
         $appointment = AppointmentService::create($clinicId, [
             'patient_id' => (int) $patient['id'],
             'family_member_id' => $sharedMemberId > 0 ? $sharedMemberId : null,
@@ -266,6 +269,57 @@ final class PublicBookingService
         }
 
         return ['patient' => $patient, 'appointment' => $appointment, 'doctor' => $doctor];
+    }
+
+    private static function ensureDailyBookingLimitNotExceeded(?int $identityId, string $phone): void
+    {
+        $limit = self::patientDailyBookingLimit();
+        if ($limit <= 0) {
+            return; // unlimited
+        }
+
+        $count = self::bookingsTodayForIdentity($identityId, $phone);
+        if ($count >= $limit) {
+            throw new \RuntimeException("Daily booking limit reached. You can book up to {$limit} appointment(s) per day.");
+        }
+    }
+
+    private static function patientDailyBookingLimit(): int
+    {
+        try {
+            $stmt = Database::connection()->prepare(
+                'SELECT setting_value FROM platform_settings WHERE setting_key = :k LIMIT 1'
+            );
+            $stmt->execute([':k' => 'patient_daily_booking_limit']);
+            $v = $stmt->fetchColumn();
+            return max(0, (int) ($v !== false ? $v : 0));
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    private static function bookingsTodayForIdentity(?int $identityId, string $phone): int
+    {
+        $pdo = Database::connection();
+        $baseSql = 'SELECT COUNT(*) AS c
+            FROM appointments a
+            JOIN patients p ON p.id = a.patient_id
+            WHERE DATE(a.scheduled_at) = CURDATE()
+              AND COALESCE(a.status, "") <> "cancelled"';
+
+        if ($identityId !== null && $identityId > 0) {
+            $stmt = $pdo->prepare($baseSql . ' AND p.identity_id = :iid');
+            $stmt->execute([':iid' => $identityId]);
+            return (int) $stmt->fetchColumn();
+        }
+
+        if ($phone === '') {
+            return 0;
+        }
+
+        $stmt = $pdo->prepare($baseSql . ' AND p.phone = :phone');
+        $stmt->execute([':phone' => $phone]);
+        return (int) $stmt->fetchColumn();
     }
 
     /**

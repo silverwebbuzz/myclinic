@@ -496,13 +496,13 @@ function ecpAuthModal() {
           : "Last step before your account is ready.";
       }
       return this.intent === 'signup'
-        ? "New to eClinicPro? Enter your mobile number — we'll text you a code."
-        : "Enter your mobile number — we'll text you a code. No password needed.";
+        ? "New to eClinicPro? Enter your WhatsApp number — we'll send you a code."
+        : "Enter your WhatsApp number — we'll send you a code. No password needed.";
     },
     step1Hint() {
       return this.intent === 'signup'
         ? "We'll create your account once you confirm the code."
-        : "We'll send a 6-digit code via SMS. No password to remember.";
+        : "We'll send a 6-digit code via WhatsApp. No password to remember.";
     },
 
     async sendOtp() {
@@ -631,11 +631,19 @@ function ecpAuthModal() {
         case 'resend_too_soon':   return retryAfter
                                     ? `Please wait ${retryAfter}s before requesting another code.`
                                     : 'Please wait a moment before requesting another code.';
+        case 'otp_locked':        return retryAfter
+                                    ? `Too many OTP requests. Try again in ${Math.ceil(retryAfter / 60)} minute(s).`
+                                    : 'Too many OTP requests. Please try again later.';
         case 'invalid_code':      return 'That code is incorrect. Try again.';
         case 'expired':           return 'Code expired. Tap Resend.';
         case 'too_many_attempts': return 'Too many attempts. Request a new code.';
         case 'no_code_issued':    return 'No active code. Tap Resend.';
         case 'db_unavailable':    return 'Database is unreachable. Check /app/.env credentials.';
+        case 'whatsapp_not_configured': return 'WhatsApp OTP is not configured yet. Contact support.';
+        case 'wa_template_missing': return 'WhatsApp OTP template is missing. Contact support.';
+        case 'wa_template_unapproved': return 'WhatsApp OTP template is not approved yet.';
+        case 'not_whatsapp':      return 'This number does not appear to have WhatsApp active.';
+        case 'wa_send_failed':    return 'We couldn\'t send the WhatsApp OTP. Try again later.';
         case 'sms_not_configured': return 'SMS isn\'t configured yet. Contact support.';
         case 'sms_send_failed':   return 'We couldn\'t send the SMS. Try again or use a different number.';
         case 'server_error':      return 'Server error.';

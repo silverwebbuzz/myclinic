@@ -21,6 +21,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/patient_auth.php';
 
 const ECP_PROFILE_GENDERS   = ['M', 'F', 'Other'];
 const ECP_PROFILE_BLOOD     = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
@@ -339,4 +340,109 @@ function ecp_profile_detect_mime(string $path): string
     }
     $info = @getimagesize($path);
     return $info['mime'] ?? '';
+}
+
+/**
+ * Send WhatsApp OTP for patient primary-phone change (owner scoped).
+ *
+ * @return array{ok:bool,error?:string,retry_after?:int,dev_code?:?string}
+ */
+function ecp_profile_send_phone_otp(int $ownerId, string $rawPhone): array
+{
+    $db = ecp_db();
+    if (!$db || $ownerId <= 0) return ['ok' => false, 'error' => 'db_unavailable'];
+
+    $phone = ecp_normalize_phone($rawPhone);
+    if ($phone === '') {
+        return ['ok' => false, 'error' => 'invalid_phone'];
+    }
+
+    // Uniqueness check (except self).
+    $stmt = $db->prepare('SELECT id FROM patient_identities WHERE phone = :p AND id <> :id LIMIT 1');
+    $stmt->execute(['p' => $phone, 'id' => $ownerId]);
+    if ($stmt->fetch(PDO::FETCH_ASSOC)) {
+        return ['ok' => false, 'error' => 'phone_in_use'];
+    }
+
+    $sent = ecp_patient_send_otp($phone, 'profile_change');
+    if (!$sent['ok']) {
+        return [
+            'ok' => false,
+            'error' => (string) ($sent['error'] ?? 'send_failed'),
+            'retry_after' => isset($sent['retry_after']) ? (int) $sent['retry_after'] : null,
+        ];
+    }
+
+    if (session_status() !== PHP_SESSION_ACTIVE) @session_start();
+    $_SESSION['profile_phone_change'][$ownerId] = [
+        'phone' => $phone,
+        'at' => time(),
+    ];
+
+    return ['ok' => true, 'dev_code' => $sent['dev_code'] ?? null];
+}
+
+/**
+ * Verify OTP and apply primary-phone change for the owner.
+ *
+ * @return array{ok:bool,error?:string}
+ */
+function ecp_profile_verify_phone_otp(int $ownerId, string $rawPhone, string $code): array
+{
+    $db = ecp_db();
+    if (!$db || $ownerId <= 0) return ['ok' => false, 'error' => 'db_unavailable'];
+
+    $phone = ecp_normalize_phone($rawPhone);
+    $code = preg_replace('/\D/', '', (string) $code) ?? '';
+    if ($phone === '' || strlen($code) !== 6) {
+        return ['ok' => false, 'error' => 'invalid_input'];
+    }
+
+    if (session_status() !== PHP_SESSION_ACTIVE) @session_start();
+    $pending = $_SESSION['profile_phone_change'][$ownerId] ?? null;
+    if (!is_array($pending) || (string) ($pending['phone'] ?? '') !== $phone) {
+        return ['ok' => false, 'error' => 'no_code_issued'];
+    }
+
+    // Ensure still unique before applying.
+    $dup = $db->prepare('SELECT id FROM patient_identities WHERE phone = :p AND id <> :id LIMIT 1');
+    $dup->execute(['p' => $phone, 'id' => $ownerId]);
+    if ($dup->fetch(PDO::FETCH_ASSOC)) {
+        return ['ok' => false, 'error' => 'phone_in_use'];
+    }
+
+    $stmt = $db->prepare(
+        'SELECT id, code_hash, expires_at, attempts
+         FROM patient_otp_codes
+         WHERE handle = :h AND consumed_at IS NULL
+         ORDER BY id DESC LIMIT 1'
+    );
+    $stmt->execute(['h' => $phone]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$row) return ['ok' => false, 'error' => 'no_code_issued'];
+    if (strtotime((string) $row['expires_at']) < time()) return ['ok' => false, 'error' => 'expired'];
+    if ((int) $row['attempts'] >= ECP_PAT_OTP_MAX_ATTEMPTS) return ['ok' => false, 'error' => 'too_many_attempts'];
+
+    $db->prepare('UPDATE patient_otp_codes SET attempts = attempts + 1 WHERE id = :id')->execute(['id' => $row['id']]);
+    if (!hash_equals((string) $row['code_hash'], hash('sha256', $code))) {
+        return ['ok' => false, 'error' => 'invalid_code'];
+    }
+
+    $db->prepare('UPDATE patient_otp_codes SET consumed_at = NOW() WHERE id = :id')->execute(['id' => $row['id']]);
+    $db->prepare('UPDATE patient_identities SET phone = :p, phone_verified_at = NOW() WHERE id = :id AND is_active = 1')
+       ->execute(['p' => $phone, 'id' => $ownerId]);
+    unset($_SESSION['profile_phone_change'][$ownerId]);
+
+    return ['ok' => true];
+}
+
+function ecp_profile_phone_available(int $ownerId, string $rawPhone): bool
+{
+    $db = ecp_db();
+    if (!$db || $ownerId <= 0) return false;
+    $phone = ecp_normalize_phone($rawPhone);
+    if ($phone === '') return false;
+    $stmt = $db->prepare('SELECT id FROM patient_identities WHERE phone = :p AND id <> :id LIMIT 1');
+    $stmt->execute(['p' => $phone, 'id' => $ownerId]);
+    return !$stmt->fetch(PDO::FETCH_ASSOC);
 }

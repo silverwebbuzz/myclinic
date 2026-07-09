@@ -50,6 +50,8 @@ $navGroups = [
     ],
     'System' => [
         ['/admin/feature-flags', 'Feature Flags', 'M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7'],
+        ['/admin/misc', 'Misc', 'M4 7h16M4 12h16M4 17h10'],
+        ['/admin/recaptcha', 'reCAPTCHA', 'M12 2a10 10 0 100 20 10 10 0 000-20zm1 14h-2v-2h2v2zm2.07-7.75l-.9.92A3.49 3.49 0 0013 12h-2v-.5c0-.83.34-1.58.88-2.12l1.24-1.26a1.99 1.99 0 10-3.4-1.41H7.72a4 4 0 117.35 2.54z'],
         ['/admin/messaging', 'Messaging', 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z'],
         ['/admin/email', 'Email', 'M4 4h16v16H4zM4 8l8 5 8-5'],
         ['/admin/email-templates', 'Email Templates', 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h4'],

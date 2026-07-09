@@ -189,25 +189,12 @@ final class ClinicSettingsService
             'appointment_reminder_24h' => !empty($post['appointment_reminder_24h']),
             'appointment_reminder_1h' => !empty($post['appointment_reminder_1h']),
             'rx_delivery' => !empty($post['rx_delivery']),
-            'lab_report_ready' => !empty($post['lab_report_ready']),
             'follow_up_reminder' => !empty($post['follow_up_reminder']),
-            'whatsapp_mode' => $post['whatsapp_mode'] ?? 'shared',
         ];
 
-        $update = [
+        QueryBuilder::table('specialty_configs')->where('clinic_id', '=', $clinicId)->update([
             'notification_prefs' => json_encode($prefs),
-            'whatsapp_number' => trim($post['whatsapp_number'] ?? '') ?: null,
-        ];
-
-        if (!empty($post['whatsapp_token'])) {
-            $update['whatsapp_token'] = trim($post['whatsapp_token']);
-        }
-        if (!empty($post['razorpay_key']) && !empty($post['razorpay_secret'])) {
-            $update['razorpay_key'] = trim($post['razorpay_key']);
-            $update['razorpay_secret'] = trim($post['razorpay_secret']);
-        }
-
-        QueryBuilder::table('specialty_configs')->where('clinic_id', '=', $clinicId)->update($update);
+        ]);
     }
 
     /**

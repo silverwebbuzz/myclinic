@@ -51,6 +51,31 @@ set_exception_handler(function (Throwable $e) {
 });
 
 switch ($action) {
+    case 'check_phone':
+        $in = ecp_profile_body();
+        $phone = (string) ($in['phone'] ?? ($_GET['phone'] ?? ''));
+        echo json_encode([
+            'ok' => true,
+            'available' => ecp_profile_phone_available($ownerId, $phone),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        break;
+
+    case 'send_phone_otp':
+        ecp_profile_require_post($isPost);
+        $in = ecp_profile_body();
+        echo json_encode(ecp_profile_send_phone_otp($ownerId, (string) ($in['phone'] ?? '')), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        break;
+
+    case 'verify_phone_otp':
+        ecp_profile_require_post($isPost);
+        $in = ecp_profile_body();
+        $res = ecp_profile_verify_phone_otp($ownerId, (string) ($in['phone'] ?? ''), (string) ($in['code'] ?? ''));
+        if (!empty($res['ok'])) {
+            $res['profile'] = ecp_profile_get($ownerId);
+        }
+        echo json_encode($res, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        break;
+
     case 'save':
         ecp_profile_require_post($isPost);
         echo json_encode(ecp_profile_save($ownerId, ecp_profile_body()));

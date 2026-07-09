@@ -34,6 +34,8 @@ use App\Controllers\DietTemplateController;
 use App\Controllers\DoctorScheduleController;
 use App\Controllers\HelpController;
 use App\Controllers\MessagingAdminController;
+use App\Controllers\MiscAdminController;
+use App\Controllers\RecaptchaAdminController;
 use App\Controllers\OnboardingController;
 use App\Controllers\EmailTemplateAdminController;
 use App\Controllers\SpecialtyAdminController;
@@ -64,7 +66,11 @@ return static function (RouteRegistrar $router): void {
         $auth->post('/login', [AuthController::class, 'login']);
         $auth->post('/logout', [AuthController::class, 'logout']);
         $auth->get('/forgot-password', [AuthController::class, 'showForgotPassword']);
-        $auth->post('/forgot-password', [AuthController::class, 'forgotPassword']);
+        $auth->post('/forgot-password/send-otp', [AuthController::class, 'sendForgotPasswordOtp']);
+        $auth->post('/forgot-password/verify-otp', [AuthController::class, 'verifyForgotPasswordOtp']);
+        $auth->post('/forgot-password/reset', [AuthController::class, 'resetPasswordViaPhone']);
+        $auth->get('/forgot-username', [AuthController::class, 'showForgotUsername']);
+        $auth->post('/forgot-username', [AuthController::class, 'forgotUsername']);
         $auth->get('/reset-password/{token}', [AuthController::class, 'showResetPassword']);
         $auth->post('/reset-password/{token}', [AuthController::class, 'resetPassword']);
         $auth->get('/accept-invite/{token}', [AcceptInviteController::class, 'show']);
@@ -77,6 +83,7 @@ return static function (RouteRegistrar $router): void {
     });
 
     $router->get('/api/check-slug', [AuthController::class, 'checkSlug']);
+    $router->get('/api/check-username', [AuthController::class, 'checkUsername']);
 
     $router->post('/webhooks/stripe', [WebhookController::class, 'stripe']);
     $router->post('/webhooks/razorpay', [WebhookController::class, 'razorpay']);
@@ -416,6 +423,12 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/cron/template-discovery', [SuperAdminController::class, 'runTemplateDiscovery']);
         $admin->post('/cron/followup-reminders', [SuperAdminController::class, 'runFollowUpReminders']);
         $admin->post('/cron/followup-mark-missed', [SuperAdminController::class, 'runFollowUpMarkMissed']);
+
+        // Auth captcha control
+        $admin->get('/recaptcha', [RecaptchaAdminController::class, 'index']);
+        $admin->post('/recaptcha', [RecaptchaAdminController::class, 'save']);
+        $admin->get('/misc', [MiscAdminController::class, 'index']);
+        $admin->post('/misc', [MiscAdminController::class, 'save']);
 
         // WhatsApp/SMS messaging control centre
         $admin->get('/messaging', [MessagingAdminController::class, 'index']);

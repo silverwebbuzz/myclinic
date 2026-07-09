@@ -227,7 +227,6 @@ $ratingVal = (float) ($p['rating'] ?? 0);
                             </section>
                         <?php endif; ?>
                         <section class="dp-panel" x-show="tab === 'photos'" x-cloak>
-                            <h2>Photos</h2>
                             <?php if (!empty($p['images'])): ?>
                                 <div class="dp-gallery"><?php foreach ($p['images'] as $img): ?><figure class="dp-gallery-item"><img src="<?= e($img['url'] ?? '') ?>" alt="<?= e($img['alt'] ?? '') ?>" loading="lazy" onerror="this.closest('.dp-gallery-item')?.remove()"></figure><?php endforeach; ?></div>
                             <?php else: ?>

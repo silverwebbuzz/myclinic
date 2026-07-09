@@ -7,6 +7,8 @@ $devCode = $devCode ?? null;
 $info = $info ?? null;
 $error = $error ?? null;
 $old = $old ?? [];
+$defaultUsername = $defaultUsername ?? '';
+$oldUsername = $old['username'] ?? $defaultUsername;
 $prefRef = $_GET['ref'] ?? ($_COOKIE['mc_ref'] ?? '');
 $prefRef = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $prefRef));
 ob_start();
@@ -61,6 +63,11 @@ ob_start();
                 </div>
                 <p class="mt-1 text-xs text-slate-400">We'll send a one-time code on WhatsApp to this number for verification.</p>
             </div>
+            <?php if (!empty($captchaEnabled) && !empty($captchaSiteKey)): ?>
+                <div class="overflow-hidden rounded-lg border border-slate-200 p-2">
+                    <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars((string) $captchaSiteKey) ?>"></div>
+                </div>
+            <?php endif; ?>
             <button type="submit" class="w-full rounded-lg bg-emerald-600 py-2.5 text-sm font-medium text-white hover:bg-emerald-700">
                 Send code
             </button>
@@ -85,6 +92,11 @@ ob_start();
                        placeholder="••••••"
                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-center text-lg tracking-[0.4em] focus:border-emerald-500 focus:outline-none">
             </div>
+            <?php if (!empty($captchaEnabled) && !empty($captchaSiteKey)): ?>
+                <div class="overflow-hidden rounded-lg border border-slate-200 p-2">
+                    <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars((string) $captchaSiteKey) ?>"></div>
+                </div>
+            <?php endif; ?>
             <button type="submit" class="w-full rounded-lg bg-emerald-600 py-2.5 text-sm font-medium text-white hover:bg-emerald-700">
                 Verify
             </button>
@@ -97,11 +109,22 @@ ob_start();
             </button>
         </form>
     <?php else: ?>
-        <form method="post" action="/register" class="mt-6 space-y-4" x-data="registerForm()">
+        <form method="post" action="/register" class="mt-6 space-y-4" x-data="registerForm()" x-init="init()">
             <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
 
             <div class="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
                 Verified phone <strong>+91 <?= htmlspecialchars($phoneDigits) ?></strong>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-600">Username</label>
+                <input name="username" type="text" autocomplete="username"
+                       value="<?= htmlspecialchars($oldUsername) ?>"
+                       placeholder="<?= htmlspecialchars($defaultUsername) ?>"
+                       @input.debounce.400ms="checkUsername($event.target.value)"
+                       class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                <p class="mt-1 text-xs" :class="usernameStatusClass" x-text="usernameStatusText"></p>
+                <p class="mt-0.5 text-xs text-slate-400">Defaults to your mobile number. You can change it, or leave as-is.</p>
             </div>
 
             <div>
@@ -147,6 +170,11 @@ ob_start();
                        placeholder="Have a partner code? Enter it here"
                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm uppercase focus:border-emerald-500 focus:outline-none">
             </div>
+            <?php if (!empty($captchaEnabled) && !empty($captchaSiteKey)): ?>
+                <div class="overflow-hidden rounded-lg border border-slate-200 p-2">
+                    <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars((string) $captchaSiteKey) ?>"></div>
+                </div>
+            <?php endif; ?>
 
             <button type="submit" class="w-full rounded-lg bg-emerald-600 py-2.5 text-sm font-medium text-white hover:bg-emerald-700">
                 Create clinic account
@@ -157,12 +185,48 @@ ob_start();
     <p class="mt-4 text-center text-sm text-slate-500">
         Already have an account? <a href="/login" class="text-emerald-600 hover:underline">Login</a>
     </p>
+    <?php if (!empty($captchaEnabled) && !empty($captchaSiteKey)): ?>
+        <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <?php endif; ?>
 </div>
 <script>
 function registerForm() {
     return {
         slug: <?= json_encode($old['slug'] ?? '') ?>,
         strength: 0,
+        usernameStatusText: '',
+        usernameStatusClass: 'text-slate-400',
+        defaultUsername: <?= json_encode($defaultUsername) ?>,
+        init() {
+            const initial = <?= json_encode($oldUsername) ?>;
+            if (initial) {
+                this.checkUsername(initial);
+            }
+        },
+        async checkUsername(value) {
+            const raw = (value || '').trim();
+            if (raw === '') {
+                this.usernameStatusText = 'Will use your mobile number if left blank.';
+                this.usernameStatusClass = 'text-slate-400';
+                return;
+            }
+            try {
+                const r = await fetch('/api/check-username?username=' + encodeURIComponent(raw));
+                const data = await r.json();
+                if (data.reason === 'invalid') {
+                    this.usernameStatusText = 'Use 3–30 chars: letters, numbers, underscore (or 10-digit mobile).';
+                    this.usernameStatusClass = 'text-red-600';
+                } else if (data.available) {
+                    this.usernameStatusText = 'Username is available.';
+                    this.usernameStatusClass = 'text-emerald-600';
+                } else {
+                    this.usernameStatusText = 'Username is already taken.';
+                    this.usernameStatusClass = 'text-red-600';
+                }
+            } catch (e) {
+                this.usernameStatusText = '';
+            }
+        },
         suggestSlug(name) {
             this.slug = name.toLowerCase()
                 .replace(/[^a-z0-9]+/g, '-')

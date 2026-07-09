@@ -8468,6 +8468,23 @@ body {
   border-radius: 10px;
 }
 
+/* Empty photos fallback should render like a normal gallery tile,
+   not inherit the full-size hero avatar positioning. */
+.dp-gallery-empty {
+  width: 100%;
+  max-width: 260px;
+}
+
+.dp-gallery-empty .dp-hero-avatar {
+  position: static;
+  inset: auto;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4/3;
+  border-radius: 10px;
+  font-size: 36px;
+}
+
 .dp-side {
   display: grid;
   gap: 16px;

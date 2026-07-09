@@ -39,7 +39,7 @@ final class MessagingPolicy
         }
 
         // Quiet hours (OTP never routes through here, so safe to block all).
-        if (self::inQuietHours()) {
+        if (MessagingSettings::doctorLimitsEnabled() && self::inQuietHours()) {
             return ['channel' => null, 'reason' => 'quiet hours', 'downgraded' => false];
         }
 
@@ -56,9 +56,11 @@ final class MessagingPolicy
             return ['channel' => null, 'reason' => "rule off ({$tier})", 'downgraded' => false];
         }
 
-        // Per-event frequency caps.
-        if (self::frequencyExceeded($clinicId, $eventKey, $rule)) {
-            return ['channel' => null, 'reason' => 'frequency cap', 'downgraded' => false];
+        if (MessagingSettings::doctorLimitsEnabled()) {
+            // Per-event frequency caps.
+            if (self::frequencyExceeded($clinicId, $eventKey, $rule)) {
+                return ['channel' => null, 'reason' => 'frequency cap', 'downgraded' => false];
+            }
         }
 
         $channel = $rule['channel'];
@@ -68,7 +70,11 @@ final class MessagingPolicy
             return ['channel' => 'push', 'reason' => 'push', 'downgraded' => false];
         }
 
-        // Quota check + downgrade chain.
+        // Quota check + downgrade chain (only when doctor limits are enabled).
+        if (!MessagingSettings::doctorLimitsEnabled()) {
+            return ['channel' => $channel, 'reason' => 'doctor limits disabled', 'downgraded' => false];
+        }
+
         $quota = self::quota($clinicId);
         $downgraded = false;
 

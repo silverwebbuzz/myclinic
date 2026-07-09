@@ -25,6 +25,7 @@ $effectivePhoneDisplay = $formatIndianPhone(DoctorOtpService::normalizePhone($ef
 $pendingPhoneDisplay = $pendingPhone !== '' ? $formatIndianPhone(DoctorOtpService::normalizePhone($pendingPhone)) : '';
 $pendingDigits = $pendingPhoneDisplay !== '' ? (preg_replace('/\D/', '', $pendingPhoneDisplay) ?? '') : '';
 $pendingDigits10 = strlen($pendingDigits) >= 10 ? substr($pendingDigits, -10) : '';
+$phoneCodeResendSeconds = 30;
 
 $clinicName  = $clinic['name'] ?? 'our clinic';
 $shareText   = "Book your appointment at {$clinicName} online — quick, no calls needed: {$bookingUrl}";
@@ -123,7 +124,22 @@ $qrSrc       = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=
     </div>
 </div>
 
-<div x-data="{ phoneModal: <?= json_encode(in_array($phoneStep, ['code', 'verified'], true)) ?> }">
+<div x-data="{
+    phoneModal: <?= json_encode(in_array($phoneStep, ['code', 'verified'], true)) ?>,
+    resendIn: <?= (int) ($phoneStep === 'code' ? $phoneCodeResendSeconds : 0) ?>,
+    resendTimer: null,
+    initResend() {
+        if (this.resendIn > 0) {
+            this.resendTimer = setInterval(() => {
+                this.resendIn -= 1;
+                if (this.resendIn <= 0) {
+                    clearInterval(this.resendTimer);
+                    this.resendTimer = null;
+                }
+            }, 1000);
+        }
+    }
+}" x-init="initResend()">
 <form method="post" action="/settings/general" enctype="multipart/form-data" class="space-y-4 ui-card ui-card-pad">
     <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
     <div class="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -139,7 +155,7 @@ $qrSrc       = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=
                        title="Click to change phone">
                 <button type="button" class="ui-btn ui-btn-secondary whitespace-nowrap" @click="phoneModal = true">Change</button>
             </div>
-            <p class="mt-1 text-[11px] text-slate-500">Phone changes require OTP verification.</p>
+            <p class="mt-1 text-[11px] text-slate-500">Phone changes require WhatsApp OTP verification.</p>
             <?php if ($pendingPhone !== '' && $phoneStep === 'verified'): ?>
             <p class="mt-1 text-[11px] font-medium text-emerald-700">Verified: <?= htmlspecialchars($pendingPhoneDisplay) ?>.</p>
             <?php endif; ?>
@@ -224,20 +240,23 @@ $qrSrc       = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=
             <h3 class="text-base font-semibold text-slate-900">Verify new phone number</h3>
             <button type="button" class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" @click="phoneModal = false">✕</button>
         </div>
-        <p class="mt-1 text-xs text-slate-500">Send OTP to the new number and verify it. Your phone number will update automatically after successful verification.</p>
+        <p class="mt-1 text-xs text-slate-500">Send a WhatsApp OTP to the new number and verify it. Your phone number updates automatically after successful verification.</p>
 
         <?php if ($phoneStep === 'code' && $pendingPhone !== ''): ?>
             <form method="post" action="/settings/general/phone/verify-otp" class="mt-4 space-y-3">
                 <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
                 <input type="hidden" name="new_phone" value="<?= htmlspecialchars($pendingPhoneDisplay) ?>">
-                <div class="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">OTP sent to <strong><?= htmlspecialchars($pendingPhoneDisplay) ?></strong></div>
-                <input name="otp_code" maxlength="6" inputmode="numeric" placeholder="Enter 6-digit OTP" class="ui-input">
-                <button type="submit" class="ui-btn ui-btn-primary w-full">Verify OTP</button>
+                <div class="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">WhatsApp OTP sent to <strong><?= htmlspecialchars($pendingPhoneDisplay) ?></strong></div>
+                <input name="otp_code" maxlength="6" inputmode="numeric" placeholder="Enter 6-digit WhatsApp OTP" class="ui-input">
+                <button type="submit" class="ui-btn ui-btn-primary w-full">Verify WhatsApp OTP</button>
             </form>
             <form method="post" action="/settings/general/phone/send-otp" class="mt-2">
                 <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
                 <input type="hidden" name="new_phone" value="<?= htmlspecialchars($pendingPhoneDisplay) ?>">
-                <button type="submit" class="ui-btn ui-btn-secondary w-full">Resend OTP</button>
+                <button type="submit" class="ui-btn ui-btn-secondary w-full" :disabled="resendIn > 0">
+                    <span x-show="resendIn === 0">Resend WhatsApp OTP</span>
+                    <span x-show="resendIn > 0">Resend in <span x-text="resendIn"></span>s</span>
+                </button>
             </form>
             <?php if ($phoneDevCode !== ''): ?>
             <p class="mt-2 text-xs text-amber-700">DEV OTP: <strong><?= htmlspecialchars($phoneDevCode) ?></strong></p>
@@ -262,7 +281,7 @@ $qrSrc       = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=
                            class="min-w-0 flex-1 px-3 py-2 text-sm outline-none"
                            autofocus>
                 </div>
-                <button type="submit" class="ui-btn ui-btn-primary w-full">Send OTP</button>
+                <button type="submit" class="ui-btn ui-btn-primary w-full">Send WhatsApp OTP</button>
             </form>
         <?php endif; ?>
     </div>
