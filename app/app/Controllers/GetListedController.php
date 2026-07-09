@@ -35,6 +35,7 @@ final class GetListedController
 
         return Response::html(Layout::page('onboarding/get-listed', [
             'clinic'        => $clinic,
+            'ownerName'     => trim((string) (RequestContext::user()['name'] ?? '')),
             'latest'        => DoctorClaimService::latestForTenantPhone((string) ($clinic['phone'] ?? '')),
             'listingStatus' => DoctorClaimService::listingStatus($clinic),
             'listing'       => ClinicSettingsService::publicListing($clinicId),

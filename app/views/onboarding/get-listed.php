@@ -236,7 +236,7 @@ ob_start();
         <label class="block">
             <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Doctor's full name *</span>
             <input type="text" name="full_name" required maxlength="120"
-                   value="<?= htmlspecialchars((string) ($clinic['name'] ?? '')) ?>"
+                   value="<?= htmlspecialchars((string) ($ownerName ?? '')) ?>"
                    class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
             <span class="mt-1 block text-xs text-slate-500">e.g. Dr. Riya Mehta — appears as the doctor in your public listing.</span>
         </label>

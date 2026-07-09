@@ -213,7 +213,7 @@ final class MailService
                 'doctor_name' => 'Dr Test Doctor',
                 'clinic_name' => 'Test Clinic',
                 'phone' => '+91 99999 99999',
-                'login_url' => rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/') . '/doctor/login',
+                'login_url' => rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/') . '/login',
             ],
             default => ['clinic_name' => 'Test Clinic'],
         };
@@ -472,7 +472,7 @@ final class MailService
                     'Patient Management',
                     'Clinic Profile & Online Presence',
                 ],
-                'cta' => ['label' => 'Sign in to your portal', 'url' => (string) ($payload['login_url'] ?? $appUrl . '/doctor/login')],
+                'cta' => ['label' => 'Sign in to your portal', 'url' => (string) ($payload['login_url'] ?? $appUrl . '/login')],
                 'sign_off' => "Please let us know your preferred date and time for a short demo session, and our team will arrange it accordingly. "
                     . "We look forward to supporting your practice.\n\n"
                     . "You can connect with us on WhatsApp or call: +91 9998010029\n\n"

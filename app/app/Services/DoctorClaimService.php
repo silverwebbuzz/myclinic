@@ -275,6 +275,41 @@ final class DoctorClaimService
     }
 
     /**
+     * Greeting name for doctor-facing messages. Portal listing requests used to
+     * store the clinic name in full_name when the form was prefilled from
+     * tenants.name — prefer the owner user's name in that case.
+     *
+     * @param array<string, mixed> $req
+     */
+    private static function resolveDoctorDisplayName(array $req, int $tenantId): string
+    {
+        $clinic = trim((string) ($req['clinic_name'] ?? ''));
+        $full = trim((string) ($req['full_name'] ?? ''));
+        if ($full !== '' && ($clinic === '' || strcasecmp($full, $clinic) !== 0)) {
+            return $full;
+        }
+
+        return self::ownerDisplayName($tenantId) ?? ($full !== '' ? $full : 'Doctor');
+    }
+
+    private static function ownerDisplayName(int $tenantId): ?string
+    {
+        if ($tenantId <= 0) {
+            return null;
+        }
+        $stmt = self::pdo()->prepare(
+            'SELECT name FROM users
+             WHERE clinic_id = :cid AND is_active = 1
+             ORDER BY is_owner DESC, id ASC
+             LIMIT 1'
+        );
+        $stmt->execute(['cid' => $tenantId]);
+        $name = trim((string) ($stmt->fetchColumn() ?: ''));
+
+        return $name !== '' ? $name : null;
+    }
+
+    /**
      * Approval notification to the doctor, fanned out across every channel we
      * have a destination for: email, SMS, and WhatsApp. WhatsApp uses
      * doctor_approved.
@@ -292,10 +327,10 @@ final class DoctorClaimService
     private static function notifyApproved(array $req, int $tenantId): array
     {
         $base         = rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/');
-        $loginUrl     = $base . '/doctor/login';
+        $loginUrl     = $base . '/login';
         $email        = trim((string) ($req['email'] ?? ''));
         $phone        = trim((string) ($req['phone'] ?? ''));
-        $name         = (string) ($req['full_name'] ?? 'Doctor');
+        $name         = self::resolveDoctorDisplayName($req, $tenantId);
         $clinic       = (string) ($req['clinic_name'] ?? '');
         $supportPhone = trim((string) ($_ENV['SUPPORT_PHONE'] ?? $_ENV['HELP_PHONE'] ?? '+91 98765 43210'));
 
@@ -430,7 +465,8 @@ final class DoctorClaimService
                  "phone_verified", :src, :ip, :ua)'
         );
         $stmt->execute([
-            'name'    => trim((string) ($input['full_name']   ?? $tenant['name'] ?? 'Doctor')),
+            'name'    => trim((string) ($input['full_name'] ?? ''))
+                         ?: (self::ownerDisplayName($tenantId) ?? 'Doctor'),
             'phone'   => (string) ($tenant['phone'] ?? ''),
             'email'   => $tenant['email'] ?? null,
             'clinic'  => trim((string) ($input['clinic_name'] ?? $tenant['name'] ?? '')),
