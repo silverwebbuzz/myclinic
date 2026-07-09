@@ -80,6 +80,27 @@ function ecp_profile_slug_columns_ready(PDO $db): bool
     return $ready;
 }
 
+/**
+ * True once the persisted `has_photo` generated column from
+ * 2026_07_09_add_search_indexes.sql exists. When present, the search
+ * ORDER BY uses the column (index-sortable, no filesort); otherwise it
+ * falls back to the inline photo_reference expression.
+ */
+function ecp_directory_has_photo_column(PDO $db): bool
+{
+    static $ready = null;
+    if ($ready !== null) {
+        return $ready;
+    }
+    try {
+        $ready = (bool) $db->query("SHOW COLUMNS FROM directory_doctors LIKE 'has_photo'")->fetch();
+    } catch (Throwable $e) {
+        $ready = false;
+    }
+
+    return $ready;
+}
+
 function ecp_profile_city_meta(PDO $db, string $citySlug): ?array
 {
     static $cache = [];
