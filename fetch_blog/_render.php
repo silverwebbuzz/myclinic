@@ -65,6 +65,47 @@ function fb_slugify(string $s): string {
 }
 
 /**
+ * Heading id in WordPress "sanitize_title" style used by the live blog:
+ * lowercase, apostrophes become "-039-", other non-alphanumerics become
+ * "-". e.g. "Scared of a Root Canal? Let's Clear the Air"
+ *        -> "scared-of-a-root-canal-let-039-s-clear-the-air"
+ */
+function fb_heading_id(string $s): string {
+    $s = strtolower(trim($s));
+    $s = str_replace("'", '-039-', $s);
+    $s = str_replace('&', '-038-', $s);
+    $s = (string) preg_replace('/[^a-z0-9]+/', '-', $s);
+    $s = (string) preg_replace('/-+/', '-', $s);
+    return trim($s, '-');
+}
+
+/**
+ * Prose block in the blog's classic-editor style: the FIRST paragraph is
+ * <p class="isSelectedEnd">...</p>, every following paragraph is RAW text
+ * separated by blank lines (WordPress auto-wraps these in <p> on save).
+ * @param string[] $paras
+ */
+function fb_prose(array $paras, bool $firstIsLead = true): string {
+    $html = '';
+    $first = true;
+    foreach ($paras as $p) {
+        if (!is_string($p) || $p === '') continue;
+        if ($first && $firstIsLead) {
+            $html .= '<p class="isSelectedEnd">' . fb_md($p) . '</p>' . "\n";
+        } else {
+            $html .= fb_md($p) . "\n\n";
+        }
+        $first = false;
+    }
+    return $html;
+}
+
+/** Heading with WP-style id. */
+function fb_h2(string $text): string {
+    return '<h2 id="' . fb_heading_id($text) . '">' . fb_e($text) . '</h2>';
+}
+
+/**
  * The best real directory URL for this blog:
  *   city + mapped specialty → /find-a-doctor/{spec}-in-{city}
  *   mapped specialty only   → /find-a-doctor/{spec}
@@ -101,25 +142,19 @@ function fb_render_html(array $row, array $b): string {
 
     $out = [];
 
-    // --- Intro: hook heading + paragraphs (like the live post opening)
+    // --- Intro: hook heading + prose (first para is the lead) ----------
     $introHeading = (string) ($b['intro_heading'] ?? '');
     if ($introHeading !== '') {
-        $out[] = '<h2>' . fb_e($introHeading) . '</h2>';
+        $out[] = fb_h2($introHeading);
     }
-    $first = true;
-    foreach ((array) ($b['intro'] ?? []) as $p) {
-        if (!is_string($p) || $p === '') continue;
-        $out[] = $first
-            ? '<p class="isSelectedEnd">' . fb_md($p) . '</p>'
-            : '<p>' . fb_md($p) . '</p>';
-        $first = false;
-    }
+    $out[] = fb_prose((array) ($b['intro'] ?? []));
 
-    // --- Quick-answer box ---------------------------------------------
+    // --- Quick-answer box (content is raw text, no <p>) ----------------
     if (!empty($b['quick_answer'])) {
-        $out[] = '<div class="ecp-quick-answer">'
-            . '<h4>Quick answer</h4>'
-            . '<p>' . fb_md($b['quick_answer']) . '</p></div>';
+        $out[] = '<div class="ecp-quick-answer">' . "\n"
+            . '<h4>Quick answer</h4>' . "\n"
+            . fb_md((string) $b['quick_answer']) . "\n\n"
+            . '</div>';
     }
 
     // --- Symptom checklist ----------------------------------------------
@@ -143,54 +178,78 @@ function fb_render_html(array $row, array $b): string {
         $out[] = '<h2>What causes it?</h2><ul class="implant-list">' . $items . "\n" . '</ul>';
     }
 
-    // --- Deep-dive sections: implant-section with alternating image side --
-    $i = 0;
+    // --- Deep-dive sections -----------------------------------------------
+    // Structure per the live blog:
+    //   <section class="implant-section">
+    //     <div class="implant-content full">
+    //       <div class="implant-text">
+    //         <h2 id="...">Heading</h2>
+    //         (lead <p class="isSelectedEnd"> + raw prose paragraphs)
+    //         [if bullets and/or an image:]
+    //         <div class="eclinicpro-quick-answer">
+    //           <div class="ecp-quick-answer-title"> lead-in + <ul class="implant-list"> </div>
+    //           <div class="implant-image"><img ...></div>
+    //         </div>
+    //       </div></div></section>
     foreach ((array) ($b['sections'] ?? []) as $sec) {
         if (!is_array($sec)) continue;
         $heading = (string) ($sec['heading'] ?? '');
-        $paras = '';
-        foreach ((array) ($sec['paragraphs'] ?? []) as $p) {
-            if (is_string($p) && $p !== '') $paras .= '<p>' . fb_md($p) . '</p>' . "\n";
-        }
+        $prose   = fb_prose((array) ($sec['paragraphs'] ?? []));
 
-        // point-wise content: bullets (implant-list) OR titled items (benefit-item)
-        $points = '';
+        // bullets (implant-list) with optional lead-in
         $bulletsIntro = (string) ($sec['bullets_intro'] ?? '');
         $bullets = array_values(array_filter((array) ($sec['bullets'] ?? []), 'is_string'));
+        $bulletsHtml = '';
         if ($bullets !== []) {
-            if ($bulletsIntro !== '') $points .= '<p>' . fb_md($bulletsIntro) . '</p>' . "\n";
             $lis = '';
             foreach ($bullets as $bl) { $lis .= "\n \t" . '<li>' . fb_md($bl) . '</li>'; }
-            $points .= '<ul class="implant-list">' . $lis . "\n" . '</ul>' . "\n";
+            $bulletsHtml = ($bulletsIntro !== '' ? fb_md($bulletsIntro) . "\n" : '')
+                . '<ul class="implant-list">' . $lis . "\n" . '</ul>' . "\n";
         }
+
+        // titled point cards (benefit-item) — content raw, no <p>
+        $itemsHtml = '';
         foreach ((array) ($sec['items'] ?? []) as $it) {
             if (!is_array($it)) continue;
             $t = (string) ($it['title'] ?? '');
             if ($t === '') continue;
-            $points .= '<div class="benefit-item">' . "\n"
+            $itemsHtml .= '<div class="benefit-item">' . "\n"
                 . '<h4>' . fb_e($t) . '</h4>' . "\n"
-                . '<p>' . fb_md((string) ($it['text'] ?? '')) . '</p>' . "\n"
+                . fb_md((string) ($it['text'] ?? '')) . "\n\n"
                 . '</div>' . "\n";
         }
 
-        if ($paras === '' && $points === '') continue;
+        if ($prose === '' && $bulletsHtml === '' && $itemsHtml === '') continue;
 
         $alt = (string) ($sec['image_alt'] ?? '');
-        $text = '<div class="implant-text">'
-            . ($heading !== '' ? "\n<h2>" . fb_e($heading) . '</h2>' : '')
-            . "\n" . $paras . $points . '</div>';
+        $hasImg = $alt !== '';
+        $img = $hasImg
+            ? '<div class="implant-image"><img src="' . FB_IMG_PLACEHOLDER . '" alt="' . fb_e($alt) . '" loading="lazy" /></div>'
+            : '';
 
-        if ($alt !== '') {
-            $img = '<div class="implant-image"><img src="' . FB_IMG_PLACEHOLDER . '" alt="' . fb_e($alt) . '" loading="lazy" /></div>';
-            // alternate: image right, then image left, like the live post
-            $inner = ($i % 2 === 0) ? $text . "\n" . $img : $img . "\n" . $text;
-            $out[] = '<section class="implant-section">' . "\n"
-                . '<div class="implant-content">' . "\n" . $inner . "\n" . '</div>' . "\n" . '</section>';
-        } else {
-            $out[] = '<section class="implant-section">' . "\n"
-                . '<div class="implant-content full">' . "\n" . $text . "\n" . '</div>' . "\n" . '</section>';
+        // Build the inner text column.
+        $inner = '<div class="implant-text">' . "\n"
+            . ($heading !== '' ? fb_h2($heading) . "\n" : '')
+            . $prose;
+
+        if ($bulletsHtml !== '' && $hasImg) {
+            // bullets + image share the eclinicpro-quick-answer flex row
+            $inner .= '<div class="eclinicpro-quick-answer">' . "\n"
+                . '<div class="ecp-quick-answer-title">' . "\n" . $bulletsHtml . '</div>' . "\n"
+                . $img . "\n"
+                . '</div>' . "\n";
+        } elseif ($bulletsHtml !== '') {
+            $inner .= $bulletsHtml;
+        } elseif ($hasImg) {
+            // image only, still inside the flex row so it sits beside the prose
+            $inner .= '<div class="eclinicpro-quick-answer">' . "\n" . $img . "\n" . '</div>' . "\n";
         }
-        $i++;
+        $inner .= $itemsHtml . '</div>';
+
+        $out[] = '<section class="implant-section">' . "\n"
+            . '<div class="implant-content full">' . "\n"
+            . $inner . "\n"
+            . '</div>' . "\n" . '</section>';
     }
 
     // --- Tests you may need ------------------------------------------------
@@ -200,7 +259,7 @@ function fb_render_html(array $row, array $b): string {
             $items .= "\n \t" . '<li><strong>' . fb_e((string) ($t['name'] ?? '')) . '</strong> — '
                 . fb_e((string) ($t['what_it_shows'] ?? '')) . '</li>';
         }
-        $out[] = '<h2>Tests Your Doctor May Suggest</h2>'
+        $out[] = fb_h2('Tests Your Doctor May Suggest')
             . '<ul class="implant-list">' . $items . "\n" . '</ul>'
             . '<p class="ecp-note">Your doctor decides which tests you actually need — many people need none of these.</p>';
     }
@@ -218,7 +277,7 @@ function fb_render_html(array $row, array $b): string {
                 . '</tr>' . "\n";
         }
         $out[] = '<section class="comparison-section">' . "\n"
-            . '<h2>Treatment Options Compared</h2>' . "\n"
+            . fb_h2('Treatment Options Compared') . "\n"
             . '<div class="table-responsive">' . "\n"
             . '<table class="comparison-table">' . "\n"
             . '<thead>' . "\n" . '<tr>' . "\n"
@@ -240,7 +299,7 @@ function fb_render_html(array $row, array $b): string {
             $steps .= "\n" . '<h4>' . $n . '. ' . fb_e((string) ($s['title'] ?? '')) . '</h4>' . "\n"
                 . '<p class="isSelectedEnd">' . fb_e((string) ($s['description'] ?? '')) . '</p>' . "\n";
         }
-        $out[] = '<h2>Step-by-Step: What Happens</h2>' . $steps;
+        $out[] = fb_h2('Step-by-Step: What Happens') . $steps;
     }
 
     // --- Recovery timeline ----------------------------------------------------
@@ -250,7 +309,7 @@ function fb_render_html(array $row, array $b): string {
             $items .= "\n \t" . '<li><strong>' . fb_e((string) ($p['phase'] ?? '')) . '</strong> — '
                 . fb_e((string) ($p['what_to_expect'] ?? '')) . '</li>';
         }
-        $out[] = '<h2>Recovery: What to Expect</h2><ul class="implant-list">' . $items . "\n" . '</ul>';
+        $out[] = fb_h2('Recovery: What to Expect') . '<ul class="implant-list">' . $items . "\n" . '</ul>';
     }
 
     // --- Key takeaways box --------------------------------------------------------
@@ -264,24 +323,24 @@ function fb_render_html(array $row, array $b): string {
             . '</div>';
     }
 
-    // --- Doctor CTA banner ------------------------------------------------------
+    // --- Doctor CTA banner (content raw, no <p>) --------------------------------
     $ctaWhere = $city !== '' ? ' in ' . fb_e($city) : ' near you';
     $out[] = '<div class="ecp-cta-banner">' . "\n"
         . '<h3>Talk to a verified ' . fb_e($specialty) . $ctaWhere . '</h3>' . "\n"
-        . '<p>Book an appointment in 30 seconds on eClinicPro.</p>' . "\n"
-        . '<a class="ecp-cta-btn" href="' . fb_e($findUrl) . '">Find a doctor</a>' . "\n"
+        . 'Book an appointment in 30 seconds on eClinicPro.' . "\n\n"
+        . '<a class="ecp-cta-btn" href="' . fb_e($findUrl) . '">Find a doctor</a>' . "\n\n"
         . '</div>';
 
-    // --- Myth vs Fact: faq-item cards --------------------------------------------
+    // --- Myth vs Fact: faq-item cards (answer raw, no <p>) -----------------------
     if (!empty($b['myths'])) {
         $items = '';
         foreach ((array) $b['myths'] as $m) {
             $items .= '<div class="faq-item">' . "\n"
                 . '<h4>Myth: ' . fb_e((string) ($m['myth'] ?? '')) . '</h4>' . "\n"
-                . '<p><strong>Fact:</strong> ' . fb_md((string) ($m['fact'] ?? '')) . '</p>' . "\n"
+                . '<strong>Fact:</strong> ' . fb_md((string) ($m['fact'] ?? '')) . "\n\n"
                 . '</div>' . "\n";
         }
-        $out[] = '<h2>Myths vs Facts</h2>' . "\n" . $items;
+        $out[] = fb_h2('Myths vs Facts') . "\n" . $items;
     }
 
     // --- FAQ section (live-post structure) + FAQPage schema ------------------------
@@ -294,7 +353,7 @@ function fb_render_html(array $row, array $b): string {
             if ($q === '') continue;
             $items .= '<div class="faq-item">' . "\n"
                 . '<h4>' . fb_e($q) . '</h4>' . "\n"
-                . '<p>' . fb_md($a) . '</p>' . "\n"
+                . fb_md($a) . "\n\n"
                 . '</div>' . "\n";
             $schema[] = [
                 '@type' => 'Question',
@@ -309,7 +368,7 @@ function fb_render_html(array $row, array $b): string {
             'mainEntity' => $schema,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $out[] = '<section>' . "\n\n"
-            . '<h2 class="text-center mb-5">Frequently Asked Questions</h2>' . "\n"
+            . '<h2 id="' . fb_heading_id('Frequently Asked Questions') . '" class="text-center mb-5">Frequently Asked Questions</h2>' . "\n"
             . $items
             . '</section>' . "\n"
             . '<script type="application/ld+json">' . $jsonLd . '</script>';
@@ -331,12 +390,6 @@ function fb_render_html(array $row, array $b): string {
         . 'diagnosis, or treatment by a qualified doctor. If you have severe or worsening symptoms, see a doctor immediately.</p>';
 
     $html = implode("\n", $out);
-
-    // --- SEO post-pass: reading-time line at the very top
-    $words = str_word_count(strip_tags($html));
-    $minutes = max(1, (int) ceil($words / 200));
-    $html = '<p class="ecp-meta-line">&#128337; ' . $minutes . ' min read &middot; '
-        . 'Reviewed for general accuracy &middot; Not a substitute for medical advice</p>' . "\n" . $html;
 
     // --- SEO post-pass: MedicalWebPage JSON-LD (workbook: "MedicalWebPage-
     //     appropriate schema"; Yoast's Article schema sits alongside this)
