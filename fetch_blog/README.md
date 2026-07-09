@@ -4,12 +4,22 @@ Turns the **Blog Calendar (90)** tab of `document/eClinicPro_90Day_7City_Workboo
 into WordPress drafts, one click per blog:
 
 ```
-Create button → Claude writes the guide (structured JSON blocks)
-             → Gemini draws the branded hero image
-             → hero uploaded to WP media library
-             → blocks rendered to HTML → WordPress DRAFT created
-             → you review + publish in wp-admin
+Create button → Claude writes a 2000+ word guide (structured JSON blocks)
+             → rendered with the blog theme's own classes (implant-section,
+               implant-list, comparison-table, faq-item — no inline CSS)
+             → WordPress DRAFT created with tags + category + Yoast fields
+             → you replace image placeholders, review + publish in wp-admin
 ```
+
+One-time theme step: paste `blog-blocks.css` into the blog
+(wp-admin → Appearance → Customize → Additional CSS) — it styles the four
+blocks the theme has no class for (.ecp-quick-answer, .ecp-cta-banner,
+.ecp-note, .ecp-disclaimer).
+
+Images are manual: every image slot in the draft is a visible grey
+placeholder (placehold.co) with ready alt text — replace the `src` in
+wp-admin and set a featured image. Gemini code (`_gemini.php`,
+`img_test.php`) is kept for later but is NOT called by the pipeline.
 
 ## Files
 

@@ -39,9 +39,17 @@ LEGAL / AD-POLICY COMPLIANCE (India Drugs & Magic Remedies Act)
 ARTICLE LENGTH — REQUIRED
 The complete article (intro + sections + all blocks together) must be AT LEAST 2000 words. Reach that length with genuinely useful depth, never padding:
 - "intro": 2-3 full paragraphs setting up the problem in everyday Indian life.
-- "sections": 4-6 deep-dive prose sections of 200-300 words each (like a good health magazine article), covering angles the structured blocks don't: how daily life is affected, home care and prevention, when to see a doctor urgently (red flags), what happens at the first consultation, living with the condition long-term, cost/insurance guidance, etc.
+- "sections": 4-6 deep-dive sections of 200-300 words each (like a good health magazine article), covering angles the structured blocks don't: how daily life is affected, home care and prevention, when to see a doctor urgently (red flags), what happens at the first consultation, living with the condition long-term, cost/insurance guidance, etc.
 - FAQ answers: 3-5 sentences each, not one-liners.
 - Causes lines and checklist items can stay short.
+
+READABILITY — REQUIRED (people skim on phones)
+- Keep paragraphs SHORT: 2-3 sentences, max ~50 words. Never write a 70+ word paragraph.
+- In every section, whenever content is enumerable (symptoms, tips, do's and don'ts, foods, warning signs, mistakes, steps, options), put it in the section's "bullets" list instead of burying it in prose. Most sections should be 1-2 short paragraphs + a bullet list, not 3 paragraphs.
+- When a section presents 3-6 named things each needing a line of explanation (benefits, types, methods), use "items" (title + one line) instead of paragraphs.
+- Use at most one of "bullets" or "items" per section.
+- Bold the 1-2 most important phrases per paragraph by wrapping them in **double asterisks** (e.g. "see a dentist **within 24 hours**"). Use sparingly — only what a skimmer must catch. No other markdown.
+- "key_takeaways": end with 4-6 one-line takeaways a reader should remember.
 
 OUTPUT FORMAT
 Return ONLY one JSON object, no markdown fences, no commentary. Schema:
@@ -55,8 +63,17 @@ Return ONLY one JSON object, no markdown fences, no commentary. Schema:
     "tags": ["4-6 short WordPress tags, lowercase, e.g. \"sinusitis\", \"homeopathy\", \"nasal congestion\""]
   },
   "quick_answer": "3-4 sentence direct answer to the searcher's question.",
+  "intro_heading": "Catchy H2 hook for the opening, different from the post title (like 'Missing a Tooth? Here's Everything You Need to Know')",
   "intro": ["paragraph 1", "paragraph 2", "..."],
-  "sections": [{"heading": "Section heading", "paragraphs": ["para 1", "para 2"]}],   // 4-6 deep-dive sections, 200-300 words each
+  "sections": [{
+    "heading": "Section heading",
+    "paragraphs": ["short para 1", "short para 2"],
+    "bullets_intro": "optional one-line lead-in for the bullets, or \"\"",
+    "bullets": ["point 1", "point 2"],                       // [] when the section has none
+    "items": [{"title": "Named thing", "text": "one-line explanation"}],  // [] unless section lists 3-6 named things
+    "image_alt": "alt text for a supporting image, or \"\" if this section needs no image"
+  }],   // 4-6 deep-dive sections, 200-300 words each; give image_alt to the 2-4 sections that most benefit from a visual
+  "key_takeaways": ["one-line takeaway 1", "..."],           // always 4-6 items
 
   "symptom_checklist": ["symptom 1", "..."],                    // 6-10 items. Condition & Screening guides only, else []
   "causes": [{"title": "Cause", "line": "one plain sentence"}], // 4-6 items. Condition guides only, else []
@@ -66,14 +83,10 @@ Return ONLY one JSON object, no markdown fences, no commentary. Schema:
   "recovery_timeline": [{"phase": "Day 1", "what_to_expect": ""}],     // Procedure guides only, else []
   "myths": [{"myth": "", "fact": ""}],                                 // exactly 3. Condition guides only, else []
   "faq": [{"q": "", "a": ""}],                                         // 5-7 real patient questions, concise answers
-  "image_brief": {
-    "hero_prompt": "One-sentence visual description of a calming, illustrative hero image for this condition. No text in image, no anatomy labels, no real-patient look, no before/after.",
-    "hero_alt": "plain alt text"
-  },
   "review_flags": ["every cost line", "any claim you were unsure about", "..."]
 }
 
-Template block usage — intro, sections, image_brief and meta are ALWAYS included; of the other arrays include only the ones for the given template, send [] for the rest:
+Template block usage — intro_heading, intro, sections, key_takeaways and meta are ALWAYS included; of the other arrays include only the ones for the given template, send [] for the rest:
 - Condition Guide:  quick_answer, symptom_checklist, causes, lab_tests, treatment_options, myths, faq
 - Procedure Guide:  quick_answer, lab_tests, treatment_options, procedure_steps, recovery_timeline, faq
 - Screening/Test Guide: quick_answer, symptom_checklist, lab_tests, treatment_options, faq
@@ -88,15 +101,31 @@ function fb_claude_generate(array $row): array {
     if ($apiKey === '') throw new RuntimeException('ANTHROPIC_API_KEY is empty in fetch_blog/.env');
     $model = fb_env('CLAUDE_MODEL', 'claude-opus-4-8');
 
-    $user = "Write today's guide.\n"
-        . "Blog title: {$row['title']}\n"
-        . "Focus keyword: {$row['keyword']}\n"
-        . "Template: {$row['template']}\n"
-        . "Campaign specialty: {$row['campaign']}\n"
-        . "CTA specialty: {$row['cta_specialty']}\n"
-        . "Lab tests to mention: {$row['lab_tests']}\n"
-        . "City for the doctor CTA: {$row['city']}\n"
-        . "Return the JSON object only.";
+    $lines = [
+        "Write today's guide.",
+        "Blog title: {$row['title']}",
+        "Focus keyword: {$row['keyword']}",
+    ];
+    if (($row['secondary_keyword'] ?? '') !== '') {
+        $lines[] = "Secondary keyword (work it in naturally): {$row['secondary_keyword']}";
+    }
+    $lines[] = "Template: {$row['template']}";
+    if (($row['blog_type'] ?? '') !== '') {
+        $lines[] = "Article angle: {$row['blog_type']} (make this the main focus — e.g. Cost articles lead with cost breakdowns, Diet articles with food guidance, Myths vs Facts with a myth-heavy structure)";
+    }
+    if (($row['intent'] ?? '') !== '') {
+        $lines[] = "Search intent: {$row['intent']}";
+    }
+    $lines[] = "Specialty: {$row['campaign']}";
+    $lines[] = "CTA specialty: {$row['cta_specialty']}";
+    $lines[] = ($row['lab_tests'] ?? '') !== ''
+        ? "Lab tests to mention: {$row['lab_tests']}"
+        : "Lab tests: none specified — mention only standard, well-established tests if genuinely relevant, else send lab_tests as [].";
+    $lines[] = ($row['city'] ?? '') !== ''
+        ? "City for the doctor CTA: {$row['city']}"
+        : "No specific city — write for a national Indian audience.";
+    $lines[] = "Return the JSON object only.";
+    $user = implode("\n", $lines);
 
     $payload = [
         'model'      => $model,

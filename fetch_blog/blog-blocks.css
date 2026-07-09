@@ -1,0 +1,161 @@
+/* =====================================================================
+   fetch_blog blocks — paste ONCE into the blog theme:
+   wp-admin → Appearance → Customize → Additional CSS
+   (or append to wp-content/themes/eclinicpro-blog/style.css)
+
+   Covers the four blocks the generated posts use that have no theme
+   class yet. Palette matches the existing .comparison-table teal.
+   ===================================================================== */
+
+.ecp-quick-answer{
+    background:#f0faf7;
+    border-left:5px solid #00a884;
+    border-radius:10px;
+    padding:18px 22px;
+    margin:0 0 30px;
+}
+.ecp-quick-answer h4{
+    margin:0 0 8px;
+    color:#00a884;
+    font-size:18px;
+}
+.ecp-quick-answer p{
+    margin:0;
+    line-height:1.5;
+}
+
+.ecp-quick-answer ul.implant-list{
+    margin:0 0 0 20px;
+    padding:0;
+}
+.ecp-quick-answer ul.implant-list li{
+    margin-bottom:6px;
+}
+
+/* Titled point cards inside sections (h4 + one line). The theme markup
+   uses .benefit-item on the live dental post but has no CSS rule for
+   it, so this styles both old and generated posts. */
+.benefit-item{
+    border-left:4px solid #00a884;
+    background:#f8fbfa;
+    border-radius:0 10px 10px 0;
+    padding:12px 18px;
+    margin:0 0 14px;
+}
+.benefit-item h4{
+    margin:0 0 6px;
+    font-size:17px;
+    color:#222;
+}
+.benefit-item p{
+    margin:0;
+    line-height:1.5;
+    color:#555;
+}
+
+.ecp-note{
+    font-size:14px;
+    color:#777;
+    font-style:italic;
+    margin:10px 0 30px;
+}
+
+.ecp-cta-banner{
+    background:#00a884;
+    color:#fff;
+    border-radius:12px;
+    padding:28px 24px;
+    margin:45px 0;
+    text-align:center;
+}
+.ecp-cta-banner h3{
+    margin:0 0 6px;
+    color:#fff;
+    font-size:24px;
+}
+.ecp-cta-banner p{
+    margin:0 0 16px;
+    color:#eafaf5;
+}
+.ecp-cta-btn{
+    display:inline-block;
+    background:#fff;
+    color:#00a884;
+    font-weight:700;
+    padding:12px 30px;
+    border-radius:999px;
+    text-decoration:none;
+}
+.ecp-cta-btn:hover{
+    background:#e6f4f0;
+    color:#00795f;
+}
+.ecp-cta-center{
+    text-align:center;
+    margin:40px 0;
+}
+.ecp-cta-center .ecp-cta-btn{
+    background:#00a884;
+    color:#fff;
+}
+.ecp-cta-center .ecp-cta-btn:hover{
+    background:#00795f;
+}
+
+.ecp-meta-line{
+    font-size:13.5px;
+    color:#777;
+    margin:0 0 22px;
+}
+
+.ecp-toc{
+    background:#f8fbfa;
+    border:1px solid #e5e5e5;
+    border-radius:10px;
+    padding:16px 22px;
+    margin:0 0 34px;
+}
+.ecp-toc h4{
+    margin:0 0 10px;
+    color:#00a884;
+    font-size:16px;
+}
+.ecp-toc ol{
+    margin:0;
+    padding-left:20px;
+    columns:2;
+    column-gap:36px;
+}
+.ecp-toc li{
+    margin-bottom:6px;
+    font-size:14.5px;
+    break-inside:avoid;
+}
+.ecp-toc a{
+    color:#333;
+    text-decoration:none;
+}
+.ecp-toc a:hover{
+    color:#00a884;
+    text-decoration:underline;
+}
+@media (max-width:600px){
+    .ecp-toc ol{columns:1;}
+}
+
+.ecp-related{
+    margin:34px 0 0;
+    font-size:15px;
+}
+.ecp-related a{
+    color:#00a884;
+    font-weight:600;
+}
+
+.ecp-disclaimer{
+    font-size:13px;
+    color:#777;
+    border-top:1px solid #e5e5e5;
+    padding-top:14px;
+    margin-top:40px;
+}

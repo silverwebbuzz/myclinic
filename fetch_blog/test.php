@@ -33,22 +33,27 @@ try {
     $checks[] = ['name' => 'Claude', 'ok' => false, 'msg' => $e->getMessage()];
 }
 
-// ---- Gemini ---------------------------------------------------------
+// ---- Gemini (optional — images are added manually in wp-admin) ------
 try {
     $key = fb_env('GEMINI_API_KEY');
-    if ($key === '') throw new RuntimeException('GEMINI_API_KEY is empty in .env');
+    if ($key === '') {
+        $checks[] = ['name' => 'Gemini (optional)', 'ok' => true, 'msg' => 'Not configured — fine, images are added manually.'];
+        throw new class extends RuntimeException { public bool $skip = true; };
+    }
     $model = fb_env('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image');
     [$code, $body] = fb_http('GET', 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode($model), [
         'x-goog-api-key: ' . $key,
     ], null, 30);
     if ($code === 200) {
-        $checks[] = ['name' => 'Gemini', 'ok' => true, 'msg' => "Key valid, model {$model} available."];
+        $checks[] = ['name' => 'Gemini (optional)', 'ok' => true, 'msg' => "Key valid, model {$model} available."];
     } else {
         $err = json_decode($body, true)['error']['message'] ?? "HTTP {$code}";
         throw new RuntimeException((string) $err);
     }
 } catch (Throwable $e) {
-    $checks[] = ['name' => 'Gemini', 'ok' => false, 'msg' => $e->getMessage()];
+    if (!property_exists($e, 'skip')) {
+        $checks[] = ['name' => 'Gemini (optional)', 'ok' => true, 'msg' => 'Not usable (' . $e->getMessage() . ') — fine, images are added manually.'];
+    }
 }
 
 // ---- WordPress ------------------------------------------------------
