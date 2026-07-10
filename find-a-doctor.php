@@ -324,7 +324,7 @@ require __DIR__ . '/partials/header.php';
                 <!-- Search bar -->
                 <div class="fd-search">
                     <label class="fd-sfield">
-                        <span class="ico"><img src="/assets/img/icon/search-icon.svg" alt="Search"></span>
+                        <span class="ico"><img src="/assets/img/icon/search-icon.svg" alt="Search" width="18" height="18"></span>
                         <div class="col">
                             <div class="lbl">Doctor / Hospital</div>
                             <input type="text" x-model="q" placeholder="e.g. Dr. Mehta or Apollo Hospitals">

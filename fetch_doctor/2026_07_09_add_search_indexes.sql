@@ -94,6 +94,17 @@ CALL ecp_add_index_if_missing(
     'clinic_id, is_owner, is_active, id'
 );
 
+-- --- 5. Footer "top cities" GROUP BY (runs on EVERY page) -------------
+-- ecp_footer_top_cities(): SELECT city, COUNT(*) ... WHERE is_active=1
+--   AND status='OPERATIONAL' AND city<>'' GROUP BY city ORDER BY n DESC.
+-- Without a covering index this is a full scan + temp-table aggregation
+-- on every page render site-wide. This index lets MySQL group by reading
+-- the index in city order (loose index scan) instead of scanning rows.
+CALL ecp_add_index_if_missing(
+    'directory_doctors', 'idx_footer_cities',
+    'is_active, status, city'
+);
+
 DROP PROCEDURE IF EXISTS ecp_add_index_if_missing;
 
 -- --- verify (optional) -----------------------------------------------

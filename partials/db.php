@@ -154,6 +154,21 @@ function ecp_footer_top_cities(int $limit = 30): array
     static $cache = null;
     if ($cache !== null) return array_slice($cache, 0, $limit);
 
+    // This is a GROUP BY over the whole directory that runs on EVERY page
+    // in the footer, but its result only changes when doctors are added.
+    // Cache to a temp file for 6h so the aggregation runs a couple of
+    // times a day, not on every request. (Works even before the
+    // idx_footer_cities index is applied on the server.)
+    $cacheFile = sys_get_temp_dir() . '/ecp_footer_cities.json';
+    $ttl = 6 * 3600;
+    if (is_file($cacheFile) && (time() - filemtime($cacheFile)) < $ttl) {
+        $data = json_decode((string) @file_get_contents($cacheFile), true);
+        if (is_array($data)) {
+            $cache = $data;
+            return array_slice($cache, 0, $limit);
+        }
+    }
+
     $db = ecp_db();
     if (!$db) return [];
     try {
@@ -169,6 +184,7 @@ function ecp_footer_top_cities(int $limit = 30): array
         );
         $stmt->execute();
         $cache = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        @file_put_contents($cacheFile, json_encode($cache), LOCK_EX);
         return array_slice($cache, 0, $limit);
     } catch (Throwable $e) {
         return $cache = [];
@@ -293,6 +309,20 @@ function ecp_save_insurance_lead(array $data): bool
  */
 function ecp_directory_doctor_count(?string $countryCode = null): int
 {
+    static $memo = [];
+    $key = strtoupper((string) $countryCode);
+    if (isset($memo[$key])) return $memo[$key];
+
+    // Hero-copy total ("Search 2,789 verified clinicians"). Changes only
+    // when doctors are imported, but runs at server render on every page.
+    // Cache 6h to a temp file so it isn't a full COUNT on each request.
+    $cacheFile = sys_get_temp_dir() . '/ecp_dir_count_' . ($key !== '' ? $key : 'all') . '.txt';
+    $ttl = 6 * 3600;
+    if (is_file($cacheFile) && (time() - filemtime($cacheFile)) < $ttl) {
+        $n = (int) @file_get_contents($cacheFile);
+        return $memo[$key] = $n;
+    }
+
     $db = ecp_db();
     if (!$db) return 0;
     try {
@@ -304,7 +334,9 @@ function ecp_directory_doctor_count(?string $countryCode = null): int
         }
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
-        return (int) $stmt->fetchColumn();
+        $n = (int) $stmt->fetchColumn();
+        @file_put_contents($cacheFile, (string) $n, LOCK_EX);
+        return $memo[$key] = $n;
     } catch (Throwable $e) {
         return 0;
     }
