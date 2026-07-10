@@ -115,7 +115,11 @@ function ecp_search_doctors(array $filters): array {
     // Default ranking tiers: joined clinics first, then listings WITH a photo,
     // then the rest by quality. Photos make cards look complete/trustworthy, so
     // photo'd listings rank above photo-less ones within the same claim tier.
-    $hasPhoto = "(dd.photo_reference IS NOT NULL AND dd.photo_reference <> '') DESC";
+    // Prefer the persisted has_photo column (index-sortable → no filesort);
+    // fall back to the inline expression on servers without the migration.
+    $hasPhoto = ecp_directory_has_photo_column($db)
+        ? 'dd.has_photo DESC'
+        : "(dd.photo_reference IS NOT NULL AND dd.photo_reference <> '') DESC";
     $order = match ($sort) {
         'distance' => $selectDistance !== null ? 'distance_km IS NULL, distance_km ASC' : "dd.is_claimed DESC, $hasPhoto, dd.quality_score DESC",
         'rating'   => 'dd.rating DESC, dd.reviews DESC',

@@ -324,7 +324,7 @@ require __DIR__ . '/partials/header.php';
                 <!-- Search bar -->
                 <div class="fd-search">
                     <label class="fd-sfield">
-                        <span class="ico"><img src="/assets/img/icon/search-icon.svg" alt="Search"></span>
+                        <span class="ico"><img src="/assets/img/icon/search-icon.svg" alt="Search" width="18" height="18"></span>
                         <div class="col">
                             <div class="lbl">Doctor / Hospital</div>
                             <input type="text" x-model="q" placeholder="e.g. Dr. Mehta or Apollo Hospitals">
@@ -752,7 +752,7 @@ require __DIR__ . '/partials/header.php';
                                 </div>
                                 <template x-if="d.phone">
                                     <div class="fd-meta-row">
-                                        <span class="mi"><img src="/assets/img/icon/phone-call.png" alt="Phone Call"></span>
+                                        <span class="mi"><img src="/assets/img/icon/phone-call.png" alt="Phone Call" width="16" height="16" loading="lazy"></span>
                                         <a :href="'tel:' + d.phone" x-text="d.phone"></a>
                                     </div>
                                 </template>
@@ -807,7 +807,7 @@ require __DIR__ . '/partials/header.php';
                                     @click="bookDoctor(d)"><img src="/assets/img/icon/book-appointment.png" alt="Smart Scheduling"> Book</button>
                                 <template x-if="d.phone">
                                     <a :href="'tel:' + d.phone" class="fd-btn"
-                                        @click="trackCall(d)"><img src="/assets/img/icon/phone-call.png" alt="phone"> Call</a>
+                                        @click="trackCall(d)"><img src="/assets/img/icon/phone-call.png" alt="phone" width="16" height="16"> Call</a>
                                 </template>
                             </div>
 

@@ -152,52 +152,16 @@ try {
 
 <!-- Reveal-on-scroll: light replacement for the React IntersectionObserver -->
 
-<!-- jQuery (must be first) -->
-<!-- jQuery (FIRST) -->
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-
-<!-- Slick JS (AFTER jQuery) -->
-<script src="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js"></script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.9.0/slick.min.js"></script>
-
-
-
-<!-- Slick Init -->
-<!-- <script>
-jQuery(document).ready(function ($) {
-
-    if ($('.shop-list').length) {
-        $('.shop-list').slick({
-            slidesToShow: 5,
-            slidesToScroll: 1,
-            arrows: true,
-            dots: false,
-            autoplay: true,
-            autoplaySpeed: 3000,
-            responsive: [
-                {
-                    breakpoint: 1024,
-                    settings: { slidesToShow: 3 }
-                },
-                {
-                    breakpoint: 768,
-                    settings: { slidesToShow: 2 }
-                },
-                {
-                    breakpoint: 480,
-                    settings: { slidesToShow: 1 }
-                }
-            ]
-        });
-    }
-
-});
-</script> -->
+<!--
+  Removed from the global footer (2026-07-10, perf): jQuery 3.7.1, slick
+  (x2: jsdelivr 1.8.1 + cloudflare 1.9.0) and swiper (x2: v11 + v12).
+  These were render-blocking on EVERY page (~160 KiB from 4 CDNs) but:
+    - jQuery + slick were dead code (only user was the commented-out init below)
+    - swiper is used ONLY by /eclinicpro-health-store, which loads its own copy
+  Lighthouse network tree showed these as the main critical-path chain on
+  /find-a-doctor. If a future page needs a carousel, load swiper on that
+  page only (as health-store does), not here.
+-->
 
 
 <script>
