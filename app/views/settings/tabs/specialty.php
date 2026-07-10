@@ -30,8 +30,6 @@ $currentLabel = $specialties[$specialty]['label'] ?? ucfirst((string) $specialty
     </form>
     <?php endif; ?>
 
-    <p class="ui-help mt-3 border-t border-slate-100 pt-3">Consultation slot length is set under <a href="/settings?tab=hours" class="text-emerald-700 hover:underline">Working hours</a>.</p>
-
     <!-- Change-specialty modal -->
     <div x-show="specialtyModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
          @keydown.escape.window="specialtyModal = false">

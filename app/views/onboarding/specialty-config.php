@@ -17,7 +17,7 @@ ob_start();
         <div>
             <label class="text-xs font-medium text-slate-600">Appointment slot duration (minutes)</label>
             <select name="slot_duration" class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm">
-                <?php foreach ([10, 15, 20, 30, 45, 60] as $m): ?>
+                <?php foreach (\App\Services\DoctorScheduleService::ALLOWED_SLOT_DURATIONS as $m): ?>
                 <option value="<?= $m ?>" <?= (int)($options['slot_duration'] ?? 15) === $m ? 'selected' : '' ?>><?= $m ?> min</option>
                 <?php endforeach; ?>
             </select>

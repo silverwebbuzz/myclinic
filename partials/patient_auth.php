@@ -25,6 +25,59 @@ const ECP_PAT_OTP_TTL_SECONDS = 600;   // 10 minutes
 const ECP_PAT_OTP_MAX_ATTEMPTS = 5;
 const ECP_PAT_OTP_RESEND_SECONDS = 30; // throttle re-issue
 
+/**
+ * Platform reCAPTCHA config (same keys as /admin/recaptcha).
+ *
+ * @return array{enabled: bool, site_key: string, secret_key: string}
+ */
+function ecp_recaptcha_config(): array
+{
+    $db = ecp_db();
+    if (!$db) {
+        return ['enabled' => false, 'site_key' => '', 'secret_key' => ''];
+    }
+    $s = ecp_platform_settings($db, ['recaptcha_enabled', 'recaptcha_site_key', 'recaptcha_secret_key']);
+    $site = trim((string) ($s['recaptcha_site_key'] ?? ''));
+    $secret = trim((string) ($s['recaptcha_secret_key'] ?? ''));
+    $enabled = ($s['recaptcha_enabled'] ?? '0') === '1' && $site !== '' && $secret !== '';
+
+    return ['enabled' => $enabled, 'site_key' => $site, 'secret_key' => $secret];
+}
+
+function ecp_recaptcha_verify(?string $token, ?string $remoteIp = null): bool
+{
+    $cfg = ecp_recaptcha_config();
+    if (!$cfg['enabled']) {
+        return true;
+    }
+    $token = trim((string) $token);
+    if ($token === '') {
+        return false;
+    }
+    $post = [
+        'secret' => $cfg['secret_key'],
+        'response' => $token,
+    ];
+    if ($remoteIp !== null && $remoteIp !== '') {
+        $post['remoteip'] = $remoteIp;
+    }
+    $ch = curl_init('https://www.google.com/recaptcha/api/siteverify');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_TIMEOUT => 10,
+        CURLOPT_POSTFIELDS => http_build_query($post),
+    ]);
+    $response = curl_exec($ch);
+    curl_close($ch);
+    if (!is_string($response) || $response === '') {
+        return false;
+    }
+    $json = json_decode($response, true);
+
+    return is_array($json) && !empty($json['success']);
+}
+
 // ---------------------------------------------------------------------
 // OTP issue
 // ---------------------------------------------------------------------

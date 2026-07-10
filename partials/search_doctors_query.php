@@ -104,12 +104,30 @@ function ecp_search_doctors(array $filters): array {
 
     $selectDistance = null;
     if ($lat !== null && $lng !== null) {
+        // Prefer listing coordinates; fall back to catalog city lat/lng so
+        // distance works for claimed clinics that only have city/state set.
+        $docLat = 'COALESCE(dd.lat, ('
+            . 'SELECT c.lat FROM directory_cities c'
+            . ' WHERE LOWER(c.name) = LOWER(dd.city)'
+            . ' AND (dd.state IS NULL OR dd.state = \'\''
+            . '      OR LOWER(c.state) = LOWER(dd.state))'
+            . ' AND c.is_active = 1'
+            . ' ORDER BY c.id ASC LIMIT 1))';
+        $docLng = 'COALESCE(dd.lng, ('
+            . 'SELECT c.lng FROM directory_cities c'
+            . ' WHERE LOWER(c.name) = LOWER(dd.city)'
+            . ' AND (dd.state IS NULL OR dd.state = \'\''
+            . '      OR LOWER(c.state) = LOWER(dd.state))'
+            . ' AND c.is_active = 1'
+            . ' ORDER BY c.id ASC LIMIT 1))';
+        // Named placeholders must be unique when ATTR_EMULATE_PREPARES is false.
         $selectDistance =
-            '(6371 * 2 * ASIN(SQRT(POWER(SIN((:ulat - dd.lat) * PI() / 360), 2)'
-          . ' + COS(:ulat * PI() / 180) * COS(dd.lat * PI() / 180)'
-          . ' * POWER(SIN((:ulng - dd.lng) * PI() / 360), 2)))) AS distance_km';
-        $params['ulat'] = $lat;
-        $params['ulng'] = $lng;
+            '(6371 * 2 * ASIN(SQRT(POWER(SIN((:ulat1 - ' . $docLat . ') * PI() / 360), 2)'
+          . ' + COS(:ulat2 * PI() / 180) * COS((' . $docLat . ') * PI() / 180)'
+          . ' * POWER(SIN((:ulng1 - ' . $docLng . ') * PI() / 360), 2)))) AS distance_km';
+        $params['ulat1'] = $lat;
+        $params['ulat2'] = $lat;
+        $params['ulng1'] = $lng;
     }
 
     // Default ranking tiers: joined clinics first, then listings WITH a photo,
@@ -184,7 +202,7 @@ function ecp_search_doctors(array $filters): array {
     if ($page === 1) {
         $cnt = $db->prepare("SELECT COUNT(*) FROM $fromSql WHERE $whereSql");
         foreach ($params as $k => $v) {
-            if (in_array($k, ['lim', 'off', 'max_km', 'ulat', 'ulng', 'qrel'], true)) {
+            if (in_array($k, ['lim', 'off', 'max_km', 'ulat1', 'ulat2', 'ulng1', 'qrel'], true)) {
                 continue;
             }
             $cnt->bindValue(':' . $k, $v);

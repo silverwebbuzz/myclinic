@@ -8,6 +8,14 @@ use App\Core\QueryBuilder;
 
 final class DoctorScheduleService
 {
+    /** Allowed appointment slot lengths (minutes) — shared with onboarding + settings. */
+    public const ALLOWED_SLOT_DURATIONS = [10, 15, 20, 30, 45, 60];
+
+    public static function normalizeSlotDuration(int $slotDuration): int
+    {
+        return in_array($slotDuration, self::ALLOWED_SLOT_DURATIONS, true) ? $slotDuration : 15;
+    }
+
     /**
      * Rebuild doctor_schedules from clinic working_hours JSON for every bookable doctor.
      * Replaces all prior rows for each doctor so changed start times (e.g. 09:30) are not orphaned.
@@ -23,7 +31,7 @@ final class DoctorScheduleService
             return;
         }
 
-        $slotDuration = in_array($slotDuration, [15, 30], true) ? $slotDuration : 15;
+        $slotDuration = self::normalizeSlotDuration($slotDuration);
         $dayMap = ['sun' => 0, 'mon' => 1, 'tue' => 2, 'wed' => 3, 'thu' => 4, 'fri' => 5, 'sat' => 6];
         $rowsInserted = 0;
 
@@ -148,7 +156,7 @@ final class DoctorScheduleService
         $config = OnboardingService::specialtyConfig($clinicId) ?? [];
         $slot = (int) ($config['slot_duration_min'] ?? 15);
 
-        return in_array($slot, [15, 30], true) ? $slot : 15;
+        return self::normalizeSlotDuration($slot);
     }
 
     /** Normalize HH:MM or HH:MM:SS to HH:MM:SS for MySQL TIME columns. */

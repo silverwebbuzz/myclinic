@@ -81,13 +81,77 @@ ob_start();
                       class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none"><?= htmlspecialchars((string) ($row['address'] ?? '')) ?></textarea>
         </label>
 
+        <?php
+        $picker = $locationPicker ?? ['states' => [], 'citiesByState' => []];
+        $pickerJson = htmlspecialchars(json_encode($picker, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
+        $selectedLocJson = htmlspecialchars(json_encode([
+            'state' => (string) ($row['state'] ?? ''),
+            'city'  => (string) ($row['city'] ?? ''),
+        ], JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
+        ?>
+        <div class="grid gap-4 sm:grid-cols-2" x-data="ecpStateCityPicker(<?= $pickerJson ?>, <?= $selectedLocJson ?>)">
+            <input type="hidden" name="state" :value="stateName" required>
+            <input type="hidden" name="city" :value="cityName" required>
+
+            <div class="block relative" @click.outside="stateOpen = false">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">State *</span>
+                <button type="button" @click="stateOpen = !stateOpen; cityOpen = false; $nextTick(() => $refs.stateQ && $refs.stateQ.focus())"
+                        class="mt-1.5 flex w-full items-center justify-between rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-left text-sm focus:border-emerald-500 focus:outline-none">
+                    <span :class="stateName ? 'text-slate-900' : 'text-slate-400'" x-text="stateName || 'Select state…'"></span>
+                    <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="stateOpen" x-cloak
+                     class="absolute z-20 mt-1 max-h-56 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+                    <div class="border-b border-slate-100 p-2">
+                        <input type="search" x-ref="stateQ" x-model="stateQuery" placeholder="Search state…"
+                               class="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm focus:border-emerald-500 focus:outline-none">
+                    </div>
+                    <ul class="max-h-44 overflow-y-auto py-1">
+                        <template x-for="s in filteredStates" :key="s.id">
+                            <li>
+                                <button type="button" @click="pickState(s)"
+                                        class="block w-full px-3 py-2 text-left text-sm hover:bg-emerald-50"
+                                        :class="Number(stateId) === Number(s.id) ? 'bg-emerald-50 font-medium text-emerald-800' : 'text-slate-700'"
+                                        x-text="s.name"></button>
+                            </li>
+                        </template>
+                        <li x-show="filteredStates.length === 0" class="px-3 py-2 text-sm text-slate-400">No states found</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="block relative" @click.outside="cityOpen = false">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">City *</span>
+                <button type="button"
+                        @click="if (stateId) { cityOpen = !cityOpen; stateOpen = false; $nextTick(() => $refs.cityQ && $refs.cityQ.focus()) }"
+                        :disabled="!stateId"
+                        class="mt-1.5 flex w-full items-center justify-between rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-left text-sm focus:border-emerald-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400">
+                    <span :class="cityName ? 'text-slate-900' : 'text-slate-400'"
+                          x-text="cityName || (stateId ? 'Select city…' : 'Select state first')"></span>
+                    <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="cityOpen" x-cloak
+                     class="absolute z-20 mt-1 max-h-56 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+                    <div class="border-b border-slate-100 p-2">
+                        <input type="search" x-ref="cityQ" x-model="cityQuery" placeholder="Search city…"
+                               class="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm focus:border-emerald-500 focus:outline-none">
+                    </div>
+                    <ul class="max-h-44 overflow-y-auto py-1">
+                        <template x-for="c in filteredCities" :key="c.id">
+                            <li>
+                                <button type="button" @click="pickCity(c)"
+                                        class="block w-full px-3 py-2 text-left text-sm hover:bg-emerald-50"
+                                        :class="Number(cityId) === Number(c.id) ? 'bg-emerald-50 font-medium text-emerald-800' : 'text-slate-700'"
+                                        x-text="c.name"></button>
+                            </li>
+                        </template>
+                        <li x-show="filteredCities.length === 0" class="px-3 py-2 text-sm text-slate-400">No cities for this state</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
         <div class="grid gap-4 sm:grid-cols-2">
-            <label class="block">
-                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Area / locality</span>
-                <input type="text" name="area" maxlength="120"
-                       value="<?= htmlspecialchars((string) ($row['area'] ?? '')) ?>"
-                       class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
-            </label>
             <label class="block">
                 <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Consultation fee (<?= htmlspecialchars((string) ($row['consultation_fee_currency'] ?? 'INR')) ?>)</span>
                 <input type="number" name="consultation_fee" min="0" step="1"
@@ -95,15 +159,14 @@ ob_start();
                        placeholder="e.g. 500"
                        class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
             </label>
+            <label class="block">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Website</span>
+                <input type="url" name="website" maxlength="500"
+                       value="<?= htmlspecialchars((string) ($row['website'] ?? '')) ?>"
+                       placeholder="https://"
+                       class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
+            </label>
         </div>
-
-        <label class="block">
-            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Website</span>
-            <input type="url" name="website" maxlength="500"
-                   value="<?= htmlspecialchars((string) ($row['website'] ?? '')) ?>"
-                   placeholder="https://"
-                   class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
-        </label>
 
         <label class="block">
             <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Services offered</span>
@@ -241,20 +304,73 @@ ob_start();
             <span class="mt-1 block text-xs text-slate-500">e.g. Dr. Riya Mehta — appears as the doctor in your public listing.</span>
         </label>
 
-        <!-- City + state -->
-        <div class="grid gap-4 sm:grid-cols-2">
-            <label class="block">
+        <!-- State then City (searchable, cascading) -->
+        <?php
+        $picker = $locationPicker ?? ['states' => [], 'citiesByState' => []];
+        $pickerJson = htmlspecialchars(json_encode($picker, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
+        ?>
+        <div class="grid gap-4 sm:grid-cols-2" x-data="ecpStateCityPicker(<?= $pickerJson ?>)">
+            <input type="hidden" name="state" :value="stateName" required>
+            <input type="hidden" name="city" :value="cityName" required>
+
+            <div class="block relative" @click.outside="stateOpen = false">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">State *</span>
+                <button type="button" @click="stateOpen = !stateOpen; cityOpen = false; $nextTick(() => $refs.stateQ && $refs.stateQ.focus())"
+                        class="mt-1.5 flex w-full items-center justify-between rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-left text-sm focus:border-emerald-500 focus:outline-none">
+                    <span :class="stateName ? 'text-slate-900' : 'text-slate-400'" x-text="stateName || 'Select state…'"></span>
+                    <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="stateOpen" x-cloak
+                     class="absolute z-20 mt-1 max-h-56 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+                    <div class="border-b border-slate-100 p-2">
+                        <input type="search" x-ref="stateQ" x-model="stateQuery" placeholder="Search state…"
+                               class="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm focus:border-emerald-500 focus:outline-none">
+                    </div>
+                    <ul class="max-h-44 overflow-y-auto py-1">
+                        <template x-for="s in filteredStates" :key="s.id">
+                            <li>
+                                <button type="button" @click="pickState(s)"
+                                        class="block w-full px-3 py-2 text-left text-sm hover:bg-emerald-50"
+                                        :class="Number(stateId) === Number(s.id) ? 'bg-emerald-50 font-medium text-emerald-800' : 'text-slate-700'"
+                                        x-text="s.name"></button>
+                            </li>
+                        </template>
+                        <li x-show="filteredStates.length === 0" class="px-3 py-2 text-sm text-slate-400">No states found</li>
+                    </ul>
+                </div>
+                <p class="mt-1 text-xs text-rose-600" x-show="triedSubmit && !stateName">Please select a state.</p>
+            </div>
+
+            <div class="block relative" @click.outside="cityOpen = false">
                 <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">City *</span>
-                <input type="text" name="city" required maxlength="80"
-                       placeholder="Mumbai"
-                       class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
-            </label>
-            <label class="block">
-                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">State</span>
-                <input type="text" name="state" maxlength="80"
-                       placeholder="Maharashtra"
-                       class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-emerald-500 focus:outline-none">
-            </label>
+                <button type="button"
+                        @click="if (stateId) { cityOpen = !cityOpen; stateOpen = false; $nextTick(() => $refs.cityQ && $refs.cityQ.focus()) }"
+                        :disabled="!stateId"
+                        class="mt-1.5 flex w-full items-center justify-between rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-left text-sm focus:border-emerald-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400">
+                    <span :class="cityName ? 'text-slate-900' : 'text-slate-400'"
+                          x-text="cityName || (stateId ? 'Select city…' : 'Select state first')"></span>
+                    <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="cityOpen" x-cloak
+                     class="absolute z-20 mt-1 max-h-56 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+                    <div class="border-b border-slate-100 p-2">
+                        <input type="search" x-ref="cityQ" x-model="cityQuery" placeholder="Search city…"
+                               class="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm focus:border-emerald-500 focus:outline-none">
+                    </div>
+                    <ul class="max-h-44 overflow-y-auto py-1">
+                        <template x-for="c in filteredCities" :key="c.id">
+                            <li>
+                                <button type="button" @click="pickCity(c)"
+                                        class="block w-full px-3 py-2 text-left text-sm hover:bg-emerald-50"
+                                        :class="Number(cityId) === Number(c.id) ? 'bg-emerald-50 font-medium text-emerald-800' : 'text-slate-700'"
+                                        x-text="c.name"></button>
+                            </li>
+                        </template>
+                        <li x-show="filteredCities.length === 0" class="px-3 py-2 text-sm text-slate-400">No cities for this state</li>
+                    </ul>
+                </div>
+                <p class="mt-1 text-xs text-rose-600" x-show="triedSubmit && !cityName">Please select a city.</p>
+            </div>
         </div>
 
         <!-- Specialty -->
@@ -317,6 +433,99 @@ ob_start();
 
     <?php endif; /* approved vs not-approved */ ?>
 </div>
+
+<script>
+function ecpStateCityPicker(payload, selected) {
+  const states = Array.isArray(payload?.states) ? payload.states : [];
+  const citiesByState = payload?.citiesByState && typeof payload.citiesByState === 'object'
+    ? payload.citiesByState : {};
+  const initialState = String(selected?.state || '').trim();
+  const initialCity = String(selected?.city || '').trim();
+
+  let stateId = '';
+  let stateName = '';
+  let cityId = '';
+  let cityName = '';
+
+  if (initialState !== '') {
+    const matchState = states.find((s) => String(s.name || '').toLowerCase() === initialState.toLowerCase());
+    if (matchState) {
+      stateId = String(matchState.id);
+      stateName = String(matchState.name || '');
+      const cities = citiesByState[stateId] || [];
+      if (initialCity !== '') {
+        const matchCity = cities.find((c) => String(c.name || '').toLowerCase() === initialCity.toLowerCase());
+        if (matchCity) {
+          cityId = String(matchCity.id);
+          cityName = String(matchCity.name || '');
+        } else {
+          cityName = initialCity;
+        }
+      }
+    } else {
+      stateName = initialState;
+      cityName = initialCity;
+    }
+  }
+
+  return {
+    states,
+    citiesByState,
+    stateId,
+    stateName,
+    cityId,
+    cityName,
+    stateOpen: false,
+    cityOpen: false,
+    stateQuery: '',
+    cityQuery: '',
+    triedSubmit: false,
+    get filteredStates() {
+      const q = this.stateQuery.trim().toLowerCase();
+      if (!q) return this.states;
+      return this.states.filter(s => String(s.name || '').toLowerCase().includes(q));
+    },
+    get filteredCities() {
+      const list = this.citiesByState[String(this.stateId)] || [];
+      const q = this.cityQuery.trim().toLowerCase();
+      if (!q) return list;
+      return list.filter(c => String(c.name || '').toLowerCase().includes(q));
+    },
+    pickState(s) {
+      this.stateId = String(s.id);
+      this.stateName = s.name || '';
+      this.stateOpen = false;
+      this.stateQuery = '';
+      this.cityId = '';
+      this.cityName = '';
+      this.cityQuery = '';
+    },
+    pickCity(c) {
+      this.cityId = String(c.id);
+      this.cityName = c.name || '';
+      this.cityOpen = false;
+      this.cityQuery = '';
+    },
+  };
+}
+
+// Block submit until state + city are chosen (hidden required inputs alone
+// are unreliable across browsers when empty).
+document.addEventListener('submit', (e) => {
+  const form = e.target;
+  if (!(form instanceof HTMLFormElement)) return;
+  const action = form.getAttribute('action') || '';
+  if (action !== '/listing/apply' && action !== '/listing/save') return;
+  const root = form.querySelector('[x-data*="ecpStateCityPicker"]');
+  if (!root || typeof Alpine === 'undefined' || typeof Alpine.$data !== 'function') return;
+  const data = Alpine.$data(root);
+  if (!data) return;
+  data.triedSubmit = true;
+  if (!data.stateName || !data.cityName) {
+    e.preventDefault();
+  }
+}, true);
+</script>
 
 <?php
 $content = ob_get_clean();

@@ -89,18 +89,38 @@ if ($action === 'submit') {
     if ($preferredDate === '') out(400, ['ok' => false, 'error' => 'date_required']);
     if ($preferredTime === '') out(400, ['ok' => false, 'error' => 'time_required']);
 
-    // Enforce the 7-day booking window patients agreed to.
+    // Enforce booking window. Unclaimed (non-joined) doctors: no today, no weekends.
     $now    = strtotime(date('Y-m-d'));
     $picked = strtotime($preferredDate);
     if ($picked === false || $picked < $now) {
         out(400, ['ok' => false, 'error' => 'date_in_past']);
     }
-    if ($picked > $now + (7 * 86400)) {
+
+    $db = ecp_db();
+    $isClaimed = false;
+    if ($db) {
+        $claimStmt = $db->prepare('SELECT is_claimed FROM directory_doctors WHERE id = :id LIMIT 1');
+        $claimStmt->execute(['id' => $doctorId]);
+        $isClaimed = (bool) $claimStmt->fetchColumn();
+    }
+
+    if (!$isClaimed) {
+        if ($picked === $now) {
+            out(400, ['ok' => false, 'error' => 'today_not_allowed']);
+        }
+        $dow = (int) date('w', $picked); // 0 = Sun, 6 = Sat
+        if ($dow === 0 || $dow === 6) {
+            out(400, ['ok' => false, 'error' => 'weekend_not_allowed']);
+        }
+        // Up to ~2 weeks ahead so patients still get several weekday options.
+        if ($picked > $now + (14 * 86400)) {
+            out(400, ['ok' => false, 'error' => 'date_out_of_window']);
+        }
+    } elseif ($picked > $now + (7 * 86400)) {
         out(400, ['ok' => false, 'error' => 'date_out_of_window']);
     }
 
     // Spam guard — same identity can't submit > 5 book_submitted in last hour.
-    $db = ecp_db();
     if ($db) {
         $g = $db->prepare(
             'SELECT COUNT(*) FROM directory_leads

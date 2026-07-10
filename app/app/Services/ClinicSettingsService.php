@@ -94,9 +94,7 @@ final class ClinicSettingsService
         self::ensureSpecialtyConfigRow($clinicId);
 
         $slotDuration = (int) ($post['slot_duration_min'] ?? 15);
-        if (!in_array($slotDuration, [15, 30], true)) {
-            $slotDuration = 15;
-        }
+        $slotDuration = DoctorScheduleService::normalizeSlotDuration($slotDuration);
         $bookingWindow = (int) ($post['booking_window_days'] ?? 30);
         if (!in_array($bookingWindow, [7, 15, 30, 60, 90], true)) {
             $bookingWindow = 30;
@@ -358,7 +356,8 @@ final class ClinicSettingsService
             'doctor_name' => $doctorName !== '' ? $doctorName : null,
             'bio'         => trim((string) ($post['bio'] ?? '')) !== '' ? mb_substr(trim((string) $post['bio']), 0, 2000) : null,
             'address'     => trim((string) ($post['address'] ?? '')) !== '' ? mb_substr(trim((string) $post['address']), 0, 500) : null,
-            'area'        => mb_substr(trim((string) ($post['area'] ?? '')), 0, 120) ?: null,
+            'state'       => mb_substr(trim((string) ($post['state'] ?? '')), 0, 80) ?: null,
+            'city'        => mb_substr(trim((string) ($post['city'] ?? '')), 0, 120) ?: null,
             'website'     => mb_substr(trim((string) ($post['website'] ?? '')), 0, 500) ?: null,
         ];
         if ($parsedFee !== null) {

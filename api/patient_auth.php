@@ -97,6 +97,12 @@ switch ($action) {
             ecp_api_out(409, ['ok' => false, 'error' => 'account_exists']);
         }
 
+        $captchaToken = (string) ($in['g-recaptcha-response'] ?? $in['captcha_token'] ?? '');
+        $remoteIp = $_SERVER['REMOTE_ADDR'] ?? null;
+        if (!ecp_recaptcha_verify($captchaToken !== '' ? $captchaToken : null, is_string($remoteIp) ? $remoteIp : null)) {
+            ecp_api_out(400, ['ok' => false, 'error' => 'captcha_failed']);
+        }
+
         $res = ecp_patient_send_otp($phone, $intent);
 
         if (!$res['ok']) {
@@ -140,6 +146,12 @@ switch ($action) {
 
         if ($phone === '' || $code === '') {
             ecp_api_out(400, ['ok' => false, 'error' => 'phone_and_code_required']);
+        }
+
+        $captchaToken = (string) ($in['g-recaptcha-response'] ?? $in['captcha_token'] ?? '');
+        $remoteIp = $_SERVER['REMOTE_ADDR'] ?? null;
+        if (!ecp_recaptcha_verify($captchaToken !== '' ? $captchaToken : null, is_string($remoteIp) ? $remoteIp : null)) {
+            ecp_api_out(400, ['ok' => false, 'error' => 'captcha_failed']);
         }
 
         $res = ecp_patient_verify_otp($phone, $code, $name);

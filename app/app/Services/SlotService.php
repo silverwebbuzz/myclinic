@@ -136,10 +136,7 @@ final class SlotService
 
         $slots = [];
         foreach ($schedules as $sched) {
-            $duration = (int) ($sched['slot_duration'] ?? 15);
-            if (!in_array($duration, [15, 30], true)) {
-                $duration = 15;
-            }
+            $duration = DoctorScheduleService::normalizeSlotDuration((int) ($sched['slot_duration'] ?? 15));
 
             $start = self::timeOnDate($date, (string) ($sched['start_time'] ?? ''), $tz);
             $normalEnd = self::timeOnDate($date, (string) ($sched['end_time'] ?? ''), $tz);

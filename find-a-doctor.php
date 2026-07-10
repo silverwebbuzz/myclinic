@@ -343,7 +343,7 @@ require __DIR__ . '/partials/header.php';
 
                         <div class="fd-ac" x-show="acOpen" @mousedown.prevent x-transition.opacity>
                             <div class="fd-ac-item use-loc"
-                                @click="loc = ''; locValue = null; acOpen = false">
+                                @click="loc = ''; locValue = null; acOpen = false; requestLocation()">
                                 <div class="ic"><img src="/assets/img/icon/office-push-pin.png" alt="Office Push Pin"></div>
                                 <div>
                                     <div class="nm">Use my precise location</div>
@@ -455,7 +455,7 @@ require __DIR__ . '/partials/header.php';
                     <button type="button" class="fd-mbar-loc-clear" x-show="loc" @click="loc = ''; locValue = null" aria-label="Clear location">✕</button>
 
                     <div class="fd-ac" x-show="acOpen" @mousedown.prevent x-transition.opacity>
-                        <div class="fd-ac-item use-loc" @click="loc = ''; locValue = null; acOpen = false; mLocOpen = true">
+                        <div class="fd-ac-item use-loc" @click="loc = ''; locValue = null; acOpen = false; mLocOpen = true; requestLocation()">
                             <div class="ic"><img src="/assets/img/icon/location-pin.png" alt="Location Pin"></div>
                             <div><div class="nm">Use my precise location</div><div class="sb">Allow browser to share where you are</div></div>
                         </div>
@@ -654,8 +654,8 @@ require __DIR__ . '/partials/header.php';
                 </div>
 
                 <!-- Clear -->
-                <button type="button" class="fd-chip-clear" x-show="activeFilterCount() > 0" @click="clearFilters()">
-                    Clear all (<span x-text="activeFilterCount()"></span>)
+                <button type="button" class="fd-chip-clear" x-show="activeSearchCount() > 0" @click="clearSearch()">
+                    Clear search
                 </button>
             </div>
 
@@ -986,7 +986,7 @@ require __DIR__ . '/partials/header.php';
                 </div>
 
                 <div class="fd-sheet-foot">
-                    <button type="button" class="fd-sheet-reset" @click="clearFilters()">Reset</button>
+                    <button type="button" class="fd-sheet-reset" @click="clearSearch()">Clear search</button>
                     <button type="button" class="fd-sheet-apply" @click="mFilterOpen = false">Apply Filters</button>
                 </div>
             </div>
@@ -1231,6 +1231,11 @@ require __DIR__ . '/partials/header.php';
                             lat: pos.coords.latitude,
                             lng: pos.coords.longitude
                         };
+                        // Nearest-first: precise location alone used to leave
+                        // sort=relevance, so distant cities could still rank first.
+                        this.sort = 'distance';
+                        this.loc = 'Near me';
+                        this.locValue = null;
                     },
                     err => {
                         const msg = err.code === 1 ?
@@ -1247,6 +1252,7 @@ require __DIR__ . '/partials/header.php';
             clearLocation() {
                 this.userLoc = null;
                 this.maxDistanceKm = 0;
+                if (this.loc === 'Near me') this.loc = '';
             },
 
             // Distance now comes from the server (d.distance_km). Helpers stay
@@ -1296,7 +1302,6 @@ require __DIR__ . '/partials/header.php';
                 const p = new URLSearchParams();
                 if (this.q.trim()) p.set('q', this.q.trim());
                 if (this.country && this.country !== 'IN') p.set('country', this.country);
-                if (this.country === 'IN') p.set('country', 'IN');
                 if (this.locValue?.state) p.set('state', this.locValue.state);
                 if (this.locValue?.city) p.set('city', this.locValue.city);
                 if (this.locValue?.area) p.set('area', this.locValue.area);
@@ -1548,13 +1553,41 @@ require __DIR__ . '/partials/header.php';
                     (this.maxDistanceKm > 0 ? 1 : 0);
             },
 
-            clearFilters() {
+            activeSearchCount() {
+                return this.activeFilterCount() +
+                    (this.q.trim() ? 1 : 0) +
+                    ((this.loc.trim() || this.locValue || this.userLoc) ? 1 : 0) +
+                    (this.sort && this.sort !== 'relevance' ? 1 : 0) +
+                    (this.spec && this.spec !== 'all' ? 1 : 0) +
+                    (this.country && this.country !== 'IN' ? 1 : 0);
+            },
+
+            clearSearch() {
+                this.q = '';
+                this.loc = '';
+                this.locValue = null;
+                this.userLoc = null;
+                this.maxDistanceKm = 0;
+                this.sort = 'relevance';
+                this.spec = 'all';
+                this.country = 'IN';
                 this.avail = 'any';
                 this.video = false;
                 this.gender = 'any';
                 this.minRating = 0;
                 this.lang = 'any';
-                this.maxDistanceKm = 0;
+                this.page = 1;
+                localStorage.removeItem('fd:loc');
+                localStorage.removeItem('fd:maxDistKm');
+
+                if (!(window.FD_DATA && window.FD_DATA.isSeoPage)) {
+                    history.replaceState(null, '', '/find-a-doctor');
+                }
+                this.refresh();
+            },
+
+            clearFilters() {
+                this.clearSearch();
             },
 
             toggleFav(id) {

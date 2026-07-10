@@ -39,6 +39,7 @@ use App\Controllers\RecaptchaAdminController;
 use App\Controllers\OnboardingController;
 use App\Controllers\EmailTemplateAdminController;
 use App\Controllers\SpecialtyAdminController;
+use App\Controllers\LocationAdminController;
 use App\Controllers\VitalsController;
 use App\Controllers\WebhookController;
 use App\Controllers\WordPressAdminController;
@@ -441,6 +442,13 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/specialties', [SpecialtyAdminController::class, 'index']);
         $admin->post('/specialties', [SpecialtyAdminController::class, 'save']);
         $admin->post('/specialties/{id}/toggle', [SpecialtyAdminController::class, 'toggle']);
+
+        // States & cities catalog (Listed on eClinicPro pickers)
+        $admin->get('/locations', [LocationAdminController::class, 'index']);
+        $admin->post('/locations/states', [LocationAdminController::class, 'saveState']);
+        $admin->post('/locations/states/{id}/toggle', [LocationAdminController::class, 'toggleState']);
+        $admin->post('/locations/cities', [LocationAdminController::class, 'saveCity']);
+        $admin->post('/locations/cities/{id}/toggle', [LocationAdminController::class, 'toggleCity']);
 
         // Plan catalog (source of truth for pricing / onboarding / checkout)
         $admin->get('/plans', [\App\Controllers\PlanAdminController::class, 'index']);

@@ -283,6 +283,15 @@ final class FollowUpService
                 continue;
             }
 
+            $config = OnboardingService::specialtyConfig($clinicId) ?? [];
+            $prefs = $config['notification_prefs'] ?? null;
+            if (is_string($prefs)) {
+                $prefs = json_decode($prefs, true);
+            }
+            if (is_array($prefs) && empty($prefs['follow_up_reminder'])) {
+                continue;
+            }
+
             $reminderPayload = [
                 'patient_name' => $row['patient_name'],
                 'clinic_name' => $row['clinic_name'],

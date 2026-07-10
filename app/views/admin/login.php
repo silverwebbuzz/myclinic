@@ -22,7 +22,15 @@
             <span class="text-slate-400">Password</span>
             <input name="password" type="password" required class="mt-1 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2">
         </label>
+        <?php if (!empty($captchaEnabled) && !empty($captchaSiteKey)): ?>
+        <div class="mt-4 overflow-hidden rounded-lg border border-slate-600 bg-slate-900 p-2">
+            <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars((string) $captchaSiteKey) ?>"></div>
+        </div>
+        <?php endif; ?>
         <button type="submit" class="mt-6 w-full rounded-lg bg-emerald-600 py-2 font-medium hover:bg-emerald-500">Sign in</button>
     </form>
+    <?php if (!empty($captchaEnabled) && !empty($captchaSiteKey)): ?>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <?php endif; ?>
 </body>
 </html>

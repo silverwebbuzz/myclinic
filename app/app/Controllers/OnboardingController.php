@@ -435,6 +435,9 @@ final class OnboardingController
             ->where('clinic_id', '=', $clinicId)
             ->update([
                 'specialty_options' => json_encode($options),
+                'slot_duration_min' => DoctorScheduleService::normalizeSlotDuration(
+                    (int) ($options['slot_duration'] ?? 15)
+                ),
             ]);
 
         if (!$syncSchedules) {
@@ -446,7 +449,9 @@ final class OnboardingController
         if (is_string($workingHours)) {
             $workingHours = json_decode($workingHours, true) ?: OnboardingService::defaultWorkingHours();
         }
-        $slotDuration = (int) ($options['slot_duration'] ?? $config['slot_duration_min'] ?? 15);
+        $slotDuration = DoctorScheduleService::normalizeSlotDuration(
+            (int) ($options['slot_duration'] ?? $config['slot_duration_min'] ?? 15)
+        );
         $doctorIds = DoctorScheduleService::doctorIdsForClinic($clinicId);
         if (is_array($workingHours)) {
             DoctorScheduleService::syncFromWorkingHours($clinicId, $workingHours, $doctorIds, $slotDuration);
@@ -554,6 +559,10 @@ final class OnboardingController
     /** @param array<string, mixed> $post @return array<string, mixed> */
     private function parseSpecialtyOptions(string $specialty, array $post): array
     {
-        return ['slot_duration' => (int) ($post['slot_duration'] ?? 15)];
+        return [
+            'slot_duration' => DoctorScheduleService::normalizeSlotDuration(
+                (int) ($post['slot_duration'] ?? 15)
+            ),
+        ];
     }
 }

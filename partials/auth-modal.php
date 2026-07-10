@@ -13,6 +13,12 @@
 //     book         — "Book an appointment"
 //     default      — "Sign in to continue"
 // =====================================================================
+
+$ecpCaptcha = function_exists('ecp_recaptcha_config')
+    ? ecp_recaptcha_config()
+    : ['enabled' => false, 'site_key' => ''];
+$ecpCaptchaEnabled = !empty($ecpCaptcha['enabled']);
+$ecpCaptchaSiteKey = (string) ($ecpCaptcha['site_key'] ?? '');
 ?>
 
 <div id="ecp-auth-modal" x-data="ecpAuthModal()" x-show="open" x-cloak
@@ -57,6 +63,11 @@
       </label>
       <p class="auth-hint" x-text="step1Hint()"></p>
       <p class="auth-error" x-show="errorMsg" x-html="errorMsg"></p>
+      <?php if ($ecpCaptchaEnabled && $ecpCaptchaSiteKey !== ''): ?>
+      <div class="auth-captcha">
+        <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($ecpCaptchaSiteKey) ?>"></div>
+      </div>
+      <?php endif; ?>
       <button type="submit" class="auth-btn primary" :disabled="busy || phoneDigits.length < 10">
         <span x-show="!busy" x-text="intent === 'signup' ? 'Create my account' : 'Send code'"></span>
         <span x-show="busy">Sending…</span>
@@ -115,6 +126,12 @@
 
       <p class="auth-error" x-show="errorMsg" x-html="errorMsg"></p>
 
+      <?php if ($ecpCaptchaEnabled && $ecpCaptchaSiteKey !== ''): ?>
+      <div class="auth-captcha">
+        <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($ecpCaptchaSiteKey) ?>"></div>
+      </div>
+      <?php endif; ?>
+
       <button type="submit" class="auth-btn primary"
               :disabled="busy || code.length !== 6 || (!phoneExists && !name.trim())">
         <span x-show="!busy" x-text="phoneExists ? 'Sign in' : 'Create account'"></span>
@@ -129,6 +146,9 @@
     </form>
   </div>
 </div>
+<?php if ($ecpCaptchaEnabled && $ecpCaptchaSiteKey !== ''): ?>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+<?php endif; ?>
 
 <style>
 .auth-overlay {
@@ -241,6 +261,11 @@
 .auth-hint, .auth-tos {
   font-size: 12.5px; color: var(--mute);
   line-height: 1.5; margin: -4px 0 0;
+}
+.auth-captcha {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 4px;
 }
 .auth-tos { text-align: center; margin-top: 4px; }
 .auth-tos a { color: var(--teal-700); text-decoration: underline; }
@@ -413,9 +438,31 @@ function ecpAuthModal() {
     busy: false,
     errorMsg: '',
     resendCountdown: 0,
+    captchaEnabled: <?= $ecpCaptchaEnabled ? 'true' : 'false' ?>,
     _resendTimer: null,
     _reason: 'default',
     _afterLogin: null,
+
+    captchaToken() {
+      if (!this.captchaEnabled || typeof grecaptcha === 'undefined') return '';
+      try {
+        for (let i = 0; i < 4; i++) {
+          try {
+            const t = grecaptcha.getResponse(i);
+            if (t) return t;
+          } catch (e) { break; }
+        }
+        return grecaptcha.getResponse() || '';
+      } catch (e) { return ''; }
+    },
+    resetCaptcha() {
+      if (!this.captchaEnabled || typeof grecaptcha === 'undefined') return;
+      try {
+        for (let i = 0; i < 4; i++) {
+          try { grecaptcha.reset(i); } catch (e) { break; }
+        }
+      } catch (e) {}
+    },
 
     init() {
       // Expose a tiny global API the rest of the site uses.
@@ -507,6 +554,11 @@ function ecpAuthModal() {
 
     async sendOtp() {
       if (this.phoneDigits.length < 10) return;
+      const captcha = this.captchaToken();
+      if (this.captchaEnabled && !captcha) {
+        this.errorMsg = 'Please complete the captcha.';
+        return;
+      }
       this.busy = true; this.errorMsg = ''; this.devCode = null;
       try {
         const r = await fetch('/api/patient_auth?action=send_otp', {
@@ -515,6 +567,7 @@ function ecpAuthModal() {
           body: JSON.stringify({
             phone:  '+91' + this.phoneDigits,
             intent: this.intent,
+            'g-recaptcha-response': captcha || undefined,
           }),
         });
         const text = await r.text();
@@ -527,6 +580,7 @@ function ecpAuthModal() {
           return;
         }
         if (!j.ok) {
+          this.resetCaptcha();
           // Smart messages: if user picked the wrong tab, offer to flip it.
           if (j.error === 'account_not_found') {
             this.errorMsg = "We don't see an account with this number. " +
@@ -544,10 +598,12 @@ function ecpAuthModal() {
         this.nameHint    = j.name_hint || null;
         if (j.dev_code)  this.devCode = j.dev_code;
         this.step = 'code';
+        this.resetCaptcha();
         this.startResendCountdown(30);
         this.$nextTick(() => this.$refs.codeInput && this.$refs.codeInput.focus());
       } catch (e) {
         this.errorMsg = "Couldn't reach server: " + (e.message || e);
+        this.resetCaptcha();
       } finally {
         this.busy = false;
       }
@@ -561,6 +617,10 @@ function ecpAuthModal() {
 
     async resendOtp() {
       this.code = '';
+      if (this.captchaEnabled && !this.captchaToken()) {
+        this.errorMsg = 'Complete the captcha, then tap Resend again.';
+        return;
+      }
       await this.sendOtp();
     },
 
@@ -575,6 +635,11 @@ function ecpAuthModal() {
 
     async verifyOtp() {
       if (this.code.length !== 6) return;
+      const captcha = this.captchaToken();
+      if (this.captchaEnabled && !captcha) {
+        this.errorMsg = 'Please complete the captcha.';
+        return;
+      }
       this.busy = true; this.errorMsg = '';
       try {
         const r = await fetch('/api/patient_auth?action=verify_otp', {
@@ -584,6 +649,7 @@ function ecpAuthModal() {
             phone: '+91' + this.phoneDigits,
             code:  this.code,
             name:  this.name || undefined,
+            'g-recaptcha-response': captcha || undefined,
           }),
         });
         const text = await r.text();
@@ -596,6 +662,7 @@ function ecpAuthModal() {
           return;
         }
         if (!j.ok) {
+          this.resetCaptcha();
           this.errorMsg = this.errorText(j.error) + (j.hint ? ' — ' + j.hint : '');
           return;
         }
@@ -619,6 +686,7 @@ function ecpAuthModal() {
         location.reload();
       } catch (e) {
         this.errorMsg = "Couldn't reach server. Check your connection.";
+        this.resetCaptcha();
       } finally {
         this.busy = false;
       }
@@ -646,6 +714,7 @@ function ecpAuthModal() {
         case 'wa_send_failed':    return 'We couldn\'t send the WhatsApp OTP. Try again later.';
         case 'sms_not_configured': return 'SMS isn\'t configured yet. Contact support.';
         case 'sms_send_failed':   return 'We couldn\'t send the SMS. Try again or use a different number.';
+        case 'captcha_failed':    return 'Please complete the captcha and try again.';
         case 'server_error':      return 'Server error.';
         default:                  return 'Something went wrong. Please try again.';
       }
