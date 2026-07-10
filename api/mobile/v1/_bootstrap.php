@@ -88,11 +88,28 @@ function ecp_m_require_method(string $method): void {
  * The token is the same 64-char hex value stored in patient_sessions.id.
  */
 function ecp_m_bearer_token(): string {
-    $hdr = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-    // Some servers (Apache + PHP-FPM) expose it under a redirected name.
-    if ($hdr === '' && isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
-        $hdr = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+    $hdr = '';
+
+    // Apache strips the Authorization header from PHP by default; different
+    // stacks expose it in different places. Check every known location so a
+    // valid Bearer token is never silently dropped (this exact issue made
+    // authed endpoints return login_required despite a good token).
+    $candidates = [
+        $_SERVER['HTTP_AUTHORIZATION']          ?? '',   // ideal (with .htaccess forwarding)
+        $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '',   // Apache rewrite fallback
+    ];
+    foreach ($candidates as $c) {
+        if ($c !== '') { $hdr = $c; break; }
     }
+
+    // Last resort: apache_request_headers()/getallheaders() reads the raw
+    // request headers directly, bypassing the $_SERVER stripping entirely.
+    if ($hdr === '' && function_exists('getallheaders')) {
+        foreach (getallheaders() as $k => $v) {
+            if (strcasecmp($k, 'Authorization') === 0) { $hdr = (string) $v; break; }
+        }
+    }
+
     if ($hdr !== '' && preg_match('/Bearer\s+([0-9a-f]{64})/i', $hdr, $m)) {
         return strtolower($m[1]);
     }
