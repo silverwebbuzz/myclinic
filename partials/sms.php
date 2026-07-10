@@ -121,8 +121,8 @@ function ecp_whatsapp_send_otp(string $phone, string $code): array {
     $token = trim((string) ($settings['wa_access_token'] ?? ''));
     $phoneId = trim((string) ($settings['wa_phone_number_id'] ?? ''));
     $templateKey = trim((string) ($settings['patient_otp_template_key'] ?? ''));
-    if ($templateKey === '') {
-        $templateKey = 'auth_doctor_register_otp';
+    if ($templateKey === '' || $templateKey === 'auth_doctor_register_otp') {
+        $templateKey = 'authentication';
     }
 
     $isLocal = strtolower(ecp_env('APP_ENV', 'local')) === 'local';

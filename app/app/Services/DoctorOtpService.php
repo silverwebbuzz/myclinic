@@ -35,7 +35,12 @@ final class DoctorOtpService
             return ['ok' => false, 'error' => 'no_account'];
         }
 
-        return self::issueForPurpose($phone, 'login', "Your eClinicPro login code is: {code}\nValid for 10 minutes.");
+        $tpl = WaTemplateService::OTP_TEMPLATE;
+        if (!MessagingSettings::whatsappConfigured() || WaTemplateService::isApproved($tpl)) {
+            return self::issueForPurposeWhatsApp($phone, 'login', $tpl);
+        }
+
+        return ['ok' => false, 'error' => 'whatsapp_unavailable'];
     }
 
     /**
@@ -54,8 +59,7 @@ final class DoctorOtpService
         }
 
         // Enforce WhatsApp-only OTP for registration.
-        // Template key is namespaced to avoid collisions across modules.
-        $tpl = 'auth_doctor_register_otp';
+        $tpl = WaTemplateService::OTP_TEMPLATE;
         if (!MessagingSettings::whatsappConfigured() || WaTemplateService::isApproved($tpl)) {
             return self::issueForPurposeWhatsApp($phone, 'register', $tpl);
         }

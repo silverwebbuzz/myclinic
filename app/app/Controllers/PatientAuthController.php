@@ -36,6 +36,8 @@ final class PatientAuthController
                 'account_not_found' => 404,
                 'account_exists' => 409,
                 'resend_too_soon' => 429,
+                'not_whatsapp' => 400,
+                'wa_template_missing', 'wa_template_unapproved', 'wa_send_failed' => 503,
                 default => 500,
             };
 
