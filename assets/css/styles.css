@@ -478,11 +478,25 @@ button {
   opacity: 0;
   transform: translateY(20px);
   transition: opacity .6s ease, transform .6s ease;
+  /* Promote to its own layer so the reveal transform never reflows
+     siblings (helps keep CLS at 0 on long pages like /find-a-doctor). */
+  will-change: opacity, transform;
 }
 
 .reveal.is-in {
   opacity: 1;
   transform: none;
+}
+
+/* Respect reduced-motion AND guarantee content is visible even if the
+   IntersectionObserver script is slow or fails — never leave a reveal
+   block stuck at opacity:0. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 
 /* ----- Hero ----- */
