@@ -79,6 +79,7 @@ require __DIR__ . '/partials/header.php';
                 <input type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10"
                        x-model="phoneDigits"
                        @input="phoneDigits = phoneDigits.replace(/\D/g, '').slice(0,10)"
+                       @focus="loadCaptcha()"
                        :disabled="busy" placeholder="98XXXXXXXX" required>
               </div>
             </label>
@@ -1656,6 +1657,12 @@ function patientInlineAuth(captchaEnabled) {
     resendCountdown: 0,
     captchaEnabled: !!captchaEnabled,
     _resendTimer: null,
+
+    // Load reCAPTCHA on first interaction with the form (not on page load),
+    // so browsing visitors never pay its ~370 KB / ~2s cost.
+    loadCaptcha() {
+      if (this.captchaEnabled && window.ecpLoadRecaptcha) window.ecpLoadRecaptcha();
+    },
 
     subline() {
       if (this.step === 'code') {

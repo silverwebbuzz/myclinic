@@ -64,7 +64,7 @@ require __DIR__ . '/partials/header.php';
           <div class="ct-row">
             <label class="ct-fld">
               <span>Your name *</span>
-              <input type="text" x-model="form.name" :disabled="busy" maxlength="120" placeholder="e.g. Riya Mehta" required>
+              <input type="text" x-model="form.name" :disabled="busy" maxlength="120" placeholder="e.g. Riya Mehta" required @focus="loadCaptcha()">
             </label>
             <label class="ct-fld">
               <span>Email *</span>
@@ -130,9 +130,9 @@ require __DIR__ . '/partials/header.php';
   </div>
 </section>
 
-<?php if ($contactCaptchaEnabled && $contactCaptchaSiteKey !== ''): ?>
-<script src="https://www.google.com/recaptcha/api.js" async defer></script>
-<?php endif; ?>
+<!-- reCAPTCHA is loaded lazily on first form interaction via the shared
+     window.ecpLoadRecaptcha() (defined in partials/auth-modal.php), so it
+     doesn't cost page-load time. See contactForm().loadCaptcha(). -->
 
 <style>
 .ct-page {
@@ -235,6 +235,11 @@ function contactForm(captchaEnabled) {
     errorMsg: '',
     successMsg: '',
     form: { name: '', email: '', phone: '', subject: 'General enquiry', message: '', company: '' },
+
+    // Load reCAPTCHA on first interaction (not page load) via the shared loader.
+    loadCaptcha() {
+      if (this.captchaEnabled && window.ecpLoadRecaptcha) window.ecpLoadRecaptcha();
+    },
 
     captchaToken() {
       if (!this.captchaEnabled || typeof grecaptcha === 'undefined') return '';

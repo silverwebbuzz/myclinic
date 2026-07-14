@@ -142,7 +142,43 @@ $ecpPatientJson = $ecpPatient
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"></noscript>
 
     <?php $stylesBust = @filemtime(__DIR__ . '/../assets/css/styles.css') ?: time(); ?>
-    <link rel="stylesheet" href="/assets/css/styles.css?v=<?= $stylesBust ?>" />
+    <!-- Critical above-the-fold CSS, inlined so the header/nav paints without
+         waiting on the 180 KB styles.css. Copied verbatim from styles.css
+         (:root, reset, body, .nav*, .logo*, .btn*, mobile burger). Keep in
+         sync if those base rules change. -->
+    <style id="ecp-critical-css">
+:root{--bg:#FFFFFF;--bg-2:#F5F5F7;--bg-3:#FAFAFB;--ink:#0A0A0A;--ink-2:#1C1C1E;--mute:#6E6E73;--line:rgba(0,0,0,.08);--line-2:rgba(0,0,0,.05);--teal-50:#E0F4EE;--teal-100:#C6EBDE;--teal-400:#2DC08A;--teal-600:#0F9B6E;--teal-700:#0B7F5A;--teal-800:#076B4C;--teal-950:#03382A;--blue-600:#1A6FC4;--blue-50:#E8F1FC;--red:#FF453A;--green:#30D158;--amber:#FF9F0A}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;font-feature-settings:"ss01","cv11";background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;scroll-behavior:smooth;overflow-x:hidden;max-width:100%}
+img,svg,video{max-width:100%}
+a{color:inherit;text-decoration:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:980px;padding:12px 22px;font-size:15px;font-weight:500;transition:all .2s ease;white-space:nowrap;border:1px solid transparent}
+.btn-primary{background:var(--teal-600);color:#fff}
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;background:#fff;backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--line);transition:all .25s ease;height:80px;display:flex;align-items:center}
+.nav-inner{max-width:1280px;margin:0 auto;padding:0 20px;width:100%}
+.nav .nav-inner{display:flex;align-items:center;gap:28px}
+.logo{font-size:18px;font-weight:600;letter-spacing:-.4px;color:var(--ink);display:inline-flex;align-items:center;width:180px}
+.logo em{color:var(--teal-600);font-style:normal;font-weight:600}
+.logo-img{display:block;height:100%;width:100%;object-fit:contain;object-position:center center}
+.nav-links{display:flex;gap:24px;flex:1;min-width:0}
+.nav-link{font-size:16px;font-weight:500;color:var(--ink-2);position:relative;padding:4px 0;transition:color .15s}
+.nav-cta{display:flex;gap:8px;align-items:center;flex-shrink:0}
+.nav .btn{padding:7px 16px;font-size:16px}
+.nav-signin{font-size:14px;font-weight:500;color:var(--ink-2)}
+.nav-user{position:relative}
+.nav-user-btn{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 12px 4px 4px;font:inherit;font-size:13.5px;color:var(--ink);cursor:pointer}
+.nav-user-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--teal-400),var(--teal-700));color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;letter-spacing:-.3px;overflow:hidden}
+.nav-user-photo{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
+.nav-user-hi{font-weight:500;color:var(--ink-2);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis}
+.nav-user-caret{color:var(--mute)}
+.nav-burger{display:none;background:transparent;border:0;margin-left:4px;cursor:pointer;color:var(--ink);border-radius:8px}
+.nav-burger svg{width:28px;height:28px}
+@media (max-width:900px){.nav-inner{padding:0 20px;gap:12px}.nav-burger{display:inline-flex;align-items:center;justify-content:center}.nav-signin{display:none}.nav-user-hi{display:none}.nav-user-caret{display:none}.nav .btn{padding:8px 14px;font-size:13px;line-height:1.2}.nav-links{display:none}}
+    </style>
+    <!-- Full stylesheet loaded async so it no longer blocks first paint. -->
+    <link rel="preload" as="style" href="/assets/css/styles.css?v=<?= $stylesBust ?>"
+          onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="/assets/css/styles.css?v=<?= $stylesBust ?>" /></noscript>
     <?php if (!empty($extraHead)) echo $extraHead; ?>
 
     <!-- Alpine pinned to exact version for CDN cacheability (was @3.x.x — re-fetched on every floating release) -->

@@ -147,7 +147,25 @@ $ecpCaptchaSiteKey = (string) ($ecpCaptcha['site_key'] ?? '');
   </div>
 </div>
 <?php if ($ecpCaptchaEnabled && $ecpCaptchaSiteKey !== ''): ?>
-<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+<script>
+/* Lazy reCAPTCHA loader — shared across the auth modal, patient page and
+   contact form. The api.js bundle is ~370 KB and costs ~2s of main-thread
+   CPU, so we do NOT load it on page load. It's injected the first time a
+   form that needs it is actually opened. Idempotent: safe to call repeatedly.
+   Once the script loads it auto-renders any .g-recaptcha widgets present. */
+window.ecpLoadRecaptcha = window.ecpLoadRecaptcha || (function () {
+  var started = false;
+  return function () {
+    if (started) return;
+    started = true;
+    var s = document.createElement('script');
+    s.src = 'https://www.google.com/recaptcha/api.js';
+    s.async = true;
+    s.defer = true;
+    document.head.appendChild(s);
+  };
+})();
+</script>
 <?php endif; ?>
 
 <style>
@@ -511,6 +529,8 @@ function ecpAuthModal() {
       this.nameHint = null;
       this.open = true;
       document.body.style.overflow = 'hidden';
+      // Pull in reCAPTCHA now (not on page load) — only if captcha is enabled.
+      if (this.captchaEnabled && window.ecpLoadRecaptcha) window.ecpLoadRecaptcha();
     },
 
     close() {
