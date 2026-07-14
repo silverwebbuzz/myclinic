@@ -44,6 +44,7 @@ $marketing = [
     ['/security',          0.6, 'monthly'],
     ['/customer-stories',  0.7, 'monthly'],
     ['/book-a-demo',       0.7, 'monthly'],
+    ['/contact',           0.5, 'yearly'],
     ['/cervical-cancer',   0.7, 'monthly'],
     ['/privacy-policy',    0.3, 'yearly'],
     ['/terms',             0.3, 'yearly'],
