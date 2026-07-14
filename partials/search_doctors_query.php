@@ -128,6 +128,27 @@ function ecp_search_doctors(array $filters): array {
         $params['ulat1'] = $lat;
         $params['ulat2'] = $lat;
         $params['ulng1'] = $lng;
+
+        // Bounding-box prefilter: restrict to a lat/lng rectangle BEFORE the
+        // expensive Haversine + filesort. This lets MySQL use an index on
+        // (lat, lng) to cut the candidate set from ~all rows to the few hundred
+        // physically near the user, instead of computing distance for every row.
+        // Box radius = the requested max_km, else a generous 50km default so the
+        // "nearest first" sort still has plenty of candidates. 1 deg lat ≈ 111km;
+        // 1 deg lng ≈ 111km * cos(lat).
+        $boxKm  = $maxKm > 0 ? $maxKm : 50.0;
+        $latPad = $boxKm / 111.0;
+        $cosLat = max(0.01, cos(deg2rad($lat)));   // guard near the poles
+        $lngPad = $boxKm / (111.0 * $cosLat);
+        // Only rows whose OWN coordinates are in the box are prefiltered; rows
+        // relying on the city-fallback lat/lng (dd.lat IS NULL) are kept so the
+        // fallback still works for them.
+        $where[] = '(dd.lat IS NULL OR (dd.lat BETWEEN :box_lat_min AND :box_lat_max '
+                 . 'AND dd.lng BETWEEN :box_lng_min AND :box_lng_max))';
+        $params['box_lat_min'] = $lat - $latPad;
+        $params['box_lat_max'] = $lat + $latPad;
+        $params['box_lng_min'] = $lng - $lngPad;
+        $params['box_lng_max'] = $lng + $lngPad;
     }
 
     // Default ranking tiers: joined clinics first, then listings WITH a photo,
