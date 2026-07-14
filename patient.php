@@ -25,21 +25,49 @@ require __DIR__ . '/partials/header.php';
 <div x-data="patientPanel(<?= $me ? '1' : '0' ?>)" x-init="init()" x-cloak class="patient-page">
 
 <?php if (!$me): ?>
-  <!-- LOGGED-OUT VIEW: simple CTA that opens the shared auth modal -->
+  <!-- LOGGED-OUT VIEW: features showcase + sign-in card -->
   <section class="pt-hero">
     <div class="wrap">
-      <div class="pt-card">
-        <div class="pt-card-head">
-          <h1>My Health</h1>
-          <p class="lede">Save up to <strong>5 doctors</strong> to your shortlist and access your prescriptions in one place.</p>
+      <div class="pt-hero-split">
+
+        <!-- Left: value proposition + feature list -->
+        <div class="pt-hero-copy">
+          <span class="pt-eyebrow">Your free patient account</span>
+          <h1>Everything about your health, in one place</h1>
+          <p class="pt-hero-lede">
+            Sign in with just your mobile number — no password to remember — and get:
+          </p>
+          <ul class="pt-feat-list">
+            <li><span class="pt-feat-ic">✅</span><div><b>Prescriptions</b><span>Every e-prescription saved & searchable</span></div></li>
+            <li><span class="pt-feat-ic">✅</span><div><b>Reports</b><span>Lab reports and results in one vault</span></div></li>
+            <li><span class="pt-feat-ic">✅</span><div><b>Family Profiles</b><span>Manage health for up to 6 members</span></div></li>
+            <li><span class="pt-feat-ic">✅</span><div><b>Bookings</b><span>Track upcoming & past appointments</span></div></li>
+            <li><span class="pt-feat-ic">✅</span><div><b>Favourite Doctors</b><span>Shortlist doctors for quick access</span></div></li>
+            <li><span class="pt-feat-ic">✅</span><div><b>Follow-up Reminders</b><span>Never miss a follow-up visit</span></div></li>
+            <li><span class="pt-feat-ic">✅</span><div><b>Medicine Reminders</b><span>Timely nudges to take your meds</span></div></li>
+            <li><span class="pt-feat-ic">✅</span><div><b>Appointment Reminders</b><span>Alerts before every appointment</span></div></li>
+          </ul>
         </div>
-        <button type="button" class="btn btn-primary pt-cta-signin"
-                @click="window.ecpAuth.open('default')">
-          Sign in with mobile number
-        </button>
-        <p class="pt-hint" style="text-align:center; margin-top:14px;">
-          One-time code via WhatsApp message. No password to remember.
-        </p>
+
+        <!-- Right: sign-in card -->
+        <div class="pt-card pt-card-signin">
+          <div class="pt-card-head">
+            <h2>My Health</h2>
+            <p class="lede">Free forever. Set up in under a minute.</p>
+          </div>
+          <button type="button" class="btn btn-primary pt-cta-signin"
+                  @click="window.ecpAuth.open('default')">
+            Sign in with mobile number
+          </button>
+          <p class="pt-hint" style="text-align:center; margin-top:14px;">
+            One-time code via WhatsApp message. No password to remember.
+          </p>
+          <div class="pt-trust">
+            <span>🔒 Private & secure</span>
+            <span>🇮🇳 ABHA-ready</span>
+          </div>
+        </div>
+
       </div>
     </div>
   </section>
@@ -694,8 +722,50 @@ require __DIR__ . '/partials/header.php';
 }
 .pt-hero .wrap, .pt-main .wrap { max-width: 980px; margin: 0 auto; padding: 0 24px; }
 
-/* -------- Logged-out (signup/signin card) -------- */
-.pt-hero .wrap { max-width: 480px; padding-top: 24px; }
+/* -------- Logged-out (features showcase + signin card) -------- */
+.pt-hero .wrap { max-width: 1040px; padding-top: 24px; }
+.pt-hero-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 40px;
+  align-items: center;
+}
+
+/* Left column: copy + feature list */
+.pt-hero-copy { min-width: 0; }
+.pt-eyebrow {
+  display: inline-block;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--teal-700);
+  background: var(--teal-50);
+  padding: 5px 12px; border-radius: 999px;
+  margin-bottom: 16px;
+}
+.pt-hero-copy h1 {
+  font-size: clamp(26px, 3.6vw, 40px);
+  font-weight: 600;
+  letter-spacing: -0.8px;
+  line-height: 1.12;
+  margin: 0 0 12px;
+}
+.pt-hero-lede {
+  color: var(--ink-2);
+  font-size: 15.5px; line-height: 1.5;
+  margin: 0 0 22px;
+  max-width: 460px;
+}
+.pt-feat-list {
+  list-style: none; padding: 0; margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+}
+.pt-feat-list li { display: flex; gap: 11px; align-items: flex-start; }
+.pt-feat-ic { font-size: 15px; line-height: 1.3; flex-shrink: 0; }
+.pt-feat-list li b { display: block; font-weight: 600; font-size: 14.5px; color: var(--ink); }
+.pt-feat-list li span { display: block; font-size: 12.5px; color: var(--mute); margin-top: 2px; line-height: 1.4; }
+
 .pt-card {
   background: #fff;
   border: 1px solid var(--line);
@@ -703,7 +773,8 @@ require __DIR__ . '/partials/header.php';
   padding: 36px 36px 32px;
   box-shadow: 0 18px 48px rgba(0,0,0,0.05);
 }
-.pt-card-head h1 {
+.pt-card-signin { position: sticky; top: 100px; }
+.pt-card-head h1, .pt-card-head h2 {
   font-size: clamp(24px, 3vw, 30px);
   font-weight: 500;
   letter-spacing: -0.5px;
@@ -716,6 +787,22 @@ require __DIR__ . '/partials/header.php';
   padding: 14px 18px;
   font-size: 15px; font-weight: 600;
   border-radius: 12px;
+}
+.pt-trust {
+  display: flex; justify-content: center; gap: 18px;
+  margin-top: 20px; padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.pt-trust span { font-size: 12px; font-weight: 600; color: var(--mute); }
+
+/* Stack the split on narrower screens */
+@media (max-width: 860px) {
+  .pt-hero-split { grid-template-columns: 1fr; gap: 28px; }
+  .pt-card-signin { position: static; order: -1; }
+  .pt-hero-copy h1 { font-size: clamp(24px, 6vw, 32px); }
+}
+@media (max-width: 480px) {
+  .pt-feat-list { grid-template-columns: 1fr; gap: 13px; }
 }
 
 .pt-tabs { display: flex; border-bottom: 1px solid var(--line); margin-bottom: 22px; }
