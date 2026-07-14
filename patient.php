@@ -155,17 +155,66 @@ require __DIR__ . '/partials/header.php';
   <!-- ============ FEATURE SHOWCASE (alternating image + text) ============ -->
   <?php
     // Each slide is a self-contained graphic; the copy here is a short lead-in only.
+    // Each point mirrors a bullet baked into the slide, surfaced as real text
+    // for SEO and for readability on small phone screens. 'd' = optional detail.
     $ptShowcase = [
-      ['img' => 1,  'kicker' => 'All in one app',      'title' => 'Your personal health companion',      'text' => 'Everything you need for better healthcare — in one free account.'],
-      ['img' => 2,  'kicker' => 'Find doctors',         'title' => 'The right doctor, faster',              'text' => 'Search by specialty, city or clinic and connect with verified doctors you can trust.'],
-      ['img' => 3,  'kicker' => 'Book instantly',       'title' => 'Appointments in seconds',               'text' => 'Simple, fast and hassle-free booking with real-time availability and instant confirmation.'],
-      ['img' => 4,  'kicker' => 'For everyone',         'title' => 'Care for your whole family',            'text' => 'Add up to 6 family members and manage everyone’s health from one account.'],
-      ['img' => 5,  'kicker' => 'Prescriptions',        'title' => 'Your prescriptions, always with you',   'text' => 'Store and access every prescription digitally — safe, secure and never lost again.'],
-      ['img' => 6,  'kicker' => 'Health history',       'title' => 'Your full health story, organised',     'text' => 'Past appointments, prescriptions, reports and consultations — all in one timeline.'],
-      ['img' => 7,  'kicker' => 'Favourites',           'title' => 'Stay connected with doctors you trust', 'text' => 'Save your favourite doctors and rebook them anytime in just one tap.'],
-      ['img' => 8,  'kicker' => 'Reminders',            'title' => 'Never miss an appointment',             'text' => 'Track upcoming, completed and past visits with smart alerts and reminders.'],
-      ['img' => 9,  'kicker' => 'Privacy first',        'title' => 'Your health, protected & secure',       'text' => 'End-to-end encryption, OTP verification and ABHA-ready — your data stays yours.'],
-      ['img' => 10, 'kicker' => 'Better healthcare',    'title' => 'For you & your loved ones',             'text' => 'From prescriptions to secure records, eClinicPro brings it all together.', 'cta' => true],
+      ['img' => 1,  'kicker' => 'All in one app',      'title' => 'Your personal health companion',      'text' => 'Everything you need for better healthcare — in one free account.', 'points' => [
+        ['t' => 'Trusted doctors'],
+        ['t' => 'Easy booking'],
+        ['t' => 'Secure & private'],
+        ['t' => 'For you & your family'],
+      ]],
+      ['img' => 2,  'kicker' => 'Find doctors',         'title' => 'The right doctor, faster',              'text' => 'Search by specialty, city or clinic and connect with verified doctors you can trust.', 'points' => [
+        ['t' => 'Verified doctors'],
+        ['t' => 'Search by speciality or city'],
+        ['t' => 'Real patient reviews'],
+      ]],
+      ['img' => 3,  'kicker' => 'Book instantly',       'title' => 'Appointments in seconds',               'text' => 'Simple, fast and hassle-free booking, anytime and anywhere.', 'points' => [
+        ['t' => 'Choose date & time'],
+        ['t' => 'Real-time availability'],
+        ['t' => 'Instant confirmation'],
+      ]],
+      ['img' => 4,  'kicker' => 'For everyone',         'title' => 'Care for your whole family',            'text' => 'Add up to 6 family members and manage everyone’s health from one account.', 'points' => [
+        ['t' => 'Add up to 6 members'],
+        ['t' => 'Manage health in one place'],
+        ['t' => 'Separate history for each member'],
+        ['t' => 'Reminders for everyone'],
+      ]],
+      ['img' => 5,  'kicker' => 'Prescriptions',        'title' => 'Your prescriptions, always with you',   'text' => 'Store and access every prescription digitally — never lose one again.', 'points' => [
+        ['t' => 'Upload & save prescriptions', 'd' => 'Keep every prescription instantly'],
+        ['t' => 'Access anytime, anywhere'],
+        ['t' => 'Safe, secure & private'],
+      ]],
+      ['img' => 6,  'kicker' => 'Health history',       'title' => 'Your full health story, organised',     'text' => 'Past appointments, prescriptions, reports and consultations — all in one timeline.', 'points' => [
+        ['t' => 'Complete appointment history'],
+        ['t' => 'Prescriptions & doctors’ notes'],
+        ['t' => 'Lab reports & documents'],
+        ['t' => 'Your health, well organised'],
+      ]],
+      ['img' => 7,  'kicker' => 'Favourites',           'title' => 'Stay connected with doctors you trust', 'text' => 'Save your favourite doctors and rebook them anytime in just one tap.', 'points' => [
+        ['t' => 'Save your preferred doctors'],
+        ['t' => 'Quick rebooking anytime'],
+        ['t' => 'Get updates & reminders'],
+        ['t' => 'Trusted care, every time'],
+      ]],
+      ['img' => 8,  'kicker' => 'Reminders',            'title' => 'Never miss an appointment',             'text' => 'Track upcoming, completed and past visits with smart alerts and reminders.', 'points' => [
+        ['t' => 'Upcoming appointments'],
+        ['t' => 'Real-time updates'],
+        ['t' => 'Completed appointments'],
+        ['t' => 'Reminders & alerts'],
+      ]],
+      ['img' => 9,  'kicker' => 'Privacy first',        'title' => 'Your health, protected & secure',       'text' => 'Your privacy is our priority — your health information stays safe and confidential.', 'points' => [
+        ['t' => 'Secure data', 'd' => 'End-to-end encryption'],
+        ['t' => 'Private & confidential', 'd' => 'Your data is always protected'],
+        ['t' => 'OTP verification', 'd' => 'An extra layer of security'],
+        ['t' => 'ABHA ready', 'd' => 'Seamless integration with your ABHA ID'],
+      ]],
+      ['img' => 10, 'kicker' => 'Better healthcare',    'title' => 'For you & your loved ones',             'text' => 'From prescriptions to secure records, eClinicPro brings it all together for a healthier tomorrow.', 'cta' => true, 'points' => [
+        ['t' => 'For you', 'd' => 'Simple, fast and reliable'],
+        ['t' => 'For your family', 'd' => 'Care for every age, in one place'],
+        ['t' => 'For your health', 'd' => 'Track, manage & improve'],
+        ['t' => 'For your peace of mind', 'd' => 'Secure, private, always'],
+      ]],
     ];
   ?>
   <section class="pt-showcase">
@@ -186,6 +235,16 @@ require __DIR__ . '/partials/header.php';
           <span class="pt-show-kicker"><?= e($s['kicker']) ?></span>
           <h3><?= e($s['title']) ?></h3>
           <p><?= e($s['text']) ?></p>
+          <?php if (!empty($s['points'])): ?>
+          <ul class="pt-show-points">
+            <?php foreach ($s['points'] as $pt): ?>
+            <li>
+              <svg class="pt-show-tick" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+              <span><strong><?= e($pt['t']) ?></strong><?php if (!empty($pt['d'])): ?> — <?= e($pt['d']) ?><?php endif; ?></span>
+            </li>
+            <?php endforeach; ?>
+          </ul>
+          <?php endif; ?>
           <?php if (!empty($s['cta'])): ?>
           <button type="button" class="btn btn-primary pt-show-cta"
                   @click="window.ecpAuth ? window.ecpAuth.open('default') : (window.location.hash = '')">
@@ -1054,6 +1113,20 @@ require __DIR__ . '/partials/header.php';
   color: var(--ink-2); margin: 0;
   max-width: 440px;
 }
+.pt-show-points {
+  list-style: none; padding: 0; margin: 18px 0 0;
+  display: flex; flex-direction: column; gap: 10px;
+  max-width: 460px;
+}
+.pt-show-points li {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 14.5px; line-height: 1.45; color: var(--ink-2);
+}
+.pt-show-tick {
+  color: var(--teal-600); flex-shrink: 0;
+  margin-top: 1px;
+}
+.pt-show-points strong { font-weight: 600; color: var(--ink); }
 .pt-show-cta {
   margin-top: 22px;
   padding: 13px 24px;
@@ -1069,6 +1142,8 @@ require __DIR__ . '/partials/header.php';
   .pt-show-row.is-reverse .pt-show-media { order: 0; }
   .pt-show-copy { text-align: center; }
   .pt-show-copy p { margin-left: auto; margin-right: auto; }
+  /* Keep the checklist left-aligned (readable) but centre the block. */
+  .pt-show-points { text-align: left; margin-left: auto; margin-right: auto; }
   .pt-show-media { max-width: 460px; margin: 0 auto; }
 }
 @media (max-width: 480px) {
