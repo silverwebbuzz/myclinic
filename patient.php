@@ -30,45 +30,171 @@ require __DIR__ . '/partials/header.php';
     <div class="wrap">
       <div class="pt-hero-split">
 
-        <!-- Left: value proposition + feature list -->
+        <!-- Left: value proposition + compact feature chips -->
         <div class="pt-hero-copy">
           <span class="pt-eyebrow">Your free patient account</span>
-          <h1>Everything about your health, in one place</h1>
+          <h1>Your personal health companion</h1>
           <p class="pt-hero-lede">
-            Sign in with just your mobile number — no password to remember — and get:
+            One free account for prescriptions, reports, bookings, your whole family
+            and timely reminders — sign in with just your mobile number, no password to remember.
           </p>
-          <ul class="pt-feat-list">
-            <li><span class="pt-feat-ic">✅</span><div><b>Prescriptions</b><span>Every e-prescription saved & searchable</span></div></li>
-            <li><span class="pt-feat-ic">✅</span><div><b>Reports</b><span>Lab reports and results in one vault</span></div></li>
-            <li><span class="pt-feat-ic">✅</span><div><b>Family Profiles</b><span>Manage health for up to 6 members</span></div></li>
-            <li><span class="pt-feat-ic">✅</span><div><b>Bookings</b><span>Track upcoming & past appointments</span></div></li>
-            <li><span class="pt-feat-ic">✅</span><div><b>Favourite Doctors</b><span>Shortlist doctors for quick access</span></div></li>
-            <li><span class="pt-feat-ic">✅</span><div><b>Follow-up Reminders</b><span>Never miss a follow-up visit</span></div></li>
-            <li><span class="pt-feat-ic">✅</span><div><b>Medicine Reminders</b><span>Timely nudges to take your meds</span></div></li>
-            <li><span class="pt-feat-ic">✅</span><div><b>Appointment Reminders</b><span>Alerts before every appointment</span></div></li>
+          <ul class="pt-feat-chips">
+            <li>✅ Prescriptions</li>
+            <li>✅ Reports</li>
+            <li>✅ Family Profiles</li>
+            <li>✅ Bookings</li>
+            <li>✅ Favourite Doctors</li>
+            <li>✅ Follow-up Reminders</li>
+            <li>✅ Medicine Reminders</li>
+            <li>✅ Appointment Reminders</li>
           </ul>
         </div>
 
-        <!-- Right: sign-in card -->
-        <div class="pt-card pt-card-signin">
+        <!-- Right: INLINE sign-in / sign-up form (same OTP flow as the modal) -->
+        <?php
+          $ptCaptcha        = ecp_recaptcha_config();
+          $ptCaptchaEnabled = !empty($ptCaptcha['enabled']);
+          $ptCaptchaSiteKey = (string) ($ptCaptcha['site_key'] ?? '');
+        ?>
+        <div class="pt-card pt-card-signin" x-data="patientInlineAuth(<?= $ptCaptchaEnabled ? 'true' : 'false' ?>)">
           <div class="pt-card-head">
-            <h2>My Health</h2>
-            <p class="lede">Free forever. Set up in under a minute.</p>
+            <h2 x-text="step === 'code' ? 'Verify your number' : 'My Health'"></h2>
+            <p class="lede" x-text="subline()"></p>
           </div>
-          <button type="button" class="btn btn-primary pt-cta-signin"
-                  @click="window.ecpAuth.open('default')">
-            Sign in with mobile number
-          </button>
-          <p class="pt-hint" style="text-align:center; margin-top:14px;">
-            One-time code via WhatsApp message. No password to remember.
-          </p>
-          <div class="pt-trust">
+
+          <!-- Sign in / Create account toggle (step 1 only) -->
+          <div class="pt-auth-tabs" x-show="step === 'phone'">
+            <button type="button" :class="intent === 'signin' ? 'is-active' : ''"
+                    @click="intent = 'signin'; errorMsg = ''">Sign in</button>
+            <button type="button" :class="intent === 'signup' ? 'is-active' : ''"
+                    @click="intent = 'signup'; errorMsg = ''">Create account</button>
+          </div>
+
+          <!-- STEP 1: phone -->
+          <form class="pt-auth-form" x-show="step === 'phone'" @submit.prevent="sendOtp()">
+            <label>
+              <span class="pt-auth-lbl">Mobile number</span>
+              <div class="pt-phone-field">
+                <span class="pt-phone-cc">+91</span>
+                <input type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10"
+                       x-model="phoneDigits"
+                       @input="phoneDigits = phoneDigits.replace(/\D/g, '').slice(0,10)"
+                       :disabled="busy" placeholder="98XXXXXXXX" required>
+              </div>
+            </label>
+            <p class="pt-hint" x-text="intent === 'signup' ? 'We\'ll create your account once you confirm the code.' : 'We\'ll send a 6-digit code via WhatsApp. No password to remember.'"></p>
+            <p class="pt-auth-err" x-show="errorMsg" x-html="errorMsg"></p>
+            <?php if ($ptCaptchaEnabled && $ptCaptchaSiteKey !== ''): ?>
+            <div class="pt-auth-captcha">
+              <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($ptCaptchaSiteKey) ?>"></div>
+            </div>
+            <?php endif; ?>
+            <button type="submit" class="btn btn-primary pt-cta-signin" :disabled="busy || phoneDigits.length < 10">
+              <span x-show="!busy" x-text="intent === 'signup' ? 'Create my account' : 'Send code'"></span>
+              <span x-show="busy">Sending…</span>
+            </button>
+            <p class="pt-auth-tos">By continuing you agree to our <a href="/security" target="_blank">privacy &amp; terms</a>.</p>
+          </form>
+
+          <!-- STEP 2: code -->
+          <form class="pt-auth-form" x-show="step === 'code'" @submit.prevent="verifyOtp()">
+            <div class="pt-auth-back" @click="step = 'phone'; errorMsg = ''">‹ Change number</div>
+
+            <template x-if="phoneExists && nameHint">
+              <div class="pt-auth-welcome">Welcome back, <strong x-text="nameHint"></strong> 👋
+                <span>Enter the code we sent to <strong x-text="'+91 ' + phoneDigits"></strong>.</span></div>
+            </template>
+            <template x-if="!phoneExists">
+              <div class="pt-auth-welcome new">Setting up your account
+                <span>We sent a code to <strong x-text="'+91 ' + phoneDigits"></strong>.</span></div>
+            </template>
+            <template x-if="devCode">
+              <div class="pt-auth-dev">DEV code: <strong x-text="devCode"></strong></div>
+            </template>
+
+            <label>
+              <span class="pt-auth-lbl">6-digit code</span>
+              <input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+                     x-model="code" x-ref="codeInput"
+                     @input="code = code.replace(/\D/g, '').slice(0,6)"
+                     :disabled="busy" placeholder="••••••" required>
+            </label>
+            <template x-if="!phoneExists">
+              <label>
+                <span class="pt-auth-lbl">Your full name</span>
+                <input type="text" x-model="name" :disabled="busy" placeholder="e.g. Riya Mehta" maxlength="120" required>
+              </label>
+            </template>
+            <p class="pt-auth-err" x-show="errorMsg" x-html="errorMsg"></p>
+            <?php if ($ptCaptchaEnabled && $ptCaptchaSiteKey !== ''): ?>
+            <div class="pt-auth-captcha">
+              <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($ptCaptchaSiteKey) ?>"></div>
+            </div>
+            <?php endif; ?>
+            <button type="submit" class="btn btn-primary pt-cta-signin"
+                    :disabled="busy || code.length !== 6 || (!phoneExists && !name.trim())">
+              <span x-show="!busy" x-text="phoneExists ? 'Sign in' : 'Create account'"></span>
+              <span x-show="busy">Verifying…</span>
+            </button>
+            <button type="button" class="pt-auth-resend" :disabled="busy || resendCountdown > 0" @click="resendOtp()">
+              <span x-show="resendCountdown === 0">Resend code</span>
+              <span x-show="resendCountdown > 0">Resend in <span x-text="resendCountdown"></span>s</span>
+            </button>
+          </form>
+
+          <div class="pt-trust" x-show="step === 'phone'">
             <span>🔒 Private & secure</span>
             <span>🇮🇳 ABHA-ready</span>
           </div>
         </div>
 
       </div>
+    </div>
+  </section>
+
+  <!-- ============ FEATURE SHOWCASE (alternating image + text) ============ -->
+  <?php
+    // Each slide is a self-contained graphic; the copy here is a short lead-in only.
+    $ptShowcase = [
+      ['img' => 1,  'kicker' => 'All in one app',      'title' => 'Your personal health companion',      'text' => 'Everything you need for better healthcare — in one free account.'],
+      ['img' => 2,  'kicker' => 'Find doctors',         'title' => 'The right doctor, faster',              'text' => 'Search by specialty, city or clinic and connect with verified doctors you can trust.'],
+      ['img' => 3,  'kicker' => 'Book instantly',       'title' => 'Appointments in seconds',               'text' => 'Simple, fast and hassle-free booking with real-time availability and instant confirmation.'],
+      ['img' => 4,  'kicker' => 'For everyone',         'title' => 'Care for your whole family',            'text' => 'Add up to 6 family members and manage everyone’s health from one account.'],
+      ['img' => 5,  'kicker' => 'Prescriptions',        'title' => 'Your prescriptions, always with you',   'text' => 'Store and access every prescription digitally — safe, secure and never lost again.'],
+      ['img' => 6,  'kicker' => 'Health history',       'title' => 'Your full health story, organised',     'text' => 'Past appointments, prescriptions, reports and consultations — all in one timeline.'],
+      ['img' => 7,  'kicker' => 'Favourites',           'title' => 'Stay connected with doctors you trust', 'text' => 'Save your favourite doctors and rebook them anytime in just one tap.'],
+      ['img' => 8,  'kicker' => 'Reminders',            'title' => 'Never miss an appointment',             'text' => 'Track upcoming, completed and past visits with smart alerts and reminders.'],
+      ['img' => 9,  'kicker' => 'Privacy first',        'title' => 'Your health, protected & secure',       'text' => 'End-to-end encryption, OTP verification and ABHA-ready — your data stays yours.'],
+      ['img' => 10, 'kicker' => 'Better healthcare',    'title' => 'For you & your loved ones',             'text' => 'From prescriptions to secure records, eClinicPro brings it all together.', 'cta' => true],
+    ];
+  ?>
+  <section class="pt-showcase">
+    <div class="wrap">
+      <div class="pt-showcase-head">
+        <span class="pt-eyebrow">A quick tour</span>
+        <h2>See what your free account can do</h2>
+      </div>
+
+      <?php foreach ($ptShowcase as $i => $s): ?>
+      <div class="pt-show-row<?= $i % 2 ? ' is-reverse' : '' ?>">
+        <div class="pt-show-media">
+          <img src="/assets/img/patient_img/eClinicpro-patient<?= (int) $s['img'] ?>.jpeg"
+               alt="<?= e($s['title']) ?> — eClinicPro patient app"
+               loading="lazy" width="1080" height="1350">
+        </div>
+        <div class="pt-show-copy">
+          <span class="pt-show-kicker"><?= e($s['kicker']) ?></span>
+          <h3><?= e($s['title']) ?></h3>
+          <p><?= e($s['text']) ?></p>
+          <?php if (!empty($s['cta'])): ?>
+          <button type="button" class="btn btn-primary pt-show-cta"
+                  @click="window.ecpAuth ? window.ecpAuth.open('default') : (window.location.hash = '')">
+            Create your free account
+          </button>
+          <?php endif; ?>
+        </div>
+      </div>
+      <?php endforeach; ?>
     </div>
   </section>
 <?php else: ?>
@@ -755,16 +881,15 @@ require __DIR__ . '/partials/header.php';
   margin: 0 0 22px;
   max-width: 460px;
 }
-.pt-feat-list {
+.pt-feat-chips {
   list-style: none; padding: 0; margin: 0;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px 24px;
+  display: flex; flex-wrap: wrap; gap: 8px;
 }
-.pt-feat-list li { display: flex; gap: 11px; align-items: flex-start; }
-.pt-feat-ic { font-size: 15px; line-height: 1.3; flex-shrink: 0; }
-.pt-feat-list li b { display: block; font-weight: 600; font-size: 14.5px; color: var(--ink); }
-.pt-feat-list li span { display: block; font-size: 12.5px; color: var(--mute); margin-top: 2px; line-height: 1.4; }
+.pt-feat-chips li {
+  font-size: 12.5px; font-weight: 600; color: var(--ink-2);
+  background: var(--bg-2); border: 1px solid var(--line);
+  padding: 6px 12px; border-radius: 999px;
+}
 
 .pt-card {
   background: #fff;
@@ -795,14 +920,159 @@ require __DIR__ . '/partials/header.php';
 }
 .pt-trust span { font-size: 12px; font-weight: 600; color: var(--mute); }
 
+/* -------- Inline auth form (on the signin card) -------- */
+.pt-auth-tabs {
+  display: flex; background: var(--bg-2); border-radius: 12px;
+  padding: 4px; gap: 4px; margin-bottom: 18px;
+}
+.pt-auth-tabs button {
+  flex: 1; background: transparent; border: 0;
+  padding: 10px 12px; border-radius: 9px;
+  font: inherit; font-size: 13.5px; font-weight: 600;
+  color: var(--mute); cursor: pointer; transition: all .15s;
+}
+.pt-auth-tabs button:hover { color: var(--ink); }
+.pt-auth-tabs button.is-active {
+  background: #fff; color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+}
+.pt-auth-form { display: flex; flex-direction: column; gap: 14px; }
+.pt-auth-form label { display: flex; flex-direction: column; gap: 6px; }
+.pt-auth-lbl {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--mute);
+}
+.pt-auth-form input {
+  border: 1px solid var(--line); border-radius: 11px;
+  padding: 13px 14px; font: inherit; font-size: 16px;
+  outline: none; width: 100%;
+  transition: border-color .15s, box-shadow .15s;
+}
+.pt-auth-form input:focus { border-color: var(--teal-400); box-shadow: 0 0 0 3px rgba(15,155,110,0.14); }
+.pt-auth-form input:disabled { background: var(--bg-2); opacity: 0.7; }
+.pt-phone-field {
+  display: flex; align-items: stretch;
+  border: 1px solid var(--line); border-radius: 11px; overflow: hidden;
+  transition: border-color .15s, box-shadow .15s;
+}
+.pt-phone-field:focus-within { border-color: var(--teal-400); box-shadow: 0 0 0 3px rgba(15,155,110,0.14); }
+.pt-phone-cc {
+  background: var(--bg-2); padding: 13px 14px;
+  font-weight: 600; font-size: 15px; color: var(--ink-2);
+  border-right: 1px solid var(--line);
+}
+.pt-phone-field input { border: 0; border-radius: 0; flex: 1; }
+.pt-phone-field input:focus { box-shadow: none; }
+.pt-auth-captcha { display: flex; justify-content: center; }
+.pt-auth-err {
+  font-size: 13px; color: #c0392b;
+  background: rgba(192,57,43,0.06); border: 1px solid rgba(192,57,43,0.15);
+  border-radius: 8px; padding: 9px 11px; margin: 0;
+}
+.pt-auth-err a { color: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.pt-auth-tos { text-align: center; font-size: 12.5px; color: var(--mute); margin: 4px 0 0; }
+.pt-auth-tos a { color: var(--teal-700); text-decoration: underline; }
+.pt-auth-back {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12.5px; font-weight: 600; color: var(--ink-2);
+  cursor: pointer; align-self: flex-start; padding: 2px 0;
+}
+.pt-auth-back:hover { color: var(--teal-700); }
+.pt-auth-welcome {
+  background: var(--teal-50); color: var(--teal-800);
+  border: 1px solid rgba(15,155,110,0.15);
+  padding: 14px 16px; border-radius: 12px;
+  font-size: 14.5px; font-weight: 600;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.pt-auth-welcome span { font-size: 13px; font-weight: 400; color: var(--ink-2); }
+.pt-auth-welcome.new { background: #f0f4ff; color: #1e3a8a; border-color: rgba(30,58,138,0.15); }
+.pt-auth-dev {
+  font-size: 13px; background: #fff7e0; border: 1px solid #f5d97e;
+  color: #6b4f00; padding: 10px 12px; border-radius: 9px;
+}
+.pt-auth-dev strong { font-family: ui-monospace, Menlo, monospace; letter-spacing: 2px; margin-left: 6px; }
+.pt-auth-resend {
+  background: transparent; border: 0; font: inherit;
+  font-size: 13.5px; font-weight: 600; color: var(--ink-2);
+  cursor: pointer; padding: 4px;
+}
+.pt-auth-resend:hover:not(:disabled) { color: var(--teal-700); }
+.pt-auth-resend:disabled { opacity: 0.55; cursor: not-allowed; }
+
 /* Stack the split on narrower screens */
 @media (max-width: 860px) {
   .pt-hero-split { grid-template-columns: 1fr; gap: 28px; }
   .pt-card-signin { position: static; order: -1; }
   .pt-hero-copy h1 { font-size: clamp(24px, 6vw, 32px); }
 }
+/* -------- Feature showcase (alternating image + text) -------- */
+.pt-showcase {
+  border-top: 1px solid var(--line);
+  margin-top: 64px;
+  padding-top: 56px;
+}
+.pt-showcase .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+.pt-showcase-head { text-align: center; margin-bottom: 48px; }
+.pt-showcase-head h2 {
+  font-size: clamp(24px, 3.4vw, 34px);
+  font-weight: 600; letter-spacing: -0.6px;
+  margin: 6px 0 0;
+}
+.pt-show-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 48px;
+  align-items: center;
+  margin-bottom: 72px;
+}
+.pt-show-row.is-reverse .pt-show-media { order: 2; }
+.pt-show-media {
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.07);
+  background: #fff;
+}
+.pt-show-media img { display: block; width: 100%; height: auto; }
+.pt-show-kicker {
+  display: inline-block;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--teal-700);
+  background: var(--teal-50);
+  padding: 5px 12px; border-radius: 999px;
+  margin-bottom: 14px;
+}
+.pt-show-copy h3 {
+  font-size: clamp(21px, 2.6vw, 28px);
+  font-weight: 600; letter-spacing: -0.5px;
+  line-height: 1.2; margin: 0 0 12px;
+}
+.pt-show-copy p {
+  font-size: 15.5px; line-height: 1.6;
+  color: var(--ink-2); margin: 0;
+  max-width: 440px;
+}
+.pt-show-cta {
+  margin-top: 22px;
+  padding: 13px 24px;
+  font-size: 15px; font-weight: 600;
+  border-radius: 12px;
+}
+
+@media (max-width: 820px) {
+  .pt-showcase { margin-top: 44px; padding-top: 40px; }
+  .pt-showcase-head { margin-bottom: 36px; }
+  .pt-show-row { grid-template-columns: 1fr; gap: 22px; margin-bottom: 52px; }
+  /* Image always sits above the text on mobile, regardless of desktop side. */
+  .pt-show-row.is-reverse .pt-show-media { order: 0; }
+  .pt-show-copy { text-align: center; }
+  .pt-show-copy p { margin-left: auto; margin-right: auto; }
+  .pt-show-media { max-width: 460px; margin: 0 auto; }
+}
 @media (max-width: 480px) {
-  .pt-feat-list { grid-template-columns: 1fr; gap: 13px; }
+  .pt-feat-chips { gap: 6px; }
 }
 
 .pt-tabs { display: flex; border-bottom: 1px solid var(--line); margin-bottom: 22px; }
@@ -1294,6 +1564,149 @@ require __DIR__ . '/partials/header.php';
 </style>
 
 <script>
+/* Inline sign-in/up on the logged-out patient page.
+   Reuses the same /api/patient_auth endpoints as the shared modal. */
+function patientInlineAuth(captchaEnabled) {
+  return {
+    step: 'phone',        // 'phone' | 'code'
+    intent: 'signin',     // 'signin' | 'signup'
+    phoneDigits: '',
+    code: '',
+    name: '',
+    phoneExists: false,
+    nameHint: null,
+    devCode: null,
+    busy: false,
+    errorMsg: '',
+    resendCountdown: 0,
+    captchaEnabled: !!captchaEnabled,
+    _resendTimer: null,
+
+    subline() {
+      if (this.step === 'code') {
+        return this.phoneExists ? 'Almost there — enter the code we sent you.'
+                                : 'Last step before your account is ready.';
+      }
+      return this.intent === 'signup'
+        ? "New here? Enter your WhatsApp number — we'll send a code."
+        : "Sign in with your mobile number. Free forever.";
+    },
+
+    captchaToken() {
+      if (!this.captchaEnabled || typeof grecaptcha === 'undefined') return '';
+      try {
+        for (let i = 0; i < 4; i++) {
+          try { const t = grecaptcha.getResponse(i); if (t) return t; } catch (e) { break; }
+        }
+        return grecaptcha.getResponse() || '';
+      } catch (e) { return ''; }
+    },
+    resetCaptcha() {
+      if (!this.captchaEnabled || typeof grecaptcha === 'undefined') return;
+      try { for (let i = 0; i < 4; i++) { try { grecaptcha.reset(i); } catch (e) { break; } } } catch (e) {}
+    },
+
+    flipTo(newIntent) { this.intent = newIntent; this.errorMsg = ''; },
+
+    async sendOtp() {
+      if (this.phoneDigits.length < 10) return;
+      const captcha = this.captchaToken();
+      if (this.captchaEnabled && !captcha) { this.errorMsg = 'Please complete the captcha.'; return; }
+      this.busy = true; this.errorMsg = ''; this.devCode = null;
+      try {
+        const r = await fetch('/api/patient_auth?action=send_otp', {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: '+91' + this.phoneDigits, intent: this.intent, 'g-recaptcha-response': captcha || undefined }),
+        });
+        const text = await r.text();
+        let j; try { j = JSON.parse(text); } catch (e) {
+          this.errorMsg = 'Server returned an unexpected response (HTTP ' + r.status + ').'; return;
+        }
+        if (!j.ok) {
+          this.resetCaptcha();
+          if (j.error === 'account_not_found') {
+            this.errorMsg = "We don't see an account with this number. " +
+              '<a onclick="Alpine.$data(document.querySelector(\'.pt-card-signin\')).flipTo(\'signup\')">Create one instead?</a>';
+          } else if (j.error === 'account_exists') {
+            this.errorMsg = 'This number is already registered. ' +
+              '<a onclick="Alpine.$data(document.querySelector(\'.pt-card-signin\')).flipTo(\'signin\')">Sign in instead?</a>';
+          } else {
+            this.errorMsg = this.errorText(j.error, j.retry_after) + (j.hint ? ' — ' + j.hint : '');
+          }
+          return;
+        }
+        this.phoneExists = !!j.exists;
+        this.nameHint = j.name_hint || null;
+        if (j.dev_code) this.devCode = j.dev_code;
+        this.step = 'code';
+        this.resetCaptcha();
+        this.startResendCountdown(30);
+        this.$nextTick(() => this.$refs.codeInput && this.$refs.codeInput.focus());
+      } catch (e) {
+        this.errorMsg = "Couldn't reach server: " + (e.message || e); this.resetCaptcha();
+      } finally { this.busy = false; }
+    },
+
+    async resendOtp() {
+      this.code = '';
+      if (this.captchaEnabled && !this.captchaToken()) { this.errorMsg = 'Complete the captcha, then tap Resend again.'; return; }
+      await this.sendOtp();
+    },
+
+    startResendCountdown(secs) {
+      this.resendCountdown = secs;
+      if (this._resendTimer) clearInterval(this._resendTimer);
+      this._resendTimer = setInterval(() => {
+        this.resendCountdown -= 1;
+        if (this.resendCountdown <= 0) { clearInterval(this._resendTimer); this._resendTimer = null; }
+      }, 1000);
+    },
+
+    async verifyOtp() {
+      if (this.code.length !== 6) return;
+      const captcha = this.captchaToken();
+      if (this.captchaEnabled && !captcha) { this.errorMsg = 'Please complete the captcha.'; return; }
+      this.busy = true; this.errorMsg = '';
+      try {
+        const r = await fetch('/api/patient_auth?action=verify_otp', {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: '+91' + this.phoneDigits, code: this.code, name: this.name || undefined, 'g-recaptcha-response': captcha || undefined }),
+        });
+        const text = await r.text();
+        let j; try { j = JSON.parse(text); } catch (e) {
+          this.errorMsg = 'Server returned an unexpected response (HTTP ' + r.status + ').'; return;
+        }
+        if (!j.ok) { this.resetCaptcha(); this.errorMsg = this.errorText(j.error) + (j.hint ? ' — ' + j.hint : ''); return; }
+        // Success — reload into the logged-in panel.
+        if (typeof ecpSetPatientSession === 'function') ecpSetPatientSession(j.patient);
+        location.reload();
+      } catch (e) {
+        this.errorMsg = "Couldn't reach server. Check your connection."; this.resetCaptcha();
+      } finally { this.busy = false; }
+    },
+
+    errorText(code, retryAfter) {
+      switch (code) {
+        case 'invalid_phone':     return "That number doesn't look right.";
+        case 'phone_required':    return 'Enter your mobile number.';
+        case 'resend_too_soon':   return retryAfter ? `Please wait ${retryAfter}s before requesting another code.` : 'Please wait a moment before requesting another code.';
+        case 'otp_locked':        return retryAfter ? `Too many OTP requests. Try again in ${Math.ceil(retryAfter / 60)} minute(s).` : 'Too many OTP requests. Please try again later.';
+        case 'invalid_code':      return 'That code is incorrect. Try again.';
+        case 'expired':           return 'Code expired. Tap Resend.';
+        case 'too_many_attempts': return 'Too many attempts. Request a new code.';
+        case 'no_code_issued':    return 'No active code. Tap Resend.';
+        case 'whatsapp_not_configured': return 'WhatsApp OTP is not configured yet. Contact support.';
+        case 'not_whatsapp':      return 'This number does not appear to have WhatsApp active.';
+        case 'wa_send_failed':    return "We couldn't send the WhatsApp OTP. Try again later.";
+        case 'captcha_failed':    return 'Please complete the captcha and try again.';
+        default:                  return 'Something went wrong. Please try again.';
+      }
+    },
+  };
+}
+
 function patientPanel(isLoggedIn) {
   return {
     loggedIn: !!isLoggedIn,
