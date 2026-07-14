@@ -64,6 +64,33 @@ if ($seoMeta) {
     $metaDesc  = strip_tags($seoMeta['intro']);
 }
 
+// ---- Edge-cache the anonymous default/SEO listing --------------------
+// The heaviest cost for a first-time visitor is that this page runs several
+// DB queries (search + counts + footer cities) on EVERY hit. But the default
+// listing (and each SEO path) is IDENTICAL for every logged-out visitor, so
+// it's safe to let CloudFlare + the browser serve a cached copy. This turns a
+// ~3s server render into a ~50ms cache hit for the vast majority of arrivals.
+//
+// Only cache when it's genuinely shareable:
+//   - logged OUT (no ecp_pid cookie) — logged-in users get personalised chrome
+//   - page 1
+//   - no ad-hoc filter query string (q/sort/min_rating/lat/lng/…), which would
+//     otherwise explode into thousands of cache variants. The bare landing and
+//     clean SEO paths (city/specialty) ARE cached; filtered searches are not
+//     (those already fetch fresh via /api/search_doctors client-side anyway).
+$ecpLoggedOut       = empty($_COOKIE['ecp_pid']);
+$ecpNoAdHocFilters  = empty(array_diff(array_keys($_GET), ['seo', 'page']));
+$ecpCacheableList   = $ecpLoggedOut
+    && $ecpNoAdHocFilters
+    && ($initialFilters['page'] ?? 1) <= 1;
+if ($ecpCacheableList) {
+    // 10 min fresh at the edge, then serve stale for up to an hour while one
+    // request refreshes in the background — so visitors basically never wait
+    // on a live render. Browser keeps its own short copy too.
+    header('Cache-Control: public, max-age=120, s-maxage=600, stale-while-revalidate=3600');
+    header('Vary: Cookie');
+}
+
 // ---- SSR: load the first page now (we need item count for schema) ----
 $searchInput = $initialFilters;
 if ($searchInput['spec'] === 'all') $searchInput['spec'] = '';
@@ -1163,21 +1190,12 @@ require __DIR__ . '/partials/header.php';
                     localStorage.setItem('fd:country', v);
                 });
 
-                // Restore saved location (geolocation permission already granted).
-                try {
-                    const raw = localStorage.getItem('fd:loc');
-                    if (raw) {
-                        const v = JSON.parse(raw);
-                        if (v && v.lat && v.lng && (Date.now() - (v.at || 0)) < 7 * 86400 * 1000) {
-                            this.userLoc = {
-                                lat: v.lat,
-                                lng: v.lng
-                            };
-                        }
-                    }
-                    const savedDist = localStorage.getItem('fd:maxDistKm');
-                    if (savedDist) this.maxDistanceKm = parseInt(savedDist, 10) || 0;
-                } catch (e) {}
+                // NOTE: we deliberately do NOT auto-restore a saved location on
+                // load. Doing so fired a "near me" (lat/lng) search on every page
+                // load — a full-table distance sort that made the page slow. The
+                // default view now shows the fast ranking (joined doctors first,
+                // then those with photos, then Google rating). "Use my location"
+                // still works, but only when the user explicitly taps it.
                 this.$watch('userLoc', v => {
                     if (v) localStorage.setItem('fd:loc', JSON.stringify({
                         ...v,

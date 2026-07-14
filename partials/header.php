@@ -181,8 +181,13 @@ a{color:inherit;text-decoration:none}
     <noscript><link rel="stylesheet" href="/assets/css/styles.css?v=<?= $stylesBust ?>" /></noscript>
     <?php if (!empty($extraHead)) echo $extraHead; ?>
 
-    <!-- Alpine pinned to exact version for CDN cacheability (was @3.x.x — re-fetched on every floating release) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+    <!-- Alpine self-hosted (was jsdelivr CDN). Serving it from our own origin
+         avoids a cross-origin DNS+TLS handshake to jsdelivr on first paint and
+         lets it arrive on the already-open connection, so the interactive UI
+         (doctor cards, filters) boots sooner. Cached 7 days via .htaccess;
+         ?v=filemtime busts it when the file is replaced. -->
+    <?php $alpineBust = @filemtime(__DIR__ . '/../assets/js/alpine-3.14.1.min.js') ?: '3141'; ?>
+    <script defer src="/assets/js/alpine-3.14.1.min.js?v=<?= $alpineBust ?>"></script>
     <script src="https://analytics.ahrefs.com/analytics.js" data-key="4woSp6JOsZmShXEwnBQwUQ" async></script>
     <script>
         var ahrefs_analytics_script = document.createElement('script');
