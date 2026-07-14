@@ -18,6 +18,10 @@ if ($ref === '' || !preg_match('#^[A-Za-z0-9_\-/.]+$#', $ref)) {
 }
 $isNewRef = str_contains($ref, '/');   // New-API refs look like places/.../photos/...
 
+// Response body depends on the Accept header (WebP vs JPEG), so downstream
+// caches must key on it. Emitted for every path below.
+header('Vary: Accept');
+
 // ---- 30-day disk cache (ToS-aligned: temporary, auto-refreshed) ------------
 // Google Places ToS allows only TEMPORARY caching of photo content, not
 // permanent storage. We cache each (ref,width) to disk and re-fetch from Google
@@ -25,7 +29,14 @@ $isNewRef = str_contains($ref, '/');   // New-API refs look like places/.../phot
 // call per photo per month, instead of per request) while staying within terms.
 const ECP_PHOTO_CACHE_TTL = 2592000; // 30 days
 $cacheDir = __DIR__ . '/../storage/photo_cache';
-$cacheKey = sha1($ref . '|' . $width);
+
+// Serve WebP to browsers that accept it (≈30% smaller than JPEG) when GD can
+// encode it. Cache the WebP variant under its own key so it never collides with
+// the JPEG one served to non-WebP clients.
+$wantsWebp = str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'image/webp')
+    && function_exists('imagewebp') && function_exists('imagecreatefromstring');
+
+$cacheKey = sha1($ref . '|' . $width . ($wantsWebp ? '|webp' : ''));
 $cacheFile = $cacheDir . '/' . $cacheKey;
 $cacheMeta = $cacheFile . '.type'; // stores the content-type
 
@@ -33,7 +44,7 @@ $cacheMeta = $cacheFile . '.type'; // stores the content-type
 if (is_file($cacheFile) && (time() - filemtime($cacheFile)) < ECP_PHOTO_CACHE_TTL) {
     $ct = is_file($cacheMeta) ? trim((string) file_get_contents($cacheMeta)) : 'image/jpeg';
     header('Content-Type: ' . ($ct !== '' ? $ct : 'image/jpeg'));
-    header('Cache-Control: public, max-age=86400');
+    header('Cache-Control: public, max-age=2592000, immutable');
     header('X-Content-Type-Options: nosniff');
     header('X-Photo-Cache: hit');
     readfile($cacheFile);
@@ -46,7 +57,7 @@ if ($key === '') {
     if (is_file($cacheFile)) {
         $ct = is_file($cacheMeta) ? trim((string) file_get_contents($cacheMeta)) : 'image/jpeg';
         header('Content-Type: ' . ($ct !== '' ? $ct : 'image/jpeg'));
-        header('Cache-Control: public, max-age=86400');
+        header('Cache-Control: public, max-age=2592000, immutable');
         header('X-Photo-Cache: stale-no-key');
         readfile($cacheFile);
         exit;
@@ -102,13 +113,33 @@ if ($body === false) {
         if (is_file($cacheFile)) {
             $ct = is_file($cacheMeta) ? trim((string) file_get_contents($cacheMeta)) : 'image/jpeg';
             header('Content-Type: ' . ($ct !== '' ? $ct : 'image/jpeg'));
-            header('Cache-Control: public, max-age=86400');
+            header('Cache-Control: public, max-age=2592000, immutable');
             header('X-Photo-Cache: stale-fetch-failed');
             readfile($cacheFile);
             exit;
         }
         http_response_code(404);
         exit;
+    }
+}
+
+// Transcode to WebP for browsers that asked for it. If GD can't decode/encode
+// this particular image we silently keep the original bytes (still valid).
+if ($wantsWebp && stripos($contentType, 'webp') === false) {
+    $im = @imagecreatefromstring($body);
+    if ($im !== false) {
+        imagepalettetotruecolor($im);
+        ob_start();
+        if (@imagewebp($im, null, 82)) {
+            $webp = (string) ob_get_clean();
+            if ($webp !== '') {
+                $body = $webp;
+                $contentType = 'image/webp';
+            }
+        } else {
+            ob_end_clean();
+        }
+        imagedestroy($im);
     }
 }
 
@@ -126,7 +157,7 @@ if (is_dir($cacheDir) && is_writable($cacheDir)) {
 }
 
 header('Content-Type: ' . $contentType);
-header('Cache-Control: public, max-age=86400');
+header('Cache-Control: public, max-age=2592000, immutable');
 header('X-Content-Type-Options: nosniff');
 header('X-Photo-Cache: miss');
 echo $body;

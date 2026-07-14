@@ -233,7 +233,9 @@ function ecp_shape_directory_row(array $r): array {
         ? $ownerDoctorName
         : trim((string) ($r['doctor_name'] ?? ''));
     $display    = $doctorName !== '' ? $doctorName : $clinicName;
-    $avatar     = ecp_directory_avatar($r, 400);
+    // Avatars render at 88px (176px @2x retina). Requesting 200px covers that
+    // with headroom while roughly halving image bytes vs the old 400px.
+    $avatar     = ecp_directory_avatar($r, 200);
     $first      = mb_substr($avatar['initials'], 0, 1) ?: 'D';
     $last       = mb_strlen($avatar['initials']) > 1 ? mb_substr($avatar['initials'], -1) : '';
 

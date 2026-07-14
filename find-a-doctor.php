@@ -690,7 +690,7 @@ require __DIR__ . '/partials/header.php';
                             x-init="checkPhoto(d)">
                             <!-- No photo/logo → gender-based default doctor icon -->
                             <template x-if="!d.photo_url || d._photoBroken">
-                                <img class="fd-avatar-default" :src="defaultAvatar(d)" :alt="d.name" loading="lazy">
+                                <img class="fd-avatar-default" :src="defaultAvatar(d)" :alt="d.name" loading="lazy" decoding="async" width="88" height="88">
                             </template>
                         </div>
 
