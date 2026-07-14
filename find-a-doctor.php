@@ -15,6 +15,49 @@ require_once __DIR__ . '/partials/helpers.php';
 require_once __DIR__ . '/partials/find_doctor_search.php';
 require_once __DIR__ . '/partials/seo_slugs.php';
 
+// =====================================================================
+// Server-side full-page cache for the anonymous listing.
+//
+// There is NO CDN in front of this site (requests hit Apache directly), so
+// the CDN cache headers alone did nothing — every visitor triggered a full
+// ~seconds-long PHP+MySQL render. This caches the whole rendered HTML to disk
+// (same pattern as api/photo.php) and serves that file on later hits, skipping
+// all DB work. First visitor pays the render; everyone after gets a file read.
+//
+// Only for pages that are identical for every anonymous visitor:
+//   - logged OUT (no ecp_pid cookie)
+//   - GET request
+//   - no ad-hoc filter query params (only 'seo' path + optional page=1)
+// =====================================================================
+$ecpPageCacheKey = null;
+$ecpPageCacheTtl = 600;   // 10 min; a background-ish refresh on the first miss after expiry
+if (
+    ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET'
+    && empty($_COOKIE['ecp_pid'])
+    && empty(array_diff(array_keys($_GET), ['seo', 'page']))
+    && (int) ($_GET['page'] ?? 1) <= 1
+) {
+    $ecpSeoRaw = trim((string) ($_GET['seo'] ?? ''));
+    // Restrict the key to a safe charset so it maps cleanly to a filename.
+    if ($ecpSeoRaw === '' || preg_match('#^[A-Za-z0-9/\-]{1,120}$#', $ecpSeoRaw)) {
+        $ecpPageCacheKey = 'fad_' . sha1('v1|' . strtolower($ecpSeoRaw));
+        $ecpPageCacheDir = __DIR__ . '/storage/page_cache';
+        $ecpPageCacheFile = $ecpPageCacheDir . '/' . $ecpPageCacheKey . '.html';
+
+        // Serve a fresh cached copy immediately — before any DB work.
+        if (is_file($ecpPageCacheFile)
+            && (time() - filemtime($ecpPageCacheFile)) < $ecpPageCacheTtl) {
+            header('Content-Type: text/html; charset=UTF-8');
+            header('Cache-Control: public, max-age=120, s-maxage=600, stale-while-revalidate=3600');
+            header('X-Page-Cache: hit');
+            readfile($ecpPageCacheFile);
+            exit;
+        }
+        // Miss → capture the render below and write it to disk at the end.
+        ob_start();
+    }
+}
+
 $pageTitle  = 'Find a Doctor — eClinicPro';
 $metaDesc   = 'Search verified clinicians across India — see availability, fees and ratings before you book.';
 $activePage = 'find';
@@ -64,31 +107,13 @@ if ($seoMeta) {
     $metaDesc  = strip_tags($seoMeta['intro']);
 }
 
-// ---- Edge-cache the anonymous default/SEO listing --------------------
-// The heaviest cost for a first-time visitor is that this page runs several
-// DB queries (search + counts + footer cities) on EVERY hit. But the default
-// listing (and each SEO path) is IDENTICAL for every logged-out visitor, so
-// it's safe to let CloudFlare + the browser serve a cached copy. This turns a
-// ~3s server render into a ~50ms cache hit for the vast majority of arrivals.
-//
-// Only cache when it's genuinely shareable:
-//   - logged OUT (no ecp_pid cookie) — logged-in users get personalised chrome
-//   - page 1
-//   - no ad-hoc filter query string (q/sort/min_rating/lat/lng/…), which would
-//     otherwise explode into thousands of cache variants. The bare landing and
-//     clean SEO paths (city/specialty) ARE cached; filtered searches are not
-//     (those already fetch fresh via /api/search_doctors client-side anyway).
-$ecpLoggedOut       = empty($_COOKIE['ecp_pid']);
-$ecpNoAdHocFilters  = empty(array_diff(array_keys($_GET), ['seo', 'page']));
-$ecpCacheableList   = $ecpLoggedOut
-    && $ecpNoAdHocFilters
-    && ($initialFilters['page'] ?? 1) <= 1;
-if ($ecpCacheableList) {
-    // 10 min fresh at the edge, then serve stale for up to an hour while one
-    // request refreshes in the background — so visitors basically never wait
-    // on a live render. Browser keeps its own short copy too.
+// Browser cache header for the cacheable anonymous listing (the heavy work is
+// avoided by the disk page-cache above; this just lets the visitor's OWN browser
+// reuse the page briefly). NOTE: no `Vary: Cookie` — it would defeat caching
+// since nearly every visitor carries some cookie; the disk cache already keys
+// on the ecp_pid login cookie itself.
+if ($ecpPageCacheKey !== null) {
     header('Cache-Control: public, max-age=120, s-maxage=600, stale-while-revalidate=3600');
-    header('Vary: Cookie');
 }
 
 // ---- SSR: load the first page now (we need item count for schema) ----
@@ -1748,3 +1773,22 @@ require __DIR__ . '/partials/header.php';
 </script>
 
 <?php require __DIR__ . '/partials/footer.php'; ?>
+<?php
+// ---- Write the rendered page to the disk cache (miss path) ----
+// We only started a buffer when this request was cacheable AND had no fresh
+// file, so if a buffer is open, flush it to the client and persist a copy.
+if ($ecpPageCacheKey !== null && ob_get_level() > 0) {
+    $html = ob_get_clean();          // stop capturing; $html = full page
+    echo $html;                      // send to the visitor now
+    // Persist best-effort; a write failure just means the next hit re-renders.
+    if (!is_dir($ecpPageCacheDir)) {
+        @mkdir($ecpPageCacheDir, 0755, true);
+    }
+    if (is_dir($ecpPageCacheDir) && is_writable($ecpPageCacheDir)) {
+        $tmp = $ecpPageCacheFile . '.' . bin2hex(random_bytes(4)) . '.tmp';
+        if (@file_put_contents($tmp, $html) !== false) {
+            @rename($tmp, $ecpPageCacheFile);   // atomic swap; no partial reads
+        }
+    }
+}
+?>
