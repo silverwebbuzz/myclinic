@@ -191,9 +191,22 @@ require __DIR__ . '/partials/header.php';
     .fd-spec-panel.is-open {
         display: grid;
     }
+
+    /* Now that the root is no longer x-cloak'd, these popovers/autocompletes
+       (all default to a closed state in Alpine) must start hidden in raw CSS
+       so they don't flash open before Alpine boots. Alpine's x-show sets an
+       inline `display` that overrides these once it takes over. */
+    .fd-ac,
+    .fd-pop {
+        display: none;
+    }
 </style>
 
-<div x-data="findDoctor()" x-init="init()" x-cloak>
+<!-- NOTE: no x-cloak on this root. Cloaking the whole page hid the
+     server-rendered first page too, forcing LCP to wait ~4.5s for Alpine.
+     Interactive bits that would flash (dropdowns, filter sheet, loading grid)
+     carry their own x-cloak below, so removing it here is safe. -->
+<div x-data="findDoctor()" x-init="init()">
 
     <?php if ($seoMeta): ?>
         <?php
@@ -673,12 +686,24 @@ require __DIR__ . '/partials/header.php';
                 </template>
             </div>
 
-            <!-- Empty state -->
-            <div class="fd-empty" x-show="!loading && pageItems().length === 0">
+            <!-- Empty state (cloaked so it can't flash before Alpine evaluates
+                 x-show now that the root is no longer cloaked). -->
+            <div class="fd-empty" x-show="!loading && pageItems().length === 0" x-cloak>
                 <div class="glyph">🩺</div>
                 <h3>No doctors match your filters</h3>
                 <p>Try widening your search — clear a few filters or pick a different area.</p>
             </div>
+
+            <!-- Server-rendered first page (SSR) — paints at TTFB so the LCP
+                 element (a card's address) doesn't wait ~4.5s for Alpine.
+                 Removed by init() the moment Alpine hydrates the live grid. -->
+            <?php if (!empty($firstPage)): ?>
+            <div class="fd-grid" id="fd-ssr">
+                <?php foreach (array_slice($firstPage, 0, 8) as $d): ?>
+                    <?php require __DIR__ . '/partials/fd_card_ssr.php'; ?>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
 
             <!-- Results grid -->
             <div class="fd-grid" x-show="pageItems().length > 0"
@@ -1152,6 +1177,14 @@ require __DIR__ . '/partials/header.php';
             ],
 
             init() {
+                // Remove the server-rendered first page once Alpine's live grid
+                // is ready, so there's no duplicate list. $nextTick waits for the
+                // x-for grid to paint first, avoiding a flash of empty space.
+                this.$nextTick(() => {
+                    const ssr = document.getElementById('fd-ssr');
+                    if (ssr) ssr.remove();
+                });
+
                 // Restore country preference (only if URL didn't set one).
                 if (!('country' in (new URLSearchParams(location.search).keys()))) {
                     const savedC = localStorage.getItem('fd:country');
