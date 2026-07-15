@@ -88,7 +88,6 @@ return static function (RouteRegistrar $router): void {
 
     $router->post('/webhooks/stripe', [WebhookController::class, 'stripe']);
     $router->post('/webhooks/razorpay', [WebhookController::class, 'razorpay']);
-    $router->post('/webhooks/cashfree', [WebhookController::class, 'cashfree']);
     // Meta WhatsApp: GET = verify handshake, POST = delivery/inbound events.
     $router->get('/webhooks/whatsapp', [WebhookController::class, 'whatsapp']);
     $router->post('/webhooks/whatsapp', [WebhookController::class, 'whatsapp']);
@@ -209,10 +208,10 @@ return static function (RouteRegistrar $router): void {
 
         $app->get('/onboarding/plan-selection', [OnboardingController::class, 'planSelection']);
         $app->post('/onboarding/plan-selection', [OnboardingController::class, 'selectPlan']);
-        // Real gateway checkout (Cashfree) — used by onboarding + Settings.
+        // Real gateway checkout (Razorpay) — used by onboarding + Settings.
         $app->post('/subscription/checkout', [SubscriptionController::class, 'checkout']);
         $app->get('/onboarding/billing/success', [OnboardingController::class, 'billingSuccess']);
-        $app->get('/onboarding/billing/cashfree-return', [OnboardingController::class, 'cashfreeReturn']);
+        $app->get('/onboarding/billing/razorpay-return', [OnboardingController::class, 'razorpayReturn']);
         $app->get('/onboarding/clinic-setup', [OnboardingController::class, 'clinicSetup']);
         $app->post('/onboarding/clinic-setup', [OnboardingController::class, 'saveClinicSetup']);
         $app->post('/onboarding/clinic-setup/draft', [OnboardingController::class, 'draftClinicSetup']);

@@ -20,8 +20,9 @@ $dot = static fn (bool $on): string => $on
         <div>
             <h1 class="text-xl font-semibold">Payment gateway</h1>
             <p class="text-sm text-slate-500">
-                Subscription payments (clinics paying for plans). Credentials are stored in
-                the server's <code>.env</code> for security and are <strong>read-only here</strong>.
+                Subscription payments (clinics paying for plans) are processed via
+                <strong>Razorpay</strong>. Credentials are stored in the server's
+                <code>.env</code> for security and are <strong>read-only here</strong>.
             </p>
         </div>
 
@@ -37,30 +38,31 @@ $dot = static fn (bool $on): string => $on
                         <?php endif; ?>
                     </div>
                 </div>
-                <?php if ($g['active'] === 'cashfree'): ?>
-                <span class="rounded-full px-3 py-1 text-xs font-medium <?= $g['cashfree_mode'] === 'production' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' ?>">
-                    <?= $g['cashfree_mode'] === 'production' ? '● Production' : '● Sandbox' ?>
+                <?php if ($g['active'] === 'razorpay'): ?>
+                <span class="rounded-full px-3 py-1 text-xs font-medium <?= $g['razorpay_mode'] === 'production' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' ?>">
+                    <?= $g['razorpay_mode'] === 'production' ? '● Production (live)' : '● Sandbox (test)' ?>
                 </span>
                 <?php endif; ?>
             </div>
         </section>
 
-        <!-- Per-gateway key status -->
+        <!-- Credentials -->
         <section class="rounded-xl border bg-white p-5 shadow-sm space-y-4">
             <h2 class="text-sm font-semibold">Credentials</h2>
 
-            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div>
-                    <div class="font-medium">Cashfree <span class="text-xs text-slate-400">(primary)</span></div>
-                    <div class="text-xs text-slate-500">CASHFREE_APP_ID · CASHFREE_SECRET_KEY · CASHFREE_ENV</div>
-                </div>
-                <?= $dot((bool) $g['cashfree_set']) ?>
-            </div>
-
             <div class="flex items-center justify-between">
                 <div>
-                    <div class="font-medium">Razorpay <span class="text-xs text-slate-400">(fallback)</span></div>
-                    <div class="text-xs text-slate-500">RAZORPAY_KEY_ID · RAZORPAY_KEY_SECRET</div>
+                    <div class="font-medium">Razorpay</div>
+                    <div class="text-xs text-slate-500">RAZORPAY_KEY_ID · RAZORPAY_KEY_SECRET · RAZORPAY_ENV · RAZORPAY_WEBHOOK_SECRET</div>
+                    <?php if (!empty($g['key_prefix'])): ?>
+                    <div class="mt-1 text-[11px] text-slate-400">Key prefix: <code><?= htmlspecialchars($g['key_prefix']) ?>…</code>
+                        <?php if (str_starts_with((string) $g['key_prefix'], 'rzp_live') && $g['razorpay_mode'] !== 'production'): ?>
+                        <span class="ml-1 text-rose-600">⚠ live key but RAZORPAY_ENV is sandbox</span>
+                        <?php elseif (str_starts_with((string) $g['key_prefix'], 'rzp_test') && $g['razorpay_mode'] === 'production'): ?>
+                        <span class="ml-1 text-rose-600">⚠ test key but RAZORPAY_ENV is production</span>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
                 </div>
                 <?= $dot((bool) $g['razorpay_set']) ?>
             </div>
@@ -70,22 +72,30 @@ $dot = static fn (bool $on): string => $on
         <section class="rounded-xl border bg-white p-5 shadow-sm space-y-2 text-sm">
             <h2 class="text-sm font-semibold">Endpoints</h2>
             <div class="flex justify-between gap-4">
-                <span class="text-slate-500">Cashfree API base</span>
-                <code class="text-slate-700"><?= htmlspecialchars($g['cashfree_api_base']) ?></code>
+                <span class="text-slate-500">Razorpay API base</span>
+                <code class="text-slate-700"><?= htmlspecialchars($g['razorpay_api_base']) ?></code>
             </div>
             <div class="flex justify-between gap-4">
-                <span class="text-slate-500">Cashfree webhook</span>
-                <code class="text-slate-700"><?= htmlspecialchars($g['cashfree_webhook']) ?></code>
-            </div>
-            <div class="flex justify-between gap-4">
-                <span class="text-slate-500">Razorpay webhook</span>
+                <span class="text-slate-500">Webhook URL</span>
                 <code class="text-slate-700"><?= htmlspecialchars($g['razorpay_webhook']) ?></code>
             </div>
         </section>
 
+        <!-- Setup checklist -->
+        <section class="rounded-xl border bg-white p-5 shadow-sm space-y-2 text-sm">
+            <h2 class="text-sm font-semibold">Going live</h2>
+            <ol class="ml-4 list-decimal space-y-1 text-slate-600">
+                <li>Sandbox: use <code>rzp_test_…</code> keys and set <code>RAZORPAY_ENV=sandbox</code>.</li>
+                <li>Production: swap in <code>rzp_live_…</code> keys and set <code>RAZORPAY_ENV=production</code>.</li>
+                <li>In the Razorpay dashboard → Webhooks, add the URL above and subscribe to
+                    <code>payment.captured</code>, <code>payment.failed</code>, and <code>order.paid</code>.</li>
+                <li>Copy the webhook secret into <code>RAZORPAY_WEBHOOK_SECRET</code>.</li>
+            </ol>
+        </section>
+
         <p class="text-xs text-slate-400">
             To change keys or switch sandbox/production, edit <code>.env</code> on the server and reload.
-            Per-clinic patient-payment keys (Razorpay) are managed by each clinic under Settings → Notifications.
+            Per-clinic patient-payment keys are managed by each clinic under Settings → Notifications.
         </p>
     </main>
 </body>

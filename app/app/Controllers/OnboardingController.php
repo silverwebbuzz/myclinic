@@ -68,19 +68,20 @@ final class OnboardingController
     }
 
     /**
-     * Cashfree redirects the doctor here after payment (?order_id=...). We
-     * verify the order with Cashfree's API and activate the plan — this is the
-     * safety net for a missed/late webhook (verify is idempotent).
+     * Razorpay Checkout returns the doctor here after payment
+     * (?order_id=...&payment_id=...). We verify the order against Razorpay's
+     * API and activate the plan — this is the safety net for a missed/late
+     * webhook (verify is idempotent).
      */
-    public function cashfreeReturn(Request $request): Response
+    public function razorpayReturn(Request $request): Response
     {
         $orderId = (string) ($request->query['order_id'] ?? '');
-        $paid = $orderId !== '' && BillingGatewayService::verifyCashfreeOrder($orderId);
+        $paid = $orderId !== '' && BillingGatewayService::verifyRazorpayOrder($orderId);
 
         // A doctor who has already finished onboarding (step >= 5) is paying a
         // RENEWAL/UPGRADE from Settings — they must NOT be dropped back into the
         // first-time clinic-setup wizard. Only a first-time payer continues into
-        // onboarding. (Cashfree's return_url is shared for both flows, so we
+        // onboarding. (Razorpay's return URL is shared for both flows, so we
         // branch here on onboarding state.)
         $onboarded = OnboardingService::currentStep() >= 5;
 

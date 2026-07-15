@@ -19,7 +19,7 @@ use PDO;
  * CRUD over the `plans` catalog (migration 030). This is the source of truth
  * PlanService reads; config/plans.php is only a fallback when the table is
  * empty/missing. Edits here flow straight into onboarding, the pricing page,
- * and Cashfree checkout.
+ * and Razorpay checkout.
  *
  * `modules` accepts the literal "all_paid" (every core module) or a
  * comma/newline list of module ids. highlights/limits are one-per-line.
