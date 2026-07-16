@@ -157,9 +157,9 @@ a{color:inherit;text-decoration:none}
 .nav{position:fixed;top:0;left:0;right:0;z-index:100;background:#fff;backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--line);transition:all .25s ease;height:80px;display:flex;align-items:center}
 .nav-inner{max-width:1280px;margin:0 auto;padding:0 20px;width:100%}
 .nav .nav-inner{display:flex;align-items:center;gap:28px}
-.logo{font-size:18px;font-weight:600;letter-spacing:-.4px;color:var(--ink);display:inline-flex;align-items:center;width:180px}
+.logo{font-size:18px;font-weight:600;letter-spacing:-.4px;color:var(--ink);display:inline-flex;align-items:center;width:180px;height:40px;flex-shrink:0}
 .logo em{color:var(--teal-600);font-style:normal;font-weight:600}
-.logo-img{display:block;height:100%;width:100%;object-fit:contain;object-position:center center}
+.logo-img{display:block;height:40px;width:auto;max-width:180px;object-fit:contain;object-position:center center}
 .nav-links{display:flex;gap:24px;flex:1;min-width:0}
 .nav-link{font-size:16px;font-weight:500;color:var(--ink-2);position:relative;padding:4px 0;transition:color .15s}
 .nav-cta{display:flex;gap:8px;align-items:center;flex-shrink:0}
@@ -174,11 +174,14 @@ a{color:inherit;text-decoration:none}
 .nav-burger{display:none;background:transparent;border:0;margin-left:4px;cursor:pointer;color:var(--ink);border-radius:8px}
 .nav-burger svg{width:28px;height:28px}
 @media (max-width:900px){.nav-inner{padding:0 20px;gap:12px}.nav-burger{display:inline-flex;align-items:center;justify-content:center}.nav-signin{display:none}.nav-user-hi{display:none}.nav-user-caret{display:none}.nav .btn{padding:8px 14px;font-size:13px;line-height:1.2}.nav-links{display:none}}
+/* Safety net before Alpine + full CSS: hide cloaked UI; keep icons from exploding. */
+[x-cloak]{display:none!important}
+.hp-path-ic img{width:26px;height:auto;object-fit:contain}
+.security-item svg{width:20px;height:20px;flex-shrink:0;fill:none;stroke:#0c8b6f;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
     </style>
-    <!-- Full stylesheet loaded async so it no longer blocks first paint. -->
-    <link rel="preload" as="style" href="/assets/css/styles.css?v=<?= $stylesBust ?>"
-          onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="/assets/css/styles.css?v=<?= $stylesBust ?>" /></noscript>
+    <!-- Render-blocking on purpose: async loading caused a long FOUC (half-styled
+         homepage) whenever styles.css lagged — especially on slow/3G connections. -->
+    <link rel="stylesheet" href="/assets/css/styles.css?v=<?= $stylesBust ?>">
     <?php if (!empty($extraHead)) echo $extraHead; ?>
 
     <!-- Alpine self-hosted (was jsdelivr CDN). Serving it from our own origin
@@ -223,15 +226,17 @@ a{color:inherit;text-decoration:none}
         </nav>
 
         <div class="nav-cta">
-            <!-- Logged out: opens the shared login modal. -->
-            <button type="button" class="nav-signin" x-show="!patient"
+            <!-- Logged out: opens the shared login modal.
+                 Server-render the correct branch so we don't flash both states
+                 before Alpine boots; x-cloak only on the inactive branch. -->
+            <button type="button" class="nav-signin" x-show="!patient"<?= $ecpPatient ? ' x-cloak' : '' ?>
                     @click="window.ecpAuth && window.ecpAuth.open('default')"
                     style="background: none; border: 0; cursor: pointer; padding: 0; font: inherit;">
                 Patient login
             </button>
 
             <!-- Logged in: greeting + avatar dropdown -->
-            <div class="nav-user" x-show="patient" @click.outside="patientMenuOpen = false">
+            <div class="nav-user" x-show="patient"<?= $ecpPatient ? '' : ' x-cloak' ?> @click.outside="patientMenuOpen = false">
                 <button type="button" class="nav-user-btn" @click="patientMenuOpen = !patientMenuOpen">
                     <span class="nav-user-avatar">
                         <template x-if="patient && patient.has_photo">
@@ -241,10 +246,15 @@ a{color:inherit;text-decoration:none}
                             <span x-text="patientInitial()"></span>
                         </template>
                     </span>
-                    <span class="nav-user-hi">Hi, <strong x-text="patientFirstName()"></strong></span>
+                    <span class="nav-user-hi">Hi, <strong x-text="patientFirstName()"><?php
+                        if ($ecpPatient) {
+                            $ecpNavFirst = $ecpPatient['first_name'] ?? explode(' ', trim((string) ($ecpPatient['name'] ?? '')))[0];
+                            echo e($ecpNavFirst);
+                        }
+                    ?></strong></span>
                     <svg class="nav-user-caret" :class="patientMenuOpen ? 'open' : ''" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                 </button>
-                <div class="nav-user-menu" x-show="patientMenuOpen" x-transition.opacity>
+                <div class="nav-user-menu" x-show="patientMenuOpen" x-cloak x-transition.opacity>
                     <a href="/patient" class="nav-user-item">My Health</a>
                     <a href="/find-a-doctor" class="nav-user-item">Find a doctor</a>
                     <button type="button" class="nav-user-item danger" @click="signOut()">Sign out</button>
@@ -315,4 +325,3 @@ function ecpHeader() {
 </script>
 
 <?php require __DIR__ . '/auth-modal.php'; ?>
-<?php require __DIR__ . '/doctor-claim-modal.php'; ?>

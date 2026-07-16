@@ -169,6 +169,10 @@ window.ecpLoadRecaptcha = window.ecpLoadRecaptcha || (function () {
 <?php endif; ?>
 
 <style>
+/* Hide until Alpine removes x-cloak — must beat .auth-overlay { display:flex }
+   and must not wait on async styles.css (see critical CSS in header.php). */
+.auth-overlay[x-cloak] { display: none !important; }
+
 .auth-overlay {
   position: fixed; inset: 0;
   background: rgba(15, 23, 30, 0.55);
