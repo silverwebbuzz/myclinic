@@ -57,6 +57,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^find-a-doctor/([A-Za-z0-9][A-Za-z0-9\-]*)/([A-Za-z0-9][A-Za-z0-9\-]*)/?$ find-a-doctor.php?seo=$1/$2 [L,QSA,NC]
 
+# -------- Lab detail pages (/lab/{type}/{slug}) --------
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^lab/(package|organ|symptom|life|step|why|partner)/([a-z0-9][a-z0-9\-]*)/?$ lab-detail.php?type=$1&slug=$2 [L,QSA,NC]
+
 # -------- Pricing moved into the For-doctors (features) page --------
 # Redirect the retired /pricing page to the new section so old links/SEO survive.
 RewriteRule ^pricing/?$ /features#pricing [R=301,L]

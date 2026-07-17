@@ -47,6 +47,42 @@ try {
     $footerCities = [];
 }
 ?>
+<!-- Our Presence — city directory strip (images can be added later) -->
+<?php
+$presenceCities = [
+    'Agra', 'Ahmedabad', 'Aligarh', 'Bareilly', 'Bengaluru', 'Bhopal', 'Bhubaneswar', 'Bilaspur',
+    'Chennai', 'Chhattisgarh', 'Coimbatore', 'Dadar', 'Delhi', 'Dhanbad', 'Ernakulam', 'Faridabad',
+    'Ghaziabad', 'Goa', 'Gonda', 'Greater Noida', 'Gurgaon', 'Gwalior', 'Hyderabad', 'Indore',
+    'Jabalpur', 'Jaipur', 'Jamshedpur', 'Jhansi', 'Jodhpur', 'Kalyan', 'Kerala', 'Kochi',
+    'Kolkata', 'Kota', 'Lucknow', 'Ludhiana', 'Mangalore', 'Mulund', 'Mumbai', 'Navi Mumbai',
+    'Nizamabad', 'Noida', 'Panaji', 'Patiala', 'Patna', 'Pune', 'Rajkot', 'Ranchi',
+    'Ratnagiri', 'South Delhi', 'Surat', 'Tirupati', 'Udaipur', 'Varanasi', 'Venkateswara nagar',
+    'Vijayawada', 'Visakhapatnam', 'West Bengal', 'West Delhi',
+];
+$presenceTitle = $presenceTitle ?? 'Our Presence';
+$presenceSub = $presenceSub ?? 'Find doctors & clinics across these cities';
+?>
+<section class="foot-presence" aria-labelledby="foot-presence-title">
+    <div class="wrap">
+        <h2 id="foot-presence-title" class="foot-presence-title"><?= e($presenceTitle) ?></h2>
+        <p class="foot-presence-sub"><?= e($presenceSub) ?></p>
+        <div class="foot-presence-rule" aria-hidden="true"></div>
+        <div class="foot-presence-list">
+            <?php foreach ($presenceCities as $i => $cityName): ?>
+                <?php
+                $slug = function_exists('ecp_slug_for_city') ? ecp_slug_for_city($cityName) : '';
+                $href = $slug !== '' ? '/find-a-doctor/' . rawurlencode($slug) : '/find-a-doctor';
+                ?>
+                <?php if ($i > 0): ?><span class="foot-presence-sep" aria-hidden="true">|</span><?php endif; ?>
+                <a class="foot-presence-link" href="<?= e($href) ?>"><?= e($cityName) ?></a>
+            <?php endforeach; ?>
+        </div>
+        <!-- Optional image grid (hidden until assets are added):
+             <div class="foot-presence-gallery" hidden>...</div>
+        -->
+    </div>
+</section>
+
 <?php if (!empty($footerCities)): ?>
     <section class="foot-cities">
         <div class="wrap">
