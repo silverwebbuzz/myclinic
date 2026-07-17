@@ -276,9 +276,28 @@ button {
 }
 
 .nav-signin {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 14px;
-  font-weight: 500;
-  color: var(--ink-2);
+  font-weight: 600;
+  color: var(--teal-700, #0b7a56);
+  background: #fff;
+  border: 1px solid var(--teal-600);
+  border-radius: 999px;
+  padding: 7px 14px;
+  cursor: pointer;
+  line-height: 1.2;
+  transition: background .15s, color .15s;
+}
+
+.nav-signin:hover {
+  background: var(--teal-600);
+  color: #fff;
+}
+
+.nav-signin svg {
+  flex-shrink: 0;
 }
 
 /* Awareness ribbon symbol in the header (→ /cervical-cancer) */

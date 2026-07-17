@@ -1119,9 +1119,13 @@ require __DIR__ . '/partials/header.php';
   }
 
   .pt-auth-tabs button.is-active {
-    background: #fff;
-    color: var(--ink);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+    background: var(--teal-600, #0F9B6E);
+    color: #fff;
+    box-shadow: 0 1px 3px rgba(15, 155, 110, 0.25), 0 0 0 1px rgba(15, 155, 110, 0.35);
+  }
+
+  .pt-auth-tabs button.is-active:hover {
+    color: #fff;
   }
 
   .pt-auth-form {
@@ -2756,7 +2760,7 @@ require __DIR__ . '/partials/header.php';
   function patientInlineAuth(captchaEnabled) {
     return {
       step: 'phone', // 'phone' | 'code'
-      intent: 'signin', // 'signin' | 'signup'
+      intent: 'signup', // 'signin' | 'signup' — default to Create account for new-visitor conversion
       phoneDigits: '',
       code: '',
       name: '',

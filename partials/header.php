@@ -164,7 +164,9 @@ a{color:inherit;text-decoration:none}
 .nav-link{font-size:16px;font-weight:500;color:var(--ink-2);position:relative;padding:4px 0;transition:color .15s}
 .nav-cta{display:flex;gap:8px;align-items:center;flex-shrink:0}
 .nav .btn{padding:7px 16px;font-size:16px}
-.nav-signin{font-size:14px;font-weight:500;color:var(--ink-2)}
+.nav-signin{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:var(--teal-700,#0b7a56);background:#fff;border:1px solid var(--teal-600);border-radius:999px;padding:7px 14px;cursor:pointer;line-height:1.2;transition:background .15s,color .15s}
+.nav-signin:hover{background:var(--teal-600);color:#fff}
+.nav-signin svg{flex-shrink:0}
 .nav-user{position:relative}
 .nav-user-btn{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 12px 4px 4px;font:inherit;font-size:13.5px;color:var(--ink);cursor:pointer}
 .nav-user-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--teal-400),var(--teal-700));color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;letter-spacing:-.3px;overflow:hidden}
@@ -230,9 +232,9 @@ a{color:inherit;text-decoration:none}
                  Server-render the correct branch so we don't flash both states
                  before Alpine boots; x-cloak only on the inactive branch. -->
             <button type="button" class="nav-signin" x-show="!patient"<?= $ecpPatient ? ' x-cloak' : '' ?>
-                    @click="window.ecpAuth && window.ecpAuth.open('default')"
-                    style="background: none; border: 0; cursor: pointer; padding: 0; font: inherit;">
-                Patient login
+                    @click="window.ecpAuth && window.ecpAuth.open('default')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Your Health Panel
             </button>
 
             <!-- Logged in: greeting + avatar dropdown -->
