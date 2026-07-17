@@ -80,9 +80,8 @@ try {
                 <h5>For patients</h5>
                 <ul>
                     <li><a href="/for-patients">Why eClinicPro</a></li>
-                    <li><a href="/patient">Register free</a></li>
+                    <li><a href="/patient">Sign in / Register</a></li>
                     <li><a href="/find-a-doctor">Find a doctor</a></li>
-                    <li><a href="/patient">My health panel</a></li>
                     <li><a href="/for-patients#family">Family profiles</a></li>
                     <li><a href="/for-patients#rx">E-prescriptions</a></li>
                 </ul>
