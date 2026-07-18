@@ -28,6 +28,8 @@ $patientFeatures = [
         'Add up to 6 family members with their date of birth, gender, blood group and ABHA number. Book for them and share details with the clinic instantly.'],
     ['💊', 'Your e-prescription vault',
         'Upload prescriptions you already have, and receive new ones straight from your eClinicPro doctor — all in one secure place, always with you.'],
+    ['🧪', 'Keep every lab report',
+        'Blood tests, X-rays, scans — upload your past reports for yourself or any family member, and carry your full history to every appointment.'],
     ['👤', 'One profile, everywhere',
         'Keep your contact, address, emergency contact, allergies and chronic conditions ready — so a clinic never asks you to fill the same form twice.'],
 ];
@@ -61,6 +63,8 @@ $patientFaqs = [
         'Yes. If a clinic has not joined yet, you can still send a booking request — we notify the clinic and track it for you until they confirm.'],
     ['What can I do with my prescriptions?',
         'Your e-prescription vault keeps everything in one place. You can upload prescriptions you already have, and receive new ones straight from your eClinicPro doctor — always with you, whenever you need them.'],
+    ['Can I store my old lab reports?',
+        'Yes. You can upload past test results — blood work, X-rays, scans and more — as a photo or PDF, for yourself or any family member. Add the lab name and report date so everything stays easy to find, and your full history is with you at every appointment.'],
     ['What is ABHA and do I need it?',
         'ABHA (Ayushman Bharat Health Account) is India’s digital health ID. It is optional — you can add it to your profile and family members if you have one, but you can use every feature without it.'],
 ];

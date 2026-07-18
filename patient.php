@@ -684,6 +684,113 @@ require __DIR__ . '/partials/header.php';
             </template>
           </div>
 
+          <!-- ============ LAB REPORTS TAB ============ -->
+          <div x-show="tab === 'labs'" class="pt-tab-pane">
+            <div class="pt-section-head">
+              <h3>Lab reports</h3>
+              <button type="button" class="btn-mini primary" @click="labs.startAdd()" x-show="!labs.adding">+ Add report</button>
+            </div>
+            <p class="pt-section-note">
+              Keep every test result in one place — blood work, scans, X-rays. Upload a photo or PDF
+              of a report you already have and it stays with you, for any doctor you visit.
+            </p>
+
+            <div x-show="labs.loading" class="pt-loading">Loading your lab reports…</div>
+
+            <!-- Add form (patient self-upload) -->
+            <template x-if="labs.adding">
+              <div class="pt-fam-edit">
+                <div class="pt-fam-edit-grid">
+                  <label class="pt-fld"><span>For</span>
+                    <select x-model="labs.form.family_member_id">
+                      <option value="">Myself</option>
+                      <template x-for="m in family.members" :key="'labm-' + m.id">
+                        <template x-if="!m.is_self">
+                          <option :value="m.id" x-text="m.name"></option>
+                        </template>
+                      </template>
+                    </select>
+                  </label>
+                  <label class="pt-fld"><span>Title *</span>
+                    <input type="text" x-model="labs.form.label" placeholder="e.g. Complete Blood Count — Jul 2026">
+                  </label>
+                  <label class="pt-fld"><span>Test type <em>(optional)</em></span>
+                    <input type="text" x-model="labs.form.test_type" list="ecp-lab-types" placeholder="e.g. Blood test">
+                    <datalist id="ecp-lab-types">
+                      <option value="Blood test"></option>
+                      <option value="Urine test"></option>
+                      <option value="X-Ray"></option>
+                      <option value="Ultrasound"></option>
+                      <option value="CT scan"></option>
+                      <option value="MRI"></option>
+                      <option value="ECG"></option>
+                      <option value="Biopsy / pathology"></option>
+                      <option value="Other"></option>
+                    </datalist>
+                  </label>
+                  <label class="pt-fld"><span>Lab / diagnostic centre <em>(optional)</em></span>
+                    <input type="text" x-model="labs.form.lab_name" placeholder="e.g. Thyrocare">
+                  </label>
+                  <label class="pt-fld"><span>Referred by <em>(optional)</em></span>
+                    <input type="text" x-model="labs.form.doctor_name" placeholder="Doctor's name">
+                  </label>
+                  <label class="pt-fld"><span>Report date <em>(optional)</em></span>
+                    <input type="date" x-model="labs.form.reported_on">
+                  </label>
+                  <label class="pt-fld"><span>Notes <em>(optional)</em></span>
+                    <input type="text" x-model="labs.form.notes" placeholder="e.g. Fasting sample">
+                  </label>
+                  <label class="pt-fld"><span>Report file <em>(photo or PDF)</em></span>
+                    <input type="file" accept="image/*,application/pdf" @change="labs.pickFile($event)">
+                  </label>
+                </div>
+
+                <p class="pt-fam-err" x-show="labs.formError" x-text="labs.formError"></p>
+                <div class="pt-fam-edit-actions">
+                  <button type="button" class="btn-mini" @click="labs.cancelAdd()">Cancel</button>
+                  <button type="button" class="btn-mini primary" :disabled="labs.saving"
+                    @click="labs.save()" x-text="labs.saving ? 'Saving…' : 'Save report'"></button>
+                </div>
+              </div>
+            </template>
+
+            <!-- List -->
+            <div class="pt-fam-list" x-show="!labs.loading && labs.items.length > 0">
+              <template x-for="r in labs.items" :key="'lab-' + r.id">
+                <div class="pt-fam-card">
+                  <div class="pt-fam-head">
+                    <span class="pt-fam-avatar">🧪</span>
+                    <span class="pt-fam-id">
+                      <span class="pt-fam-name" x-text="r.label"></span>
+                      <span class="pt-fam-rel">
+                        <template x-if="r.test_type"><span class="pt-fam-blood" x-text="r.test_type"></span></template>
+                        <template x-if="r.lab_name"><span x-text="' · ' + r.lab_name"></span></template>
+                        <template x-if="r.doctor_name"><span x-text="' · ' + r.doctor_name"></span></template>
+                        <template x-if="r.reported_on"><span x-text="' · ' + labs.fmtDate(r.reported_on)"></span></template>
+                        <template x-if="r.notes"><span x-text="' · ' + r.notes"></span></template>
+                      </span>
+                    </span>
+                    <div class="pt-fam-actions">
+                      <template x-if="r.has_file">
+                        <a class="btn-mini" :href="'/api/patient_lab_reports?action=file&id=' + r.id" target="_blank" rel="noopener">View</a>
+                      </template>
+                      <button type="button" class="btn-mini" @click="labs.remove(r)">Remove</button>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <template x-if="!labs.loading && labs.items.length === 0 && !labs.adding">
+              <div class="pt-empty">
+                <div class="glyph">🧪</div>
+                <h3>No lab reports yet</h3>
+                <p>Add your past test results — blood work, scans, X-rays — so you always have them with you at your next appointment.</p>
+                <button type="button" class="btn btn-primary" @click="labs.startAdd()">+ Add a report</button>
+              </div>
+            </template>
+          </div>
+
           <!-- ============ MY PROFILE TAB ============ -->
           <div x-show="tab === 'profile'" class="pt-tab-pane">
             <div class="pt-section-head">
@@ -923,6 +1030,13 @@ require __DIR__ . '/partials/header.php';
               <span class="pt-tab-count" x-show="rx.items.length > 0" x-text="rx.items.length"></span>
             </button>
             <button type="button" role="tab"
+              :class="tab === 'labs' ? 'is-active' : ''"
+              @click="tab = 'labs'; labs.loadOnce()">
+              <span class="pt-nav-ic">🧪</span>
+              <span class="pt-nav-label">Lab reports</span>
+              <span class="pt-tab-count" x-show="labs.items.length > 0" x-text="labs.items.length"></span>
+            </button>
+            <button type="button" role="tab"
               :class="tab === 'profile' ? 'is-active' : ''"
               @click="tab = 'profile'; profile.loadOnce()">
               <span class="pt-nav-ic">👤</span>
@@ -934,10 +1048,6 @@ require __DIR__ . '/partials/header.php';
           <div class="pt-soon">
             <h3>Coming soon</h3>
             <ul>
-              <li>
-                <span class="ic">🧪</span>
-                <div><b>Lab reports</b><span>All your results in one place</span></div>
-              </li>
               <li>
                 <span class="ic">🩺</span>
                 <div><b>Video consult</b><span>Talk to a doctor from home</span></div>
@@ -3289,6 +3399,136 @@ require __DIR__ . '/partials/header.php';
               },
               body: JSON.stringify({
                 id: p.id
+              }),
+            });
+            await this.load();
+          } catch (e) {}
+        },
+        fmtDate(d) {
+          try {
+            return new Date(d).toLocaleDateString('en-IN', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric'
+            });
+          } catch (e) {
+            return d;
+          }
+        },
+      },
+
+      // ---- Lab reports (Labs tab) ----
+      labs: {
+        loaded: false,
+        loading: false,
+        items: [],
+        adding: false,
+        saving: false,
+        formError: '',
+        form: {},
+        file: null,
+
+        async loadOnce() {
+          if (this.loaded) return;
+          await this.load();
+        },
+        async load() {
+          this.loading = true;
+          try {
+            const r = await fetch('/api/patient_lab_reports', {
+              credentials: 'same-origin'
+            });
+            const j = await r.json();
+            this.items = j.ok ? (j.items || []) : [];
+          } catch (e) {
+            this.items = [];
+          } finally {
+            this.loading = false;
+            this.loaded = true;
+          }
+        },
+
+        blankForm() {
+          return {
+            family_member_id: '',
+            label: '',
+            test_type: '',
+            lab_name: '',
+            doctor_name: '',
+            reported_on: '',
+            notes: ''
+          };
+        },
+        startAdd() {
+          this.formError = '';
+          this.file = null;
+          this.form = this.blankForm();
+          this.adding = true;
+          // Family members feed the "For" dropdown — make sure they're loaded.
+          this.$data.family.loadOnce();
+        },
+        cancelAdd() {
+          this.adding = false;
+          this.formError = '';
+          this.file = null;
+        },
+        pickFile(e) {
+          this.file = (e.target.files && e.target.files[0]) || null;
+        },
+
+        async save() {
+          if (!this.form.label.trim()) {
+            this.formError = 'Please enter a title.';
+            return;
+          }
+          this.saving = true;
+          this.formError = '';
+          try {
+            const fd = new FormData();
+            fd.append('label', this.form.label);
+            if (this.form.family_member_id) fd.append('family_member_id', this.form.family_member_id);
+            if (this.form.test_type) fd.append('test_type', this.form.test_type);
+            if (this.form.lab_name) fd.append('lab_name', this.form.lab_name);
+            if (this.form.doctor_name) fd.append('doctor_name', this.form.doctor_name);
+            if (this.form.reported_on) fd.append('reported_on', this.form.reported_on);
+            if (this.form.notes) fd.append('notes', this.form.notes);
+            if (this.file) fd.append('file', this.file);
+
+            const r = await fetch('/api/patient_lab_reports?action=add', {
+              method: 'POST',
+              credentials: 'same-origin',
+              body: fd,
+            });
+            const j = await r.json();
+            if (j.ok) {
+              this.adding = false;
+              this.file = null;
+              await this.load();
+            } else {
+              this.formError = ({
+                label_required: 'Please enter a title.',
+                file_too_large: 'That file is too large (max ' + (j.max_mb || 10) + ' MB).',
+                file_type_not_allowed: 'Only images or PDF files are allowed.',
+                member_not_found: 'That family member could not be found.',
+              })[j.error] || ('Could not save. ' + (j.error || ''));
+            }
+          } catch (e) {
+            this.formError = 'Network error — please try again.';
+          } finally {
+            this.saving = false;
+          }
+        },
+        async remove(r) {
+          if (!confirm('Remove "' + r.label + '" from your lab reports?')) return;
+          try {
+            await fetch('/api/patient_lab_reports?action=remove', {
+              method: 'POST',
+              credentials: 'same-origin',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                id: r.id
               }),
             });
             await this.load();
