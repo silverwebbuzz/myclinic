@@ -59,7 +59,7 @@ $presenceCities = [
     'Ratnagiri', 'South Delhi', 'Surat', 'Tirupati', 'Udaipur', 'Varanasi', 'Venkateswara nagar',
     'Vijayawada', 'Visakhapatnam', 'West Bengal', 'West Delhi',
 ];
-$presenceTitle = $presenceTitle ?? 'Our Presence';
+$presenceTitle = $presenceTitle ?? 'Available in 50+ Cities';
 $presenceSub = $presenceSub ?? 'Find doctors & clinics across these cities';
 ?>
 <section class="foot-presence" aria-labelledby="foot-presence-title">

@@ -205,6 +205,25 @@ $doctorImg = lab_photo('photo-1612349317150-e413f6a5b16d', 480, 560);
 $waterImg = lab_photo('photo-1548839140-29a749e1cf4d', 560, 420);
 $reportImg = lab_photo('photo-1576091160399-112ba8d25d1d', 700, 520);
 
+$pkgPriceNum = (int) preg_replace('/\D/', '', (string) $price);
+$pkgMrpNum = (int) preg_replace('/\D/', '', (string) $mrp);
+$pkgDiscount = ($pkgMrpNum > $pkgPriceNum) ? ($pkgMrpNum - $pkgPriceNum) : 0;
+
+$bookCities = ['Mumbai', 'Delhi', 'Bengaluru', 'Hyderabad', 'Chennai', 'Kolkata', 'Pune', 'Ahmedabad', 'Jaipur', 'Surat', 'Lucknow', 'Indore', 'Chandigarh', 'Nagpur', 'Coimbatore'];
+$bookTimeSlots = [
+    '06:00 AM - 07:00 AM', '07:00 AM - 08:00 AM', '08:00 AM - 09:00 AM', '09:00 AM - 10:00 AM',
+    '10:00 AM - 11:00 AM', '11:00 AM - 12:00 PM', '12:00 PM - 01:00 PM', '02:00 PM - 03:00 PM',
+    '03:00 PM - 04:00 PM', '04:00 PM - 05:00 PM', '05:00 PM - 06:00 PM',
+];
+$addonTests = [
+    ['id' => 'vitd', 'label' => 'Vitamin D Total', 'count' => 1, 'price' => 899],
+    ['id' => 'vitb12', 'label' => 'Vitamin B-12', 'count' => 1, 'price' => 699],
+    ['id' => 'tft', 'label' => 'Thyroid Profile Total', 'count' => 3, 'price' => 499],
+    ['id' => 'hba1c', 'label' => 'HbA1c', 'count' => 1, 'price' => 399],
+    ['id' => 'iron', 'label' => 'Iron Studies', 'count' => 4, 'price' => 550],
+    ['id' => 'lipid', 'label' => 'Lipid Profile', 'count' => 5, 'price' => 450],
+];
+
 $extraHead = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@flaticon/flaticon-uicons@3.3.1/css/regular/rounded.css">';
 
 require __DIR__ . '/partials/header.php';
@@ -215,7 +234,7 @@ require __DIR__ . '/partials/header.php';
     Preview only — lab booking launching soon. Detail pages are for layout &amp; partner demos.
 </div>
 
-<main class="ldp ldp-<?= e($type) ?>">
+<main class="ldp ldp-<?= e($type) ?><?= ($isPkg && $pkgPriceNum > 0) ? ' ldp-has-book' : '' ?>">
 
     <div class="wrap">
         <nav class="ldp-crumbs" aria-label="Breadcrumb">
@@ -227,10 +246,12 @@ require __DIR__ . '/partials/header.php';
             <span aria-hidden="true">›</span>
             <span><?= e($d['title']) ?></span>
         </nav>
-    </div>
+
+        <div class="ldp-shell<?= ($isPkg && $pkgPriceNum > 0) ? ' has-aside' : '' ?>">
+            <div class="ldp-main">
 
     <!-- Hero -->
-    <section class="ldp-hero wrap">
+    <section class="ldp-hero">
         <div class="ldp-hero-grid">
             <div class="ldp-hero-copy">
                 <span class="ldp-badge"><?= e($badge) ?></span>
@@ -255,21 +276,37 @@ require __DIR__ . '/partials/header.php';
                     <strong>₹<?= e($price) ?></strong>
                     <?php if ($mrp !== ''): ?><s>₹<?= e($mrp) ?></s><?php endif; ?>
                     <?php if ($off !== ''): ?><span><?= e($off) ?>% OFF</span><?php endif; ?>
-                </div>
-                <?php endif; ?>
-                <div class="ldp-hero-actions">
+                        <div class="ldp-hero-actions">
                     <?php if ($isPkg): ?>
-                    <button type="button" class="ldp-btn ldp-btn-primary lab-book" data-book="<?= e($d['title']) ?>">Book Home Collection</button>
-                    <a href="#ldp-tests" class="ldp-btn ldp-btn-ghost">View Tests</a>
+                    <a href="#ldpBookForm" class="ldp-btn ldp-btn-primary">Book Home Collection</a>
+                    <!-- <a href="#ldp-tests" class="ldp-btn ldp-btn-ghost">View Tests</a> -->
                     <?php else: ?>
                     <a href="/lab#lab-packages" class="ldp-btn ldp-btn-primary">Browse Packages</a>
                     <a href="/lab" class="ldp-btn ldp-btn-ghost">Back to Lab</a>
                     <?php endif; ?>
                 </div>
+                </div>
+                <?php endif; ?>
+                <!-- <div class="ldp-hero-actions">
+                    <?php if ($isPkg): ?>
+                    <a href="#ldpBookForm" class="ldp-btn ldp-btn-primary">Book Home Collection</a>
+                    <a href="#ldp-tests" class="ldp-btn ldp-btn-ghost">View Tests</a>
+                    <?php else: ?>
+                    <a href="/lab#lab-packages" class="ldp-btn ldp-btn-primary">Browse Packages</a>
+                    <a href="/lab" class="ldp-btn ldp-btn-ghost">Back to Lab</a>
+                    <?php endif; ?>
+                </div> -->
                 <div class="ldp-hero-trust">
                     <span>🔒 Secure booking</span>
                     <span>✔ 100% Safe &amp; Hygienic</span>
                 </div>
+                <div class="ldp-hero-logos" aria-label="Lab partners and certifications">
+                    <img src="/assets/img/logos/thyrocare-logo.webp" alt="Thyrocare" width="140" height="48" loading="lazy">
+                    <img src="/assets/img/logos/nabl-logo.webp" alt="100% NABL Accreditation" width="72" height="72" loading="lazy">
+                    <img src="/assets/img/logos/cap-accredited-logo.webp" alt="CAP Accredited" width="120" height="48" loading="lazy">
+                    <img src="/assets/img/logos/isologo.webp" alt="ISO 9001" width="72" height="72" loading="lazy">
+                </div>
+                
             </div>
             <div class="ldp-hero-media">
                 <img src="<?= e($heroSide) ?>" alt="<?= e($d['title']) ?>" width="900" height="700" loading="eager">
@@ -278,7 +315,7 @@ require __DIR__ . '/partials/header.php';
     </section>
 
     <!-- Highlights bar -->
-    <section class="ldp-bar wrap">
+    <section class="ldp-bar">
         <div class="ldp-bar-inner">
             <?php foreach ($highlightsBar as [$label]): ?>
             <div class="ldp-bar-item">
@@ -291,7 +328,7 @@ require __DIR__ . '/partials/header.php';
 
     <!-- What's included chips -->
     <?php if ($includeChips): ?>
-    <section class="ldp-section wrap">
+    <section class="ldp-section">
         <div class="ldp-section-head">
             <h2>What’s Included</h2>
             <?php if ($isPkg): ?><a href="#ldp-tests">View all tests</a><?php endif; ?>
@@ -335,7 +372,7 @@ require __DIR__ . '/partials/header.php';
 
     <!-- Tests + Why choose (two-card layout) -->
     <section class="ldp-section ldp-section-soft" id="ldp-tests">
-        <div class="wrap ldp-tw">
+        <div class="ldp-tw">
             <article class="ldp-tw-card">
                 <header class="ldp-tw-head">
                     <h2><?= $isPkg ? 'Tests Included' : 'Key Details' ?></h2>
@@ -392,7 +429,7 @@ require __DIR__ . '/partials/header.php';
 
     <!-- Prep + How it works -->
     <section class="ldp-section ldp-section-prep">
-        <div class="wrap ldp-split-prep">
+        <div class="ldp-split-prep">
             <article class="ldp-prep-card">
                 <h2 class="ldp-h2 ldp-h2-teal">Before Your Test</h2>
                 <ul class="ldp-prep-list">
@@ -452,7 +489,7 @@ require __DIR__ . '/partials/header.php';
     </section> -->
 
     <!-- FAQ -->
-    <section class="ldp-section wrap" id="ldp-faq">
+    <section class="ldp-section" id="ldp-faq">
         <div class="ldp-section-head ldp-section-head-center">
             <h2>Frequently Asked Questions</h2>
         </div>
@@ -483,7 +520,6 @@ require __DIR__ . '/partials/header.php';
     <!-- Related -->
     <?php if (!empty($d['related'])): ?>
     <section class="ldp-section ldp-section-soft">
-        <div class="wrap">
             <div class="ldp-section-head">
                 <h2>You may also like</h2>
                 <a href="/lab#lab-packages">View all packages</a>
@@ -505,9 +541,161 @@ require __DIR__ . '/partials/header.php';
                 </a>
                 <?php endforeach; ?>
             </div>
-        </div>
     </section>
     <?php endif; ?>
+
+            </div><!-- /.ldp-main -->
+
+            <?php if ($isPkg && $pkgPriceNum > 0): ?>
+            <aside class="ldp-aside" id="ldpBookForm" aria-label="Book this package">
+                <div class="ldp-bf">
+                    <header class="ldp-bf-head">
+                        <h2>Book This Package</h2>
+                    </header>
+                    <form class="ldp-bf-form" id="ldpLabBookForm" novalidate
+                          data-pkg-price="<?= (int) $pkgPriceNum ?>"
+                          data-pkg-mrp="<?= (int) $pkgMrpNum ?>"
+                          data-pkg-name="<?= e($d['title']) ?>"
+                          data-hardcopy="75">
+
+                        <div class="ldp-bf-block">
+                            <h3 class="ldp-bf-title">Price Details</h3>
+                            <div class="ldp-bf-price-rows">
+                                <div class="ldp-bf-row">
+                                    <span>MRP</span>
+                                    <s id="ldpBfMrp">₹<?= number_format(max($pkgMrpNum, $pkgPriceNum)) ?></s>
+                                </div>
+                                <div class="ldp-bf-row">
+                                    <span>Discount</span>
+                                    <span class="ldp-bf-discount" id="ldpBfDiscount">- ₹<?= number_format($pkgDiscount) ?></span>
+                                </div>
+                                <div class="ldp-bf-row ldp-bf-row-pay">
+                                    <span>You Pay</span>
+                                    <strong id="ldpBfYouPay">₹<?= number_format($pkgPriceNum) ?></strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ldp-bf-block">
+                            <label class="ldp-bf-label" for="ldpBfPersons">Number of Persons</label>
+                            <div class="ldp-bf-qty" role="group" aria-label="Number of persons">
+                                <button type="button" class="ldp-bf-qty-btn" id="ldpBfQtyMinus" aria-label="Decrease">−</button>
+                                <input type="number" name="persons" id="ldpBfPersons" value="1" min="1" max="10" readonly>
+                                <button type="button" class="ldp-bf-qty-btn" id="ldpBfQtyPlus" aria-label="Increase">+</button>
+                            </div>
+
+                            <p class="ldp-bf-hint">Write <strong>Exact Pincode</strong>, not nearby Pincode</p>
+                            <div class="ldp-bf-pinrow">
+                                <input type="text" name="pincode" id="ldpBfPincode" inputmode="numeric" maxlength="6" placeholder="Pincode" pattern="[1-9][0-9]{5}" required autocomplete="postal-code">
+                                <button type="button" class="ldp-bf-check" id="ldpBfPinCheck">Check Availability</button>
+                            </div>
+                            <p class="ldp-bf-pinmsg" id="ldpBfPinMsg" hidden></p>
+
+                            <label class="ldp-bf-label" for="ldpBfDate">Preferred Date</label>
+                            <div class="ldp-bf-icon-field">
+                                <input type="date" id="ldpBfDate" name="appointment_date" required aria-label="Select Preferred Appointment Date">
+                                <span class="ldp-bf-ico" aria-hidden="true"><i class="fi fi-rr-calendar"></i></span>
+                            </div>
+
+                            <label class="ldp-bf-label" for="ldpBfTime">Time Slot</label>
+                            <div class="ldp-bf-select-wrap ldp-bf-icon-field">
+                                <select id="ldpBfTime" name="time_slot" required>
+                                    <option value="" disabled selected>Select Time Slot</option>
+                                    <?php foreach ($bookTimeSlots as $slot): ?>
+                                    <option value="<?= e($slot) ?>"><?= e($slot) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <span class="ldp-bf-ico" aria-hidden="true"><i class="fi fi-rr-clock"></i></span>
+                            </div>
+                        </div>
+
+                        <div class="ldp-bf-block">
+                            <p class="ldp-bf-hint">Write <strong>FULL NAME</strong> for all persons.</p>
+                            <div id="ldpBfBeneficiaries" class="ldp-bf-beneficiaries">
+                                <div class="ldp-bf-person" data-person="1">
+                                    <input type="text" name="beneficiary_name[]" placeholder="Beneficiary Name 1" required autocomplete="name">
+                                    <div class="ldp-bf-agegender">
+                                        <input type="number" name="beneficiary_age[]" min="1" max="120" placeholder="Age" required>
+                                        <select name="beneficiary_gender[]" required aria-label="Select Gender">
+                                            <option value="" disabled selected>Select Gender</option>
+                                            <option value="Male">Male</option>
+                                            <option value="Female">Female</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <label class="ldp-bf-label" for="ldpBfEmail">Email</label>
+                            <input type="email" id="ldpBfEmail" name="email" placeholder="Email" required autocomplete="email">
+
+                            <label class="ldp-bf-label" for="ldpBfPhone">Phone</label>
+                            <input type="tel" id="ldpBfPhone" name="phone" placeholder="Phone" required inputmode="tel" maxlength="10" pattern="[6-9][0-9]{9}" autocomplete="tel">
+
+                            <label class="ldp-bf-label" for="ldpBfAddress">Complete Address</label>
+                            <textarea id="ldpBfAddress" name="address" rows="3" placeholder="Complete Address" required autocomplete="street-address"></textarea>
+                            <p class="ldp-bf-note-soft">Order with incomplete/invalid address will be rejected.</p>
+                        </div>
+
+                        <div class="ldp-bf-block">
+                            <h3 class="ldp-bf-title">Additional Information</h3>
+                            <label class="ldp-bf-label" for="ldpBfCoupon">Coupon Code <span>(Optional)</span></label>
+                            <input type="text" id="ldpBfCoupon" name="coupon" placeholder="Enter coupon code" autocomplete="off">
+                            <p class="ldp-bf-coupon-msg" id="ldpBfCouponMsg" hidden></p>
+
+                            <label class="ldp-bf-label" for="ldpBfNotes">Add Notes <span>(Optional)</span></label>
+                            <textarea id="ldpBfNotes" name="notes" rows="3" placeholder="Write any instructions"></textarea>
+                        </div>
+
+                        <div class="ldp-bf-block" id="ldpBookAddons">
+                            <h3 class="ldp-bf-title">Tick To Add Additional Tests (Optional)</h3>
+                            <div class="ldp-bf-addons">
+                                <?php foreach ($addonTests as $addon): ?>
+                                <label class="ldp-bf-addon">
+                                    <input type="checkbox" name="addons[]" value="<?= e($addon['id']) ?>" data-price="<?= (int) $addon['price'] ?>">
+                                    <span><?= e($addon['label']) ?> (<?= (int) $addon['count'] ?>) @ Rs. <?= (int) $addon['price'] ?></span>
+                                </label>
+                                <?php endforeach; ?>
+                            </div>
+                            <label class="ldp-bf-hardcopy">
+                                <input type="checkbox" name="hard_copy" id="ldpBfHardCopy" value="1">
+                                <span>Please tick to receive hard copy / SMS updates. Courier charges <strong>Rs. 75 Extra.</strong></span>
+                            </label>
+                        </div>
+
+                        <button type="submit" class="ldp-bf-submit">Book Now</button>
+
+                        <div class="ldp-bf-paylater">
+                            <span class="ldp-bf-paylater-ico" aria-hidden="true"><i class="fi fi-rr-wallet"></i></span>
+                            <div>
+                                <strong>Book Now, Pay Later!</strong>
+                                <p>Simple process. No cost EMI options available.</p>
+                            </div>
+                        </div>
+
+                        <div class="ldp-bf-summary">
+                            <div class="ldp-bf-row">
+                                <span>Test Package Price</span>
+                                <span class="ldp-bf-val" id="ldpBfSumPkg">₹<?= number_format($pkgPriceNum) ?></span>
+                            </div>
+                            <div class="ldp-bf-row">
+                                <span>Home Collection Charges</span>
+                                <span class="ldp-bf-val">Free</span>
+                            </div>
+                            <div class="ldp-bf-row ldp-bf-row-total">
+                                <span>Total Amount</span>
+                                <strong id="ldpBfSumTotal">₹<?= number_format($pkgPriceNum) ?></strong>
+                            </div>
+                            <p class="ldp-bf-note">Note: Payment should be made before or at the time of sample collection.</p>
+                            <p class="ldp-bf-secure"><i class="fi fi-rr-shield-check" aria-hidden="true"></i> 100% Secure Booking</p>
+                        </div>
+                    </form>
+                </div>
+            </aside>
+            <?php endif; ?>
+
+        </div><!-- /.ldp-shell -->
+    </div><!-- /.wrap -->
 
 </main>
 
@@ -518,10 +706,10 @@ require __DIR__ . '/partials/header.php';
         <div class="ldp-sticky-actions">
             <?php if ($isPkg && $price !== ''): ?>
             <div class="ldp-sticky-price">
-                <strong>₹<?= e($price) ?></strong>
-                <?php if ($off !== ''): ?><span><?= e($off) ?>% OFF</span><?php endif; ?>
+                <strong id="ldpStickyTotal">₹<?= e($price) ?></strong>
+                <?php if ($off !== ''): ?><span id="ldpStickyOff"><?= e($off) ?>% OFF</span><?php endif; ?>
             </div>
-            <button type="button" class="ldp-btn ldp-btn-light lab-book" data-book="<?= e($d['title']) ?>">Book Now</button>
+            <a href="#ldpBookForm" class="ldp-btn ldp-btn-light">Book Now</a>
             <?php else: ?>
             <a href="/lab#lab-packages" class="ldp-btn ldp-btn-light">Browse Packages</a>
             <?php endif; ?>
@@ -540,33 +728,275 @@ require __DIR__ . '/partials/header.php';
         if (msg) toast.textContent = msg;
         toast.classList.add('is-on');
         clearTimeout(timer);
-        timer = setTimeout(function () { toast.classList.remove('is-on'); }, 2600);
+        timer = setTimeout(function () { toast.classList.remove('is-on'); }, 3200);
     }
-    document.addEventListener('click', function (ev) {
-        var book = ev.target.closest('[data-book]');
-        if (!book) return;
-        ev.preventDefault();
-        var pkg = book.getAttribute('data-book') || 'Lab Test';
-        if (window.ecpAuth && typeof window.ecpAuth.require === 'function') {
-            window.ecpAuth.require('lab_booking', function () {
-                showToast('You’re signed in — “' + pkg + '” booking opens soon.');
-            });
-        } else {
-            showToast();
-        }
-    });
 
     var faqSearch = document.getElementById('ldpFaqSearch');
     var faqItems = document.querySelectorAll('#ldpFaqGrid .ldp-faq-item');
     if (faqSearch && faqItems.length) {
         faqSearch.addEventListener('input', function () {
-            var q = (faqSearch.value || '').toLowerCase().trim().toggleCase();
+            var q = (faqSearch.value || '').toLowerCase().trim();
             faqItems.forEach(function (el) {
                 var hay = el.getAttribute('data-faq') || '';
                 el.hidden = q !== '' && hay.indexOf(q) === -1;
             });
         });
     }
+
+    var form = document.getElementById('ldpLabBookForm');
+    if (!form) return;
+
+    var pkgPrice = parseInt(form.getAttribute('data-pkg-price') || '0', 10) || 0;
+    var pkgMrp = parseInt(form.getAttribute('data-pkg-mrp') || '0', 10) || pkgPrice;
+    var hardFee = parseInt(form.getAttribute('data-hardcopy') || '75', 10) || 75;
+    var personsInput = document.getElementById('ldpBfPersons');
+    var minusBtn = document.getElementById('ldpBfQtyMinus');
+    var plusBtn = document.getElementById('ldpBfQtyPlus');
+    var beneficiaries = document.getElementById('ldpBfBeneficiaries');
+    var dateInput = document.getElementById('ldpBfDate');
+    var pinInput = document.getElementById('ldpBfPincode');
+    var pinCheck = document.getElementById('ldpBfPinCheck');
+    var pinMsg = document.getElementById('ldpBfPinMsg');
+    var hardCopy = document.getElementById('ldpBfHardCopy');
+    var couponInput = document.getElementById('ldpBfCoupon');
+    var couponMsg = document.getElementById('ldpBfCouponMsg');
+    var couponOff = 0;
+    var pinOk = false;
+
+    if (dateInput) {
+        var t = new Date();
+        dateInput.min = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+    }
+
+    function persons() {
+        return Math.max(1, Math.min(10, parseInt((personsInput && personsInput.value) || '1', 10) || 1));
+    }
+
+    function personBlockHtml(n) {
+        return ''
+            + '<div class="ldp-bf-person" data-person="' + n + '">'
+            + '<input type="text" name="beneficiary_name[]" placeholder="Beneficiary Name ' + n + '" required autocomplete="name">'
+            + '<div class="ldp-bf-agegender">'
+            + '<input type="number" name="beneficiary_age[]" min="1" max="120" placeholder="Age" required>'
+            + '<select name="beneficiary_gender[]" required aria-label="Select Gender">'
+            + '<option value="" disabled selected>Select Gender</option>'
+            + '<option value="Male">Male</option>'
+            + '<option value="Female">Female</option>'
+            + '<option value="Other">Other</option>'
+            + '</select>'
+            + '</div></div>';
+    }
+
+    function syncBeneficiaries() {
+        if (!beneficiaries) return;
+        var n = persons();
+        var existing = beneficiaries.querySelectorAll('.ldp-bf-person');
+        var cur = existing.length;
+        if (n > cur) {
+            for (var i = cur + 1; i <= n; i++) {
+                beneficiaries.insertAdjacentHTML('beforeend', personBlockHtml(i));
+            }
+        } else if (n < cur) {
+            for (var j = cur; j > n; j--) {
+                var el = beneficiaries.querySelector('.ldp-bf-person[data-person="' + j + '"]');
+                if (el) el.remove();
+            }
+        }
+    }
+
+    function setPersons(n) {
+        n = Math.max(1, Math.min(10, n));
+        if (personsInput) {
+            personsInput.value = String(n);
+            personsInput.classList.add('is-highlight');
+        }
+        syncBeneficiaries();
+        updateTotals();
+    }
+
+    function setPinMsg(text, ok) {
+        if (!pinMsg) return;
+        pinMsg.hidden = !text;
+        pinMsg.textContent = text || '';
+        pinMsg.classList.toggle('is-ok', !!ok);
+        pinMsg.classList.toggle('is-bad', !!text && !ok);
+    }
+
+    function checkPincode() {
+        var pin = ((pinInput && pinInput.value) || '').replace(/\D/g, '');
+        if (pinInput) pinInput.value = pin;
+        if (!/^[1-9][0-9]{5}$/.test(pin)) {
+            pinOk = false;
+            setPinMsg('Enter a valid 6-digit Indian pincode.', false);
+            return false;
+        }
+        var first = parseInt(pin.charAt(0), 10);
+        pinOk = first >= 1 && first <= 8;
+        if (pinOk) {
+            setPinMsg('Home collection available for pincode ' + pin + '.', true);
+        } else {
+            setPinMsg('Sorry, home collection is not available for this pincode yet.', false);
+        }
+        return pinOk;
+    }
+
+    function addonTotal() {
+        var sum = 0;
+        form.querySelectorAll('input[name="addons[]"]:checked').forEach(function (cb) {
+            sum += parseInt(cb.getAttribute('data-price') || '0', 10) || 0;
+        });
+        return sum;
+    }
+
+    function formatInr(n) {
+        return '₹' + Math.round(n).toLocaleString('en-IN');
+    }
+
+    function applyCoupon() {
+        couponOff = 0;
+        if (!couponMsg) return;
+        var code = ((couponInput && couponInput.value) || '').trim().toUpperCase();
+        if (!code) {
+            couponMsg.hidden = true;
+            couponMsg.textContent = '';
+            return;
+        }
+        if (code === 'SAVE100') {
+            couponOff = 100;
+            couponMsg.hidden = false;
+            couponMsg.className = 'ldp-bf-coupon-msg is-ok';
+            couponMsg.textContent = 'Coupon applied: ₹100 off';
+        } else if (code === 'LAB50') {
+            couponOff = 50;
+            couponMsg.hidden = false;
+            couponMsg.className = 'ldp-bf-coupon-msg is-ok';
+            couponMsg.textContent = 'Coupon applied: ₹50 off';
+        } else {
+            couponMsg.hidden = false;
+            couponMsg.className = 'ldp-bf-coupon-msg is-bad';
+            couponMsg.textContent = 'Invalid coupon code';
+        }
+    }
+
+    function updateTotals() {
+        var p = persons();
+        var mrpLine = Math.max(pkgMrp, pkgPrice) * p;
+        var pkgLine = pkgPrice * p;
+        var addons = addonTotal() * p;
+        var hard = (hardCopy && hardCopy.checked) ? hardFee : 0;
+        var discount = (mrpLine - pkgLine) + couponOff;
+        var total = Math.max(0, pkgLine + addons + hard - couponOff);
+
+        var elMrp = document.getElementById('ldpBfMrp');
+        var elDisc = document.getElementById('ldpBfDiscount');
+        var elPay = document.getElementById('ldpBfYouPay');
+        var elSumPkg = document.getElementById('ldpBfSumPkg');
+        var elSumTotal = document.getElementById('ldpBfSumTotal');
+        var elStickyTotal = document.getElementById('ldpStickyTotal');
+
+        if (elMrp) elMrp.textContent = formatInr(mrpLine);
+        if (elDisc) elDisc.textContent = '- ' + formatInr(Math.max(0, discount));
+        if (elPay) elPay.textContent = formatInr(total);
+        if (elSumPkg) elSumPkg.textContent = formatInr(pkgLine + addons);
+        if (elSumTotal) elSumTotal.textContent = formatInr(total);
+        if (elStickyTotal) elStickyTotal.textContent = formatInr(total);
+    }
+
+    if (minusBtn) minusBtn.addEventListener('click', function () { setPersons(persons() - 1); });
+    if (plusBtn) plusBtn.addEventListener('click', function () { setPersons(persons() + 1); });
+
+    if (pinCheck) pinCheck.addEventListener('click', checkPincode);
+    if (pinInput) {
+        pinInput.addEventListener('input', function () {
+            pinOk = false;
+            setPinMsg('', false);
+            this.value = this.value.replace(/\D/g, '').slice(0, 6);
+        });
+        pinInput.addEventListener('blur', function () {
+            if (this.value.length === 6) checkPincode();
+        });
+    }
+
+    form.addEventListener('change', function (ev) {
+        var t = ev.target;
+        if (t && (t.name === 'addons[]' || t.id === 'ldpBfHardCopy')) updateTotals();
+    });
+
+    if (couponInput) {
+        couponInput.addEventListener('change', function () { applyCoupon(); updateTotals(); });
+        couponInput.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Enter') {
+                ev.preventDefault();
+                applyCoupon();
+                updateTotals();
+            }
+        });
+    }
+
+    // Highlight focused fields (as in reference)
+    form.querySelectorAll('input, select, textarea').forEach(function (el) {
+        el.addEventListener('focus', function () {
+            form.querySelectorAll('.is-highlight').forEach(function (h) { h.classList.remove('is-highlight'); });
+            var target = el.closest('.ldp-bf-qty') || el.closest('.ldp-bf-pinrow') || el.closest('.ldp-bf-icon-field') || el.closest('.ldp-bf-select-wrap') || el;
+            target.classList.add('is-highlight');
+        });
+    });
+
+    form.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        applyCoupon();
+        updateTotals();
+
+        if (!checkPincode()) {
+            pinInput && pinInput.focus();
+            return;
+        }
+        if (!dateInput || !dateInput.value) {
+            showToast('Please select preferred appointment date.');
+            dateInput && dateInput.focus();
+            return;
+        }
+        var time = document.getElementById('ldpBfTime');
+        if (!time || !time.value) {
+            showToast('Please select a time slot.');
+            time && time.focus();
+            return;
+        }
+        var phone = document.getElementById('ldpBfPhone');
+        var phoneVal = ((phone && phone.value) || '').replace(/\D/g, '');
+        if (phone) phone.value = phoneVal;
+        if (!/^[6-9][0-9]{9}$/.test(phoneVal)) {
+            showToast('Enter a valid 10-digit mobile number.');
+            phone && phone.focus();
+            return;
+        }
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        var pkgName = form.getAttribute('data-pkg-name') || 'Lab package';
+        var totalText = (document.getElementById('ldpBfSumTotal') || {}).textContent || '';
+        function finish() {
+            showToast('Booking request received for “' + pkgName + '” (' + totalText + '). We’ll confirm shortly.');
+            form.reset();
+            couponOff = 0;
+            pinOk = false;
+            setPinMsg('', false);
+            if (couponMsg) { couponMsg.hidden = true; couponMsg.textContent = ''; }
+            if (beneficiaries) beneficiaries.innerHTML = personBlockHtml(1);
+            setPersons(1);
+            updateTotals();
+        }
+        if (window.ecpAuth && typeof window.ecpAuth.require === 'function') {
+            window.ecpAuth.require('lab_booking', finish);
+        } else {
+            finish();
+        }
+    });
+
+    syncBeneficiaries();
+    updateTotals();
 })();
 </script>
 
