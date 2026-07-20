@@ -21,4 +21,7 @@ fetch_blog/output/
 
 # 90-day campaign workbook — planning doc, keep local only
 document/eClinicPro_90Day_7City_Workbook.xlsx
+
+# document/ — local source data & planning material (Thyrocare JSON/xlsx, etc.)
+document/
 fetch_blog/img/

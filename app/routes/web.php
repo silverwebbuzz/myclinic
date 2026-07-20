@@ -442,6 +442,18 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/specialties', [SpecialtyAdminController::class, 'save']);
         $admin->post('/specialties/{id}/toggle', [SpecialtyAdminController::class, 'toggle']);
 
+        // Lab test catalog (Thyrocare-sourced products, categories, coupons)
+        $admin->get('/lab/products', [\App\Controllers\LabAdminController::class, 'products']);
+        $admin->get('/lab/products/{id}', [\App\Controllers\LabAdminController::class, 'productDetail']);
+        $admin->post('/lab/products/{id}', [\App\Controllers\LabAdminController::class, 'saveProduct']);
+        $admin->post('/lab/products/{id}/toggle', [\App\Controllers\LabAdminController::class, 'toggleProduct']);
+        $admin->get('/lab/categories', [\App\Controllers\LabAdminController::class, 'categories']);
+        $admin->post('/lab/categories', [\App\Controllers\LabAdminController::class, 'saveCategory']);
+        $admin->post('/lab/categories/{id}/toggle', [\App\Controllers\LabAdminController::class, 'toggleCategory']);
+        $admin->get('/lab/coupons', [\App\Controllers\LabAdminController::class, 'coupons']);
+        $admin->post('/lab/coupons', [\App\Controllers\LabAdminController::class, 'saveCoupon']);
+        $admin->post('/lab/coupons/{id}/toggle', [\App\Controllers\LabAdminController::class, 'toggleCoupon']);
+
         // States & cities catalog (Listed on eClinicPro pickers)
         $admin->get('/locations', [LocationAdminController::class, 'index']);
         $admin->post('/locations/states', [LocationAdminController::class, 'saveState']);
