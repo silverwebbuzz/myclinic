@@ -67,11 +67,14 @@ RewriteRule ^lab/category/([a-z0-9][a-z0-9\-]*)/?$ lab-listing.php?type=category
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^lab/test/([a-z0-9][a-z0-9\-]*)/?$ lab-detail.php?type=test&slug=$1 [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^lab/symptom/([a-z0-9][a-z0-9\-]*)/?$ lab-listing.php?type=symptom&slug=$1 [L,QSA,NC]
 
 # -------- Lab detail pages (/lab/{type}/{slug}) --------
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^lab/(package|organ|symptom|life|step|why|partner)/([a-z0-9][a-z0-9\-]*)/?$ lab-detail.php?type=$1&slug=$2 [L,QSA,NC]
+RewriteRule ^lab/(package|organ|life|step|why|partner)/([a-z0-9][a-z0-9\-]*)/?$ lab-detail.php?type=$1&slug=$2 [L,QSA,NC]
 
 # -------- Pricing moved into the For-doctors (features) page --------
 # Redirect the retired /pricing page to the new section so old links/SEO survive.

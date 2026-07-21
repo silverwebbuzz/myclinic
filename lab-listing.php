@@ -41,6 +41,29 @@ if ($view === 'category') {
     $subheading = 'Book ' . $catName . ' diagnostic tests and packages with free home sample collection.';
     $canonicalUrl = ecp_site_url(ecp_lab_category_url($slug));
     $crumbLabel = $catName;
+} elseif ($view === 'symptom') {
+    if ($slug === '' || !preg_match('/^[a-z0-9-]+$/', $slug)) {
+        http_response_code(404);
+        require __DIR__ . '/404.php';
+        return;
+    }
+    $listing = ecp_lab_symptom_listing($slug);
+    if (!$listing['category']) {
+        http_response_code(404);
+        require __DIR__ . '/404.php';
+        return;
+    }
+    $symName    = $listing['category']['name'];
+    $symDesc    = $listing['category']['desc'] ?? '';
+    $pageTitle  = 'Tests for ' . $symName . ' — Book Online | eClinicPro';
+    $metaDesc   = 'Not sure which test to book for ' . strtolower($symName) . '? '
+        . 'See the ' . $listing['total'] . '+ most relevant lab tests and health packages at eClinicPro — '
+        . 'NABL-accredited labs, free home sample collection and a free doctor consult.';
+    $heading    = 'Tests for ' . $symName;
+    $subheading = $symDesc !== '' ? $symDesc . ' — recommended tests & packages.'
+        : 'The most relevant tests and packages for this concern.';
+    $canonicalUrl = ecp_site_url(ecp_lab_symptom_url($slug));
+    $crumbLabel = $symName;
 } else {
     $view = 'hub';
     $listing = ecp_lab_listing(null);

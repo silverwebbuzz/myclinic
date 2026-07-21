@@ -155,6 +155,11 @@ if (function_exists('ecp_db') && ($labDb = ecp_db())) {
             $emit('/lab/category/' . rawurlencode($c['slug']), '0.8', 'weekly');
         }
 
+        // Book-by-symptom listings (curated concern pages; strong patient search).
+        foreach (array_keys(ecp_lab_symptom_map()) as $symptomSlug) {
+            $emit('/lab/symptom/' . rawurlencode($symptomSlug), '0.7', 'weekly');
+        }
+
         // Every active product: packages/offers → /lab/package, tests → /lab/test.
         $stmt = $labDb->query(
             "SELECT product_type, slug FROM lab_products WHERE is_active = 1 ORDER BY product_type, slug"

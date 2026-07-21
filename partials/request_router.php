@@ -77,7 +77,16 @@ function ecp_dispatch_clean_url(string $requestUri): bool
         return true;
     }
 
-    if (preg_match('#^/lab/(package|organ|symptom|life|step|why|partner)/([a-z0-9][a-z0-9\-]*)/?$#i', $uri, $m)) {
+    // Book-by-symptom listing — /lab/symptom/{slug} (was a thin detail page).
+    if (preg_match('#^/lab/symptom/([a-z0-9][a-z0-9\-]*)/?$#i', $uri, $m)) {
+        $_GET['type'] = 'symptom';
+        $_GET['slug'] = strtolower($m[1]);
+        require __DIR__ . '/../lab-listing.php';
+
+        return true;
+    }
+
+    if (preg_match('#^/lab/(package|organ|life|step|why|partner)/([a-z0-9][a-z0-9\-]*)/?$#i', $uri, $m)) {
         $_GET['type'] = strtolower($m[1]);
         $_GET['slug'] = strtolower($m[2]);
         require __DIR__ . '/../lab-detail.php';

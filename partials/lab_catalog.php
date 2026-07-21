@@ -710,6 +710,99 @@ function ecp_lab_organ_category_map(): array
 }
 
 /**
+ * Maps a "Book by Symptom" tile -> the clinical concepts that investigate it,
+ * as [label, description, keywords[]]. A symptom is NOT a single category — it
+ * bundles categories + specific test/parameter name keywords (e.g. fever →
+ * infection markers + malaria/dengue/typhoid). ecp_lab_symptom_listing() shows
+ * every product whose name, category, or contained test matches any keyword.
+ *
+ * @return array<string,array{0:string,1:string,2:list<string>}>
+ */
+function ecp_lab_symptom_map(): array
+{
+    return [
+        'fever' => ['Fever', 'Cold, flu & viral infections',
+            ['fever', 'malaria', 'dengue', 'typhoid', 'infection', 'widal', 'crp', 'hemogram', 'esr', 'chikungunya']],
+        'cough' => ['Cough & Cold', 'Dry cough, wet cough & allergy',
+            ['respiratory', 'infection', 'allergy', 'ige', 'hemogram', 'crp', 'influenza', 'covid']],
+        'body-pain' => ['Body Pain', 'Muscle, joint & back pain',
+            ['arthritis', 'vitamin d', 'calcium', 'uric acid', 'rheumatoid', 'ra factor', 'crp', 'esr']],
+        'stomach' => ['Stomach Issues', 'Acidity, gas, bloating & pain',
+            ['liver', 'gastro', 'stool', 'amylase', 'lipase', 'h. pylori', 'hepatitis', 'lft']],
+        'skin' => ['Skin Problems', 'Acne, allergy, rashes & itching',
+            ['allergy', 'ige', 'skin', 'vitamin', 'thyroid', 'hemogram', 'fungal']],
+        'fatigue' => ['Fatigue & Weakness', 'Tiredness & low energy',
+            ['anaemia', 'thyroid', 'vitamin', 'iron', 'b12', 'hemogram', 'sugar', 'ferritin']],
+        'weight' => ['Weight Issues', 'Weight gain or loss',
+            ['thyroid', 'diabetes', 'lipid', 'sugar', 'hba1c', 'cortisol', 'insulin']],
+        'heart-health' => ['Heart Health', 'Chest pain, BP & cholesterol',
+            ['cardiac', 'lipid', 'cholesterol', 'homocysteine', 'troponin', 'crp', 'apolipoprotein']],
+    ];
+}
+
+/**
+ * Listing for a "Book by Symptom" tile. Resolves the symptom to keyword rules
+ * (ecp_lab_symptom_map) and returns products whose name / category / contained
+ * test matches any keyword — shaped IDENTICALLY to ecp_lab_listing() so the
+ * listing page renders it with no changes.
+ *
+ * @return array{category: ?array, packages: list<array>, offers: list<array>, tests: list<array>, total: int}
+ */
+function ecp_lab_symptom_listing(string $symptomSlug, int $limit = 120): array
+{
+    $empty = ['category' => null, 'packages' => [], 'offers' => [], 'tests' => [], 'total' => 0];
+    $map = ecp_lab_symptom_map();
+    if (!isset($map[$symptomSlug]) || !function_exists('ecp_db') || !($db = ecp_db())) {
+        return $empty;
+    }
+    [$label, $desc, $keywords] = $map[$symptomSlug];
+
+    try {
+        // Build an OR of LIKE conditions across name / category / parameter,
+        // each keyword its OWN placeholder (native prepares forbid reuse).
+        $conds = [];
+        $args  = [];
+        $i = 0;
+        foreach ($keywords as $kw) {
+            $like = '%' . $kw . '%';
+            $conds[] = "lp.name LIKE :k{$i}a";           $args[":k{$i}a"] = $like;
+            $conds[] = "EXISTS (SELECT 1 FROM lab_product_categories lpc_s JOIN lab_categories c_s ON c_s.id=lpc_s.category_id WHERE lpc_s.product_id=lp.id AND c_s.name LIKE :k{$i}b)"; $args[":k{$i}b"] = $like;
+            $conds[] = "EXISTS (SELECT 1 FROM lab_product_parameters lpp_s JOIN lab_parameters par_s ON par_s.id=lpp_s.parameter_id WHERE lpp_s.product_id=lp.id AND par_s.name LIKE :k{$i}c)"; $args[":k{$i}c"] = $like;
+            $i++;
+        }
+        $orSql = '(' . implode(' OR ', $conds) . ')';
+
+        $sql = "SELECT lp.id, lp.product_type, lp.slug, lp.name, lp.test_count,
+                       lp.test_groups_json, pr.mrp, pr.offer_rate
+                FROM lab_products lp
+                JOIN lab_product_pricing pr ON pr.id = (
+                    SELECT p2.id FROM lab_product_pricing p2
+                    WHERE p2.product_id = lp.id
+                    ORDER BY p2.effective_from DESC, p2.id DESC LIMIT 1
+                )
+                WHERE lp.is_active = 1 AND pr.offer_rate > 0 AND $orSql
+                ORDER BY lp.is_featured DESC, lp.booked_count DESC, lp.test_count DESC, lp.name ASC
+                LIMIT " . (int) $limit;
+        $stmt = $db->prepare($sql);
+        $stmt->execute($args);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        // A synthetic "category" so the page shows a heading/breadcrumb.
+        $out = $empty;
+        $out['category'] = ['id' => 0, 'name' => $label, 'slug' => $symptomSlug, 'is_symptom' => true, 'desc' => $desc];
+        foreach ($rows as $r) {
+            $item = ecp_lab_shape_listing_item($r);
+            $out[$item['type'] === 'offer' ? 'offers' : ($item['type'] === 'test' ? 'tests' : 'packages')][] = $item;
+            $out['total']++;
+        }
+        return $out;
+    } catch (Throwable $e) {
+        error_log('[ecp_lab_symptom_listing] ' . $e->getMessage());
+        return $empty;
+    }
+}
+
+/**
  * All lab categories that have at least $minProducts active products, for the
  * hub page's category rail AND the sitemap. Cached per request.
  *
@@ -787,44 +880,10 @@ function ecp_lab_listing(?string $categorySlug = null, int $limit = 300): array
         $out = $empty;
         $out['category'] = $category;
         foreach ($rows as $r) {
-            $mrp   = (float) $r['mrp'];
-            $offer = (float) $r['offer_rate'];
-            $offPct = $mrp > 0 ? (int) round(($mrp - $offer) / $mrp * 100) : 0;
-            // Normalize DB product_type -> UI type: PROFILE renders as a
-            // "package" (the tab + card filter use 'package', not 'profile').
-            $uiType = match ($r['product_type']) {
-                'OFFER' => 'offer',
-                'TEST'  => 'test',
-                default => 'package', // PROFILE
-            };
-            // Top test groups (from the precomputed JSON column), biggest first,
-            // as [label => count] — for the "what's inside" chips on the card.
-            $groups = [];
-            if (!empty($r['test_groups_json'])) {
-                $decoded = json_decode((string) $r['test_groups_json'], true);
-                if (is_array($decoded)) {
-                    arsort($decoded);
-                    foreach (array_slice($decoded, 0, 4, true) as $grp => $cnt) {
-                        $groups[ecp_lab_titlecase((string) $grp)] = (int) $cnt;
-                    }
-                }
-            }
-            $item = [
-                'type'   => $uiType,
-                'slug'   => (string) $r['slug'],
-                'title'  => ecp_lab_titlecase($r['name']),
-                'params' => (int) $r['test_count'],
-                'price'  => (int) round($offer),
-                'mrp'    => (int) round($mrp),
-                'off'    => $offPct,
-                'groups' => $groups,
-                'url'    => $r['product_type'] === 'TEST'
-                    ? ecp_lab_test_url((string) $r['slug'])
-                    : ecp_lab_detail_url('package', (string) $r['slug']),
-            ];
-            if ($r['product_type'] === 'OFFER') {
+            $item = ecp_lab_shape_listing_item($r);
+            if ($item['type'] === 'offer') {
                 $out['offers'][] = $item;
-            } elseif ($r['product_type'] === 'TEST') {
+            } elseif ($item['type'] === 'test') {
                 $out['tests'][] = $item;
             } else {
                 $out['packages'][] = $item;
@@ -838,6 +897,51 @@ function ecp_lab_listing(?string $categorySlug = null, int $limit = 300): array
     }
 }
 
+/**
+ * Shape one DB product row into a listing-card item. Shared by category,
+ * symptom and hub listings so the card fields stay consistent.
+ *
+ * @param array<string,mixed> $r  a lab_products row joined with current pricing
+ * @return array<string,mixed>
+ */
+function ecp_lab_shape_listing_item(array $r): array
+{
+    $mrp   = (float) $r['mrp'];
+    $offer = (float) $r['offer_rate'];
+    $offPct = $mrp > 0 ? (int) round(($mrp - $offer) / $mrp * 100) : 0;
+    // Normalize DB product_type -> UI type: PROFILE renders as a "package"
+    // (the tab + card filter use 'package', not 'profile').
+    $uiType = match ($r['product_type']) {
+        'OFFER' => 'offer',
+        'TEST'  => 'test',
+        default => 'package', // PROFILE
+    };
+    // Top test groups from the precomputed JSON column, biggest first.
+    $groups = [];
+    if (!empty($r['test_groups_json'])) {
+        $decoded = json_decode((string) $r['test_groups_json'], true);
+        if (is_array($decoded)) {
+            arsort($decoded);
+            foreach (array_slice($decoded, 0, 4, true) as $grp => $cnt) {
+                $groups[ecp_lab_titlecase((string) $grp)] = (int) $cnt;
+            }
+        }
+    }
+    return [
+        'type'   => $uiType,
+        'slug'   => (string) $r['slug'],
+        'title'  => ecp_lab_titlecase($r['name']),
+        'params' => (int) $r['test_count'],
+        'price'  => (int) round($offer),
+        'mrp'    => (int) round($mrp),
+        'off'    => $offPct,
+        'groups' => $groups,
+        'url'    => $r['product_type'] === 'TEST'
+            ? ecp_lab_test_url((string) $r['slug'])
+            : ecp_lab_detail_url('package', (string) $r['slug']),
+    ];
+}
+
 /** Canonical URL for an individual test's SEO page. */
 function ecp_lab_test_url(string $slug): string
 {
@@ -848,6 +952,12 @@ function ecp_lab_test_url(string $slug): string
 function ecp_lab_category_url(string $slug): string
 {
     return '/lab/category/' . rawurlencode($slug);
+}
+
+/** Canonical URL for a "Book by Symptom" listing page. */
+function ecp_lab_symptom_url(string $slug): string
+{
+    return '/lab/symptom/' . rawurlencode($slug);
 }
 
 /**
