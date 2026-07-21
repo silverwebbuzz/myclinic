@@ -473,15 +473,16 @@ function ecp_lab_raw_catalog(): array
             ['diabetic', '🩸', 'Diabetic Care', 'Monitor blood sugar, HbA1c & organ health to manage diabetes.', 'red'],
             ['thyroid', '🦋', 'Thyroid Care', 'Track T3, T4, TSH & antibodies for complete thyroid health.', 'indigo'],
         ],
+        // "Why book with us" — only claims we can honestly stand behind given
+        // the Thyrocare partnership. Each row: [icon-key, title, blurb].
+        // (No "free doctor consult" / "24-hr reports" — we don't guarantee those.)
         'why' => [
-            ['nabl', 'NABL-Accredited Labs', 'Trusted & accurate results you can rely on.'],
-            ['home', 'Free Home Sample Collection', 'Safe, convenient & hassle-free collection.'],
-            ['reports-app', 'Digital Reports on App', 'Access your reports anytime, anywhere.'],
-            ['fast', 'Reports Within 24 Hours', 'Quick turnaround for faster insights.'],
-            ['doctor', 'Free Doctor Consultation', 'Expert advice with every test you book.'],
-            ['savings', 'Up to 70% Off MRP', 'Affordable pricing on 5000+ tests.'],
-            ['hygiene', 'Safe & Hygienic Collection', 'Trained professionals with proper safety.'],
-            ['india', 'Available Across India', 'Pan-India network at your service.'],
+            ['partner',  'Powered by Thyrocare', "Tests processed by Thyrocare — one of India's largest, most trusted diagnostic networks."],
+            ['accredited', 'NABL & CAP Accredited', 'Samples analysed at NABL-accredited, CAP-certified pathology labs.'],
+            ['catalog',  '700+ Tests & Packages', 'From single tests to full-body checkups — pick exactly what you need.'],
+            ['home',     'Free Home Sample Collection', 'A trained phlebotomist collects your sample at your doorstep — no clinic visit.'],
+            ['discount', 'Extra Discount on Login', 'Members get an extra discount (up to 25%) on top of listed prices when they book here.'],
+            ['digital',  'Digital Reports', 'Your reports are saved to your eClinicPro Health account — access them anytime.'],
         ],
         'steps' => [
             ['01', 'choose', 'Choose a Test or Package', 'Search or browse by organ, symptom or life stage.'],

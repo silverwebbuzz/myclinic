@@ -618,19 +618,37 @@ require __DIR__ . '/partials/header.php';
             <div class="lab-why-shell">
                 <header class="lab-why-head">
                     <h2>Why Book Lab Tests on <span>eClinicPro?</span></h2>
+                    <p>Real diagnostics, honest pricing — powered by Thyrocare, delivered to your door.</p>
                 </header>
 
+                <?php
+                // Inline SVG icons keyed to the $why rows (no external images).
+                $whyIcons = [
+                    // partner — network / connected nodes
+                    'partner' => '<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M7.5 7.5l3.5 8M16.5 7.5l-3.5 8M8 6h8"/>',
+                    // accredited — shield check
+                    'accredited' => '<path d="M12 3l7 2.5v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9v-5L12 3z"/><path d="M9 12l2 2 4-4.5"/>',
+                    // catalog — list / clipboard
+                    'catalog' => '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9zM9 11h6M9 15h6"/>',
+                    // home — house
+                    'home' => '<path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/><path d="M10 19v-5h4v5"/>',
+                    // discount — tag with %
+                    'discount' => '<path d="M4 12V5a1 1 0 011-1h7l8 8-8 8-8-8z"/><circle cx="8.5" cy="8.5" r="1"/><path d="M10 15l5-5"/>',
+                    // digital — phone / report
+                    'digital' => '<rect x="7" y="3" width="10" height="18" rx="2"/><path d="M10 7h4M10 11h4M10 15h2"/>',
+                ];
+                ?>
                 <div class="lab-why-grid">
                     <?php foreach ($why as [$slug, $title, $blurb]): ?>
-                        <a href="<?= e(ecp_lab_detail_url('why', $slug)) ?>" class="lab-why-card">
+                        <div class="lab-why-card">
                             <div class="lab-why-ico" aria-hidden="true">
-                                <img src="<?= e(lab_photo($labPhotos['why-' . $slug], 160, 160)) ?>" alt="" width="160" height="160" loading="lazy">
+                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><?= $whyIcons[$slug] ?? '' ?></svg>
                             </div>
-                            <div>
+                            <div class="lab-why-text">
                                 <strong><?= e($title) ?></strong>
                                 <span><?= e($blurb) ?></span>
                             </div>
-                        </a>
+                        </div>
                     <?php endforeach; ?>
                 </div>
 

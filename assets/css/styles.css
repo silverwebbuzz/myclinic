@@ -11896,7 +11896,8 @@ body {
 
 .lab-why-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* 6 cards -> clean 3 x 2 grid (was 4-col, which left an odd 4+2). */
+  grid-template-columns: repeat(3, 1fr);
   gap: 14px;
 }
 
@@ -11929,6 +11930,17 @@ body {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+/* Inline-SVG icon variant (replaces the old photo icons). */
+.lab-why-ico svg { color: #059669; }
+/* Blurbs are longer now — align the icon to the top of the card. */
+.lab-why-card { align-items: flex-start; }
+.lab-why-text { min-width: 0; }
+.lab-why-head p {
+  margin: .5rem 0 0;
+  font-size: .95rem;
+  color: var(--mute);
+  max-width: 640px;
 }
 
 .lab-why-card strong {
