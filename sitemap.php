@@ -16,6 +16,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/partials/helpers.php';
 require_once __DIR__ . '/partials/db.php';
 require_once __DIR__ . '/partials/seo_slugs.php';
+require_once __DIR__ . '/partials/lab_catalog.php';
 
 header('Content-Type: application/xml; charset=utf-8');
 header('Cache-Control: public, max-age=21600');   // 6 hours
@@ -128,6 +129,46 @@ if ($db) {
         }
     } catch (Throwable $e) {
         error_log('[sitemap] ' . $e->getMessage());
+    }
+}
+
+// ---- Lab catalog: hub, category listings, packages/offers & test pages ----
+// Every crawlable lab URL so Google indexes "diabetes test", "aarogyam",
+// "full body checkup", "vitamin d test price", etc.
+if (function_exists('ecp_db') && ($labDb = ecp_db())) {
+    $emit = static function (string $path, string $priority, string $freq) use ($base, $now): void {
+        echo "  <url>\n";
+        echo "    <loc>{$base}{$path}</loc>\n";
+        echo "    <lastmod>{$now}</lastmod>\n";
+        echo "    <changefreq>{$freq}</changefreq>\n";
+        echo "    <priority>{$priority}</priority>\n";
+        echo "  </url>\n";
+    };
+    try {
+        // Browse hub.
+        $emit('/lab/tests', '0.8', 'weekly');
+
+        // Category listings — only categories with >= 3 products, so we don't
+        // ship thin-content pages to Google (thin pages hurt SEO). Smaller
+        // categories still work if linked, they're just not in the sitemap.
+        foreach (ecp_lab_categories(3) as $c) {
+            $emit('/lab/category/' . rawurlencode($c['slug']), '0.8', 'weekly');
+        }
+
+        // Every active product: packages/offers → /lab/package, tests → /lab/test.
+        $stmt = $labDb->query(
+            "SELECT product_type, slug FROM lab_products WHERE is_active = 1 ORDER BY product_type, slug"
+        );
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $p) {
+            $slug = rawurlencode((string) $p['slug']);
+            if ($p['product_type'] === 'TEST') {
+                $emit('/lab/test/' . $slug, '0.6', 'monthly');
+            } else {
+                $emit('/lab/package/' . $slug, '0.7', 'weekly');
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('[sitemap lab] ' . $e->getMessage());
     }
 }
 

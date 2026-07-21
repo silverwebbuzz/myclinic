@@ -591,6 +591,10 @@ function ecp_lab_find_item(string $type, string $slug): ?array
     if ($type === 'package') {
         return ecp_lab_db_find_package($slug);
     }
+    // Individual test pages (/lab/test/{slug}) resolve straight from the DB.
+    if ($type === 'test') {
+        return ecp_lab_db_find_test($slug);
+    }
     return null;
 }
 
@@ -674,6 +678,215 @@ function ecp_lab_db_find_package(string $slug): ?array
         ];
     } catch (Throwable $e) {
         error_log('[ecp_lab_db_find_package] ' . $e->getMessage());
+        return null;
+    }
+}
+
+// ===========================================================================
+// Listing pages (/lab/tests hub, /lab/category/{slug}, /lab/test/{slug})
+// ===========================================================================
+
+/**
+ * Maps a homepage "organ / body system" tile slug -> the lab_categories slug
+ * its listing page should show. Organs ARE categories, presented visually.
+ * Falls back to the organ slug itself if it happens to match a category.
+ */
+function ecp_lab_organ_category_map(): array
+{
+    return [
+        'heart'      => 'cardiac',
+        'lungs'      => 'infection',      // no lung category; closest is respiratory/infection
+        'liver'      => 'liver',
+        'kidney'     => 'renal',
+        'thyroid'    => 'thyroid',
+        'diabetes'   => 'diabetes',
+        'bone'       => 'arthritis',
+        'brain'      => 'vitamin',        // neuro/B12 → vitamin panel
+        'full-body'  => 'wellness',
+        'vitamins'   => 'vitamin',
+        'immunity'   => 'anaemia',
+        'pregnancy'  => 'pregnancy',
+    ];
+}
+
+/**
+ * All lab categories that have at least $minProducts active products, for the
+ * hub page's category rail AND the sitemap. Cached per request.
+ *
+ * @return list<array{id:int,name:string,slug:string,n:int}>
+ */
+function ecp_lab_categories(int $minProducts = 1): array
+{
+    static $cache = null;
+    if ($cache === null) {
+        $cache = [];
+        if (function_exists('ecp_db') && ($db = ecp_db())) {
+            try {
+                $stmt = $db->query(
+                    'SELECT c.id, c.name, c.slug, COUNT(lpc.product_id) AS n
+                       FROM lab_categories c
+                       JOIN lab_product_categories lpc ON lpc.category_id = c.id
+                       JOIN lab_products lp ON lp.id = lpc.product_id AND lp.is_active = 1
+                      GROUP BY c.id
+                      ORDER BY n DESC, c.name ASC'
+                );
+                $cache = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (Throwable $e) {
+                error_log('[ecp_lab_categories] ' . $e->getMessage());
+            }
+        }
+    }
+    return array_values(array_filter($cache, static fn ($c) => (int) $c['n'] >= $minProducts));
+}
+
+/**
+ * Products for a listing page. Pass a category slug to scope, or null for the
+ * hub ("All"). Returns items shaped for the listing grid, split by type so the
+ * page can show Packages / Offers / Tests sections or tabs.
+ *
+ * @return array{category: ?array, packages: list<array>, offers: list<array>, tests: list<array>, total: int}
+ */
+function ecp_lab_listing(?string $categorySlug = null, int $limit = 300): array
+{
+    $empty = ['category' => null, 'packages' => [], 'offers' => [], 'tests' => [], 'total' => 0];
+    if (!function_exists('ecp_db') || !($db = ecp_db())) {
+        return $empty;
+    }
+
+    try {
+        $category = null;
+        $params = [];
+        $catJoin = '';
+        if ($categorySlug !== null && $categorySlug !== '' && $categorySlug !== 'all') {
+            $cstmt = $db->prepare('SELECT id, name, slug FROM lab_categories WHERE slug = ? LIMIT 1');
+            $cstmt->execute([$categorySlug]);
+            $category = $cstmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            if (!$category) {
+                return $empty; // unknown category → 404 upstream
+            }
+            $catJoin = 'JOIN lab_product_categories lpc ON lpc.product_id = lp.id AND lpc.category_id = :cat';
+            $params[':cat'] = (int) $category['id'];
+        }
+
+        $sql = "SELECT lp.id, lp.product_type, lp.slug, lp.name, lp.test_count,
+                       pr.mrp, pr.offer_rate
+                FROM lab_products lp
+                $catJoin
+                JOIN lab_product_pricing pr ON pr.id = (
+                    SELECT p2.id FROM lab_product_pricing p2
+                    WHERE p2.product_id = lp.id
+                    ORDER BY p2.effective_from DESC, p2.id DESC LIMIT 1
+                )
+                WHERE lp.is_active = 1 AND pr.offer_rate > 0
+                ORDER BY lp.is_featured DESC, lp.booked_count DESC, lp.test_count DESC, lp.name ASC
+                LIMIT " . (int) $limit;
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $out = $empty;
+        $out['category'] = $category;
+        foreach ($rows as $r) {
+            $mrp   = (float) $r['mrp'];
+            $offer = (float) $r['offer_rate'];
+            $offPct = $mrp > 0 ? (int) round(($mrp - $offer) / $mrp * 100) : 0;
+            $item = [
+                'type'   => strtolower($r['product_type']),
+                'slug'   => (string) $r['slug'],
+                'title'  => ecp_lab_titlecase($r['name']),
+                'params' => (int) $r['test_count'],
+                'price'  => (int) round($offer),
+                'mrp'    => (int) round($mrp),
+                'off'    => $offPct,
+                'url'    => $r['product_type'] === 'TEST'
+                    ? ecp_lab_test_url((string) $r['slug'])
+                    : ecp_lab_detail_url('package', (string) $r['slug']),
+            ];
+            if ($r['product_type'] === 'OFFER') {
+                $out['offers'][] = $item;
+            } elseif ($r['product_type'] === 'TEST') {
+                $out['tests'][] = $item;
+            } else {
+                $out['packages'][] = $item;
+            }
+            $out['total']++;
+        }
+        return $out;
+    } catch (Throwable $e) {
+        error_log('[ecp_lab_listing] ' . $e->getMessage());
+        return $empty;
+    }
+}
+
+/** Canonical URL for an individual test's SEO page. */
+function ecp_lab_test_url(string $slug): string
+{
+    return '/lab/test/' . rawurlencode($slug);
+}
+
+/** Canonical URL for a category listing page. */
+function ecp_lab_category_url(string $slug): string
+{
+    return '/lab/category/' . rawurlencode($slug);
+}
+
+/**
+ * Look up a single TEST by slug for its /lab/test/{slug} page. Shaped like an
+ * ecp_lab_items() entry so lab-detail.php can render it. Null if not found.
+ */
+function ecp_lab_db_find_test(string $slug): ?array
+{
+    if (!function_exists('ecp_db') || !($db = ecp_db())) {
+        return null;
+    }
+    try {
+        $stmt = $db->prepare(
+            "SELECT lp.id, lp.slug, lp.name, lp.test_count, lp.description, lp.disease_group,
+                    pr.mrp, pr.offer_rate
+             FROM lab_products lp
+             JOIN lab_product_pricing pr ON pr.id = (
+                 SELECT p2.id FROM lab_product_pricing p2
+                 WHERE p2.product_id = lp.id
+                 ORDER BY p2.effective_from DESC, p2.id DESC LIMIT 1
+             )
+             WHERE lp.slug = ? AND lp.is_active = 1 AND lp.product_type = 'TEST'
+             LIMIT 1"
+        );
+        $stmt->execute([$slug]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return null;
+        }
+        $mrp   = (float) $row['mrp'];
+        $offer = (float) $row['offer_rate'];
+        $offPct = $mrp > 0 ? (int) round(($mrp - $offer) / $mrp * 100) : 0;
+        $photos = ecp_lab_photos();
+        $title = ecp_lab_titlecase($row['name']);
+        return [
+            'type'       => 'package', // reuse the package detail layout (has price + book)
+            'slug'       => (string) $row['slug'],
+            'title'      => $title,
+            'subtitle'   => 'Single diagnostic test'
+                            . ($offPct > 0 ? ' · ' . $offPct . '% off' : ''),
+            'blurb'      => $row['description']
+                            ?: 'Book ' . $title . ' online with free home sample collection and a digital report.',
+            'highlights' => [
+                'Free home sample collection',
+                'NABL-accredited lab processing',
+                'Digital report + free doctor consult',
+            ],
+            'tests'  => [$title],
+            'params' => '1',
+            'price'  => (string) (int) round($offer),
+            'mrp'    => (string) (int) round($mrp),
+            'off'    => (string) $offPct,
+            'cats'   => ['popular'],
+            'badge'  => '',
+            'photo'  => $photos['gal-' . (1 + (abs(crc32($slug)) % 8))] ?? $photos['hero-lab'],
+            'crumb'  => 'Individual Tests',
+        ];
+    } catch (Throwable $e) {
+        error_log('[ecp_lab_db_find_test] ' . $e->getMessage());
         return null;
     }
 }

@@ -51,6 +51,32 @@ function ecp_dispatch_clean_url(string $requestUri): bool
         return true;
     }
 
+    // Lab browse hub — /lab/tests (all packages, offers & tests).
+    if (preg_match('#^/lab/tests/?$#i', $uri)) {
+        $_GET['type'] = 'hub';
+        require __DIR__ . '/../lab-listing.php';
+
+        return true;
+    }
+
+    // Lab category listing — /lab/category/{slug} (SEO landing per concern).
+    if (preg_match('#^/lab/category/([a-z0-9][a-z0-9\-]*)/?$#i', $uri, $m)) {
+        $_GET['type'] = 'category';
+        $_GET['slug'] = strtolower($m[1]);
+        require __DIR__ . '/../lab-listing.php';
+
+        return true;
+    }
+
+    // Individual test page — /lab/test/{slug} (SEO long-tail).
+    if (preg_match('#^/lab/test/([a-z0-9][a-z0-9\-]*)/?$#i', $uri, $m)) {
+        $_GET['type'] = 'test';
+        $_GET['slug'] = strtolower($m[1]);
+        require __DIR__ . '/../lab-detail.php';
+
+        return true;
+    }
+
     if (preg_match('#^/lab/(package|organ|symptom|life|step|why|partner)/([a-z0-9][a-z0-9\-]*)/?$#i', $uri, $m)) {
         $_GET['type'] = strtolower($m[1]);
         $_GET['slug'] = strtolower($m[2]);

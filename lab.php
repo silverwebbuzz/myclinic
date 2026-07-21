@@ -396,8 +396,17 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="lab-organs-grid">
-                <?php foreach ($organs as [$slug, $label, $desc]): ?>
-                    <a href="<?= e(ecp_lab_detail_url('organ', $slug)) ?>" class="lab-organ-card">
+                <?php
+                // Organ tiles now link to the DB-backed category LISTING page
+                // (/lab/category/{slug}) instead of a thin detail page. The map
+                // resolves each organ to its lab_categories slug.
+                $organCatMap = ecp_lab_organ_category_map();
+                foreach ($organs as [$slug, $label, $desc]):
+                    $organUrl = isset($organCatMap[$slug])
+                        ? ecp_lab_category_url($organCatMap[$slug])
+                        : ecp_lab_detail_url('organ', $slug);
+                ?>
+                    <a href="<?= e($organUrl) ?>" class="lab-organ-card">
                         <div class="lab-organ-card-media">
                             <img src="<?= e(lab_photo($labPhotos['organ-' . $slug], 480, 320)) ?>" alt="<?= e($label) ?> health tests" width="480" height="320" loading="lazy">
                         </div>
@@ -766,13 +775,16 @@ if ($labSearchIndex === []) {
         ];
     }
 }
+$organCatMapIdx = ecp_lab_organ_category_map();
 foreach ($organs as [$slug, $label, $desc]) {
     $labSearchIndex[] = [
         'type' => 'organ',
         'slug' => $slug,
         'title' => $label,
         'meta' => 'Body System | ' . $desc,
-        'url' => ecp_lab_detail_url('organ', $slug),
+        'url' => isset($organCatMapIdx[$slug])
+            ? ecp_lab_category_url($organCatMapIdx[$slug])
+            : ecp_lab_detail_url('organ', $slug),
         'q' => strtolower($label . ' ' . $desc),
     ];
 }
@@ -956,7 +968,11 @@ foreach ($lifeStage as [$slug, $ico, $name, $blurb, $accent]) {
             if (input) input.value = q;
             hideSuggest();
             var items = matchItems(q);
-            filterPackageCards(q);
+            // NOTE: search results render in the dedicated #lab-search-results
+            // section below — we do NOT filter the "Popular Health Packages"
+            // grid here (that grid is controlled only by its own tab buttons).
+            // Filtering it on search emptied the grid for terms not in a card's
+            // name (e.g. "Vitamin D", "Iron"), which looked like a blank grid.
 
             if (!resultsSec || !resultsList) return;
             if (!q) {

@@ -57,6 +57,17 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^find-a-doctor/([A-Za-z0-9][A-Za-z0-9\-]*)/([A-Za-z0-9][A-Za-z0-9\-]*)/?$ find-a-doctor.php?seo=$1/$2 [L,QSA,NC]
 
+# -------- Lab browse hub + category listings + test pages (SEO) --------
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^lab/tests/?$ lab-listing.php?type=hub [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^lab/category/([a-z0-9][a-z0-9\-]*)/?$ lab-listing.php?type=category&slug=$1 [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^lab/test/([a-z0-9][a-z0-9\-]*)/?$ lab-detail.php?type=test&slug=$1 [L,QSA,NC]
+
 # -------- Lab detail pages (/lab/{type}/{slug}) --------
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

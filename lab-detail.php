@@ -10,7 +10,7 @@ require_once __DIR__ . '/partials/lab_catalog.php';
 
 $type = strtolower(trim((string) ($_GET['type'] ?? '')));
 $slug = strtolower(trim((string) ($_GET['slug'] ?? '')));
-$allowed = ['package', 'organ', 'symptom', 'life', 'step', 'why', 'partner'];
+$allowed = ['package', 'test', 'organ', 'symptom', 'life', 'step', 'why', 'partner'];
 
 $notFound = static function () use ($type): never {
     http_response_code(404);
@@ -35,7 +35,8 @@ if (!$item) {
 }
 
 $d = ecp_lab_build_detail($item);
-$isPkg = $type === 'package';
+// Individual tests use the same priced/bookable layout as packages.
+$isPkg = ($type === 'package' || $type === 'test');
 $tests = $d['tests'] ?? [];
 $params = $d['params'] ?? (string) max(count($tests), 1);
 $price = $d['price'] ?? '';
