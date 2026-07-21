@@ -298,15 +298,27 @@ require __DIR__ . '/partials/header.php';
 
             <div class="lab-pkgs-grid" id="labPkgsGrid">
                 <?php foreach ($packages as $pkg):
-                    // Positional row (see ecp_lab_db_packages / static fallback). fasting
-                    // is the 11th element ('CF' = fasting required, 'NF' = none, '' = n/a).
+                    // Positional row (see ecp_lab_db_packages / static fallback).
+                    //  [10] fasting ('CF'|'NF'|''); [11] group breakdown (DB rows only).
                     [$slug, $name, $highlights, $tests, $params, $price, $mrp, $off, $cats, $badge] = $pkg;
-                    $fasting = $pkg[10] ?? '';
+                    $fasting   = $pkg[10] ?? '';
+                    $breakdown = $pkg[11] ?? ['groups' => [], 'remaining' => 0];
+                    // DB-sourced packages won't have a curated photo key; rotate
+                    // through the gallery pool by slug so every card has an image.
+                    $pkgPhotoId = $labPhotos['pkg-' . $slug]
+                        ?? $labPhotos['gal-' . (1 + (abs(crc32($slug)) % 8))]
+                        ?? $labPhotos['hero-lab'];
                     ?>
                     <article class="lab-pkg-card"
                         data-cats="<?= e(implode(' ', $cats)) ?>"
                         data-name="<?= e($name) ?>"
                         data-search="<?= e(strtolower($name . ' ' . implode(' ', $tests) . ' ' . implode(' ', $highlights))) ?>">
+                        <div class="lab-pkg-card-media">
+                            <a href="<?= e(ecp_lab_detail_url('package', $slug)) ?>" tabindex="-1" aria-hidden="true">
+                                <img src="<?= e(lab_photo($pkgPhotoId, 640, 400)) ?>" alt="<?= e($name) ?>" width="640" height="400" loading="lazy">
+                            </a>
+                            <?php if ($badge !== ''): ?><span class="lab-pkg-card-badge"><?= e($badge) ?></span><?php endif; ?>
+                        </div>
                         <div class="lab-pkg-card-body">
                             <!-- Top meta chips: audience + fasting (both real / accurate). -->
                             <div class="lab-pkg-chips">
@@ -364,7 +376,20 @@ require __DIR__ . '/partials/header.php';
                                 </div>
                             </div>
 
-                            <p class="lab-pkg-card-incl"><span>Test Included:</span> <?= e(implode(' , ', array_slice($tests, 0, 3))) ?><?php if (count($tests) > 3): ?><a href="<?= e(ecp_lab_detail_url('package', $slug)) ?>" class="lab-pkg-card-more"> …&nbsp;+<?= count($tests) - 3 ?> more</a><?php endif; ?></p>
+                            <?php if (!empty($breakdown['groups'])): ?>
+                                <!-- Test-group breakdown (biggest first) + "+N more" so
+                                     the chips reconcile with the headline test count. -->
+                                <div class="lab-pkg-card-groups">
+                                    <?php foreach ($breakdown['groups'] as $grp => $cnt): ?>
+                                        <span class="lab-pkg-card-group"><?= e($grp) ?> <b><?= (int) $cnt ?></b></span>
+                                    <?php endforeach; ?>
+                                    <?php if (($breakdown['remaining'] ?? 0) > 0): ?>
+                                        <a href="<?= e(ecp_lab_detail_url('package', $slug)) ?>" class="lab-pkg-card-group lab-pkg-card-group-more">+<?= (int) $breakdown['remaining'] ?> more</a>
+                                    <?php endif; ?>
+                                </div>
+                            <?php elseif (!empty($tests)): ?>
+                                <p class="lab-pkg-card-incl"><span>Test Included:</span> <?= e(implode(' , ', array_slice($tests, 0, 3))) ?><?php if (count($tests) > 3): ?><a href="<?= e(ecp_lab_detail_url('package', $slug)) ?>" class="lab-pkg-card-more"> …&nbsp;+<?= count($tests) - 3 ?> more</a><?php endif; ?></p>
+                            <?php endif; ?>
 
                             <!-- Exclusive offer: two-colour price + % chip. -->
                             <div class="lab-pkg-offer">

@@ -168,6 +168,40 @@ function ecp_lab_package_filters(): array
  *
  * @return list<array>
  */
+
+/**
+ * Decode a lab_products.test_groups_json blob into a card-ready breakdown.
+ *
+ * The JSON is {group_name: count} for ALL groups in the package. Cards only have
+ * room for a few chips, so we show the biggest `$top` groups and report how many
+ * individual tests fall outside them — that "+N more" reconciles the visible
+ * chips with the package's headline test_count (e.g. Aarogyam XL = 149 across 18
+ * groups; top 4 sum to 77, so remaining = 72).
+ *
+ * @return array{groups: array<string,int>, remaining: int, total: int}
+ */
+function ecp_lab_group_breakdown(?string $json, int $top = 4): array
+{
+    $all = [];
+    if ($json !== null && $json !== '') {
+        $decoded = json_decode($json, true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $grp => $cnt) {
+                $all[ecp_lab_titlecase((string) $grp)] = (int) $cnt;
+            }
+        }
+    }
+    arsort($all);
+    $total  = array_sum($all);
+    $groups = array_slice($all, 0, $top, true);
+    $shown  = array_sum($groups);
+    return [
+        'groups'    => $groups,
+        'remaining' => max(0, $total - $shown),
+        'total'     => $total,
+    ];
+}
+
 function ecp_lab_db_packages(int $limit = 12): array
 {
     if (!function_exists('ecp_db')) {
@@ -182,7 +216,7 @@ function ecp_lab_db_packages(int $limit = 12): array
         // Grid rows: current price = latest effective_from per product.
         $stmt = $db->prepare(
             "SELECT lp.id, lp.slug, lp.name, lp.test_count, lp.is_featured, lp.fasting,
-                    pr.mrp, pr.offer_rate
+                    lp.test_groups_json, pr.mrp, pr.offer_rate
              FROM lab_products lp
              JOIN lab_product_pricing pr ON pr.id = (
                  SELECT p2.id FROM lab_product_pricing p2
@@ -278,6 +312,9 @@ function ecp_lab_db_packages(int $limit = 12): array
                 !empty($row['is_featured']) ? 'Bestseller' : '',
                 // fasting: 'CF' = fasting required, 'NF' = no fasting, null = unknown.
                 (string) ($row['fasting'] ?? ''),
+                // [11] group breakdown: top groups + "+N more" so chips reconcile
+                // with the headline test_count.
+                ecp_lab_group_breakdown($row['test_groups_json'] ?? null, 4),
             ];
         }
         return $out;
@@ -947,17 +984,10 @@ function ecp_lab_shape_listing_item(array $r): array
         'TEST'  => 'test',
         default => 'package', // PROFILE
     };
-    // Top test groups from the precomputed JSON column, biggest first.
-    $groups = [];
-    if (!empty($r['test_groups_json'])) {
-        $decoded = json_decode((string) $r['test_groups_json'], true);
-        if (is_array($decoded)) {
-            arsort($decoded);
-            foreach (array_slice($decoded, 0, 4, true) as $grp => $cnt) {
-                $groups[ecp_lab_titlecase((string) $grp)] = (int) $cnt;
-            }
-        }
-    }
+    // Top test groups (biggest first) + "+N more" remainder, so the visible
+    // chips reconcile with the headline test_count. Shared helper = same math
+    // as the /lab grid cards.
+    $breakdown = ecp_lab_group_breakdown($r['test_groups_json'] ?? null, 4);
     return [
         'type'   => $uiType,
         'slug'   => (string) $r['slug'],
@@ -966,7 +996,8 @@ function ecp_lab_shape_listing_item(array $r): array
         'price'  => (int) round($offer),
         'mrp'    => (int) round($mrp),
         'off'    => $offPct,
-        'groups' => $groups,
+        'groups' => $breakdown['groups'],
+        'groups_remaining' => $breakdown['remaining'],
         // 'CF' = fasting required, 'NF' = none, '' = n/a (for card chips).
         'fasting' => (string) ($r['fasting'] ?? ''),
         'url'    => $r['product_type'] === 'TEST'

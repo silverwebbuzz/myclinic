@@ -162,6 +162,9 @@ $renderCard = static function (array $it): string {
                 <?php foreach ($it['groups'] as $grp => $cnt): ?>
                 <span class="lab-list-card-group"><?= e($grp) ?> <b><?= (int) $cnt ?></b></span>
                 <?php endforeach; ?>
+                <?php if (!empty($it['groups_remaining'])): ?>
+                <a href="<?= e($it['url']) ?>" class="lab-list-card-group lab-pkg-card-group-more">+<?= (int) $it['groups_remaining'] ?> more</a>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
 

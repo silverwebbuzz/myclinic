@@ -10730,7 +10730,7 @@ body {
 
 .lab-pkgs-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 18px;
 }
 
@@ -10753,11 +10753,41 @@ body {
   display: none;
 }
 
+/* Card image (Popular Health Packages) — sits above the meta/detail body. */
+.lab-pkg-card-media {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(145deg, #D6F0E6 0%, #A8DCC8 55%, #7DCFB0 100%);
+  overflow: hidden;
+}
+
+.lab-pkg-card-media a { display: block; height: 100%; }
+
+.lab-pkg-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.lab-pkg-card-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(15, 155, 110, 0.95);
+  padding: 4px 10px;
+  border-radius: 980px;
+  box-shadow: 0 2px 8px rgba(15, 155, 110, 0.35);
+}
+
 .lab-pkg-card-body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 18px 18px 16px;
+  padding: 16px 18px 16px;
   flex: 1;
 }
 
@@ -10869,6 +10899,41 @@ body {
 }
 
 .lab-pkg-card-more:hover { color: var(--teal-700); }
+
+/* Test-group chips (Popular Health Packages) — matches /lab/category cards.
+   Shows biggest groups + a "+N more" chip so counts reconcile with the total. */
+.lab-pkg-card-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lab-pkg-card-group {
+  font-size: 11.5px;
+  color: #475569;
+  background: #f1f5f9;
+  border-radius: 7px;
+  padding: 3px 8px;
+  line-height: 1.35;
+}
+
+.lab-pkg-card-group b {
+  color: var(--ink-2);
+  font-weight: 700;
+}
+
+.lab-pkg-card-group-more {
+  color: var(--teal-700);
+  background: rgba(15, 155, 110, 0.10);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background .15s;
+}
+
+.lab-pkg-card-group-more:hover {
+  background: rgba(15, 155, 110, 0.18);
+}
 
 /* Exclusive offer block — two-colour price + % chip */
 .lab-pkg-offer {
@@ -13632,11 +13697,6 @@ body {
 
 .lab-pkg-card-title a:hover {
   color: var(--teal-600);
-}
-
-.lab-pkg-card-media a {
-  display: block;
-  height: 100%;
 }
 
 .lab-how-card,
