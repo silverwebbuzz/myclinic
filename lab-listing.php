@@ -79,6 +79,13 @@ $renderCard = static function (array $it): string {
                 <a href="<?= e($it['url']) ?>"><?= e($it['title']) ?></a>
             </h3>
             <p class="lab-list-card-count"><?= (int) $it['params'] ?> test<?= $it['params'] == 1 ? '' : 's' ?> included</p>
+            <?php if (!empty($it['groups'])): ?>
+            <div class="lab-list-card-groups">
+                <?php foreach ($it['groups'] as $grp => $cnt): ?>
+                <span class="lab-list-card-group"><?= e($grp) ?> <b><?= (int) $cnt ?></b></span>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
             <div class="lab-list-card-price">
                 <strong>₹<?= e(number_format($it['price'])) ?></strong>
                 <?php if ($hasOff): ?>
@@ -113,6 +120,22 @@ $renderCard = static function (array $it): string {
 
     <div class="wrap lab-list-wrap">
 
+        <!-- Explore by health concern (internal links = SEO) — shown on top -->
+        <?php if ($categories): ?>
+        <section class="lab-list-explore lab-list-explore-top">
+            <h2>Explore by health concern</h2>
+            <div class="lab-list-cats">
+                <?php foreach ($categories as $c): ?>
+                <a href="<?= e(ecp_lab_category_url($c['slug'])) ?>"
+                   class="lab-list-cat<?= (isset($listing['category']['slug']) && $listing['category']['slug'] === $c['slug']) ? ' is-current' : '' ?>">
+                    <?= e(ecp_lab_titlecase($c['name'])) ?>
+                    <span><?= (int) $c['n'] ?></span>
+                </a>
+                <?php endforeach; ?>
+            </div>
+        </section>
+        <?php endif; ?>
+
         <!-- Tabs: All / Packages / Offers / Tests -->
         <div class="lab-list-tabs" role="tablist" aria-label="Filter by type">
             <?php
@@ -143,22 +166,6 @@ $renderCard = static function (array $it): string {
         <div class="lab-list-none">
             <p>No tests found here yet. <a href="/lab/tests">Browse all tests →</a></p>
         </div>
-        <?php endif; ?>
-
-        <!-- Explore other categories (internal links = SEO) -->
-        <?php if ($categories): ?>
-        <section class="lab-list-explore">
-            <h2>Explore by health concern</h2>
-            <div class="lab-list-cats">
-                <?php foreach ($categories as $c): ?>
-                <a href="<?= e(ecp_lab_category_url($c['slug'])) ?>"
-                   class="lab-list-cat<?= (isset($listing['category']['slug']) && $listing['category']['slug'] === $c['slug']) ? ' is-current' : '' ?>">
-                    <?= e(ecp_lab_titlecase($c['name'])) ?>
-                    <span><?= (int) $c['n'] ?></span>
-                </a>
-                <?php endforeach; ?>
-            </div>
-        </section>
         <?php endif; ?>
     </div>
 </main>

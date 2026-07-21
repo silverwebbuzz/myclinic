@@ -15540,7 +15540,10 @@ body {
 }
 /* ===== Lab listing / browse hub (/lab/tests, /lab/category/{slug}) ===== */
 .lab-listing { padding-bottom: 3rem; }
-.lab-list-head { background: linear-gradient(135deg,#ecfdf5 0%,#f0fdfa 100%); padding: 2rem 0 1.5rem; }
+/* Clear the fixed site header so the H1 isn't clipped at the top. */
+.lab-list-head { background: linear-gradient(135deg,#ecfdf5 0%,#f0fdfa 100%); padding: 6.5rem 0 1.5rem; }
+@media (max-width: 768px) { .lab-list-head { padding-top: 5.5rem; } }
+.lab-list-explore-top { margin-top: 0; margin-bottom: 1.5rem; padding-top: 0; border-top: 0; }
 .lab-list-crumbs { font-size: .85rem; color: #6b7280; margin-bottom: .5rem; }
 .lab-list-crumbs a { color: #059669; text-decoration: none; }
 .lab-list-crumbs a:hover { text-decoration: underline; }
@@ -15564,7 +15567,10 @@ body {
 .lab-list-card-title { font-size: 1rem; font-weight: 700; margin: 0 0 .3rem; line-height: 1.3; }
 .lab-list-card-title a { color: #0f172a; text-decoration: none; }
 .lab-list-card-title a:hover { color: #059669; }
-.lab-list-card-count { font-size: .82rem; color: #6b7280; margin: 0 0 .6rem; }
+.lab-list-card-count { font-size: .82rem; color: #6b7280; margin: 0 0 .5rem; }
+.lab-list-card-groups { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .6rem; }
+.lab-list-card-group { font-size: .7rem; color: #475569; background: #f1f5f9; border-radius: 6px; padding: .12rem .4rem; }
+.lab-list-card-group b { color: #0f172a; font-weight: 700; }
 .lab-list-card-price { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .8rem; }
 .lab-list-card-price strong { font-size: 1.2rem; color: #0f172a; }
 .lab-list-card-price s { color: #9ca3af; font-size: .85rem; }

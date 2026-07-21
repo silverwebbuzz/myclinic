@@ -769,7 +769,7 @@ function ecp_lab_listing(?string $categorySlug = null, int $limit = 300): array
         }
 
         $sql = "SELECT lp.id, lp.product_type, lp.slug, lp.name, lp.test_count,
-                       pr.mrp, pr.offer_rate
+                       lp.test_groups_json, pr.mrp, pr.offer_rate
                 FROM lab_products lp
                 $catJoin
                 JOIN lab_product_pricing pr ON pr.id = (
@@ -790,14 +790,34 @@ function ecp_lab_listing(?string $categorySlug = null, int $limit = 300): array
             $mrp   = (float) $r['mrp'];
             $offer = (float) $r['offer_rate'];
             $offPct = $mrp > 0 ? (int) round(($mrp - $offer) / $mrp * 100) : 0;
+            // Normalize DB product_type -> UI type: PROFILE renders as a
+            // "package" (the tab + card filter use 'package', not 'profile').
+            $uiType = match ($r['product_type']) {
+                'OFFER' => 'offer',
+                'TEST'  => 'test',
+                default => 'package', // PROFILE
+            };
+            // Top test groups (from the precomputed JSON column), biggest first,
+            // as [label => count] — for the "what's inside" chips on the card.
+            $groups = [];
+            if (!empty($r['test_groups_json'])) {
+                $decoded = json_decode((string) $r['test_groups_json'], true);
+                if (is_array($decoded)) {
+                    arsort($decoded);
+                    foreach (array_slice($decoded, 0, 4, true) as $grp => $cnt) {
+                        $groups[ecp_lab_titlecase((string) $grp)] = (int) $cnt;
+                    }
+                }
+            }
             $item = [
-                'type'   => strtolower($r['product_type']),
+                'type'   => $uiType,
                 'slug'   => (string) $r['slug'],
                 'title'  => ecp_lab_titlecase($r['name']),
                 'params' => (int) $r['test_count'],
                 'price'  => (int) round($offer),
                 'mrp'    => (int) round($mrp),
                 'off'    => $offPct,
+                'groups' => $groups,
                 'url'    => $r['product_type'] === 'TEST'
                     ? ecp_lab_test_url((string) $r['slug'])
                     : ecp_lab_detail_url('package', (string) $r['slug']),
