@@ -563,9 +563,16 @@ require __DIR__ . '/partials/header.php';
 
             <div class="lab-lifestage-grid">
                 <?php foreach ($lifeStage as [$slug, $ico, $name, $blurb, $accent]): ?>
-                    <a href="<?= e(ecp_lab_detail_url('life', $slug)) ?>" class="lab-life-card lab-life-<?= e($accent) ?>">
+                    <?php
+                    // Null-safe photo: fall back to the gallery pool if this life
+                    // slug has no curated key (so a new tile never breaks the grid).
+                    $lifePhotoId = $labPhotos['life-' . $slug]
+                        ?? $labPhotos['gal-' . (1 + (abs(crc32($slug)) % 8))]
+                        ?? $labPhotos['hero-lab'];
+                    ?>
+                    <a href="<?= e(ecp_lab_life_url($slug)) ?>" class="lab-life-card lab-life-<?= e($accent) ?>">
                         <div class="lab-life-media">
-                            <img src="<?= e(lab_photo($labPhotos['life-' . $slug], 640, 440)) ?>" alt="<?= e($name) ?>" width="640" height="440" loading="lazy">
+                            <img src="<?= e(lab_photo($lifePhotoId, 640, 440)) ?>" alt="<?= e($name) ?>" width="640" height="440" loading="lazy">
                             <span class="lab-life-ico" aria-hidden="true"><?= $ico ?></span>
                         </div>
                         <div class="lab-life-body">
@@ -823,7 +830,7 @@ foreach ($lifeStage as [$slug, $ico, $name, $blurb, $accent]) {
         'slug' => $slug,
         'title' => $name,
         'meta' => 'Life Stage | ' . $blurb,
-        'url' => ecp_lab_detail_url('life', $slug),
+        'url' => ecp_lab_life_url($slug),
         'q' => strtolower($name . ' ' . $blurb),
     ];
 }

@@ -55,6 +55,8 @@ function ecp_lab_photos(): array
         'symptom-fatigue' => 'photo-1544005313-94ddf0286df2',
         'symptom-weight' => 'photo-1571019614242-c5c5dee9f50b',
         'symptom-heart-health' => 'photo-1505751172876-fa1923c5c528',
+        'life-diabetic' => 'photo-1683727186226-910f31a9da45',
+        'life-thyroid' => 'photo-1631217868264-e5b90bb7e133',
         'life-child' => 'photo-1503454537195-1dcabb73ffb9',
         'life-mens' => 'photo-1612349317150-e413f6a5b16d',
         'life-womens' => 'photo-1438761681033-6461ffad8d80',
@@ -709,6 +711,30 @@ function ecp_lab_organ_category_map(): array
         'immunity'   => 'anaemia',
         'pregnancy'  => 'pregnancy',
     ];
+}
+
+/**
+ * Resolve a "life stage" tile slug -> a real listing URL. Most map to a lab
+ * category listing; a couple to the closest concept. Everything lands on a
+ * working page (no thin /lab/life/* detail pages, which don't exist for these).
+ */
+function ecp_lab_life_url(string $slug): string
+{
+    $catMap = [
+        'child'     => 'wellness',
+        'mens'      => 'wellness',
+        'womens'    => 'pregnancy',   // women's health packages cluster here
+        'pregnancy' => 'pregnancy',
+        'senior'    => 'arthritis',
+        'fitness'   => 'metabolic',
+        'diabetic'  => 'diabetes',
+        'thyroid'   => 'thyroid',
+    ];
+    if (isset($catMap[$slug])) {
+        return ecp_lab_category_url($catMap[$slug]);
+    }
+    // Fallback: the browse hub.
+    return '/lab/tests';
 }
 
 /**
