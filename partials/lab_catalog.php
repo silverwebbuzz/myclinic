@@ -303,7 +303,7 @@ function ecp_lab_db_search_index(int $testLimit = 150): array
     try {
         // All packages/offers + top individual tests, each with current price.
         $stmt = $db->prepare(
-            "SELECT lp.product_type, lp.slug, lp.name, lp.test_count,
+            "SELECT lp.id, lp.product_type, lp.slug, lp.name, lp.test_count,
                     pr.mrp, pr.offer_rate
              FROM lab_products lp
              JOIN lab_product_pricing pr ON pr.id = (
@@ -328,6 +328,41 @@ function ecp_lab_db_search_index(int $testLimit = 150): array
         $stmt->bindValue(':tl', $testLimit, PDO::PARAM_INT);
         $stmt->execute();
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if (!$rows) {
+            return [];
+        }
+
+        // Enrich each item's search haystack with the names of the tests it
+        // CONTAINS + its category names, so chips like "Liver" or "Iron" find
+        // packages that include those, not only ones with the word in the title.
+        $wantedIds = array_map(static fn ($r) => (int) $r['id'], $rows);
+        $extraById = [];
+        if ($wantedIds) {
+            $in = implode(',', array_fill(0, count($wantedIds), '?'));
+            // Parameter names per product.
+            $pStmt = $db->prepare(
+                "SELECT lpp.product_id, GROUP_CONCAT(DISTINCT par.name SEPARATOR ' ') AS names
+                   FROM lab_product_parameters lpp
+                   JOIN lab_parameters par ON par.id = lpp.parameter_id
+                  WHERE lpp.product_id IN ($in) GROUP BY lpp.product_id"
+            );
+            $pStmt->execute($wantedIds);
+            foreach ($pStmt->fetchAll(PDO::FETCH_ASSOC) as $pr2) {
+                $extraById[(int) $pr2['product_id']] = (string) $pr2['names'];
+            }
+            // Category names per product (append to any param names).
+            $cStmt = $db->prepare(
+                "SELECT lpc.product_id, GROUP_CONCAT(DISTINCT c.name SEPARATOR ' ') AS names
+                   FROM lab_product_categories lpc
+                   JOIN lab_categories c ON c.id = lpc.category_id
+                  WHERE lpc.product_id IN ($in) GROUP BY lpc.product_id"
+            );
+            $cStmt->execute($wantedIds);
+            foreach ($cStmt->fetchAll(PDO::FETCH_ASSOC) as $cr2) {
+                $pid = (int) $cr2['product_id'];
+                $extraById[$pid] = trim(($extraById[$pid] ?? '') . ' ' . (string) $cr2['names']);
+            }
+        }
 
         $out = [];
         foreach ($rows as $r) {
@@ -336,6 +371,7 @@ function ecp_lab_db_search_index(int $testLimit = 150): array
             $offer = (float) $r['offer_rate'];
             $offPct = $mrp > 0 ? (int) round(($mrp - $offer) / $mrp * 100) : 0;
             $title = ecp_lab_titlecase($r['name']);
+            $extra = $extraById[(int) $r['id']] ?? '';
             $out[] = [
                 'type'   => 'package', // detail route is /lab/package/{slug} for both
                 'slug'   => (string) $r['slug'],
@@ -348,7 +384,8 @@ function ecp_lab_db_search_index(int $testLimit = 150): array
                 'mrp'    => (string) (int) round($mrp),
                 'off'    => (string) $offPct,
                 'url'    => ecp_lab_detail_url('package', (string) $r['slug']),
-                'q'      => strtolower($title),
+                // Haystack: title + contained test names + category names.
+                'q'      => strtolower(trim($title . ' ' . $extra)),
             ];
         }
         return $out;

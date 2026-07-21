@@ -80,9 +80,26 @@ require __DIR__ . '/partials/header.php';
                             <div class="lab-search-popular" id="labSearchPopular">
                                 <span>Popular Searches:</span>
                                 <?php
-                                $popularSearches = ['Full Body checkup', 'Thyroid test', 'Vitamin D', 'Sugar test', 'Lipid profile', 'LFT', 'Kidney test', 'Uric acid', 'Fever test'];
-                                foreach ($popularSearches as $term): ?>
-                                <button type="button" class="lab-search-chip" data-lab-q="<?= e($term) ?>"><?= e($term) ?></button>
+                                // India-tuned popular searches. Each = [patient-friendly label, term that
+                                // actually matches the catalog]. Labels use the acronyms patients know
+                                // (LFT, CBC); the search term is what the DB names/parameters contain, so
+                                // every chip returns real results. Verified against the seeded catalog.
+                                $popularSearches = [
+                                    ['Full Body checkup', 'Full Body'],
+                                    ['Thyroid test',       'Thyroid'],
+                                    ['Diabetes',           'Diabetes'],
+                                    ['Vitamin D',          'Vitamin D'],
+                                    ['HbA1c',              'HbA1c'],
+                                    ['Sugar test',         'Sugar'],
+                                    ['LFT (Liver)',        'Liver'],
+                                    ['Uric acid',          'Uric Acid'],
+                                    ['Lipid profile',      'Lipid'],
+                                    ['CBC / Blood count',  'Hemoglobin'],
+                                    ['Iron / Anaemia',     'Iron'],
+                                    ['Fever panel',        'Fever'],
+                                ];
+                                foreach ($popularSearches as [$label, $term]): ?>
+                                <button type="button" class="lab-search-chip" data-lab-q="<?= e($term) ?>"><?= e($label) ?></button>
                                 <?php endforeach; ?>
                             </div>
                         </div>
