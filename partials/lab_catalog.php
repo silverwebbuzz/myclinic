@@ -468,6 +468,8 @@ function ecp_lab_raw_catalog(): array
             ['pregnancy', '🤰', 'Pregnancy Care', 'Nutritional support, safe monitoring & essential tests for a healthy journey.', 'pink'],
             ['senior', '👴', 'Senior Care', 'Comprehensive aging care & chronic disease management.', 'orange'],
             ['fitness', '🏃', 'Fitness Check', 'Stay active, improve performance & track your metabolic health.', 'teal'],
+            ['diabetic', '🩸', 'Diabetic Care', 'Monitor blood sugar, HbA1c & organ health to manage diabetes.', 'red'],
+            ['thyroid', '🦋', 'Thyroid Care', 'Track T3, T4, TSH & antibodies for complete thyroid health.', 'indigo'],
         ],
         'why' => [
             ['nabl', 'NABL-Accredited Labs', 'Trusted & accurate results you can rely on.'],

@@ -11599,6 +11599,13 @@ body {
 .lab-life-teal .lab-life-accent {
   background: #2DC08A;
 }
+/* Added accents for Diabetic Care (red) & Thyroid Care (indigo). */
+.lab-life-red .lab-life-ico::after { background: #EF4444; }
+.lab-life-red .lab-life-media { background: linear-gradient(145deg, #FEE2E2, #FECACA); }
+.lab-life-red .lab-life-accent { background: #EF4444; }
+.lab-life-indigo .lab-life-ico::after { background: #6366F1; }
+.lab-life-indigo .lab-life-media { background: linear-gradient(145deg, #E0E7FF, #C7D2FE); }
+.lab-life-indigo .lab-life-accent { background: #6366F1; }
 
 .lab-life-body h3 {
   margin: 0;
@@ -11665,6 +11672,92 @@ body {
   margin: 10px 0 0;
   color: var(--mute);
   font-size: 15px;
+}
+
+/* Accreditation logo strip (Thyrocare / NABL / CAP / ISO) on /lab. */
+.lab-accred-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem 2rem;
+  margin-top: 2.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid #e5e7eb;
+}
+.lab-accred-label {
+  font-size: .78rem;
+  font-style: italic;
+  color: #94a3b8;
+  margin-right: .5rem;
+}
+.lab-accred-logo {
+  height: 44px;
+  width: auto;
+  object-fit: contain;
+  filter: grayscale(15%);
+  opacity: .9;
+  transition: opacity .2s, filter .2s;
+}
+.lab-accred-logo:hover { filter: none; opacity: 1; }
+.lab-accred-badge { height: 60px; } /* round NABL/ISO seals read better a bit larger */
+@media (max-width: 520px) {
+  .lab-accred-strip { gap: 1rem 1.25rem; }
+  .lab-accred-logo { height: 36px; }
+  .lab-accred-badge { height: 48px; }
+  .lab-accred-label { flex-basis: 100%; text-align: center; margin: 0; }
+}
+
+/* 6-step "How It Works" icon flow (matches the package detail page). */
+.lab-how-flow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem 0;
+  list-style: none;
+  margin: 2rem 0 0;
+  padding: 0;
+}
+.lab-how-flowstep {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 130px;
+  max-width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 .75rem;
+}
+.lab-how-flownum {
+  font-size: .72rem;
+  font-weight: 700;
+  color: #10b981;
+  letter-spacing: .05em;
+}
+.lab-how-flowico {
+  width: 58px; height: 58px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #ecfdf5, #d1fae5);
+  color: #059669;
+  font-size: 1.5rem;
+  margin: .4rem 0 .6rem;
+}
+.lab-how-flowstep strong { font-size: .95rem; color: #0f172a; margin-bottom: .25rem; }
+.lab-how-flowtext { font-size: .8rem; color: #64748b; line-height: 1.35; }
+.lab-how-flowarrow {
+  position: absolute;
+  top: 44px; right: -10px;
+  color: #a7f3d0;
+  font-size: 1.1rem;
+}
+@media (max-width: 900px) {
+  .lab-how-flowstep { flex-basis: 33%; max-width: none; }
+  .lab-how-flowarrow { display: none; }
+}
+@media (max-width: 520px) {
+  .lab-how-flowstep { flex-basis: 50%; }
 }
 
 .lab-how-steps {

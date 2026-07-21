@@ -39,6 +39,19 @@ $activePage = 'lab';
 $hideFinalCta = true; // renders its own footer CTA banner
 $noindex = true; // keep out of Google until bookings/partners are live —
 // URL stays shareable for partner demos.
+// Flaticon icons for the "How It Works" flow (same set as the detail page).
+$extraHead = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@flaticon/flaticon-uicons@3.3.1/css/regular/rounded.css">';
+
+// 6-step "How It Works" flow — kept in sync with lab-detail.php's $stepsHow
+// so the landing and package pages tell the same story. [icon, title, blurb].
+$howSteps = [
+    ['fi-rr-clipboard-list-check', 'Choose',          'Select a test or package as per your need'],
+    ['fi-rr-calendar-clock',       'Book Slot',       'Pick a convenient slot for sample collection'],
+    ['fi-rr-scooter',              'Home Collection', 'Our phlebotomist collects the sample from your home'],
+    ['fi-rr-flask',                'Testing',         'Sample tested at NABL & CAP accredited labs'],
+    ['fi-rr-smartphone',           'Digital Report',  'Get your reports on the app within 24 hours'],
+    ['fi-rr-doctor',               'Doctor Review',   'Free consultation with expert report review'],
+];
 
 require __DIR__ . '/partials/header.php';
 ?>
@@ -573,25 +586,22 @@ require __DIR__ . '/partials/header.php';
             <header class="lab-how-head">
                 <span class="lab-how-badge">Simple, Fast &amp; Reliable</span>
                 <h2>How It Works</h2>
-                <p>From booking to reports in four simple steps.</p>
+                <p>From booking to reports in six simple steps.</p>
             </header>
 
-            <div class="lab-how-steps">
-                <?php foreach ($steps as $i => [$num, $slug, $title, $blurb]): ?>
-                    <?php if ($i > 0): ?>
-                        <div class="lab-how-connector" aria-hidden="true"><span></span></div>
-                    <?php endif; ?>
-                    <a href="<?= e(ecp_lab_detail_url('step', $slug)) ?>" class="lab-how-card">
-                        <span class="lab-how-num"><?= e($num) ?></span>
-                        <div class="lab-how-ico" aria-hidden="true">
-                            <img src="<?= e(lab_photo($labPhotos['step-' . $slug], 200, 200)) ?>" alt="" width="200" height="200" loading="lazy">
-                        </div>
-                        <h3><?= e($title) ?></h3>
-                        <span class="lab-how-line" aria-hidden="true"></span>
-                        <p><?= e($blurb) ?></p>
-                    </a>
+            <ol class="lab-how-flow">
+                <?php foreach ($howSteps as $i => [$ico, $title, $blurb]): ?>
+                    <li class="lab-how-flowstep">
+                        <span class="lab-how-flownum"><?= sprintf('%02d', $i + 1) ?></span>
+                        <span class="lab-how-flowico" aria-hidden="true"><i class="fi <?= e($ico) ?>"></i></span>
+                        <strong><?= e($title) ?></strong>
+                        <span class="lab-how-flowtext"><?= e($blurb) ?></span>
+                        <?php if ($i < count($howSteps) - 1): ?>
+                        <span class="lab-how-flowarrow" aria-hidden="true"><i class="fi fi-rr-arrow-small-right"></i></span>
+                        <?php endif; ?>
+                    </li>
                 <?php endforeach; ?>
-            </div>
+            </ol>
         </div>
     </section>
 
@@ -663,6 +673,15 @@ require __DIR__ . '/partials/header.php';
                         </div>
                     </a>
                 <?php endforeach; ?>
+            </div>
+
+            <!-- Accreditation logos (same set as the package detail page). -->
+            <div class="lab-accred-strip" aria-label="Lab partners and certifications">
+                <span class="lab-accred-label">In association with</span>
+                <img src="/assets/img/logos/thyrocare-logo.webp" alt="Thyrocare" class="lab-accred-logo" loading="lazy">
+                <img src="/assets/img/logos/nabl-logo.webp" alt="100% NABL Accreditation" class="lab-accred-logo lab-accred-badge" loading="lazy">
+                <img src="/assets/img/logos/cap-accredited-logo.webp" alt="CAP Accredited — College of American Pathologists" class="lab-accred-logo" loading="lazy">
+                <img src="/assets/img/logos/isologo.webp" alt="ISO 9001 certified" class="lab-accred-logo lab-accred-badge" loading="lazy">
             </div>
         </div>
     </section>
