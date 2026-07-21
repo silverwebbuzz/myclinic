@@ -23,7 +23,9 @@ require_once __DIR__ . '/partials/lab_catalog.php';
 $labPhotos = ecp_lab_photos();
 $raw = ecp_lab_raw_catalog();
 $packages = $raw['packages'];
-$packageFilters = $raw['packageFilters'];
+// India-tuned storefront tabs (Full Body, Diabetes, Thyroid, Vitamins, Women,
+// Heart, Fever & Infection, Senior) — replaces the old static $raw list.
+$packageFilters = ecp_lab_package_filters();
 $organs = $raw['organs'];
 $concerns = $raw['concerns'];
 $lifeStage = $raw['lifeStage'];

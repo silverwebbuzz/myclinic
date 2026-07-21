@@ -447,6 +447,7 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/lab/products/{id}', [\App\Controllers\LabAdminController::class, 'productDetail']);
         $admin->post('/lab/products/{id}', [\App\Controllers\LabAdminController::class, 'saveProduct']);
         $admin->post('/lab/products/{id}/toggle', [\App\Controllers\LabAdminController::class, 'toggleProduct']);
+        $admin->post('/lab/products/{id}/feature', [\App\Controllers\LabAdminController::class, 'toggleFeatured']);
         $admin->get('/lab/categories', [\App\Controllers\LabAdminController::class, 'categories']);
         $admin->post('/lab/categories', [\App\Controllers\LabAdminController::class, 'saveCategory']);
         $admin->post('/lab/categories/{id}/toggle', [\App\Controllers\LabAdminController::class, 'toggleCategory']);

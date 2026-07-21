@@ -7,8 +7,30 @@ $typeBadge = static function (string $t): array {
         default   => ['Test',    'bg-slate-100 text-slate-700'],
     };
 };
-$qs = static function (array $over) use ($q, $type): string {
-    return http_build_query(array_merge(['q' => $q, 'type' => $type], $over));
+$qs = static function (array $over) use ($q, $type, $categoryId): string {
+    return http_build_query(array_merge(['q' => $q, 'type' => $type, 'category' => $categoryId ?: ''], $over));
+};
+// Hidden inputs so a row toggle returns to the same filtered view/page.
+$returnCtx = static function () use ($q, $type, $categoryId, $page): string {
+    $h = '';
+    foreach (['q' => $q, 'type' => $type, 'category' => $categoryId ?: '', 'page' => $page] as $k => $v) {
+        if ($v !== '' && $v !== 0) {
+            $h .= '<input type="hidden" name="return_' . $k . '" value="' . htmlspecialchars((string) $v) . '">';
+        }
+    }
+    return $h;
+};
+// Small on/off pill-toggle: green = ON, grey = OFF; submitting flips it.
+$toggleBtn = static function (bool $on, string $action, string $csrf, string $returnHtml, string $onLabel, string $offLabel): string {
+    $cls = $on
+        ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+        : 'bg-slate-200 text-slate-600 hover:bg-slate-300';
+    $label = $on ? $onLabel : $offLabel;
+    return '<form method="post" action="' . htmlspecialchars($action) . '" class="inline">'
+        . '<input type="hidden" name="_csrf" value="' . htmlspecialchars($csrf) . '">'
+        . $returnHtml
+        . '<button type="submit" class="rounded-full px-3 py-1 text-xs font-semibold transition ' . $cls . '">'
+        . $label . '</button></form>';
 };
 ?>
 <!DOCTYPE html>
@@ -60,8 +82,19 @@ $qs = static function (array $over) use ($q, $type): string {
                     <?php endforeach; ?>
                 </select>
             </label>
+            <label class="block text-sm">
+                <span class="text-slate-600">Category</span>
+                <select name="category" class="mt-1 rounded border px-3 py-1.5 text-sm">
+                    <option value="">All categories</option>
+                    <?php foreach ($allCategories as $c): ?>
+                    <option value="<?= (int) $c['id'] ?>" <?= $categoryId === (int) $c['id'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($c['name']) ?> (<?= (int) $c['n'] ?>)
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
             <button type="submit" class="rounded bg-slate-800 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-700">Filter</button>
-            <?php if ($q !== '' || $type !== ''): ?>
+            <?php if ($q !== '' || $type !== '' || $categoryId > 0): ?>
             <a href="/admin/lab/products" class="text-sm text-slate-500 hover:underline">Clear</a>
             <?php endif; ?>
         </form>
@@ -73,49 +106,59 @@ $qs = static function (array $over) use ($q, $type): string {
                     <tr>
                         <th class="px-4 py-2">Name</th>
                         <th class="px-4 py-2">Type</th>
+                        <th class="px-4 py-2">Category</th>
                         <th class="px-4 py-2">Test Code</th>
                         <th class="px-4 py-2 text-right">MRP</th>
                         <th class="px-4 py-2 text-right">Offer</th>
+                        <th class="px-4 py-2 text-right">Incentive</th>
                         <th class="px-4 py-2 text-right">Coupon cap</th>
                         <th class="px-4 py-2 text-center"># tests</th>
-                        <th class="px-4 py-2">Status</th>
+                        <th class="px-4 py-2 text-center">Active</th>
+                        <th class="px-4 py-2 text-center">Featured</th>
                         <th class="px-4 py-2"></th>
                     </tr>
                 </thead>
                 <tbody class="divide-y">
                     <?php foreach ($products as $p): ?>
-                    <?php [$tLabel, $tClass] = $typeBadge($p['product_type']); ?>
+                    <?php
+                        [$tLabel, $tClass] = $typeBadge($p['product_type']);
+                        $ret = $returnCtx();
+                        $incAmt = $p['incentive_amt'] ?? null;
+                        $incPct = $p['incentive_pct'] ?? null;
+                    ?>
                     <tr class="<?= empty($p['is_active']) ? 'opacity-50' : '' ?>">
                         <td class="px-4 py-2 font-medium">
                             <a href="/admin/lab/products/<?= (int) $p['id'] ?>" class="text-sky-700 hover:underline">
                                 <?= htmlspecialchars($p['name']) ?>
                             </a>
-                            <?php if (!empty($p['is_featured'])): ?>
-                            <span class="ml-1 text-amber-500" title="Featured">★</span>
-                            <?php endif; ?>
                         </td>
                         <td class="px-4 py-2"><span class="rounded-full px-2 py-0.5 text-xs font-medium <?= $tClass ?>"><?= $tLabel ?></span></td>
+                        <td class="px-4 py-2 text-slate-500 max-w-[14rem] truncate" title="<?= htmlspecialchars($p['category_names'] ?? '') ?>">
+                            <?= htmlspecialchars($p['category_names'] ?? '') ?: '<span class="text-slate-300">—</span>' ?>
+                        </td>
                         <td class="px-4 py-2 text-slate-500"><?= htmlspecialchars($p['thyrocare_code'] ?? '') ?: '<span class="text-slate-300">—</span>' ?></td>
                         <td class="px-4 py-2 text-right text-slate-400 line-through"><?= $p['mrp'] !== null ? '₹' . number_format((float) $p['mrp']) : '—' ?></td>
                         <td class="px-4 py-2 text-right font-semibold"><?= $p['offer_rate'] !== null ? '₹' . number_format((float) $p['offer_rate']) : '—' ?></td>
+                        <td class="px-4 py-2 text-right text-slate-600">
+                            <?php if ($incAmt !== null || $incPct !== null): ?>
+                                <?= $incAmt !== null ? '₹' . number_format((float) $incAmt) : '' ?><?php if ($incAmt !== null && $incPct !== null): ?> <?php endif; ?><?php if ($incPct !== null): ?><span class="text-slate-400">(<?= rtrim(rtrim(number_format((float) $incPct, 2), '0'), '.') ?>%)</span><?php endif; ?>
+                            <?php else: ?><span class="text-slate-300">—</span><?php endif; ?>
+                        </td>
                         <td class="px-4 py-2 text-right text-slate-600"><?= (int) ($p['max_discount_pct'] ?? 0) ?>%</td>
                         <td class="px-4 py-2 text-center text-slate-500"><?= (int) $p['test_count'] ?></td>
-                        <td class="px-4 py-2">
-                            <span class="rounded-full px-2 py-0.5 text-xs font-medium <?= !empty($p['is_active']) ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600' ?>">
-                                <?= !empty($p['is_active']) ? 'Active' : 'Hidden' ?>
-                            </span>
+                        <td class="px-4 py-2 text-center">
+                            <?= $toggleBtn(!empty($p['is_active']), '/admin/lab/products/' . (int) $p['id'] . '/toggle', $csrf, $ret, 'On', 'Off') ?>
+                        </td>
+                        <td class="px-4 py-2 text-center">
+                            <?= $toggleBtn(!empty($p['is_featured']), '/admin/lab/products/' . (int) $p['id'] . '/feature', $csrf, $ret, '★ On', 'Off') ?>
                         </td>
                         <td class="px-4 py-2 text-right whitespace-nowrap">
                             <a href="/admin/lab/products/<?= (int) $p['id'] ?>" class="text-sky-700 hover:underline">Edit</a>
-                            <form method="post" action="/admin/lab/products/<?= (int) $p['id'] ?>/toggle" class="ml-3 inline">
-                                <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
-                                <button type="submit" class="text-slate-500 hover:underline"><?= !empty($p['is_active']) ? 'Hide' : 'Show' ?></button>
-                            </form>
                         </td>
                     </tr>
                     <?php endforeach; ?>
                     <?php if (!$products): ?>
-                    <tr><td colspan="9" class="px-4 py-8 text-center text-slate-400">No products match.</td></tr>
+                    <tr><td colspan="12" class="px-4 py-8 text-center text-slate-400">No products match.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>

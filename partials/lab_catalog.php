@@ -109,21 +109,47 @@ function ecp_lab_detail_url(string $type, string $slug): string
     return '/lab/' . rawurlencode($type) . '/' . rawurlencode($slug);
 }
 
+/** Test count at/above which a package is treated as a "Full Body" checkup. */
+const ECP_LAB_FULL_BODY_MIN_TESTS = 40;
+
 /**
  * Maps a curated storefront filter tab -> the lab_categories slugs that feed it.
  * A package appears under a tab when any of its linked categories matches.
- * 'popular' is derived from is_featured/booked_count, not a category.
+ * 'popular' is derived from is_featured/booked_count, and 'full-body' from the
+ * test count (see ECP_LAB_FULL_BODY_MIN_TESTS) — neither is a real category.
  */
 function ecp_lab_tab_category_map(): array
 {
     return [
-        'heart'      => ['cardiac', 'heart-health', 'cardiac-risk-markers'],
-        'diabetes'   => ['diabetes', 'metabolic', 'diabetes-renal'],
-        'thyroid'    => ['thyroid', 'autoimmune-thyroid'],
-        'women'      => ['pregnancy', 'infertility'],
-        'senior'     => ['arthritis', 'renal', 'cardiac'],
-        'preventive' => ['wellness', 'vitamin', 'anaemia'],
-        'kids'       => ['pregnancy'],
+        // 'full-body' handled by test_count, not categories (see ecp_lab_db_packages)
+        'diabetes' => ['diabetes', 'metabolic', 'diabetes-renal', 'diabetes-cardiac'],
+        'thyroid'  => ['thyroid', 'autoimmune-thyroid'],
+        'vitamins' => ['vitamin', 'elements', 'anaemia'],
+        'women'    => ['pregnancy', 'infertility', 'autoimmune-pregnancy', 'anaemia-pregnancy'],
+        'heart'    => ['cardiac', 'heart-health', 'cardiac-risk-markers', 'arthritis-cardiac'],
+        'fever'    => ['infection', 'infectious-disease', 'typhoid', 'malaria', 'covid', 'hepatitis'],
+        'senior'   => ['arthritis', 'renal', 'cardiac', 'arthritis-renal'],
+    ];
+}
+
+/**
+ * The storefront filter tabs, in display order. Keys are the data-cats values
+ * the JS filter matches; values are the button labels. Tuned for the Indian
+ * market: Full Body first (most-searched), then the high-demand conditions.
+ */
+function ecp_lab_package_filters(): array
+{
+    return [
+        'all'       => 'All Packages',
+        'popular'   => 'Most Popular',
+        'full-body' => 'Full Body',
+        'diabetes'  => 'Diabetes',
+        'thyroid'   => 'Thyroid',
+        'vitamins'  => 'Vitamins',
+        'women'     => 'Women',
+        'heart'     => 'Heart',
+        'fever'     => 'Fever & Infection',
+        'senior'    => 'Senior Citizen',
     ];
 }
 
@@ -219,6 +245,10 @@ function ecp_lab_db_packages(int $limit = 12): array
             // Which storefront tabs this package belongs to.
             $prodCats = $catsByProduct[$pid] ?? [];
             $tabs = ['popular']; // always eligible for "Most Popular"
+            // Full Body = comprehensive panel (by test count, not category).
+            if ((int) $row['test_count'] >= ECP_LAB_FULL_BODY_MIN_TESTS) {
+                $tabs[] = 'full-body';
+            }
             foreach ($tabMap as $tab => $slugs) {
                 if (array_intersect($prodCats, $slugs)) {
                     $tabs[] = $tab;

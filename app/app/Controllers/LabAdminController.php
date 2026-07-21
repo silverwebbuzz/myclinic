@@ -39,34 +39,70 @@ final class LabAdminController
         if (!in_array($type, ['TEST', 'PROFILE', 'OFFER'], true)) {
             $type = '';
         }
+        $categoryId = (int) ($request->query['category'] ?? 0);
         $page = max(1, (int) ($request->query['page'] ?? 1));
 
         $where  = [];
         $params = [];
         if ($q !== '') {
-            $where[] = '(lp.name LIKE :q OR lp.code LIKE :q OR lp.thyrocare_code LIKE :q)';
+            // Match the product's own name/code/test-code, AND products that
+            // CONTAIN a parameter or belong to a CATEGORY matching the term —
+            // so "diabetes" (a category) or "HbA1c" (a contained test) both
+            // surface the relevant packages, not just exact-name hits.
+            $where[] = '(lp.name LIKE :q OR lp.code LIKE :q OR lp.thyrocare_code LIKE :q
+                OR EXISTS (
+                    SELECT 1 FROM lab_product_parameters lpp_s
+                    JOIN lab_parameters par_s ON par_s.id = lpp_s.parameter_id
+                    WHERE lpp_s.product_id = lp.id AND par_s.name LIKE :q
+                )
+                OR EXISTS (
+                    SELECT 1 FROM lab_product_categories lpc_s
+                    JOIN lab_categories c_s ON c_s.id = lpc_s.category_id
+                    WHERE lpc_s.product_id = lp.id AND c_s.name LIKE :q
+                ))';
             $params[':q'] = '%' . $q . '%';
         }
         if ($type !== '') {
             $where[] = 'lp.product_type = :type';
             $params[':type'] = $type;
         }
+        // Category filter: restrict to products linked to the chosen category.
+        $catJoin = '';
+        if ($categoryId > 0) {
+            $catJoin = 'JOIN lab_product_categories lpc_f ON lpc_f.product_id = lp.id AND lpc_f.category_id = :cat';
+            $params[':cat'] = $categoryId;
+        }
         $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
 
         $rows = [];
         $total = 0;
+        $allCategories = [];
         $tableMissing = false;
         try {
-            $countStmt = $pdo->prepare("SELECT COUNT(*) FROM lab_products lp $whereSql");
+            // Category dropdown options (only those with products).
+            $allCategories = $pdo->query(
+                'SELECT c.id, c.name, COUNT(lpc.product_id) AS n
+                   FROM lab_categories c
+                   JOIN lab_product_categories lpc ON lpc.category_id = c.id
+                  GROUP BY c.id ORDER BY c.name ASC'
+            )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            $countStmt = $pdo->prepare("SELECT COUNT(DISTINCT lp.id) FROM lab_products lp $catJoin $whereSql");
             $countStmt->execute($params);
             $total = (int) $countStmt->fetchColumn();
 
             $offset = ($page - 1) * self::PER_PAGE;
             // Current price = the row with the latest effective_from per product.
+            // Categories are aggregated into a comma list for the column.
             $sql = "SELECT lp.*,
-                           pr.mrp, pr.offer_rate, pr.incentive_pct,
-                           pr.max_discount_pct, pr.id AS pricing_id
+                           pr.mrp, pr.offer_rate, pr.incentive_pct, pr.incentive_amt,
+                           pr.max_discount_pct, pr.id AS pricing_id,
+                           (SELECT GROUP_CONCAT(c2.name ORDER BY c2.name SEPARATOR ', ')
+                              FROM lab_product_categories lpc2
+                              JOIN lab_categories c2 ON c2.id = lpc2.category_id
+                             WHERE lpc2.product_id = lp.id) AS category_names
                     FROM lab_products lp
+                    $catJoin
                     LEFT JOIN lab_product_pricing pr
                            ON pr.id = (
                                SELECT p2.id FROM lab_product_pricing p2
@@ -93,6 +129,8 @@ final class LabAdminController
             'pages'        => (int) ceil(max(1, $total) / self::PER_PAGE),
             'q'            => $q,
             'type'         => $type,
+            'categoryId'   => $categoryId,
+            'allCategories'=> $allCategories,
             'tableMissing' => $tableMissing,
             'message'      => $request->query['message'] ?? null,
         ]));
@@ -226,7 +264,39 @@ final class LabAdminController
                 ->execute([(int) $id]);
         } catch (\Throwable $e) { /* ignore */ }
 
-        return Response::redirect('/admin/lab/products?message=toggled');
+        return Response::redirect($this->listReturnUrl($request, 'toggled'));
+    }
+
+    /** POST /admin/lab/products/{id}/feature — flip is_featured. */
+    public function toggleFeatured(Request $request, string $id): Response
+    {
+        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
+            return Response::redirect('/admin/lab/products');
+        }
+        try {
+            Database::connection()
+                ->prepare('UPDATE lab_products SET is_featured = 1 - is_featured WHERE id = ?')
+                ->execute([(int) $id]);
+        } catch (\Throwable $e) { /* ignore */ }
+
+        return Response::redirect($this->listReturnUrl($request, 'featured_toggled'));
+    }
+
+    /**
+     * Rebuild the /admin/lab/products URL preserving the current filter/page
+     * so a row toggle returns you to the same view instead of the top.
+     */
+    private function listReturnUrl(Request $request, string $message): string
+    {
+        $keep = [];
+        foreach (['q', 'type', 'category', 'page'] as $k) {
+            $v = $request->post['return_' . $k] ?? '';
+            if ($v !== '') {
+                $keep[$k] = $v;
+            }
+        }
+        $keep['message'] = $message;
+        return '/admin/lab/products?' . http_build_query($keep);
     }
 
     // ---- Categories --------------------------------------------------------
