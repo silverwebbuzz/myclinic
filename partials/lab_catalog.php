@@ -109,6 +109,241 @@ function ecp_lab_detail_url(string $type, string $slug): string
     return '/lab/' . rawurlencode($type) . '/' . rawurlencode($slug);
 }
 
+/**
+ * Maps a curated storefront filter tab -> the lab_categories slugs that feed it.
+ * A package appears under a tab when any of its linked categories matches.
+ * 'popular' is derived from is_featured/booked_count, not a category.
+ */
+function ecp_lab_tab_category_map(): array
+{
+    return [
+        'heart'      => ['cardiac', 'heart-health', 'cardiac-risk-markers'],
+        'diabetes'   => ['diabetes', 'metabolic', 'diabetes-renal'],
+        'thyroid'    => ['thyroid', 'autoimmune-thyroid'],
+        'women'      => ['pregnancy', 'infertility'],
+        'senior'     => ['arthritis', 'renal', 'cardiac'],
+        'preventive' => ['wellness', 'vitamin', 'anaemia'],
+        'kids'       => ['pregnancy'],
+    ];
+}
+
+/**
+ * DB-backed packages for the /lab grid, in the SAME positional tuple shape as
+ * the static 'packages' array so lab.php's render loop is unchanged:
+ *   [slug, name, highlights[], tests[], paramCount, price, mrp, off%, cats[], badge]
+ *
+ * Selection: featured first, then most-booked packages/offers. Each package's
+ * `cats` are the storefront filter tabs it belongs to (mapped from its
+ * lab_categories), always including 'popular' so it shows under "Most Popular".
+ *
+ * Returns [] when the DB/tables are unavailable — caller keeps the static list.
+ *
+ * @return list<array>
+ */
+function ecp_lab_db_packages(int $limit = 12): array
+{
+    if (!function_exists('ecp_db')) {
+        return [];
+    }
+    $db = ecp_db();
+    if (!$db) {
+        return [];
+    }
+
+    try {
+        // Grid rows: current price = latest effective_from per product.
+        $stmt = $db->prepare(
+            "SELECT lp.id, lp.slug, lp.name, lp.test_count, lp.is_featured,
+                    pr.mrp, pr.offer_rate
+             FROM lab_products lp
+             JOIN lab_product_pricing pr ON pr.id = (
+                 SELECT p2.id FROM lab_product_pricing p2
+                 WHERE p2.product_id = lp.id
+                 ORDER BY p2.effective_from DESC, p2.id DESC LIMIT 1
+             )
+             WHERE lp.is_active = 1
+               AND lp.product_type IN ('PROFILE', 'OFFER')
+               AND pr.offer_rate > 0
+             ORDER BY lp.is_featured DESC, lp.booked_count DESC, lp.name ASC
+             LIMIT :lim"
+        );
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if (!$rows) {
+            return [];
+        }
+
+        $ids = array_column($rows, 'id');
+        $in  = implode(',', array_fill(0, count($ids), '?'));
+
+        // Up to 6 sample test names per package (for the card's test-chip list).
+        $testsByProduct = [];
+        $tstmt = $db->prepare(
+            "SELECT lpp.product_id, par.name
+             FROM lab_product_parameters lpp
+             JOIN lab_parameters par ON par.id = lpp.parameter_id
+             WHERE lpp.product_id IN ($in)
+             ORDER BY par.name"
+        );
+        $tstmt->execute($ids);
+        foreach ($tstmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $pid = (int) $r['product_id'];
+            if (count($testsByProduct[$pid] ?? []) < 6) {
+                $testsByProduct[$pid][] = ecp_lab_titlecase($r['name']);
+            }
+        }
+
+        // Category slugs per package (for tab mapping).
+        $catsByProduct = [];
+        $cstmt = $db->prepare(
+            "SELECT lpc.product_id, c.slug
+             FROM lab_product_categories lpc
+             JOIN lab_categories c ON c.id = lpc.category_id
+             WHERE lpc.product_id IN ($in)"
+        );
+        $cstmt->execute($ids);
+        foreach ($cstmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $catsByProduct[(int) $r['product_id']][] = $r['slug'];
+        }
+
+        $tabMap = ecp_lab_tab_category_map();
+
+        $out = [];
+        foreach ($rows as $row) {
+            $pid   = (int) $row['id'];
+            $mrp   = (float) $row['mrp'];
+            $offer = (float) $row['offer_rate'];
+            $offPct = $mrp > 0 ? (int) round(($mrp - $offer) / $mrp * 100) : 0;
+
+            // Which storefront tabs this package belongs to.
+            $prodCats = $catsByProduct[$pid] ?? [];
+            $tabs = ['popular']; // always eligible for "Most Popular"
+            foreach ($tabMap as $tab => $slugs) {
+                if (array_intersect($prodCats, $slugs)) {
+                    $tabs[] = $tab;
+                }
+            }
+            $tabs = array_values(array_unique($tabs));
+
+            $tests = $testsByProduct[$pid] ?? [];
+            $highlights = [
+                (int) $row['test_count'] . ' tests in one package',
+                $offPct > 0 ? "Save up to {$offPct}% vs individual tests" : 'Comprehensive health screening',
+                'Free home sample collection & digital reports',
+            ];
+
+            $out[] = [
+                (string) $row['slug'],
+                ecp_lab_titlecase($row['name']),
+                $highlights,
+                $tests,
+                (string) (int) $row['test_count'],
+                (string) (int) round($offer),
+                (string) (int) round($mrp),
+                (string) $offPct,
+                $tabs,
+                !empty($row['is_featured']) ? 'Bestseller' : '',
+            ];
+        }
+        return $out;
+    } catch (Throwable $e) {
+        error_log('[ecp_lab_db_packages] ' . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Full autocomplete index from the DB: every active package/offer plus the most
+ * popular individual tests. Shaped like lab.php's $labSearchIndex package rows
+ * (type/slug/title/meta/params/price/mrp/off/url/q) so the JS renderer is
+ * unchanged. Returns [] when the DB is unavailable (caller keeps the static index).
+ *
+ * @return list<array<string,mixed>>
+ */
+function ecp_lab_db_search_index(int $testLimit = 150): array
+{
+    if (!function_exists('ecp_db')) {
+        return [];
+    }
+    $db = ecp_db();
+    if (!$db) {
+        return [];
+    }
+    try {
+        // All packages/offers + top individual tests, each with current price.
+        $stmt = $db->prepare(
+            "SELECT lp.product_type, lp.slug, lp.name, lp.test_count,
+                    pr.mrp, pr.offer_rate
+             FROM lab_products lp
+             JOIN lab_product_pricing pr ON pr.id = (
+                 SELECT p2.id FROM lab_product_pricing p2
+                 WHERE p2.product_id = lp.id
+                 ORDER BY p2.effective_from DESC, p2.id DESC LIMIT 1
+             )
+             WHERE lp.is_active = 1 AND pr.offer_rate > 0
+               AND (
+                   lp.product_type IN ('PROFILE', 'OFFER')
+                   OR lp.id IN (
+                       SELECT id FROM (
+                           SELECT id FROM lab_products
+                           WHERE is_active = 1 AND product_type = 'TEST'
+                           ORDER BY booked_count DESC, name ASC
+                           LIMIT :tl
+                       ) t
+                   )
+               )
+             ORDER BY (lp.product_type = 'TEST'), lp.booked_count DESC, lp.name ASC"
+        );
+        $stmt->bindValue(':tl', $testLimit, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $out = [];
+        foreach ($rows as $r) {
+            $isPackage = $r['product_type'] !== 'TEST';
+            $mrp   = (float) $r['mrp'];
+            $offer = (float) $r['offer_rate'];
+            $offPct = $mrp > 0 ? (int) round(($mrp - $offer) / $mrp * 100) : 0;
+            $title = ecp_lab_titlecase($r['name']);
+            $out[] = [
+                'type'   => 'package', // detail route is /lab/package/{slug} for both
+                'slug'   => (string) $r['slug'],
+                'title'  => $title,
+                'meta'   => $isPackage
+                    ? 'Package | Includes ' . (int) $r['test_count'] . ' Tests'
+                    : 'Test | Single parameter',
+                'params' => (string) (int) $r['test_count'],
+                'price'  => (string) (int) round($offer),
+                'mrp'    => (string) (int) round($mrp),
+                'off'    => (string) $offPct,
+                'url'    => ecp_lab_detail_url('package', (string) $r['slug']),
+                'q'      => strtolower($title),
+            ];
+        }
+        return $out;
+    } catch (Throwable $e) {
+        error_log('[ecp_lab_db_search_index] ' . $e->getMessage());
+        return [];
+    }
+}
+
+/** Thyrocare names are ALL CAPS; present them in Title Case for the storefront. */
+function ecp_lab_titlecase(string $name): string
+{
+    // Only re-case fully-uppercase strings; leave mixed-case names as-is.
+    if ($name !== mb_strtoupper($name)) {
+        return $name;
+    }
+    $out = mb_convert_case(mb_strtolower($name), MB_CASE_TITLE);
+    // Keep common lab acronyms uppercase.
+    return preg_replace_callback(
+        '/\b(cbc|tsh|t3|t4|hba1c|crp|hiv|hcg|psa|esr|ldl|hdl|vldl|ecg|pcr|dna|rna|std|uti|hs-crp|apo)\b/i',
+        static fn ($m) => mb_strtoupper($m[1]),
+        $out
+    ) ?? $out;
+}
+
 function ecp_lab_raw_catalog(): array
 {
     static $raw = null;
@@ -116,8 +351,12 @@ function ecp_lab_raw_catalog(): array
         return $raw;
     }
 
+    // Prefer live DB packages; fall back to the curated static list below when
+    // the DB or lab_* tables are unavailable (keeps the page working offline).
+    $dbPackages = ecp_lab_db_packages(12);
+
     $raw = [
-        'packages' => [
+        'packages' => $dbPackages !== [] ? $dbPackages : [
             ['full-body-advanced', 'Full Body Checkup Advanced', ['Complete body health analysis', 'Includes blood, urine & vital markers', 'Ideal for annual health checkup'], ['CBC', 'Lipid Profile', 'Liver Function', 'Kidney Function', 'Thyroid (T3 T4 TSH)', 'HbA1c', 'Vitamin D', 'Vitamin B12'], '85', '1499', '4200', '64', ['popular', 'preventive'], 'Bestseller'],
             ['diabetes-care', 'Diabetes Care Profile', ['Monitors blood sugar levels', 'Includes HbA1c & fasting sugar', 'Early diabetes detection'], ['Fasting Blood Sugar', 'HbA1c', 'Lipid Profile', 'Kidney Function', 'Urine Routine'], '42', '699', '1800', '61', ['popular', 'diabetes'], ''],
             ['thyroid-total', 'Thyroid Profile - Total', ['Complete thyroid function test', 'Includes T3, T4 & TSH', 'Detects hypo & hyperthyroidism'], ['T3', 'T4', 'TSH', 'Anti-TPO'], '4', '499', '1200', '58', ['thyroid'], ''],
@@ -280,7 +519,96 @@ function ecp_lab_find_item(string $type, string $slug): ?array
             return $item;
         }
     }
+    // The grid only lists the top ~12 packages, but a detail URL may point at
+    // any of the 300+ DB packages/offers. Resolve those directly by slug.
+    if ($type === 'package') {
+        return ecp_lab_db_find_package($slug);
+    }
     return null;
+}
+
+/**
+ * Look up a single package/offer by slug from the DB and shape it like an
+ * ecp_lab_items() 'package' entry (so lab-detail.php renders it unchanged).
+ * Returns null when not found or the DB is unavailable.
+ */
+function ecp_lab_db_find_package(string $slug): ?array
+{
+    if (!function_exists('ecp_db')) {
+        return null;
+    }
+    $db = ecp_db();
+    if (!$db) {
+        return null;
+    }
+    try {
+        $stmt = $db->prepare(
+            "SELECT lp.id, lp.slug, lp.name, lp.test_count, lp.description,
+                    pr.mrp, pr.offer_rate
+             FROM lab_products lp
+             JOIN lab_product_pricing pr ON pr.id = (
+                 SELECT p2.id FROM lab_product_pricing p2
+                 WHERE p2.product_id = lp.id
+                 ORDER BY p2.effective_from DESC, p2.id DESC LIMIT 1
+             )
+             WHERE lp.slug = ? AND lp.is_active = 1
+               AND lp.product_type IN ('PROFILE', 'OFFER')
+             LIMIT 1"
+        );
+        $stmt->execute([$slug]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return null;
+        }
+
+        // Full test list (grouped names) for the detail page.
+        $tstmt = $db->prepare(
+            "SELECT par.name
+             FROM lab_product_parameters lpp
+             JOIN lab_parameters par ON par.id = lpp.parameter_id
+             WHERE lpp.product_id = ?
+             ORDER BY par.group_name, par.name"
+        );
+        $tstmt->execute([(int) $row['id']]);
+        $tests = array_map(
+            static fn ($r) => ecp_lab_titlecase($r['name']),
+            $tstmt->fetchAll(PDO::FETCH_ASSOC) ?: []
+        );
+
+        $mrp   = (float) $row['mrp'];
+        $offer = (float) $row['offer_rate'];
+        $offPct = $mrp > 0 ? (int) round(($mrp - $offer) / $mrp * 100) : 0;
+        $photos = ecp_lab_photos();
+
+        return [
+            'type'       => 'package',
+            'slug'       => (string) $row['slug'],
+            'title'      => ecp_lab_titlecase($row['name']),
+            'subtitle'   => (int) $row['test_count'] . ' tests included'
+                            . ($offPct > 0 ? ' · Up to ' . $offPct . '% off' : ''),
+            'blurb'      => $row['description'] ?: 'A comprehensive health package with '
+                            . (int) $row['test_count'] . ' tests, sample collected at home.',
+            'highlights' => [
+                (int) $row['test_count'] . ' tests in one package',
+                'Free home sample collection & digital reports',
+                'Free doctor consultation with your report',
+            ],
+            'tests'  => $tests,
+            'params' => (string) (int) $row['test_count'],
+            'price'  => (string) (int) round($offer),
+            'mrp'    => (string) (int) round($mrp),
+            'off'    => (string) $offPct,
+            'cats'   => ['popular'],
+            'badge'  => '',
+            'photo'  => $photos['pkg-' . $slug]
+                        ?? $photos['gal-' . (1 + (abs(crc32($slug)) % 8))]
+                        ?? $photos['hero-lab'],
+            'crumb'  => 'Health Packages',
+        ];
+    } catch (Throwable $e) {
+        error_log('[ecp_lab_db_find_package] ' . $e->getMessage());
+        return null;
+    }
 }
 
 /**

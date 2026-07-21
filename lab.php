@@ -260,7 +260,14 @@ require __DIR__ . '/partials/header.php';
                         data-search="<?= e(strtolower($name . ' ' . implode(' ', $tests) . ' ' . implode(' ', $highlights))) ?>">
                         <div class="lab-pkg-card-media">
                             <a href="<?= e(ecp_lab_detail_url('package', $slug)) ?>" tabindex="-1" aria-hidden="true">
-                                <img src="<?= e(lab_photo($labPhotos['pkg-' . $slug], 640, 400)) ?>" alt="<?= e($name) ?>" width="640" height="400" loading="lazy">
+                                <?php
+                                // DB-sourced packages won't have a curated photo key; rotate
+                                // through the gallery pool by slug so every card has an image.
+                                $pkgPhotoId = $labPhotos['pkg-' . $slug]
+                                    ?? $labPhotos['gal-' . (1 + (abs(crc32($slug)) % 8))]
+                                    ?? $labPhotos['hero-lab'];
+                                ?>
+                                <img src="<?= e(lab_photo($pkgPhotoId, 640, 400)) ?>" alt="<?= e($name) ?>" width="640" height="400" loading="lazy">
                             </a>
                         </div>
                         <div class="lab-pkg-card-body">
@@ -273,8 +280,11 @@ require __DIR__ . '/partials/header.php';
                             </ul>
                             <div class="lab-pkg-card-price">
                                 <span class="lab-pkg-card-now">₹<?= e($price) ?></span>
-                                <span class="lab-pkg-card-off"><?= e($off) ?>% OFF</span>
-                                <s class="lab-pkg-card-mrp">₹<?= e($mrp) ?></s>
+                                <?php // Only show the "% OFF" chip + struck MRP when there IS a discount. ?>
+                                <?php if ((int) $off > 0 && (float) $mrp > (float) $price): ?>
+                                    <span class="lab-pkg-card-off"><?= e($off) ?>% OFF</span>
+                                    <s class="lab-pkg-card-mrp">₹<?= e($mrp) ?></s>
+                                <?php endif; ?>
                             </div>
                             <div class="lab-pkg-card-actions">
                                 <a href="<?= e(ecp_lab_detail_url('package', $slug)) ?>" class="lab-pkg-card-link">View details →</a>
@@ -718,20 +728,24 @@ require __DIR__ . '/partials/header.php';
 
 <?php
 // Search index for autocomplete + results (packages, organs, symptoms, life).
-$labSearchIndex = [];
-foreach ($packages as [$slug, $name, $highlights, $tests, $params, $price, $mrp, $off, $cats, $badge]) {
-    $labSearchIndex[] = [
-        'type' => 'package',
-        'slug' => $slug,
-        'title' => $name,
-        'meta' => 'Package | Includes ' . $params . ' Tests',
-        'params' => $params,
-        'price' => $price,
-        'mrp' => $mrp,
-        'off' => $off,
-        'url' => ecp_lab_detail_url('package', $slug),
-        'q' => strtolower($name . ' ' . implode(' ', $tests) . ' ' . implode(' ', $highlights) . ' ' . implode(' ', $cats)),
-    ];
+// Prefer the full DB index (all packages/offers + top individual tests); fall
+// back to just the grid packages when the DB/lab tables are unavailable.
+$labSearchIndex = ecp_lab_db_search_index(150);
+if ($labSearchIndex === []) {
+    foreach ($packages as [$slug, $name, $highlights, $tests, $params, $price, $mrp, $off, $cats, $badge]) {
+        $labSearchIndex[] = [
+            'type' => 'package',
+            'slug' => $slug,
+            'title' => $name,
+            'meta' => 'Package | Includes ' . $params . ' Tests',
+            'params' => $params,
+            'price' => $price,
+            'mrp' => $mrp,
+            'off' => $off,
+            'url' => ecp_lab_detail_url('package', $slug),
+            'q' => strtolower($name . ' ' . implode(' ', $tests) . ' ' . implode(' ', $highlights) . ' ' . implode(' ', $cats)),
+        ];
+    }
 }
 foreach ($organs as [$slug, $label, $desc]) {
     $labSearchIndex[] = [
