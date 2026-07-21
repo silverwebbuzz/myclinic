@@ -181,7 +181,7 @@ function ecp_lab_db_packages(int $limit = 12): array
     try {
         // Grid rows: current price = latest effective_from per product.
         $stmt = $db->prepare(
-            "SELECT lp.id, lp.slug, lp.name, lp.test_count, lp.is_featured,
+            "SELECT lp.id, lp.slug, lp.name, lp.test_count, lp.is_featured, lp.fasting,
                     pr.mrp, pr.offer_rate
              FROM lab_products lp
              JOIN lab_product_pricing pr ON pr.id = (
@@ -276,6 +276,8 @@ function ecp_lab_db_packages(int $limit = 12): array
                 (string) $offPct,
                 $tabs,
                 !empty($row['is_featured']) ? 'Bestseller' : '',
+                // fasting: 'CF' = fasting required, 'NF' = no fasting, null = unknown.
+                (string) ($row['fasting'] ?? ''),
             ];
         }
         return $out;
@@ -426,14 +428,14 @@ function ecp_lab_raw_catalog(): array
 
     $raw = [
         'packages' => $dbPackages !== [] ? $dbPackages : [
-            ['full-body-advanced', 'Full Body Checkup Advanced', ['Complete body health analysis', 'Includes blood, urine & vital markers', 'Ideal for annual health checkup'], ['CBC', 'Lipid Profile', 'Liver Function', 'Kidney Function', 'Thyroid (T3 T4 TSH)', 'HbA1c', 'Vitamin D', 'Vitamin B12'], '85', '1499', '4200', '64', ['popular', 'preventive'], 'Bestseller'],
-            ['diabetes-care', 'Diabetes Care Profile', ['Monitors blood sugar levels', 'Includes HbA1c & fasting sugar', 'Early diabetes detection'], ['Fasting Blood Sugar', 'HbA1c', 'Lipid Profile', 'Kidney Function', 'Urine Routine'], '42', '699', '1800', '61', ['popular', 'diabetes'], ''],
-            ['thyroid-total', 'Thyroid Profile - Total', ['Complete thyroid function test', 'Includes T3, T4 & TSH', 'Detects hypo & hyperthyroidism'], ['T3', 'T4', 'TSH', 'Anti-TPO'], '4', '499', '1200', '58', ['thyroid'], ''],
-            ['heart-health', 'Heart Health Package', ['Assesses cardiovascular risk', 'Includes lipid & cardiac markers', 'Ideal for heart health monitoring'], ['Lipid Profile', 'ECG Review', 'hs-CRP', 'Homocysteine', 'Blood Pressure'], '30', '999', '2600', '62', ['popular', 'heart'], ''],
-            ['vitamin-deficiency', 'Vitamin Deficiency Package', ['Checks key vitamin levels', 'Includes Vitamin D & B12', 'Identifies nutritional gaps'], ['Vitamin D', 'Vitamin B12', 'Calcium', 'Iron Studies', 'Folate'], '12', '899', '2400', '63', ['preventive'], ''],
-            ['womens-wellness', "Women's Wellness - Full", ['Comprehensive women\'s health panel', 'Hormones, iron & bone markers', 'Ideal for preventive screening'], ['CBC', 'Thyroid', 'Iron Studies', 'Vitamin D', 'Vitamin B12', 'PCOS Markers', 'Calcium'], '60', '1299', '3500', '63', ['popular', 'women'], 'Popular'],
-            ['senior-citizen', 'Senior Citizen Package', ['Age-focused full body screening', 'Covers chronic & lifestyle risks', 'Recommended for 60+ adults'], ['Full Body Profile', 'Diabetes', 'Cardiac', 'Bone Health', 'Liver & Kidney'], '90', '1799', '5000', '64', ['popular', 'senior'], ''],
-            ['fever-infection', 'Fever / Infection Panel', ['Detects common infections', 'Includes dengue, malaria & typhoid', 'Quick fever diagnosis panel'], ['CBC', 'Malaria', 'Dengue NS1', 'Typhoid', 'CRP', 'Urine Routine'], '20', '799', '2000', '60', ['preventive'], ''],
+            ['full-body-advanced', 'Full Body Checkup Advanced', ['Complete body health analysis', 'Includes blood, urine & vital markers', 'Ideal for annual health checkup'], ['CBC', 'Lipid Profile', 'Liver Function', 'Kidney Function', 'Thyroid (T3 T4 TSH)', 'HbA1c', 'Vitamin D', 'Vitamin B12'], '85', '1499', '4200', '64', ['popular', 'preventive'], 'Bestseller', 'CF'],
+            ['diabetes-care', 'Diabetes Care Profile', ['Monitors blood sugar levels', 'Includes HbA1c & fasting sugar', 'Early diabetes detection'], ['Fasting Blood Sugar', 'HbA1c', 'Lipid Profile', 'Kidney Function', 'Urine Routine'], '42', '699', '1800', '61', ['popular', 'diabetes'], '', 'CF'],
+            ['thyroid-total', 'Thyroid Profile - Total', ['Complete thyroid function test', 'Includes T3, T4 & TSH', 'Detects hypo & hyperthyroidism'], ['T3', 'T4', 'TSH', 'Anti-TPO'], '4', '499', '1200', '58', ['thyroid'], '', 'NF'],
+            ['heart-health', 'Heart Health Package', ['Assesses cardiovascular risk', 'Includes lipid & cardiac markers', 'Ideal for heart health monitoring'], ['Lipid Profile', 'ECG Review', 'hs-CRP', 'Homocysteine', 'Blood Pressure'], '30', '999', '2600', '62', ['popular', 'heart'], '', 'CF'],
+            ['vitamin-deficiency', 'Vitamin Deficiency Package', ['Checks key vitamin levels', 'Includes Vitamin D & B12', 'Identifies nutritional gaps'], ['Vitamin D', 'Vitamin B12', 'Calcium', 'Iron Studies', 'Folate'], '12', '899', '2400', '63', ['preventive'], '', 'NF'],
+            ['womens-wellness', "Women's Wellness - Full", ['Comprehensive women\'s health panel', 'Hormones, iron & bone markers', 'Ideal for preventive screening'], ['CBC', 'Thyroid', 'Iron Studies', 'Vitamin D', 'Vitamin B12', 'PCOS Markers', 'Calcium'], '60', '1299', '3500', '63', ['popular', 'women'], 'Popular', 'CF'],
+            ['senior-citizen', 'Senior Citizen Package', ['Age-focused full body screening', 'Covers chronic & lifestyle risks', 'Recommended for 60+ adults'], ['Full Body Profile', 'Diabetes', 'Cardiac', 'Bone Health', 'Liver & Kidney'], '90', '1799', '5000', '64', ['popular', 'senior'], '', 'CF'],
+            ['fever-infection', 'Fever / Infection Panel', ['Detects common infections', 'Includes dengue, malaria & typhoid', 'Quick fever diagnosis panel'], ['CBC', 'Malaria', 'Dengue NS1', 'Typhoid', 'CRP', 'Urine Routine'], '20', '799', '2000', '60', ['preventive'], '', 'NF'],
         ],
         'packageFilters' => [
             'all' => 'All Packages', 'popular' => 'Most Popular', 'heart' => 'Heart', 'diabetes' => 'Diabetes',
@@ -802,7 +804,7 @@ function ecp_lab_symptom_listing(string $symptomSlug, int $limit = 120): array
         $orSql = '(' . implode(' OR ', $conds) . ')';
 
         $sql = "SELECT lp.id, lp.product_type, lp.slug, lp.name, lp.test_count,
-                       lp.test_groups_json, pr.mrp, pr.offer_rate
+                       lp.fasting, lp.test_groups_json, pr.mrp, pr.offer_rate
                 FROM lab_products lp
                 JOIN lab_product_pricing pr ON pr.id = (
                     SELECT p2.id FROM lab_product_pricing p2
@@ -891,7 +893,7 @@ function ecp_lab_listing(?string $categorySlug = null, int $limit = 300): array
         }
 
         $sql = "SELECT lp.id, lp.product_type, lp.slug, lp.name, lp.test_count,
-                       lp.test_groups_json, pr.mrp, pr.offer_rate
+                       lp.fasting, lp.test_groups_json, pr.mrp, pr.offer_rate
                 FROM lab_products lp
                 $catJoin
                 JOIN lab_product_pricing pr ON pr.id = (
@@ -965,6 +967,8 @@ function ecp_lab_shape_listing_item(array $r): array
         'mrp'    => (int) round($mrp),
         'off'    => $offPct,
         'groups' => $groups,
+        // 'CF' = fasting required, 'NF' = none, '' = n/a (for card chips).
+        'fasting' => (string) ($r['fasting'] ?? ''),
         'url'    => $r['product_type'] === 'TEST'
             ? ecp_lab_test_url((string) $r['slug'])
             : ecp_lab_detail_url('package', (string) $r['slug']),

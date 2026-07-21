@@ -94,14 +94,69 @@ $renderCard = static function (array $it): string {
     $typeLabel = ['package' => 'Package', 'offer' => 'Offer', 'test' => 'Test'][$it['type']] ?? 'Test';
     $hasOff = $it['off'] > 0 && $it['mrp'] > $it['price'];
     ob_start(); ?>
-    <article class="lab-list-card" data-type="<?= e($it['type']) ?>"
+    <?php $fasting = $it['fasting'] ?? ''; ?>
+    <article class="lab-list-card lab-pkg-card" data-type="<?= e($it['type']) ?>"
              data-search="<?= e(strtolower($it['title'])) ?>">
-        <div class="lab-list-card-body">
-            <span class="lab-list-card-tag lab-list-card-tag-<?= e($it['type']) ?>"><?= e($typeLabel) ?></span>
-            <h3 class="lab-list-card-title">
+        <div class="lab-pkg-card-body">
+            <!-- Top meta chips: audience + fasting (both real / accurate). -->
+            <div class="lab-pkg-chips">
+                <span class="lab-pkg-chip lab-pkg-chip-gender">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/>
+                        <path d="M6 21c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                    For Male &amp; Female
+                </span>
+                <?php if ($fasting === 'NF'): ?>
+                    <span class="lab-pkg-chip lab-pkg-chip-fast-ok">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M6 3v7a3 3 0 0 0 6 0V3M9 3v18M17 3c-1.5 1.5-2 3.5-2 6s.5 4.5 2 6v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        No Fasting Required
+                    </span>
+                <?php elseif ($fasting === 'CF'): ?>
+                    <span class="lab-pkg-chip lab-pkg-chip-fast-req">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M6 3v7a3 3 0 0 0 6 0V3M9 3v18M17 3c-1.5 1.5-2 3.5-2 6s.5 4.5 2 6v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Fasting Required
+                    </span>
+                <?php endif; ?>
+                <span class="lab-pkg-chip lab-list-card-tag-<?= e($it['type']) ?> lab-list-type-chip"><?= e($typeLabel) ?></span>
+            </div>
+
+            <h3 class="lab-pkg-card-title">
                 <a href="<?= e($it['url']) ?>"><?= e($it['title']) ?></a>
             </h3>
-            <p class="lab-list-card-count"><?= (int) $it['params'] ?> test<?= $it['params'] == 1 ? '' : 's' ?> included</p>
+
+            <!-- Stat row: test count + report time, with icons. -->
+            <div class="lab-pkg-stats">
+                <div class="lab-pkg-stat">
+                    <span class="lab-pkg-stat-ico" aria-hidden="true">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M9 3h6M10 3v5.5L5.8 17a3 3 0 0 0 2.7 4.3h7a3 3 0 0 0 2.7-4.3L14 8.5V3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M8 14h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                        </svg>
+                    </span>
+                    <span class="lab-pkg-stat-meta">
+                        <small>Tests Included</small>
+                        <strong><?= (int) $it['params'] ?> Test<?= $it['params'] == 1 ? '' : 's' ?></strong>
+                    </span>
+                </div>
+                <div class="lab-pkg-stat">
+                    <span class="lab-pkg-stat-ico" aria-hidden="true">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.7"/>
+                            <path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                    <span class="lab-pkg-stat-meta">
+                        <small>Reports within</small>
+                        <strong>24 Hours*</strong>
+                    </span>
+                </div>
+            </div>
+
             <?php if (!empty($it['groups'])): ?>
             <div class="lab-list-card-groups">
                 <?php foreach ($it['groups'] as $grp => $cnt): ?>
@@ -109,16 +164,27 @@ $renderCard = static function (array $it): string {
                 <?php endforeach; ?>
             </div>
             <?php endif; ?>
-            <div class="lab-list-card-price">
-                <strong>₹<?= e(number_format($it['price'])) ?></strong>
+
+            <!-- Exclusive offer: two-colour price + % chip. -->
+            <div class="lab-pkg-offer">
                 <?php if ($hasOff): ?>
-                    <s>₹<?= e(number_format($it['mrp'])) ?></s>
-                    <span class="lab-list-card-off"><?= (int) $it['off'] ?>% OFF</span>
+                    <span class="lab-pkg-offer-label">Exclusive Offer</span>
                 <?php endif; ?>
+                <div class="lab-pkg-offer-price">
+                    <span class="lab-pkg-offer-now">₹<?= e(number_format($it['price'])) ?></span>
+                    <?php if ($hasOff): ?>
+                        <s class="lab-pkg-offer-mrp">₹<?= e(number_format($it['mrp'])) ?></s>
+                        <span class="lab-pkg-offer-off">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12V6a2 2 0 0 1 2-2h6l8 8-8 8-8-8z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/></svg>
+                            <?= (int) $it['off'] ?>% off
+                        </span>
+                    <?php endif; ?>
+                </div>
             </div>
-            <div class="lab-list-card-actions">
-                <a href="<?= e($it['url']) ?>" class="lab-list-card-link">View details →</a>
-                <button type="button" class="lab-list-card-book lab-book" data-book="<?= e($it['title']) ?>">Book Now</button>
+
+            <div class="lab-pkg-card-actions">
+                <a href="<?= e($it['url']) ?>" class="lab-pkg-card-detail">Detail</a>
+                <button type="button" class="lab-pkg-card-book lab-book" data-book="<?= e($it['title']) ?>">Book Now</button>
             </div>
         </div>
     </article>

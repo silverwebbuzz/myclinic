@@ -297,41 +297,94 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <div class="lab-pkgs-grid" id="labPkgsGrid">
-                <?php foreach ($packages as [$slug, $name, $highlights, $tests, $params, $price, $mrp, $off, $cats, $badge]): ?>
+                <?php foreach ($packages as $pkg):
+                    // Positional row (see ecp_lab_db_packages / static fallback). fasting
+                    // is the 11th element ('CF' = fasting required, 'NF' = none, '' = n/a).
+                    [$slug, $name, $highlights, $tests, $params, $price, $mrp, $off, $cats, $badge] = $pkg;
+                    $fasting = $pkg[10] ?? '';
+                    ?>
                     <article class="lab-pkg-card"
                         data-cats="<?= e(implode(' ', $cats)) ?>"
                         data-name="<?= e($name) ?>"
                         data-search="<?= e(strtolower($name . ' ' . implode(' ', $tests) . ' ' . implode(' ', $highlights))) ?>">
-                        <div class="lab-pkg-card-media">
-                            <a href="<?= e(ecp_lab_detail_url('package', $slug)) ?>" tabindex="-1" aria-hidden="true">
-                                <?php
-                                // DB-sourced packages won't have a curated photo key; rotate
-                                // through the gallery pool by slug so every card has an image.
-                                $pkgPhotoId = $labPhotos['pkg-' . $slug]
-                                    ?? $labPhotos['gal-' . (1 + (abs(crc32($slug)) % 8))]
-                                    ?? $labPhotos['hero-lab'];
-                                ?>
-                                <img src="<?= e(lab_photo($pkgPhotoId, 640, 400)) ?>" alt="<?= e($name) ?>" width="640" height="400" loading="lazy">
-                            </a>
-                        </div>
                         <div class="lab-pkg-card-body">
-                            <h3 class="lab-pkg-card-title"><a href="<?= e(ecp_lab_detail_url('package', $slug)) ?>"><?= e($name) ?></a></h3>
-                            <p class="lab-pkg-card-count"><?= e($params) ?> Tests Included</p>
-                            <ul class="lab-pkg-card-points">
-                                <?php foreach ($highlights as $point): ?>
-                                    <li><?= e($point) ?></li>
-                                <?php endforeach; ?>
-                            </ul>
-                            <div class="lab-pkg-card-price">
-                                <span class="lab-pkg-card-now">₹<?= e($price) ?></span>
-                                <?php // Only show the "% OFF" chip + struck MRP when there IS a discount. ?>
-                                <?php if ((int) $off > 0 && (float) $mrp > (float) $price): ?>
-                                    <span class="lab-pkg-card-off"><?= e($off) ?>% OFF</span>
-                                    <s class="lab-pkg-card-mrp">₹<?= e($mrp) ?></s>
+                            <!-- Top meta chips: audience + fasting (both real / accurate). -->
+                            <div class="lab-pkg-chips">
+                                <span class="lab-pkg-chip lab-pkg-chip-gender">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/>
+                                        <path d="M6 21c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                    </svg>
+                                    For Male &amp; Female
+                                </span>
+                                <?php if ($fasting === 'NF'): ?>
+                                    <span class="lab-pkg-chip lab-pkg-chip-fast-ok">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                            <path d="M6 3v7a3 3 0 0 0 6 0V3M9 3v18M17 3c-1.5 1.5-2 3.5-2 6s.5 4.5 2 6v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        No Fasting Required
+                                    </span>
+                                <?php elseif ($fasting === 'CF'): ?>
+                                    <span class="lab-pkg-chip lab-pkg-chip-fast-req">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                            <path d="M6 3v7a3 3 0 0 0 6 0V3M9 3v18M17 3c-1.5 1.5-2 3.5-2 6s.5 4.5 2 6v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        Fasting Required
+                                    </span>
                                 <?php endif; ?>
                             </div>
+
+                            <h3 class="lab-pkg-card-title"><a href="<?= e(ecp_lab_detail_url('package', $slug)) ?>"><?= e($name) ?></a></h3>
+
+                            <!-- Stat row: test count (+ report chip) with icons. -->
+                            <div class="lab-pkg-stats">
+                                <div class="lab-pkg-stat">
+                                    <span class="lab-pkg-stat-ico" aria-hidden="true">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                            <path d="M9 3h6M10 3v5.5L5.8 17a3 3 0 0 0 2.7 4.3h7a3 3 0 0 0 2.7-4.3L14 8.5V3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M8 14h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                                        </svg>
+                                    </span>
+                                    <span class="lab-pkg-stat-meta">
+                                        <small>Tests Included</small>
+                                        <strong><?= e($params) ?> Tests</strong>
+                                    </span>
+                                </div>
+                                <div class="lab-pkg-stat">
+                                    <span class="lab-pkg-stat-ico" aria-hidden="true">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                            <circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.7"/>
+                                            <path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </span>
+                                    <span class="lab-pkg-stat-meta">
+                                        <small>Reports within</small>
+                                        <strong>24 Hours*</strong>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <p class="lab-pkg-card-incl"><span>Test Included:</span> <?= e(implode(' , ', array_slice($tests, 0, 3))) ?><?php if (count($tests) > 3): ?><a href="<?= e(ecp_lab_detail_url('package', $slug)) ?>" class="lab-pkg-card-more"> …&nbsp;+<?= count($tests) - 3 ?> more</a><?php endif; ?></p>
+
+                            <!-- Exclusive offer: two-colour price + % chip. -->
+                            <div class="lab-pkg-offer">
+                                <?php if ((int) $off > 0 && (float) $mrp > (float) $price): ?>
+                                    <span class="lab-pkg-offer-label">Exclusive Offer</span>
+                                <?php endif; ?>
+                                <div class="lab-pkg-offer-price">
+                                    <span class="lab-pkg-offer-now">₹<?= e($price) ?></span>
+                                    <?php if ((int) $off > 0 && (float) $mrp > (float) $price): ?>
+                                        <s class="lab-pkg-offer-mrp">₹<?= e($mrp) ?></s>
+                                        <span class="lab-pkg-offer-off">
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12V6a2 2 0 0 1 2-2h6l8 8-8 8-8-8z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/></svg>
+                                            <?= e($off) ?>% off
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
                             <div class="lab-pkg-card-actions">
-                                <a href="<?= e(ecp_lab_detail_url('package', $slug)) ?>" class="lab-pkg-card-link">View details →</a>
+                                <a href="<?= e(ecp_lab_detail_url('package', $slug)) ?>" class="lab-pkg-card-detail">Detail</a>
                                 <button type="button" class="lab-pkg-card-book lab-book" data-book="<?= e($name) ?>">Book Now</button>
                             </div>
                         </div>
