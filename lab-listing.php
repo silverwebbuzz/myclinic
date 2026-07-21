@@ -136,29 +136,45 @@ $renderCard = static function (array $it): string {
         </section>
         <?php endif; ?>
 
-        <!-- Tabs: All / Packages / Offers / Tests -->
-        <div class="lab-list-tabs" role="tablist" aria-label="Filter by type">
-            <?php
-            $tabs = [
-                'all'     => ['All', count($allItems)],
-                'package' => ['Packages', count($packages)],
-                'offer'   => ['Offers', count($offers)],
-                'test'    => ['Tests', count($tests)],
-            ];
-            $first = true;
-            foreach ($tabs as $key => [$label, $count]):
-                if ($count === 0 && $key !== 'all') continue; ?>
-                <button type="button" class="lab-list-tab<?= $first ? ' is-active' : '' ?>"
-                        role="tab" aria-selected="<?= $first ? 'true' : 'false' ?>"
-                        data-list-tab="<?= e($key) ?>">
-                    <?= e($label) ?> <span class="lab-list-tab-n"><?= (int) $count ?></span>
+        <!-- Tabs + view toggle -->
+        <div class="lab-list-toolbar">
+            <div class="lab-list-tabs" role="tablist" aria-label="Filter by type">
+                <?php
+                $tabs = [
+                    'all'     => ['All', count($allItems)],
+                    'package' => ['Packages', count($packages)],
+                    'offer'   => ['Offers', count($offers)],
+                    'test'    => ['Tests', count($tests)],
+                ];
+                $first = true;
+                foreach ($tabs as $key => [$label, $count]):
+                    if ($count === 0 && $key !== 'all') continue; ?>
+                    <button type="button" class="lab-list-tab<?= $first ? ' is-active' : '' ?>"
+                            role="tab" aria-selected="<?= $first ? 'true' : 'false' ?>"
+                            data-list-tab="<?= e($key) ?>">
+                        <?= e($label) ?> <span class="lab-list-tab-n"><?= (int) $count ?></span>
+                    </button>
+                <?php $first = false; endforeach; ?>
+            </div>
+            <div class="lab-list-view" role="group" aria-label="View style">
+                <button type="button" class="lab-list-viewbtn is-active" data-view="grid" aria-label="Grid view" title="Grid view">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                    </svg>
                 </button>
-            <?php $first = false; endforeach; ?>
+                <button type="button" class="lab-list-viewbtn" data-view="list" aria-label="List view" title="List view">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                        <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+                    </svg>
+                </button>
+            </div>
         </div>
 
-        <!-- Grid -->
+        <!-- Grid (data-view flips between box grid and full-width list) -->
         <?php if ($allItems): ?>
-        <div class="lab-list-grid" id="labListGrid">
+        <div class="lab-list-grid" id="labListGrid" data-view="grid">
             <?php foreach ($allItems as $it) echo $renderCard($it); ?>
         </div>
         <p class="lab-list-empty" id="labListEmpty" hidden>No items in this tab.</p>
@@ -194,6 +210,28 @@ $renderCard = static function (array $it): string {
                 if (empty) empty.hidden = shown > 0;
             });
         });
+    })();
+
+    // Grid / list view toggle. Flips the container's data-view (CSS does the
+    // layout change) and remembers the choice in localStorage.
+    (function () {
+        var grid = document.getElementById('labListGrid');
+        var btns = document.querySelectorAll('.lab-list-viewbtn');
+        if (!grid || !btns.length) return;
+        function setView(v) {
+            grid.setAttribute('data-view', v);
+            btns.forEach(function (b) {
+                b.classList.toggle('is-active', b.getAttribute('data-view') === v);
+            });
+            try { localStorage.setItem('labListView', v); } catch (e) {}
+        }
+        btns.forEach(function (b) {
+            b.addEventListener('click', function () { setView(b.getAttribute('data-view')); });
+        });
+        try {
+            var saved = localStorage.getItem('labListView');
+            if (saved === 'list' || saved === 'grid') setView(saved);
+        } catch (e) {}
     })();
 </script>
 

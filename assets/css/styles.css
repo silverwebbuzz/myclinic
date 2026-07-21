@@ -15551,7 +15551,13 @@ body {
 .lab-list-title { font-size: 1.9rem; font-weight: 800; color: #0f172a; margin: 0 0 .35rem; }
 .lab-list-sub { color: #475569; margin: 0; }
 .lab-list-wrap { padding-top: 1.5rem; }
-.lab-list-tabs { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.5rem; }
+.lab-list-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+.lab-list-tabs { display: flex; flex-wrap: wrap; gap: .5rem; }
+.lab-list-view { display: inline-flex; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+.lab-list-viewbtn { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 32px; background: #fff; border: none; color: #6b7280; cursor: pointer; transition: all .15s; }
+.lab-list-viewbtn + .lab-list-viewbtn { border-left: 1px solid #d1d5db; }
+.lab-list-viewbtn:hover { color: #059669; }
+.lab-list-viewbtn.is-active { background: #059669; color: #fff; }
 .lab-list-tab { border: 1px solid #d1d5db; background: #fff; border-radius: 999px; padding: .45rem 1rem; font-size: .9rem; font-weight: 600; color: #374151; cursor: pointer; transition: all .15s; }
 .lab-list-tab:hover { border-color: #059669; color: #059669; }
 .lab-list-tab.is-active { background: #059669; border-color: #059669; color: #fff; }
@@ -15580,6 +15586,33 @@ body {
 .lab-list-card-link:hover { text-decoration: underline; }
 .lab-list-card-book { background: #059669; color: #fff; border: none; border-radius: 8px; padding: .45rem .9rem; font-size: .85rem; font-weight: 600; cursor: pointer; }
 .lab-list-card-book:hover { background: #047857; }
+
+/* ----- List view: cards become full-width horizontal rows ----- */
+.lab-list-grid[data-view="list"] { display: block; }
+.lab-list-grid[data-view="list"] .lab-list-card { margin-bottom: .75rem; }
+.lab-list-grid[data-view="list"] .lab-list-card-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .25rem 1.5rem;
+  padding: 1rem 1.25rem;
+}
+/* Title/count/groups form the left info block; each takes full width of the
+   flex row so they stack, but the block as a whole flex-grows to fill space. */
+.lab-list-grid[data-view="list"] .lab-list-card-tag { order: 1; margin-bottom: 0; flex: 0 0 auto; }
+.lab-list-grid[data-view="list"] .lab-list-card-title { order: 2; flex: 1 1 auto; margin: 0; }
+.lab-list-grid[data-view="list"] .lab-list-card-count { order: 3; flex: 1 1 100%; margin: 0; }
+.lab-list-grid[data-view="list"] .lab-list-card-groups { order: 4; flex: 1 1 100%; margin: .15rem 0 0; }
+/* Price + actions sit on the right, pushed over by margin-left:auto. */
+.lab-list-grid[data-view="list"] .lab-list-card-price { order: 5; margin: 0 0 0 auto; }
+.lab-list-grid[data-view="list"] .lab-list-card-actions { order: 6; flex: 0 0 auto; gap: .75rem; }
+@media (min-width: 768px) {
+  /* On wide screens keep price + actions on the same row as the title by
+     letting the info items share the row instead of forcing full width. */
+  .lab-list-grid[data-view="list"] .lab-list-card-title { flex: 1 1 60%; }
+  .lab-list-grid[data-view="list"] .lab-list-card-count,
+  .lab-list-grid[data-view="list"] .lab-list-card-groups { flex: 1 1 100%; }
+}
 .lab-list-empty, .lab-list-none { text-align: center; color: #6b7280; padding: 2rem 0; }
 .lab-list-none a { color: #059669; }
 .lab-list-explore { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb; }
