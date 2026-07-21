@@ -506,6 +506,7 @@ require __DIR__ . '/partials/header.php';
             <?php endforeach; ?>
             <?php
             $extraFaq = [
+                ['Do I get a discount if I log in before booking?', 'Yes — log in with a free eClinicPro account before you book to unlock an extra 5%–25% member discount, depending on the package. It\'s applied automatically at checkout on top of the price shown.'],
                 ['Are home collection charges included?', 'Home sample collection is free with this booking on eClinicPro (preview — live fees confirmed at launch).'],
                 ['Can I reschedule my slot?', 'Yes. You can reschedule your home collection slot from your booking confirmation once bookings go live.'],
             ];

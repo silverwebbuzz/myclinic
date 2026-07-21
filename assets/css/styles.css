@@ -11708,6 +11708,144 @@ body {
   .lab-accred-label { flex-basis: 100%; text-align: center; margin: 0; }
 }
 
+/* Hero partner strip — compact "In association with" logos under the CTA. */
+.lab-banner-accred {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(15, 23, 42, .08);
+}
+.lab-banner-accred-label {
+  display: block;
+  font-size: .72rem;
+  font-style: italic;
+  letter-spacing: .01em;
+  color: #94a3b8;
+  margin-bottom: .6rem;
+}
+.lab-banner-accred-logos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .9rem 1.4rem;
+}
+.lab-banner-accred-logo {
+  height: 34px;
+  width: auto;
+  object-fit: contain;
+  filter: grayscale(15%);
+  opacity: .92;
+  transition: opacity .2s, filter .2s;
+}
+.lab-banner-accred-logo:hover { filter: none; opacity: 1; }
+.lab-banner-accred-badge { height: 46px; } /* round NABL/ISO seals read better a bit larger */
+@media (max-width: 640px) {
+  .lab-banner-accred-logos { gap: .75rem 1rem; justify-content: center; }
+  .lab-banner-accred-label { text-align: center; }
+  .lab-banner-accred-logo { height: 30px; }
+  .lab-banner-accred-badge { height: 40px; }
+}
+
+/* ============ Lab landing FAQ ============ */
+.lab-faq {
+  padding: 64px 0 72px;
+  background: linear-gradient(180deg, #f8fafb 0%, #ffffff 100%);
+}
+.lab-faq-head {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 28px;
+}
+.lab-faq-eyebrow {
+  display: inline-block;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--teal-600);
+  margin-bottom: 8px;
+}
+.lab-faq-head h2 {
+  margin: 0 0 8px;
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  color: var(--ink, #0f172a);
+}
+.lab-faq-head p {
+  margin: 0;
+  color: var(--mute);
+  font-size: 15px;
+}
+.lab-faq-search {
+  max-width: 480px;
+  margin: 0 auto 22px;
+}
+.lab-faq-search input {
+  width: 100%;
+  padding: 13px 18px;
+  border-radius: 980px;
+  border: 1.5px solid var(--line);
+  font-size: 14px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  background: #fff;
+}
+.lab-faq-search input:focus {
+  border-color: var(--teal-400);
+  box-shadow: 0 0 0 3px rgba(15, 155, 110, 0.12);
+}
+.lab-faq-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+.lab-faq-item {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0 16px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.lab-faq-item[open] {
+  border-color: rgba(15, 155, 110, 0.3);
+  box-shadow: 0 10px 24px rgba(15, 155, 110, 0.08);
+}
+.lab-faq-item summary {
+  list-style: none;
+  cursor: pointer;
+  font-weight: 650;
+  font-size: 14.5px;
+  color: var(--ink-2);
+  padding: 15px 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.lab-faq-item summary::-webkit-details-marker { display: none; }
+.lab-faq-item summary::after {
+  content: "+";
+  color: var(--teal-600);
+  font-size: 18px;
+  font-weight: 400;
+  flex-shrink: 0;
+}
+.lab-faq-item[open] summary::after { content: "–"; }
+.lab-faq-item p {
+  margin: 0 0 14px;
+  font-size: 13.5px;
+  color: var(--mute);
+  line-height: 1.6;
+}
+.lab-faq-none {
+  text-align: center;
+  color: var(--mute);
+  font-size: 14px;
+  margin: 22px auto 0;
+}
+@media (max-width: 720px) {
+  .lab-faq-grid { grid-template-columns: 1fr; }
+}
+
 /* 6-step "How It Works" icon flow (matches the package detail page). */
 .lab-how-flow {
   display: flex;

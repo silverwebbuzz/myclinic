@@ -134,6 +134,18 @@ require __DIR__ . '/partials/header.php';
                                 View Packages
                             </a>
                         </div>
+
+                        <!-- Partner / accreditation trust strip — tells patients up-front
+                             that testing is powered by Thyrocare (NABL/CAP/ISO accredited). -->
+                        <div class="lab-banner-accred" aria-label="Lab partners and certifications">
+                            <span class="lab-banner-accred-label">In association with</span>
+                            <div class="lab-banner-accred-logos">
+                                <img src="/assets/img/logos/thyrocare-logo.webp" alt="Thyrocare" class="lab-banner-accred-logo" loading="eager">
+                                <img src="/assets/img/logos/nabl-logo.webp" alt="100% NABL Accreditation" class="lab-banner-accred-logo lab-banner-accred-badge" loading="eager">
+                                <img src="/assets/img/logos/cap-accredited-logo.webp" alt="CAP Accredited — College of American Pathologists" class="lab-banner-accred-logo" loading="eager">
+                                <img src="/assets/img/logos/isologo.webp" alt="ISO 9001 certified" class="lab-banner-accred-logo lab-banner-accred-badge" loading="eager">
+                            </div>
+                        </div>
                     </div>
 
                     <div class="lab-banner-visual" aria-hidden="true">
@@ -796,6 +808,67 @@ require __DIR__ . '/partials/header.php';
         </div>
     </section>
 
+    <!-- Frequently Asked Questions -----------------------------------------
+         Content adapted from Thyrocare's public FAQ. eClinicPro handles the
+         booking, home-collection scheduling and digital reports; Thyrocare is
+         the accredited lab that actually processes every sample — so anything
+         about the testing lab keeps the "Thyrocare" name. -->
+    <section class="lab-faq" id="lab-faq">
+        <div class="wrap">
+            <div class="lab-faq-head">
+                <span class="lab-faq-eyebrow">Got Questions?</span>
+                <h2>Frequently Asked Questions</h2>
+                <p>Everything you need to know about booking lab tests and health packages with us.</p>
+            </div>
+
+            <div class="lab-faq-search">
+                <input type="search" id="labFaqSearch" placeholder="Search a question…" aria-label="Search FAQs" autocomplete="off">
+            </div>
+
+            <div class="lab-faq-grid" id="labFaqGrid">
+                <?php
+                // [question, answer]. Adapted from Thyrocare's FAQ. Thyrocare = the
+                // accredited testing lab; eClinicPro = the platform you book on.
+                $labFaqs = [
+                    ['Who runs the lab tests I book here?',
+                     'Your samples are tested by Thyrocare — one of India\'s largest NABL & CAP-accredited diagnostic labs. eClinicPro handles your booking, home sample collection and digital reports, while Thyrocare\'s fully automated laboratories process the tests and generate the results.'],
+                    ['How do I book a lab test or health package?',
+                     'Search for a test, package or symptom in the search bar above, or browse the popular health packages on this page. Pick what you need, choose a convenient date and time, and confirm — our team schedules a phlebotomist to collect your sample from home.'],
+                    ['Do I get a discount if I log in before booking?',
+                     'Yes — members save more. Create a free eClinicPro account and log in before you book to unlock an extra 5% to 25% off, depending on the package. The member discount is applied automatically at checkout on top of the price shown, so you always see your final amount before you confirm.'],
+                    ['Is home sample collection available? Is there a charge?',
+                     'Yes. A trained phlebotomist visits your home to collect the sample at the slot you choose, at no extra collection charge for most locations. You\'ll get a confirmation once your booking is scheduled.'],
+                    ['Do I need to fast before my test?',
+                     'It depends on the test. Tests like fasting blood sugar, lipid profile and many full-body packages usually require 8–12 hours of fasting (water is allowed). Others, such as thyroid or vitamin tests, do not. The exact instructions for your test are shared with you at the time of booking.'],
+                    ['How soon will I get my report? Is it valid?',
+                     'Most routine reports are ready within 24–48 hours after the sample reaches the Thyrocare lab; some specialised tests take a little longer. Reports are delivered digitally and carry the accredited lab\'s validation — they are accepted by doctors and hospitals just like any lab report.'],
+                    ['How will I receive my report?',
+                     'Your digital report is shared with you as soon as it\'s ready — you\'ll be notified, and the PDF is available to download. If you have an eClinicPro patient account, your reports are also saved securely in your Lab Reports vault for future reference.'],
+                    ['Are the labs and results reliable?',
+                     'Yes. Every sample is processed at Thyrocare facilities that are NABL-accredited and CAP-certified, with ISO-compliant quality systems and expert pathologists. This is the same accreditation standard trusted by hospitals across India.'],
+                    ['Can I book tests for my family members?',
+                     'Absolutely. You can book tests and packages for parents, children or anyone in your family. If you have a patient account, you can add family members and keep each person\'s reports organised under their own profile.'],
+                    ['How do I pay for my booking?',
+                     'You can pay online securely when you book. Pricing shown on this page reflects the applicable Thyrocare rates. If you\'re logged in, your member discount (an extra 5%–25% off, depending on the package) and any active offer are applied automatically at checkout before you confirm.'],
+                    ['What if I need to reschedule or cancel my collection?',
+                     'You can reschedule your home collection to another convenient slot by contacting our support team. If you cancel before the sample is collected, no charge applies for the collection.'],
+                    ['Is my health data kept private and secure?',
+                     'Yes. Your personal and health information is handled securely and shared only with the accredited lab needed to process your test and with you. Your reports are never sold or shared for marketing.'],
+                    ['Do I get a doctor consultation with my report?',
+                     'Selected health packages include a free doctor consultation so you can understand your results and next steps. Where it\'s included, it\'s clearly mentioned on the package, and you can also book a consult separately through eClinicPro any time.'],
+                ];
+                foreach ($labFaqs as [$q, $a]): ?>
+                <details class="lab-faq-item" data-faq="<?= e(strtolower($q . ' ' . $a)) ?>">
+                    <summary><?= e($q) ?></summary>
+                    <p><?= e($a) ?></p>
+                </details>
+                <?php endforeach; ?>
+            </div>
+
+            <p class="lab-faq-none" id="labFaqNone" hidden>No questions match your search. Try another keyword.</p>
+        </div>
+    </section>
+
 </main>
 
 <?php
@@ -1098,6 +1171,24 @@ foreach ($lifeStage as [$slug, $ico, $name, $blurb, $accent]) {
             if (suggest && !suggest.hidden && !ev.target.closest('.lab-banner-search-wrap')) {
                 hideSuggest();
             }
+        });
+    })();
+
+    /* FAQ filter — hides non-matching questions as you type. */
+    (function () {
+        var input = document.getElementById('labFaqSearch');
+        var items = document.querySelectorAll('#labFaqGrid .lab-faq-item');
+        var none  = document.getElementById('labFaqNone');
+        if (!input || !items.length) return;
+        input.addEventListener('input', function () {
+            var q = (input.value || '').toLowerCase().trim();
+            var shown = 0;
+            items.forEach(function (el) {
+                var hit = !q || (el.getAttribute('data-faq') || '').indexOf(q) !== -1;
+                el.hidden = !hit;
+                if (hit) shown++;
+            });
+            if (none) none.hidden = shown !== 0;
         });
     })();
 </script>
