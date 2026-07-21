@@ -95,9 +95,15 @@ $toggleBtn = static function (bool $on, string $action, string $csrf, string $re
             </label>
             <button type="submit" class="rounded bg-slate-800 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-700">Filter</button>
             <?php if ($q !== '' || $type !== '' || $categoryId > 0): ?>
-            <a href="/admin/lab/products" class="text-sm text-slate-500 hover:underline">Clear</a>
+            <a href="/admin/lab/products" class="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50">Clear filters</a>
             <?php endif; ?>
         </form>
+        <?php if ($type !== '' || $categoryId > 0): ?>
+        <p class="-mt-2 text-xs text-amber-700">
+            ⚠ A <?= $type !== '' ? 'Type' : '' ?><?= ($type !== '' && $categoryId > 0) ? ' &amp; ' : '' ?><?= $categoryId > 0 ? 'Category' : '' ?>
+            filter is active — it can hide items that match your search. Set it back to “All” to widen results.
+        </p>
+        <?php endif; ?>
 
         <!-- List -->
         <div class="overflow-x-auto rounded-xl border bg-white shadow-sm">
@@ -158,7 +164,35 @@ $toggleBtn = static function (bool $on, string $action, string $csrf, string $re
                     </tr>
                     <?php endforeach; ?>
                     <?php if (!$products): ?>
-                    <tr><td colspan="12" class="px-4 py-8 text-center text-slate-400">No products match.</td></tr>
+                    <tr><td colspan="12" class="px-8 py-10 text-center text-slate-500">
+                        <?php
+                        $typeLabels = ['TEST' => 'Tests', 'PROFILE' => 'Packages', 'OFFER' => 'Offers'];
+                        $activeFilters = [];
+                        if ($type !== '')      { $activeFilters[] = 'Type = ' . ($typeLabels[$type] ?? $type); }
+                        if ($categoryId > 0)   {
+                            foreach ($allCategories as $c) {
+                                if ((int) $c['id'] === $categoryId) { $activeFilters[] = 'Category = ' . $c['name']; break; }
+                            }
+                        }
+                        ?>
+                        <div class="font-medium text-slate-700">
+                            No products match<?= $q !== '' ? ' “' . htmlspecialchars($q) . '”' : '' ?>.
+                        </div>
+                        <?php if ($activeFilters): ?>
+                        <div class="mt-1 text-sm">
+                            A filter may be hiding results: <strong><?= htmlspecialchars(implode(' · ', $activeFilters)) ?></strong>.
+                        </div>
+                        <div class="mt-3 flex items-center justify-center gap-3">
+                            <?php if ($q !== ''): ?>
+                            <a href="/admin/lab/products?<?= htmlspecialchars(http_build_query(['q' => $q])) ?>"
+                               class="rounded bg-sky-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-600">
+                                Search “<?= htmlspecialchars($q) ?>” in all types
+                            </a>
+                            <?php endif; ?>
+                            <a href="/admin/lab/products" class="text-sm text-slate-500 hover:underline">Clear everything</a>
+                        </div>
+                        <?php endif; ?>
+                    </td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
