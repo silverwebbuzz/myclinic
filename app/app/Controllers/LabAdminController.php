@@ -49,18 +49,29 @@ final class LabAdminController
             // CONTAIN a parameter or belong to a CATEGORY matching the term —
             // so "diabetes" (a category) or "HbA1c" (a contained test) both
             // surface the relevant packages, not just exact-name hits.
-            $where[] = '(lp.name LIKE :q OR lp.code LIKE :q OR lp.thyrocare_code LIKE :q
+            //
+            // NOTE: the app runs PDO with EMULATE_PREPARES=false (native
+            // prepares), which does NOT allow one named placeholder to be
+            // reused across multiple positions — doing so throws HY093 and the
+            // whole query silently fails (0 results). So every occurrence of
+            // the search term gets its OWN placeholder + bound value.
+            $like = '%' . $q . '%';
+            $where[] = '(lp.name LIKE :q1 OR lp.code LIKE :q2 OR lp.thyrocare_code LIKE :q3
                 OR EXISTS (
                     SELECT 1 FROM lab_product_parameters lpp_s
                     JOIN lab_parameters par_s ON par_s.id = lpp_s.parameter_id
-                    WHERE lpp_s.product_id = lp.id AND par_s.name LIKE :q
+                    WHERE lpp_s.product_id = lp.id AND par_s.name LIKE :q4
                 )
                 OR EXISTS (
                     SELECT 1 FROM lab_product_categories lpc_s
                     JOIN lab_categories c_s ON c_s.id = lpc_s.category_id
-                    WHERE lpc_s.product_id = lp.id AND c_s.name LIKE :q
+                    WHERE lpc_s.product_id = lp.id AND c_s.name LIKE :q5
                 ))';
-            $params[':q'] = '%' . $q . '%';
+            $params[':q1'] = $like;
+            $params[':q2'] = $like;
+            $params[':q3'] = $like;
+            $params[':q4'] = $like;
+            $params[':q5'] = $like;
         }
         if ($type !== '') {
             $where[] = 'lp.product_type = :type';
