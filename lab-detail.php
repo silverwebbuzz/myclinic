@@ -57,9 +57,19 @@ if ($badge === '') {
     $badge = $isPkg ? 'Best Seller' : ($typeLabels[$type] ?? 'Lab');
 }
 
-// Build "what's included" chips from tests / features
+// "What's Included" chips — real Thyrocare group names from the DB (biggest
+// first), so the chips reconcile with the accordion. Falls back to test names
+// or features when a package has no group metadata.
+$dbGroups = $d['test_groups'] ?? [];
 $includeChips = [];
-if ($tests) {
+if ($isPkg && $dbGroups) {
+    foreach (array_slice(array_keys($dbGroups), 0, 7) as $g) {
+        $includeChips[] = $g;
+    }
+    if (count($dbGroups) > 7) {
+        $includeChips[] = '& More';
+    }
+} elseif ($tests) {
     foreach (array_slice($tests, 0, 7) as $t) {
         $includeChips[] = $t;
     }
@@ -72,56 +82,71 @@ if ($tests) {
     }
 }
 
-// Accordion test groups — package categories match detail mock
+// ── Real DB-driven tags (rendered as pills under the H1) ───────────────────
+// fasting: 'CF' = compulsory fasting, 'NF' = no fasting required.
+$fastingCode = (string) ($d['fasting'] ?? '');
+$diseaseTags = $d['disease_tags'] ?? [];
+$loginPct    = (int) ($d['login_pct'] ?? 0);
+
+$detailTags = [];
+if ($isPkg && $params) {
+    $detailTags[] = ['fi-rr-flask', $params . ' Tests Included'];
+}
+if ($fastingCode === 'CF') {
+    $detailTags[] = ['fi-rr-clock', 'Fasting Required (8–10 hrs)'];
+} elseif ($fastingCode === 'NF') {
+    $detailTags[] = ['fi-rr-check', 'No Fasting Required'];
+}
+$detailTags[] = ['fi-rr-file-medical', 'Digital Reports'];
+$detailTags[] = ['fi-rr-house-blank', 'Free Home Collection'];
+if ($loginPct > 0) {
+    $detailTags[] = ['fi-rr-badge-percent', 'Extra ' . $loginPct . '% off on login'];
+}
+// Condition/disease tags (Thyroid, Infertility, …) from disease_group.
+foreach (array_slice($diseaseTags, 0, 4) as $dt) {
+    $detailTags[] = ['fi-rr-heart', $dt];
+}
+
+// Accordion test groups — driven by the REAL Thyrocare grouping stored in the
+// DB (lab_parameters.group_name). No hardcoded test names: each panel is a
+// genuine group with its actual parameters and true count.
 $icoBase = '/assets/img/lab/icons/';
 $testGroups = [];
-if ($isPkg) {
-    $catalogTests = array_values($tests);
-    $profiles = [
-        ['Blood Tests', 'blood-test', 13, ['CBC', 'Hemoglobin', 'RBC Count', 'WBC Count', 'Platelet Count', 'PCV', 'MCV', 'MCH', 'MCHC', 'RDW', 'Neutrophils', 'Lymphocytes', 'ESR']],
-        ['Diabetes & Sugar Related', 'sugar', 5, ['Fasting Blood Sugar', 'PPBS', 'HbA1c', 'Insulin Fasting', 'Average Blood Glucose']],
-        ['Kidney Profile', 'kidney', 7, ['Serum Creatinine', 'Blood Urea', 'BUN', 'Uric Acid', 'Sodium', 'Potassium', 'Chloride']],
-        ['Liver Profile', 'liver', 4, ['SGOT (AST)', 'SGPT (ALT)', 'Bilirubin Total', 'Alkaline Phosphatase']],
-        ['Lipid Profile', 'lipid', 5, ['Total Cholesterol', 'HDL', 'LDL', 'Triglycerides', 'VLDL']],
-        ['Thyroid Profile', 'thyroid', 4, ['T3', 'T4', 'TSH', 'Free T4']],
-        ['Iron & Vitamin Profile', 'iron', 4, ['Serum Iron', 'Ferritin', 'Vitamin D', 'Vitamin B12']],
-    ];
-    // Prefer real package tests in first matching groups when present
-    $used = [];
-    foreach ($profiles as [$name, $icon, $count, $defaults]) {
-        $matched = [];
-        foreach ($catalogTests as $t) {
-            $tl = strtolower((string) $t);
-            $hit = false;
-            if ($icon === 'sugar' && preg_match('/sugar|hba1c|glucose|insulin|ppbs|fbs|diabetes/', $tl)) {
-                $hit = true;
-            } elseif ($icon === 'kidney' && preg_match('/kidney|renal|crea|urea|uric|sodium|potassium|urine/', $tl)) {
-                $hit = true;
-            } elseif ($icon === 'liver' && preg_match('/liver|hepatic|sgot|sgpt|bilirubin|alkaline/', $tl)) {
-                $hit = true;
-            } elseif ($icon === 'lipid' && preg_match('/lipid|cholesterol|hdl|ldl|trigly/', $tl)) {
-                $hit = true;
-            } elseif ($icon === 'thyroid' && preg_match('/thyroid|tsh|\bt3\b|\bt4\b/', $tl)) {
-                $hit = true;
-            } elseif ($icon === 'iron' && preg_match('/iron|ferritin|vitamin|b12|folate|calcium/', $tl)) {
-                $hit = true;
-            } elseif ($icon === 'blood-test' && preg_match('/cbc|blood|hemoglobin|platelet|esr|hemogram/', $tl)) {
-                $hit = true;
-            }
-            if ($hit && !isset($used[$t])) {
-                $matched[] = $t;
-                $used[$t] = true;
-            }
-        }
-        $items = $matched ? array_values(array_unique(array_merge($matched, $defaults))) : $defaults;
-        $items = array_slice($items, 0, max($count, count($matched)));
+
+// Map a real group name -> the closest existing accordion icon (best-effort;
+// falls back to a generic flask). Purely cosmetic — data is from the DB.
+$groupIcon = static function (string $name): string {
+    $n = strtolower($name);
+    return match (true) {
+        (bool) preg_match('/sugar|diabet|glucose|hba1c|insulin/', $n) => 'sugar',
+        (bool) preg_match('/kidney|renal|urea|creat|electrolyte/', $n) => 'kidney',
+        (bool) preg_match('/liver|hepat/', $n)                        => 'liver',
+        (bool) preg_match('/lipid|cardiac|cholesterol|heart/', $n)    => 'lipid',
+        (bool) preg_match('/thyroid/', $n)                            => 'thyroid',
+        (bool) preg_match('/iron|vitamin|anaemia|anemia|b12|ferritin/', $n) => 'iron',
+        (bool) preg_match('/blood|cbc|hemogram|haemogram|complete/', $n) => 'blood-test',
+        default                                                       => 'flask',
+    };
+};
+
+if ($isPkg && !empty($d['test_groups'])) {
+    foreach ($d['test_groups'] as $groupName => $groupTests) {
         $testGroups[] = [
-            'name' => $name,
-            'icon' => $icon,
-            'count' => count($items),
-            'items' => $items,
+            'name'  => $groupName,
+            'icon'  => $groupIcon((string) $groupName),
+            'count' => count($groupTests),
+            'items' => $groupTests,
         ];
     }
+} elseif ($isPkg && $tests) {
+    // Fallback: no group metadata (e.g. static catalog) — one flat panel of the
+    // real test names rather than inventing categories.
+    $testGroups[] = [
+        'name'  => 'Tests Included',
+        'icon'  => 'flask',
+        'count' => count($tests),
+        'items' => array_values($tests),
+    ];
 } else {
     foreach (array_slice($d['features'] ?? [], 0, 6) as $i => $f) {
         $icons = ['clipboard', 'report', 'shield', 'doctor', 'flask', 'check'];
@@ -265,6 +290,16 @@ require __DIR__ . '/partials/header.php';
                     <span class="ldp-pill"><?= e($params) ?> Tests Included</span>
                     <?php endif; ?>
                 </div>
+                <?php if ($detailTags): ?>
+                <ul class="ldp-hero-tags" aria-label="Package details">
+                    <?php foreach ($detailTags as [$tagIco, $tagLabel]): ?>
+                    <li class="ldp-tag">
+                        <i class="fi <?= e($tagIco) ?>" aria-hidden="true"></i>
+                        <span><?= e($tagLabel) ?></span>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+                <?php endif; ?>
                 <p class="ldp-hero-desc"><?= e($d['overview']) ?></p>
                 <ul class="ldp-hero-perks">
                     <li>Free Home Collection</li>
@@ -335,38 +370,27 @@ require __DIR__ . '/partials/header.php';
             <?php if ($isPkg): ?><a href="#ldp-tests">View all tests</a><?php endif; ?>
         </div>
         <div class="ldp-chips">
+            <?php
+            // Best-effort PNG icon for a real group-name chip; generic fallback.
+            $chipIcon = static function (string $label): string {
+                $n = strtolower($label);
+                return match (true) {
+                    $label === '& More'                                        => 'MOre-icon.png',
+                    (bool) preg_match('/sugar|diabet|glucose|hba1c/', $n)      => 'Hba1c-icon.png',
+                    (bool) preg_match('/kidney|renal|urea|creat|electrolyte/', $n) => 'Kidney-icon.png',
+                    (bool) preg_match('/liver|hepat/', $n)                     => 'Liver-Profile-icon.png',
+                    (bool) preg_match('/lipid|cardiac|cholesterol|heart/', $n) => 'Lipid-Profile-icon.png',
+                    (bool) preg_match('/thyroid/', $n)                         => 'Thyroid-icon.png',
+                    (bool) preg_match('/iron|vitamin|anaemia|anemia|b12/', $n) => 'Iron-Studies-icon.png',
+                    default                                                    => 'Blood-Sugar-icon.png',
+                };
+            };
+            foreach ($includeChips as $chip): ?>
             <div class="ldp-chip">
-                <span class="ldp-chip-ico" aria-hidden="true"><img src="/assets/img/lab/icons/Blood-Sugar-icon.png" alt="" width="60" height="60" loading="lazy"></span>
-                <span>Blood Tests</span>
+                <span class="ldp-chip-ico" aria-hidden="true"><img src="/assets/img/lab/icons/<?= e($chipIcon((string) $chip)) ?>" alt="" width="60" height="60" loading="lazy"></span>
+                <span><?= e($chip) ?></span>
             </div>
-            <div class="ldp-chip">
-                <span class="ldp-chip-ico" aria-hidden="true"><img src="/assets/img/lab/icons/Hba1c-icon.png" alt="" width="60" height="60" loading="lazy"></span>
-                <span>HbA1c</span>
-            </div>
-            <div class="ldp-chip">
-                <span class="ldp-chip-ico" aria-hidden="true"><img src="/assets/img/lab/icons/Kidney-icon.png" alt="" width="60" height="60" loading="lazy"></span>
-                <span>Kidney Profile</span>
-            </div>
-            <div class="ldp-chip">
-                <span class="ldp-chip-ico" aria-hidden="true"><img src="/assets/img/lab/icons/Liver-Profile-icon.png" alt="" width="60" height="60" loading="lazy"></span>
-                <span>Liver Profile</span>
-            </div>
-            <div class="ldp-chip">
-                <span class="ldp-chip-ico" aria-hidden="true"><img src="/assets/img/lab/icons/Lipid-Profile-icon.png" alt="" width="60" height="60" loading="lazy"></span>
-                <span>Lipid Profile</span>
-            </div>
-            <div class="ldp-chip">
-                <span class="ldp-chip-ico" aria-hidden="true"><img src="/assets/img/lab/icons/Thyroid-icon.png" alt="" width="60" height="60" loading="lazy"></span>
-                <span>Thyroid Profile</span>
-            </div>
-            <div class="ldp-chip">
-                <span class="ldp-chip-ico" aria-hidden="true"><img src="/assets/img/lab/icons/Iron-Studies-icon.png" alt="" width="60" height="60" loading="lazy"></span>
-                <span>Iron & Vitamin Profile</span>
-            </div>
-            <div class="ldp-chip">
-                <span class="ldp-chip-ico" aria-hidden="true"><img src="/assets/img/lab/icons/MOre-icon.png" alt="" width="60" height="60" loading="lazy"></span>
-                <span>& More</span>
-            </div>
+            <?php endforeach; ?>
         </div>
     </section>
     <?php endif; ?>
@@ -505,8 +529,11 @@ require __DIR__ . '/partials/header.php';
             </details>
             <?php endforeach; ?>
             <?php
+            $loginFaqAnswer = $loginPct > 0
+                ? 'Yes — log in with a free eClinicPro account before you book to unlock an extra ' . $loginPct . '% member discount on this package, applied automatically at checkout on top of the price shown.'
+                : 'Log in with a free eClinicPro account before you book to unlock any available member discounts and save your reports to your Health account.';
             $extraFaq = [
-                ['Do I get a discount if I log in before booking?', 'Yes — log in with a free eClinicPro account before you book to unlock an extra 5%–25% member discount, depending on the package. It\'s applied automatically at checkout on top of the price shown.'],
+                ['Do I get a discount if I log in before booking?', $loginFaqAnswer],
                 ['Are home collection charges included?', 'Home sample collection is free with this booking on eClinicPro (preview — live fees confirmed at launch).'],
                 ['Can I reschedule my slot?', 'Yes. You can reschedule your home collection slot from your booking confirmation once bookings go live.'],
             ];

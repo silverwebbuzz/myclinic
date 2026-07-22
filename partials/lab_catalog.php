@@ -659,7 +659,8 @@ function ecp_lab_db_find_package(string $slug): ?array
     try {
         $stmt = $db->prepare(
             "SELECT lp.id, lp.slug, lp.name, lp.test_count, lp.description,
-                    pr.mrp, pr.offer_rate
+                    lp.fasting, lp.disease_group, lp.banner_image, lp.is_featured,
+                    pr.mrp, pr.offer_rate, pr.max_discount_pct
              FROM lab_products lp
              JOIN lab_product_pricing pr ON pr.id = (
                  SELECT p2.id FROM lab_product_pricing p2
@@ -676,24 +677,48 @@ function ecp_lab_db_find_package(string $slug): ?array
             return null;
         }
 
-        // Full test list (grouped names) for the detail page.
+        // Full test list grouped by lab_parameters.group_name — this is the
+        // REAL Thyrocare grouping (e.g. "CARDIAC RISK MARKERS", "THYROID"),
+        // used to drive both the accordion and the flat 'tests' chip list.
         $tstmt = $db->prepare(
-            "SELECT par.name
+            "SELECT par.name, par.group_name
              FROM lab_product_parameters lpp
              JOIN lab_parameters par ON par.id = lpp.parameter_id
              WHERE lpp.product_id = ?
              ORDER BY par.group_name, par.name"
         );
         $tstmt->execute([(int) $row['id']]);
-        $tests = array_map(
-            static fn ($r) => ecp_lab_titlecase($r['name']),
-            $tstmt->fetchAll(PDO::FETCH_ASSOC) ?: []
-        );
+        $paramRows = $tstmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $tests  = [];
+        $groups = [];
+        foreach ($paramRows as $pr2) {
+            $name = ecp_lab_titlecase((string) $pr2['name']);
+            $grp  = ecp_lab_titlecase(trim((string) ($pr2['group_name'] ?? '')) ?: 'Other Parameters');
+            $tests[] = $name;
+            $groups[$grp][] = $name;
+        }
+        // Biggest groups first so the accordion opens on the meatiest panel.
+        uasort($groups, static fn ($a, $b) => count($b) <=> count($a));
 
         $mrp   = (float) $row['mrp'];
         $offer = (float) $row['offer_rate'];
         $offPct = $mrp > 0 ? (int) round(($mrp - $offer) / $mrp * 100) : 0;
         $photos = ecp_lab_photos();
+
+        // Login bonus: best active coupon, capped by this product's ceiling.
+        $maxDisc = (int) ($row['max_discount_pct'] ?? 0);
+        $loginPct = ecp_lab_best_login_discount($db, $maxDisc);
+
+        // disease_group -> display tags (THYROID,INFERTILITY -> ['Thyroid','Infertility'])
+        $diseaseTags = [];
+        foreach (preg_split('/\s*,\s*/', trim((string) ($row['disease_group'] ?? ''))) ?: [] as $dg) {
+            if ($dg !== '') {
+                $diseaseTags[] = ecp_lab_titlecase($dg);
+            }
+        }
+
+        $fasting = (string) ($row['fasting'] ?? '');
 
         return [
             'type'       => 'package',
@@ -708,21 +733,55 @@ function ecp_lab_db_find_package(string $slug): ?array
                 'Free home sample collection & digital reports',
                 'Free doctor consultation with your report',
             ],
-            'tests'  => $tests,
-            'params' => (string) (int) $row['test_count'],
-            'price'  => (string) (int) round($offer),
-            'mrp'    => (string) (int) round($mrp),
-            'off'    => (string) $offPct,
-            'cats'   => ['popular'],
-            'badge'  => '',
-            'photo'  => $photos['pkg-' . $slug]
-                        ?? $photos['gal-' . (1 + (abs(crc32($slug)) % 8))]
-                        ?? $photos['hero-lab'],
-            'crumb'  => 'Health Packages',
+            'tests'       => $tests,
+            'test_groups' => $groups,          // ['Group Name' => [test, test, …]]
+            'params'      => (string) (int) $row['test_count'],
+            'price'       => (string) (int) round($offer),
+            'mrp'         => (string) (int) round($mrp),
+            'off'         => (string) $offPct,
+            'cats'        => ['popular'],
+            'badge'       => !empty($row['is_featured']) ? 'Bestseller' : '',
+            // Real Thyrocare banner when present; else the curated Unsplash pool.
+            'banner_image' => !empty($row['banner_image']) ? (string) $row['banner_image'] : '',
+            'photo'       => $photos['pkg-' . $slug]
+                             ?? $photos['gal-' . (1 + (abs(crc32($slug)) % 8))]
+                             ?? $photos['hero-lab'],
+            'crumb'        => 'Health Packages',
+            // Tags for the detail page pills.
+            'fasting'      => $fasting,                 // 'CF' | 'NF' | ''
+            'disease_tags' => $diseaseTags,             // ['Thyroid','Infertility']
+            'login_pct'    => $loginPct,                // extra % for logged-in patients
         ];
     } catch (Throwable $e) {
         error_log('[ecp_lab_db_find_package] ' . $e->getMessage());
         return null;
+    }
+}
+
+/**
+ * Best active login-bonus discount %, capped by a product's max_discount_pct.
+ * Reads lab_coupons (requires_login = 1, active, in date window) and returns
+ * LEAST(highest coupon %, $maxDiscountPct). Returns 0 when nothing applies —
+ * so the page never promises a discount the product ceiling forbids.
+ */
+function ecp_lab_best_login_discount(PDO $db, int $maxDiscountPct): int
+{
+    if ($maxDiscountPct <= 0) {
+        return 0;
+    }
+    try {
+        $stmt = $db->query(
+            "SELECT MAX(discount_pct) AS pct
+               FROM lab_coupons
+              WHERE is_active = 1 AND requires_login = 1
+                AND (starts_at IS NULL OR starts_at <= CURRENT_DATE)
+                AND (ends_at   IS NULL OR ends_at   >= CURRENT_DATE)"
+        );
+        $couponPct = (int) ($stmt->fetchColumn() ?: 0);
+        return min($couponPct, $maxDiscountPct);
+    } catch (Throwable $e) {
+        error_log('[ecp_lab_best_login_discount] ' . $e->getMessage());
+        return 0;
     }
 }
 
@@ -1094,7 +1153,11 @@ function ecp_lab_build_detail(array $item): array
     $type = $item['type'];
     $title = $item['title'];
     $photos = ecp_lab_photos();
-    $hero = lab_photo($item['photo'], 1600, 900);
+    // Prefer the product's real banner (Thyrocare imageLocation) when we have
+    // one; otherwise fall back to the curated Unsplash photo for this item.
+    $hero = !empty($item['banner_image'])
+        ? (string) $item['banner_image']
+        : lab_photo($item['photo'], 1600, 900);
     $galleryKeys = ['gal-1', 'gal-2', 'gal-3', 'gal-4', 'gal-5', 'gal-6'];
     // Rotate gallery by slug hash so pages feel unique
     $seed = crc32($type . ':' . $item['slug']);
