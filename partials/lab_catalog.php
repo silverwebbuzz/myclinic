@@ -625,19 +625,30 @@ function ecp_lab_items(?string $type = null): array
 
 function ecp_lab_find_item(string $type, string $slug): ?array
 {
+    // Packages/tests: ALWAYS resolve the full record from the DB first. The
+    // grid/static catalog only carries a card-sized summary (tests capped at 6,
+    // no group breakdown), so using it for the detail page truncated the
+    // "Tests Included" list. The DB lookup returns the complete composition
+    // (all parameters grouped by group_name); fall back to the grid item only
+    // if the DB is unavailable or the slug isn't a live product.
+    if ($type === 'package') {
+        $full = ecp_lab_db_find_package($slug);
+        if ($full) {
+            return $full;
+        }
+    } elseif ($type === 'test') {
+        $full = ecp_lab_db_find_test($slug);
+        if ($full) {
+            return $full;
+        }
+    }
+
+    // Non-priced types (organ/symptom/life/why/…) and DB-miss fallbacks come
+    // from the curated static/grid catalog.
     foreach (ecp_lab_items($type) as $item) {
         if ($item['slug'] === $slug) {
             return $item;
         }
-    }
-    // The grid only lists the top ~12 packages, but a detail URL may point at
-    // any of the 300+ DB packages/offers. Resolve those directly by slug.
-    if ($type === 'package') {
-        return ecp_lab_db_find_package($slug);
-    }
-    // Individual test pages (/lab/test/{slug}) resolve straight from the DB.
-    if ($type === 'test') {
-        return ecp_lab_db_find_test($slug);
     }
     return null;
 }
