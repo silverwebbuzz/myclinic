@@ -1073,14 +1073,14 @@ require __DIR__ . '/partials/header.php';
 
   .pt-hero .wrap,
   .pt-main .wrap {
-    max-width: 980px;
+    max-width: 1280px;
     margin: 0 auto;
-    padding: 0 24px;
+    padding: 0 20px;
   }
 
   /* -------- Logged-out (features showcase + signin card) -------- */
   .pt-hero .wrap {
-    max-width: 1040px;
+    max-width: 1280px;
     padding-top: 24px;
   }
 
@@ -1803,8 +1803,8 @@ require __DIR__ . '/partials/header.php';
   /* -------- 2-column grid: main content + nav sidebar -------- */
   .pt-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 260px;
-    gap: 16px;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 24px;
     align-items: start;
   }
 
