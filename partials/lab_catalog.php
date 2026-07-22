@@ -111,6 +111,24 @@ function ecp_lab_detail_url(string $type, string $slug): string
     return '/lab/' . rawurlencode($type) . '/' . rawurlencode($slug);
 }
 
+/**
+ * Join a list into a human phrase: ['A'] -> "A", ['A','B'] -> "A & B",
+ * ['A','B','C'] -> "A, B & C". Used for the "Screens X, Y & Z" copy.
+ */
+function ecp_join_human(array $items): string
+{
+    $items = array_values(array_filter(array_map('strval', $items), static fn ($s) => $s !== ''));
+    $n = count($items);
+    if ($n === 0) {
+        return '';
+    }
+    if ($n === 1) {
+        return $items[0];
+    }
+    $last = array_pop($items);
+    return implode(', ', $items) . ' & ' . $last;
+}
+
 /** Test count at/above which a package is treated as a "Full Body" checkup. */
 const ECP_LAB_FULL_BODY_MIN_TESTS = 40;
 
@@ -1206,6 +1224,21 @@ function ecp_lab_build_detail(array $item): array
         case 'package':
             $tests = $item['tests'] ?? [];
             $highlights = $item['highlights'] ?? [];
+            // Real group names for an accurate "what's included" FAQ answer.
+            $grpNames = array_keys($item['test_groups'] ?? []);
+            $includedAnswer = $grpNames
+                ? 'This package covers ' . (int) ($item['params'] ?? count($tests))
+                  . ' parameters across ' . ecp_join_human(array_slice($grpNames, 0, 6))
+                  . (count($grpNames) > 6 ? ' and more.' : '.')
+                : 'This package includes ' . implode(', ', array_slice($tests, 0, 6))
+                  . (count($tests) > 6 ? ', and more' : '')
+                  . ' — ' . ($item['params'] ?? '') . ' parameters in total.';
+            // Fasting answer keyed off the real flag (CF/NF), not a guess.
+            $fastingAnswer = match ((string) ($item['fasting'] ?? '')) {
+                'CF' => 'Yes — this package requires 8–10 hours of fasting. Only plain water is allowed during the fasting window.',
+                'NF' => 'No fasting is required for this package. You can book a sample collection at any time of day.',
+                default => 'Fasting requirements depend on the specific markers. Exact prep instructions are confirmed at booking.',
+            };
             $detail += [
                 'overview' => "The {$title} is a carefully curated diagnostic panel designed for clear, actionable insights. It includes {$item['params']} parameters spanning the markers clinicians use most often for prevention and early detection.",
                 'about' => "Built for people who want a reliable health snapshot without guesswork, this package brings together essential blood and related markers in one booking. Home sample collection, NABL-lab processing, and digital reports keep the journey simple from start to finish.",
@@ -1225,9 +1258,9 @@ function ecp_lab_build_detail(array $item): array
                     ['value' => '24h*', 'label' => 'Report turnaround'],
                 ],
                 'faq' => [
-                    ['q' => "What is included in {$title}?", 'a' => 'This package includes ' . implode(', ', array_slice($tests, 0, 6)) . (count($tests) > 6 ? ', and more' : '') . ' — ' . ($item['params'] ?? '') . ' parameters in total.'],
-                    ['q' => 'Do I need to fast before the test?', 'a' => 'Some markers (such as fasting sugar or lipid profile) may require overnight fasting. You will see exact prep instructions at booking.'],
-                    ['q' => 'How do I get my reports?', 'a' => 'Digital reports are delivered on the eClinicPro app, with an optional free doctor consult to review findings.'],
+                    ['q' => "What is included in {$title}?", 'a' => $includedAnswer],
+                    ['q' => 'Do I need to fast before the test?', 'a' => $fastingAnswer],
+                    ['q' => 'How do I get my reports?', 'a' => 'Digital reports are saved to your eClinicPro Health account, where you can view and download them anytime.'],
                     ['q' => 'Is home collection available?', 'a' => 'Yes. Choose a time slot and our phlebotomist will collect your sample at home.'],
                 ],
                 'cta_title' => "Ready to book {$title}?",

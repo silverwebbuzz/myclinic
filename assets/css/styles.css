@@ -15010,6 +15010,13 @@ body {
   display: block;
 }
 
+.ldp-tw-acc-ico i {
+  font-size: 20px;
+  line-height: 1;
+  color: var(--teal-700, #0f9b6e);
+  display: inline-flex;
+}
+
 .ldp-tw-acc-title {
   flex: 1;
   min-width: 0;
@@ -15045,6 +15052,12 @@ body {
   height: 14px;
   object-fit: contain;
   display: block;
+}
+
+.ldp-tw-acc-chev i {
+  font-size: 14px;
+  line-height: 1;
+  display: inline-flex;
 }
 
 .ldp-tw-acc-item[open] .ldp-tw-acc-chev {
@@ -15100,6 +15113,13 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.ldp-tw-why-ico i {
+  font-size: 20px;
+  line-height: 1;
+  color: var(--teal-700, #0f9b6e);
+  display: inline-flex;
 }
 
 .ldp-tw-why-ico img {

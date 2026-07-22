@@ -52,9 +52,12 @@ $typeLabels = [
     'why' => 'Why eClinicPro',
     'partner' => 'Lab Partner',
 ];
+// Badge comes from the DB: 'Bestseller' only when the product is genuinely
+// is_featured. For non-priced types keep the type label; for a plain package
+// with no flag, show no badge (don't fake "Best Seller" on everything).
 $badge = trim((string) ($d['badge'] ?? ''));
-if ($badge === '') {
-    $badge = $isPkg ? 'Best Seller' : ($typeLabels[$type] ?? 'Lab');
+if ($badge === '' && !$isPkg) {
+    $badge = $typeLabels[$type] ?? 'Lab';
 }
 
 // "What's Included" chips — real Thyrocare group names from the DB (biggest
@@ -88,10 +91,9 @@ $fastingCode = (string) ($d['fasting'] ?? '');
 $diseaseTags = $d['disease_tags'] ?? [];
 $loginPct    = (int) ($d['login_pct'] ?? 0);
 
+// Note: the test-count is already shown as a green pill in .ldp-hero-meta, so
+// we intentionally do NOT repeat it here as a grey tag.
 $detailTags = [];
-if ($isPkg && $params) {
-    $detailTags[] = ['fi-rr-flask', $params . ' Tests Included'];
-}
 if ($fastingCode === 'CF') {
     $detailTags[] = ['fi-rr-clock', 'Fasting Required (8–10 hrs)'];
 } elseif ($fastingCode === 'NF') {
@@ -100,7 +102,15 @@ if ($fastingCode === 'CF') {
 $detailTags[] = ['fi-rr-file-medical', 'Digital Reports'];
 $detailTags[] = ['fi-rr-house-blank', 'Free Home Collection'];
 if ($loginPct > 0) {
-    $detailTags[] = ['fi-rr-badge-percent', 'Extra ' . $loginPct . '% off on login'];
+    // "From 5% to 25% off when you order here" — floor is the smallest active
+    // login coupon, ceiling is this product's cap (login_pct).
+    $minLoginPct = min(5, $loginPct);
+    $detailTags[] = [
+        'fi-rr-badge-percent',
+        $minLoginPct < $loginPct
+            ? "From {$minLoginPct}% to {$loginPct}% off if you order here"
+            : "Extra {$loginPct}% off if you order here",
+    ];
 }
 // Condition/disease tags (Thyroid, Infertility, …) from disease_group.
 foreach (array_slice($diseaseTags, 0, 4) as $dt) {
@@ -110,22 +120,25 @@ foreach (array_slice($diseaseTags, 0, 4) as $dt) {
 // Accordion test groups — driven by the REAL Thyrocare grouping stored in the
 // DB (lab_parameters.group_name). No hardcoded test names: each panel is a
 // genuine group with its actual parameters and true count.
-$icoBase = '/assets/img/lab/icons/';
 $testGroups = [];
 
-// Map a real group name -> the closest existing accordion icon (best-effort;
-// falls back to a generic flask). Purely cosmetic — data is from the DB.
+// Map a real group name -> a Flaticon UI-font class (the `fi fi-rr-*` set is
+// already loaded on this page). We use icon-font glyphs instead of the PNG
+// icon set because several of those PNGs are wrong/placeholder art. Crisp at
+// any size and consistent with the rest of the page.
 $groupIcon = static function (string $name): string {
     $n = strtolower($name);
     return match (true) {
-        (bool) preg_match('/sugar|diabet|glucose|hba1c|insulin/', $n) => 'sugar',
-        (bool) preg_match('/kidney|renal|urea|creat|electrolyte/', $n) => 'kidney',
-        (bool) preg_match('/liver|hepat/', $n)                        => 'liver',
-        (bool) preg_match('/lipid|cardiac|cholesterol|heart/', $n)    => 'lipid',
-        (bool) preg_match('/thyroid/', $n)                            => 'thyroid',
-        (bool) preg_match('/iron|vitamin|anaemia|anemia|b12|ferritin/', $n) => 'iron',
-        (bool) preg_match('/blood|cbc|hemogram|haemogram|complete/', $n) => 'blood-test',
-        default                                                       => 'flask',
+        (bool) preg_match('/sugar|diabet|glucose|hba1c|insulin/', $n) => 'fi-rr-blood-test-tube',
+        (bool) preg_match('/kidney|renal|urea|creat|electrolyte|urine/', $n) => 'fi-rr-kidneys',
+        (bool) preg_match('/liver|hepat/', $n)                        => 'fi-rr-inner-nose',
+        (bool) preg_match('/lipid|cardiac|cholesterol|heart|homocyst/', $n) => 'fi-rr-heart',
+        (bool) preg_match('/thyroid/', $n)                            => 'fi-rr-neck',
+        (bool) preg_match('/iron|vitamin|anaemia|anemia|b12|ferritin|mineral|element/', $n) => 'fi-rr-pills',
+        (bool) preg_match('/blood|cbc|hemogram|haemogram|complete|count/', $n) => 'fi-rr-blood',
+        (bool) preg_match('/hormone|fertil|pregn|reproduct/', $n)     => 'fi-rr-dna',
+        (bool) preg_match('/allergy|immun/', $n)                      => 'fi-rr-shield-plus',
+        default                                                       => 'fi-rr-flask',
     };
 };
 
@@ -149,7 +162,7 @@ if ($isPkg && !empty($d['test_groups'])) {
     ];
 } else {
     foreach (array_slice($d['features'] ?? [], 0, 6) as $i => $f) {
-        $icons = ['clipboard', 'report', 'shield', 'doctor', 'flask', 'check'];
+        $icons = ['fi-rr-clipboard-list-check', 'fi-rr-file-medical', 'fi-rr-shield-check', 'fi-rr-user-md', 'fi-rr-flask', 'fi-rr-check'];
         $testGroups[] = [
             'name' => $f,
             'icon' => $icons[$i % count($icons)],
@@ -159,27 +172,63 @@ if ($isPkg && !empty($d['test_groups'])) {
     }
 }
 
-$whyReasons = [
-    ['doc-check', 'Monitors blood sugar & HbA1c', 'Track long & short term sugar levels'],
-    ['molecule', 'Detects early complications', 'Kidney, liver, heart & nerve related'],
-    ['shield', 'Prevents future health risks', 'Timely detection, better outcomes'],
-    ['report', 'Doctor reviewed reports', 'Expert insights with every report'],
-    ['value', 'Great value for comprehensive care', ($params ?: '42') . ' tests at an affordable price'],
-];
-if (!$isPkg) {
-    $whyReasons = [];
-    foreach (array_slice($d['benefits'] ?? $d['features'] ?? [], 0, 5) as $i => $b) {
-        $icons = ['doc-check', 'molecule', 'shield', 'report', 'value'];
-        $whyReasons[] = [$icons[$i % 5], $b, 'Why this matters for your care'];
+// "Why Choose This Package?" — derived from REAL DB facts (no invented clinical
+// claims). Each row: [fi-icon, title, subtitle]. We build from the package's
+// test count, the actual groups/conditions it screens, fasting, login discount,
+// and digital-report delivery — all things we can honestly stand behind.
+$whyReasons = [];
+if ($isPkg) {
+    // What it screens: real condition tags, else the biggest test groups.
+    $screensList = $diseaseTags;
+    if (!$screensList && !empty($d['test_groups'])) {
+        $screensList = array_slice(array_keys($d['test_groups']), 0, 3);
+    }
+    if ($params) {
+        $whyReasons[] = ['fi-rr-flask', $params . ' diagnostic tests in one package',
+            'A single booking covers ' . $params . ' parameters — no ordering tests one by one.'];
+    }
+    if ($screensList) {
+        $whyReasons[] = ['fi-rr-heart', 'Screens ' . ecp_join_human(array_slice($screensList, 0, 3)),
+            'Focused on the markers most relevant to this package.'];
+    }
+    if ($fastingCode === 'CF') {
+        $whyReasons[] = ['fi-rr-clock', 'Fasting sample for accuracy',
+            'Requires 8–10 hours fasting so results are reliable.'];
+    } elseif ($fastingCode === 'NF') {
+        $whyReasons[] = ['fi-rr-check', 'No fasting needed',
+            'Book any time of day — no overnight fasting required.'];
+    }
+    if ($loginPct > 0) {
+        $whyReasons[] = ['fi-rr-badge-percent', 'Extra savings on login',
+            'Members save up to ' . $loginPct . '% more when they order here.'];
+    }
+    $whyReasons[] = ['fi-rr-file-medical', 'Digital reports on your account',
+        'Reports are saved to your eClinicPro Health account — access them anytime.'];
+    $whyReasons[] = ['fi-rr-house-blank', 'Free home sample collection',
+        'A trained phlebotomist collects your sample at your doorstep.'];
+    $whyReasons = array_slice($whyReasons, 0, 5);
+} else {
+    foreach (array_slice($d['benefits'] ?? $d['features'] ?? [], 0, 5) as $b) {
+        $whyReasons[] = ['fi-rr-check', $b, 'Why this matters for your care'];
     }
 }
 
-$prep = [
-    ['fi-rr-clock', 'Fasting 8–10 hours recommended'],
-    ['fi-rr-glass-water', 'Drink plenty of water'],
-    ['fi-rr-pills', 'Continue regular medicines'],
-    ['fi-rr-hand-holding-droplet', 'Morning sample collection preferred'],
-];
+// "Before Your Test" — driven by the product's real fasting flag so we never
+// tell a no-fasting test to fast (or vice-versa).
+$prep = [];
+if ($fastingCode === 'CF') {
+    $prep[] = ['fi-rr-clock', 'Fasting of 8–10 hours is required'];
+    $prep[] = ['fi-rr-glass-water', 'Only plain water is allowed during fasting'];
+} elseif ($fastingCode === 'NF') {
+    $prep[] = ['fi-rr-check', 'No fasting required — book any time of day'];
+    $prep[] = ['fi-rr-glass-water', 'Stay normally hydrated before your sample'];
+} else {
+    // Unknown fasting requirement — be honest, don't guess.
+    $prep[] = ['fi-rr-info', 'Fasting instructions will be confirmed at booking'];
+    $prep[] = ['fi-rr-glass-water', 'Drink water normally before your sample'];
+}
+$prep[] = ['fi-rr-pills', 'Continue your regular medicines unless advised otherwise'];
+$prep[] = ['fi-rr-hand-holding-droplet', 'Morning sample collection is preferred'];
 
 $stepsHow = [
     ['fi-rr-clipboard-list-check', 'Choose', 'Select this package as per your need'],
@@ -192,11 +241,10 @@ $stepsHow = [
 
 $highlightsBar = [
     [$params . ' Tests Included', 'tests'],
-    ['24 Hr Report Delivery', 'clock'],
+    ['Digital Reports', 'clock'],
     ['NABL Accredited Labs', 'lab'],
     ['Free Home Collection', 'home'],
-    ['Free Doctor Consultation', 'doc'],
-    ['96% Customer Satisfaction', 'star'],
+    ['Powered by Thyrocare', 'doc'],
 ];
 
 $testimonials = [
@@ -205,9 +253,6 @@ $testimonials = [
     ['Ananya M.', 'Bengaluru', 'Good value versus MRP. The package covered everything my physician asked for.'],
 ];
 
-$seed = crc32($type . ':' . $slug);
-$bookings = number_format(8000 + ($seed % 9000));
-$rating = number_format(4.6 + (($seed % 4) / 10), 1);
 
 $pageTitle = $d['title'] . ' — Lab Tests | eClinicPro';
 $metaDesc = substr(strip_tags($d['overview'] ?? $d['subtitle'] ?? ''), 0, 155);
@@ -280,16 +325,13 @@ require __DIR__ . '/partials/header.php';
     <section class="ldp-hero">
         <div class="ldp-hero-grid">
             <div class="ldp-hero-copy">
-                <span class="ldp-badge"><?= e($badge) ?></span>
+                <?php if ($badge !== ''): ?><span class="ldp-badge"><?= e($badge) ?></span><?php endif; ?>
                 <h1><?= e($d['title']) ?></h1>
+                <?php if ($isPkg || $params): ?>
                 <div class="ldp-hero-meta">
-                    <span class="ldp-stars" aria-label="Rated <?= e($rating) ?> out of 5">★★★★★</span>
-                    <strong><?= e($rating) ?></strong>
-                    <span>(<?= e($bookings) ?>+ Bookings)</span>
-                    <?php if ($isPkg || $params): ?>
                     <span class="ldp-pill"><?= e($params) ?> Tests Included</span>
-                    <?php endif; ?>
                 </div>
+                <?php endif; ?>
                 <?php if ($detailTags): ?>
                 <ul class="ldp-hero-tags" aria-label="Package details">
                     <?php foreach ($detailTags as [$tagIco, $tagLabel]): ?>
@@ -408,12 +450,12 @@ require __DIR__ . '/partials/header.php';
                     <details class="ldp-tw-acc-item" <?= $i === 0 ? '' : '' ?>>
                         <summary>
                             <span class="ldp-tw-acc-ico" aria-hidden="true">
-                                <img src="<?= e($icoBase . ($g['icon'] ?? 'flask') . '.png') ?>" alt="" width="128" height="128" loading="lazy">
+                                <i class="fi <?= e($g['icon'] ?? 'fi-rr-flask') ?>"></i>
                             </span>
                             <span class="ldp-tw-acc-title"><?= e($g['name']) ?></span>
                             <span class="ldp-tw-acc-count"><?= (int) $g['count'] ?> <?= $isPkg ? 'Tests' : 'Points' ?></span>
                             <span class="ldp-tw-acc-chev" aria-hidden="true">
-                                <img src="<?= e($icoBase . 'chevron.png') ?>" alt="" width="128" height="128" loading="lazy">
+                                <i class="fi fi-rr-angle-small-down"></i>
                             </span>
                         </summary>
                         <ul>
@@ -435,7 +477,7 @@ require __DIR__ . '/partials/header.php';
                         <?php foreach ($whyReasons as [$wIco, $wTitle, $wSub]): ?>
                         <li>
                             <span class="ldp-tw-why-ico" aria-hidden="true">
-                                <img src="<?= e($icoBase . $wIco . '.png') ?>" alt="" width="128" height="128" loading="lazy">
+                                <i class="fi <?= e($wIco) ?>"></i>
                             </span>
                             <div>
                                 <strong><?= e($wTitle) ?></strong>
