@@ -945,7 +945,9 @@ require __DIR__ . '/partials/header.php';
         setPinMsg('Checking availability…', false);
         if (pinMsg) pinMsg.classList.remove('is-bad');
 
-        return fetch('api/lab_pincode.php?pin=' + pin, { headers: { 'Accept': 'application/json' } })
+        // Root-relative: this page is served at /lab/package/{slug}, so a
+        // relative 'api/…' would resolve to /lab/package/api/… and 404.
+        return fetch('/api/lab_pincode.php?pin=' + pin, { headers: { 'Accept': 'application/json' } })
             .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
             .then(function (data) {
                 if (data && data.serviceable) {
