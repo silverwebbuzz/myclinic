@@ -14002,6 +14002,84 @@ body {
   color: #c62828;
 }
 
+/* -------- Highlighted pincode gate (first, must-do step) -------- */
+.ldp-bf-pingate {
+  background: var(--teal-50, #e9f7f4);
+  border: 1.5px solid var(--teal-200, #b9e3db);
+  border-radius: 14px;
+  padding: 14px 14px 16px;
+  margin: 4px 0 16px;
+}
+
+.ldp-bf-pinhint {
+  margin: 0 0 8px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--ink-2);
+}
+
+.ldp-bf-pinhint strong {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.ldp-bf-pingate .ldp-bf-check {
+  background: var(--teal-600, #0f9d8b);
+  border-color: var(--teal-600, #0f9d8b);
+  color: #fff;
+}
+
+.ldp-bf-pingate .ldp-bf-check:hover {
+  background: var(--teal-700, #0c7f70);
+  border-color: var(--teal-700, #0c7f70);
+}
+
+.ldp-bf-pinloc {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.ldp-bf-pinloc-field .ldp-bf-label {
+  margin-top: 0;
+}
+
+.ldp-bf-pinloc input[readonly] {
+  background: #fff;
+  color: var(--ink);
+  font-weight: 600;
+  cursor: default;
+}
+
+/* -------- Soft-gate: form is unusable until a pincode is confirmed -------- */
+/* Every gated control is disabled via JS; dim disabled controls so the
+   locked state reads clearly without hiding what the user is about to fill. */
+.ldp-bf-form.is-locked input:disabled,
+.ldp-bf-form.is-locked select:disabled,
+.ldp-bf-form.is-locked textarea:disabled,
+.ldp-bf-form.is-locked button:disabled:not(.ldp-bf-check) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ldp-bf-form.is-locked .ldp-bf-submit:disabled {
+  opacity: 0.5;
+}
+
+/* The date & time fields share the first block with the live pincode gate;
+   dim their labels too so the gated area looks consistently inactive. */
+.ldp-bf-form.is-locked .ldp-bf-icon-field,
+.ldp-bf-form.is-locked .ldp-bf-select-wrap {
+  opacity: 0.6;
+}
+
+.ldp-bf-form.is-locked .ldp-bf-pingate,
+.ldp-bf-form.is-locked .ldp-bf-pingate .ldp-bf-check,
+.ldp-bf-form.is-locked .ldp-bf-pingate input {
+  opacity: 1; /* the gate itself always stays active */
+}
+
 .ldp-bf-beneficiaries {
   display: flex;
   flex-direction: column;

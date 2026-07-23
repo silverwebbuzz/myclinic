@@ -655,12 +655,25 @@ require __DIR__ . '/partials/header.php';
                                 <button type="button" class="ldp-bf-qty-btn" id="ldpBfQtyPlus" aria-label="Increase">+</button>
                             </div>
 
-                            <p class="ldp-bf-hint">Write <strong>Exact Pincode</strong>, not nearby Pincode</p>
-                            <div class="ldp-bf-pinrow">
-                                <input type="text" name="pincode" id="ldpBfPincode" inputmode="numeric" maxlength="6" placeholder="Pincode" pattern="[1-9][0-9]{5}" required autocomplete="postal-code">
-                                <button type="button" class="ldp-bf-check" id="ldpBfPinCheck">Check Availability</button>
+                            <div class="ldp-bf-pingate" id="ldpBfPinGate">
+                                <p class="ldp-bf-pinhint">Write <strong>Exact Pincode</strong>, not nearby Pincode</p>
+                                <div class="ldp-bf-pinrow">
+                                    <input type="text" name="pincode" id="ldpBfPincode" inputmode="numeric" maxlength="6" placeholder="Enter your area pincode" pattern="[1-9][0-9]{5}" required autocomplete="postal-code">
+                                    <button type="button" class="ldp-bf-check" id="ldpBfPinCheck">Check Availability</button>
+                                </div>
+                                <p class="ldp-bf-pinmsg" id="ldpBfPinMsg" hidden></p>
+                                <!-- Auto-filled from the serviceable-pincode map on a successful check. -->
+                                <div class="ldp-bf-pinloc" id="ldpBfPinLoc" hidden>
+                                    <div class="ldp-bf-pinloc-field">
+                                        <label class="ldp-bf-label" for="ldpBfCity">City</label>
+                                        <input type="text" id="ldpBfCity" name="city" readonly autocomplete="off">
+                                    </div>
+                                    <div class="ldp-bf-pinloc-field">
+                                        <label class="ldp-bf-label" for="ldpBfState">State</label>
+                                        <input type="text" id="ldpBfState" name="state" readonly autocomplete="off">
+                                    </div>
+                                </div>
                             </div>
-                            <p class="ldp-bf-pinmsg" id="ldpBfPinMsg" hidden></p>
 
                             <label class="ldp-bf-label" for="ldpBfDate">Preferred Date</label>
                             <div class="ldp-bf-icon-field">
@@ -893,22 +906,69 @@ require __DIR__ . '/partials/header.php';
         pinMsg.classList.toggle('is-bad', !!text && !ok);
     }
 
+    var cityInput = document.getElementById('ldpBfCity');
+    var stateInput = document.getElementById('ldpBfState');
+    var pinLoc = document.getElementById('ldpBfPinLoc');
+    var pinChecking = false;
+
+    // Enable/disable everything below the pincode gate. The pincode input and
+    // its Check button stay live; the rest of the form is unusable until a
+    // serviceable pincode is confirmed, so no unfulfillable order can submit.
+    function setFormLocked(locked) {
+        form.classList.toggle('is-locked', !!locked);
+        var controls = form.querySelectorAll('input, select, textarea, button');
+        controls.forEach(function (el) {
+            if (el === pinInput || el === pinCheck) return;        // gate stays live
+            if (el === cityInput || el === stateInput) return;     // auto-filled, always readonly
+            el.disabled = !!locked;
+        });
+    }
+
+    function setLocation(city, state) {
+        if (cityInput) cityInput.value = city || '';
+        if (stateInput) stateInput.value = state || '';
+        if (pinLoc) pinLoc.hidden = !(city && state);
+    }
+
     function checkPincode() {
         var pin = ((pinInput && pinInput.value) || '').replace(/\D/g, '');
         if (pinInput) pinInput.value = pin;
         if (!/^[1-9][0-9]{5}$/.test(pin)) {
             pinOk = false;
+            setLocation('', '');
+            setFormLocked(true);
             setPinMsg('Enter a valid 6-digit Indian pincode.', false);
-            return false;
+            return Promise.resolve(false);
         }
-        var first = parseInt(pin.charAt(0), 10);
-        pinOk = first >= 1 && first <= 8;
-        if (pinOk) {
-            setPinMsg('Home collection available for pincode ' + pin + '.', true);
-        } else {
-            setPinMsg('Sorry, home collection is not available for this pincode yet.', false);
-        }
-        return pinOk;
+        if (pinChecking) return Promise.resolve(pinOk);
+        pinChecking = true;
+        setPinMsg('Checking availability…', false);
+        if (pinMsg) pinMsg.classList.remove('is-bad');
+
+        return fetch('api/lab_pincode.php?pin=' + pin, { headers: { 'Accept': 'application/json' } })
+            .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+            .then(function (data) {
+                if (data && data.serviceable) {
+                    pinOk = true;
+                    setLocation(data.city, data.state);
+                    setFormLocked(false);
+                    setPinMsg('Home collection available in ' + data.city + ', ' + data.state + '.', true);
+                } else {
+                    pinOk = false;
+                    setLocation('', '');
+                    setFormLocked(true);
+                    setPinMsg('Sorry, home collection is not available for this pincode yet.', false);
+                }
+                return pinOk;
+            })
+            .catch(function () {
+                pinOk = false;
+                setLocation('', '');
+                setFormLocked(true);
+                setPinMsg('Could not check right now. Please try again.', false);
+                return false;
+            })
+            .finally(function () { pinChecking = false; });
     }
 
     function addonTotal() {
@@ -981,6 +1041,8 @@ require __DIR__ . '/partials/header.php';
         pinInput.addEventListener('input', function () {
             pinOk = false;
             setPinMsg('', false);
+            setLocation('', '');
+            setFormLocked(true);
             this.value = this.value.replace(/\D/g, '').slice(0, 6);
         });
         pinInput.addEventListener('blur', function () {
@@ -1018,7 +1080,9 @@ require __DIR__ . '/partials/header.php';
         applyCoupon();
         updateTotals();
 
-        if (!checkPincode()) {
+        if (!pinOk) {
+            checkPincode();
+            showToast('Please check pincode availability before booking.');
             pinInput && pinInput.focus();
             return;
         }
@@ -1054,6 +1118,8 @@ require __DIR__ . '/partials/header.php';
             couponOff = 0;
             pinOk = false;
             setPinMsg('', false);
+            setLocation('', '');
+            setFormLocked(true);
             if (couponMsg) { couponMsg.hidden = true; couponMsg.textContent = ''; }
             if (beneficiaries) beneficiaries.innerHTML = personBlockHtml(1);
             setPersons(1);
@@ -1068,6 +1134,7 @@ require __DIR__ . '/partials/header.php';
 
     syncBeneficiaries();
     updateTotals();
+    setFormLocked(true); // gate everything until a serviceable pincode is confirmed
 })();
 </script>
 
