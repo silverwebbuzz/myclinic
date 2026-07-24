@@ -620,13 +620,6 @@ require __DIR__ . '/partials/header.php';
             <?php if ($isPkg && $pkgPriceNum > 0): ?>
             <aside class="ldp-aside" id="ldpBookForm" aria-label="Book this package">
                 <div class="ldp-bf">
-                    <div class="ldp-bf-paylater">
-                        <span class="ldp-bf-paylater-ico" aria-hidden="true"><i class="fi fi-rr-wallet"></i></span>
-                        <div class="ldp-bf-paylater-txt">
-                            <strong class="ldp-bf-paylater-title">Book Now, Pay Later!</strong>
-                            <span class="ldp-bf-paylater-sub">Simple Process, No Spam Calls</span>
-                        </div>
-                    </div>
                     <header class="ldp-bf-head">
                         <h2>Book This Package</h2>
                     </header>
@@ -634,7 +627,7 @@ require __DIR__ . '/partials/header.php';
                         <span class="ldp-bf-paylater-ico" aria-hidden="true"><i class="fi fi-rr-wallet"></i></span>
                         <div class="ldp-bf-paylater-txt">
                             <strong class="ldp-bf-paylater-title">Book Now, Pay Later!</strong>
-                            <span class="ldp-bf-paylater-sub">You will get a payment link shortly. You can make the payment ONLINE(<strong>Recommended</strong>) using that link or pay using UPI/Cash to the technician.</span>
+                            <span class="ldp-bf-paylater-sub">Simple Process, No Spam Calls</span>
                         </div>
                     </div>
                     <form class="ldp-bf-form" id="ldpLabBookForm" novalidate
@@ -792,9 +785,9 @@ require __DIR__ . '/partials/header.php';
 
                         <div class="ldp-bf-paylater">
                             <span class="ldp-bf-paylater-ico" aria-hidden="true"><i class="fi fi-rr-wallet"></i></span>
-                            <div>
-                                <strong>Book Now, Pay Later!</strong>
-                                <p>Simple process. No cost EMI options available.</p>
+                            <div class="ldp-bf-paylater-txt">
+                                <strong class="ldp-bf-paylater-title">Book Now, Pay Later!</strong>
+                                <span class="ldp-bf-paylater-sub">You will get a payment link shortly. You can make the payment ONLINE(<strong>Recommended</strong>) using that link or pay using UPI/Cash to the technician.</span>
                             </div>
                         </div>
 
