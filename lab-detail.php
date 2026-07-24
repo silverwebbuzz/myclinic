@@ -623,6 +623,11 @@ require __DIR__ . '/partials/header.php';
                     <header class="ldp-bf-head">
                         <h2>Book This Package</h2>
                     </header>
+                    <div class="ldp-bf-paylater">
+                        <h3 class="ldp-bf-paylater-title">Book Now, Pay Later</h3>
+                        <p class="ldp-bf-paylater-sub">Simple Process, No Spam Calls</p>
+                        <p class="ldp-bf-paylater-text">You will get a payment link shortly. You can make the payment ONLINE(<strong>Recommended</strong>) using that link or pay using UPI/Cash to the technician.</p>
+                    </div>
                     <form class="ldp-bf-form" id="ldpLabBookForm" novalidate
                           data-pkg-price="<?= (int) $pkgPriceNum ?>"
                           data-pkg-mrp="<?= (int) $pkgMrpNum ?>"
@@ -630,6 +635,26 @@ require __DIR__ . '/partials/header.php';
                           data-hardcopy="75">
 
                         <div class="ldp-bf-block">
+                            <?php if ($ecpPatient): ?>
+                            <div class="ldp-bf-user" id="ldpBfUser">
+                                <span class="ldp-bf-user-avatar" aria-hidden="true"><?= e(ecp_patient_initials($ecpPatient)) ?></span>
+                                <div class="ldp-bf-user-meta">
+                                    <strong class="ldp-bf-user-name"><?= e(trim((string) ($ecpPatient['name'] ?? '')) ?: ecp_patient_first_name($ecpPatient)) ?></strong>
+                                    <span class="ldp-bf-user-phone"><?= e((string) ($ecpPatient['phone'] ?? '')) ?></span>
+                                </div>
+                                <span class="ldp-bf-user-badge"><i class="fi fi-rr-check" aria-hidden="true"></i> Logged in</span>
+                            </div>
+                            <?php else: ?>
+                            <button type="button" class="ldp-bf-login" id="ldpBfLogin" data-auth-reason="lab_book">
+                                <span class="ldp-bf-login-ico" aria-hidden="true"><i class="fi fi-rr-user"></i></span>
+                                <span class="ldp-bf-login-txt">
+                                    <strong>Login / Sign up</strong>
+                                    <small>Login to unlock extra discount</small>
+                                </span>
+                                <span class="ldp-bf-login-arrow" aria-hidden="true"><i class="fi fi-rr-angle-right"></i></span>
+                            </button>
+                            <?php endif; ?>
+
                             <div class="ldp-bf-pingate" id="ldpBfPinGate">
                                 <p class="ldp-bf-pinhint">Write <strong>Exact Pincode</strong>, not nearby Pincode</p>
                                 <div class="ldp-bf-pinrow">
@@ -656,23 +681,6 @@ require __DIR__ . '/partials/header.php';
                                     <button type="button" class="ldp-bf-qty-btn" id="ldpBfQtyMinus" aria-label="Decrease">−</button>
                                     <input type="number" name="persons" id="ldpBfPersons" value="1" min="1" max="10" readonly>
                                     <button type="button" class="ldp-bf-qty-btn" id="ldpBfQtyPlus" aria-label="Increase">+</button>
-                                </div>
-                            </div>
-
-                            <label class="ldp-bf-label">Preferred Date &amp; Time</label>
-                            <div class="ldp-bf-datetime">
-                                <div class="ldp-bf-icon-field">
-                                    <input type="date" id="ldpBfDate" name="appointment_date" required aria-label="Select Preferred Appointment Date">
-                                    <span class="ldp-bf-ico" aria-hidden="true"><i class="fi fi-rr-calendar"></i></span>
-                                </div>
-                                <div class="ldp-bf-select-wrap ldp-bf-icon-field">
-                                    <select id="ldpBfTime" name="time_slot" required>
-                                        <option value="" disabled selected>Select Time Slot</option>
-                                        <?php foreach ($bookTimeSlots as $slot): ?>
-                                        <option value="<?= e($slot) ?>"><?= e($slot) ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <span class="ldp-bf-ico" aria-hidden="true"><i class="fi fi-rr-clock"></i></span>
                                 </div>
                             </div>
                         </div>
@@ -702,13 +710,51 @@ require __DIR__ . '/partials/header.php';
 
                             <label class="ldp-bf-label" for="ldpBfAddress">Complete Address</label>
                             <textarea id="ldpBfAddress" name="address" rows="3" placeholder="Complete Address" required autocomplete="street-address"></textarea>
-                            <p class="ldp-bf-note-soft">Order with incomplete/invalid address will be rejected.</p>
+                            <p class="ldp-bf-note-danger">Note: Order with incomplete address will be rejected.</p>
+
+                            <label class="ldp-bf-label">Preferred Date &amp; Time</label>
+                            <div class="ldp-bf-datetime">
+                                <div class="ldp-bf-icon-field">
+                                    <input type="date" id="ldpBfDate" name="appointment_date" required aria-label="Select Preferred Appointment Date">
+                                    <span class="ldp-bf-ico" aria-hidden="true"><i class="fi fi-rr-calendar"></i></span>
+                                </div>
+                                <div class="ldp-bf-select-wrap ldp-bf-icon-field">
+                                    <select id="ldpBfTime" name="time_slot" required>
+                                        <option value="" disabled selected>Select Time Slot</option>
+                                        <?php foreach ($bookTimeSlots as $slot): ?>
+                                        <option value="<?= e($slot) ?>"><?= e($slot) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <span class="ldp-bf-ico" aria-hidden="true"><i class="fi fi-rr-clock"></i></span>
+                                </div>
+                            </div>
+
+                            <ol class="ldp-bf-notes-list">
+                                <li>Appointment confirmation and Technician details will be provided to you through Email &amp; WhatsApp/SMS well in advance.</li>
+                                <li>The date and time of collection may change if Technicians are not available at the requested time.</li>
+                                <li>Kindly allow 30 minutes (Plus or Minus) for the technician to find and reach your location through possible traffic/weather.</li>
+                            </ol>
                         </div>
 
                         <div class="ldp-bf-block">
                             <h3 class="ldp-bf-title">Additional Information</h3>
-                            <label class="ldp-bf-label" for="ldpBfCoupon">Coupon Code <span>(Optional)</span></label>
-                            <input type="text" id="ldpBfCoupon" name="coupon" placeholder="Enter coupon code" autocomplete="off">
+                            <label class="ldp-bf-label">Coupon Code <span>(Optional)</span></label>
+                            <?php
+                            // Predefined percentage coupon ladder. Applying one requires login.
+                            $couponLadder = [5, 10, 15, 20, 25];
+                            ?>
+                            <div class="ldp-bf-coupons" id="ldpBfCoupons" data-logged-in="<?= $ecpPatient ? '1' : '0' ?>">
+                                <?php foreach ($couponLadder as $pct): ?>
+                                <div class="ldp-bf-coupon" data-code="SAVE<?= $pct ?>" data-pct="<?= $pct ?>">
+                                    <div class="ldp-bf-coupon-info">
+                                        <span class="ldp-bf-coupon-code">SAVE<?= $pct ?></span>
+                                        <span class="ldp-bf-coupon-desc"><?= $pct ?>% off</span>
+                                    </div>
+                                    <button type="button" class="ldp-bf-coupon-apply">Apply</button>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <input type="hidden" id="ldpBfCoupon" name="coupon" value="">
                             <p class="ldp-bf-coupon-msg" id="ldpBfCouponMsg" hidden></p>
 
                             <label class="ldp-bf-label" for="ldpBfNotes">Add Notes <span>(Optional)</span></label>
@@ -828,7 +874,7 @@ require __DIR__ . '/partials/header.php';
     var hardCopy = document.getElementById('ldpBfHardCopy');
     var couponInput = document.getElementById('ldpBfCoupon');
     var couponMsg = document.getElementById('ldpBfCouponMsg');
-    var couponOff = 0;
+    var couponsWrap = document.getElementById('ldpBfCoupons');
     var pinOk = false;
 
     if (dateInput) {
@@ -969,30 +1015,54 @@ require __DIR__ . '/partials/header.php';
         return '₹' + Math.round(n).toLocaleString('en-IN');
     }
 
-    function applyCoupon() {
+    // Applied coupon state. couponOff is recomputed as a % of the package line
+    // inside updateTotals(), so it scales with the number of persons.
+    var appliedCouponPct = 0;
+    var appliedCouponCode = '';
+    var couponOff = 0;
+
+    function couponAmount(pkgLine) {
+        return Math.round(pkgLine * appliedCouponPct / 100);
+    }
+
+    function clearCoupon() {
+        appliedCouponPct = 0;
+        appliedCouponCode = '';
         couponOff = 0;
-        if (!couponMsg) return;
-        var code = ((couponInput && couponInput.value) || '').trim().toUpperCase();
-        if (!code) {
-            couponMsg.hidden = true;
-            couponMsg.textContent = '';
+        if (couponInput) couponInput.value = '';
+        if (couponsWrap) couponsWrap.querySelectorAll('.ldp-bf-coupon.is-applied')
+            .forEach(function (c) { c.classList.remove('is-applied'); });
+        if (couponMsg) { couponMsg.hidden = true; couponMsg.textContent = ''; }
+    }
+
+    // Apply a predefined percentage coupon. Requires the patient to be logged in;
+    // logged-out users get the shared auth modal instead.
+    function applyCouponChip(row) {
+        if (!row) return;
+        var loggedIn = couponsWrap && couponsWrap.getAttribute('data-logged-in') === '1';
+        if (!loggedIn) {
+            window.dispatchEvent(new CustomEvent('ecp:open-auth', { detail: { reason: 'lab_coupon' } }));
             return;
         }
-        if (code === 'SAVE100') {
-            couponOff = 100;
+        var code = (row.getAttribute('data-code') || '').toUpperCase();
+        var pct = parseInt(row.getAttribute('data-pct') || '0', 10) || 0;
+
+        // Toggle off if the same coupon is tapped again.
+        if (appliedCouponCode === code) { clearCoupon(); updateTotals(); return; }
+
+        appliedCouponPct = pct;
+        appliedCouponCode = code;
+        if (couponInput) couponInput.value = code;
+
+        if (couponsWrap) couponsWrap.querySelectorAll('.ldp-bf-coupon')
+            .forEach(function (c) { c.classList.toggle('is-applied', c === row); });
+
+        if (couponMsg) {
             couponMsg.hidden = false;
             couponMsg.className = 'ldp-bf-coupon-msg is-ok';
-            couponMsg.textContent = 'Coupon applied: ₹100 off';
-        } else if (code === 'LAB50') {
-            couponOff = 50;
-            couponMsg.hidden = false;
-            couponMsg.className = 'ldp-bf-coupon-msg is-ok';
-            couponMsg.textContent = 'Coupon applied: ₹50 off';
-        } else {
-            couponMsg.hidden = false;
-            couponMsg.className = 'ldp-bf-coupon-msg is-bad';
-            couponMsg.textContent = 'Invalid coupon code';
+            couponMsg.textContent = 'Coupon ' + code + ' applied: ' + pct + '% off';
         }
+        updateTotals();
     }
 
     function updateTotals() {
@@ -1001,6 +1071,8 @@ require __DIR__ . '/partials/header.php';
         var pkgLine = pkgPrice * p;
         var addons = addonTotal() * p;
         var hard = (hardCopy && hardCopy.checked) ? hardFee : 0;
+        // Percentage coupon applies to the package line (scales with persons).
+        couponOff = couponAmount(pkgLine);
         var discount = (mrpLine - pkgLine) + couponOff;
         var total = Math.max(0, pkgLine + addons + hard - couponOff);
 
@@ -1041,16 +1113,50 @@ require __DIR__ . '/partials/header.php';
         if (t && (t.name === 'addons[]' || t.id === 'ldpBfHardCopy')) updateTotals();
     });
 
-    if (couponInput) {
-        couponInput.addEventListener('change', function () { applyCoupon(); updateTotals(); });
-        couponInput.addEventListener('keydown', function (ev) {
-            if (ev.key === 'Enter') {
-                ev.preventDefault();
-                applyCoupon();
-                updateTotals();
-            }
+    if (couponsWrap) {
+        couponsWrap.addEventListener('click', function (ev) {
+            var btn = ev.target.closest('.ldp-bf-coupon-apply');
+            if (!btn) return;
+            ev.preventDefault();
+            applyCouponChip(btn.closest('.ldp-bf-coupon'));
         });
     }
+
+    var loginBtn = document.getElementById('ldpBfLogin');
+    if (loginBtn) {
+        loginBtn.addEventListener('click', function () {
+            window.dispatchEvent(new CustomEvent('ecp:open-auth', {
+                detail: { reason: loginBtn.getAttribute('data-auth-reason') || 'lab_book' }
+            }));
+        });
+    }
+
+    // After OTP login (fired by the shared auth modal, no page reload): replace the
+    // login button with an identity chip and unlock coupon Apply.
+    window.addEventListener('ecp:patient-login', function (ev) {
+        var p = (ev && ev.detail) || {};
+        if (couponsWrap) couponsWrap.setAttribute('data-logged-in', '1');
+        if (!loginBtn) return;
+        var name = p.name || p.first_name || 'Patient';
+        var phone = p.phone || p.handle || '';
+        var initials = name.trim().split(/\s+/).map(function (w) { return w.charAt(0); })
+            .join('').slice(0, 2).toUpperCase() || 'P';
+        var chip = document.createElement('div');
+        chip.className = 'ldp-bf-user';
+        chip.id = 'ldpBfUser';
+        chip.innerHTML =
+            '<span class="ldp-bf-user-avatar" aria-hidden="true"></span>' +
+            '<div class="ldp-bf-user-meta">' +
+              '<strong class="ldp-bf-user-name"></strong>' +
+              '<span class="ldp-bf-user-phone"></span>' +
+            '</div>' +
+            '<span class="ldp-bf-user-badge"><i class="fi fi-rr-check" aria-hidden="true"></i> Logged in</span>';
+        chip.querySelector('.ldp-bf-user-avatar').textContent = initials;
+        chip.querySelector('.ldp-bf-user-name').textContent = name;
+        chip.querySelector('.ldp-bf-user-phone').textContent = phone;
+        loginBtn.replaceWith(chip);
+        loginBtn = null;
+    });
 
     // Highlight focused fields (as in reference)
     form.querySelectorAll('input, select, textarea').forEach(function (el) {
@@ -1063,7 +1169,6 @@ require __DIR__ . '/partials/header.php';
 
     form.addEventListener('submit', function (ev) {
         ev.preventDefault();
-        applyCoupon();
         updateTotals();
 
         if (!pinOk) {
@@ -1101,12 +1206,11 @@ require __DIR__ . '/partials/header.php';
         function finish() {
             showToast('Booking request received for “' + pkgName + '” (' + totalText + '). We’ll confirm shortly.');
             form.reset();
-            couponOff = 0;
+            clearCoupon();
             pinOk = false;
             setPinMsg('', false);
             setLocation('', '');
             setFormLocked(true);
-            if (couponMsg) { couponMsg.hidden = true; couponMsg.textContent = ''; }
             if (beneficiaries) beneficiaries.innerHTML = personBlockHtml(1);
             setPersons(1);
             updateTotals();

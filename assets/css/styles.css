@@ -13780,6 +13780,35 @@ body {
   letter-spacing: 0.01em;
 }
 
+/* Book Now, Pay Later banner (below the header, above the form) */
+.ldp-bf-paylater {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.ldp-bf-paylater-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink-2);
+  line-height: 1.2;
+}
+
+.ldp-bf-paylater-sub {
+  margin: 2px 0 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--teal-700);
+}
+
+.ldp-bf-paylater-text {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
 .ldp-bf-form {
   padding: 0;
 }
@@ -14137,6 +14166,32 @@ body {
   color: var(--mute);
 }
 
+/* Red rejection note under the address field */
+.ldp-bf-note-danger {
+  margin: 6px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #c62828;
+}
+
+/* Numbered collection notes under Preferred Date & Time */
+.ldp-bf-notes-list {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  list-style: decimal;
+}
+
+.ldp-bf-notes-list li {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.ldp-bf-notes-list li:last-child {
+  margin-bottom: 0;
+}
+
 .ldp-bf .is-highlight,
 .ldp-bf input.is-highlight,
 .ldp-bf select.is-highlight,
@@ -14238,6 +14293,198 @@ body {
 
 .ldp-bf-coupon-msg.is-bad {
   color: #c62828;
+}
+
+/* ── Patient login box (above pincode) ─────────────────────────────── */
+.ldp-bf-login {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--teal-400);
+  border-radius: 12px;
+  background: var(--teal-50);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+
+.ldp-bf-login:hover {
+  border-color: var(--teal-700);
+  box-shadow: 0 0 0 3px rgba(15, 155, 110, 0.12);
+}
+
+.ldp-bf-login-ico {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--teal-700);
+  font-size: 16px;
+}
+
+.ldp-bf-login-txt {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+
+.ldp-bf-login-txt strong {
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.ldp-bf-login-txt small {
+  font-size: 11.5px;
+  color: var(--teal-700);
+}
+
+.ldp-bf-login-arrow {
+  flex: 0 0 auto;
+  color: var(--teal-700);
+  font-size: 14px;
+}
+
+/* Logged-in identity chip */
+.ldp-bf-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.ldp-bf-user-avatar {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--teal-700);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ldp-bf-user-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+
+.ldp-bf-user-name {
+  font-size: 13.5px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ldp-bf-user-phone {
+  font-size: 12px;
+  color: var(--mute);
+}
+
+.ldp-bf-user-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--teal-50);
+  color: var(--teal-700);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+/* ── Predefined percentage coupons ─────────────────────────────────── */
+.ldp-bf-coupons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ldp-bf-coupon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 12px;
+  border: 1.5px dashed var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.ldp-bf-coupon.is-applied {
+  border-style: solid;
+  border-color: var(--teal-400);
+  background: var(--teal-50);
+}
+
+.ldp-bf-coupon-info {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ldp-bf-coupon-code {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: .3px;
+  color: var(--ink-2);
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: #f3f6f8;
+}
+
+.ldp-bf-coupon.is-applied .ldp-bf-coupon-code {
+  background: #fff;
+  color: var(--teal-700);
+}
+
+.ldp-bf-coupon-desc {
+  font-size: 12.5px;
+  color: var(--mute);
+}
+
+.ldp-bf-coupon-apply {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: var(--teal-700);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+.ldp-bf-coupon-apply:hover {
+  background: var(--teal-50);
+}
+
+.ldp-bf-coupon.is-applied .ldp-bf-coupon-apply {
+  color: var(--teal-700);
+}
+
+.ldp-bf-coupon.is-applied .ldp-bf-coupon-apply::before {
+  content: "✓ ";
 }
 
 .ldp-bf-submit {
