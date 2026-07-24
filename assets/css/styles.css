@@ -14265,6 +14265,12 @@ body {
   color: var(--ink-2);
 }
 
+/* [hidden] must win over the flex display above (e.g. the courier/discount
+   summary rows that are toggled hidden until they apply). */
+.ldp-bf-row[hidden] {
+  display: none;
+}
+
 .ldp-bf-row s {
   color: var(--mute);
 }
