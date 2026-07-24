@@ -620,13 +620,22 @@ require __DIR__ . '/partials/header.php';
             <?php if ($isPkg && $pkgPriceNum > 0): ?>
             <aside class="ldp-aside" id="ldpBookForm" aria-label="Book this package">
                 <div class="ldp-bf">
+                    <div class="ldp-bf-paylater">
+                        <span class="ldp-bf-paylater-ico" aria-hidden="true"><i class="fi fi-rr-wallet"></i></span>
+                        <div class="ldp-bf-paylater-txt">
+                            <strong class="ldp-bf-paylater-title">Book Now, Pay Later!</strong>
+                            <span class="ldp-bf-paylater-sub">Simple Process, No Spam Calls</span>
+                        </div>
+                    </div>
                     <header class="ldp-bf-head">
                         <h2>Book This Package</h2>
                     </header>
                     <div class="ldp-bf-paylater">
-                        <h3 class="ldp-bf-paylater-title">Book Now, Pay Later</h3>
-                        <p class="ldp-bf-paylater-sub">Simple Process, No Spam Calls</p>
-                        <p class="ldp-bf-paylater-text">You will get a payment link shortly. You can make the payment ONLINE(<strong>Recommended</strong>) using that link or pay using UPI/Cash to the technician.</p>
+                        <span class="ldp-bf-paylater-ico" aria-hidden="true"><i class="fi fi-rr-wallet"></i></span>
+                        <div class="ldp-bf-paylater-txt">
+                            <strong class="ldp-bf-paylater-title">Book Now, Pay Later!</strong>
+                            <span class="ldp-bf-paylater-sub">You will get a payment link shortly. You can make the payment ONLINE(<strong>Recommended</strong>) using that link or pay using UPI/Cash to the technician.</span>
+                        </div>
                     </div>
                     <form class="ldp-bf-form" id="ldpLabBookForm" novalidate
                           data-pkg-price="<?= (int) $pkgPriceNum ?>"
@@ -711,6 +720,8 @@ require __DIR__ . '/partials/header.php';
                             <label class="ldp-bf-label" for="ldpBfAddress">Complete Address</label>
                             <textarea id="ldpBfAddress" name="address" rows="3" placeholder="Complete Address" required autocomplete="street-address"></textarea>
                             <p class="ldp-bf-note-danger">Note: Order with incomplete address will be rejected.</p>
+
+                            <hr class="ldp-bf-divider">
 
                             <label class="ldp-bf-label">Preferred Date &amp; Time</label>
                             <div class="ldp-bf-datetime">
