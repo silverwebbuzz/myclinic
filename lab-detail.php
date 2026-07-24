@@ -630,31 +630,6 @@ require __DIR__ . '/partials/header.php';
                           data-hardcopy="75">
 
                         <div class="ldp-bf-block">
-                            <h3 class="ldp-bf-title">Price Details</h3>
-                            <div class="ldp-bf-price-rows">
-                                <div class="ldp-bf-row">
-                                    <span>MRP</span>
-                                    <s id="ldpBfMrp">₹<?= number_format(max($pkgMrpNum, $pkgPriceNum)) ?></s>
-                                </div>
-                                <div class="ldp-bf-row">
-                                    <span>Discount</span>
-                                    <span class="ldp-bf-discount" id="ldpBfDiscount">- ₹<?= number_format($pkgDiscount) ?></span>
-                                </div>
-                                <div class="ldp-bf-row ldp-bf-row-pay">
-                                    <span>You Pay</span>
-                                    <strong id="ldpBfYouPay">₹<?= number_format($pkgPriceNum) ?></strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="ldp-bf-block">
-                            <label class="ldp-bf-label" for="ldpBfPersons">Number of Persons</label>
-                            <div class="ldp-bf-qty" role="group" aria-label="Number of persons">
-                                <button type="button" class="ldp-bf-qty-btn" id="ldpBfQtyMinus" aria-label="Decrease">−</button>
-                                <input type="number" name="persons" id="ldpBfPersons" value="1" min="1" max="10" readonly>
-                                <button type="button" class="ldp-bf-qty-btn" id="ldpBfQtyPlus" aria-label="Increase">+</button>
-                            </div>
-
                             <div class="ldp-bf-pingate" id="ldpBfPinGate">
                                 <p class="ldp-bf-pinhint">Write <strong>Exact Pincode</strong>, not nearby Pincode</p>
                                 <div class="ldp-bf-pinrow">
@@ -675,21 +650,30 @@ require __DIR__ . '/partials/header.php';
                                 </div>
                             </div>
 
-                            <label class="ldp-bf-label" for="ldpBfDate">Preferred Date</label>
-                            <div class="ldp-bf-icon-field">
-                                <input type="date" id="ldpBfDate" name="appointment_date" required aria-label="Select Preferred Appointment Date">
-                                <span class="ldp-bf-ico" aria-hidden="true"><i class="fi fi-rr-calendar"></i></span>
+                            <div class="ldp-bf-persons-row">
+                                <label class="ldp-bf-label" for="ldpBfPersons">Number of Persons</label>
+                                <div class="ldp-bf-qty" role="group" aria-label="Number of persons">
+                                    <button type="button" class="ldp-bf-qty-btn" id="ldpBfQtyMinus" aria-label="Decrease">−</button>
+                                    <input type="number" name="persons" id="ldpBfPersons" value="1" min="1" max="10" readonly>
+                                    <button type="button" class="ldp-bf-qty-btn" id="ldpBfQtyPlus" aria-label="Increase">+</button>
+                                </div>
                             </div>
 
-                            <label class="ldp-bf-label" for="ldpBfTime">Time Slot</label>
-                            <div class="ldp-bf-select-wrap ldp-bf-icon-field">
-                                <select id="ldpBfTime" name="time_slot" required>
-                                    <option value="" disabled selected>Select Time Slot</option>
-                                    <?php foreach ($bookTimeSlots as $slot): ?>
-                                    <option value="<?= e($slot) ?>"><?= e($slot) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <span class="ldp-bf-ico" aria-hidden="true"><i class="fi fi-rr-clock"></i></span>
+                            <label class="ldp-bf-label">Preferred Date &amp; Time</label>
+                            <div class="ldp-bf-datetime">
+                                <div class="ldp-bf-icon-field">
+                                    <input type="date" id="ldpBfDate" name="appointment_date" required aria-label="Select Preferred Appointment Date">
+                                    <span class="ldp-bf-ico" aria-hidden="true"><i class="fi fi-rr-calendar"></i></span>
+                                </div>
+                                <div class="ldp-bf-select-wrap ldp-bf-icon-field">
+                                    <select id="ldpBfTime" name="time_slot" required>
+                                        <option value="" disabled selected>Select Time Slot</option>
+                                        <?php foreach ($bookTimeSlots as $slot): ?>
+                                        <option value="<?= e($slot) ?>"><?= e($slot) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <span class="ldp-bf-ico" aria-hidden="true"><i class="fi fi-rr-clock"></i></span>
+                                </div>
                             </div>
                         </div>
 

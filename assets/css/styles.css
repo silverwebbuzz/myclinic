@@ -13947,6 +13947,30 @@ body {
   margin: 0;
 }
 
+/* Number of Persons: label + stepper on one line */
+.ldp-bf-persons-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.ldp-bf-persons-row .ldp-bf-label {
+  margin: 0;
+}
+
+/* Preferred Date & Time on one line */
+.ldp-bf-datetime {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ldp-bf-datetime > .ldp-bf-icon-field {
+  min-width: 0;
+}
+
 .ldp-bf-hint {
   margin: 12px 0 8px;
   font-size: 12.5px;
