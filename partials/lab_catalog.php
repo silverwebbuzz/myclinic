@@ -454,6 +454,74 @@ function ecp_lab_db_search_index(int $testLimit = 150): array
     }
 }
 
+/**
+ * Individual add-on TESTS (only single tests, never packages) for the "add more
+ * tests" picker on the booking form. Each row: [id, label, price]. Popular first.
+ *
+ * $excludeSlug lets the caller drop the current package/test from the list so a
+ * page doesn't offer to add what it already is. Falls back to a small static set
+ * when the DB is unavailable so the picker is never empty in preview mode.
+ */
+function ecp_lab_addon_tests(int $limit = 200, string $excludeSlug = ''): array
+{
+    $fallback = [
+        ['id' => 'vitd',   'label' => 'Vitamin D Total',       'price' => 899],
+        ['id' => 'vitb12', 'label' => 'Vitamin B-12',          'price' => 699],
+        ['id' => 'tft',    'label' => 'Thyroid Profile Total', 'price' => 499],
+        ['id' => 'hba1c',  'label' => 'HbA1c',                 'price' => 399],
+        ['id' => 'iron',   'label' => 'Iron Studies',          'price' => 550],
+        ['id' => 'lipid',  'label' => 'Lipid Profile',         'price' => 450],
+    ];
+
+    if (!function_exists('ecp_db')) {
+        return $fallback;
+    }
+    $db = ecp_db();
+    if (!$db) {
+        return $fallback;
+    }
+
+    try {
+        $stmt = $db->prepare(
+            "SELECT lp.slug, lp.name, pr.offer_rate
+               FROM lab_products lp
+               JOIN lab_product_pricing pr ON pr.id = (
+                   SELECT p2.id FROM lab_product_pricing p2
+                   WHERE p2.product_id = lp.id
+                   ORDER BY p2.effective_from DESC, p2.id DESC LIMIT 1
+               )
+              WHERE lp.is_active = 1
+                AND lp.product_type = 'TEST'
+                AND pr.offer_rate > 0
+              ORDER BY lp.booked_count DESC, lp.name ASC
+              LIMIT :lim"
+        );
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if (!$rows) {
+            return $fallback;
+        }
+
+        $out = [];
+        foreach ($rows as $r) {
+            $slug = (string) $r['slug'];
+            if ($excludeSlug !== '' && $slug === $excludeSlug) {
+                continue;
+            }
+            $out[] = [
+                'id'    => $slug,
+                'label' => ecp_lab_titlecase((string) $r['name']),
+                'price' => (int) round((float) $r['offer_rate']),
+            ];
+        }
+        return $out ?: $fallback;
+    } catch (Throwable $e) {
+        error_log('[ecp_lab_addon_tests] ' . $e->getMessage());
+        return $fallback;
+    }
+}
+
 /** Thyrocare names are ALL CAPS; present them in Title Case for the storefront. */
 function ecp_lab_titlecase(string $name): string
 {

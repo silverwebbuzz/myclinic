@@ -286,14 +286,9 @@ $bookTimeSlots = [
     '10:00 AM - 11:00 AM', '11:00 AM - 12:00 PM', '12:00 PM - 01:00 PM', '02:00 PM - 03:00 PM',
     '03:00 PM - 04:00 PM', '04:00 PM - 05:00 PM', '05:00 PM - 06:00 PM',
 ];
-$addonTests = [
-    ['id' => 'vitd', 'label' => 'Vitamin D Total', 'count' => 1, 'price' => 899],
-    ['id' => 'vitb12', 'label' => 'Vitamin B-12', 'count' => 1, 'price' => 699],
-    ['id' => 'tft', 'label' => 'Thyroid Profile Total', 'count' => 3, 'price' => 499],
-    ['id' => 'hba1c', 'label' => 'HbA1c', 'count' => 1, 'price' => 399],
-    ['id' => 'iron', 'label' => 'Iron Studies', 'count' => 4, 'price' => 550],
-    ['id' => 'lipid', 'label' => 'Lipid Profile', 'count' => 5, 'price' => 450],
-];
+// Searchable add-on TESTS (individual tests only, DB-driven). Excludes the test
+// this page already is, so a /lab/test/... page can't offer to add itself.
+$addonTests = ecp_lab_addon_tests(200, $type === 'test' ? $slug : '');
 
 $extraHead = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@flaticon/flaticon-uicons@3.3.1/css/regular/rounded.css">';
 
@@ -742,42 +737,60 @@ require __DIR__ . '/partials/header.php';
 
                         <div class="ldp-bf-block">
                             <h3 class="ldp-bf-title">Additional Information</h3>
-                            <label class="ldp-bf-label">Coupon Code <span>(Optional)</span></label>
+                            <?php if ($loginPct > 0): ?>
                             <?php
-                            // Predefined percentage coupon ladder. Applying one requires login.
-                            $couponLadder = [5, 10, 15, 20, 25];
+                            // Single coupon: the best login discount for THIS product, already
+                            // capped by lab_product_pricing.max_discount_pct (see $loginPct).
+                            $couponPct  = $loginPct;
+                            $couponCode = 'SAVE' . $couponPct;
                             ?>
+                            <label class="ldp-bf-label">Coupon Code <span>(Optional)</span></label>
                             <div class="ldp-bf-coupons" id="ldpBfCoupons" data-logged-in="<?= $ecpPatient ? '1' : '0' ?>">
-                                <?php foreach ($couponLadder as $pct): ?>
-                                <div class="ldp-bf-coupon" data-code="SAVE<?= $pct ?>" data-pct="<?= $pct ?>">
+                                <div class="ldp-bf-coupon" data-code="<?= e($couponCode) ?>" data-pct="<?= (int) $couponPct ?>">
                                     <div class="ldp-bf-coupon-info">
-                                        <span class="ldp-bf-coupon-code">SAVE<?= $pct ?></span>
-                                        <span class="ldp-bf-coupon-desc"><?= $pct ?>% off</span>
+                                        <span class="ldp-bf-coupon-code"><?= e($couponCode) ?></span>
+                                        <span class="ldp-bf-coupon-desc"><?= (int) $couponPct ?>% off</span>
                                     </div>
                                     <button type="button" class="ldp-bf-coupon-apply">Apply</button>
                                 </div>
-                                <?php endforeach; ?>
                             </div>
                             <input type="hidden" id="ldpBfCoupon" name="coupon" value="">
                             <p class="ldp-bf-coupon-msg" id="ldpBfCouponMsg" hidden></p>
+                            <?php endif; ?>
 
                             <label class="ldp-bf-label" for="ldpBfNotes">Add Notes <span>(Optional)</span></label>
                             <textarea id="ldpBfNotes" name="notes" rows="3" placeholder="Write any instructions"></textarea>
                         </div>
 
                         <div class="ldp-bf-block" id="ldpBookAddons">
-                            <h3 class="ldp-bf-title">Tick To Add Additional Tests (Optional)</h3>
-                            <div class="ldp-bf-addons">
-                                <?php foreach ($addonTests as $addon): ?>
-                                <label class="ldp-bf-addon">
-                                    <input type="checkbox" name="addons[]" value="<?= e($addon['id']) ?>" data-price="<?= (int) $addon['price'] ?>">
-                                    <span><?= e($addon['label']) ?> (<?= (int) $addon['count'] ?>) @ Rs. <?= (int) $addon['price'] ?></span>
-                                </label>
-                                <?php endforeach; ?>
+                            <h3 class="ldp-bf-title">Add More Tests (Optional)</h3>
+
+                            <div class="ldp-bf-testsearch" id="ldpAddonSearch">
+                                <span class="ldp-bf-testsearch-ico" aria-hidden="true"><i class="fi fi-rr-search"></i></span>
+                                <input type="text" id="ldpAddonInput" class="ldp-bf-testsearch-input"
+                                       placeholder="Search and add more tests" autocomplete="off"
+                                       role="combobox" aria-expanded="false" aria-controls="ldpAddonResults"
+                                       aria-autocomplete="list">
+                                <ul class="ldp-bf-testsearch-results" id="ldpAddonResults" role="listbox" hidden></ul>
                             </div>
+
+                            <!-- Chosen tests land here as removable chips; each carries a hidden,
+                                 checked addons[] checkbox so the existing total logic picks it up. -->
+                            <div class="ldp-bf-testchips" id="ldpAddonChips"></div>
+
+                            <?php
+                            // Test catalogue for the picker (individual tests only).
+                            $addonJson = array_map(static fn ($a) => [
+                                'id'    => (string) $a['id'],
+                                'label' => (string) $a['label'],
+                                'price' => (int) $a['price'],
+                            ], $addonTests);
+                            ?>
+                            <script type="application/json" id="ldpAddonData"><?= json_encode($addonJson, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
+
                             <label class="ldp-bf-hardcopy">
                                 <input type="checkbox" name="hard_copy" id="ldpBfHardCopy" value="1">
-                                <span>Please tick to receive hard copy / SMS updates. Courier charges <strong>Rs. 75 Extra.</strong></span>
+                                <span>Please tick to receive hard copy. Courier charges <b>Rs. 75 Extra.</b></span>
                             </label>
                         </div>
 
@@ -787,7 +800,7 @@ require __DIR__ . '/partials/header.php';
                             <span class="ldp-bf-paylater-ico" aria-hidden="true"><i class="fi fi-rr-wallet"></i></span>
                             <div class="ldp-bf-paylater-txt">
                                 <strong class="ldp-bf-paylater-title">Book Now, Pay Later!</strong>
-                                <span class="ldp-bf-paylater-sub">You will get a payment link shortly. You can make the payment ONLINE(<strong>Recommended</strong>) using that link or pay using UPI/Cash to the technician.</span>
+                                <span class="ldp-bf-paylater-sub">You will get a payment link shortly. You can make the payment ONLINE (<b>Recommended</b>) using that link or pay using UPI/Cash to the technician.</span>
                             </div>
                         </div>
 
@@ -954,6 +967,9 @@ require __DIR__ . '/partials/header.php';
         controls.forEach(function (el) {
             if (el === pinInput || el === pinCheck) return;        // gate stays live
             if (el === cityInput || el === stateInput) return;     // auto-filled, always readonly
+            // Login/sign-up and coupon Apply sit above the pincode gate — logging in
+            // is meant to happen first, so they must stay clickable while locked.
+            if (el.id === 'ldpBfLogin' || el.closest('.ldp-bf-coupon')) return;
             el.disabled = !!locked;
         });
     }
@@ -1126,6 +1142,142 @@ require __DIR__ . '/partials/header.php';
         });
     }
 
+    // ── Add-more-tests search picker ──────────────────────────────────────
+    var resetAddons = function () {};   // assigned by the picker IIFE below
+    (function initAddonSearch() {
+        var input   = document.getElementById('ldpAddonInput');
+        var results = document.getElementById('ldpAddonResults');
+        var chips   = document.getElementById('ldpAddonChips');
+        var dataEl  = document.getElementById('ldpAddonData');
+        if (!input || !results || !chips || !dataEl) return;
+
+        var catalog = [];
+        try { catalog = JSON.parse(dataEl.textContent || '[]') || []; } catch (e) { catalog = []; }
+        var chosen = Object.create(null);   // id -> true, so a test can't be added twice
+        var activeIdx = -1;                 // keyboard-highlighted result
+
+        function inr(n) { return '₹' + Math.round(n).toLocaleString('en-IN'); }
+
+        function matches(q) {
+            q = q.trim().toLowerCase();
+            var pool = catalog.filter(function (t) { return !chosen[t.id]; });
+            if (!q) return pool.slice(0, 8);
+            return pool.filter(function (t) {
+                return t.label.toLowerCase().indexOf(q) !== -1;
+            }).slice(0, 8);
+        }
+
+        function closeResults() {
+            results.hidden = true;
+            results.innerHTML = '';
+            activeIdx = -1;
+            input.setAttribute('aria-expanded', 'false');
+        }
+
+        function renderResults() {
+            var list = matches(input.value);
+            if (!list.length) {
+                results.innerHTML = '<li class="ldp-bf-testsearch-empty" role="presentation">No matching tests</li>';
+                results.hidden = false;
+                input.setAttribute('aria-expanded', 'true');
+                activeIdx = -1;
+                return;
+            }
+            results.innerHTML = list.map(function (t, i) {
+                return '<li class="ldp-bf-testsearch-opt" role="option" data-id="' + t.id + '"' +
+                       (i === activeIdx ? ' aria-selected="true"' : '') + '>' +
+                       '<span class="ldp-bf-testsearch-name"></span>' +
+                       '<span class="ldp-bf-testsearch-price">' + inr(t.price) + '</span></li>';
+            }).join('');
+            // Fill names via textContent to avoid any HTML injection from labels.
+            Array.prototype.forEach.call(results.children, function (li, i) {
+                li.querySelector('.ldp-bf-testsearch-name').textContent = list[i].label;
+            });
+            results.hidden = false;
+            input.setAttribute('aria-expanded', 'true');
+        }
+
+        function addTest(id) {
+            var t = catalog.find(function (x) { return x.id === id; });
+            if (!t || chosen[id]) return;
+            chosen[id] = true;
+
+            var chip = document.createElement('div');
+            chip.className = 'ldp-bf-testchip';
+            chip.setAttribute('data-id', id);
+            chip.innerHTML =
+                '<input type="checkbox" name="addons[]" checked hidden ' +
+                       'value="' + id + '" data-price="' + t.price + '">' +
+                '<span class="ldp-bf-testchip-name"></span>' +
+                '<span class="ldp-bf-testchip-price">' + inr(t.price) + '</span>' +
+                '<button type="button" class="ldp-bf-testchip-x" aria-label="Remove">×</button>';
+            chip.querySelector('.ldp-bf-testchip-name').textContent = t.label;
+            chips.appendChild(chip);
+
+            input.value = '';
+            closeResults();
+            input.focus();
+            updateTotals();
+        }
+
+        function removeTest(id) {
+            var chip = chips.querySelector('.ldp-bf-testchip[data-id="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
+            if (chip) chip.remove();
+            delete chosen[id];
+            updateTotals();
+        }
+
+        input.addEventListener('input', function () { activeIdx = -1; renderResults(); });
+        input.addEventListener('focus', function () { renderResults(); });
+
+        input.addEventListener('keydown', function (ev) {
+            var opts = results.querySelectorAll('.ldp-bf-testsearch-opt');
+            if (ev.key === 'ArrowDown') {
+                ev.preventDefault();
+                if (!opts.length) { renderResults(); return; }
+                activeIdx = Math.min(activeIdx + 1, opts.length - 1);
+                renderResults();
+            } else if (ev.key === 'ArrowUp') {
+                ev.preventDefault();
+                activeIdx = Math.max(activeIdx - 1, 0);
+                renderResults();
+            } else if (ev.key === 'Enter') {
+                if (activeIdx >= 0 && opts[activeIdx]) {
+                    ev.preventDefault();
+                    addTest(opts[activeIdx].getAttribute('data-id'));
+                }
+            } else if (ev.key === 'Escape') {
+                closeResults();
+            }
+        });
+
+        results.addEventListener('mousedown', function (ev) {
+            // mousedown (not click) so it fires before the input's blur closes the list.
+            var opt = ev.target.closest('.ldp-bf-testsearch-opt');
+            if (!opt) return;
+            ev.preventDefault();
+            addTest(opt.getAttribute('data-id'));
+        });
+
+        chips.addEventListener('click', function (ev) {
+            var x = ev.target.closest('.ldp-bf-testchip-x');
+            if (!x) return;
+            removeTest(x.closest('.ldp-bf-testchip').getAttribute('data-id'));
+        });
+
+        document.addEventListener('click', function (ev) {
+            if (!ev.target.closest('#ldpAddonSearch')) closeResults();
+        });
+
+        // Let the form-reset flow clear chosen add-ons.
+        resetAddons = function () {
+            chips.innerHTML = '';
+            chosen = Object.create(null);
+            input.value = '';
+            closeResults();
+        };
+    })();
+
     var loginBtn = document.getElementById('ldpBfLogin');
     if (loginBtn) {
         loginBtn.addEventListener('click', function () {
@@ -1135,32 +1287,9 @@ require __DIR__ . '/partials/header.php';
         });
     }
 
-    // After OTP login (fired by the shared auth modal, no page reload): replace the
-    // login button with an identity chip and unlock coupon Apply.
-    window.addEventListener('ecp:patient-login', function (ev) {
-        var p = (ev && ev.detail) || {};
-        if (couponsWrap) couponsWrap.setAttribute('data-logged-in', '1');
-        if (!loginBtn) return;
-        var name = p.name || p.first_name || 'Patient';
-        var phone = p.phone || p.handle || '';
-        var initials = name.trim().split(/\s+/).map(function (w) { return w.charAt(0); })
-            .join('').slice(0, 2).toUpperCase() || 'P';
-        var chip = document.createElement('div');
-        chip.className = 'ldp-bf-user';
-        chip.id = 'ldpBfUser';
-        chip.innerHTML =
-            '<span class="ldp-bf-user-avatar" aria-hidden="true"></span>' +
-            '<div class="ldp-bf-user-meta">' +
-              '<strong class="ldp-bf-user-name"></strong>' +
-              '<span class="ldp-bf-user-phone"></span>' +
-            '</div>' +
-            '<span class="ldp-bf-user-badge"><i class="fi fi-rr-check" aria-hidden="true"></i> Logged in</span>';
-        chip.querySelector('.ldp-bf-user-avatar').textContent = initials;
-        chip.querySelector('.ldp-bf-user-name').textContent = name;
-        chip.querySelector('.ldp-bf-user-phone').textContent = phone;
-        loginBtn.replaceWith(chip);
-        loginBtn = null;
-    });
+    // Note: on a successful OTP login the shared auth modal calls location.reload()
+    // itself, so the page re-renders server-side with the logged-in state (identity
+    // chip + coupon unlocked). No client-side DOM swap is needed here.
 
     // Highlight focused fields (as in reference)
     form.querySelectorAll('input, select, textarea').forEach(function (el) {
@@ -1211,6 +1340,7 @@ require __DIR__ . '/partials/header.php';
             showToast('Booking request received for “' + pkgName + '” (' + totalText + '). We’ll confirm shortly.');
             form.reset();
             clearCoupon();
+            resetAddons();
             pinOk = false;
             setPinMsg('', false);
             setLocation('', '');

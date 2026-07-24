@@ -14309,6 +14309,153 @@ body {
   font-weight: 700;
 }
 
+/* ── Add-more-tests search picker ─────────────────────────────────── */
+.ldp-bf-testsearch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 0 10px;
+}
+
+.ldp-bf-testsearch:focus-within {
+  border-color: var(--teal-400);
+  box-shadow: 0 0 0 3px rgba(15, 155, 110, 0.12);
+}
+
+.ldp-bf-testsearch-ico {
+  flex: 0 0 auto;
+  color: var(--mute);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.ldp-bf-testsearch-input {
+  flex: 1 1 auto;
+  border: none !important;
+  outline: none;
+  background: transparent;
+  padding: 11px 0 !important;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: var(--ink-2);
+  box-shadow: none !important;
+}
+
+.ldp-bf-testsearch-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(7, 107, 76, 0.14);
+}
+
+.ldp-bf-testsearch-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 7px;
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.ldp-bf-testsearch-opt:hover,
+.ldp-bf-testsearch-opt[aria-selected="true"] {
+  background: var(--teal-50);
+}
+
+.ldp-bf-testsearch-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ldp-bf-testsearch-price {
+  flex: 0 0 auto;
+  font-weight: 700;
+  color: var(--teal-700);
+}
+
+.ldp-bf-testsearch-empty {
+  padding: 10px;
+  font-size: 12.5px;
+  color: var(--mute);
+  text-align: center;
+}
+
+/* Chosen add-on tests as removable chips */
+.ldp-bf-testchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+
+.ldp-bf-testchips:empty {
+  margin: 0;
+}
+
+.ldp-bf-testchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  border: 1.5px solid var(--teal-400);
+  border-radius: 999px;
+  background: var(--teal-50);
+  font-size: 12.5px;
+  color: var(--ink-2);
+  max-width: 100%;
+}
+
+.ldp-bf-testchip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ldp-bf-testchip-price {
+  font-weight: 700;
+  color: var(--teal-700);
+}
+
+.ldp-bf-testchip-x {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--teal-700);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.ldp-bf-testchip-x:hover {
+  background: var(--teal-700);
+  color: #fff;
+}
+
 .ldp-bf-coupon-msg {
   margin: 6px 0 0;
   font-size: 12px;
