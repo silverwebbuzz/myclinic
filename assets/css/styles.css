@@ -14662,7 +14662,10 @@ body {
 }
 
 .ldp-bf-submit {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   width: calc(100% - 32px);
   margin: 14px 16px 0;
   border: none;
@@ -14678,6 +14681,22 @@ body {
 
 .ldp-bf-submit:hover {
   background: var(--teal-800);
+}
+
+/* "Save ₹X" pill on the Book Now button. */
+.ldp-bf-submit-save[hidden] {
+  display: none;
+}
+
+.ldp-bf-submit-save {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
 }
 
 .ldp-bf-paylater {
@@ -14732,6 +14751,31 @@ body {
 .ldp-bf-val {
   color: var(--teal-600);
   font-weight: 650;
+}
+
+/* Package name in the summary — wrap gracefully, don't push the price off. */
+.ldp-bf-sum-name {
+  font-weight: 650;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Itemised add-on test lines. */
+.ldp-bf-summary .ldp-bf-sum-addon {
+  color: var(--mute);
+  font-size: 12.5px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ldp-bf-summary .ldp-bf-sum-addon + .ldp-bf-val,
+.ldp-bf-row .ldp-bf-sum-addon ~ .ldp-bf-val {
+  font-weight: 600;
+}
+
+/* Discount line renders in the same green as savings. */
+.ldp-bf-row-discount #ldpBfSumDiscount {
+  color: var(--teal-700);
 }
 
 .ldp-bf-row-total {

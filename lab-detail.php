@@ -794,7 +794,10 @@ require __DIR__ . '/partials/header.php';
                             </label>
                         </div>
 
-                        <button type="submit" class="ldp-bf-submit">Book Now</button>
+                        <button type="submit" class="ldp-bf-submit">
+                            <span class="ldp-bf-submit-label">Book Now</span>
+                            <span class="ldp-bf-submit-save" id="ldpBfSubmitSave" hidden></span>
+                        </button>
 
                         <div class="ldp-bf-paylater">
                             <span class="ldp-bf-paylater-ico" aria-hidden="true"><i class="fi fi-rr-wallet"></i></span>
@@ -806,13 +809,30 @@ require __DIR__ . '/partials/header.php';
 
                         <div class="ldp-bf-summary">
                             <div class="ldp-bf-row">
-                                <span>Test Package Price</span>
+                                <span class="ldp-bf-sum-name"><?= e($d['title']) ?></span>
                                 <span class="ldp-bf-val" id="ldpBfSumPkg">₹<?= number_format($pkgPriceNum) ?></span>
                             </div>
+
+                            <!-- Add-on tests chosen via "Add More Tests" are itemised here. -->
+                            <div id="ldpBfSumAddons"></div>
+
                             <div class="ldp-bf-row">
                                 <span>Home Collection Charges</span>
                                 <span class="ldp-bf-val">Free</span>
                             </div>
+
+                            <!-- Courier line: only shown when the hard-copy option is ticked. -->
+                            <div class="ldp-bf-row" id="ldpBfSumCourierRow" hidden>
+                                <span>Hard Copy Courier</span>
+                                <span class="ldp-bf-val" id="ldpBfSumCourier">₹75</span>
+                            </div>
+
+                            <!-- Discount line: only shown when a coupon is applied. -->
+                            <div class="ldp-bf-row ldp-bf-row-discount" id="ldpBfSumDiscountRow" hidden>
+                                <span id="ldpBfSumDiscountLabel">Discount</span>
+                                <span class="ldp-bf-val" id="ldpBfSumDiscount">- ₹0</span>
+                            </div>
+
                             <div class="ldp-bf-row ldp-bf-row-total">
                                 <span>Total Amount</span>
                                 <strong id="ldpBfSumTotal">₹<?= number_format($pkgPriceNum) ?></strong>
@@ -1085,30 +1105,93 @@ require __DIR__ . '/partials/header.php';
         updateTotals();
     }
 
+    // Each chosen add-on test as {label, price} (unit price, before persons).
+    function addonItems() {
+        var items = [];
+        form.querySelectorAll('input[name="addons[]"]:checked').forEach(function (cb) {
+            var chip = cb.closest('.ldp-bf-testchip');
+            var name = chip && chip.querySelector('.ldp-bf-testchip-name');
+            items.push({
+                label: name ? name.textContent : 'Added test',
+                price: parseInt(cb.getAttribute('data-price') || '0', 10) || 0
+            });
+        });
+        return items;
+    }
+
     function updateTotals() {
         var p = persons();
         var mrpLine = Math.max(pkgMrp, pkgPrice) * p;
         var pkgLine = pkgPrice * p;
-        var addons = addonTotal() * p;
-        var hard = (hardCopy && hardCopy.checked) ? hardFee : 0;
+        var items   = addonItems();
+        var addons  = addonTotal() * p;
+        var hard    = (hardCopy && hardCopy.checked) ? hardFee : 0;
         // Percentage coupon applies to the package line (scales with persons).
         couponOff = couponAmount(pkgLine);
-        var discount = (mrpLine - pkgLine) + couponOff;
         var total = Math.max(0, pkgLine + addons + hard - couponOff);
 
+        // Package MRP/discount widgets (if the compact price card is present).
+        var discount = (mrpLine - pkgLine) + couponOff;
         var elMrp = document.getElementById('ldpBfMrp');
         var elDisc = document.getElementById('ldpBfDiscount');
         var elPay = document.getElementById('ldpBfYouPay');
-        var elSumPkg = document.getElementById('ldpBfSumPkg');
-        var elSumTotal = document.getElementById('ldpBfSumTotal');
-        var elStickyTotal = document.getElementById('ldpStickyTotal');
-
         if (elMrp) elMrp.textContent = formatInr(mrpLine);
         if (elDisc) elDisc.textContent = '- ' + formatInr(Math.max(0, discount));
         if (elPay) elPay.textContent = formatInr(total);
-        if (elSumPkg) elSumPkg.textContent = formatInr(pkgLine + addons);
+
+        // ── Itemised order summary ──────────────────────────────────────
+        var elSumPkg = document.getElementById('ldpBfSumPkg');
+        if (elSumPkg) elSumPkg.textContent = formatInr(pkgLine);
+
+        // Add-on test lines (one per chosen test, price scaled by persons).
+        var addonsBox = document.getElementById('ldpBfSumAddons');
+        if (addonsBox) {
+            addonsBox.innerHTML = '';
+            items.forEach(function (it) {
+                var row = document.createElement('div');
+                row.className = 'ldp-bf-row';
+                var name = document.createElement('span');
+                name.className = 'ldp-bf-sum-addon';
+                name.textContent = '+ ' + it.label + (p > 1 ? ' × ' + p : '');
+                var val = document.createElement('span');
+                val.className = 'ldp-bf-val';
+                val.textContent = formatInr(it.price * p);
+                row.appendChild(name);
+                row.appendChild(val);
+                addonsBox.appendChild(row);
+            });
+        }
+
+        // Courier row (only when hard copy is ticked).
+        var courierRow = document.getElementById('ldpBfSumCourierRow');
+        var courierVal = document.getElementById('ldpBfSumCourier');
+        if (courierRow) courierRow.hidden = (hard <= 0);
+        if (courierVal) courierVal.textContent = formatInr(hardFee);
+
+        // Discount row (only when a coupon is applied).
+        var discRow = document.getElementById('ldpBfSumDiscountRow');
+        var discLbl = document.getElementById('ldpBfSumDiscountLabel');
+        var discVal = document.getElementById('ldpBfSumDiscount');
+        if (discRow) discRow.hidden = (couponOff <= 0);
+        if (discLbl && appliedCouponCode) discLbl.textContent = 'Discount (' + appliedCouponCode + ')';
+        if (discVal) discVal.textContent = '- ' + formatInr(couponOff);
+
+        var elSumTotal = document.getElementById('ldpBfSumTotal');
+        var elStickyTotal = document.getElementById('ldpStickyTotal');
         if (elSumTotal) elSumTotal.textContent = formatInr(total);
         if (elStickyTotal) elStickyTotal.textContent = formatInr(total);
+
+        // "Save ₹X" on the Book Now button — total savings = MRP markdown + coupon.
+        var elSave = document.getElementById('ldpBfSubmitSave');
+        if (elSave) {
+            var saved = Math.max(0, discount);
+            if (saved > 0) {
+                elSave.textContent = 'Save ' + formatInr(saved);
+                elSave.hidden = false;
+            } else {
+                elSave.hidden = true;
+            }
+        }
     }
 
     if (minusBtn) minusBtn.addEventListener('click', function () { setPersons(persons() - 1); });
