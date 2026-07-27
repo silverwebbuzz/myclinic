@@ -45,7 +45,7 @@ if ($view === 'category') {
     $pageTitle = $catName . ' Tests & Packages — Book Online | eClinicPro';
     $metaDesc  = 'Book ' . $catName . ' lab tests and health packages online at eClinicPro — '
         . $listing['total'] . '+ options, NABL-accredited labs, free home sample collection, '
-        . 'digital reports and a free doctor consult.';
+        . 'and digital reports.';
     $heading    = $catName . ' Tests & Health Packages';
     $subheading = 'Book ' . $catName . ' diagnostic tests and packages with free home sample collection.';
     $canonicalUrl = ecp_site_url(ecp_lab_category_url($slug));
@@ -67,7 +67,7 @@ if ($view === 'category') {
     $pageTitle  = 'Tests for ' . $symName . ' — Book Online | eClinicPro';
     $metaDesc   = 'Not sure which test to book for ' . strtolower($symName) . '? '
         . 'See the ' . $listing['total'] . '+ most relevant lab tests and health packages at eClinicPro — '
-        . 'NABL-accredited labs, free home sample collection and a free doctor consult.';
+        . 'NABL-accredited labs, free home sample collection and digital reports.';
     $heading    = 'Tests for ' . $symName;
     $subheading = $symDesc !== '' ? $symDesc . ' — recommended tests & packages.'
         : 'The most relevant tests and packages for this concern.';

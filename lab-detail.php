@@ -236,7 +236,7 @@ $stepsHow = [
     ['fi-rr-scooter', 'Home Collection', 'Our phlebotomist will collect sample from your home'],
     ['fi-rr-flask', 'Testing', 'Sample tested at NABL accredited labs'],
     ['fi-rr-smartphone', 'Digital Report', 'Get reports on app within 24 hours'],
-    ['fi-rr-doctor', 'Doctor Review', 'Free consultation with report review'],
+    ['fi-rr-shield-check', 'Saved Securely', 'Reports stored in your eClinicPro Health account'],
 ];
 
 $highlightsBar = [
@@ -248,7 +248,7 @@ $highlightsBar = [
 ];
 
 $testimonials = [
-    ['Priya S.', 'Mumbai', 'Reports came the next morning and the doctor consult helped me understand my sugar trends clearly.'],
+    ['Priya S.', 'Mumbai', 'Reports came the next morning and were saved straight to my account — easy to share with my doctor.'],
     ['Rahul K.', 'Pune', 'Home collection was on time and hygienic. Booking on eClinicPro was very simple.'],
     ['Ananya M.', 'Bengaluru', 'Good value versus MRP. The package covered everything my physician asked for.'],
 ];
@@ -342,7 +342,7 @@ require __DIR__ . '/partials/header.php';
                     <li>Free Home Collection</li>
                     <li>NABL Accredited Labs</li>
                     <li>Reports in 24 Hours</li>
-                    <li>Free Doctor Consultation</li>
+                    <li>Saved to Your Health Account</li>
                 </ul>
                 <?php if ($isPkg && $price !== ''): ?>
                 <div class="ldp-hero-price">
@@ -853,18 +853,20 @@ require __DIR__ . '/partials/header.php';
 <!-- Sticky CTA -->
 <div class="ldp-sticky" id="ldpSticky">
     <div class="wrap ldp-sticky-inner">
-        <p>Ready to take control of your health? Book <strong><?= e($d['title']) ?></strong> today &amp; get expert insights.</p>
+        <p>Ready to take control of your health? Book <strong><?= e($d['title']) ?></strong> today with free home sample collection.</p>
         <div class="ldp-sticky-actions">
             <?php if ($isPkg && $price !== ''): ?>
             <div class="ldp-sticky-price">
                 <strong id="ldpStickyTotal">₹<?= e($price) ?></strong>
-                <?php if ($off !== ''): ?><span id="ldpStickyOff"><?= e($off) ?>% OFF</span><?php endif; ?>
+                <?php // Always in the DOM (hidden when 0) so updateTotals() can
+                      // fill it in once a coupon applies — a product with no
+                      // MRP margin still reaches a real discount via the coupon. ?>
+                <span id="ldpStickyOff" <?= ((int) $off) > 0 ? '' : 'hidden' ?>><?= e($off !== '' ? $off : '0') ?>% OFF</span>
             </div>
             <a href="#ldpBookForm" class="ldp-btn ldp-btn-light">Book Now</a>
             <?php else: ?>
             <a href="/lab#lab-packages" class="ldp-btn ldp-btn-light">Browse Packages</a>
             <?php endif; ?>
-            <a href="/contact" class="ldp-btn ldp-btn-outline-light">Talk to Expert</a>
         </div>
     </div>
 </div>
@@ -1180,6 +1182,19 @@ require __DIR__ . '/partials/header.php';
         var elStickyTotal = document.getElementById('ldpStickyTotal');
         if (elSumTotal) elSumTotal.textContent = formatInr(total);
         if (elStickyTotal) elStickyTotal.textContent = formatInr(total);
+
+        // Sticky "% OFF" badge. It was rendered once from PHP using only the
+        // Thyrocare MRP-vs-offer margin, which is 0 on many products — so it
+        // showed a stale "0% OFF" even after a coupon cut the price. Recompute
+        // it from the SAME numbers as the total (MRP markdown + coupon) and
+        // hide it entirely when there is nothing to boast about.
+        var elStickyOff = document.getElementById('ldpStickyOff');
+        if (elStickyOff) {
+            var base = mrpLine > 0 ? mrpLine : pkgLine;
+            var pct  = base > 0 ? Math.round((Math.max(0, discount) / base) * 100) : 0;
+            elStickyOff.textContent = pct + '% OFF';
+            elStickyOff.hidden = (pct <= 0);
+        }
 
         // "Save ₹X" on the Book Now button — total savings = MRP markdown + coupon.
         var elSave = document.getElementById('ldpBfSubmitSave');

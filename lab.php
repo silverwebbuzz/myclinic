@@ -34,7 +34,7 @@ $steps = $raw['steps'];
 $partners = $raw['partners'];
 
 $pageTitle  = 'Lab Tests & Health Packages — Book Online | eClinicPro';
-$metaDesc   = 'Book diagnostic lab tests & full-body health packages online. NABL-accredited labs, free home sample collection, digital reports and doctor consults. Launching soon.';
+$metaDesc   = 'Book diagnostic lab tests & full-body health packages online. NABL-accredited labs, free home sample collection and digital reports. Launching soon.';
 $activePage = 'lab';
 $hideFinalCta = true; // renders its own footer CTA banner
 $noindex = true; // keep out of Google until bookings/partners are live —
@@ -50,7 +50,7 @@ $howSteps = [
     ['fi-rr-scooter',              'Home Collection', 'Our phlebotomist collects the sample from your home'],
     ['fi-rr-flask',                'Testing',         'Sample tested at NABL & CAP accredited labs'],
     ['fi-rr-smartphone',           'Digital Report',  'Get your reports on the app within 24 hours'],
-    ['fi-rr-doctor',               'Doctor Review',   'Free consultation with expert report review'],
+    ['fi-rr-shield-check',         'Saved Securely',  'Reports stored in your eClinicPro Health account'],
 ];
 
 require __DIR__ . '/partials/header.php';
@@ -78,7 +78,7 @@ require __DIR__ . '/partials/header.php';
                             Accurate Results, Better Health
                         </span>
                         <h1>Lab Tests &amp; <span>Health Packages</span></h1>
-                        <p class="lab-banner-sub">Get precise reports, expert insights, and personalized packages for you and your family's well-being.</p>
+                        <p class="lab-banner-sub">Get precise reports from NABL-accredited labs, with free home sample collection for you and your family.</p>
 
                         <div class="lab-banner-search-wrap">
                             <form class="lab-banner-search" id="labSearchForm" role="search" autocomplete="off">
@@ -826,7 +826,7 @@ require __DIR__ . '/partials/header.php';
                         Accurate Results. Better Health.
                     </span>
                     <h2>Health Checkups, Made <span>Effortless</span></h2>
-                    <p>Book diagnostic tests with free home sample collection, digital reports and a free doctor consultation – all in one place.</p>
+                    <p>Book diagnostic tests with free home sample collection and digital reports – all in one place.</p>
                     <div class="lab-final-cta-actions">
                         <button type="button" class="lab-final-cta-btn lab-final-cta-btn-solid lab-book" data-book="Lab Test Booking">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -937,7 +937,7 @@ require __DIR__ . '/partials/header.php';
                     ['Is my health data kept private and secure?',
                      'Yes. Your personal and health information is handled securely and shared only with the accredited lab needed to process your test and with you. Your reports are never sold or shared for marketing.'],
                     ['Do I get a doctor consultation with my report?',
-                     'Selected health packages include a free doctor consultation so you can understand your results and next steps. Where it\'s included, it\'s clearly mentioned on the package, and you can also book a consult separately through eClinicPro any time.'],
+                     'A doctor consultation is not included with lab bookings. Your report is delivered to your eClinicPro Health account, and you can book an appointment with any doctor on eClinicPro separately to review it — their consultation fee is shown upfront on their profile.'],
                 ];
                 foreach ($labFaqs as [$q, $a]): ?>
                 <details class="lab-faq-item" data-faq="<?= e(strtolower($q . ' ' . $a)) ?>">

@@ -613,7 +613,7 @@ function ecp_lab_raw_catalog(): array
             ['01', 'choose', 'Choose a Test or Package', 'Search or browse by organ, symptom or life stage.'],
             ['02', 'home', 'Book Home Collection', 'Pick a time slot — our phlebotomist visits you.'],
             ['03', 'lab', 'Sample Tested at NABL Lab', 'Processed at accredited partner labs near you.'],
-            ['04', 'reports', 'Get Digital Reports', 'Reports on the app + a free doctor consult.'],
+            ['04', 'reports', 'Get Digital Reports', 'Reports saved to your eClinicPro Health account.'],
         ],
         'partners' => [
             ['nabl', 'NABL-Accredited Labs', 'Tests processed at NABL-approved labs.'],
@@ -828,7 +828,7 @@ function ecp_lab_db_find_package(string $slug): ?array
             'highlights' => [
                 (int) $row['test_count'] . ' tests in one package',
                 'Free home sample collection & digital reports',
-                'Free doctor consultation with your report',
+                'Reports saved to your eClinicPro Health account',
             ],
             'tests'       => $tests,
             'test_groups' => $groups,          // ['Group Name' => [test, test, …]]
@@ -1070,8 +1070,15 @@ function ecp_lab_categories(int $minProducts = 1): array
  *                     bloated panels above genuinely useful ones and correlates
  *                     with price, which quietly reproduces a price-desc sort.
  *                     Density surfaces the package that feels like the best
- *                     deal. NULLIF guards the divide (offer_rate > 0 is already
- *                     in the WHERE, this is belt-and-braces).
+ *                     deal.
+ *
+ * PERF: density reads the STORED generated column `pr.value_density`
+ * (2026_07_27_lab_value_density_index.sql), NOT an inline
+ * `(lp.test_count / pr.offer_rate)` expression. A computed expression spanning
+ * two tables can't use an index, so it forced a filesort over the whole
+ * category on every page load — that's what made the listing pages slow. The
+ * generated column is indexed and precomputed. ecp_lab_sort_density_expr()
+ * falls back to the inline maths when the patch hasn't been run yet.
  *
  * The user-facing dropdown can override with price/test-count orders.
  *
@@ -1079,13 +1086,52 @@ function ecp_lab_categories(int $minProducts = 1): array
  */
 function ecp_lab_sort_modes(): array
 {
+    $density = ecp_lab_sort_density_expr();
+
     return [
-        'popular'    => ['Recommended',      "lp.is_featured DESC, lp.booked_count DESC, (lp.test_count / NULLIF(pr.offer_rate,0)) DESC, lp.name ASC"],
+        'popular'    => ['Recommended',      "lp.is_featured DESC, lp.booked_count DESC, $density DESC, lp.name ASC"],
         'price-asc'  => ['Price: Low to High', "pr.offer_rate ASC, lp.name ASC"],
         'price-desc' => ['Price: High to Low', "pr.offer_rate DESC, lp.name ASC"],
         'tests-desc' => ['Most Tests',       "lp.test_count DESC, pr.offer_rate ASC, lp.name ASC"],
         'discount'   => ['Biggest Saving',   "((pr.mrp - pr.offer_rate) / NULLIF(pr.mrp,0)) DESC, lp.name ASC"],
     ];
+}
+
+/**
+ * The value-density expression to sort on.
+ *
+ * Prefers the indexed STORED generated column added by
+ * 2026_07_27_lab_value_density_index.sql. If that patch hasn't been deployed
+ * yet the column doesn't exist and the query would fatal, so we fall back to
+ * the (slower, unindexed) inline division. Result is cached per request —
+ * information_schema is not something to hit on every listing render.
+ */
+function ecp_lab_sort_density_expr(): string
+{
+    static $expr = null;
+    if ($expr !== null) {
+        return $expr;
+    }
+
+    $expr = '(lp.test_count / NULLIF(pr.offer_rate,0))'; // safe default
+    if (!function_exists('ecp_db') || !($db = ecp_db())) {
+        return $expr;
+    }
+    try {
+        $has = $db->query(
+            "SELECT COUNT(*) FROM information_schema.COLUMNS
+              WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = 'lab_product_pricing'
+                AND COLUMN_NAME = 'value_density'"
+        )->fetchColumn();
+        if ((int) $has > 0) {
+            $expr = 'pr.value_density';
+        }
+    } catch (\Throwable $e) {
+        error_log('[ecp_lab_sort_density_expr] ' . $e->getMessage());
+    }
+
+    return $expr;
 }
 
 /** Resolve a ?sort= value to a safe ORDER BY fragment (never interpolate raw input). */
@@ -1264,7 +1310,7 @@ function ecp_lab_db_find_test(string $slug): ?array
             'highlights' => [
                 'Free home sample collection',
                 'NABL-accredited lab processing',
-                'Digital report + free doctor consult',
+                'Digital report saved to your Health account',
             ],
             'tests'  => [$title],
             'params' => '1',
@@ -1318,7 +1364,7 @@ function ecp_lab_build_detail(array $item): array
         ['Choose', 'Select this ' . ($type === 'package' ? 'package' : 'option') . ' or related tests that match your needs.'],
         ['Book', 'Pick a convenient home collection slot — a trained phlebotomist visits you.'],
         ['Test', 'Your sample is processed at NABL-accredited partner labs.'],
-        ['Report', 'Get digital reports on the app plus a free doctor consult.'],
+        ['Report', 'Get digital reports on the app, saved to your Health account.'],
     ];
 
     $detail = [
@@ -1356,7 +1402,7 @@ function ecp_lab_build_detail(array $item): array
                     'Save time with a single booking instead of ordering tests one by one',
                     'Transparent pricing with up to ' . ($item['off'] ?? '60') . '% off MRP',
                     'Reports typically available within 24 hours*',
-                    'Free doctor consultation to help interpret results',
+                    'Clear digital reports you can share with any doctor',
                     'Safe home collection by trained professionals',
                 ],
                 'process' => $baseProcess,
@@ -1373,7 +1419,7 @@ function ecp_lab_build_detail(array $item): array
                     ['q' => 'Is home collection available?', 'a' => 'Yes. Choose a time slot and our phlebotomist will collect your sample at home.'],
                 ],
                 'cta_title' => "Ready to book {$title}?",
-                'cta_text' => 'Secure your slot for home collection and get digital reports with a free doctor consult.',
+                'cta_text' => 'Secure your slot for home collection and get digital reports saved to your Health account.',
             ];
             break;
 
@@ -1387,7 +1433,7 @@ function ecp_lab_build_detail(array $item): array
                     'Matched packages for common concerns',
                     'Home sample collection available',
                     'NABL-accredited lab processing',
-                    'Digital reports + doctor consult option',
+                    'Digital reports saved to your Health account',
                 ],
                 'benefits' => [
                     "Catch {$organ}-related issues earlier with the right markers",
@@ -1426,7 +1472,7 @@ function ecp_lab_build_detail(array $item): array
                     'Curated packages for common patterns',
                     'Home collection when you feel unwell',
                     'Fast digital reporting',
-                    'Optional doctor consult on results',
+                    'Easy to share results with your doctor',
                 ],
                 'benefits' => [
                     'Move from guesswork to measurable markers',
@@ -1460,7 +1506,7 @@ function ecp_lab_build_detail(array $item): array
                     'Bundled pricing vs à-la-carte tests',
                     'Home sample collection',
                     'Digital reports for easy sharing with your doctor',
-                    'Optional free consult on findings',
+                    'Findings laid out clearly in your report',
                 ],
                 'benefits' => [
                     'Screening tailored to life stage — not one-size-fits-all',
@@ -1555,7 +1601,7 @@ function ecp_lab_build_detail(array $item): array
             $detail += [
                 'overview' => $item['subtitle'] ?? $item['blurb'] ?? $title,
                 'about' => 'Learn more about this offering on eClinicPro Lab Tests & Health Packages.',
-                'features' => ['Home collection', 'NABL labs', 'Digital reports', 'Doctor consult'],
+                'features' => ['Home collection', 'NABL labs', 'Digital reports', 'Saved to your account'],
                 'benefits' => ['Convenient', 'Trusted', 'Affordable', 'Fast'],
                 'process' => $baseProcess,
                 'stats' => [
