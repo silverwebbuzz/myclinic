@@ -33,8 +33,13 @@ foreach ($parameters as $p) {
         </div>
 
         <?php if (!empty($message)): ?>
-        <div class="rounded bg-emerald-50 border border-emerald-200 px-4 py-2 text-sm text-emerald-800">
-            <?= htmlspecialchars(str_replace('_', ' ', (string) $message)) ?>
+        <?php $isError = in_array($message, ['confirm_name_mismatch', 'delete_failed', 'save_error'], true); ?>
+        <div class="rounded border px-4 py-2 text-sm <?= $isError
+            ? 'bg-rose-50 border-rose-200 text-rose-800'
+            : 'bg-emerald-50 border-emerald-200 text-emerald-800' ?>">
+            <?= $message === 'confirm_name_mismatch'
+                ? 'The name you typed didn\'t match — nothing was deleted.'
+                : htmlspecialchars(str_replace('_', ' ', (string) $message)) ?>
         </div>
         <?php endif; ?>
 
@@ -139,6 +144,36 @@ foreach ($parameters as $p) {
             </table>
         </div>
         <?php endif; ?>
+
+        <!-- ===== Danger zone ===== -->
+        <div class="rounded-xl border border-rose-200 bg-rose-50 p-5 shadow-sm">
+            <h2 class="font-semibold text-rose-900">Delete this product</h2>
+            <p class="mt-1 text-sm text-rose-800">
+                Permanently removes the product plus its pricing history,
+                <?= count($parameters) ?> parameter link(s), category links, images and aliases.
+                Parameters and categories left referencing nothing are swept too. This cannot be undone.
+            </p>
+            <p class="mt-2 text-sm text-rose-800">
+                If you only want it off the public site, untick <strong>Active</strong> above instead —
+                that keeps the row for a future re-import.
+            </p>
+
+            <form method="post" action="/admin/lab/products/<?= (int) $product['id'] ?>/delete"
+                  class="mt-4 flex flex-wrap items-end gap-3"
+                  onsubmit="return confirm('Permanently delete this product? This cannot be undone.');">
+                <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+                <label class="block text-sm">
+                    <span class="text-rose-900">Type the product name to confirm</span>
+                    <input type="text" name="confirm_name" required autocomplete="off"
+                           placeholder="<?= htmlspecialchars($product['name']) ?>"
+                           class="mt-1 w-96 max-w-full rounded border border-rose-300 px-2 py-1.5 text-sm">
+                </label>
+                <button type="submit"
+                        class="rounded bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700">
+                    Delete permanently
+                </button>
+            </form>
+        </div>
     </main>
 </body>
 </html>

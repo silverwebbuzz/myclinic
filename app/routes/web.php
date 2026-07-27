@@ -444,10 +444,16 @@ return static function (RouteRegistrar $router): void {
 
         // Lab test catalog (Thyrocare-sourced products, categories, coupons)
         $admin->get('/lab/products', [\App\Controllers\LabAdminController::class, 'products']);
+        // Static segments must be declared BEFORE /lab/products/{id}, otherwise
+        // the id route matches "cleanup"/"bulk-delete" and swallows them.
+        $admin->get('/lab/products/cleanup', [\App\Controllers\LabAdminController::class, 'cleanup']);
+        $admin->post('/lab/products/cleanup', [\App\Controllers\LabAdminController::class, 'cleanupRun']);
+        $admin->post('/lab/products/bulk-delete', [\App\Controllers\LabAdminController::class, 'bulkDeleteProducts']);
         $admin->get('/lab/products/{id}', [\App\Controllers\LabAdminController::class, 'productDetail']);
         $admin->post('/lab/products/{id}', [\App\Controllers\LabAdminController::class, 'saveProduct']);
         $admin->post('/lab/products/{id}/toggle', [\App\Controllers\LabAdminController::class, 'toggleProduct']);
         $admin->post('/lab/products/{id}/feature', [\App\Controllers\LabAdminController::class, 'toggleFeatured']);
+        $admin->post('/lab/products/{id}/delete', [\App\Controllers\LabAdminController::class, 'deleteProduct']);
         $admin->get('/lab/categories', [\App\Controllers\LabAdminController::class, 'categories']);
         $admin->post('/lab/categories', [\App\Controllers\LabAdminController::class, 'saveCategory']);
         $admin->post('/lab/categories/{id}/toggle', [\App\Controllers\LabAdminController::class, 'toggleCategory']);

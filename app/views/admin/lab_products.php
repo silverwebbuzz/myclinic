@@ -49,6 +49,10 @@ $toggleBtn = static function (bool $on, string $action, string $csrf, string $re
                 <h1 class="text-xl font-semibold">Lab Tests &amp; Packages</h1>
                 <p class="text-sm text-slate-500">Thyrocare catalog — <?= number_format($total) ?> items</p>
             </div>
+            <a href="/admin/lab/products/cleanup"
+               class="rounded border border-rose-300 px-3 py-1.5 text-sm font-medium text-rose-700 hover:bg-rose-50">
+                Bulk clean up…
+            </a>
         </div>
 
         <?php if (!empty($message)): ?>
@@ -105,11 +109,23 @@ $toggleBtn = static function (bool $on, string $action, string $csrf, string $re
         </p>
         <?php endif; ?>
 
+        <!-- Bulk-delete form. It lives OUTSIDE the table because each row already
+             contains its own toggle <form>, and HTML forbids nested forms. The
+             row checkboxes bind to it via form="bulkDelete". -->
+        <form method="post" action="/admin/lab/products/bulk-delete" id="bulkDelete"
+              onsubmit="return confirm('Permanently delete the selected product(s) and all their pricing, parameters and category links? This cannot be undone.');">
+            <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+            <?= $returnCtx() ?>
+        </form>
+
         <!-- List -->
         <div class="overflow-x-auto rounded-xl border bg-white shadow-sm">
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr>
+                        <th class="px-3 py-2">
+                            <input type="checkbox" id="checkAll" title="Select all on this page">
+                        </th>
                         <th class="px-4 py-2">Name</th>
                         <th class="px-4 py-2">Type</th>
                         <th class="px-4 py-2">Category</th>
@@ -133,6 +149,9 @@ $toggleBtn = static function (bool $on, string $action, string $csrf, string $re
                         $incPct = $p['incentive_pct'] ?? null;
                     ?>
                     <tr class="<?= empty($p['is_active']) ? 'opacity-50' : '' ?>">
+                        <td class="px-3 py-2">
+                            <input type="checkbox" form="bulkDelete" name="ids[]" value="<?= (int) $p['id'] ?>" class="rowCheck">
+                        </td>
                         <td class="px-4 py-2 font-medium">
                             <a href="/admin/lab/products/<?= (int) $p['id'] ?>" class="text-sky-700 hover:underline">
                                 <?= htmlspecialchars($p['name']) ?>
@@ -164,7 +183,7 @@ $toggleBtn = static function (bool $on, string $action, string $csrf, string $re
                     </tr>
                     <?php endforeach; ?>
                     <?php if (!$products): ?>
-                    <tr><td colspan="12" class="px-8 py-10 text-center text-slate-500">
+                    <tr><td colspan="13" class="px-8 py-10 text-center text-slate-500">
                         <?php
                         $typeLabels = ['TEST' => 'Tests', 'PROFILE' => 'Packages', 'OFFER' => 'Offers'];
                         $activeFilters = [];
@@ -197,6 +216,52 @@ $toggleBtn = static function (bool $on, string $action, string $csrf, string $re
                 </tbody>
             </table>
         </div>
+
+        <!-- Selection action bar — only visible once something is checked. -->
+        <div id="bulkBar" class="hidden sticky bottom-4 flex items-center justify-between rounded-xl border border-rose-200 bg-white px-4 py-3 shadow-lg">
+            <span class="text-sm text-slate-700"><strong id="bulkCount">0</strong> selected on this page</span>
+            <div class="flex items-center gap-3">
+                <button type="button" id="bulkClear" class="text-sm text-slate-500 hover:underline">Clear</button>
+                <button type="submit" form="bulkDelete"
+                        class="rounded bg-rose-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-rose-700">
+                    Delete selected
+                </button>
+            </div>
+        </div>
+
+        <script>
+        // Select-all + selection counter for the bulk-delete bar. Scoped to the
+        // current page of rows — deletion never applies to unrendered rows.
+        (function () {
+            var all   = document.getElementById('checkAll');
+            var bar   = document.getElementById('bulkBar');
+            var count = document.getElementById('bulkCount');
+            var boxes = Array.prototype.slice.call(document.querySelectorAll('.rowCheck'));
+
+            function sync() {
+                var n = boxes.filter(function (b) { return b.checked; }).length;
+                count.textContent = n;
+                bar.classList.toggle('hidden', n === 0);
+                if (all) {
+                    all.checked = n > 0 && n === boxes.length;
+                    all.indeterminate = n > 0 && n < boxes.length;
+                }
+            }
+
+            if (all) {
+                all.addEventListener('change', function () {
+                    boxes.forEach(function (b) { b.checked = all.checked; });
+                    sync();
+                });
+            }
+            boxes.forEach(function (b) { b.addEventListener('change', sync); });
+            document.getElementById('bulkClear').addEventListener('click', function () {
+                boxes.forEach(function (b) { b.checked = false; });
+                sync();
+            });
+            sync();
+        })();
+        </script>
 
         <!-- Pagination -->
         <?php if ($pages > 1): ?>

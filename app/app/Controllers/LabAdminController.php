@@ -9,6 +9,7 @@ use App\Core\RequestContext;
 use App\Http\Request;
 use App\Http\Response;
 use App\Services\CsrfService;
+use App\Services\LabProductDeletionService;
 use App\Support\View;
 use PDO;
 
@@ -291,6 +292,130 @@ final class LabAdminController
         } catch (\Throwable $e) { /* ignore */ }
 
         return Response::redirect($this->listReturnUrl($request, 'featured_toggled'));
+    }
+
+    // ---- Deletion ----------------------------------------------------------
+
+    /**
+     * POST /admin/lab/products/{id}/delete — permanently remove one product.
+     *
+     * Guarded by a typed-name confirmation, same as the clinic-delete flow's
+     * slug confirmation: the catalog has near-identical package names (three
+     * "HEALTHY 2026 COUPLE PACKAGE WITH ECG" rows, for instance), so a stray
+     * click on the wrong row is a real risk.
+     */
+    public function deleteProduct(Request $request, string $id): Response
+    {
+        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
+            return Response::redirect('/admin/lab/products');
+        }
+        $pid = (int) $id;
+
+        $stmt = Database::connection()->prepare('SELECT name FROM lab_products WHERE id = ?');
+        $stmt->execute([$pid]);
+        $name = $stmt->fetchColumn();
+        if ($name === false) {
+            return Response::redirect('/admin/lab/products?message=not_found');
+        }
+
+        $confirm = trim((string) ($request->post['confirm_name'] ?? ''));
+        if (strcasecmp($confirm, (string) $name) !== 0) {
+            return Response::redirect('/admin/lab/products/' . $pid . '?message=confirm_name_mismatch');
+        }
+
+        try {
+            LabProductDeletionService::deleteByIds([$pid]);
+        } catch (\Throwable $e) {
+            return Response::redirect('/admin/lab/products/' . $pid . '?message=delete_failed');
+        }
+
+        return Response::redirect('/admin/lab/products?message=product_deleted');
+    }
+
+    /** POST /admin/lab/products/bulk-delete — remove the checked rows. */
+    public function bulkDeleteProducts(Request $request): Response
+    {
+        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
+            return Response::redirect('/admin/lab/products');
+        }
+        $ids = $request->post['ids'] ?? [];
+        if (!is_array($ids) || $ids === []) {
+            return Response::redirect($this->listReturnUrl($request, 'nothing_selected'));
+        }
+
+        try {
+            $report = LabProductDeletionService::deleteByIds($ids);
+        } catch (\Throwable $e) {
+            return Response::redirect($this->listReturnUrl($request, 'delete_failed'));
+        }
+
+        return Response::redirect($this->listReturnUrl($request, 'deleted_' . $report['products']));
+    }
+
+    /**
+     * GET /admin/lab/products/cleanup — paste a list of names your merchant
+     * account can't fulfil, preview exactly what matches, then delete.
+     *
+     * Two-step by design: the preview step is what makes a 30-line paste safe,
+     * because it shows unmatched lines (typos) BEFORE anything is destroyed.
+     */
+    public function cleanup(Request $request): Response
+    {
+        return Response::html(View::render('admin/lab_cleanup', [
+            'admin'     => RequestContext::superAdmin(),
+            'csrf'      => CsrfService::token(),
+            'raw'       => '',
+            'matched'   => [],
+            'unmatched' => [],
+            'previewed' => false,
+            'message'   => $request->query['message'] ?? null,
+            'report'    => null,
+        ]));
+    }
+
+    /** POST /admin/lab/products/cleanup — action=preview | action=delete. */
+    public function cleanupRun(Request $request): Response
+    {
+        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
+            return Response::redirect('/admin/lab/products/cleanup');
+        }
+
+        $raw    = (string) ($request->post['names'] ?? '');
+        $action = (string) ($request->post['action'] ?? 'preview');
+        $lines  = preg_split('/\r\n|\r|\n/', $raw) ?: [];
+
+        $resolved = LabProductDeletionService::resolveNames($lines);
+        $report   = null;
+
+        if ($action === 'delete') {
+            $ids = [];
+            foreach ($resolved['matched'] as $hits) {
+                foreach ($hits as $hit) {
+                    $ids[] = $hit['id'];
+                }
+            }
+            if ($ids !== []) {
+                try {
+                    $report = LabProductDeletionService::deleteByIds($ids);
+                } catch (\Throwable $e) {
+                    return Response::redirect('/admin/lab/products/cleanup?message=delete_failed');
+                }
+                // Re-resolve so the screen shows what's LEFT (should be nothing
+                // matched, and any typo lines still listed as unmatched).
+                $resolved = LabProductDeletionService::resolveNames($lines);
+            }
+        }
+
+        return Response::html(View::render('admin/lab_cleanup', [
+            'admin'     => RequestContext::superAdmin(),
+            'csrf'      => CsrfService::token(),
+            'raw'       => $raw,
+            'matched'   => $resolved['matched'],
+            'unmatched' => $resolved['unmatched'],
+            'previewed' => true,
+            'message'   => null,
+            'report'    => $report,
+        ]));
     }
 
     /**
