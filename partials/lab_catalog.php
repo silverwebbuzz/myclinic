@@ -133,6 +133,44 @@ function ecp_join_human(array $items): string
 const ECP_LAB_FULL_BODY_MIN_TESTS = 40;
 
 /**
+ * Home-collection charge on small orders.
+ *
+ * Thyrocare bills US ₹200 when the order value falls below ₹300. We pass that
+ * cost through at cost — no markup — so the fee is Thyrocare's rule, not an
+ * eClinicPro margin play. Word it that way in the UI.
+ *
+ * The threshold is measured on the ORDER SUBTOTAL (package + add-on tests,
+ * × persons), NOT on the single product's list price. So a ₹80 FBS booked for
+ * four people, or with a couple of add-ons, clears ₹300 and collection is free.
+ * That's also why the fee has to be computed in JS on every change rather than
+ * rendered once from PHP.
+ *
+ * Whether the coupon discount applies BEFORE this test is a real business
+ * decision — see ECP_LAB_COLLECTION_ON_DISCOUNTED below.
+ */
+const ECP_LAB_COLLECTION_FEE       = 200;   // ₹ charged when under the threshold
+const ECP_LAB_COLLECTION_MIN_ORDER = 300;   // ₹ order value for free collection
+
+/**
+ * Is the free-collection threshold tested on the POST-discount amount?
+ *
+ * TRUE — confirmed business rule. Thyrocare bills us on what the order actually
+ * settles at, so the member coupon is applied FIRST and the threshold is tested
+ * against the discounted figure. A ₹325 order that a 25% coupon takes to ₹244
+ * falls under ₹300 and DOES attract the ₹200 collection charge.
+ *
+ * Consequence to be aware of: near the boundary a discount can raise the total
+ * (₹325 → ₹244 + ₹200 = ₹444). That is intended — we'd otherwise absorb a ₹200
+ * cost Thyrocare charges us. The order summary shows the collection line and an
+ * "add ₹X more" nudge so the patient can see it and top up past the threshold.
+ *
+ * NOTE: the fees themselves are NEVER discounted — see the total in
+ * updateTotals(). The coupon base is the package line only; the ₹200 collection
+ * and ₹75 courier are added after the discount and are always paid in full.
+ */
+const ECP_LAB_COLLECTION_ON_DISCOUNTED = true;
+
+/**
  * Maps a curated storefront filter tab -> the lab_categories slugs that feed it.
  * A package appears under a tab when any of its linked categories matches.
  * 'popular' is derived from is_featured/booked_count, and 'full-body' from the

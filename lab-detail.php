@@ -43,6 +43,14 @@ $price = $d['price'] ?? '';
 $mrp = $d['mrp'] ?? '';
 $off = $d['off'] ?? '';
 
+// Home collection is free only above Thyrocare's order threshold. Below it they
+// bill ₹200, which we pass through at cost — so on those (mostly cheap single
+// tests) the page must NOT claim "Free Home Collection". This flags the
+// single-unit case; the booking form recomputes live, because adding tests or
+// persons can lift the order over the threshold and make collection free again.
+$priceNumForFee   = (int) preg_replace('/\D/', '', (string) $price);
+$collectionIsFree = $priceNumForFee <= 0 || $priceNumForFee >= ECP_LAB_COLLECTION_MIN_ORDER;
+
 $typeLabels = [
     'package' => 'Health Package',
     'organ' => 'Body System',
@@ -100,7 +108,9 @@ if ($fastingCode === 'CF') {
     $detailTags[] = ['fi-rr-check', 'No Fasting Required'];
 }
 $detailTags[] = ['fi-rr-file-medical', 'Digital Reports'];
-$detailTags[] = ['fi-rr-house-blank', 'Free Home Collection'];
+$detailTags[] = $collectionIsFree
+    ? ['fi-rr-house-blank', 'Free Home Collection']
+    : ['fi-rr-house-blank', 'Home Collection ₹' . ECP_LAB_COLLECTION_FEE . ' (free over ₹' . ECP_LAB_COLLECTION_MIN_ORDER . ')'];
 if ($loginPct > 0) {
     // "From 5% to 25% off when you order here" — floor is the smallest active
     // login coupon, ceiling is this product's cap (login_pct).
@@ -204,8 +214,12 @@ if ($isPkg) {
     }
     $whyReasons[] = ['fi-rr-file-medical', 'Digital reports on your account',
         'Reports are saved to your eClinicPro Health account — access them anytime.'];
-    $whyReasons[] = ['fi-rr-house-blank', 'Free home sample collection',
-        'A trained phlebotomist collects your sample at your doorstep.'];
+    $whyReasons[] = $collectionIsFree
+        ? ['fi-rr-house-blank', 'Free home sample collection',
+            'A trained phlebotomist collects your sample at your doorstep.']
+        : ['fi-rr-house-blank', 'Home sample collection',
+            'A trained phlebotomist collects your sample at your doorstep. Orders under ₹'
+            . ECP_LAB_COLLECTION_MIN_ORDER . ' carry a ₹' . ECP_LAB_COLLECTION_FEE . ' collection charge.'];
     $whyReasons = array_slice($whyReasons, 0, 5);
 } else {
     foreach (array_slice($d['benefits'] ?? $d['features'] ?? [], 0, 5) as $b) {
@@ -243,7 +257,7 @@ $highlightsBar = [
     [$params . ' Tests Included', 'tests'],
     ['Digital Reports', 'clock'],
     ['NABL Accredited Labs', 'lab'],
-    ['Free Home Collection', 'home'],
+    [$collectionIsFree ? 'Free Home Collection' : 'Home Collection ₹' . ECP_LAB_COLLECTION_FEE, 'home'],
     ['Powered by Thyrocare', 'doc'],
 ];
 
@@ -339,7 +353,7 @@ require __DIR__ . '/partials/header.php';
                 <?php endif; ?>
                 <p class="ldp-hero-desc"><?= e($d['overview']) ?></p>
                 <ul class="ldp-hero-perks">
-                    <li>Free Home Collection</li>
+                    <li><?= $collectionIsFree ? 'Free Home Collection' : 'Home Collection ₹' . ECP_LAB_COLLECTION_FEE ?></li>
                     <li>NABL Accredited Labs</li>
                     <li>Reports in 24 Hours</li>
                     <li>Saved to Your Health Account</li>
@@ -571,7 +585,13 @@ require __DIR__ . '/partials/header.php';
                 : 'Log in with a free eClinicPro account before you book to unlock any available member discounts and save your reports to your Health account.';
             $extraFaq = [
                 ['Do I get a discount if I log in before booking?', $loginFaqAnswer],
-                ['Are home collection charges included?', 'Home sample collection is free with this booking on eClinicPro (preview — live fees confirmed at launch).'],
+                ['Are home collection charges included?',
+                 'Home sample collection is free once your test total is ₹' . ECP_LAB_COLLECTION_MIN_ORDER
+                 . ' or more after any member discount. Below that our lab partner charges ₹' . ECP_LAB_COLLECTION_FEE
+                 . ' for the visit, which we pass on at cost. Collection and hard-copy courier charges are '
+                 . 'service fees, so no discount or coupon applies to them. Everything is itemised in your '
+                 . 'order summary before you confirm, and adding more tests or booking for more than one '
+                 . 'person often takes you past ₹' . ECP_LAB_COLLECTION_MIN_ORDER . ' and makes collection free.'],
                 ['Can I reschedule my slot?', 'Yes. You can reschedule your home collection slot from your booking confirmation once bookings go live.'],
             ];
             foreach ($extraFaq as $faq): ?>
@@ -629,7 +649,10 @@ require __DIR__ . '/partials/header.php';
                           data-pkg-price="<?= (int) $pkgPriceNum ?>"
                           data-pkg-mrp="<?= (int) $pkgMrpNum ?>"
                           data-pkg-name="<?= e($d['title']) ?>"
-                          data-hardcopy="75">
+                          data-hardcopy="75"
+                          data-collection-fee="<?= (int) ECP_LAB_COLLECTION_FEE ?>"
+                          data-collection-min="<?= (int) ECP_LAB_COLLECTION_MIN_ORDER ?>"
+                          data-collection-on-discounted="<?= ECP_LAB_COLLECTION_ON_DISCOUNTED ? '1' : '0' ?>">
 
                         <div class="ldp-bf-block">
                             <?php if ($ecpPatient): ?>
@@ -816,10 +839,14 @@ require __DIR__ . '/partials/header.php';
                             <!-- Add-on tests chosen via "Add More Tests" are itemised here. -->
                             <div id="ldpBfSumAddons"></div>
 
-                            <div class="ldp-bf-row">
+                            <?php // Free above the threshold, ₹200 below it (Thyrocare's
+                                  // rule, passed through at cost). Both the value and the
+                                  // hint are rewritten by updateTotals() as the order changes. ?>
+                            <div class="ldp-bf-row ldp-bf-row-collection">
                                 <span>Home Collection Charges</span>
-                                <span class="ldp-bf-val">Free</span>
+                                <span class="ldp-bf-val" id="ldpBfSumCollection">Free</span>
                             </div>
+                            <p class="ldp-bf-collection-hint" id="ldpBfCollectionHint" hidden></p>
 
                             <!-- Courier line: only shown when the hard-copy option is ticked. -->
                             <div class="ldp-bf-row" id="ldpBfSumCourierRow" hidden>
@@ -837,6 +864,10 @@ require __DIR__ . '/partials/header.php';
                                 <span>Total Amount</span>
                                 <strong id="ldpBfSumTotal">₹<?= number_format($pkgPriceNum) ?></strong>
                             </div>
+                            <?php // Stated where the money is, not just in the FAQ — the
+                                  // fee/discount interaction is the most likely source of a
+                                  // "why is my total higher?" support ticket. ?>
+                            <p class="ldp-bf-note" id="ldpBfFeeNote" hidden>Collection and courier charges are service fees — discounts and coupons do not apply to them.</p>
                             <p class="ldp-bf-note">Note: Payment should be made before or at the time of sample collection.</p>
                             <p class="ldp-bf-secure"><i class="fi fi-rr-shield-check" aria-hidden="true"></i> 100% Secure Booking</p>
                         </div>
@@ -902,6 +933,10 @@ require __DIR__ . '/partials/header.php';
     var pkgPrice = parseInt(form.getAttribute('data-pkg-price') || '0', 10) || 0;
     var pkgMrp = parseInt(form.getAttribute('data-pkg-mrp') || '0', 10) || pkgPrice;
     var hardFee = parseInt(form.getAttribute('data-hardcopy') || '75', 10) || 75;
+    // Home-collection charge config (see ECP_LAB_COLLECTION_* in lab_catalog.php).
+    var collectionFee = parseInt(form.getAttribute('data-collection-fee') || '0', 10) || 0;
+    var collectionMin = parseInt(form.getAttribute('data-collection-min') || '0', 10) || 0;
+    var collectionOnDiscounted = form.getAttribute('data-collection-on-discounted') === '1';
     var personsInput = document.getElementById('ldpBfPersons');
     var minusBtn = document.getElementById('ldpBfQtyMinus');
     var plusBtn = document.getElementById('ldpBfQtyPlus');
@@ -1130,7 +1165,26 @@ require __DIR__ . '/partials/header.php';
         var hard    = (hardCopy && hardCopy.checked) ? hardFee : 0;
         // Percentage coupon applies to the package line (scales with persons).
         couponOff = couponAmount(pkgLine);
-        var total = Math.max(0, pkgLine + addons + hard - couponOff);
+
+        // ── Home collection fee ─────────────────────────────────────────
+        // Thyrocare bills ₹200 when the order value is under ₹300; we pass it
+        // through at cost.
+        //
+        // The threshold is tested on the value of the TESTS (package + add-ons
+        // × persons) AFTER the member discount — that's what the order actually
+        // settles at, which is what Thyrocare bills on. So ₹325 of tests minus a
+        // 25% coupon = ₹244, which is under ₹300 and DOES attract the ₹200.
+        //
+        // The courier fee is excluded from this test: it's a separate service
+        // charge, not order value.
+        var orderValue = pkgLine + addons;
+        if (collectionOnDiscounted) orderValue -= couponOff;
+        var collection = (collectionMin > 0 && orderValue < collectionMin) ? collectionFee : 0;
+
+        // FEES ARE NEVER DISCOUNTED. couponOff is derived from pkgLine alone, so
+        // adding `collection` and `hard` here — after the subtraction — means the
+        // ₹200 and the ₹75 are always paid in full regardless of any coupon.
+        var total = Math.max(0, pkgLine + addons - couponOff + collection + hard);
 
         // Package MRP/discount widgets (if the compact price card is present).
         var discount = (mrpLine - pkgLine) + couponOff;
@@ -1140,6 +1194,39 @@ require __DIR__ . '/partials/header.php';
         if (elMrp) elMrp.textContent = formatInr(mrpLine);
         if (elDisc) elDisc.textContent = '- ' + formatInr(Math.max(0, discount));
         if (elPay) elPay.textContent = formatInr(total);
+
+        // Collection-charge line + the "add ₹X more" nudge. Showing the gap is
+        // the point: a patient one ₹60 test away from free collection will
+        // usually add it, which is a better outcome than a silent ₹200.
+        var elCollection = document.getElementById('ldpBfSumCollection');
+        var elCollHint = document.getElementById('ldpBfCollectionHint');
+        if (elCollection) {
+            elCollection.textContent = collection > 0 ? formatInr(collection) : 'Free';
+            elCollection.classList.toggle('is-charged', collection > 0);
+        }
+        if (elCollHint) {
+            if (collection > 0) {
+                // Gap to the threshold, quoted in "more tests to add".
+                // The coupon base is pkgLine ONLY (see couponAmount) — add-on
+                // tests are never discounted — so ₹X of add-ons raises the
+                // post-discount order value by the full ₹X. No gross-up needed;
+                // the raw gap is already the right advice. Rounded up to ₹10 so
+                // it reads as guidance rather than false precision.
+                var gap = Math.ceil(Math.max(0, collectionMin - orderValue) / 10) * 10;
+                elCollHint.textContent = 'Orders under ' + formatInr(collectionMin)
+                    + ' carry a ' + formatInr(collectionFee) + ' home-collection charge'
+                    + (appliedCouponPct > 0 ? ' (checked after your discount)' : '') + '. '
+                    + 'Add about ' + formatInr(gap) + ' more in tests to get collection free.';
+                elCollHint.hidden = false;
+            } else {
+                elCollHint.hidden = true;
+            }
+        }
+
+        // The "fees aren't discountable" note only matters when a fee is on the
+        // bill — showing it on a clean ₹899 package is just noise.
+        var elFeeNote = document.getElementById('ldpBfFeeNote');
+        if (elFeeNote) elFeeNote.hidden = (collection <= 0 && hard <= 0);
 
         // ── Itemised order summary ──────────────────────────────────────
         var elSumPkg = document.getElementById('ldpBfSumPkg');

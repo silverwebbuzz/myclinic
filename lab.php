@@ -919,7 +919,7 @@ require __DIR__ . '/partials/header.php';
                     ['Do I get a discount if I log in before booking?',
                      'Yes — members save more. Create a free eClinicPro account and log in before you book to unlock an extra 5% to 25% off, depending on the package. The member discount is applied automatically at checkout on top of the price shown, so you always see your final amount before you confirm.'],
                     ['Is home sample collection available? Is there a charge?',
-                     'Yes. A trained phlebotomist visits your home to collect the sample at the slot you choose, at no extra collection charge for most locations. You\'ll get a confirmation once your booking is scheduled.'],
+                     'Yes. A trained phlebotomist visits your home to collect the sample at the slot you choose. Collection is free once your test total is ₹' . ECP_LAB_COLLECTION_MIN_ORDER . ' or more after any member discount; below that our lab partner charges ₹' . ECP_LAB_COLLECTION_FEE . ' for the visit, which we pass on at cost. Collection and courier charges are service fees, so no coupon applies to them. Everything is itemised in your order summary before you confirm.'],
                     ['Do I need to fast before my test?',
                      'It depends on the test. Tests like fasting blood sugar, lipid profile and many full-body packages usually require 8–12 hours of fasting (water is allowed). Others, such as thyroid or vitamin tests, do not. The exact instructions for your test are shared with you at the time of booking.'],
                     ['How soon will I get my report? Is it valid?',
