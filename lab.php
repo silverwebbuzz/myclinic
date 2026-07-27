@@ -408,9 +408,13 @@ require __DIR__ . '/partials/header.php';
                                 </div>
                             </div>
 
+                            <!-- Single CTA → detail page (step one of booking).
+                                 Previously "Detail" + a data-book button that
+                                 only fired a "coming soon" toast; sending the
+                                 user to the real package page is strictly more
+                                 useful, and matches the listing pages. -->
                             <div class="lab-pkg-card-actions">
-                                <a href="<?= e(ecp_lab_detail_url('package', $slug)) ?>" class="lab-pkg-card-detail">Detail</a>
-                                <button type="button" class="lab-pkg-card-book lab-book" data-book="<?= e($name) ?>">Book Now</button>
+                                <a href="<?= e(ecp_lab_detail_url('package', $slug)) ?>" class="lab-pkg-card-book lab-pkg-card-cta">Book Now</a>
                             </div>
                         </div>
                     </article>
@@ -1206,11 +1210,10 @@ foreach ($lifeStage as [$slug, $ico, $name, $blurb, $accent]) {
                         '</a>' +
                         '<div class="lab-search-result-foot">' +
                         priceHtml +
+                        // One CTA, same as the package cards — "View details"
+                        // and "Book" both pointed at the detail page anyway.
                         '<div class="lab-search-result-actions">' +
-                        '<a class="lab-search-result-link" href="' + item.url + '">View details</a>' +
-                        (item.type === 'package'
-                            ? '<button type="button" class="lab-search-result-book lab-book" data-book="' + escapeHtml(item.title) + '">Book</button>'
-                            : '') +
+                        '<a class="lab-search-result-book" href="' + item.url + '">Book Now</a>' +
                         '</div></div></article>';
                 }).join('');
             }

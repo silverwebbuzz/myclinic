@@ -972,7 +972,7 @@ function ecp_lab_symptom_map(): array
  *
  * @return array{category: ?array, packages: list<array>, offers: list<array>, tests: list<array>, total: int}
  */
-function ecp_lab_symptom_listing(string $symptomSlug, int $limit = 120): array
+function ecp_lab_symptom_listing(string $symptomSlug, int $limit = 120, ?string $sort = null): array
 {
     $empty = ['category' => null, 'packages' => [], 'offers' => [], 'tests' => [], 'total' => 0];
     $map = ecp_lab_symptom_map();
@@ -1005,7 +1005,7 @@ function ecp_lab_symptom_listing(string $symptomSlug, int $limit = 120): array
                     ORDER BY p2.effective_from DESC, p2.id DESC LIMIT 1
                 )
                 WHERE lp.is_active = 1 AND pr.offer_rate > 0 AND $orSql
-                ORDER BY lp.is_featured DESC, lp.booked_count DESC, lp.test_count DESC, lp.name ASC
+                ORDER BY " . ecp_lab_sort_sql($sort) . "
                 LIMIT " . (int) $limit;
         $stmt = $db->prepare($sql);
         $stmt->execute($args);
@@ -1057,13 +1057,54 @@ function ecp_lab_categories(int $minProducts = 1): array
 }
 
 /**
+ * Sort modes for the listing pages, as SQL ORDER BY fragments.
+ *
+ * 'popular' (the default) is a MERCHANDISED order, not a raw popularity sort:
+ *   1. is_featured  — hand-picked heroes per category. This is the key lever;
+ *                     editorial choice should always outrank any formula.
+ *   2. booked_count — Thyrocare's popularity number. NOTE: it is 0 for ~80% of
+ *                     the seeded catalog, so for most rows this is a tie and
+ *                     the next key decides. Replace it with our OWN order
+ *                     counts once bookings have run for a while.
+ *   3. value density — tests per rupee, NOT raw test_count. Raw count ranks
+ *                     bloated panels above genuinely useful ones and correlates
+ *                     with price, which quietly reproduces a price-desc sort.
+ *                     Density surfaces the package that feels like the best
+ *                     deal. NULLIF guards the divide (offer_rate > 0 is already
+ *                     in the WHERE, this is belt-and-braces).
+ *
+ * The user-facing dropdown can override with price/test-count orders.
+ *
+ * @return array<string,array{0:string,1:string}> slug => [label, order-by SQL]
+ */
+function ecp_lab_sort_modes(): array
+{
+    return [
+        'popular'    => ['Recommended',      "lp.is_featured DESC, lp.booked_count DESC, (lp.test_count / NULLIF(pr.offer_rate,0)) DESC, lp.name ASC"],
+        'price-asc'  => ['Price: Low to High', "pr.offer_rate ASC, lp.name ASC"],
+        'price-desc' => ['Price: High to Low', "pr.offer_rate DESC, lp.name ASC"],
+        'tests-desc' => ['Most Tests',       "lp.test_count DESC, pr.offer_rate ASC, lp.name ASC"],
+        'discount'   => ['Biggest Saving',   "((pr.mrp - pr.offer_rate) / NULLIF(pr.mrp,0)) DESC, lp.name ASC"],
+    ];
+}
+
+/** Resolve a ?sort= value to a safe ORDER BY fragment (never interpolate raw input). */
+function ecp_lab_sort_sql(?string $sort): string
+{
+    $modes = ecp_lab_sort_modes();
+    $key = strtolower(trim((string) $sort));
+
+    return $modes[$key][1] ?? $modes['popular'][1];
+}
+
+/**
  * Products for a listing page. Pass a category slug to scope, or null for the
  * hub ("All"). Returns items shaped for the listing grid, split by type so the
  * page can show Packages / Offers / Tests sections or tabs.
  *
  * @return array{category: ?array, packages: list<array>, offers: list<array>, tests: list<array>, total: int}
  */
-function ecp_lab_listing(?string $categorySlug = null, int $limit = 300): array
+function ecp_lab_listing(?string $categorySlug = null, int $limit = 300, ?string $sort = null): array
 {
     $empty = ['category' => null, 'packages' => [], 'offers' => [], 'tests' => [], 'total' => 0];
     if (!function_exists('ecp_db') || !($db = ecp_db())) {
@@ -1095,7 +1136,7 @@ function ecp_lab_listing(?string $categorySlug = null, int $limit = 300): array
                     ORDER BY p2.effective_from DESC, p2.id DESC LIMIT 1
                 )
                 WHERE lp.is_active = 1 AND pr.offer_rate > 0
-                ORDER BY lp.is_featured DESC, lp.booked_count DESC, lp.test_count DESC, lp.name ASC
+                ORDER BY " . ecp_lab_sort_sql($sort) . "
                 LIMIT " . (int) $limit;
         $stmt = $db->prepare($sql);
         $stmt->execute($params);

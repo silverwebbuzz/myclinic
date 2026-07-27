@@ -20,13 +20,22 @@ require_once __DIR__ . '/partials/lab_catalog.php';
 $view = strtolower(trim((string) ($_GET['type'] ?? 'hub')));   // 'hub' | 'category'
 $slug = strtolower(trim((string) ($_GET['slug'] ?? '')));
 
+// Sort order. Validated against the whitelist in lab_catalog.php — an unknown
+// value silently falls back to 'popular' rather than 404ing, so a stale or
+// hand-edited ?sort= link still renders a useful page.
+$sortModes = ecp_lab_sort_modes();
+$sort = strtolower(trim((string) ($_GET['sort'] ?? 'popular')));
+if (!isset($sortModes[$sort])) {
+    $sort = 'popular';
+}
+
 if ($view === 'category') {
     if ($slug === '' || !preg_match('/^[a-z0-9-]+$/', $slug)) {
         http_response_code(404);
         require __DIR__ . '/404.php';
         return;
     }
-    $listing = ecp_lab_listing($slug);
+    $listing = ecp_lab_listing($slug, 300, $sort);
     if (!$listing['category']) {
         http_response_code(404);
         require __DIR__ . '/404.php';
@@ -47,7 +56,7 @@ if ($view === 'category') {
         require __DIR__ . '/404.php';
         return;
     }
-    $listing = ecp_lab_symptom_listing($slug);
+    $listing = ecp_lab_symptom_listing($slug, 120, $sort);
     if (!$listing['category']) {
         http_response_code(404);
         require __DIR__ . '/404.php';
@@ -66,7 +75,7 @@ if ($view === 'category') {
     $crumbLabel = $symName;
 } else {
     $view = 'hub';
-    $listing = ecp_lab_listing(null);
+    $listing = ecp_lab_listing(null, 300, $sort);
     $pageTitle = 'All Lab Tests, Health Packages & Offers — Book Online | eClinicPro';
     $metaDesc  = 'Browse and book all diagnostic lab tests, full-body health packages and offers '
         . 'online at eClinicPro. NABL-accredited labs, free home sample collection, digital reports.';
@@ -185,9 +194,15 @@ $renderCard = static function (array $it): string {
                 </div>
             </div>
 
+            <!-- Single CTA. Booking isn't live yet, so "Book Now" leads to the
+                 detail page — which IS step one of booking (price, test list,
+                 CTA). When checkout ships, only this href changes; the label
+                 stays, so users never get retrained.
+                 It was two buttons ("Detail" + a data-book <button>), but the
+                 data-book handler lives in lab.php and never loaded here, so
+                 "Book Now" was a silent no-op on every listing page. -->
             <div class="lab-pkg-card-actions">
-                <a href="<?= e($it['url']) ?>" class="lab-pkg-card-detail">Detail</a>
-                <button type="button" class="lab-pkg-card-book lab-book" data-book="<?= e($it['title']) ?>">Book Now</button>
+                <a href="<?= e($it['url']) ?>" class="lab-pkg-card-book lab-pkg-card-cta">Book Now</a>
             </div>
         </div>
     </article>
@@ -248,6 +263,28 @@ $renderCard = static function (array $it): string {
                     </button>
                 <?php $first = false; endforeach; ?>
             </div>
+            <!-- Sort. A plain GET form so it works without JS and every sorted
+                 view is a shareable URL; JS below just auto-submits on change.
+                 Re-sorting is a server round-trip (not client-side) because the
+                 grid is capped by LIMIT — sorting only the rendered slice would
+                 lie about what's actually cheapest/biggest in the category. -->
+            <div class="lab-list-controls">
+            <?php
+            // Post back to the CLEAN url (/lab/category/{slug}), not to
+            // "?type=&slug=" — the router re-derives type/slug from the path,
+            // so `sort` is the only param the form needs to carry.
+            $sortAction = $view === 'category' ? ecp_lab_category_url($slug)
+                : ($view === 'symptom' ? ecp_lab_symptom_url($slug) : '/lab/tests');
+            ?>
+            <form method="get" action="<?= e($sortAction) ?>" class="lab-list-sort" id="labSortForm">
+                <label class="lab-list-sort-label" for="labSortSelect">Sort</label>
+                <select name="sort" id="labSortSelect" class="lab-list-sort-select">
+                    <?php foreach ($sortModes as $sortKey => $sortMode): ?>
+                    <option value="<?= e($sortKey) ?>" <?= $sort === $sortKey ? 'selected' : '' ?>><?= e($sortMode[0]) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <noscript><button type="submit" class="lab-list-sort-go">Go</button></noscript>
+            </form>
             <div class="lab-list-view" role="group" aria-label="View style">
                 <button type="button" class="lab-list-viewbtn is-active" data-view="grid" aria-label="Grid view" title="Grid view">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -261,6 +298,7 @@ $renderCard = static function (array $it): string {
                         <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
                     </svg>
                 </button>
+            </div>
             </div>
         </div>
 
@@ -279,6 +317,15 @@ $renderCard = static function (array $it): string {
 </main>
 
 <script>
+    // Sort: submit on change so it feels instant. Without JS the <noscript>
+    // Go button does the same thing.
+    (function () {
+        var sel = document.getElementById('labSortSelect');
+        var form = document.getElementById('labSortForm');
+        if (!sel || !form) return;
+        sel.addEventListener('change', function () { form.submit(); });
+    })();
+
     // Type tabs: filter the grid client-side (All / Packages / Offers / Tests).
     (function () {
         var tabs = document.querySelectorAll('[data-list-tab]');

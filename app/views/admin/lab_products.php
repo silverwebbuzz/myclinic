@@ -7,13 +7,17 @@ $typeBadge = static function (string $t): array {
         default   => ['Test',    'bg-slate-100 text-slate-700'],
     };
 };
-$qs = static function (array $over) use ($q, $type, $categoryId): string {
-    return http_build_query(array_merge(['q' => $q, 'type' => $type, 'category' => $categoryId ?: ''], $over));
+$qs = static function (array $over) use ($q, $type, $categoryId, $featured): string {
+    return http_build_query(array_merge(
+        ['q' => $q, 'type' => $type, 'category' => $categoryId ?: '', 'featured' => $featured ? '1' : ''],
+        $over
+    ));
 };
 // Hidden inputs so a row toggle returns to the same filtered view/page.
-$returnCtx = static function () use ($q, $type, $categoryId, $page): string {
+$returnCtx = static function () use ($q, $type, $categoryId, $page, $featured): string {
     $h = '';
-    foreach (['q' => $q, 'type' => $type, 'category' => $categoryId ?: '', 'page' => $page] as $k => $v) {
+    foreach (['q' => $q, 'type' => $type, 'category' => $categoryId ?: '', 'page' => $page,
+              'featured' => $featured ? '1' : ''] as $k => $v) {
         if ($v !== '' && $v !== 0) {
             $h .= '<input type="hidden" name="return_' . $k . '" value="' . htmlspecialchars((string) $v) . '">';
         }
@@ -61,6 +65,22 @@ $toggleBtn = static function (bool $on, string $action, string $csrf, string $re
         </div>
         <?php endif; ?>
 
+        <?php if (empty($tableMissing) && (int) ($featuredTotal ?? 0) === 0): ?>
+        <div class="rounded bg-sky-50 border border-sky-200 px-4 py-3 text-sm text-sky-900">
+            <strong>Nothing is featured yet.</strong>
+            “Featured” is the <em>top</em> sort key on the public category pages, so right now
+            that ranking step does nothing and ordering falls through to value-for-money.
+            Star 3–5 packages per category — the ones with good margin <em>and</em> a sensible
+            entry price — to control what patients see first.
+        </div>
+        <?php elseif (empty($tableMissing)): ?>
+        <div class="text-sm text-slate-500">
+            <strong><?= (int) $featuredTotal ?></strong> featured product(s) are pinned to the top of
+            public listings.
+            <a href="/admin/lab/products?featured=1" class="text-sky-700 hover:underline">Review them →</a>
+        </div>
+        <?php endif; ?>
+
         <?php if (!empty($tableMissing)): ?>
         <div class="rounded bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900">
             The lab tables don't exist yet. Run
@@ -97,8 +117,12 @@ $toggleBtn = static function (bool $on, string $action, string $csrf, string $re
                     <?php endforeach; ?>
                 </select>
             </label>
+            <label class="flex items-center gap-2 pb-1.5 text-sm">
+                <input type="checkbox" name="featured" value="1" <?= !empty($featured) ? 'checked' : '' ?>>
+                <span class="text-slate-600">Featured only</span>
+            </label>
             <button type="submit" class="rounded bg-slate-800 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-700">Filter</button>
-            <?php if ($q !== '' || $type !== '' || $categoryId > 0): ?>
+            <?php if ($q !== '' || $type !== '' || $categoryId > 0 || !empty($featured)): ?>
             <a href="/admin/lab/products" class="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50">Clear filters</a>
             <?php endif; ?>
         </form>

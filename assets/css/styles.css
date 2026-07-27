@@ -10988,27 +10988,6 @@ body {
   padding-top: 12px;
 }
 
-.lab-pkg-card-detail {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 96px;
-  padding: 11px 18px;
-  font-size: 14px;
-  font-weight: 650;
-  color: var(--ink-2);
-  background: #fff;
-  border: 1.5px solid var(--line);
-  border-radius: 12px;
-  transition: border-color .2s, color .2s;
-}
-
-.lab-pkg-card-detail:hover {
-  border-color: var(--teal-400);
-  color: var(--teal-700);
-}
-
 .lab-pkg-card-book {
   flex: 1;
   background: var(--teal-600);
@@ -11024,6 +11003,42 @@ body {
   background: var(--teal-700);
   transform: translateY(-1px);
 }
+
+/* Single full-width CTA (replaced the old Detail + Book Now pair). It's an <a>
+   now, not a <button>, so it needs explicit centering and no underline. */
+.lab-pkg-card-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+  border: 0;
+}
+
+.lab-pkg-card-cta:hover { color: #fff; text-decoration: none; }
+
+/* Whole-card click target: the CTA is stretched over the card, so a click
+   anywhere lands on the detail page. The title link keeps its own hover style;
+   chips/links that must stay separately clickable are lifted above it.
+   NOTE: .lab-pkg-card-media is position:relative, so the image and its own <a>
+   already paint above the overlay — that link points at the same detail page,
+   so the card still behaves as one target either way. */
+.lab-pkg-card { position: relative; }
+
+.lab-pkg-card-cta::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: 1;
+}
+
+.lab-pkg-card-title a,
+.lab-pkg-card-group-more,
+.lab-pkg-card-more,
+.lab-pkg-card-cta { position: relative; z-index: 2; }
 
 .lab-pkgs-empty {
   text-align: center;
@@ -13472,10 +13487,6 @@ body {
   .lab-pkg-card-actions {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .lab-pkg-card-detail {
-    width: 100%;
   }
 
   .lab-pkg-card-book {
@@ -16506,7 +16517,11 @@ body {
   color: var(--teal-600);
 }
 
+/* Now an <a> (was a <button>) — needs inline-flex centering + no underline. */
 .lab-search-result-book {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 13px;
   font-weight: 600;
   color: var(--teal-700);
@@ -16514,12 +16529,14 @@ body {
   background: #fff;
   padding: 8px 16px;
   border-radius: 10px;
+  text-decoration: none;
   transition: background .15s ease, color .15s ease;
 }
 
 .lab-search-result-book:hover {
   background: var(--teal-600);
   color: #fff;
+  text-decoration: none;
 }
 
 .lab-search-none {
@@ -16558,6 +16575,24 @@ body {
 .lab-list-wrap { padding-top: 1.5rem; }
 .lab-list-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
 .lab-list-tabs { display: flex; flex-wrap: wrap; gap: .5rem; }
+/* Right-hand cluster of the listing toolbar: sort dropdown + view toggle.
+   Grouping them keeps the toolbar's space-between layout (tabs | controls). */
+.lab-list-controls { display: flex; align-items: center; gap: .75rem; flex-shrink: 0; }
+.lab-list-sort { display: inline-flex; align-items: center; gap: .45rem; }
+.lab-list-sort-label { font-size: .85rem; font-weight: 600; color: #6b7280; }
+.lab-list-sort-select { border: 1px solid #d1d5db; border-radius: 8px; background: #fff; padding: .4rem 1.9rem .4rem .7rem; font-size: .875rem; font-weight: 600; color: #374151; cursor: pointer; transition: border-color .15s, color .15s;
+    /* Native arrow is inconsistent across browsers — draw our own. */
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right .6rem center; }
+.lab-list-sort-select:hover { border-color: #059669; color: #059669; }
+.lab-list-sort-select:focus-visible { outline: 2px solid #059669; outline-offset: 1px; }
+.lab-list-sort-go { margin-left: .4rem; border: 1px solid #059669; background: #059669; color: #fff; border-radius: 8px; padding: .4rem .8rem; font-size: .85rem; font-weight: 600; cursor: pointer; }
+@media (max-width: 640px) {
+    .lab-list-controls { width: 100%; justify-content: space-between; }
+    .lab-list-sort { flex: 1; }
+    .lab-list-sort-select { width: 100%; }
+}
 .lab-list-view { display: inline-flex; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; flex-shrink: 0; }
 .lab-list-viewbtn { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 32px; background: #fff; border: none; color: #6b7280; cursor: pointer; transition: all .15s; }
 .lab-list-viewbtn + .lab-list-viewbtn { border-left: 1px solid #d1d5db; }
@@ -16622,6 +16657,9 @@ body {
 .lab-list-grid[data-view="list"] .lab-pkg-offer { grid-area: offer; text-align: right; margin: 0; }
 .lab-list-grid[data-view="list"] .lab-pkg-offer-price { justify-content: flex-end; }
 .lab-list-grid[data-view="list"] .lab-pkg-card-actions { grid-area: actions; margin: 0; padding: 0; justify-content: flex-end; }
+/* In the compact list row the actions cell is narrow — let the CTA size to its
+   own text instead of stretching across the column. */
+.lab-list-grid[data-view="list"] .lab-pkg-card-cta { width: auto; min-width: 132px; }
 @media (max-width: 640px) {
   /* Below tablet, collapse the list row back to a stacked card. */
   .lab-list-grid[data-view="list"] .lab-pkg-card-body {

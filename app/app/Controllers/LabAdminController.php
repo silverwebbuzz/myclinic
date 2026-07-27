@@ -42,6 +42,10 @@ final class LabAdminController
         }
         $categoryId = (int) ($request->query['category'] ?? 0);
         $page = max(1, (int) ($request->query['page'] ?? 1));
+        // "Featured only" — the merchandising view. is_featured is the top sort
+        // key on the public listing pages, so this is how you audit what's
+        // actually being promoted per category.
+        $featured = ($request->query['featured'] ?? '') === '1';
 
         $where  = [];
         $params = [];
@@ -78,6 +82,9 @@ final class LabAdminController
             $where[] = 'lp.product_type = :type';
             $params[':type'] = $type;
         }
+        if ($featured) {
+            $where[] = 'lp.is_featured = 1';
+        }
         // Category filter: restrict to products linked to the chosen category.
         $catJoin = '';
         if ($categoryId > 0) {
@@ -88,9 +95,16 @@ final class LabAdminController
 
         $rows = [];
         $total = 0;
+        $featuredTotal = 0;
         $allCategories = [];
         $tableMissing = false;
         try {
+            // Catalog-wide featured count — surfaced so it's obvious when the
+            // top sort key is doing nothing (nothing featured = dead key).
+            $featuredTotal = (int) $pdo->query(
+                'SELECT COUNT(*) FROM lab_products WHERE is_featured = 1 AND is_active = 1'
+            )->fetchColumn();
+
             // Category dropdown options (only those with products).
             $allCategories = $pdo->query(
                 'SELECT c.id, c.name, COUNT(lpc.product_id) AS n
@@ -142,6 +156,8 @@ final class LabAdminController
             'q'            => $q,
             'type'         => $type,
             'categoryId'   => $categoryId,
+            'featured'     => $featured,
+            'featuredTotal'=> $featuredTotal,
             'allCategories'=> $allCategories,
             'tableMissing' => $tableMissing,
             'message'      => $request->query['message'] ?? null,
@@ -425,7 +441,7 @@ final class LabAdminController
     private function listReturnUrl(Request $request, string $message): string
     {
         $keep = [];
-        foreach (['q', 'type', 'category', 'page'] as $k) {
+        foreach (['q', 'type', 'category', 'page', 'featured'] as $k) {
             $v = $request->post['return_' . $k] ?? '';
             if ($v !== '') {
                 $keep[$k] = $v;
