@@ -99,6 +99,15 @@ $fastingCode = (string) ($d['fasting'] ?? '');
 $diseaseTags = $d['disease_tags'] ?? [];
 $loginPct    = (int) ($d['login_pct'] ?? 0);
 
+// The coupon's HEADLINE rate, before any per-product ceiling. $loginPct above is
+// this same coupon already capped by THIS package's max_discount_pct. Both are
+// needed: the headline rate is what each add-on line caps for itself, so an
+// add-on with a higher ceiling than the package isn't held back by it.
+$couponHeadlinePct = $loginPct;
+if ($loginPct > 0 && function_exists('ecp_db') && ($labDb = ecp_db())) {
+    $couponHeadlinePct = max($loginPct, ecp_lab_best_login_discount($labDb, 100));
+}
+
 // Note: the test-count is already shown as a green pill in .ldp-hero-meta, so
 // we intentionally do NOT repeat it here as a grey tag.
 $detailTags = [];
@@ -649,7 +658,10 @@ require __DIR__ . '/partials/header.php';
                           data-pkg-price="<?= (int) $pkgPriceNum ?>"
                           data-pkg-mrp="<?= (int) $pkgMrpNum ?>"
                           data-pkg-name="<?= e($d['title']) ?>"
-                          data-hardcopy="75"
+                          <?php // The slug is what api/lab_book.php re-prices from — the
+                                // posted price is never trusted. ?>
+                          data-pkg-slug="<?= e($slug) ?>"
+                          data-hardcopy="<?= (int) ECP_LAB_HARDCOPY_FEE ?>"
                           data-collection-fee="<?= (int) ECP_LAB_COLLECTION_FEE ?>"
                           data-collection-min="<?= (int) ECP_LAB_COLLECTION_MIN_ORDER ?>"
                           data-collection-on-discounted="<?= ECP_LAB_COLLECTION_ON_DISCOUNTED ? '1' : '0' ?>">
@@ -764,12 +776,17 @@ require __DIR__ . '/partials/header.php';
                             <?php
                             // Single coupon: the best login discount for THIS product, already
                             // capped by lab_product_pricing.max_discount_pct (see $loginPct).
+                            // The chip is NAMED for the package's capped rate, but carries the
+                            // headline rate too — each line caps that for itself, so a 5%-capped
+                            // add-on gets 5% while this package gets its own ceiling.
                             $couponPct  = $loginPct;
                             $couponCode = 'SAVE' . $couponPct;
                             ?>
                             <label class="ldp-bf-label">Coupon Code <span>(Optional)</span></label>
                             <div class="ldp-bf-coupons" id="ldpBfCoupons" data-logged-in="<?= $ecpPatient ? '1' : '0' ?>">
-                                <div class="ldp-bf-coupon" data-code="<?= e($couponCode) ?>" data-pct="<?= (int) $couponPct ?>">
+                                <div class="ldp-bf-coupon" data-code="<?= e($couponCode) ?>" data-pct="<?= (int) $couponPct ?>"
+                                     data-headline-pct="<?= (int) $couponHeadlinePct ?>"
+                                     data-pkg-max-pct="<?= (int) $loginPct ?>">
                                     <div class="ldp-bf-coupon-info">
                                         <span class="ldp-bf-coupon-code"><?= e($couponCode) ?></span>
                                         <span class="ldp-bf-coupon-desc"><?= (int) $couponPct ?>% off</span>
@@ -803,17 +820,21 @@ require __DIR__ . '/partials/header.php';
 
                             <?php
                             // Test catalogue for the picker (individual tests only).
+                            // max_pct is each test's OWN discount ceiling — the coupon is
+                            // capped per line, so a 5%-capped test never receives the
+                            // package's 25%. See ecp_lab_line_discount_pct().
                             $addonJson = array_map(static fn ($a) => [
-                                'id'    => (string) $a['id'],
-                                'label' => (string) $a['label'],
-                                'price' => (int) $a['price'],
+                                'id'      => (string) $a['id'],
+                                'label'   => (string) $a['label'],
+                                'price'   => (int) $a['price'],
+                                'max_pct' => (int) ($a['max_pct'] ?? 0),
                             ], $addonTests);
                             ?>
                             <script type="application/json" id="ldpAddonData"><?= json_encode($addonJson, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
 
                             <label class="ldp-bf-hardcopy">
                                 <input type="checkbox" name="hard_copy" id="ldpBfHardCopy" value="1">
-                                <span>Please tick to receive hard copy. Courier charges <b>Rs. 75 Extra.</b></span>
+                                <span>Please tick to receive hard copy. Courier charges <b>Rs. <?= (int) ECP_LAB_HARDCOPY_FEE ?> Extra.</b></span>
                             </label>
                         </div>
 
@@ -851,7 +872,7 @@ require __DIR__ . '/partials/header.php';
                             <!-- Courier line: only shown when the hard-copy option is ticked. -->
                             <div class="ldp-bf-row" id="ldpBfSumCourierRow" hidden>
                                 <span>Hard Copy Courier</span>
-                                <span class="ldp-bf-val" id="ldpBfSumCourier">₹75</span>
+                                <span class="ldp-bf-val" id="ldpBfSumCourier">₹<?= (int) ECP_LAB_HARDCOPY_FEE ?></span>
                             </div>
 
                             <!-- Discount line: only shown when a coupon is applied. -->
@@ -1098,13 +1119,32 @@ require __DIR__ . '/partials/header.php';
     var appliedCouponCode = '';
     var couponOff = 0;
 
+    // Last total computed by updateTotals(), in rupees. Sent with the booking
+    // purely so the server can log a mismatch against its own recomputation —
+    // it is never the amount billed.
+    var lastTotal = 0;
+
+    // The coupon's headline rate and this package's own ceiling. Each line caps
+    // the headline rate for itself (see lineDiscount) so an add-on is never
+    // discounted beyond ITS max_discount_pct, and never held back by the
+    // package's ceiling either. Mirrors ecp_lab_line_discount_pct() in PHP.
+    var couponHeadlinePct = 0;
+    var pkgMaxPct = 0;
+
+    function lineDiscount(lineTotal, maxPct) {
+        var pct = Math.max(0, Math.min(couponHeadlinePct, maxPct || 0));
+        return pct <= 0 ? 0 : Math.round(lineTotal * pct / 100);
+    }
+
     function couponAmount(pkgLine) {
-        return Math.round(pkgLine * appliedCouponPct / 100);
+        return lineDiscount(pkgLine, pkgMaxPct);
     }
 
     function clearCoupon() {
         appliedCouponPct = 0;
         appliedCouponCode = '';
+        couponHeadlinePct = 0;
+        pkgMaxPct = 0;
         couponOff = 0;
         if (couponInput) couponInput.value = '';
         if (couponsWrap) couponsWrap.querySelectorAll('.ldp-bf-coupon.is-applied')
@@ -1129,6 +1169,9 @@ require __DIR__ . '/partials/header.php';
 
         appliedCouponPct = pct;
         appliedCouponCode = code;
+        // Headline rate drives per-line capping; pct is this package's capped rate.
+        couponHeadlinePct = parseInt(row.getAttribute('data-headline-pct') || '0', 10) || pct;
+        pkgMaxPct = parseInt(row.getAttribute('data-pkg-max-pct') || '0', 10) || pct;
         if (couponInput) couponInput.value = code;
 
         if (couponsWrap) couponsWrap.querySelectorAll('.ldp-bf-coupon')
@@ -1150,7 +1193,8 @@ require __DIR__ . '/partials/header.php';
             var name = chip && chip.querySelector('.ldp-bf-testchip-name');
             items.push({
                 label: name ? name.textContent : 'Added test',
-                price: parseInt(cb.getAttribute('data-price') || '0', 10) || 0
+                price: parseInt(cb.getAttribute('data-price') || '0', 10) || 0,
+                maxPct: parseInt(cb.getAttribute('data-max-pct') || '0', 10) || 0
             });
         });
         return items;
@@ -1163,8 +1207,16 @@ require __DIR__ . '/partials/header.php';
         var items   = addonItems();
         var addons  = addonTotal() * p;
         var hard    = (hardCopy && hardCopy.checked) ? hardFee : 0;
-        // Percentage coupon applies to the package line (scales with persons).
+
+        // The coupon is applied PER LINE, each capped by that product's own
+        // max_discount_pct: the package at its ceiling, every add-on at its own.
+        // Summing per-line keeps a 5%-capped test from receiving a 25% package
+        // discount (which the lab partner never agreed to) without dragging the
+        // package down to 5% either. Mirrors ecp_lab_price_order() in PHP.
         couponOff = couponAmount(pkgLine);
+        items.forEach(function (it) {
+            couponOff += lineDiscount(it.price * p, it.maxPct);
+        });
 
         // ── Home collection fee ─────────────────────────────────────────
         // Thyrocare bills ₹200 when the order value is under ₹300; we pass it
@@ -1185,6 +1237,7 @@ require __DIR__ . '/partials/header.php';
         // adding `collection` and `hard` here — after the subtraction — means the
         // ₹200 and the ₹75 are always paid in full regardless of any coupon.
         var total = Math.max(0, pkgLine + addons - couponOff + collection + hard);
+        lastTotal = total;
 
         // Package MRP/discount widgets (if the compact price card is present).
         var discount = (mrpLine - pkgLine) + couponOff;
@@ -1207,12 +1260,18 @@ require __DIR__ . '/partials/header.php';
         if (elCollHint) {
             if (collection > 0) {
                 // Gap to the threshold, quoted in "more tests to add".
-                // The coupon base is pkgLine ONLY (see couponAmount) — add-on
-                // tests are never discounted — so ₹X of add-ons raises the
-                // post-discount order value by the full ₹X. No gross-up needed;
-                // the raw gap is already the right advice. Rounded up to ₹10 so
-                // it reads as guidance rather than false precision.
-                var gap = Math.ceil(Math.max(0, collectionMin - orderValue) / 10) * 10;
+                //
+                // Add-ons ARE discountable now (each at its own cap), so ₹X of
+                // added tests raises the post-discount order value by less than
+                // ₹X. Gross up by the highest rate a new line could receive —
+                // the headline coupon — so the advice never falls short. It may
+                // over-state slightly for a low-capped test, which is the safe
+                // direction to be wrong. Rounded up to ₹10 so it reads as
+                // guidance rather than false precision.
+                var rawGap = Math.max(0, collectionMin - orderValue);
+                var grossUp = Math.max(0, Math.min(100, couponHeadlinePct));
+                if (grossUp > 0 && grossUp < 100) rawGap = rawGap / (1 - grossUp / 100);
+                var gap = Math.ceil(rawGap / 10) * 10;
                 elCollHint.textContent = 'Orders under ' + formatInr(collectionMin)
                     + ' carry a ' + formatInr(collectionFee) + ' home-collection charge'
                     + (appliedCouponPct > 0 ? ' (checked after your discount)' : '') + '. '
@@ -1392,7 +1451,8 @@ require __DIR__ . '/partials/header.php';
             chip.setAttribute('data-id', id);
             chip.innerHTML =
                 '<input type="checkbox" name="addons[]" checked hidden ' +
-                       'value="' + id + '" data-price="' + t.price + '">' +
+                       'value="' + id + '" data-price="' + t.price + '" ' +
+                       'data-max-pct="' + (t.max_pct || 0) + '">' +
                 '<span class="ldp-bf-testchip-name"></span>' +
                 '<span class="ldp-bf-testchip-price">' + inr(t.price) + '</span>' +
                 '<button type="button" class="ldp-bf-testchip-x" aria-label="Remove">×</button>';
@@ -1520,9 +1580,10 @@ require __DIR__ . '/partials/header.php';
         }
 
         var pkgName = form.getAttribute('data-pkg-name') || 'Lab package';
-        var totalText = (document.getElementById('ldpBfSumTotal') || {}).textContent || '';
-        function finish() {
-            showToast('Booking request received for “' + pkgName + '” (' + totalText + '). We’ll confirm shortly.');
+
+        // Reset the form only after the server has accepted the booking —
+        // clearing it on a failure would throw away everything the patient typed.
+        function resetForm() {
             form.reset();
             clearCoupon();
             resetAddons();
@@ -1534,10 +1595,90 @@ require __DIR__ . '/partials/header.php';
             setPersons(1);
             updateTotals();
         }
+
+        function payload() {
+            var names = [], ages = [], genders = [];
+            form.querySelectorAll('input[name="beneficiary_name[]"]').forEach(function (el) { names.push(el.value); });
+            form.querySelectorAll('input[name="beneficiary_age[]"]').forEach(function (el) { ages.push(el.value); });
+            form.querySelectorAll('select[name="beneficiary_gender[]"]').forEach(function (el) { genders.push(el.value); });
+
+            // Slugs only — the server re-prices every add-on from the database.
+            var addons = [];
+            form.querySelectorAll('input[name="addons[]"]:checked').forEach(function (cb) {
+                addons.push(cb.value);
+            });
+
+            var val = function (id) { var el = document.getElementById(id); return el ? el.value : ''; };
+
+            return {
+                product_slug: form.getAttribute('data-pkg-slug') || '',
+                email: val('ldpBfEmail'),
+                phone: val('ldpBfPhone'),
+                pincode: val('ldpBfPincode'),
+                city: val('ldpBfCity'),
+                state: val('ldpBfState'),
+                address: val('ldpBfAddress'),
+                appointment_date: val('ldpBfDate'),
+                time_slot: val('ldpBfTime'),
+                notes: val('ldpBfNotes'),
+                hard_copy: !!(hardCopy && hardCopy.checked),
+                coupon: (couponInput && couponInput.value) || '',
+                beneficiary_name: names,
+                beneficiary_age: ages,
+                beneficiary_gender: genders,
+                addons: addons,
+                // Diagnostic only: the server bills from its own recomputation
+                // and just logs a warning if these disagree.
+                client_total: lastTotal
+            };
+        }
+
+        var submitBtn = form.querySelector('.ldp-bf-submit');
+        var submitLabel = form.querySelector('.ldp-bf-submit-label');
+        var submitting = false;
+
+        function send() {
+            if (submitting) return;
+            submitting = true;
+            if (submitBtn) submitBtn.disabled = true;
+            if (submitLabel) submitLabel.textContent = 'Booking…';
+
+            fetch('/api/lab_book.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify(payload())
+            })
+            .then(function (r) { return r.json().catch(function () { return {}; }); })
+            .then(function (res) {
+                if (res && res.ok) {
+                    showToast('Booking request received for “' + pkgName + '” · ' + res.order_ref
+                        + (res.email_sent ? '. Confirmation sent to ' + res.email + '.' : '. We’ll confirm shortly.'));
+                    resetForm();
+                    return;
+                }
+                if (res && res.error === 'login_required') {
+                    // Session expired between the gate and the POST.
+                    window.dispatchEvent(new CustomEvent('ecp:open-auth', { detail: { reason: 'lab_book' } }));
+                    showToast('Please log in to complete your booking.');
+                    return;
+                }
+                showToast((res && res.message) || 'Could not save your booking. Please try again.');
+            })
+            .catch(function () {
+                showToast('Network error — please check your connection and try again.');
+            })
+            .finally(function () {
+                submitting = false;
+                if (submitBtn) submitBtn.disabled = false;
+                if (submitLabel) submitLabel.textContent = 'Book Now';
+            });
+        }
+
         if (window.ecpAuth && typeof window.ecpAuth.require === 'function') {
-            window.ecpAuth.require('lab_booking', finish);
+            window.ecpAuth.require('lab_booking', send);
         } else {
-            finish();
+            send();
         }
     });
 

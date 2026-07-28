@@ -171,6 +171,17 @@ const ECP_LAB_COLLECTION_MIN_ORDER = 300;   // ₹ order value for free collecti
 const ECP_LAB_COLLECTION_ON_DISCOUNTED = true;
 
 /**
+ * Hard-copy courier charge in ₹, when the patient ticks "send me a printed
+ * report". Like the collection fee this is a pass-through service charge and
+ * is NEVER discounted by a coupon.
+ *
+ * Lives here (rather than next to the booking code) so the storefront template,
+ * the booking JS and the server-side repricing in partials/lab_orders.php all
+ * read one number.
+ */
+const ECP_LAB_HARDCOPY_FEE = 75;
+
+/**
  * Maps a curated storefront filter tab -> the lab_categories slugs that feed it.
  * A package appears under a tab when any of its linked categories matches.
  * 'popular' is derived from is_featured/booked_count, and 'full-body' from the
@@ -493,8 +504,34 @@ function ecp_lab_db_search_index(int $testLimit = 150): array
 }
 
 /**
+ * The discount a single line may actually receive.
+ *
+ * THE RULE: every product carries its own ceiling
+ * (lab_product_pricing.max_discount_pct), and a coupon can never exceed it —
+ * LEAST(coupon %, that product's cap). This is the rule the catalog schema has
+ * always documented; it is applied PER LINE, not once across the order.
+ *
+ * That matters when an order mixes ceilings: a 25% coupon on a 25%-capped
+ * package plus a 5%-capped add-on discounts them 25% and 5% respectively.
+ * Applying the package's 25% to the add-on would hand out a discount the lab
+ * partner never agreed to; applying the add-on's 5% to everything would punish
+ * the patient for adding a test.
+ *
+ * A cap of 0 means "never discountable" and correctly yields nothing.
+ */
+function ecp_lab_line_discount_pct(int $couponPct, int $maxDiscountPct): int
+{
+    return max(0, min($couponPct, $maxDiscountPct));
+}
+
+/**
  * Individual add-on TESTS (only single tests, never packages) for the "add more
- * tests" picker on the booking form. Each row: [id, label, price]. Popular first.
+ * tests" picker on the booking form. Each row: [id, label, price, max_pct].
+ * Popular first.
+ *
+ * max_pct is the product's own discount ceiling — carried through so the
+ * booking form can discount each add-on by its own cap rather than by whatever
+ * the parent package happens to allow. See ecp_lab_line_discount_pct().
  *
  * $excludeSlug lets the caller drop the current package/test from the list so a
  * page doesn't offer to add what it already is. Falls back to a small static set
@@ -502,13 +539,15 @@ function ecp_lab_db_search_index(int $testLimit = 150): array
  */
 function ecp_lab_addon_tests(int $limit = 200, string $excludeSlug = ''): array
 {
+    // Fallback rows carry max_pct = 0: with no database we cannot know a
+    // product's ceiling, and guessing one would risk over-discounting.
     $fallback = [
-        ['id' => 'vitd',   'label' => 'Vitamin D Total',       'price' => 899],
-        ['id' => 'vitb12', 'label' => 'Vitamin B-12',          'price' => 699],
-        ['id' => 'tft',    'label' => 'Thyroid Profile Total', 'price' => 499],
-        ['id' => 'hba1c',  'label' => 'HbA1c',                 'price' => 399],
-        ['id' => 'iron',   'label' => 'Iron Studies',          'price' => 550],
-        ['id' => 'lipid',  'label' => 'Lipid Profile',         'price' => 450],
+        ['id' => 'vitd',   'label' => 'Vitamin D Total',       'price' => 899, 'max_pct' => 0],
+        ['id' => 'vitb12', 'label' => 'Vitamin B-12',          'price' => 699, 'max_pct' => 0],
+        ['id' => 'tft',    'label' => 'Thyroid Profile Total', 'price' => 499, 'max_pct' => 0],
+        ['id' => 'hba1c',  'label' => 'HbA1c',                 'price' => 399, 'max_pct' => 0],
+        ['id' => 'iron',   'label' => 'Iron Studies',          'price' => 550, 'max_pct' => 0],
+        ['id' => 'lipid',  'label' => 'Lipid Profile',         'price' => 450, 'max_pct' => 0],
     ];
 
     if (!function_exists('ecp_db')) {
@@ -521,7 +560,7 @@ function ecp_lab_addon_tests(int $limit = 200, string $excludeSlug = ''): array
 
     try {
         $stmt = $db->prepare(
-            "SELECT lp.slug, lp.name, pr.offer_rate
+            "SELECT lp.slug, lp.name, pr.offer_rate, pr.max_discount_pct
                FROM lab_products lp
                JOIN lab_product_pricing pr ON pr.id = (
                    SELECT p2.id FROM lab_product_pricing p2
@@ -548,9 +587,10 @@ function ecp_lab_addon_tests(int $limit = 200, string $excludeSlug = ''): array
                 continue;
             }
             $out[] = [
-                'id'    => $slug,
-                'label' => ecp_lab_titlecase((string) $r['name']),
-                'price' => (int) round((float) $r['offer_rate']),
+                'id'      => $slug,
+                'label'   => ecp_lab_titlecase((string) $r['name']),
+                'price'   => (int) round((float) $r['offer_rate']),
+                'max_pct' => (int) ($r['max_discount_pct'] ?? 0),
             ];
         }
         return $out ?: $fallback;

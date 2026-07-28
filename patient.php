@@ -791,6 +791,133 @@ require __DIR__ . '/partials/header.php';
             </template>
           </div>
 
+          <!-- ============ LAB BOOKINGS TAB ============ -->
+          <!-- Orders placed through the lab storefront. Distinct from the "Lab
+               reports" tab above, which is the patient's own uploaded results. -->
+          <div x-show="tab === 'laborders'" class="pt-tab-pane">
+            <div class="pt-section-head">
+              <h3>Lab bookings</h3>
+              <a class="btn-mini primary" href="/lab#lab-packages">Book a test</a>
+            </div>
+            <p class="pt-section-note">
+              Every lab test you’ve booked with us — the slot, who it’s for, and what it costs.
+              Open any booking to see the full bill and collection details.
+            </p>
+
+            <div x-show="labOrders.loading" class="pt-loading">Loading your lab bookings…</div>
+
+            <!-- List -->
+            <div class="pt-fam-list" x-show="!labOrders.loading && labOrders.items.length > 0">
+              <template x-for="o in labOrders.items" :key="'lo-' + o.id">
+                <div class="pt-fam-card">
+                  <div class="pt-fam-head">
+                    <span class="pt-fam-avatar">🧾</span>
+                    <span class="pt-fam-id">
+                      <span class="pt-fam-name" x-text="o.product_name"></span>
+                      <span class="pt-fam-rel">
+                        <span x-text="o.order_ref"></span>
+                        <span x-text="' · ' + o.appointment_human + ', ' + o.time_slot"></span>
+                        <template x-if="o.persons > 1">
+                          <span x-text="' · ' + o.persons + ' persons'"></span>
+                        </template>
+                        <span x-text="' · ' + o.total"></span>
+                      </span>
+                    </span>
+                    <div class="pt-fam-actions">
+                      <span class="pt-lo-status" :class="'is-' + o.status" x-text="o.status_label"></span>
+                      <button type="button" class="btn-mini" @click="labOrders.open(o)">Details</button>
+                    </div>
+                  </div>
+
+                  <!-- Expanded detail: bill lines, people, collection address -->
+                  <template x-if="labOrders.openId === o.id">
+                    <div class="pt-lo-detail">
+                      <template x-if="labOrders.detailLoading">
+                        <p class="pt-loading">Loading details…</p>
+                      </template>
+                      <template x-if="labOrders.detail && !labOrders.detailLoading">
+                        <div>
+                          <div class="pt-lo-grid">
+                            <div>
+                              <h4>Collection</h4>
+                              <p x-text="labOrders.detail.appointment_human + ' · ' + labOrders.detail.time_slot"></p>
+                              <p x-text="labOrders.detail.address"></p>
+                              <p x-text="[labOrders.detail.city, labOrders.detail.state, labOrders.detail.pincode].filter(Boolean).join(', ')"></p>
+                              <p x-text="'Phone: ' + labOrders.detail.contact_phone"></p>
+                              <template x-if="labOrders.detail.notes">
+                                <p x-text="'Notes: ' + labOrders.detail.notes"></p>
+                              </template>
+                            </div>
+                            <div>
+                              <h4 x-text="labOrders.detail.beneficiaries.length > 1 ? 'People being tested' : 'Person being tested'"></h4>
+                              <ul class="pt-lo-people">
+                                <template x-for="(b, i) in labOrders.detail.beneficiaries" :key="'ben-' + o.id + '-' + i">
+                                  <li>
+                                    <span x-text="b.name"></span>
+                                    <span class="pt-lo-muted"
+                                      x-text="[b.age ? b.age + ' yrs' : '', b.gender].filter(Boolean).join(', ')"></span>
+                                  </li>
+                                </template>
+                              </ul>
+                            </div>
+                          </div>
+
+                          <h4>Bill</h4>
+                          <table class="pt-lo-bill">
+                            <tbody>
+                              <template x-for="(it, i) in labOrders.detail.items" :key="'it-' + o.id + '-' + i">
+                                <tr>
+                                  <td>
+                                    <span x-text="it.label"></span>
+                                    <template x-if="it.qty > 1 && (it.kind === 'package' || it.kind === 'addon')">
+                                      <span class="pt-lo-muted" x-text="' × ' + it.qty"></span>
+                                    </template>
+                                  </td>
+                                  <td class="pt-lo-amt" :class="it.negative ? 'is-off' : ''"
+                                    x-text="(it.negative ? '− ' : '') + it.amount"></td>
+                                </tr>
+                              </template>
+                              <tr class="pt-lo-total">
+                                <td>Total payable</td>
+                                <td class="pt-lo-amt" x-text="labOrders.detail.amounts.total"></td>
+                              </tr>
+                              <template x-if="labOrders.detail.savings_paise > 0">
+                                <tr class="pt-lo-saved">
+                                  <td>You saved</td>
+                                  <td class="pt-lo-amt is-off" x-text="labOrders.detail.amounts.savings"></td>
+                                </tr>
+                              </template>
+                            </tbody>
+                          </table>
+                          <p class="pt-lo-muted pt-lo-fine">
+                            Collection and courier charges are service fees — discounts don’t apply to them.
+                            Payment is due before or at the time of sample collection.
+                          </p>
+
+                          <div class="pt-fam-edit-actions" x-show="labOrders.detail.can_cancel">
+                            <button type="button" class="btn-mini" :disabled="labOrders.cancelling"
+                              @click="labOrders.cancel(o)"
+                              x-text="labOrders.cancelling ? 'Cancelling…' : 'Cancel booking'"></button>
+                          </div>
+                          <p class="pt-fam-err" x-show="labOrders.error" x-text="labOrders.error"></p>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </template>
+            </div>
+
+            <template x-if="!labOrders.loading && labOrders.items.length === 0">
+              <div class="pt-empty">
+                <div class="glyph">🧾</div>
+                <h3>No lab bookings yet</h3>
+                <p>Book a lab test with free home sample collection — a technician comes to you, and your report lands right here.</p>
+                <a class="btn btn-primary" href="/lab#lab-packages">Browse lab packages</a>
+              </div>
+            </template>
+          </div>
+
           <!-- ============ MY PROFILE TAB ============ -->
           <div x-show="tab === 'profile'" class="pt-tab-pane">
             <div class="pt-section-head">
@@ -1035,6 +1162,13 @@ require __DIR__ . '/partials/header.php';
               <span class="pt-nav-ic">🧪</span>
               <span class="pt-nav-label">Lab reports</span>
               <span class="pt-tab-count" x-show="labs.items.length > 0" x-text="labs.items.length"></span>
+            </button>
+            <button type="button" role="tab"
+              :class="tab === 'laborders' ? 'is-active' : ''"
+              @click="tab = 'laborders'; labOrders.loadOnce()">
+              <span class="pt-nav-ic">🧾</span>
+              <span class="pt-nav-label">Lab bookings</span>
+              <span class="pt-tab-count" x-show="labOrders.items.length > 0" x-text="labOrders.items.length"></span>
             </button>
             <button type="button" role="tab"
               :class="tab === 'profile' ? 'is-active' : ''"
@@ -2305,6 +2439,72 @@ require __DIR__ . '/partials/header.php';
     background: #fff;
   }
 
+  /* -------- Lab bookings tab -------- */
+  .pt-lo-status {
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 4px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--mute);
+  }
+  /* Pending is the common case, so it stays neutral-warm rather than alarming. */
+  .pt-lo-status.is-pending   { background: rgba(245, 158, 11, 0.12); color: #92400e; }
+  .pt-lo-status.is-confirmed { background: rgba(15, 155, 110, 0.12); color: #0F9B6E; }
+  .pt-lo-status.is-collected { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
+  .pt-lo-status.is-reported  { background: rgba(15, 155, 110, 0.16); color: #0b7a56; }
+  .pt-lo-status.is-cancelled { background: rgba(0, 0, 0, 0.06); color: #6b7280; }
+
+  .pt-lo-detail {
+    border-top: 1px solid var(--line);
+    padding: 16px;
+    background: #fafafa;
+    font-size: 13.5px;
+  }
+  .pt-lo-detail h4 {
+    margin: 0 0 6px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--mute);
+  }
+  .pt-lo-detail p { margin: 0 0 4px; line-height: 1.6; }
+
+  .pt-lo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 18px;
+  }
+
+  .pt-lo-people { margin: 0; padding-left: 16px; line-height: 1.7; }
+  .pt-lo-muted { color: var(--mute); }
+  .pt-lo-fine { margin-top: 10px; font-size: 12px; line-height: 1.6; }
+
+  .pt-lo-bill {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 4px 0 0;
+  }
+  .pt-lo-bill td {
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+  .pt-lo-amt { text-align: right; white-space: nowrap; }
+  .pt-lo-amt.is-off { color: #0F9B6E; }
+  .pt-lo-bill .pt-lo-total td {
+    font-weight: 600;
+    border-bottom: none;
+    padding-top: 11px;
+  }
+  .pt-lo-bill .pt-lo-saved td {
+    border-bottom: none;
+    padding-top: 2px;
+    font-size: 12.5px;
+    color: #0F9B6E;
+  }
+
   .pt-fam-head {
     display: flex;
     align-items: center;
@@ -3413,6 +3613,90 @@ require __DIR__ . '/partials/header.php';
             });
           } catch (e) {
             return d;
+          }
+        },
+      },
+
+      // ---- Lab bookings (orders placed through the lab storefront) ----
+      // Distinct from `labs` below, which is the patient's uploaded results vault.
+      labOrders: {
+        loaded: false,
+        loading: false,
+        items: [],
+        openId: null,
+        detail: null,
+        detailLoading: false,
+        cancelling: false,
+        error: '',
+
+        async loadOnce() {
+          if (this.loaded) return;
+          await this.load();
+        },
+        async load() {
+          this.loading = true;
+          try {
+            const r = await fetch('/api/patient_lab_orders.php', { credentials: 'same-origin' });
+            const j = await r.json();
+            this.items = j.ok ? (j.items || []) : [];
+          } catch (e) {
+            this.items = [];
+          } finally {
+            this.loading = false;
+            this.loaded = true;
+          }
+        },
+
+        // Accordion: clicking the open row closes it. Detail is fetched on
+        // demand rather than with the list — the list view never needs the
+        // bill lines, and most patients only open one booking.
+        async open(o) {
+          this.error = '';
+          if (this.openId === o.id) {
+            this.openId = null;
+            this.detail = null;
+            return;
+          }
+          this.openId = o.id;
+          this.detail = null;
+          this.detailLoading = true;
+          try {
+            const r = await fetch('/api/patient_lab_orders.php?action=detail&id=' + encodeURIComponent(o.id), {
+              credentials: 'same-origin'
+            });
+            const j = await r.json();
+            this.detail = j.ok ? j.order : null;
+            if (!j.ok) this.error = 'Could not load this booking.';
+          } catch (e) {
+            this.error = 'Could not load this booking.';
+          } finally {
+            this.detailLoading = false;
+          }
+        },
+
+        async cancel(o) {
+          if (!confirm('Cancel this lab booking? This cannot be undone.')) return;
+          this.cancelling = true;
+          this.error = '';
+          try {
+            const r = await fetch('/api/patient_lab_orders.php?action=cancel', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              body: JSON.stringify({ id: o.id })
+            });
+            const j = await r.json();
+            if (!j.ok) {
+              this.error = j.message || 'Could not cancel this booking.';
+              return;
+            }
+            this.openId = null;
+            this.detail = null;
+            await this.load();
+          } catch (e) {
+            this.error = 'Network error — please try again.';
+          } finally {
+            this.cancelling = false;
           }
         },
       },
