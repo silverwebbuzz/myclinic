@@ -2928,11 +2928,108 @@ require __DIR__ . '/partials/header.php';
     .pt-navmenu button {
       position: relative;
     }
+
+    /* The nav scrolls horizontally but gave no sign of it, so with 7 tabs the
+       last ones (Lab bookings, My Profile) were simply invisible — the menu
+       looked broken. Snap points + a fade on the right edge make the overflow
+       discoverable, and momentum scrolling makes it feel native. */
+    .pt-navmenu {
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x proximity;
+      scrollbar-width: none;
+      /* Fades the right edge only while there is more to scroll to. */
+      -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
+      mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%);
+    }
+
+    .pt-navmenu::-webkit-scrollbar {
+      display: none;
+    }
+
+    .pt-navmenu button {
+      scroll-snap-align: start;
+      flex: 0 0 auto;
+      min-width: 72px;
+    }
+
+    /* Card headers: let the name/actions wrap instead of overflowing the card
+       on a narrow screen. */
+    .pt-fam-head {
+      flex-wrap: wrap;
+      row-gap: 10px;
+      padding: 12px 14px;
+    }
+
+    .pt-fam-id {
+      min-width: 0;
+      flex: 1 1 100%;
+      order: 2;
+    }
+
+    .pt-fam-avatar {
+      order: 1;
+    }
+
+    .pt-fam-actions {
+      order: 3;
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* Long package names and refs must wrap, never force the card wide. */
+    .pt-fam-name,
+    .pt-fam-rel {
+      overflow-wrap: anywhere;
+    }
+
+    /* Lab-booking detail: single column, and the bill can scroll if it must. */
+    .pt-lo-grid {
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .pt-lo-detail {
+      padding: 14px;
+    }
+
+    .pt-lo-detail p {
+      overflow-wrap: anywhere;
+    }
   }
 
   @media (max-width: 600px) {
     .patient-page {
       padding: 24px 0 60px;
+      /* Nothing in the panel should scroll the page sideways; a single wide
+         child (long email, bill table) used to drag the whole layout. */
+      overflow-x: hidden;
+    }
+
+    /* 24px of side padding on a 360px screen is ~13% of the width. */
+    .pt-tab-pane {
+      padding: 18px 14px 20px;
+    }
+
+    .pt-section-head {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* The bill's label column wraps rather than forcing the card wide; the
+       amount column stays on one line so figures never break mid-number. */
+    .pt-lo-bill {
+      table-layout: fixed;
+      width: 100%;
+    }
+
+    .pt-lo-bill td:first-child {
+      overflow-wrap: anywhere;
+    }
+
+    .pt-lo-amt {
+      width: 34%;
     }
 
     .pt-card {

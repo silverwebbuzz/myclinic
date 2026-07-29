@@ -9597,10 +9597,11 @@ body {
 .store-toast {
   position: fixed;
   left: 50%;
-  /* Clears the fixed booking bar on lab detail pages (.ldp-sticky, ~72px).
-     At the old 28px the toast rendered behind it and messages were invisible,
-     which made a rejected form submit look like a dead click. */
-  bottom: 96px;
+  /* Clears the fixed booking bar on lab detail pages (.ldp-sticky) plus the
+     iOS home indicator. At the old 28px the toast rendered behind the bar and
+     messages were invisible, which made a rejected submit look like a dead
+     click. Errors also show inline now (#ldpBfFormError); this is the backup. */
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   transform: translate(-50%, 24px);
   background: var(--ink-2);
   color: #fff;
@@ -14866,6 +14867,14 @@ body {
   display: none;
 }
 
+/* Keep the form's own submit button (and the error box above it) clear of the
+   fixed sticky bar when scrolled to — otherwise the browser can land them
+   underneath it, where taps hit the sticky anchor instead. */
+.ldp-bf-submit,
+.ldp-bf-formerror {
+  scroll-margin-bottom: 160px;
+}
+
 /* Phone field: fixed, non-editable +91 so the input holds exactly the 10
    national digits (the old free-text field silently truncated "+91…"). */
 .ldp-bf-phone {
@@ -14900,6 +14909,13 @@ body {
   border: none;
   outline: none;
   background: transparent;
+}
+
+.ldp-bf-loginnote {
+  margin: 8px 16px 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--mute);
 }
 
 .ldp-bf-phone-hint,
@@ -16506,11 +16522,35 @@ body {
   .ldp-sticky-actions .ldp-btn {
     flex: 1;
   }
+
+  /* Keep the bar clear of the iOS home indicator. */
+  .ldp-sticky {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* The blurb is the first thing to go when height is scarce — the price and
+     the button are what matter, and the same copy is already on the page. */
+  .ldp-sticky-inner > p {
+    display: none;
+  }
+
+  .ldp-sticky-inner {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+  }
 }
 
 @media (max-width: 640px) {
+  /* The sticky bar becomes a stacked column here (price row + full-width
+     button), so it is ~130px tall — taller than the 140px that used to be
+     reserved once safe-area insets are added on iOS. Too little clearance and
+     the form's own "Book Now" button sits UNDER the bar: taps land on the
+     sticky anchor instead, which just re-scrolls to the form. That is why
+     booking appeared to do nothing on a phone. */
   .ldp-body {
-    padding-bottom: 140px;
+    padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px));
   }
 
   .ldp-hero-perks {

@@ -713,14 +713,24 @@ require __DIR__ . '/partials/header.php';
                                 <span class="ldp-bf-user-badge"><i class="fi fi-rr-check" aria-hidden="true"></i> Logged in</span>
                             </div>
                             <?php else: ?>
+                            <?php // Booking requires an account (the server enforces it too),
+                                  // and logging in reloads the page — so say so BEFORE the
+                                  // patient fills 10 fields. Their entries are also saved and
+                                  // restored across that reload, but not starting over at all
+                                  // is the better outcome. ?>
                             <button type="button" class="ldp-bf-login" id="ldpBfLogin" data-auth-reason="lab_book">
                                 <span class="ldp-bf-login-ico" aria-hidden="true"><i class="fi fi-rr-user"></i></span>
                                 <span class="ldp-bf-login-txt">
-                                    <strong>Login / Sign up</strong>
-                                    <small>Login to unlock extra discount</small>
+                                    <strong>Login / Sign up to book</strong>
+                                    <small>Takes 30 seconds — unlocks your member discount</small>
                                 </span>
                                 <span class="ldp-bf-login-arrow" aria-hidden="true"><i class="fi fi-rr-angle-right"></i></span>
                             </button>
+                            <p class="ldp-bf-loginnote">
+                                An account is required to book — it keeps your reports and
+                                booking history in one place. We’ll save anything you’ve
+                                already typed.
+                            </p>
                             <?php endif; ?>
 
                             <div class="ldp-bf-pingate" id="ldpBfPinGate">
@@ -1601,6 +1611,7 @@ require __DIR__ . '/partials/header.php';
 
     // ── Add-more-tests search picker ──────────────────────────────────────
     var resetAddons = function () {};   // assigned by the picker IIFE below
+    var addTestById = function () {};   // ditto — used to restore a saved draft
     (function initAddonSearch() {
         var input   = document.getElementById('ldpAddonInput');
         var results = document.getElementById('ldpAddonResults');
@@ -1734,6 +1745,9 @@ require __DIR__ . '/partials/header.php';
             input.value = '';
             closeResults();
         };
+
+        // Lets restoreDraft() re-add the tests the patient had picked.
+        addTestById = addTest;
     })();
 
     // Normalise as they type/paste so "+91 98765 43210" becomes "9876543210"
@@ -1758,9 +1772,111 @@ require __DIR__ . '/partials/header.php';
         });
     }
 
-    // Note: on a successful OTP login the shared auth modal calls location.reload()
-    // itself, so the page re-renders server-side with the logged-in state (identity
-    // chip + coupon unlocked). No client-side DOM swap is needed here.
+    // ── Surviving the login reload ──────────────────────────────────────
+    // The shared auth modal calls location.reload() after a successful OTP so
+    // the page re-renders logged-in (identity chip + coupon unlocked). That
+    // wiped everything the patient had typed — they came back to an empty form
+    // and had to start again, which is exactly when people give up.
+    //
+    // So: snapshot the form to sessionStorage before any reload that we can
+    // see coming, and restore it on load. sessionStorage (not local) because
+    // this is one tab's in-progress booking, and it holds a name, phone,
+    // address and health choices — it should not outlive the tab.
+    var DRAFT_KEY = 'ecp_lab_draft_' + (form.getAttribute('data-pkg-slug') || '');
+
+    function saveDraft() {
+        try {
+            var names = [], ages = [], genders = [];
+            form.querySelectorAll('input[name="beneficiary_name[]"]').forEach(function (el) { names.push(el.value); });
+            form.querySelectorAll('input[name="beneficiary_age[]"]').forEach(function (el) { ages.push(el.value); });
+            form.querySelectorAll('select[name="beneficiary_gender[]"]').forEach(function (el) { genders.push(el.value); });
+
+            var addons = [];
+            form.querySelectorAll('input[name="addons[]"]:checked').forEach(function (cb) { addons.push(cb.value); });
+
+            var v = function (id) { var el = document.getElementById(id); return el ? el.value : ''; };
+            sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
+                t: Date.now(),
+                pincode: v('ldpBfPincode'), city: v('ldpBfCity'), state: v('ldpBfState'),
+                email: v('ldpBfEmail'), phone: v('ldpBfPhone'), address: v('ldpBfAddress'),
+                date: v('ldpBfDate'), slot: v('ldpBfTime'), notes: v('ldpBfNotes'),
+                hard: !!(hardCopy && hardCopy.checked),
+                persons: persons(), names: names, ages: ages, genders: genders,
+                addons: addons, pinOk: pinOk
+            }));
+        } catch (e) {}
+    }
+
+    function clearDraft() {
+        try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) {}
+    }
+
+    function restoreDraft() {
+        var raw = null;
+        try { raw = sessionStorage.getItem(DRAFT_KEY); } catch (e) { return; }
+        if (!raw) return;
+
+        var d;
+        try { d = JSON.parse(raw); } catch (e) { clearDraft(); return; }
+        // Stale drafts are worse than none: prices and slots move on.
+        if (!d || !d.t || (Date.now() - d.t) > 60 * 60 * 1000) { clearDraft(); return; }
+
+        var set = function (id, val) {
+            var el = document.getElementById(id);
+            if (el && val) el.value = val;
+        };
+
+        // Rebuild the beneficiary rows first so their inputs exist to fill.
+        if (d.persons && d.persons > 1) setPersons(d.persons);
+
+        (d.names || []).forEach(function (v, i) {
+            var el = form.querySelectorAll('input[name="beneficiary_name[]"]')[i];
+            if (el) el.value = v;
+        });
+        (d.ages || []).forEach(function (v, i) {
+            var el = form.querySelectorAll('input[name="beneficiary_age[]"]')[i];
+            if (el) el.value = v;
+        });
+        (d.genders || []).forEach(function (v, i) {
+            var el = form.querySelectorAll('select[name="beneficiary_gender[]"]')[i];
+            if (el) el.value = v;
+        });
+
+        set('ldpBfPincode', d.pincode);
+        set('ldpBfEmail', d.email);
+        set('ldpBfPhone', d.phone);
+        set('ldpBfAddress', d.address);
+        set('ldpBfTime', d.slot);
+        set('ldpBfNotes', d.notes);
+        if (hardCopy) hardCopy.checked = !!d.hard;
+
+        // Only restore a date that is still inside the (re-derived) window.
+        if (d.date && d.date >= bookMinDate && d.date <= bookMaxDate) {
+            set('ldpBfDate', d.date);
+        }
+
+        (d.addons || []).forEach(function (id) { addTestById(id); });
+
+        // Re-run the real pincode check rather than trusting the stored flag —
+        // it is what unlocks the form, and serviceability may have changed.
+        if (d.pinOk && d.pincode) {
+            checkPincode();
+        }
+
+        updateTotals();
+        clearDraft();
+    }
+
+    // Save before the auth modal reloads the page, and on any unload.
+    window.addEventListener('ecp:open-auth', saveDraft);
+    window.addEventListener('beforeunload', function () {
+        // Don't resurrect a form the patient already submitted successfully.
+        if (!document.getElementById('ldpBfSuccess') ||
+            document.getElementById('ldpBfSuccess').hidden) {
+            saveDraft();
+        }
+    });
+    if (loginBtn) loginBtn.addEventListener('click', saveDraft);
 
     // Highlight focused fields (as in reference)
     form.querySelectorAll('input, select, textarea').forEach(function (el) {
@@ -1908,6 +2024,7 @@ require __DIR__ . '/partials/header.php';
                   + 'Please save your reference number below.');
 
             clearFormError();
+            clearDraft();   // the booking is placed; never restore it again
             resetForm();
 
             if (card) card.hidden = true;
@@ -1982,6 +2099,7 @@ require __DIR__ . '/partials/header.php';
     syncBeneficiaries();
     updateTotals();
     setFormLocked(true); // gate everything until a serviceable pincode is confirmed
+    restoreDraft();      // bring back anything typed before a login reload
 })();
 </script>
 
