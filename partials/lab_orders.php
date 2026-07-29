@@ -26,8 +26,9 @@ const ECP_LAB_MAX_PERSONS = 10;
 // ECP_LAB_HARDCOPY_FEE / ECP_LAB_COLLECTION_* come from lab_catalog.php, so the
 // form, the browser totals and this repricing all read the same numbers.
 
-/** How far ahead a collection slot may be booked. */
-const ECP_LAB_MAX_ADVANCE_DAYS = 60;
+// The bookable date window (never same-day, 19:00 IST cut-off, 7-day span)
+// comes from ecp_lab_booking_window() in lab_catalog.php, so the date picker
+// and this validation always agree.
 
 /** Rupees (int) from paise. Every amount is whole rupees today. */
 function ecp_lab_rupees(int $paise): string
@@ -305,13 +306,17 @@ function ecp_lab_order_create(int $identityId, array $in): array
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         return $fail('Enter a valid email address.');
     }
+    // Mirrors normalisePhone() in lab-detail.php: strip a +91/91 country code
+    // or a leading 0, keep the 10 national digits. Only strips when what's left
+    // is still plausible, so a real number starting "91…" survives untouched.
     $phone = preg_replace('/\D/', '', (string) ($in['phone'] ?? '')) ?? '';
-    // Strip a leading 91 country code so "+91 98…" and "98…" both validate.
     if (strlen($phone) === 12 && str_starts_with($phone, '91')) {
         $phone = substr($phone, 2);
+    } elseif (strlen($phone) === 11 && str_starts_with($phone, '0')) {
+        $phone = substr($phone, 1);
     }
     if (!preg_match('/^[6-9][0-9]{9}$/', $phone)) {
-        return $fail('Enter a valid 10-digit mobile number.');
+        return $fail('Enter a valid 10-digit mobile number (without +91).');
     }
 
     $pincode = preg_replace('/\D/', '', (string) ($in['pincode'] ?? '')) ?? '';
@@ -362,12 +367,22 @@ function ecp_lab_order_create(int $identityId, array $in): array
     if (!$d || $d->format('Y-m-d') !== $dateRaw) {
         return $fail('Select a valid appointment date.');
     }
-    $today = new DateTimeImmutable('today');
-    if ($d < $today) {
-        return $fail('Appointment date cannot be in the past.');
+    // Collection window: never same-day, and after the 19:00 IST cut-off
+    // tomorrow closes too. Enforced here (not just in the date picker) because
+    // a stale tab left open past 19:00 would otherwise post a slot the lab can
+    // no longer staff.
+    [$minDate, $maxDate] = ecp_lab_booking_window();
+    if ($dateRaw < $minDate) {
+        return $fail(
+            $minDate === (new DateTimeImmutable('tomorrow', new DateTimeZone('Asia/Kolkata')))->format('Y-m-d')
+                ? 'Home collection starts from tomorrow. Please pick a later date.'
+                : 'Bookings after ' . ECP_LAB_CUTOFF_HOUR_IST . ':00 IST start from '
+                  . date('D, d M Y', strtotime($minDate) ?: time()) . '. Please pick a later date.'
+        );
     }
-    if ($d > $today->modify('+' . ECP_LAB_MAX_ADVANCE_DAYS . ' days')) {
-        return $fail('Please choose a date within the next ' . ECP_LAB_MAX_ADVANCE_DAYS . ' days.');
+    if ($dateRaw > $maxDate) {
+        return $fail('Please choose a date within the next ' . ECP_LAB_BOOKING_WINDOW_DAYS . ' days (up to '
+            . date('D, d M Y', strtotime($maxDate) ?: time()) . ').');
     }
 
     $slot = trim((string) ($in['time_slot'] ?? ''));

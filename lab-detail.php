@@ -313,6 +313,11 @@ $bookTimeSlots = [
 // this page already is, so a /lab/test/... page can't offer to add itself.
 $addonTests = ecp_lab_addon_tests(200, $type === 'test' ? $slug : '');
 
+// Bookable collection window: never same-day, 19:00 IST cut-off drops tomorrow
+// too, 7 days wide. Rendered into the date input's min/max AND re-derived in
+// JS so a long-open tab corrects itself. Server re-validates on submit.
+[$bookMinDate, $bookMaxDate] = ecp_lab_booking_window();
+
 $extraHead = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@flaticon/flaticon-uicons@3.3.1/css/regular/rounded.css">';
 
 require __DIR__ . '/partials/header.php';
@@ -643,7 +648,38 @@ require __DIR__ . '/partials/header.php';
 
             <?php if ($isPkg && $pkgPriceNum > 0): ?>
             <aside class="ldp-aside" id="ldpBookForm" aria-label="Book this package">
-                <div class="ldp-bf">
+                <?php // Success panel: replaces the form once a booking is stored, so the
+                      // outcome is unmissable and the reference number is on screen to
+                      // quote. A toast alone was invisible behind the sticky bar. ?>
+                <div class="ldp-bf-success" id="ldpBfSuccess" hidden role="status" aria-live="polite">
+                    <div class="ldp-bf-success-ico" aria-hidden="true"><i class="fi fi-rr-check"></i></div>
+                    <h2 class="ldp-bf-success-title">Booking request received</h2>
+                    <p class="ldp-bf-success-sub" id="ldpBfSuccessSub"></p>
+
+                    <div class="ldp-bf-success-ref">
+                        <span class="ldp-bf-success-ref-label">Your reference</span>
+                        <strong id="ldpBfSuccessRef"></strong>
+                    </div>
+
+                    <dl class="ldp-bf-success-meta">
+                        <div><dt>Package</dt><dd id="ldpBfSuccessPkg"></dd></div>
+                        <div><dt>Collection</dt><dd id="ldpBfSuccessWhen"></dd></div>
+                        <div><dt>Total payable</dt><dd id="ldpBfSuccessTotal"></dd></div>
+                    </dl>
+
+                    <ol class="ldp-bf-success-steps">
+                        <li>We confirm your slot and send a payment link.</li>
+                        <li>A trained phlebotomist collects your sample at home.</li>
+                        <li>Your report is emailed and saved to your account.</li>
+                    </ol>
+
+                    <div class="ldp-bf-success-actions">
+                        <a class="ldp-btn ldp-btn-primary" href="/patient#laborders">View my bookings</a>
+                        <button type="button" class="ldp-btn ldp-btn-ghost" id="ldpBfBookAnother">Book another test</button>
+                    </div>
+                </div>
+
+                <div class="ldp-bf" id="ldpBfCard">
                     <header class="ldp-bf-head">
                         <h2>Book This Package</h2>
                     </header>
@@ -738,7 +774,19 @@ require __DIR__ . '/partials/header.php';
                             <input type="email" id="ldpBfEmail" name="email" placeholder="Email" required autocomplete="email">
 
                             <label class="ldp-bf-label" for="ldpBfPhone">Phone</label>
-                            <input type="tel" id="ldpBfPhone" name="phone" placeholder="Phone" required inputmode="tel" maxlength="10" pattern="[6-9][0-9]{9}" autocomplete="tel">
+                            <?php // Fixed "+91" prefix rather than a free-text field: the old
+                                  // input had maxlength="10" AND pattern="[6-9][0-9]{9}", so
+                                  // anyone typing "+91…" silently lost the last digits and
+                                  // could never submit. The country code is now display-only
+                                  // and the field holds exactly the 10 national digits. ?>
+                            <div class="ldp-bf-phone">
+                                <span class="ldp-bf-phone-cc" aria-hidden="true">+91</span>
+                                <input type="tel" id="ldpBfPhone" name="phone" placeholder="10-digit mobile number"
+                                       required inputmode="numeric" maxlength="10"
+                                       pattern="[6-9][0-9]{9}" autocomplete="tel-national"
+                                       aria-describedby="ldpBfPhoneHint">
+                            </div>
+                            <p class="ldp-bf-phone-hint" id="ldpBfPhoneHint">Enter the 10 digits only — we add +91 for you.</p>
 
                             <label class="ldp-bf-label" for="ldpBfAddress">Complete Address</label>
                             <textarea id="ldpBfAddress" name="address" rows="3" placeholder="Complete Address" required autocomplete="street-address"></textarea>
@@ -749,7 +797,9 @@ require __DIR__ . '/partials/header.php';
                             <label class="ldp-bf-label">Preferred Date &amp; Time</label>
                             <div class="ldp-bf-datetime">
                                 <div class="ldp-bf-icon-field">
-                                    <input type="date" id="ldpBfDate" name="appointment_date" required aria-label="Select Preferred Appointment Date">
+                                    <input type="date" id="ldpBfDate" name="appointment_date" required
+                                           min="<?= e($bookMinDate) ?>" max="<?= e($bookMaxDate) ?>"
+                                           aria-label="Select Preferred Appointment Date">
                                     <span class="ldp-bf-ico" aria-hidden="true"><i class="fi fi-rr-calendar"></i></span>
                                 </div>
                                 <div class="ldp-bf-select-wrap ldp-bf-icon-field">
@@ -762,6 +812,14 @@ require __DIR__ . '/partials/header.php';
                                     <span class="ldp-bf-ico" aria-hidden="true"><i class="fi fi-rr-clock"></i></span>
                                 </div>
                             </div>
+                            <?php // Says WHY earlier dates aren't offered, so a patient looking
+                                  // for "today" isn't left guessing. Rewritten by JS if the
+                                  // cut-off passes while the page is open. ?>
+                            <p class="ldp-bf-datehint" id="ldpBfDateHint">
+                                Collection starts <?= e(date('D, d M', strtotime($bookMinDate) ?: time())) ?>.
+                                Book up to <?= e(date('D, d M', strtotime($bookMaxDate) ?: time())) ?>.
+                                Orders placed after <?= (int) ECP_LAB_CUTOFF_HOUR_IST ?>:00 IST start from the following day.
+                            </p>
 
                             <ol class="ldp-bf-notes-list">
                                 <li>Appointment confirmation and Technician details will be provided to you through Email &amp; WhatsApp/SMS well in advance.</li>
@@ -838,6 +896,11 @@ require __DIR__ . '/partials/header.php';
                             </label>
                         </div>
 
+                        <?php // Inline error, right above the button that triggers it. The
+                              // old code only used a bottom-fixed toast, which this page's
+                              // sticky bar covers — so failures looked like dead clicks. ?>
+                        <p class="ldp-bf-formerror" id="ldpBfFormError" role="alert" hidden></p>
+
                         <button type="submit" class="ldp-bf-submit">
                             <span class="ldp-bf-submit-label">Book Now</span>
                             <span class="ldp-bf-submit-save" id="ldpBfSubmitSave" hidden></span>
@@ -885,6 +948,16 @@ require __DIR__ . '/partials/header.php';
                                 <span>Total Amount</span>
                                 <strong id="ldpBfSumTotal">₹<?= number_format($pkgPriceNum) ?></strong>
                             </div>
+
+                            <?php // The one savings figure, with the base it was measured
+                                  // against. The "Save ₹X" button, the sticky "% OFF" badge
+                                  // and this row all read from listValue/discount in
+                                  // updateTotals(), so they cannot disagree. ?>
+                            <div class="ldp-bf-row ldp-bf-row-saved" id="ldpBfSumSavedRow" hidden>
+                                <span>You save</span>
+                                <span class="ldp-bf-val" id="ldpBfSumSaved">₹0</span>
+                            </div>
+                            <p class="ldp-bf-savednote" id="ldpBfSumSavedNote" hidden></p>
                             <?php // Stated where the money is, not just in the FAQ — the
                                   // fee/discount interaction is the most likely source of a
                                   // "why is my total higher?" support ticket. ?>
@@ -972,13 +1045,116 @@ require __DIR__ . '/partials/header.php';
     var couponsWrap = document.getElementById('ldpBfCoupons');
     var pinOk = false;
 
+    // ── Collection date window ──────────────────────────────────────────
+    // Never same-day; after 19:00 IST tomorrow closes too; 7 days wide.
+    // Seeded from PHP (authoritative, always IST) and recomputed in the browser
+    // so a tab left open overnight — or across the cut-off — corrects itself
+    // instead of offering a slot the server will reject.
+    var bookMinDate = <?= json_encode($bookMinDate) ?>;
+    var bookMaxDate = <?= json_encode($bookMaxDate) ?>;
+    var CUTOFF_HOUR_IST = <?= (int) ECP_LAB_CUTOFF_HOUR_IST ?>;
+    var WINDOW_DAYS = <?= (int) ECP_LAB_BOOKING_WINDOW_DAYS ?>;
+
+    function ymd(d) {
+        return d.getUTCFullYear() + '-'
+            + String(d.getUTCMonth() + 1).padStart(2, '0') + '-'
+            + String(d.getUTCDate()).padStart(2, '0');
+    }
+
+    // "Now" as an IST wall-clock instant, independent of the device timezone.
+    function istNow() {
+        return new Date(Date.now() + 5.5 * 3600 * 1000);
+    }
+
+    function refreshDateWindow() {
+        var ist = istNow();
+        var daysAhead = ist.getUTCHours() >= CUTOFF_HOUR_IST ? 2 : 1;
+
+        var min = new Date(ist.getTime());
+        min.setUTCHours(0, 0, 0, 0);
+        min.setUTCDate(min.getUTCDate() + daysAhead);
+
+        var max = new Date(min.getTime());
+        max.setUTCDate(max.getUTCDate() + (WINDOW_DAYS - 1));
+
+        bookMinDate = ymd(min);
+        bookMaxDate = ymd(max);
+
+        if (dateInput) {
+            dateInput.min = bookMinDate;
+            dateInput.max = bookMaxDate;
+            // Drop a selection that just fell out of the window (e.g. the page
+            // was open when the cut-off passed).
+            if (dateInput.value && (dateInput.value < bookMinDate || dateInput.value > bookMaxDate)) {
+                dateInput.value = '';
+            }
+        }
+
+        var hint = document.getElementById('ldpBfDateHint');
+        if (hint) {
+            var fmt = function (iso) {
+                var parts = iso.split('-');
+                var d = new Date(Date.UTC(+parts[0], +parts[1] - 1, +parts[2]));
+                return d.toLocaleDateString('en-IN', {
+                    weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC'
+                });
+            };
+            hint.textContent = 'Collection starts ' + fmt(bookMinDate)
+                + '. Book up to ' + fmt(bookMaxDate)
+                + '. Orders placed after ' + CUTOFF_HOUR_IST + ':00 IST start from the following day.';
+        }
+        return bookMinDate;
+    }
+
     if (dateInput) {
-        var t = new Date();
-        dateInput.min = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+        refreshDateWindow();
+        // Re-check when the tab regains focus — the common way a stale window
+        // gets used is leaving the page open and coming back later.
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) refreshDateWindow();
+        });
     }
 
     function persons() {
         return Math.max(1, Math.min(10, parseInt((personsInput && personsInput.value) || '1', 10) || 1));
+    }
+
+    // ── Phone normalisation ─────────────────────────────────────────────
+    // Indians type their number every which way: "+91 98765 43210",
+    // "091-9876543210", "9876543210". Reduce all of them to the 10 national
+    // digits. Only strips a leading 91 when what remains is a plausible mobile
+    // (12 digits total), so a genuine number that happens to start "91…" is
+    // left alone.
+    function normalisePhone(raw) {
+        var d = String(raw || '').replace(/\D/g, '');
+        if (d.length === 12 && d.indexOf('91') === 0) d = d.slice(2);
+        else if (d.length === 11 && d.charAt(0) === '0') d = d.slice(1);
+        return d.slice(0, 10);
+    }
+
+    // ── Inline form errors ──────────────────────────────────────────────
+    // The old code used showToast(), which renders fixed at the bottom of the
+    // viewport — directly behind the sticky "Book Now" bar on this page. The
+    // message was effectively invisible, so a rejected submit looked like
+    // nothing happening at all. Errors now appear in the form, next to the
+    // button that was pressed, and the offending field is scrolled into view.
+    var errBox = document.getElementById('ldpBfFormError');
+
+    function clearFormError() {
+        if (errBox) { errBox.hidden = true; errBox.textContent = ''; }
+    }
+
+    function formError(msg, focusEl) {
+        if (errBox) {
+            errBox.textContent = msg;
+            errBox.hidden = false;
+            try { errBox.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {}
+        }
+        if (focusEl) {
+            try { focusEl.focus({ preventScroll: true }); } catch (e) { focusEl.focus(); }
+        }
+        // Keep the toast as a secondary channel for anyone who missed the box.
+        showToast(msg);
     }
 
     function personBlockHtml(n) {
@@ -1180,7 +1356,9 @@ require __DIR__ . '/partials/header.php';
         if (couponMsg) {
             couponMsg.hidden = false;
             couponMsg.className = 'ldp-bf-coupon-msg is-ok';
-            couponMsg.textContent = 'Coupon ' + code + ' applied: ' + pct + '% off';
+            // "on this package", not a blanket promise: added tests carry their
+            // own lower ceilings and are discounted at those rates.
+            couponMsg.textContent = 'Coupon ' + code + ' applied: ' + pct + '% off this package';
         }
         updateTotals();
     }
@@ -1233,13 +1411,25 @@ require __DIR__ . '/partials/header.php';
         if (collectionOnDiscounted) orderValue -= couponOff;
         var collection = (collectionMin > 0 && orderValue < collectionMin) ? collectionFee : 0;
 
-        // FEES ARE NEVER DISCOUNTED. couponOff is derived from pkgLine alone, so
-        // adding `collection` and `hard` here — after the subtraction — means the
-        // ₹200 and the ₹75 are always paid in full regardless of any coupon.
+        // FEES ARE NEVER DISCOUNTED. couponOff comes from the discountable lines
+        // only, so adding `collection` and `hard` here — after the subtraction —
+        // means the ₹200 and the ₹75 are always paid in full.
         var total = Math.max(0, pkgLine + addons - couponOff + collection + hard);
         lastTotal = total;
 
-        // Package MRP/discount widgets (if the compact price card is present).
+        // ── One savings figure, one base ────────────────────────────────
+        // These three numbers used to be measured against three different
+        // bases, which is why an order could show "25% off", "Save ₹6,842" and
+        // "31% OFF" all at once and look broken:
+        //   - the chip advertised the coupon's headline rate
+        //   - "Save" added the MRP markdown on top of the coupon
+        //   - the sticky % divided that by the PACKAGE mrp, ignoring add-ons
+        //
+        // Now everything derives from the same pair: `listValue` (what the whole
+        // order would cost undiscounted) and `discount` (what came off it), so
+        // savings ÷ listValue is the percentage actually shown everywhere.
+        // Fees are excluded from both — they're never discountable.
+        var listValue = Math.max(mrpLine, pkgLine) + addons;
         var discount = (mrpLine - pkgLine) + couponOff;
         var elMrp = document.getElementById('ldpBfMrp');
         var elDisc = document.getElementById('ldpBfDiscount');
@@ -1321,7 +1511,23 @@ require __DIR__ . '/partials/header.php';
         var discLbl = document.getElementById('ldpBfSumDiscountLabel');
         var discVal = document.getElementById('ldpBfSumDiscount');
         if (discRow) discRow.hidden = (couponOff <= 0);
-        if (discLbl && appliedCouponCode) discLbl.textContent = 'Discount (' + appliedCouponCode + ')';
+        if (discLbl && appliedCouponCode) {
+            // Say "up to X%" when the order mixes ceilings, so the row never
+            // claims a flat rate the amount beside it doesn't match. (₹5,579 on
+            // a ₹23k order is not 25% of everything — the add-ons were capped
+            // lower — and labelling it "25%" is what made the bill look wrong.)
+            var rates = [];
+            if (pkgLine > 0 && Math.min(couponHeadlinePct, pkgMaxPct) > 0) {
+                rates.push(Math.min(couponHeadlinePct, pkgMaxPct));
+            }
+            items.forEach(function (it) {
+                var r = Math.min(couponHeadlinePct, it.maxPct || 0);
+                if (r > 0 && rates.indexOf(r) === -1) rates.push(r);
+            });
+            var mixed = rates.length > 1;
+            discLbl.textContent = 'Discount (' + appliedCouponCode
+                + (mixed ? ', up to ' + Math.max.apply(null, rates) + '%' : '') + ')';
+        }
         if (discVal) discVal.textContent = '- ' + formatInr(couponOff);
 
         var elSumTotal = document.getElementById('ldpBfSumTotal');
@@ -1329,29 +1535,36 @@ require __DIR__ . '/partials/header.php';
         if (elSumTotal) elSumTotal.textContent = formatInr(total);
         if (elStickyTotal) elStickyTotal.textContent = formatInr(total);
 
-        // Sticky "% OFF" badge. It was rendered once from PHP using only the
-        // Thyrocare MRP-vs-offer margin, which is 0 on many products — so it
-        // showed a stale "0% OFF" even after a coupon cut the price. Recompute
-        // it from the SAME numbers as the total (MRP markdown + coupon) and
-        // hide it entirely when there is nothing to boast about.
+        // Sticky "% OFF" badge — savings over the WHOLE order's list value, the
+        // same base as the "Save ₹X" button, so the two can never disagree.
+        var saved = Math.max(0, discount);
+        var savedPct = listValue > 0 ? Math.round((saved / listValue) * 100) : 0;
+
         var elStickyOff = document.getElementById('ldpStickyOff');
         if (elStickyOff) {
-            var base = mrpLine > 0 ? mrpLine : pkgLine;
-            var pct  = base > 0 ? Math.round((Math.max(0, discount) / base) * 100) : 0;
-            elStickyOff.textContent = pct + '% OFF';
-            elStickyOff.hidden = (pct <= 0);
+            elStickyOff.textContent = savedPct + '% OFF';
+            elStickyOff.hidden = (savedPct <= 0);
         }
 
-        // "Save ₹X" on the Book Now button — total savings = MRP markdown + coupon.
+        // "Save ₹X" on the Book Now button.
         var elSave = document.getElementById('ldpBfSubmitSave');
         if (elSave) {
-            var saved = Math.max(0, discount);
-            if (saved > 0) {
-                elSave.textContent = 'Save ' + formatInr(saved);
-                elSave.hidden = false;
-            } else {
-                elSave.hidden = true;
-            }
+            elSave.textContent = 'Save ' + formatInr(saved);
+            elSave.hidden = (saved <= 0);
+        }
+
+        // Savings line in the summary, stated with its base so "Save ₹6,842"
+        // is checkable rather than a number the patient has to take on trust.
+        var elSavedRow = document.getElementById('ldpBfSumSavedRow');
+        var elSavedVal = document.getElementById('ldpBfSumSaved');
+        var elSavedNote = document.getElementById('ldpBfSumSavedNote');
+        if (elSavedRow) elSavedRow.hidden = (saved <= 0);
+        if (elSavedVal) elSavedVal.textContent = formatInr(saved);
+        if (elSavedNote) {
+            elSavedNote.textContent = saved > 0
+                ? 'That’s ' + savedPct + '% off the ' + formatInr(listValue) + ' list price for this order.'
+                : '';
+            elSavedNote.hidden = (saved <= 0);
         }
     }
 
@@ -1523,6 +1736,19 @@ require __DIR__ . '/partials/header.php';
         };
     })();
 
+    // Normalise as they type/paste so "+91 98765 43210" becomes "9876543210"
+    // in place, instead of being truncated by maxlength into an invalid number.
+    var phoneField = document.getElementById('ldpBfPhone');
+    if (phoneField) {
+        var fixPhone = function () {
+            var cleaned = normalisePhone(phoneField.value);
+            if (phoneField.value !== cleaned) phoneField.value = cleaned;
+        };
+        phoneField.addEventListener('input', fixPhone);
+        phoneField.addEventListener('paste', function () { setTimeout(fixPhone, 0); });
+        phoneField.addEventListener('blur', fixPhone);
+    }
+
     var loginBtn = document.getElementById('ldpBfLogin');
     if (loginBtn) {
         loginBtn.addEventListener('click', function () {
@@ -1551,33 +1777,45 @@ require __DIR__ . '/partials/header.php';
 
         if (!pinOk) {
             checkPincode();
-            showToast('Please check pincode availability before booking.');
-            pinInput && pinInput.focus();
+            formError('Please check pincode availability before booking.', pinInput);
             return;
         }
         if (!dateInput || !dateInput.value) {
-            showToast('Please select preferred appointment date.');
-            dateInput && dateInput.focus();
+            formError('Please select preferred appointment date.', dateInput);
+            return;
+        }
+        // Re-derive the window at submit time: the cut-off may have passed
+        // while the form was being filled in.
+        refreshDateWindow();
+        if (!dateInput.value) {
+            formError('That date is no longer available. Collection now starts '
+                + bookMinDate + '. Please pick a new date.', dateInput);
+            return;
+        }
+        if (dateInput.value < bookMinDate || dateInput.value > bookMaxDate) {
+            formError('Please choose a collection date between ' + bookMinDate
+                + ' and ' + bookMaxDate + '.', dateInput);
             return;
         }
         var time = document.getElementById('ldpBfTime');
         if (!time || !time.value) {
-            showToast('Please select a time slot.');
-            time && time.focus();
+            formError('Please select a time slot.', time);
             return;
         }
+        // normalisePhone() strips a +91/91/0 prefix and keeps the 10 national
+        // digits — so "+919374249xx", "0937…" and "937…" all validate the same.
         var phone = document.getElementById('ldpBfPhone');
-        var phoneVal = ((phone && phone.value) || '').replace(/\D/g, '');
+        var phoneVal = normalisePhone(phone && phone.value);
         if (phone) phone.value = phoneVal;
         if (!/^[6-9][0-9]{9}$/.test(phoneVal)) {
-            showToast('Enter a valid 10-digit mobile number.');
-            phone && phone.focus();
+            formError('Enter a valid 10-digit mobile number (without +91).', phone);
             return;
         }
         if (!form.checkValidity()) {
             form.reportValidity();
             return;
         }
+        clearFormError();
 
         var pkgName = form.getAttribute('data-pkg-name') || 'Lab package';
 
@@ -1637,6 +1875,67 @@ require __DIR__ . '/partials/header.php';
         var submitLabel = form.querySelector('.ldp-bf-submit-label');
         var submitting = false;
 
+        // Swap the form for the confirmation panel. Capturing the slot text
+        // BEFORE resetForm() matters — the reset blanks the inputs we read.
+        function showSuccess(res) {
+            var whenDate = dateInput ? dateInput.value : '';
+            var whenSlot = (document.getElementById('ldpBfTime') || {}).value || '';
+            var whenText = whenDate
+                ? (function () {
+                    var p = whenDate.split('-');
+                    var dt = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+                    return dt.toLocaleDateString('en-IN', {
+                        weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC'
+                    }) + (whenSlot ? ' · ' + whenSlot : '');
+                })()
+                : whenSlot;
+
+            var panel = document.getElementById('ldpBfSuccess');
+            var card = document.getElementById('ldpBfCard');
+            var set = function (id, text) {
+                var el = document.getElementById(id);
+                if (el) el.textContent = text;
+            };
+
+            set('ldpBfSuccessRef', res.order_ref || '');
+            set('ldpBfSuccessPkg', pkgName);
+            set('ldpBfSuccessWhen', whenText);
+            set('ldpBfSuccessTotal', res.total || '');
+            set('ldpBfSuccessSub', res.email_sent
+                ? 'A confirmation has been emailed to ' + (res.email || 'your inbox')
+                  + '. We’ll call to confirm your slot and send a payment link.'
+                : 'We’ll call to confirm your slot and send a payment link. '
+                  + 'Please save your reference number below.');
+
+            clearFormError();
+            resetForm();
+
+            if (card) card.hidden = true;
+            if (panel) {
+                panel.hidden = false;
+                try { panel.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) {}
+            }
+
+            // The sticky bar still advertises "Book Now" for an order already
+            // placed — hide it so the confirmation is the only call to action.
+            var sticky = document.getElementById('ldpSticky');
+            if (sticky) sticky.hidden = true;
+        }
+
+        var bookAnother = document.getElementById('ldpBfBookAnother');
+        if (bookAnother) {
+            bookAnother.addEventListener('click', function () {
+                var panel = document.getElementById('ldpBfSuccess');
+                var card = document.getElementById('ldpBfCard');
+                var sticky = document.getElementById('ldpSticky');
+                if (panel) panel.hidden = true;
+                if (card) card.hidden = false;
+                if (sticky) sticky.hidden = false;
+                refreshDateWindow();
+                try { card.scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch (e) {}
+            });
+        }
+
         function send() {
             if (submitting) return;
             submitting = true;
@@ -1652,21 +1951,19 @@ require __DIR__ . '/partials/header.php';
             .then(function (r) { return r.json().catch(function () { return {}; }); })
             .then(function (res) {
                 if (res && res.ok) {
-                    showToast('Booking request received for “' + pkgName + '” · ' + res.order_ref
-                        + (res.email_sent ? '. Confirmation sent to ' + res.email + '.' : '. We’ll confirm shortly.'));
-                    resetForm();
+                    showSuccess(res);
                     return;
                 }
                 if (res && res.error === 'login_required') {
                     // Session expired between the gate and the POST.
                     window.dispatchEvent(new CustomEvent('ecp:open-auth', { detail: { reason: 'lab_book' } }));
-                    showToast('Please log in to complete your booking.');
+                    formError('Please log in to complete your booking.');
                     return;
                 }
-                showToast((res && res.message) || 'Could not save your booking. Please try again.');
+                formError((res && res.message) || 'Could not save your booking. Please try again.');
             })
             .catch(function () {
-                showToast('Network error — please check your connection and try again.');
+                formError('Network error — please check your connection and try again.');
             })
             .finally(function () {
                 submitting = false;

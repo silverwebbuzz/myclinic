@@ -504,6 +504,40 @@ function ecp_lab_db_search_index(int $testLimit = 150): array
 }
 
 /**
+ * Booking window for home collection, as [earliest, latest] Y-m-d.
+ *
+ * THE RULES (confirmed business logic — mirrored in lab-detail.php's JS):
+ *   - never same-day: the phlebotomist round is planned the evening before
+ *   - after the 19:00 IST cut-off, tomorrow is closed too, so the earliest
+ *     slot moves to the day after
+ *   - the window is 7 days long from that earliest date
+ *
+ * Always computed in Asia/Kolkata regardless of server timezone — a server on
+ * UTC would otherwise apply the 19:00 cut-off 5.5 hours late and let a patient
+ * book a slot the lab can no longer staff.
+ *
+ * @return array{0:string,1:string,2:string} [minDate, maxDate, nowIstIso]
+ */
+function ecp_lab_booking_window(?DateTimeImmutable $now = null): array
+{
+    $ist = new DateTimeZone('Asia/Kolkata');
+    $now = $now ? $now->setTimezone($ist) : new DateTimeImmutable('now', $ist);
+
+    $daysAhead = ((int) $now->format('G') >= ECP_LAB_CUTOFF_HOUR_IST) ? 2 : 1;
+
+    $min = $now->modify('+' . $daysAhead . ' days')->setTime(0, 0);
+    $max = $min->modify('+' . (ECP_LAB_BOOKING_WINDOW_DAYS - 1) . ' days');
+
+    return [$min->format('Y-m-d'), $max->format('Y-m-d'), $now->format('c')];
+}
+
+/** Orders placed at/after this IST hour lose the next day as an option. */
+const ECP_LAB_CUTOFF_HOUR_IST = 19;   // 7:00 PM IST
+
+/** Selectable days, counting the earliest bookable date as day 1. */
+const ECP_LAB_BOOKING_WINDOW_DAYS = 7;
+
+/**
  * The discount a single line may actually receive.
  *
  * THE RULE: every product carries its own ceiling
