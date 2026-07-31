@@ -9,6 +9,7 @@ use App\Core\QueryBuilder;
 use App\Core\RequestContext;
 use App\Http\Request;
 use App\Http\Response;
+use App\Services\AccountRecoveryService;
 use App\Services\AuditService;
 use App\Services\AuthService;
 use App\Services\CsrfService;
@@ -18,8 +19,10 @@ use App\Services\JwtService;
 use App\Services\OnboardingService;
 use App\Services\PartnerReferralService;
 use App\Services\PasswordResetService;
+use App\Services\RecaptchaService;
 use App\Services\RoleAccessService;
 use App\Services\SessionService;
+use App\Services\UsernameService;
 use App\Support\SessionFlash;
 use App\Support\View;
 
@@ -36,15 +39,25 @@ final class AuthController
             $phoneStep = 'code';
         }
 
+        $pendingPhone = (string) ($request->query['phone'] ?? '');
+        $phoneDigits = preg_replace('/\D/', '', (string) ($verifiedPhone ?: $pendingPhone)) ?? '';
+        if (str_starts_with($phoneDigits, '91') && strlen($phoneDigits) === 12) {
+            $phoneDigits = substr($phoneDigits, 2);
+        }
+        $defaultUsername = $phoneDigits;
+
         return Response::html($this->view('auth/register', [
             'csrf' => CsrfService::token(),
             'error' => SessionFlash::pull('register_error') ?? null,
             'info' => SessionFlash::pull('register_info') ?? null,
             'phoneStep' => $phoneStep,
             'verifiedPhone' => $verifiedPhone,
-            'pendingPhone' => (string) ($request->query['phone'] ?? ''),
+            'pendingPhone' => $pendingPhone,
             'devCode' => SessionFlash::pull('register_dev_code'),
             'old' => [],
+            'defaultUsername' => $defaultUsername,
+            'captchaEnabled' => RecaptchaService::enabled(),
+            'captchaSiteKey' => RecaptchaService::siteKey(),
         ]));
     }
 
@@ -53,6 +66,10 @@ final class AuthController
     {
         if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
             SessionFlash::put('register_error', 'Session expired. Please try again.');
+            return Response::redirect('/register');
+        }
+        if (!$this->verifyRecaptcha($request)) {
+            SessionFlash::put('register_error', 'Please complete the CAPTCHA and try again.');
             return Response::redirect('/register');
         }
 
@@ -85,6 +102,10 @@ final class AuthController
         if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
             SessionFlash::put('register_error', 'Session expired. Please try again.');
             return Response::redirect('/register');
+        }
+        if (!$this->verifyRecaptcha($request)) {
+            SessionFlash::put('register_error', 'Please complete the CAPTCHA and try again.');
+            return Response::redirect('/register?phone=' . rawurlencode(DoctorOtpService::normalizePhone((string) ($request->post['phone'] ?? ''))));
         }
 
         $phone = (string) ($request->post['phone'] ?? '');
@@ -126,6 +147,7 @@ final class AuthController
 
         $clinicName = trim($request->post['clinic_name'] ?? '');
         $ownerName = trim($request->post['owner_name'] ?? '');
+        $rawUsername = trim($request->post['username'] ?? '');
         $slug = strtolower(trim($request->post['slug'] ?? ''));
         $optionalEmail = strtolower(trim((string) ($request->post['email'] ?? '')));
         $password = (string) ($request->post['password'] ?? '');
@@ -140,6 +162,8 @@ final class AuthController
             }
         }
         $slug = $this->resolveUniqueSlug($slug);
+        $resolvedUsername = null;
+        $error = null;
 
         if ($ownerName === '' || strlen($ownerName) < 2) {
             $error = 'Your name is required.';
@@ -158,20 +182,44 @@ final class AuthController
         } elseif (DoctorOtpService::phoneRegistered($verifiedPhone)) {
             $error = 'This mobile number is already registered. Please log in.';
         } else {
-            $error = null;
+            try {
+                $resolvedUsername = UsernameService::resolveForRegistration($rawUsername, $verifiedPhone, $ownerName);
+                $error = null;
+            } catch (\InvalidArgumentException $e) {
+                $error = match ($e->getMessage()) {
+                    'username_taken' => 'That username is already taken. Choose another.',
+                    default => 'Username must be 3–30 characters: letters, numbers, underscore (or your 10-digit mobile).',
+                };
+                $resolvedUsername = null;
+            }
         }
 
+        $defaultUsername = UsernameService::defaultFromPhone($verifiedPhone);
+        $registerViewData = static fn (?string $err) => [
+            'csrf' => CsrfService::token(),
+            'error' => $err,
+            'info' => null,
+            'old' => [
+                'clinicName' => $clinicName,
+                'ownerName' => $ownerName,
+                'slug' => $slug,
+                'email' => $optionalEmail,
+                'username' => $rawUsername !== '' ? $rawUsername : $defaultUsername,
+            ],
+            'phoneStep' => 'details',
+            'verifiedPhone' => $verifiedPhone,
+            'pendingPhone' => '',
+            'devCode' => null,
+            'defaultUsername' => $defaultUsername,
+            'captchaEnabled' => RecaptchaService::enabled(),
+            'captchaSiteKey' => RecaptchaService::siteKey(),
+        ];
+
         if ($error !== null) {
-            return Response::html($this->view('auth/register', [
-                'csrf' => CsrfService::token(),
-                'error' => $error,
-                'info' => null,
-                'old' => compact('clinicName', 'ownerName', 'slug') + ['email' => $optionalEmail],
-                'phoneStep' => 'details',
-                'verifiedPhone' => $verifiedPhone,
-                'pendingPhone' => '',
-                'devCode' => null,
-            ]), 422);
+            return Response::html($this->view('auth/register', $registerViewData($error)), 422);
+        }
+        if (!$this->verifyRecaptcha($request)) {
+            return Response::html($this->view('auth/register', $registerViewData('Please complete the CAPTCHA and try again.')), 422);
         }
 
         try {
@@ -182,19 +230,11 @@ final class AuthController
                 $verifiedPhone,
                 $password,
                 $optionalEmail !== '' ? $optionalEmail : null,
+                $resolvedUsername,
             );
         } catch (\Throwable $e) {
             error_log('[register] registerClinicViaPhone failed: ' . $e->getMessage());
-            return Response::html($this->view('auth/register', [
-                'csrf' => CsrfService::token(),
-                'error' => 'We could not create your account right now. Please try again.',
-                'info' => null,
-                'old' => compact('clinicName', 'ownerName', 'slug') + ['email' => $optionalEmail],
-                'phoneStep' => 'details',
-                'verifiedPhone' => $verifiedPhone,
-                'pendingPhone' => '',
-                'devCode' => null,
-            ]), 422);
+            return Response::html($this->view('auth/register', $registerViewData('We could not create your account right now. Please try again.')), 422);
         }
 
         DoctorOtpService::clearPhoneVerified();
@@ -204,7 +244,7 @@ final class AuthController
     }
 
     /**
-     * @param array{tenant_id: int, user_id: int} $result
+     * @param array{tenant_id: int, user_id: int, username?: string} $result
      */
     private function finishRegistration(Request $request, array $result): Response
     {
@@ -214,6 +254,11 @@ final class AuthController
         JwtService::setAuthCookies($token, $refresh);
 
         AuditService::log($request, 'INSERT', 'users', $result['user_id']);
+
+        $username = (string) ($result['username'] ?? $user['username'] ?? '');
+        if ($username !== '') {
+            SessionFlash::put('new_username', $username);
+        }
 
         return Response::redirect('/onboarding/clinic-setup');
     }
@@ -248,6 +293,8 @@ final class AuthController
             'error' => SessionFlash::pull('login_error') ?? ($request->query['error'] ?? null),
             'captchaRequired' => false,
             'googleEnabled' => false,
+            'captchaEnabled' => RecaptchaService::enabled(),
+            'captchaSiteKey' => RecaptchaService::siteKey(),
         ]));
     }
 
@@ -257,31 +304,44 @@ final class AuthController
             return Response::json(['error' => 'Database unavailable'], 503);
         }
 
-        $phone = (string) ($request->post['phone'] ?? '');
-        $normalizedPhone = DoctorOtpService::normalizePhone($phone);
+        $username = strtolower(trim((string) ($request->post['username'] ?? '')));
         $password = $request->post['password'] ?? '';
         $remember = !empty($request->post['remember_me']);
-        $attemptFailures = AuthService::recordFailedLogin($normalizedPhone);
+        $attemptFailures = AuthService::recordFailedLogin($username);
+        if (!$this->verifyRecaptcha($request)) {
+            return Response::html($this->view('auth/login', [
+                'csrf' => CsrfService::token(),
+                'error' => 'Please complete the CAPTCHA and try again.',
+                'captchaRequired' => false,
+                'googleEnabled' => false,
+                'captchaEnabled' => RecaptchaService::enabled(),
+                'captchaSiteKey' => RecaptchaService::siteKey(),
+            ]), 422);
+        }
         if ($attemptFailures >= 5) {
             return Response::html($this->view('auth/login', [
                 'csrf' => CsrfService::token(),
                 'error' => 'Too many attempts. Try again in 15 minutes.',
                 'captchaRequired' => true,
                 'googleEnabled' => false,
+                'captchaEnabled' => RecaptchaService::enabled(),
+                'captchaSiteKey' => RecaptchaService::siteKey(),
             ]), 429);
         }
 
-        $user = AuthService::findUserByPhone($normalizedPhone);
+        $user = AuthService::findUserByUsername($username);
         if ($user === null || !password_verify($password, $user['password_hash'] ?? '')) {
             return Response::html($this->view('auth/login', [
                 'csrf' => CsrfService::token(),
-                'error' => 'Invalid mobile number or password.',
+                'error' => 'Invalid username or password.',
                 'captchaRequired' => $attemptFailures >= 3,
                 'googleEnabled' => false,
+                'captchaEnabled' => RecaptchaService::enabled(),
+                'captchaSiteKey' => RecaptchaService::siteKey(),
             ]), 401);
         }
 
-        AuthService::clearFailedLogins($normalizedPhone);
+        AuthService::clearFailedLogins($username);
         $clinicId = (int) $user['clinic_id'];
         $token = JwtService::issue($user, $clinicId);
         $refresh = AuthService::establishSession($user, $request, $remember);
@@ -319,20 +379,158 @@ final class AuthController
 
     public function showForgotPassword(Request $request): Response
     {
+        $step = !empty($request->query['phone']) ? 'reset' : 'phone';
+        $verifiedPhone = AccountRecoveryService::verifiedPasswordResetPhone();
+
         return Response::html($this->view('auth/forgot-password', [
             'csrf' => CsrfService::token(),
-            'sent' => !empty($request->query['sent']),
+            'step' => $verifiedPhone !== null ? 'new_password' : $step,
+            'pendingPhone' => (string) ($request->query['phone'] ?? ''),
+            'devCode' => SessionFlash::pull('forgot_password_dev_code'),
+            'error' => SessionFlash::pull('forgot_password_error'),
+            'info' => SessionFlash::pull('forgot_password_info'),
+            'captchaEnabled' => RecaptchaService::enabled(),
+            'captchaSiteKey' => RecaptchaService::siteKey(),
         ]));
     }
 
-    public function forgotPassword(Request $request): Response
+    public function sendForgotPasswordOtp(Request $request): Response
     {
-        $email = strtolower(trim($request->post['email'] ?? ''));
-        if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            PasswordResetService::request($email);
+        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
+            SessionFlash::put('forgot_password_error', 'Session expired. Please try again.');
+            return Response::redirect('/forgot-password');
+        }
+        if (!$this->verifyRecaptcha($request)) {
+            SessionFlash::put('forgot_password_error', 'Please complete the CAPTCHA and try again.');
+            return Response::redirect('/forgot-password');
         }
 
-        return Response::redirect('/forgot-password?sent=1');
+        $phone = (string) ($request->post['phone'] ?? '');
+        $res = AccountRecoveryService::sendPasswordResetOtp($phone);
+        $normalized = DoctorOtpService::normalizePhone($phone);
+
+        if (!$res['ok']) {
+            SessionFlash::put('forgot_password_error', match ($res['error'] ?? '') {
+                'invalid_phone' => 'Please enter a valid 10-digit mobile number.',
+                'resend_too_soon' => 'Please wait a moment before requesting another code.',
+                default => 'Could not send the code. Please try again.',
+            });
+            return Response::redirect('/forgot-password');
+        }
+
+        if (!empty($res['dev_code'])) {
+            SessionFlash::put('forgot_password_dev_code', $res['dev_code']);
+        }
+        SessionFlash::put('forgot_password_info', 'If an account exists for this number, we sent a reset code.');
+        return Response::redirect('/forgot-password?phone=' . rawurlencode($normalized));
+    }
+
+    public function verifyForgotPasswordOtp(Request $request): Response
+    {
+        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
+            SessionFlash::put('forgot_password_error', 'Session expired. Please try again.');
+            return Response::redirect('/forgot-password');
+        }
+        if (!$this->verifyRecaptcha($request)) {
+            SessionFlash::put('forgot_password_error', 'Please complete the CAPTCHA and try again.');
+            return Response::redirect('/forgot-password?phone=' . rawurlencode(DoctorOtpService::normalizePhone((string) ($request->post['phone'] ?? ''))));
+        }
+
+        $phone = (string) ($request->post['phone'] ?? '');
+        $code = (string) ($request->post['code'] ?? '');
+        $res = AccountRecoveryService::verifyPasswordResetOtp($phone, $code);
+
+        if (!$res['ok']) {
+            SessionFlash::put('forgot_password_error', match ($res['error'] ?? '') {
+                'invalid_code' => 'That code is incorrect. Try again.',
+                'expired' => 'Code expired. Request a new one.',
+                'too_many_attempts' => 'Too many attempts. Request a new code.',
+                'no_code_issued' => 'No active code. Send a new one.',
+                default => 'Could not verify the code. Please try again.',
+            });
+            return Response::redirect('/forgot-password?phone=' . rawurlencode(DoctorOtpService::normalizePhone($phone)));
+        }
+
+        return Response::redirect('/forgot-password');
+    }
+
+    public function resetPasswordViaPhone(Request $request): Response
+    {
+        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
+            SessionFlash::put('forgot_password_error', 'Session expired. Please try again.');
+            return Response::redirect('/forgot-password');
+        }
+        if (!$this->verifyRecaptcha($request)) {
+            SessionFlash::put('forgot_password_error', 'Please complete the CAPTCHA and try again.');
+            return Response::redirect('/forgot-password');
+        }
+
+        $password = (string) ($request->post['password'] ?? '');
+        $confirm = (string) ($request->post['password_confirm'] ?? '');
+        $passwordError = $this->validatePassword($password, $confirm);
+
+        if ($passwordError !== null) {
+            SessionFlash::put('forgot_password_error', $passwordError);
+            return Response::redirect('/forgot-password');
+        }
+
+        $res = AccountRecoveryService::resetPassword($password);
+        if (!$res['ok']) {
+            SessionFlash::put('forgot_password_error', match ($res['error'] ?? '') {
+                'session_expired' => 'Your reset session expired. Request a new code.',
+                default => 'Could not reset your password. Please try again.',
+            });
+            return Response::redirect('/forgot-password');
+        }
+
+        return Response::redirect('/login?error=' . urlencode('Password updated. Please sign in with your username.'));
+    }
+
+    public function showForgotUsername(Request $request): Response
+    {
+        return Response::html($this->view('auth/forgot-username', [
+            'csrf' => CsrfService::token(),
+            'sent' => !empty($request->query['sent']),
+            'devUsername' => SessionFlash::pull('forgot_username_dev'),
+            'error' => SessionFlash::pull('forgot_username_error'),
+            'captchaEnabled' => RecaptchaService::enabled(),
+            'captchaSiteKey' => RecaptchaService::siteKey(),
+        ]));
+    }
+
+    public function forgotUsername(Request $request): Response
+    {
+        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
+            SessionFlash::put('forgot_username_error', 'Session expired. Please try again.');
+            return Response::redirect('/forgot-username');
+        }
+        if (!$this->verifyRecaptcha($request)) {
+            SessionFlash::put('forgot_username_error', 'Please complete the CAPTCHA and try again.');
+            return Response::redirect('/forgot-username');
+        }
+
+        $phone = (string) ($request->post['phone'] ?? '');
+        $res = AccountRecoveryService::sendUsernameReminder($phone);
+
+        if (!$res['ok']) {
+            SessionFlash::put('forgot_username_error', match ($res['error'] ?? '') {
+                'invalid_phone' => 'Please enter a valid 10-digit mobile number.',
+                default => 'Could not send your username right now. Please try again.',
+            });
+            return Response::redirect('/forgot-username');
+        }
+
+        if (!empty($res['dev_username'])) {
+            SessionFlash::put('forgot_username_dev', $res['dev_username']);
+        }
+
+        return Response::redirect('/forgot-username?sent=1');
+    }
+
+    /** @deprecated Email reset kept for staff with email; clinic login uses mobile OTP flow. */
+    public function forgotPassword(Request $request): Response
+    {
+        return Response::redirect('/forgot-password');
     }
 
     public function showResetPassword(Request $request, string $token): Response
@@ -344,11 +542,24 @@ final class AuthController
             'token' => $token,
             'valid' => $valid,
             'error' => null,
+            'captchaEnabled' => RecaptchaService::enabled(),
+            'captchaSiteKey' => RecaptchaService::siteKey(),
         ]));
     }
 
     public function resetPassword(Request $request, string $token): Response
     {
+        if (!$this->verifyRecaptcha($request)) {
+            return Response::html($this->view('auth/reset-password', [
+                'csrf' => CsrfService::token(),
+                'token' => $token,
+                'valid' => true,
+                'error' => 'Please complete the CAPTCHA and try again.',
+                'captchaEnabled' => RecaptchaService::enabled(),
+                'captchaSiteKey' => RecaptchaService::siteKey(),
+            ]), 422);
+        }
+
         $password = $request->post['password'] ?? '';
         $confirm = $request->post['password_confirm'] ?? '';
 
@@ -358,6 +569,8 @@ final class AuthController
                 'token' => $token,
                 'valid' => true,
                 'error' => 'Password must be 8+ characters with 1 uppercase and 1 number.',
+                'captchaEnabled' => RecaptchaService::enabled(),
+                'captchaSiteKey' => RecaptchaService::siteKey(),
             ]), 422);
         }
 
@@ -367,6 +580,8 @@ final class AuthController
                 'token' => $token,
                 'valid' => true,
                 'error' => 'Passwords do not match.',
+                'captchaEnabled' => RecaptchaService::enabled(),
+                'captchaSiteKey' => RecaptchaService::siteKey(),
             ]), 422);
         }
 
@@ -376,6 +591,8 @@ final class AuthController
                 'token' => $token,
                 'valid' => false,
                 'error' => 'This reset link is invalid or has expired.',
+                'captchaEnabled' => RecaptchaService::enabled(),
+                'captchaSiteKey' => RecaptchaService::siteKey(),
             ]), 410);
         }
 
@@ -521,6 +738,16 @@ final class AuthController
         return Response::json(['available' => AuthService::slugAvailable($slug)]);
     }
 
+    public function checkUsername(Request $request): Response
+    {
+        $raw = trim((string) ($request->query['username'] ?? ''));
+        if ($raw === '') {
+            return Response::json(['available' => true, 'reason' => 'blank']);
+        }
+
+        return Response::json(UsernameService::check($raw));
+    }
+
     /** @param array<string, mixed> $data */
     private function view(string $name, array $data = []): string
     {
@@ -624,5 +851,17 @@ final class AuthController
         }
 
         return null;
+    }
+
+    private function verifyRecaptcha(Request $request): bool
+    {
+        if (!RecaptchaService::enabled()) {
+            return true;
+        }
+
+        $token = $request->post['g-recaptcha-response'] ?? null;
+        $remoteIp = $_SERVER['REMOTE_ADDR'] ?? null;
+
+        return RecaptchaService::verify(is_string($token) ? $token : null, is_string($remoteIp) ? $remoteIp : null);
     }
 }

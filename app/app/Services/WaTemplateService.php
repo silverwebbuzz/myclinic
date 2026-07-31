@@ -22,6 +22,9 @@ use PDO;
  */
 final class WaTemplateService
 {
+    /** WhatsApp OTP template key in wa_templates (category: authentication). */
+    public const OTP_TEMPLATE = 'authentication';
+
     /** @var array<string,?array>|null */
     private static ?array $cache = null;
 

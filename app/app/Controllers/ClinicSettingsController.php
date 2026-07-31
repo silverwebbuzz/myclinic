@@ -16,7 +16,8 @@ use App\Services\OnboardingService;
 use App\Services\PlanService;
 use App\Services\ApiKeyService;
 use App\Services\DoctorOtpService;
-use App\Services\TwilioSmsService;
+use App\Services\WaTemplateService;
+use App\Services\WhatsAppService;
 use App\Services\WhiteLabelService;
 use App\Support\Layout;
 use App\Support\View;
@@ -262,18 +263,22 @@ final class ClinicSettingsController
             'expires_at' => date('Y-m-d H:i:s', time() + 600),
         ]);
 
-        $body = "Your eClinicPro phone-change code is: {$code}\nValid for 10 minutes.";
-        $sent = TwilioSmsService::send($phone, $body);
-        $devMode = (($_ENV['TWILIO_ACCOUNT_SID'] ?? '') === ''
-            || ($_ENV['TWILIO_AUTH_TOKEN'] ?? '') === ''
-            || ($_ENV['TWILIO_FROM_NUMBER'] ?? '') === '');
+        $wa = WhatsAppService::send($phone, WaTemplateService::OTP_TEMPLATE, [
+            'code' => $code,
+            'body' => "OTP: {$code}",
+        ]);
+        $devMode = strtolower((string) ($_ENV['APP_ENV'] ?? 'local')) === 'local';
 
-        if (!$sent['ok']) {
+        if (!$wa['ok']) {
+            $msg = strtolower((string) ($wa['message'] ?? ''));
+            if (str_contains($msg, 'not a valid whatsapp') || str_contains($msg, 'whatsapp user') || str_contains($msg, 'recipient')) {
+                return Response::redirect('/settings?tab=general&error=' . urlencode('This number is not registered on WhatsApp.'));
+            }
             return Response::redirect('/settings?tab=general&error=' . urlencode('Could not send OTP right now. Please try again.'));
         }
 
         $url = '/settings?tab=general&phone_step=code&phone=' . rawurlencode($phone)
-            . '&message=' . urlencode('OTP sent to your new phone number.');
+            . '&message=' . urlencode('WhatsApp OTP sent to your new phone number.');
         if ($devMode) {
             $url .= '&phone_dev_code=' . rawurlencode($code);
         }
@@ -602,9 +607,7 @@ final class ClinicSettingsController
             'appointment_reminder_24h' => true,
             'appointment_reminder_1h' => true,
             'rx_delivery' => true,
-            'lab_report_ready' => true,
             'follow_up_reminder' => true,
-            'whatsapp_mode' => 'shared',
         ];
     }
 

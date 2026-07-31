@@ -15,6 +15,49 @@ require_once __DIR__ . '/partials/helpers.php';
 require_once __DIR__ . '/partials/find_doctor_search.php';
 require_once __DIR__ . '/partials/seo_slugs.php';
 
+// =====================================================================
+// Server-side full-page cache for the anonymous listing.
+//
+// There is NO CDN in front of this site (requests hit Apache directly), so
+// the CDN cache headers alone did nothing — every visitor triggered a full
+// ~seconds-long PHP+MySQL render. This caches the whole rendered HTML to disk
+// (same pattern as api/photo.php) and serves that file on later hits, skipping
+// all DB work. First visitor pays the render; everyone after gets a file read.
+//
+// Only for pages that are identical for every anonymous visitor:
+//   - logged OUT (no ecp_pid cookie)
+//   - GET request
+//   - no ad-hoc filter query params (only 'seo' path + optional page=1)
+// =====================================================================
+$ecpPageCacheKey = null;
+$ecpPageCacheTtl = 600;   // 10 min; a background-ish refresh on the first miss after expiry
+if (
+    ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET'
+    && empty($_COOKIE['ecp_pid'])
+    && empty(array_diff(array_keys($_GET), ['seo', 'page']))
+    && (int) ($_GET['page'] ?? 1) <= 1
+) {
+    $ecpSeoRaw = trim((string) ($_GET['seo'] ?? ''));
+    // Restrict the key to a safe charset so it maps cleanly to a filename.
+    if ($ecpSeoRaw === '' || preg_match('#^[A-Za-z0-9/\-]{1,120}$#', $ecpSeoRaw)) {
+        $ecpPageCacheKey = 'fad_' . sha1('v1|' . strtolower($ecpSeoRaw));
+        $ecpPageCacheDir = __DIR__ . '/storage/page_cache';
+        $ecpPageCacheFile = $ecpPageCacheDir . '/' . $ecpPageCacheKey . '.html';
+
+        // Serve a fresh cached copy immediately — before any DB work.
+        if (is_file($ecpPageCacheFile)
+            && (time() - filemtime($ecpPageCacheFile)) < $ecpPageCacheTtl) {
+            header('Content-Type: text/html; charset=UTF-8');
+            header('Cache-Control: public, max-age=120, s-maxage=600, stale-while-revalidate=3600');
+            header('X-Page-Cache: hit');
+            readfile($ecpPageCacheFile);
+            exit;
+        }
+        // Miss → capture the render below and write it to disk at the end.
+        ob_start();
+    }
+}
+
 $pageTitle  = 'Find a Doctor — eClinicPro';
 $metaDesc   = 'Search verified clinicians across India — see availability, fees and ratings before you book.';
 $activePage = 'find';
@@ -62,6 +105,15 @@ $initialFilters['per_page'] = 20;
 if ($seoMeta) {
     $pageTitle = $seoMeta['title'];
     $metaDesc  = strip_tags($seoMeta['intro']);
+}
+
+// Browser cache header for the cacheable anonymous listing (the heavy work is
+// avoided by the disk page-cache above; this just lets the visitor's OWN browser
+// reuse the page briefly). NOTE: no `Vary: Cookie` — it would defeat caching
+// since nearly every visitor carries some cookie; the disk cache already keys
+// on the ecp_pid login cookie itself.
+if ($ecpPageCacheKey !== null) {
+    header('Cache-Control: public, max-age=120, s-maxage=600, stale-while-revalidate=3600');
 }
 
 // ---- SSR: load the first page now (we need item count for schema) ----
@@ -324,7 +376,7 @@ require __DIR__ . '/partials/header.php';
                 <!-- Search bar -->
                 <div class="fd-search">
                     <label class="fd-sfield">
-                        <span class="ico"><img src="/assets/img/icon/search-icon.svg" alt="Search"></span>
+                        <span class="ico"><img src="/assets/img/icon/search-icon.svg" alt="Search" width="18" height="18"></span>
                         <div class="col">
                             <div class="lbl">Doctor / Hospital</div>
                             <input type="text" x-model="q" placeholder="e.g. Dr. Mehta or Apollo Hospitals">
@@ -343,7 +395,7 @@ require __DIR__ . '/partials/header.php';
 
                         <div class="fd-ac" x-show="acOpen" @mousedown.prevent x-transition.opacity>
                             <div class="fd-ac-item use-loc"
-                                @click="loc = ''; locValue = null; acOpen = false">
+                                @click="loc = ''; locValue = null; acOpen = false; requestLocation()">
                                 <div class="ic"><img src="/assets/img/icon/office-push-pin.png" alt="Office Push Pin"></div>
                                 <div>
                                     <div class="nm">Use my precise location</div>
@@ -455,7 +507,7 @@ require __DIR__ . '/partials/header.php';
                     <button type="button" class="fd-mbar-loc-clear" x-show="loc" @click="loc = ''; locValue = null" aria-label="Clear location">✕</button>
 
                     <div class="fd-ac" x-show="acOpen" @mousedown.prevent x-transition.opacity>
-                        <div class="fd-ac-item use-loc" @click="loc = ''; locValue = null; acOpen = false; mLocOpen = true">
+                        <div class="fd-ac-item use-loc" @click="loc = ''; locValue = null; acOpen = false; mLocOpen = true; requestLocation()">
                             <div class="ic"><img src="/assets/img/icon/location-pin.png" alt="Location Pin"></div>
                             <div><div class="nm">Use my precise location</div><div class="sb">Allow browser to share where you are</div></div>
                         </div>
@@ -654,8 +706,8 @@ require __DIR__ . '/partials/header.php';
                 </div>
 
                 <!-- Clear -->
-                <button type="button" class="fd-chip-clear" x-show="activeFilterCount() > 0" @click="clearFilters()">
-                    Clear all (<span x-text="activeFilterCount()"></span>)
+                <button type="button" class="fd-chip-clear" x-show="activeSearchCount() > 0" @click="clearSearch()">
+                    Clear search
                 </button>
             </div>
 
@@ -690,7 +742,7 @@ require __DIR__ . '/partials/header.php';
                             x-init="checkPhoto(d)">
                             <!-- No photo/logo → gender-based default doctor icon -->
                             <template x-if="!d.photo_url || d._photoBroken">
-                                <img class="fd-avatar-default" :src="defaultAvatar(d)" :alt="d.name" loading="lazy">
+                                <img class="fd-avatar-default" :src="defaultAvatar(d)" :alt="d.name" loading="lazy" decoding="async" width="88" height="88">
                             </template>
                         </div>
 
@@ -752,7 +804,7 @@ require __DIR__ . '/partials/header.php';
                                 </div>
                                 <template x-if="d.phone">
                                     <div class="fd-meta-row">
-                                        <span class="mi"><img src="/assets/img/icon/phone-call.png" alt="Phone Call"></span>
+                                        <span class="mi"><img src="/assets/img/icon/phone-call.png" alt="Phone Call" width="16" height="16" loading="lazy"></span>
                                         <a :href="'tel:' + d.phone" x-text="d.phone"></a>
                                     </div>
                                 </template>
@@ -807,7 +859,7 @@ require __DIR__ . '/partials/header.php';
                                     @click="bookDoctor(d)"><img src="/assets/img/icon/book-appointment.png" alt="Smart Scheduling"> Book</button>
                                 <template x-if="d.phone">
                                     <a :href="'tel:' + d.phone" class="fd-btn"
-                                        @click="trackCall(d)"><img src="/assets/img/icon/phone-call.png" alt="phone"> Call</a>
+                                        @click="trackCall(d)"><img src="/assets/img/icon/phone-call.png" alt="phone" width="16" height="16"> Call</a>
                                 </template>
                             </div>
 
@@ -986,7 +1038,7 @@ require __DIR__ . '/partials/header.php';
                 </div>
 
                 <div class="fd-sheet-foot">
-                    <button type="button" class="fd-sheet-reset" @click="clearFilters()">Reset</button>
+                    <button type="button" class="fd-sheet-reset" @click="clearSearch()">Clear search</button>
                     <button type="button" class="fd-sheet-apply" @click="mFilterOpen = false">Apply Filters</button>
                 </div>
             </div>
@@ -1163,21 +1215,12 @@ require __DIR__ . '/partials/header.php';
                     localStorage.setItem('fd:country', v);
                 });
 
-                // Restore saved location (geolocation permission already granted).
-                try {
-                    const raw = localStorage.getItem('fd:loc');
-                    if (raw) {
-                        const v = JSON.parse(raw);
-                        if (v && v.lat && v.lng && (Date.now() - (v.at || 0)) < 7 * 86400 * 1000) {
-                            this.userLoc = {
-                                lat: v.lat,
-                                lng: v.lng
-                            };
-                        }
-                    }
-                    const savedDist = localStorage.getItem('fd:maxDistKm');
-                    if (savedDist) this.maxDistanceKm = parseInt(savedDist, 10) || 0;
-                } catch (e) {}
+                // NOTE: we deliberately do NOT auto-restore a saved location on
+                // load. Doing so fired a "near me" (lat/lng) search on every page
+                // load — a full-table distance sort that made the page slow. The
+                // default view now shows the fast ranking (joined doctors first,
+                // then those with photos, then Google rating). "Use my location"
+                // still works, but only when the user explicitly taps it.
                 this.$watch('userLoc', v => {
                     if (v) localStorage.setItem('fd:loc', JSON.stringify({
                         ...v,
@@ -1231,6 +1274,11 @@ require __DIR__ . '/partials/header.php';
                             lat: pos.coords.latitude,
                             lng: pos.coords.longitude
                         };
+                        // Nearest-first: precise location alone used to leave
+                        // sort=relevance, so distant cities could still rank first.
+                        this.sort = 'distance';
+                        this.loc = 'Near me';
+                        this.locValue = null;
                     },
                     err => {
                         const msg = err.code === 1 ?
@@ -1247,6 +1295,7 @@ require __DIR__ . '/partials/header.php';
             clearLocation() {
                 this.userLoc = null;
                 this.maxDistanceKm = 0;
+                if (this.loc === 'Near me') this.loc = '';
             },
 
             // Distance now comes from the server (d.distance_km). Helpers stay
@@ -1296,7 +1345,6 @@ require __DIR__ . '/partials/header.php';
                 const p = new URLSearchParams();
                 if (this.q.trim()) p.set('q', this.q.trim());
                 if (this.country && this.country !== 'IN') p.set('country', this.country);
-                if (this.country === 'IN') p.set('country', 'IN');
                 if (this.locValue?.state) p.set('state', this.locValue.state);
                 if (this.locValue?.city) p.set('city', this.locValue.city);
                 if (this.locValue?.area) p.set('area', this.locValue.area);
@@ -1548,13 +1596,41 @@ require __DIR__ . '/partials/header.php';
                     (this.maxDistanceKm > 0 ? 1 : 0);
             },
 
-            clearFilters() {
+            activeSearchCount() {
+                return this.activeFilterCount() +
+                    (this.q.trim() ? 1 : 0) +
+                    ((this.loc.trim() || this.locValue || this.userLoc) ? 1 : 0) +
+                    (this.sort && this.sort !== 'relevance' ? 1 : 0) +
+                    (this.spec && this.spec !== 'all' ? 1 : 0) +
+                    (this.country && this.country !== 'IN' ? 1 : 0);
+            },
+
+            clearSearch() {
+                this.q = '';
+                this.loc = '';
+                this.locValue = null;
+                this.userLoc = null;
+                this.maxDistanceKm = 0;
+                this.sort = 'relevance';
+                this.spec = 'all';
+                this.country = 'IN';
                 this.avail = 'any';
                 this.video = false;
                 this.gender = 'any';
                 this.minRating = 0;
                 this.lang = 'any';
-                this.maxDistanceKm = 0;
+                this.page = 1;
+                localStorage.removeItem('fd:loc');
+                localStorage.removeItem('fd:maxDistKm');
+
+                if (!(window.FD_DATA && window.FD_DATA.isSeoPage)) {
+                    history.replaceState(null, '', '/find-a-doctor');
+                }
+                this.refresh();
+            },
+
+            clearFilters() {
+                this.clearSearch();
             },
 
             toggleFav(id) {
@@ -1697,3 +1773,22 @@ require __DIR__ . '/partials/header.php';
 </script>
 
 <?php require __DIR__ . '/partials/footer.php'; ?>
+<?php
+// ---- Write the rendered page to the disk cache (miss path) ----
+// We only started a buffer when this request was cacheable AND had no fresh
+// file, so if a buffer is open, flush it to the client and persist a copy.
+if ($ecpPageCacheKey !== null && ob_get_level() > 0) {
+    $html = ob_get_clean();          // stop capturing; $html = full page
+    echo $html;                      // send to the visitor now
+    // Persist best-effort; a write failure just means the next hit re-renders.
+    if (!is_dir($ecpPageCacheDir)) {
+        @mkdir($ecpPageCacheDir, 0755, true);
+    }
+    if (is_dir($ecpPageCacheDir) && is_writable($ecpPageCacheDir)) {
+        $tmp = $ecpPageCacheFile . '.' . bin2hex(random_bytes(4)) . '.tmp';
+        if (@file_put_contents($tmp, $html) !== false) {
+            @rename($tmp, $ecpPageCacheFile);   // atomic swap; no partial reads
+        }
+    }
+}
+?>

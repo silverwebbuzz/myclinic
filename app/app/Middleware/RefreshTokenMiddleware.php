@@ -20,7 +20,9 @@ final class RefreshTokenMiddleware implements MiddlewareInterface
         '/login',
         '/register',
         '/forgot-password',
+        '/forgot-username',
         '/api/check-slug',
+        '/api/check-username',
         '/webhooks/stripe',
         '/webhooks/razorpay',
     ];

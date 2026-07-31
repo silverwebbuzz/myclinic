@@ -77,6 +77,8 @@ final class DoctorClaimService
             $sel->execute(['id' => (int) $row['directory_doctor_id']]);
             $row['_listing'] = $sel->fetch(PDO::FETCH_ASSOC) ?: null;
         }
+        $row['_clinic_address'] = self::resolveClinicAddress($row);
+
         return $row;
     }
 
@@ -678,12 +680,16 @@ final class DoctorClaimService
         // Carry over the rest of the submitted contact + about info so the
         // public profile page isn't half-empty after approval:
         //   - intl_phone: canonical (+CC) form of the verified phone.
-        //   - address:    no dedicated address field is collected today, so
-        //                 fall back to "City, State" (same as the tenant row).
+        //   - address:    prefer tenants.address (clinic setup / register flow);
+        //                 fall back to "City, State" from the claim request.
         //   - bio:        the doctor's free-text "message" from the request —
         //                 shown as the "About" section on the front-end profile.
         $intlPhone = DoctorOtpService::normalizePhone((string) ($req['phone'] ?? '')) ?: null;
-        $address   = trim(((string) ($req['city'] ?? '')) . ($req['state'] ? ', ' . $req['state'] : '')) ?: null;
+        $tenantAddrStmt = $db->prepare('SELECT address FROM tenants WHERE id = :id LIMIT 1');
+        $tenantAddrStmt->execute(['id' => $tenantId]);
+        $tenantAddress = trim((string) ($tenantAddrStmt->fetchColumn() ?: ''));
+        $fallbackAddress = trim(((string) ($req['city'] ?? '')) . ($req['state'] ? ', ' . $req['state'] : ''));
+        $address = $tenantAddress !== '' ? $tenantAddress : ($fallbackAddress !== '' ? $fallbackAddress : null);
         $bio       = trim((string) ($req['message'] ?? '')) ?: null;
 
         $stmt = $db->prepare(
@@ -856,6 +862,56 @@ final class DoctorClaimService
     }
 
     /** @return list<string> */
+    /**
+     * Full clinic address for admin claim detail — from the linked tenant
+     * (portal doctors) when available.
+     *
+     * @param array<string, mixed> $req
+     */
+    private static function resolveClinicAddress(array $req): ?string
+    {
+        $db = self::pdo();
+
+        if (!empty($req['created_tenant_id'])) {
+            $stmt = $db->prepare('SELECT address FROM tenants WHERE id = :id LIMIT 1');
+            $stmt->execute(['id' => (int) $req['created_tenant_id']]);
+            $addr = trim((string) ($stmt->fetchColumn() ?: ''));
+            if ($addr !== '') {
+                return $addr;
+            }
+        }
+
+        foreach (self::phoneLookupVariants((string) ($req['phone'] ?? '')) as $variant) {
+            $stmt = $db->prepare(
+                'SELECT t.address
+                 FROM tenants t
+                 INNER JOIN users u ON u.clinic_id = t.id AND u.is_active = 1
+                 WHERE u.phone = :p
+                 ORDER BY u.is_owner DESC, t.id DESC
+                 LIMIT 1'
+            );
+            $stmt->execute(['p' => $variant]);
+            $addr = trim((string) ($stmt->fetchColumn() ?: ''));
+            if ($addr !== '') {
+                return $addr;
+            }
+
+            $stmt = $db->prepare(
+                'SELECT address FROM tenants
+                 WHERE phone = :p AND is_active = 1
+                 ORDER BY id DESC
+                 LIMIT 1'
+            );
+            $stmt->execute(['p' => $variant]);
+            $addr = trim((string) ($stmt->fetchColumn() ?: ''));
+            if ($addr !== '') {
+                return $addr;
+            }
+        }
+
+        return null;
+    }
+
     private static function phoneLookupVariants(string $raw): array
     {
         $normalized = DoctorOtpService::normalizePhone($raw);

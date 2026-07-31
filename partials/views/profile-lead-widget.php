@@ -2,11 +2,15 @@
 /** @var array<string, mixed> $bookingCtx */
 $doctor = $bookingCtx['leadDoctor'] ?? [];
 $leadDays = is_array($bookingCtx['days'] ?? null) ? $bookingCtx['days'] : [];
-if ($leadDays === [] && function_exists('ecp_book_build_week_days')) {
+if ($leadDays === [] && function_exists('ecp_book_build_lead_days')) {
+    $leadDays = ecp_book_build_lead_days(7);
+} elseif ($leadDays === [] && function_exists('ecp_book_build_week_days')) {
     $leadDays = ecp_book_build_week_days(7);
 }
 $doctorJson = htmlspecialchars(json_encode($doctor, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES, 'UTF-8');
 $leadDaysJson = htmlspecialchars(json_encode($leadDays, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES, 'UTF-8');
+$todayIso = date('Y-m-d');
+$tomorrowIso = date('Y-m-d', strtotime('+1 day'));
 ?>
 <div class="dp-lead-widget" x-data="ecpProfileLeadBook(<?= $doctorJson ?>, <?= $leadDaysJson ?>)" x-init="init()">
     <div class="dp-lead-widget-head">
@@ -19,10 +23,12 @@ $leadDaysJson = htmlspecialchars(json_encode($leadDays, JSON_UNESCAPED_UNICODE |
             <label>
                 <span class="lbl">Preferred date</span>
                 <div class="lb-date-strip">
-                    <?php foreach ($leadDays as $i => $d): ?>
+                    <?php foreach ($leadDays as $d): ?>
                     <?php
                     $iso = (string) ($d['date'] ?? '');
-                    $dowLabel = $i === 0 ? 'Today' : ($i === 1 ? 'Tom' : (string) ($d['weekday'] ?? ''));
+                    $dowLabel = $iso === $todayIso
+                        ? 'Today'
+                        : ($iso === $tomorrowIso ? 'Tom' : (string) ($d['weekday'] ?? ''));
                     ?>
                     <button type="button"
                             @click="form.preferred_date = '<?= htmlspecialchars($iso, ENT_QUOTES) ?>'"
@@ -92,31 +98,53 @@ $leadDaysJson = htmlspecialchars(json_encode($leadDays, JSON_UNESCAPED_UNICODE |
 <script>
 function ecpProfileLeadBook(doctor, initialDays) {
   const normalizeDays = (rows) => {
+    const monthShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const dowShort   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayIso = today.getFullYear() + '-' +
+      String(today.getMonth() + 1).padStart(2, '0') + '-' +
+      String(today.getDate()).padStart(2, '0');
+    const tom = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    const tomIso = tom.getFullYear() + '-' +
+      String(tom.getMonth() + 1).padStart(2, '0') + '-' +
+      String(tom.getDate()).padStart(2, '0');
+
+    const labelFor = (iso, weekday) => {
+      if (iso === todayIso) return 'Today';
+      if (iso === tomIso) return 'Tom';
+      return weekday || '';
+    };
+
     if (!Array.isArray(rows) || rows.length === 0) {
-      const monthShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      const dowShort   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-      const today = new Date();
+      // Fallback for unclaimed doctors: skip today + weekends.
       const out = [];
-      for (let i = 0; i < 7; i++) {
+      for (let i = 1; out.length < 7 && i <= 60; i++) {
         const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+        const dow = d.getDay();
+        if (dow === 0 || dow === 6) continue;
         const iso = d.getFullYear() + '-' +
                     String(d.getMonth() + 1).padStart(2, '0') + '-' +
                     String(d.getDate()).padStart(2, '0');
         out.push({
           iso,
-          dow: i === 0 ? 'Today' : (i === 1 ? 'Tom' : dowShort[d.getDay()]),
+          dow: labelFor(iso, dowShort[dow]),
           day: d.getDate(),
           mon: monthShort[d.getMonth()],
         });
       }
       return out;
     }
-    return rows.map((row, i) => ({
-      iso: String(row.date ?? row.iso ?? ''),
-      dow: i === 0 ? 'Today' : (i === 1 ? 'Tom' : String(row.weekday ?? row.dow ?? '')),
-      day: Number(row.day ?? 0),
-      mon: String(row.month ?? row.mon ?? ''),
-    })).filter((row) => row.iso !== '');
+    return rows.map((row) => {
+      const iso = String(row.date ?? row.iso ?? '');
+      const weekday = String(row.weekday ?? row.dow ?? '');
+      return {
+        iso,
+        dow: labelFor(iso, weekday),
+        day: Number(row.day ?? 0),
+        mon: String(row.month ?? row.mon ?? ''),
+      };
+    }).filter((row) => row.iso !== '');
   };
 
   return {
@@ -220,7 +248,9 @@ function ecpProfileLeadBook(doctor, initialDays) {
         date_required:       'Please pick a date.',
         time_required:       'Please pick a time.',
         date_in_past:        "That date is already past — please pick a future date.",
-        date_out_of_window:  "Only the next 7 days are bookable.",
+        date_out_of_window:  "Only the next available weekdays are bookable.",
+        weekend_not_allowed: "Weekends aren't available for this clinic — pick a weekday.",
+        today_not_allowed:   "Same-day booking isn't available — pick another date.",
         doctor_id_required:  'Something went wrong identifying the doctor.',
         doctor_not_found:    'This clinic is no longer listed.',
         too_many_requests:   "You've sent a lot of bookings recently. Try again in an hour.",

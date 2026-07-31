@@ -30,7 +30,7 @@ final class SubscriptionMiddleware implements MiddlewareInterface
         '/subscription-expired',               // the block screen itself
         '/settings',                           // general settings (partial access)
         '/subscription',                       // billing / renew page (promoted from settings)
-        '/subscription/checkout',              // the renew/pay POST (Cashfree)
+        '/subscription/checkout',              // the renew/pay POST (Razorpay)
         '/onboarding',                         // never gate onboarding (avoids a
                                                // redirect loop before setup is done)
         '/logout',

@@ -50,7 +50,8 @@ $timeField = static function (string $name, string $label, string $value): strin
             <h3 class="ui-label">Slot duration</h3>
             <p class="ui-help mt-0.5">Each visible booking slot will be this long.</p>
             <div class="mt-2 inline-flex flex-wrap gap-2">
-                <?php foreach ([15 => '15 minutes', 30 => '30 minutes'] as $v => $l): ?>
+                <?php foreach (\App\Services\DoctorScheduleService::ALLOWED_SLOT_DURATIONS as $v): ?>
+                <?php $l = $v . ' minutes'; ?>
                 <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 transition hover:border-slate-300 has-[:checked]:border-brand has-[:checked]:bg-brand-light has-[:checked]:font-medium has-[:checked]:text-brand">
                     <input type="radio" class="ui-radio" name="slot_duration_min" value="<?= $v ?>" <?= $slotDuration === $v ? 'checked' : '' ?>>
                     <?= $l ?>

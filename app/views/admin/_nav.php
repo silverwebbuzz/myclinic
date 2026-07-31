@@ -40,7 +40,13 @@ $navGroups = [
     'Catalog' => [
         ['/admin/plans', 'Plans', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2'],
         ['/admin/specialties', 'Specialties', 'M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.29 1.51 4.04 3 5.5l7 7 7-7z'],
+        ['/admin/locations', 'States & Cities', 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1112 6.5a2.5 2.5 0 010 5z'],
         ['/admin/rx-templates', 'Rx Templates', 'M9 2h6v4H9zM4 6h16v16H4zM8 12h8M8 16h5'],
+    ],
+    'Lab Tests' => [
+        ['/admin/lab/products', 'Tests & Packages', 'M9 3h6v2l-1 1v4.586l4.707 4.707A2 2 0 0117.293 19H6.707a2 2 0 01-1.414-3.707L10 10.586V6L9 5V3z'],
+        ['/admin/lab/categories', 'Categories', 'M4 6h16M4 10h16M4 14h10M4 18h10'],
+        ['/admin/lab/coupons', 'Discount Coupons', 'M9 5H7a2 2 0 00-2 2v3a2 2 0 010 4v3a2 2 0 002 2h2M9 5h8a2 2 0 012 2v3a2 2 0 000 4v3a2 2 0 01-2 2H9M9 5v14'],
     ],
     'Growth' => [
         ['/admin/partners', 'Partners', 'M17 21v-2a4 4 0 00-3-3.87M9 21v-2a4 4 0 013-3.87M12 7a4 4 0 100 8 4 4 0 000-8z'],
@@ -50,6 +56,8 @@ $navGroups = [
     ],
     'System' => [
         ['/admin/feature-flags', 'Feature Flags', 'M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7'],
+        ['/admin/misc', 'Misc', 'M4 7h16M4 12h16M4 17h10'],
+        ['/admin/recaptcha', 'reCAPTCHA', 'M12 2a10 10 0 100 20 10 10 0 000-20zm1 14h-2v-2h2v2zm2.07-7.75l-.9.92A3.49 3.49 0 0013 12h-2v-.5c0-.83.34-1.58.88-2.12l1.24-1.26a1.99 1.99 0 10-3.4-1.41H7.72a4 4 0 117.35 2.54z'],
         ['/admin/messaging', 'Messaging', 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z'],
         ['/admin/email', 'Email', 'M4 4h16v16H4zM4 8l8 5 8-5'],
         ['/admin/email-templates', 'Email Templates', 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h4'],

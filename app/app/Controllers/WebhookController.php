@@ -58,25 +58,17 @@ final class WebhookController
         return Response::json(['error' => 'Stripe is no longer supported'], 410);
     }
 
+    /**
+     * Razorpay webhook — subscription payments. Handles payment.captured /
+     * order.paid (activate) and payment.failed (mark invoice failed).
+     * Signature-verified in BillingGatewayService.
+     */
     public function razorpay(Request $request): Response
     {
         $payload = $request->rawBody ?? '';
         $signature = $request->header('X-Razorpay-Signature');
 
         if (!BillingGatewayService::handleRazorpayWebhook($payload, $signature)) {
-            return Response::json(['error' => 'Invalid signature'], 400);
-        }
-
-        return Response::json(['received' => true]);
-    }
-
-    public function cashfree(Request $request): Response
-    {
-        $payload = $request->rawBody ?? '';
-        $signature = $request->header('x-webhook-signature');
-        $timestamp = $request->header('x-webhook-timestamp');
-
-        if (!BillingGatewayService::handleCashfreeWebhook($payload, $signature, $timestamp)) {
             return Response::json(['error' => 'Invalid signature'], 400);
         }
 

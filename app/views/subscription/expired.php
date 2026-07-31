@@ -24,7 +24,7 @@ ob_start();
             <?php endif; ?>
         </p>
 
-        <!-- Primary action: renew / choose a plan via the existing Cashfree checkout. -->
+        <!-- Primary action: renew / choose a plan via the Razorpay checkout. -->
         <a href="/subscription"
            class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700">
             <?= $isTrial ? 'Choose a plan to continue' : 'Renew your plan' ?>

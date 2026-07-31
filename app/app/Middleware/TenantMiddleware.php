@@ -122,11 +122,12 @@ final class TenantMiddleware implements MiddlewareInterface
             || str_starts_with($uri, '/docs')
             || $uri === '/impersonate/exit'
             || preg_match('#^/impersonate/[a-f0-9]{64}$#', $uri) === 1
-            || in_array($uri, ['/login', '/register', '/forgot-password'], true)
+            || in_array($uri, ['/login', '/register', '/forgot-password', '/forgot-username'], true)
             || str_starts_with($uri, '/accept-invite/')
             || str_starts_with($uri, '/reset-password')
             || str_starts_with($uri, '/auth/google')
             || $uri === '/api/check-slug'
+            || $uri === '/api/check-username'
             || str_starts_with($uri, '/api/patient-auth')
             || str_starts_with($uri, '/webhooks/');
     }

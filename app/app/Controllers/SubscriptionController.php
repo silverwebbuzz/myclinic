@@ -17,8 +17,8 @@ use App\Support\View;
 /**
  * Subscription checkout — turns a plan choice into a real gateway payment.
  * This is the entry point that was previously missing: it calls
- * BillingGatewayService::startCheckout() and redirects the doctor to Cashfree
- * (or the configured fallback). Reachable from both onboarding and Settings.
+ * BillingGatewayService::startCheckout() and opens Razorpay Checkout for the
+ * doctor (or simulates in dev). Reachable from both onboarding and Settings.
  */
 final class SubscriptionController
 {
@@ -84,10 +84,16 @@ final class SubscriptionController
 
         $cancelUrl = $onboarded ? '/subscription' : '/onboarding/clinic-setup';
 
-        if (($result['type'] ?? '') === 'cashfree' && !empty($result['payment_session_id'])) {
-            return Response::html(View::render('subscription/cashfree-checkout', [
-                'payment_session_id' => $result['payment_session_id'],
+        if (($result['type'] ?? '') === 'razorpay' && !empty($result['order_id'])) {
+            return Response::html(View::render('subscription/razorpay-checkout', [
+                'key_id' => $result['key_id'] ?? '',
+                'order_id' => $result['order_id'],
+                'amount' => $result['amount'] ?? 0,
+                'currency' => $result['currency'] ?? 'INR',
+                'name' => $result['name'] ?? 'Subscription',
+                'prefill' => $result['prefill'] ?? [],
                 'mode' => $result['mode'] ?? 'sandbox',
+                'return_url' => '/onboarding/billing/razorpay-return',
                 'cancel_url' => $cancelUrl,
             ]));
         }

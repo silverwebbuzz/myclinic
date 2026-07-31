@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Http\Request;
 use App\Http\Response;
 use App\Services\PatientIdentityAuthService;
+use App\Services\RecaptchaService;
 
 /** Public patient identity OTP — same flow as eclinicpro.com/api/patient_auth.php */
 final class PatientAuthController
@@ -29,6 +30,12 @@ final class PatientAuthController
             return Response::json(['ok' => false, 'error' => 'phone_required'], 400);
         }
 
+        $captchaToken = (string) ($payload['g-recaptcha-response'] ?? $payload['captcha_token'] ?? '');
+        $remoteIp = $_SERVER['REMOTE_ADDR'] ?? null;
+        if (!RecaptchaService::verify($captchaToken !== '' ? $captchaToken : null, is_string($remoteIp) ? $remoteIp : null)) {
+            return Response::json(['ok' => false, 'error' => 'captcha_failed'], 400);
+        }
+
         $res = PatientIdentityAuthService::sendOtp($phone, $intent);
         if (!$res['ok']) {
             $status = match ($res['error'] ?? '') {
@@ -36,6 +43,8 @@ final class PatientAuthController
                 'account_not_found' => 404,
                 'account_exists' => 409,
                 'resend_too_soon' => 429,
+                'not_whatsapp' => 400,
+                'wa_template_missing', 'wa_template_unapproved', 'wa_send_failed' => 503,
                 default => 500,
             };
 
@@ -60,6 +69,12 @@ final class PatientAuthController
 
         if ($phone === '' || $code === '') {
             return Response::json(['ok' => false, 'error' => 'phone_and_code_required'], 400);
+        }
+
+        $captchaToken = (string) ($payload['g-recaptcha-response'] ?? $payload['captcha_token'] ?? '');
+        $remoteIp = $_SERVER['REMOTE_ADDR'] ?? null;
+        if (!RecaptchaService::verify($captchaToken !== '' ? $captchaToken : null, is_string($remoteIp) ? $remoteIp : null)) {
+            return Response::json(['ok' => false, 'error' => 'captcha_failed'], 400);
         }
 
         $res = PatientIdentityAuthService::verifyOtp($phone, $code, $name);

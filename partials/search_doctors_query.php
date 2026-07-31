@@ -104,18 +104,61 @@ function ecp_search_doctors(array $filters): array {
 
     $selectDistance = null;
     if ($lat !== null && $lng !== null) {
+        // Prefer listing coordinates; fall back to catalog city lat/lng so
+        // distance works for claimed clinics that only have city/state set.
+        $docLat = 'COALESCE(dd.lat, ('
+            . 'SELECT c.lat FROM directory_cities c'
+            . ' WHERE LOWER(c.name) = LOWER(dd.city)'
+            . ' AND (dd.state IS NULL OR dd.state = \'\''
+            . '      OR LOWER(c.state) = LOWER(dd.state))'
+            . ' AND c.is_active = 1'
+            . ' ORDER BY c.id ASC LIMIT 1))';
+        $docLng = 'COALESCE(dd.lng, ('
+            . 'SELECT c.lng FROM directory_cities c'
+            . ' WHERE LOWER(c.name) = LOWER(dd.city)'
+            . ' AND (dd.state IS NULL OR dd.state = \'\''
+            . '      OR LOWER(c.state) = LOWER(dd.state))'
+            . ' AND c.is_active = 1'
+            . ' ORDER BY c.id ASC LIMIT 1))';
+        // Named placeholders must be unique when ATTR_EMULATE_PREPARES is false.
         $selectDistance =
-            '(6371 * 2 * ASIN(SQRT(POWER(SIN((:ulat - dd.lat) * PI() / 360), 2)'
-          . ' + COS(:ulat * PI() / 180) * COS(dd.lat * PI() / 180)'
-          . ' * POWER(SIN((:ulng - dd.lng) * PI() / 360), 2)))) AS distance_km';
-        $params['ulat'] = $lat;
-        $params['ulng'] = $lng;
+            '(6371 * 2 * ASIN(SQRT(POWER(SIN((:ulat1 - ' . $docLat . ') * PI() / 360), 2)'
+          . ' + COS(:ulat2 * PI() / 180) * COS((' . $docLat . ') * PI() / 180)'
+          . ' * POWER(SIN((:ulng1 - ' . $docLng . ') * PI() / 360), 2)))) AS distance_km';
+        $params['ulat1'] = $lat;
+        $params['ulat2'] = $lat;
+        $params['ulng1'] = $lng;
+
+        // Bounding-box prefilter: restrict to a lat/lng rectangle BEFORE the
+        // expensive Haversine + filesort. This lets MySQL use an index on
+        // (lat, lng) to cut the candidate set from ~all rows to the few hundred
+        // physically near the user, instead of computing distance for every row.
+        // Box radius = the requested max_km, else a generous 50km default so the
+        // "nearest first" sort still has plenty of candidates. 1 deg lat ≈ 111km;
+        // 1 deg lng ≈ 111km * cos(lat).
+        $boxKm  = $maxKm > 0 ? $maxKm : 50.0;
+        $latPad = $boxKm / 111.0;
+        $cosLat = max(0.01, cos(deg2rad($lat)));   // guard near the poles
+        $lngPad = $boxKm / (111.0 * $cosLat);
+        // Only rows whose OWN coordinates are in the box are prefiltered; rows
+        // relying on the city-fallback lat/lng (dd.lat IS NULL) are kept so the
+        // fallback still works for them.
+        $where[] = '(dd.lat IS NULL OR (dd.lat BETWEEN :box_lat_min AND :box_lat_max '
+                 . 'AND dd.lng BETWEEN :box_lng_min AND :box_lng_max))';
+        $params['box_lat_min'] = $lat - $latPad;
+        $params['box_lat_max'] = $lat + $latPad;
+        $params['box_lng_min'] = $lng - $lngPad;
+        $params['box_lng_max'] = $lng + $lngPad;
     }
 
     // Default ranking tiers: joined clinics first, then listings WITH a photo,
     // then the rest by quality. Photos make cards look complete/trustworthy, so
     // photo'd listings rank above photo-less ones within the same claim tier.
-    $hasPhoto = "(dd.photo_reference IS NOT NULL AND dd.photo_reference <> '') DESC";
+    // Prefer the persisted has_photo column (index-sortable → no filesort);
+    // fall back to the inline expression on servers without the migration.
+    $hasPhoto = ecp_directory_has_photo_column($db)
+        ? 'dd.has_photo DESC'
+        : "(dd.photo_reference IS NOT NULL AND dd.photo_reference <> '') DESC";
     $order = match ($sort) {
         'distance' => $selectDistance !== null ? 'distance_km IS NULL, distance_km ASC' : "dd.is_claimed DESC, $hasPhoto, dd.quality_score DESC",
         'rating'   => 'dd.rating DESC, dd.reviews DESC',
@@ -180,7 +223,7 @@ function ecp_search_doctors(array $filters): array {
     if ($page === 1) {
         $cnt = $db->prepare("SELECT COUNT(*) FROM $fromSql WHERE $whereSql");
         foreach ($params as $k => $v) {
-            if (in_array($k, ['lim', 'off', 'max_km', 'ulat', 'ulng', 'qrel'], true)) {
+            if (in_array($k, ['lim', 'off', 'max_km', 'ulat1', 'ulat2', 'ulng1', 'qrel'], true)) {
                 continue;
             }
             $cnt->bindValue(':' . $k, $v);
@@ -211,7 +254,9 @@ function ecp_shape_directory_row(array $r): array {
         ? $ownerDoctorName
         : trim((string) ($r['doctor_name'] ?? ''));
     $display    = $doctorName !== '' ? $doctorName : $clinicName;
-    $avatar     = ecp_directory_avatar($r, 400);
+    // Avatars render at 88px (176px @2x retina). Requesting 200px covers that
+    // with headroom while roughly halving image bytes vs the old 400px.
+    $avatar     = ecp_directory_avatar($r, 200);
     $first      = mb_substr($avatar['initials'], 0, 1) ?: 'D';
     $last       = mb_strlen($avatar['initials']) > 1 ? mb_substr($avatar['initials'], -1) : '';
 

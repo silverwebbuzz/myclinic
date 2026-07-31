@@ -98,6 +98,144 @@ function ecp_sms_send_otp(string $phone, string $code): array {
 }
 
 /**
+ * Send OTP over WhatsApp Cloud API using an approved template.
+ * Settings come from platform_settings to match admin/messaging controls.
+ *
+ * @return array{ok: bool, mode: string, message_id: ?string, dev_code: ?string, error: ?string}
+ */
+function ecp_whatsapp_send_otp(string $phone, string $code): array {
+    $phone = ecp_normalize_phone($phone);
+    if ($phone === '') {
+        return ['ok' => false, 'mode' => 'n/a', 'message_id' => null, 'dev_code' => null, 'error' => 'invalid_phone'];
+    }
+
+    $db = ecp_db();
+    if (!$db) {
+        return ['ok' => false, 'mode' => 'n/a', 'message_id' => null, 'dev_code' => null, 'error' => 'db_unavailable'];
+    }
+
+    $settings = ecp_platform_settings($db, [
+        'messaging_enabled', 'wa_access_token', 'wa_phone_number_id', 'patient_otp_template_key',
+    ]);
+    $enabled = ($settings['messaging_enabled'] ?? '0') === '1';
+    $token = trim((string) ($settings['wa_access_token'] ?? ''));
+    $phoneId = trim((string) ($settings['wa_phone_number_id'] ?? ''));
+    $templateKey = trim((string) ($settings['patient_otp_template_key'] ?? ''));
+    if ($templateKey === '' || $templateKey === 'auth_doctor_register_otp') {
+        $templateKey = 'authentication';
+    }
+
+    $isLocal = strtolower(ecp_env('APP_ENV', 'local')) === 'local';
+    if (!$enabled || $token === '' || $phoneId === '') {
+        return [
+            'ok' => $isLocal,
+            'mode' => $isLocal ? 'dev' : 'live',
+            'message_id' => null,
+            'dev_code' => $isLocal ? $code : null,
+            'error' => $isLocal ? null : 'whatsapp_not_configured',
+        ];
+    }
+
+    $tpl = ecp_wa_template_row($db, $templateKey);
+    if ($tpl === null) {
+        return ['ok' => false, 'mode' => 'live', 'message_id' => null, 'dev_code' => null, 'error' => 'wa_template_missing'];
+    }
+    if (strtolower((string) ($tpl['status'] ?? '')) !== 'approved') {
+        return ['ok' => false, 'mode' => 'live', 'message_id' => null, 'dev_code' => null, 'error' => 'wa_template_unapproved'];
+    }
+
+    $to = preg_replace('/\D/', '', $phone) ?? '';
+    $metaName = (string) ($tpl['meta_name'] ?: $templateKey);
+    $language = (string) ($tpl['language'] ?: 'en');
+    $category = strtolower((string) ($tpl['category'] ?? 'utility'));
+    $otpParam = ['type' => 'text', 'text' => $code];
+    $components = $category === 'authentication'
+        ? [
+            ['type' => 'body', 'parameters' => [$otpParam]],
+            ['type' => 'button', 'sub_type' => 'url', 'index' => '0', 'parameters' => [$otpParam]],
+        ]
+        : [['type' => 'body', 'parameters' => [$otpParam]]];
+
+    $payload = [
+        'messaging_product' => 'whatsapp',
+        'to' => $to,
+        'type' => 'template',
+        'template' => [
+            'name' => $metaName,
+            'language' => ['code' => $language],
+            'components' => $components,
+        ],
+    ];
+
+    $ch = curl_init("https://graph.facebook.com/v18.0/{$phoneId}/messages");
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_TIMEOUT => 15,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $token,
+            'Content-Type: application/json',
+        ],
+        CURLOPT_POSTFIELDS => json_encode($payload),
+    ]);
+    $resp = curl_exec($ch);
+    $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    $json = json_decode((string) $resp, true);
+    if ($http >= 200 && $http < 300) {
+        return [
+            'ok' => true,
+            'mode' => $isLocal ? 'dev' : 'live',
+            'message_id' => $json['messages'][0]['id'] ?? null,
+            'dev_code' => $isLocal ? $code : null,
+            'error' => null,
+        ];
+    }
+
+    $msg = strtolower((string) ($json['error']['message'] ?? ''));
+    $err = 'wa_send_failed';
+    if (str_contains($msg, 'not a valid whatsapp') || str_contains($msg, 'whatsapp user') || str_contains($msg, 'recipient')) {
+        $err = 'not_whatsapp';
+    }
+
+    return ['ok' => false, 'mode' => 'live', 'message_id' => null, 'dev_code' => null, 'error' => $err];
+}
+
+/**
+ * @param list<string> $keys
+ * @return array<string,string>
+ */
+function ecp_platform_settings(PDO $db, array $keys): array {
+    if ($keys === []) return [];
+    $map = [];
+    $placeholders = implode(',', array_fill(0, count($keys), '?'));
+    try {
+        $stmt = $db->prepare("SELECT setting_key, setting_value FROM platform_settings WHERE setting_key IN ({$placeholders})");
+        $stmt->execute(array_values($keys));
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $map[(string) $row['setting_key']] = (string) ($row['setting_value'] ?? '');
+        }
+    } catch (\Throwable $e) {
+        return [];
+    }
+    return $map;
+}
+
+/**
+ * @return array<string,mixed>|null
+ */
+function ecp_wa_template_row(PDO $db, string $templateKey): ?array {
+    try {
+        $stmt = $db->prepare('SELECT * FROM wa_templates WHERE template_key = :k LIMIT 1');
+        $stmt->execute(['k' => $templateKey]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    } catch (\Throwable $e) {
+        return null;
+    }
+}
+
+/**
  * Dev-mode logger. Appends a single line per OTP issued.
  */
 function ecp_sms_log_dev(string $phone, string $code): void {

@@ -31,7 +31,7 @@ $onTrial = !empty($clinic['trial_ends_at']) && strtotime((string) $clinic['trial
         <?php endif; ?>
 
         <?php if (!$isPaid): ?>
-        <!-- Subscribe / upgrade — triggers real Cashfree checkout -->
+        <!-- Subscribe / upgrade — triggers real Razorpay checkout -->
         <div class="mt-4 rounded-xl border border-slate-200 p-4" style="max-width:380px;">
             <p class="text-sm font-semibold text-slate-800"><?= htmlspecialchars((string) ($standard['name'] ?? 'Standard')) ?> — Annual</p>
             <p class="text-xs text-slate-500"><?= htmlspecialchars((string) ($standard['tagline'] ?? 'Everything to run your clinic · unlimited patients & users')) ?></p>
@@ -47,7 +47,7 @@ $onTrial = !empty($clinic['trial_ends_at']) && strtotime((string) $clinic['trial
                 <input type="hidden" name="billing_cycle" value="yearly">
                 <button type="submit" class="ui-btn ui-btn-primary w-full">Subscribe now · ₹<?= number_format($gross, 0) ?></button>
             </form>
-            <p class="mt-2 text-center text-[11px] text-slate-400">Secure payment via Cashfree</p>
+            <p class="mt-2 text-center text-[11px] text-slate-400">Secure payment via Razorpay</p>
         </div>
         <?php else: ?>
         <p class="mt-3 text-sm text-emerald-700">✓ Your subscription is active. Invoices are below.</p>
@@ -55,7 +55,7 @@ $onTrial = !empty($clinic['trial_ends_at']) && strtotime((string) $clinic['trial
     </section>
 
     <?php
-    // A payment that's still confirming (Cashfree webhook lands within a few
+    // A payment that's still confirming (Razorpay webhook lands within a few
     // mins). Show the in-progress timeline so the doctor isn't left guessing.
     $pending = array_values(array_filter($invoices, static fn ($i) => ($i['status'] ?? '') === 'pending'));
     $statusTone = static fn (string $s): string => match ($s) {
@@ -100,6 +100,27 @@ $onTrial = !empty($clinic['trial_ends_at']) && strtotime((string) $clinic['trial
             </ol>
         </div>
         <?php endforeach; ?>
+    </section>
+    <?php endif; ?>
+
+    <?php
+    // A failed payment (Razorpay payment.failed). Show a clear retry so the
+    // doctor isn't stuck. Only surfaced while the clinic isn't already paid.
+    $failed = !$isPaid
+        ? array_values(array_filter($invoices, static fn ($i) => ($i['status'] ?? '') === 'failed'))
+        : [];
+    ?>
+    <?php if ($failed !== []): ?>
+    <section class="ui-card ui-card-pad" style="border-color:#fca5a5;">
+        <h3 class="ui-section-title text-rose-800">Payment didn’t go through</h3>
+        <p class="mt-2 text-sm text-slate-600">Your last payment attempt could not be completed. No charge was made — you can try again.</p>
+        <form method="post" action="/subscription/checkout" class="mt-3"
+              @submit="$el.querySelector('button').disabled = true">
+            <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+            <input type="hidden" name="plan" value="standard">
+            <input type="hidden" name="billing_cycle" value="yearly">
+            <button type="submit" class="ui-btn ui-btn-primary">Retry payment</button>
+        </form>
     </section>
     <?php endif; ?>
 

@@ -10,6 +10,7 @@ use App\Http\Response;
 use App\Services\ClinicSettingsService;
 use App\Services\CsrfService;
 use App\Services\DoctorClaimService;
+use App\Services\LocationCatalogService;
 use App\Support\Layout;
 
 /**
@@ -41,6 +42,7 @@ final class GetListedController
             'listing'       => ClinicSettingsService::publicListing($clinicId),
             'services'      => ClinicSettingsService::servicesForClinic($clinicId),
             'specialties'   => self::specialtyCatalog(),
+            'locationPicker'=> LocationCatalogService::pickerPayload(),
             'csrf'          => CsrfService::token(),
             'message'       => $request->query['message'] ?? null,
         ], 'Listed on eClinicPro'));

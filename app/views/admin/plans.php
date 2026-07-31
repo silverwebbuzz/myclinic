@@ -52,7 +52,7 @@ $modulesSummary = static function ($raw): string {
 
         <p class="text-sm text-slate-500">
             The source of truth for pricing across onboarding, the public pricing page, and
-            Cashfree checkout. <code>PlanService</code> reads active plans here and only falls
+            Razorpay checkout. <code>PlanService</code> reads active plans here and only falls
             back to <code>config/plans.php</code> if this table is empty. Prices are in
             <strong>INR</strong>. <code>modules</code> may be the literal <code>all_paid</code>
             (every core module) or one module id per line.

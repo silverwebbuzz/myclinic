@@ -69,6 +69,10 @@
                             <?php if (!empty($claim['state'])): ?>, <?= htmlspecialchars((string) $claim['state']) ?><?php endif; ?>
                         </dd>
                     </div>
+                    <div class="flex">
+                        <dt class="w-32 shrink-0 text-slate-500">Address</dt>
+                        <dd class="whitespace-pre-line"><?= htmlspecialchars((string) ($claim['_clinic_address'] ?? '—')) ?></dd>
+                    </div>
                     <?php if (!empty($claim['reg_number']) || !empty($claim['reg_council'])): ?>
                     <div class="flex">
                         <dt class="w-32 shrink-0 text-slate-500">Registration</dt>

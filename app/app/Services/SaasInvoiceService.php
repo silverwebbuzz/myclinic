@@ -14,8 +14,9 @@ use App\Core\QueryBuilder;
  *   1. createPending() — at checkout, BEFORE redirecting to the gateway.
  *      Row is status='pending' so the doctor sees it in their timeline while
  *      the payment is in progress.
- *   2. markPaid() — on gateway success (Cashfree webhook OR return-URL verify;
- *      both call this, it's idempotent). Generates the PDF and emails it.
+ *   2. markPaidByOrder() — on gateway success (Razorpay webhook OR return-URL
+ *      verify; both call this, it's idempotent). Generates the PDF and emails it.
+ *   2b. markFailedByOrder() — on Razorpay payment.failed, flags the pending row.
  *
  * The SELLER is the eClinicPro vendor entity (config/company.php), NOT the
  * clinic — these are the clinic's purchases FROM us.
@@ -126,6 +127,33 @@ final class SaasInvoiceService
             self::generateAndEmail((int) $invoice['id']);
         } catch (\Throwable $e) {
             error_log('[SaasInvoiceService] markPaidByOrder failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Mark the pending invoice for a gateway order as failed (Razorpay
+     * payment.failed webhook). Only a still-pending row is touched — a paid
+     * invoice is never regressed. Lets the doctor see the failure and retry.
+     */
+    public static function markFailedByOrder(string $gatewayOrderId): void
+    {
+        if (!Database::ping() || $gatewayOrderId === '') {
+            return;
+        }
+
+        try {
+            $invoice = QueryBuilder::table('saas_invoices')
+                ->where('gateway_order_id', '=', $gatewayOrderId)
+                ->first();
+            if ($invoice === null || ($invoice['status'] ?? '') !== 'pending') {
+                return; // never regress a paid invoice
+            }
+
+            QueryBuilder::table('saas_invoices')
+                ->where('id', '=', (int) $invoice['id'])
+                ->update(['status' => 'failed']);
+        } catch (\Throwable $e) {
+            error_log('[SaasInvoiceService] markFailedByOrder failed: ' . $e->getMessage());
         }
     }
 

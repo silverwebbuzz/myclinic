@@ -1,0 +1,1738 @@
+<?php
+/**
+ * Shared lab catalog + detail-page content builder for lab.php / lab-detail.php.
+ * Images: free Unsplash License — https://unsplash.com/license
+ */
+
+declare(strict_types=1);
+
+if (!function_exists('lab_photo')) {
+    function lab_photo(string $photoId, int $w = 800, ?int $h = null): string
+    {
+        $url = 'https://images.unsplash.com/' . $photoId . '?auto=format&fit=crop&w=' . $w . '&q=80';
+        if ($h !== null) {
+            $url .= '&h=' . $h;
+        }
+        return $url;
+    }
+}
+
+function ecp_lab_photos(): array
+{
+    static $photos = null;
+    if ($photos !== null) {
+        return $photos;
+    }
+    $photos = [
+        'hero-lab' => 'photo-1582719471384-894fbb16e074',
+        'hero-family' => 'photo-1511895426328-dc8714191300',
+        'pkg-full-body-advanced' => 'photo-1700832082200-af7deeb63d9b',
+        'pkg-diabetes-care' => 'photo-1683727186226-910f31a9da45',
+        'pkg-thyroid-total' => 'photo-1631217868264-e5b90bb7e133',
+        'pkg-heart-health' => 'photo-1505751172876-fa1923c5c528',
+        'pkg-vitamin-deficiency' => 'photo-1550572017-edd951b55104',
+        'pkg-womens-wellness' => 'photo-1559839734-2b71ea197ec2',
+        'pkg-senior-citizen' => 'photo-1582750433449-648ed127bb54',
+        'pkg-fever-infection' => 'photo-1631549916768-4119b2e5f926',
+        'organs-family' => 'photo-1476703993599-0035a21b17a9',
+        'organ-heart' => 'photo-1618939304347-e91b1f33d2ab',
+        'organ-lungs' => 'photo-1530497610245-94d3c16cda28',
+        'organ-liver' => 'photo-1532187863486-abf9dbad1b69',
+        'organ-kidney' => 'photo-1579154204601-01588f351e67',
+        'organ-thyroid' => 'photo-1631217868264-e5b90bb7e133',
+        'organ-diabetes' => 'photo-1683727186226-910f31a9da45',
+        'organ-bone' => 'photo-1559757175-5700dde675bc',
+        'organ-brain' => 'photo-1559757148-5c350d0d3c56',
+        'organ-full-body' => 'photo-1700832082200-af7deeb63d9b',
+        'organ-vitamins' => 'photo-1550572017-edd951b55104',
+        'organ-immunity' => 'photo-1544367567-0f2fcb009e0b',
+        'organ-pregnancy' => 'photo-1584515933487-779824d29309',
+        'symptom-fever' => 'photo-1584820927498-cfe5211fd8bf',
+        'symptom-cough' => 'photo-1666214280557-f1b5022eb634',
+        'symptom-body-pain' => 'photo-1559757175-0eb30cd8c063',
+        'symptom-stomach' => 'photo-1516574187841-cb9cc2ca948b',
+        'symptom-skin' => 'photo-1571019613454-1cb2f99b2d8b',
+        'symptom-fatigue' => 'photo-1544005313-94ddf0286df2',
+        'symptom-weight' => 'photo-1571019614242-c5c5dee9f50b',
+        'symptom-heart-health' => 'photo-1505751172876-fa1923c5c528',
+        'life-diabetic' => 'photo-1683727186226-910f31a9da45',
+        'life-thyroid' => 'photo-1631217868264-e5b90bb7e133',
+        'life-child' => 'photo-1503454537195-1dcabb73ffb9',
+        'life-mens' => 'photo-1612349317150-e413f6a5b16d',
+        'life-womens' => 'photo-1438761681033-6461ffad8d80',
+        'life-pregnancy' => 'photo-1584515933487-779824d29309',
+        'life-senior' => 'photo-1582750433449-648ed127bb54',
+        'life-fitness' => 'photo-1571019614242-c5c5dee9f50b',
+        'step-choose' => 'photo-1576091160399-112ba8d25d1d',
+        'step-home' => 'photo-1511895426328-dc8714191300',
+        'step-lab' => 'photo-1532187863486-abf9dbad1b69',
+        'step-reports' => 'photo-1576091160399-112ba8d25d1d',
+        'why-nabl' => 'photo-1582719478250-c89cae4dc85b',
+        'why-home' => 'photo-1600880292203-757bb62b4baf',
+        'why-reports-app' => 'photo-1576091160399-112ba8d25d1d',
+        'why-fast' => 'photo-1638202993928-7267aad84c31',
+        'why-doctor' => 'photo-1612349317150-e413f6a5b16d',
+        'why-savings' => 'photo-1587854692152-cbe660dbde88',
+        'why-hygiene' => 'photo-1582719471384-894fbb16e074',
+        'why-india' => 'photo-1516574187841-cb9cc2ca948b',
+        'partner-nabl' => 'photo-1582719478250-c89cae4dc85b',
+        'partner-pathology' => 'photo-1579165466741-7f35e4755660',
+        'partner-partners' => 'photo-1700832082200-af7deeb63d9b',
+        'partner-centers' => 'photo-1511174511562-5f7f18b874f8',
+        // Extra gallery pool
+        'gal-1' => 'photo-1700832082200-af7deeb63d9b',
+        'gal-2' => 'photo-1582719471384-894fbb16e074',
+        'gal-3' => 'photo-1532187863486-abf9dbad1b69',
+        'gal-4' => 'photo-1579154204601-01588f351e67',
+        'gal-5' => 'photo-1559839734-2b71ea197ec2',
+        'gal-6' => 'photo-1612349317150-e413f6a5b16d',
+        'gal-7' => 'photo-1511895426328-dc8714191300',
+        'gal-8' => 'photo-1666214280557-f1b5022eb634',
+    ];
+    return $photos;
+}
+
+function ecp_lab_photo_key(string $type, string $slug): string
+{
+    $map = [
+        'package' => 'pkg-',
+        'organ' => 'organ-',
+        'symptom' => 'symptom-',
+        'life' => 'life-',
+        'step' => 'step-',
+        'why' => 'why-',
+        'partner' => 'partner-',
+    ];
+    return ($map[$type] ?? '') . $slug;
+}
+
+function ecp_lab_detail_url(string $type, string $slug): string
+{
+    return '/lab/' . rawurlencode($type) . '/' . rawurlencode($slug);
+}
+
+/**
+ * Join a list into a human phrase: ['A'] -> "A", ['A','B'] -> "A & B",
+ * ['A','B','C'] -> "A, B & C". Used for the "Screens X, Y & Z" copy.
+ */
+function ecp_join_human(array $items): string
+{
+    $items = array_values(array_filter(array_map('strval', $items), static fn ($s) => $s !== ''));
+    $n = count($items);
+    if ($n === 0) {
+        return '';
+    }
+    if ($n === 1) {
+        return $items[0];
+    }
+    $last = array_pop($items);
+    return implode(', ', $items) . ' & ' . $last;
+}
+
+/** Test count at/above which a package is treated as a "Full Body" checkup. */
+const ECP_LAB_FULL_BODY_MIN_TESTS = 40;
+
+/**
+ * Home-collection charge on small orders.
+ *
+ * Thyrocare bills US ₹200 when the order value falls below ₹300. We pass that
+ * cost through at cost — no markup — so the fee is Thyrocare's rule, not an
+ * eClinicPro margin play. Word it that way in the UI.
+ *
+ * The threshold is measured on the ORDER SUBTOTAL (package + add-on tests,
+ * × persons), NOT on the single product's list price. So a ₹80 FBS booked for
+ * four people, or with a couple of add-ons, clears ₹300 and collection is free.
+ * That's also why the fee has to be computed in JS on every change rather than
+ * rendered once from PHP.
+ *
+ * Whether the coupon discount applies BEFORE this test is a real business
+ * decision — see ECP_LAB_COLLECTION_ON_DISCOUNTED below.
+ */
+const ECP_LAB_COLLECTION_FEE       = 200;   // ₹ charged when under the threshold
+const ECP_LAB_COLLECTION_MIN_ORDER = 300;   // ₹ order value for free collection
+
+/**
+ * Is the free-collection threshold tested on the POST-discount amount?
+ *
+ * TRUE — confirmed business rule. Thyrocare bills us on what the order actually
+ * settles at, so the member coupon is applied FIRST and the threshold is tested
+ * against the discounted figure. A ₹325 order that a 25% coupon takes to ₹244
+ * falls under ₹300 and DOES attract the ₹200 collection charge.
+ *
+ * Consequence to be aware of: near the boundary a discount can raise the total
+ * (₹325 → ₹244 + ₹200 = ₹444). That is intended — we'd otherwise absorb a ₹200
+ * cost Thyrocare charges us. The order summary shows the collection line and an
+ * "add ₹X more" nudge so the patient can see it and top up past the threshold.
+ *
+ * NOTE: the fees themselves are NEVER discounted — see the total in
+ * updateTotals(). The coupon base is the package line only; the ₹200 collection
+ * and ₹75 courier are added after the discount and are always paid in full.
+ */
+const ECP_LAB_COLLECTION_ON_DISCOUNTED = true;
+
+/**
+ * Hard-copy courier charge in ₹, when the patient ticks "send me a printed
+ * report". Like the collection fee this is a pass-through service charge and
+ * is NEVER discounted by a coupon.
+ *
+ * Lives here (rather than next to the booking code) so the storefront template,
+ * the booking JS and the server-side repricing in partials/lab_orders.php all
+ * read one number.
+ */
+const ECP_LAB_HARDCOPY_FEE = 75;
+
+/**
+ * Maps a curated storefront filter tab -> the lab_categories slugs that feed it.
+ * A package appears under a tab when any of its linked categories matches.
+ * 'popular' is derived from is_featured/booked_count, and 'full-body' from the
+ * test count (see ECP_LAB_FULL_BODY_MIN_TESTS) — neither is a real category.
+ */
+function ecp_lab_tab_category_map(): array
+{
+    return [
+        // 'full-body' handled by test_count, not categories (see ecp_lab_db_packages)
+        'diabetes' => ['diabetes', 'metabolic', 'diabetes-renal', 'diabetes-cardiac'],
+        'thyroid'  => ['thyroid', 'autoimmune-thyroid'],
+        'vitamins' => ['vitamin', 'elements', 'anaemia'],
+        'women'    => ['pregnancy', 'infertility', 'autoimmune-pregnancy', 'anaemia-pregnancy'],
+        'heart'    => ['cardiac', 'heart-health', 'cardiac-risk-markers', 'arthritis-cardiac'],
+        'fever'    => ['infection', 'infectious-disease', 'typhoid', 'malaria', 'covid', 'hepatitis'],
+        'senior'   => ['arthritis', 'renal', 'cardiac', 'arthritis-renal'],
+    ];
+}
+
+/**
+ * The storefront filter tabs, in display order. Keys are the data-cats values
+ * the JS filter matches; values are the button labels. Tuned for the Indian
+ * market: Full Body first (most-searched), then the high-demand conditions.
+ */
+function ecp_lab_package_filters(): array
+{
+    return [
+        'all'       => 'All Packages',
+        'popular'   => 'Most Popular',
+        'full-body' => 'Full Body',
+        'diabetes'  => 'Diabetes',
+        'thyroid'   => 'Thyroid',
+        'vitamins'  => 'Vitamins',
+        'women'     => 'Women',
+        'heart'     => 'Heart',
+        'fever'     => 'Fever & Infection',
+        'senior'    => 'Senior Citizen',
+    ];
+}
+
+/**
+ * DB-backed packages for the /lab grid, in the SAME positional tuple shape as
+ * the static 'packages' array so lab.php's render loop is unchanged:
+ *   [slug, name, highlights[], tests[], paramCount, price, mrp, off%, cats[], badge]
+ *
+ * Selection: featured first, then most-booked packages/offers. Each package's
+ * `cats` are the storefront filter tabs it belongs to (mapped from its
+ * lab_categories), always including 'popular' so it shows under "Most Popular".
+ *
+ * Returns [] when the DB/tables are unavailable — caller keeps the static list.
+ *
+ * @return list<array>
+ */
+
+/**
+ * Decode a lab_products.test_groups_json blob into a card-ready breakdown.
+ *
+ * The JSON is {group_name: count} for ALL groups in the package. Cards only have
+ * room for a few chips, so we show the biggest `$top` groups and report how many
+ * individual tests fall outside them — that "+N more" reconciles the visible
+ * chips with the package's headline test_count (e.g. Aarogyam XL = 149 across 18
+ * groups; top 4 sum to 77, so remaining = 72).
+ *
+ * @return array{groups: array<string,int>, remaining: int, total: int}
+ */
+function ecp_lab_group_breakdown(?string $json, int $top = 4): array
+{
+    $all = [];
+    if ($json !== null && $json !== '') {
+        $decoded = json_decode($json, true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $grp => $cnt) {
+                $all[ecp_lab_titlecase((string) $grp)] = (int) $cnt;
+            }
+        }
+    }
+    arsort($all);
+    $total  = array_sum($all);
+    $groups = array_slice($all, 0, $top, true);
+    $shown  = array_sum($groups);
+    return [
+        'groups'    => $groups,
+        'remaining' => max(0, $total - $shown),
+        'total'     => $total,
+    ];
+}
+
+function ecp_lab_db_packages(int $limit = 12): array
+{
+    if (!function_exists('ecp_db')) {
+        return [];
+    }
+    $db = ecp_db();
+    if (!$db) {
+        return [];
+    }
+
+    try {
+        // Grid rows: current price = latest effective_from per product.
+        $stmt = $db->prepare(
+            "SELECT lp.id, lp.slug, lp.name, lp.test_count, lp.is_featured, lp.fasting,
+                    lp.test_groups_json, pr.mrp, pr.offer_rate
+             FROM lab_products lp
+             JOIN lab_product_pricing pr ON pr.id = (
+                 SELECT p2.id FROM lab_product_pricing p2
+                 WHERE p2.product_id = lp.id
+                 ORDER BY p2.effective_from DESC, p2.id DESC LIMIT 1
+             )
+             WHERE lp.is_active = 1
+               AND lp.product_type IN ('PROFILE', 'OFFER')
+               AND pr.offer_rate > 0
+             ORDER BY lp.is_featured DESC, lp.booked_count DESC, lp.name ASC
+             LIMIT :lim"
+        );
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if (!$rows) {
+            return [];
+        }
+
+        $ids = array_column($rows, 'id');
+        $in  = implode(',', array_fill(0, count($ids), '?'));
+
+        // Up to 6 sample test names per package (for the card's test-chip list).
+        $testsByProduct = [];
+        $tstmt = $db->prepare(
+            "SELECT lpp.product_id, par.name
+             FROM lab_product_parameters lpp
+             JOIN lab_parameters par ON par.id = lpp.parameter_id
+             WHERE lpp.product_id IN ($in)
+             ORDER BY par.name"
+        );
+        $tstmt->execute($ids);
+        foreach ($tstmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $pid = (int) $r['product_id'];
+            if (count($testsByProduct[$pid] ?? []) < 6) {
+                $testsByProduct[$pid][] = ecp_lab_titlecase($r['name']);
+            }
+        }
+
+        // Category slugs per package (for tab mapping).
+        $catsByProduct = [];
+        $cstmt = $db->prepare(
+            "SELECT lpc.product_id, c.slug
+             FROM lab_product_categories lpc
+             JOIN lab_categories c ON c.id = lpc.category_id
+             WHERE lpc.product_id IN ($in)"
+        );
+        $cstmt->execute($ids);
+        foreach ($cstmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $catsByProduct[(int) $r['product_id']][] = $r['slug'];
+        }
+
+        $tabMap = ecp_lab_tab_category_map();
+
+        $out = [];
+        foreach ($rows as $row) {
+            $pid   = (int) $row['id'];
+            $mrp   = (float) $row['mrp'];
+            $offer = (float) $row['offer_rate'];
+            $offPct = $mrp > 0 ? (int) round(($mrp - $offer) / $mrp * 100) : 0;
+
+            // Which storefront tabs this package belongs to.
+            $prodCats = $catsByProduct[$pid] ?? [];
+            $tabs = ['popular']; // always eligible for "Most Popular"
+            // Full Body = comprehensive panel (by test count, not category).
+            if ((int) $row['test_count'] >= ECP_LAB_FULL_BODY_MIN_TESTS) {
+                $tabs[] = 'full-body';
+            }
+            foreach ($tabMap as $tab => $slugs) {
+                if (array_intersect($prodCats, $slugs)) {
+                    $tabs[] = $tab;
+                }
+            }
+            $tabs = array_values(array_unique($tabs));
+
+            $tests = $testsByProduct[$pid] ?? [];
+            $highlights = [
+                (int) $row['test_count'] . ' tests in one package',
+                $offPct > 0 ? "Save up to {$offPct}% vs individual tests" : 'Comprehensive health screening',
+                'Free home sample collection & digital reports',
+            ];
+
+            $out[] = [
+                (string) $row['slug'],
+                ecp_lab_titlecase($row['name']),
+                $highlights,
+                $tests,
+                (string) (int) $row['test_count'],
+                (string) (int) round($offer),
+                (string) (int) round($mrp),
+                (string) $offPct,
+                $tabs,
+                !empty($row['is_featured']) ? 'Bestseller' : '',
+                // fasting: 'CF' = fasting required, 'NF' = no fasting, null = unknown.
+                (string) ($row['fasting'] ?? ''),
+                // [11] group breakdown: top groups + "+N more" so chips reconcile
+                // with the headline test_count.
+                ecp_lab_group_breakdown($row['test_groups_json'] ?? null, 4),
+            ];
+        }
+        return $out;
+    } catch (Throwable $e) {
+        error_log('[ecp_lab_db_packages] ' . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Full autocomplete index from the DB: every active package/offer plus the most
+ * popular individual tests. Shaped like lab.php's $labSearchIndex package rows
+ * (type/slug/title/meta/params/price/mrp/off/url/q) so the JS renderer is
+ * unchanged. Returns [] when the DB is unavailable (caller keeps the static index).
+ *
+ * @return list<array<string,mixed>>
+ */
+function ecp_lab_db_search_index(int $testLimit = 150): array
+{
+    if (!function_exists('ecp_db')) {
+        return [];
+    }
+    $db = ecp_db();
+    if (!$db) {
+        return [];
+    }
+    try {
+        // All packages/offers + top individual tests, each with current price.
+        $stmt = $db->prepare(
+            "SELECT lp.id, lp.product_type, lp.slug, lp.name, lp.test_count,
+                    pr.mrp, pr.offer_rate
+             FROM lab_products lp
+             JOIN lab_product_pricing pr ON pr.id = (
+                 SELECT p2.id FROM lab_product_pricing p2
+                 WHERE p2.product_id = lp.id
+                 ORDER BY p2.effective_from DESC, p2.id DESC LIMIT 1
+             )
+             WHERE lp.is_active = 1 AND pr.offer_rate > 0
+               AND (
+                   lp.product_type IN ('PROFILE', 'OFFER')
+                   OR lp.id IN (
+                       SELECT id FROM (
+                           SELECT id FROM lab_products
+                           WHERE is_active = 1 AND product_type = 'TEST'
+                           ORDER BY booked_count DESC, name ASC
+                           LIMIT :tl
+                       ) t
+                   )
+               )
+             ORDER BY (lp.product_type = 'TEST'), lp.booked_count DESC, lp.name ASC"
+        );
+        $stmt->bindValue(':tl', $testLimit, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if (!$rows) {
+            return [];
+        }
+
+        // Enrich each item's search haystack with the names of the tests it
+        // CONTAINS + its category names, so chips like "Liver" or "Iron" find
+        // packages that include those, not only ones with the word in the title.
+        $wantedIds = array_map(static fn ($r) => (int) $r['id'], $rows);
+        $extraById = [];
+        if ($wantedIds) {
+            $in = implode(',', array_fill(0, count($wantedIds), '?'));
+            // Parameter names per product.
+            $pStmt = $db->prepare(
+                "SELECT lpp.product_id, GROUP_CONCAT(DISTINCT par.name SEPARATOR ' ') AS names
+                   FROM lab_product_parameters lpp
+                   JOIN lab_parameters par ON par.id = lpp.parameter_id
+                  WHERE lpp.product_id IN ($in) GROUP BY lpp.product_id"
+            );
+            $pStmt->execute($wantedIds);
+            foreach ($pStmt->fetchAll(PDO::FETCH_ASSOC) as $pr2) {
+                $extraById[(int) $pr2['product_id']] = (string) $pr2['names'];
+            }
+            // Category names per product (append to any param names).
+            $cStmt = $db->prepare(
+                "SELECT lpc.product_id, GROUP_CONCAT(DISTINCT c.name SEPARATOR ' ') AS names
+                   FROM lab_product_categories lpc
+                   JOIN lab_categories c ON c.id = lpc.category_id
+                  WHERE lpc.product_id IN ($in) GROUP BY lpc.product_id"
+            );
+            $cStmt->execute($wantedIds);
+            foreach ($cStmt->fetchAll(PDO::FETCH_ASSOC) as $cr2) {
+                $pid = (int) $cr2['product_id'];
+                $extraById[$pid] = trim(($extraById[$pid] ?? '') . ' ' . (string) $cr2['names']);
+            }
+        }
+
+        $out = [];
+        foreach ($rows as $r) {
+            $isPackage = $r['product_type'] !== 'TEST';
+            $mrp   = (float) $r['mrp'];
+            $offer = (float) $r['offer_rate'];
+            $offPct = $mrp > 0 ? (int) round(($mrp - $offer) / $mrp * 100) : 0;
+            $title = ecp_lab_titlecase($r['name']);
+            $extra = $extraById[(int) $r['id']] ?? '';
+            $out[] = [
+                'type'   => 'package', // detail route is /lab/package/{slug} for both
+                'slug'   => (string) $r['slug'],
+                'title'  => $title,
+                'meta'   => $isPackage
+                    ? 'Package | Includes ' . (int) $r['test_count'] . ' Tests'
+                    : 'Test | Single parameter',
+                'params' => (string) (int) $r['test_count'],
+                'price'  => (string) (int) round($offer),
+                'mrp'    => (string) (int) round($mrp),
+                'off'    => (string) $offPct,
+                'url'    => ecp_lab_detail_url('package', (string) $r['slug']),
+                // Haystack: title + contained test names + category names.
+                'q'      => strtolower(trim($title . ' ' . $extra)),
+            ];
+        }
+        return $out;
+    } catch (Throwable $e) {
+        error_log('[ecp_lab_db_search_index] ' . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Booking window for home collection, as [earliest, latest] Y-m-d.
+ *
+ * THE RULES (confirmed business logic — mirrored in lab-detail.php's JS):
+ *   - never same-day: the phlebotomist round is planned the evening before
+ *   - after the 19:00 IST cut-off, tomorrow is closed too, so the earliest
+ *     slot moves to the day after
+ *   - the window is 7 days long from that earliest date
+ *
+ * Always computed in Asia/Kolkata regardless of server timezone — a server on
+ * UTC would otherwise apply the 19:00 cut-off 5.5 hours late and let a patient
+ * book a slot the lab can no longer staff.
+ *
+ * @return array{0:string,1:string,2:string} [minDate, maxDate, nowIstIso]
+ */
+function ecp_lab_booking_window(?DateTimeImmutable $now = null): array
+{
+    $ist = new DateTimeZone('Asia/Kolkata');
+    $now = $now ? $now->setTimezone($ist) : new DateTimeImmutable('now', $ist);
+
+    $daysAhead = ((int) $now->format('G') >= ECP_LAB_CUTOFF_HOUR_IST) ? 2 : 1;
+
+    $min = $now->modify('+' . $daysAhead . ' days')->setTime(0, 0);
+    $max = $min->modify('+' . (ECP_LAB_BOOKING_WINDOW_DAYS - 1) . ' days');
+
+    return [$min->format('Y-m-d'), $max->format('Y-m-d'), $now->format('c')];
+}
+
+/** Orders placed at/after this IST hour lose the next day as an option. */
+const ECP_LAB_CUTOFF_HOUR_IST = 19;   // 7:00 PM IST
+
+/** Selectable days, counting the earliest bookable date as day 1. */
+const ECP_LAB_BOOKING_WINDOW_DAYS = 7;
+
+/**
+ * The discount a single line may actually receive.
+ *
+ * THE RULE: every product carries its own ceiling
+ * (lab_product_pricing.max_discount_pct), and a coupon can never exceed it —
+ * LEAST(coupon %, that product's cap). This is the rule the catalog schema has
+ * always documented; it is applied PER LINE, not once across the order.
+ *
+ * That matters when an order mixes ceilings: a 25% coupon on a 25%-capped
+ * package plus a 5%-capped add-on discounts them 25% and 5% respectively.
+ * Applying the package's 25% to the add-on would hand out a discount the lab
+ * partner never agreed to; applying the add-on's 5% to everything would punish
+ * the patient for adding a test.
+ *
+ * A cap of 0 means "never discountable" and correctly yields nothing.
+ */
+function ecp_lab_line_discount_pct(int $couponPct, int $maxDiscountPct): int
+{
+    return max(0, min($couponPct, $maxDiscountPct));
+}
+
+/**
+ * Individual add-on TESTS (only single tests, never packages) for the "add more
+ * tests" picker on the booking form. Each row: [id, label, price, max_pct].
+ * Popular first.
+ *
+ * max_pct is the product's own discount ceiling — carried through so the
+ * booking form can discount each add-on by its own cap rather than by whatever
+ * the parent package happens to allow. See ecp_lab_line_discount_pct().
+ *
+ * $excludeSlug lets the caller drop the current package/test from the list so a
+ * page doesn't offer to add what it already is. Falls back to a small static set
+ * when the DB is unavailable so the picker is never empty in preview mode.
+ */
+function ecp_lab_addon_tests(int $limit = 200, string $excludeSlug = ''): array
+{
+    // Fallback rows carry max_pct = 0: with no database we cannot know a
+    // product's ceiling, and guessing one would risk over-discounting.
+    $fallback = [
+        ['id' => 'vitd',   'label' => 'Vitamin D Total',       'price' => 899, 'max_pct' => 0],
+        ['id' => 'vitb12', 'label' => 'Vitamin B-12',          'price' => 699, 'max_pct' => 0],
+        ['id' => 'tft',    'label' => 'Thyroid Profile Total', 'price' => 499, 'max_pct' => 0],
+        ['id' => 'hba1c',  'label' => 'HbA1c',                 'price' => 399, 'max_pct' => 0],
+        ['id' => 'iron',   'label' => 'Iron Studies',          'price' => 550, 'max_pct' => 0],
+        ['id' => 'lipid',  'label' => 'Lipid Profile',         'price' => 450, 'max_pct' => 0],
+    ];
+
+    if (!function_exists('ecp_db')) {
+        return $fallback;
+    }
+    $db = ecp_db();
+    if (!$db) {
+        return $fallback;
+    }
+
+    try {
+        $stmt = $db->prepare(
+            "SELECT lp.slug, lp.name, pr.offer_rate, pr.max_discount_pct
+               FROM lab_products lp
+               JOIN lab_product_pricing pr ON pr.id = (
+                   SELECT p2.id FROM lab_product_pricing p2
+                   WHERE p2.product_id = lp.id
+                   ORDER BY p2.effective_from DESC, p2.id DESC LIMIT 1
+               )
+              WHERE lp.is_active = 1
+                AND lp.product_type = 'TEST'
+                AND pr.offer_rate > 0
+              ORDER BY lp.booked_count DESC, lp.name ASC
+              LIMIT :lim"
+        );
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if (!$rows) {
+            return $fallback;
+        }
+
+        $out = [];
+        foreach ($rows as $r) {
+            $slug = (string) $r['slug'];
+            if ($excludeSlug !== '' && $slug === $excludeSlug) {
+                continue;
+            }
+            $out[] = [
+                'id'      => $slug,
+                'label'   => ecp_lab_titlecase((string) $r['name']),
+                'price'   => (int) round((float) $r['offer_rate']),
+                'max_pct' => (int) ($r['max_discount_pct'] ?? 0),
+            ];
+        }
+        return $out ?: $fallback;
+    } catch (Throwable $e) {
+        error_log('[ecp_lab_addon_tests] ' . $e->getMessage());
+        return $fallback;
+    }
+}
+
+/** Thyrocare names are ALL CAPS; present them in Title Case for the storefront. */
+function ecp_lab_titlecase(string $name): string
+{
+    // Only re-case fully-uppercase strings; leave mixed-case names as-is.
+    if ($name !== mb_strtoupper($name)) {
+        return $name;
+    }
+    $out = mb_convert_case(mb_strtolower($name), MB_CASE_TITLE);
+    // Keep common lab acronyms uppercase.
+    return preg_replace_callback(
+        '/\b(cbc|tsh|t3|t4|hba1c|crp|hiv|hcg|psa|esr|ldl|hdl|vldl|ecg|pcr|dna|rna|std|uti|hs-crp|apo)\b/i',
+        static fn ($m) => mb_strtoupper($m[1]),
+        $out
+    ) ?? $out;
+}
+
+function ecp_lab_raw_catalog(): array
+{
+    static $raw = null;
+    if ($raw !== null) {
+        return $raw;
+    }
+
+    // Prefer live DB packages; fall back to the curated static list below when
+    // the DB or lab_* tables are unavailable (keeps the page working offline).
+    $dbPackages = ecp_lab_db_packages(12);
+
+    $raw = [
+        'packages' => $dbPackages !== [] ? $dbPackages : [
+            ['full-body-advanced', 'Full Body Checkup Advanced', ['Complete body health analysis', 'Includes blood, urine & vital markers', 'Ideal for annual health checkup'], ['CBC', 'Lipid Profile', 'Liver Function', 'Kidney Function', 'Thyroid (T3 T4 TSH)', 'HbA1c', 'Vitamin D', 'Vitamin B12'], '85', '1499', '4200', '64', ['popular', 'preventive'], 'Bestseller', 'CF'],
+            ['diabetes-care', 'Diabetes Care Profile', ['Monitors blood sugar levels', 'Includes HbA1c & fasting sugar', 'Early diabetes detection'], ['Fasting Blood Sugar', 'HbA1c', 'Lipid Profile', 'Kidney Function', 'Urine Routine'], '42', '699', '1800', '61', ['popular', 'diabetes'], '', 'CF'],
+            ['thyroid-total', 'Thyroid Profile - Total', ['Complete thyroid function test', 'Includes T3, T4 & TSH', 'Detects hypo & hyperthyroidism'], ['T3', 'T4', 'TSH', 'Anti-TPO'], '4', '499', '1200', '58', ['thyroid'], '', 'NF'],
+            ['heart-health', 'Heart Health Package', ['Assesses cardiovascular risk', 'Includes lipid & cardiac markers', 'Ideal for heart health monitoring'], ['Lipid Profile', 'ECG Review', 'hs-CRP', 'Homocysteine', 'Blood Pressure'], '30', '999', '2600', '62', ['popular', 'heart'], '', 'CF'],
+            ['vitamin-deficiency', 'Vitamin Deficiency Package', ['Checks key vitamin levels', 'Includes Vitamin D & B12', 'Identifies nutritional gaps'], ['Vitamin D', 'Vitamin B12', 'Calcium', 'Iron Studies', 'Folate'], '12', '899', '2400', '63', ['preventive'], '', 'NF'],
+            ['womens-wellness', "Women's Wellness - Full", ['Comprehensive women\'s health panel', 'Hormones, iron & bone markers', 'Ideal for preventive screening'], ['CBC', 'Thyroid', 'Iron Studies', 'Vitamin D', 'Vitamin B12', 'PCOS Markers', 'Calcium'], '60', '1299', '3500', '63', ['popular', 'women'], 'Popular', 'CF'],
+            ['senior-citizen', 'Senior Citizen Package', ['Age-focused full body screening', 'Covers chronic & lifestyle risks', 'Recommended for 60+ adults'], ['Full Body Profile', 'Diabetes', 'Cardiac', 'Bone Health', 'Liver & Kidney'], '90', '1799', '5000', '64', ['popular', 'senior'], '', 'CF'],
+            ['fever-infection', 'Fever / Infection Panel', ['Detects common infections', 'Includes dengue, malaria & typhoid', 'Quick fever diagnosis panel'], ['CBC', 'Malaria', 'Dengue NS1', 'Typhoid', 'CRP', 'Urine Routine'], '20', '799', '2000', '60', ['preventive'], '', 'NF'],
+        ],
+        'packageFilters' => [
+            'all' => 'All Packages', 'popular' => 'Most Popular', 'heart' => 'Heart', 'diabetes' => 'Diabetes',
+            'thyroid' => 'Thyroid', 'women' => 'Women', 'senior' => 'Senior Citizen', 'preventive' => 'Preventive', 'kids' => 'Kids',
+        ],
+        'organs' => [
+            ['heart', 'Heart', 'ECG, Lipid Profile & Heart Health Tests'],
+            ['lungs', 'Lungs', 'Lung Function, Allergy & Respiratory Tests'],
+            ['liver', 'Liver', 'Liver Function, Hepatitis & Detoxification Tests'],
+            ['kidney', 'Kidney', 'Kidney Function, Urea, Creatinine & More'],
+            ['thyroid', 'Thyroid', 'Thyroid Profile, TSH, T3, T4 & More'],
+            ['diabetes', 'Diabetes', 'Blood Sugar, HbA1c & Diabetes Monitoring'],
+            ['bone', 'Bone', 'Calcium, Vitamin D & Bone Density Tests'],
+            ['brain', 'Brain', 'Mental Wellness, Vitamin B12 & Neurological Tests'],
+            ['full-body', 'Full Body', 'Comprehensive Full Body Health Checkups'],
+            ['vitamins', 'Vitamins', 'Vitamin D, B12, Iron & Other Vitamin Tests'],
+            ['immunity', 'Immunity', 'Immunity Profile & Nutritional Deficiency'],
+            ['pregnancy', 'Pregnancy', 'PCOS, Pregnancy & Women Wellness Tests'],
+        ],
+        'concerns' => [
+            ['fever', 'Fever', 'Cold, flu, viral infections & more'],
+            ['cough', 'Cough', 'Dry cough, wet cough, allergy & more'],
+            ['body-pain', 'Body Pain', 'Muscle pain, joint pain, back pain & more'],
+            ['stomach', 'Stomach Issues', 'Acidity, gas, pain, bloating & more'],
+            ['skin', 'Skin Problems', 'Acne, allergy, rashes, itching & more'],
+            ['fatigue', 'Fatigue', 'Tiredness, weakness, low energy & more'],
+            ['weight', 'Weight Issues', 'Weight gain, weight loss & more'],
+            ['heart-health', 'Heart Health', 'Chest pain, BP, cholesterol & heart risk'],
+        ],
+        'lifeStage' => [
+            ['child', '👶', 'Child Health', 'Growth, immunity, nutrition & essential tests for a healthy future.', 'blue'],
+            ['mens', '👨', "Men's Wellness", 'Stay strong, active & stress-free with preventive health checks.', 'green'],
+            ['womens', '👩', "Women's Wellness", 'Hormonal balance, fitness & vital tests for women at every stage.', 'purple'],
+            ['pregnancy', '🤰', 'Pregnancy Care', 'Nutritional support, safe monitoring & essential tests for a healthy journey.', 'pink'],
+            ['senior', '👴', 'Senior Care', 'Comprehensive aging care & chronic disease management.', 'orange'],
+            ['fitness', '🏃', 'Fitness Check', 'Stay active, improve performance & track your metabolic health.', 'teal'],
+            ['diabetic', '🩸', 'Diabetic Care', 'Monitor blood sugar, HbA1c & organ health to manage diabetes.', 'red'],
+            ['thyroid', '🦋', 'Thyroid Care', 'Track T3, T4, TSH & antibodies for complete thyroid health.', 'indigo'],
+        ],
+        // "Why book with us" — only claims we can honestly stand behind given
+        // the Thyrocare partnership. Each row: [icon-key, title, blurb].
+        // (No "free doctor consult" / "24-hr reports" — we don't guarantee those.)
+        'why' => [
+            ['partner',  'Powered by Thyrocare', "Tests processed by Thyrocare — one of India's largest, most trusted diagnostic networks."],
+            ['accredited', 'NABL & CAP Accredited', 'Samples analysed at NABL-accredited, CAP-certified pathology labs.'],
+            ['catalog',  '700+ Tests & Packages', 'From single tests to full-body checkups — pick exactly what you need.'],
+            ['home',     'Free Home Sample Collection', 'A trained phlebotomist collects your sample at your doorstep — no clinic visit.'],
+            ['discount', 'Extra Discount on Login', 'Members get an extra discount (up to 25%) on top of listed prices when they book here.'],
+            ['digital',  'Digital Reports', 'Your reports are saved to your eClinicPro Health account — access them anytime.'],
+        ],
+        'steps' => [
+            ['01', 'choose', 'Choose a Test or Package', 'Search or browse by organ, symptom or life stage.'],
+            ['02', 'home', 'Book Home Collection', 'Pick a time slot — our phlebotomist visits you.'],
+            ['03', 'lab', 'Sample Tested at NABL Lab', 'Processed at accredited partner labs near you.'],
+            ['04', 'reports', 'Get Digital Reports', 'Reports saved to your eClinicPro Health account.'],
+        ],
+        'partners' => [
+            ['nabl', 'NABL-Accredited Labs', 'Tests processed at NABL-approved labs.'],
+            ['pathology', 'Certified Pathology Network', 'A trusted network of certified labs.'],
+            ['partners', 'Trusted Diagnostic Partners', 'Partnered with reliable diagnostic experts.'],
+            ['centers', 'Pan-India Collection Centers', 'Wide reach for your convenience.'],
+        ],
+    ];
+    return $raw;
+}
+
+/** @return list<array<string,mixed>> */
+function ecp_lab_items(?string $type = null): array
+{
+    static $all = null;
+    if ($all === null) {
+        $photos = ecp_lab_photos();
+        $raw = ecp_lab_raw_catalog();
+        $all = [];
+
+        foreach ($raw['packages'] as $row) {
+            [$slug, $name, $highlights, $tests, $params, $price, $mrp, $off, $cats, $badge] = $row;
+            $key = 'pkg-' . $slug;
+            $all[] = [
+                'type' => 'package', 'slug' => $slug, 'title' => $name,
+                'subtitle' => $params . ' tests included · Up to ' . $off . '% off',
+                'blurb' => $highlights[0] ?? '',
+                'highlights' => $highlights, 'tests' => $tests, 'params' => $params,
+                'price' => $price, 'mrp' => $mrp, 'off' => $off, 'cats' => $cats, 'badge' => $badge,
+                'photo' => $photos[$key] ?? $photos['gal-1'],
+                'crumb' => 'Health Packages',
+            ];
+        }
+        foreach ($raw['organs'] as $row) {
+            [$slug, $label, $desc] = $row;
+            $key = 'organ-' . $slug;
+            $all[] = [
+                'type' => 'organ', 'slug' => $slug, 'title' => $label . ' Health Tests',
+                'subtitle' => $desc, 'blurb' => $desc, 'highlights' => [],
+                'photo' => $photos[$key] ?? $photos['gal-1'], 'crumb' => 'Body Organ & System',
+            ];
+        }
+        foreach ($raw['concerns'] as $row) {
+            [$slug, $title, $desc] = $row;
+            $key = 'symptom-' . $slug;
+            $all[] = [
+                'type' => 'symptom', 'slug' => $slug, 'title' => $title,
+                'subtitle' => $desc, 'blurb' => $desc, 'highlights' => [],
+                'photo' => $photos[$key] ?? $photos['gal-1'], 'crumb' => 'Book by Symptom',
+            ];
+        }
+        foreach ($raw['lifeStage'] as $row) {
+            [$slug, $ico, $name, $blurb, $accent] = $row;
+            $key = 'life-' . $slug;
+            $all[] = [
+                'type' => 'life', 'slug' => $slug, 'title' => $name, 'subtitle' => $blurb,
+                'blurb' => $blurb, 'highlights' => [], 'emoji' => $ico, 'accent' => $accent,
+                'photo' => $photos[$key] ?? $photos['gal-1'], 'crumb' => 'Life Stage Packages',
+            ];
+        }
+        foreach ($raw['why'] as $row) {
+            [$slug, $title, $blurb] = $row;
+            $key = 'why-' . $slug;
+            $all[] = [
+                'type' => 'why', 'slug' => $slug, 'title' => $title, 'subtitle' => $blurb,
+                'blurb' => $blurb, 'highlights' => [],
+                'photo' => $photos[$key] ?? $photos['gal-1'], 'crumb' => 'Why eClinicPro',
+            ];
+        }
+        foreach ($raw['steps'] as $row) {
+            [$num, $slug, $title, $blurb] = $row;
+            $key = 'step-' . $slug;
+            $all[] = [
+                'type' => 'step', 'slug' => $slug, 'title' => $title, 'subtitle' => 'Step ' . $num . ' · ' . $blurb,
+                'blurb' => $blurb, 'highlights' => [], 'step_num' => $num,
+                'photo' => $photos[$key] ?? $photos['gal-1'], 'crumb' => 'How It Works',
+            ];
+        }
+        foreach ($raw['partners'] as $row) {
+            [$slug, $title, $blurb] = $row;
+            $key = 'partner-' . $slug;
+            $all[] = [
+                'type' => 'partner', 'slug' => $slug, 'title' => $title, 'subtitle' => $blurb,
+                'blurb' => $blurb, 'highlights' => [],
+                'photo' => $photos[$key] ?? $photos['gal-1'], 'crumb' => 'Accredited Labs',
+            ];
+        }
+    }
+
+    if ($type === null) {
+        return $all;
+    }
+    return array_values(array_filter($all, static fn($i) => $i['type'] === $type));
+}
+
+function ecp_lab_find_item(string $type, string $slug): ?array
+{
+    // Packages/tests: ALWAYS resolve the full record from the DB first. The
+    // grid/static catalog only carries a card-sized summary (tests capped at 6,
+    // no group breakdown), so using it for the detail page truncated the
+    // "Tests Included" list. The DB lookup returns the complete composition
+    // (all parameters grouped by group_name); fall back to the grid item only
+    // if the DB is unavailable or the slug isn't a live product.
+    if ($type === 'package') {
+        $full = ecp_lab_db_find_package($slug);
+        if ($full) {
+            return $full;
+        }
+    } elseif ($type === 'test') {
+        $full = ecp_lab_db_find_test($slug);
+        if ($full) {
+            return $full;
+        }
+    }
+
+    // Non-priced types (organ/symptom/life/why/…) and DB-miss fallbacks come
+    // from the curated static/grid catalog.
+    foreach (ecp_lab_items($type) as $item) {
+        if ($item['slug'] === $slug) {
+            return $item;
+        }
+    }
+    return null;
+}
+
+/**
+ * Look up a single package/offer by slug from the DB and shape it like an
+ * ecp_lab_items() 'package' entry (so lab-detail.php renders it unchanged).
+ * Returns null when not found or the DB is unavailable.
+ */
+function ecp_lab_db_find_package(string $slug): ?array
+{
+    if (!function_exists('ecp_db')) {
+        return null;
+    }
+    $db = ecp_db();
+    if (!$db) {
+        return null;
+    }
+    try {
+        $stmt = $db->prepare(
+            "SELECT lp.id, lp.slug, lp.name, lp.test_count, lp.description,
+                    lp.fasting, lp.disease_group, lp.banner_image, lp.is_featured,
+                    pr.mrp, pr.offer_rate, pr.max_discount_pct
+             FROM lab_products lp
+             JOIN lab_product_pricing pr ON pr.id = (
+                 SELECT p2.id FROM lab_product_pricing p2
+                 WHERE p2.product_id = lp.id
+                 ORDER BY p2.effective_from DESC, p2.id DESC LIMIT 1
+             )
+             WHERE lp.slug = ? AND lp.is_active = 1
+               AND lp.product_type IN ('PROFILE', 'OFFER')
+             LIMIT 1"
+        );
+        $stmt->execute([$slug]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return null;
+        }
+
+        // Full test list grouped by lab_parameters.group_name — this is the
+        // REAL Thyrocare grouping (e.g. "CARDIAC RISK MARKERS", "THYROID"),
+        // used to drive both the accordion and the flat 'tests' chip list.
+        $tstmt = $db->prepare(
+            "SELECT par.name, par.group_name
+             FROM lab_product_parameters lpp
+             JOIN lab_parameters par ON par.id = lpp.parameter_id
+             WHERE lpp.product_id = ?
+             ORDER BY par.group_name, par.name"
+        );
+        $tstmt->execute([(int) $row['id']]);
+        $paramRows = $tstmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $tests  = [];
+        $groups = [];
+        foreach ($paramRows as $pr2) {
+            $name = ecp_lab_titlecase((string) $pr2['name']);
+            $grp  = ecp_lab_titlecase(trim((string) ($pr2['group_name'] ?? '')) ?: 'Other Parameters');
+            $tests[] = $name;
+            $groups[$grp][] = $name;
+        }
+        // Biggest groups first so the accordion opens on the meatiest panel.
+        uasort($groups, static fn ($a, $b) => count($b) <=> count($a));
+
+        $mrp   = (float) $row['mrp'];
+        $offer = (float) $row['offer_rate'];
+        $offPct = $mrp > 0 ? (int) round(($mrp - $offer) / $mrp * 100) : 0;
+        $photos = ecp_lab_photos();
+
+        // Login bonus: best active coupon, capped by this product's ceiling.
+        $maxDisc = (int) ($row['max_discount_pct'] ?? 0);
+        $loginPct = ecp_lab_best_login_discount($db, $maxDisc);
+
+        // disease_group -> display tags (THYROID,INFERTILITY -> ['Thyroid','Infertility'])
+        $diseaseTags = [];
+        foreach (preg_split('/\s*,\s*/', trim((string) ($row['disease_group'] ?? ''))) ?: [] as $dg) {
+            if ($dg !== '') {
+                $diseaseTags[] = ecp_lab_titlecase($dg);
+            }
+        }
+
+        $fasting = (string) ($row['fasting'] ?? '');
+
+        return [
+            'type'       => 'package',
+            'slug'       => (string) $row['slug'],
+            'title'      => ecp_lab_titlecase($row['name']),
+            'subtitle'   => (int) $row['test_count'] . ' tests included'
+                            . ($offPct > 0 ? ' · Up to ' . $offPct . '% off' : ''),
+            'blurb'      => $row['description'] ?: 'A comprehensive health package with '
+                            . (int) $row['test_count'] . ' tests, sample collected at home.',
+            'highlights' => [
+                (int) $row['test_count'] . ' tests in one package',
+                'Free home sample collection & digital reports',
+                'Reports saved to your eClinicPro Health account',
+            ],
+            'tests'       => $tests,
+            'test_groups' => $groups,          // ['Group Name' => [test, test, …]]
+            'params'      => (string) (int) $row['test_count'],
+            'price'       => (string) (int) round($offer),
+            'mrp'         => (string) (int) round($mrp),
+            'off'         => (string) $offPct,
+            'cats'        => ['popular'],
+            'badge'       => !empty($row['is_featured']) ? 'Bestseller' : '',
+            // Real Thyrocare banner when present; else the curated Unsplash pool.
+            'banner_image' => !empty($row['banner_image']) ? (string) $row['banner_image'] : '',
+            'photo'       => $photos['pkg-' . $slug]
+                             ?? $photos['gal-' . (1 + (abs(crc32($slug)) % 8))]
+                             ?? $photos['hero-lab'],
+            'crumb'        => 'Health Packages',
+            // Tags for the detail page pills.
+            'fasting'      => $fasting,                 // 'CF' | 'NF' | ''
+            'disease_tags' => $diseaseTags,             // ['Thyroid','Infertility']
+            'login_pct'    => $loginPct,                // extra % for logged-in patients
+        ];
+    } catch (Throwable $e) {
+        error_log('[ecp_lab_db_find_package] ' . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Best active login-bonus discount %, capped by a product's max_discount_pct.
+ * Reads lab_coupons (requires_login = 1, active, in date window) and returns
+ * LEAST(highest coupon %, $maxDiscountPct). Returns 0 when nothing applies —
+ * so the page never promises a discount the product ceiling forbids.
+ */
+function ecp_lab_best_login_discount(PDO $db, int $maxDiscountPct): int
+{
+    if ($maxDiscountPct <= 0) {
+        return 0;
+    }
+    try {
+        $stmt = $db->query(
+            "SELECT MAX(discount_pct) AS pct
+               FROM lab_coupons
+              WHERE is_active = 1 AND requires_login = 1
+                AND (starts_at IS NULL OR starts_at <= CURRENT_DATE)
+                AND (ends_at   IS NULL OR ends_at   >= CURRENT_DATE)"
+        );
+        $couponPct = (int) ($stmt->fetchColumn() ?: 0);
+        return min($couponPct, $maxDiscountPct);
+    } catch (Throwable $e) {
+        error_log('[ecp_lab_best_login_discount] ' . $e->getMessage());
+        return 0;
+    }
+}
+
+// ===========================================================================
+// Listing pages (/lab/tests hub, /lab/category/{slug}, /lab/test/{slug})
+// ===========================================================================
+
+/**
+ * Maps a homepage "organ / body system" tile slug -> the lab_categories slug
+ * its listing page should show. Organs ARE categories, presented visually.
+ * Falls back to the organ slug itself if it happens to match a category.
+ */
+function ecp_lab_organ_category_map(): array
+{
+    return [
+        'heart'      => 'cardiac',
+        'lungs'      => 'infection',      // no lung category; closest is respiratory/infection
+        'liver'      => 'liver',
+        'kidney'     => 'renal',
+        'thyroid'    => 'thyroid',
+        'diabetes'   => 'diabetes',
+        'bone'       => 'arthritis',
+        'brain'      => 'vitamin',        // neuro/B12 → vitamin panel
+        'full-body'  => 'wellness',
+        'vitamins'   => 'vitamin',
+        'immunity'   => 'anaemia',
+        'pregnancy'  => 'pregnancy',
+    ];
+}
+
+/**
+ * Resolve a "life stage" tile slug -> a real listing URL. Most map to a lab
+ * category listing; a couple to the closest concept. Everything lands on a
+ * working page (no thin /lab/life/* detail pages, which don't exist for these).
+ */
+function ecp_lab_life_url(string $slug): string
+{
+    $catMap = [
+        'child'     => 'wellness',
+        'mens'      => 'wellness',
+        'womens'    => 'pregnancy',   // women's health packages cluster here
+        'pregnancy' => 'pregnancy',
+        'senior'    => 'arthritis',
+        'fitness'   => 'metabolic',
+        'diabetic'  => 'diabetes',
+        'thyroid'   => 'thyroid',
+    ];
+    if (isset($catMap[$slug])) {
+        return ecp_lab_category_url($catMap[$slug]);
+    }
+    // Fallback: the browse hub.
+    return '/lab/tests';
+}
+
+/**
+ * Maps a "Book by Symptom" tile -> the clinical concepts that investigate it,
+ * as [label, description, keywords[]]. A symptom is NOT a single category — it
+ * bundles categories + specific test/parameter name keywords (e.g. fever →
+ * infection markers + malaria/dengue/typhoid). ecp_lab_symptom_listing() shows
+ * every product whose name, category, or contained test matches any keyword.
+ *
+ * @return array<string,array{0:string,1:string,2:list<string>}>
+ */
+function ecp_lab_symptom_map(): array
+{
+    return [
+        'fever' => ['Fever', 'Cold, flu & viral infections',
+            ['fever', 'malaria', 'dengue', 'typhoid', 'infection', 'widal', 'crp', 'hemogram', 'esr', 'chikungunya']],
+        'cough' => ['Cough & Cold', 'Dry cough, wet cough & allergy',
+            ['respiratory', 'infection', 'allergy', 'ige', 'hemogram', 'crp', 'influenza', 'covid']],
+        'body-pain' => ['Body Pain', 'Muscle, joint & back pain',
+            ['arthritis', 'vitamin d', 'calcium', 'uric acid', 'rheumatoid', 'ra factor', 'crp', 'esr']],
+        'stomach' => ['Stomach Issues', 'Acidity, gas, bloating & pain',
+            ['liver', 'gastro', 'stool', 'amylase', 'lipase', 'h. pylori', 'hepatitis', 'lft']],
+        'skin' => ['Skin Problems', 'Acne, allergy, rashes & itching',
+            ['allergy', 'ige', 'skin', 'vitamin', 'thyroid', 'hemogram', 'fungal']],
+        'fatigue' => ['Fatigue & Weakness', 'Tiredness & low energy',
+            ['anaemia', 'thyroid', 'vitamin', 'iron', 'b12', 'hemogram', 'sugar', 'ferritin']],
+        'weight' => ['Weight Issues', 'Weight gain or loss',
+            ['thyroid', 'diabetes', 'lipid', 'sugar', 'hba1c', 'cortisol', 'insulin']],
+        'heart-health' => ['Heart Health', 'Chest pain, BP & cholesterol',
+            ['cardiac', 'lipid', 'cholesterol', 'homocysteine', 'troponin', 'crp', 'apolipoprotein']],
+    ];
+}
+
+/**
+ * Listing for a "Book by Symptom" tile. Resolves the symptom to keyword rules
+ * (ecp_lab_symptom_map) and returns products whose name / category / contained
+ * test matches any keyword — shaped IDENTICALLY to ecp_lab_listing() so the
+ * listing page renders it with no changes.
+ *
+ * @return array{category: ?array, packages: list<array>, offers: list<array>, tests: list<array>, total: int}
+ */
+function ecp_lab_symptom_listing(string $symptomSlug, int $limit = 120, ?string $sort = null): array
+{
+    $empty = ['category' => null, 'packages' => [], 'offers' => [], 'tests' => [], 'total' => 0];
+    $map = ecp_lab_symptom_map();
+    if (!isset($map[$symptomSlug]) || !function_exists('ecp_db') || !($db = ecp_db())) {
+        return $empty;
+    }
+    [$label, $desc, $keywords] = $map[$symptomSlug];
+
+    try {
+        // Build an OR of LIKE conditions across name / category / parameter,
+        // each keyword its OWN placeholder (native prepares forbid reuse).
+        $conds = [];
+        $args  = [];
+        $i = 0;
+        foreach ($keywords as $kw) {
+            $like = '%' . $kw . '%';
+            $conds[] = "lp.name LIKE :k{$i}a";           $args[":k{$i}a"] = $like;
+            $conds[] = "EXISTS (SELECT 1 FROM lab_product_categories lpc_s JOIN lab_categories c_s ON c_s.id=lpc_s.category_id WHERE lpc_s.product_id=lp.id AND c_s.name LIKE :k{$i}b)"; $args[":k{$i}b"] = $like;
+            $conds[] = "EXISTS (SELECT 1 FROM lab_product_parameters lpp_s JOIN lab_parameters par_s ON par_s.id=lpp_s.parameter_id WHERE lpp_s.product_id=lp.id AND par_s.name LIKE :k{$i}c)"; $args[":k{$i}c"] = $like;
+            $i++;
+        }
+        $orSql = '(' . implode(' OR ', $conds) . ')';
+
+        $sql = "SELECT lp.id, lp.product_type, lp.slug, lp.name, lp.test_count,
+                       lp.fasting, lp.test_groups_json, pr.mrp, pr.offer_rate
+                FROM lab_products lp
+                JOIN lab_product_pricing pr ON pr.id = (
+                    SELECT p2.id FROM lab_product_pricing p2
+                    WHERE p2.product_id = lp.id
+                    ORDER BY p2.effective_from DESC, p2.id DESC LIMIT 1
+                )
+                WHERE lp.is_active = 1 AND pr.offer_rate > 0 AND $orSql
+                ORDER BY " . ecp_lab_sort_sql($sort) . "
+                LIMIT " . (int) $limit;
+        $stmt = $db->prepare($sql);
+        $stmt->execute($args);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        // A synthetic "category" so the page shows a heading/breadcrumb.
+        $out = $empty;
+        $out['category'] = ['id' => 0, 'name' => $label, 'slug' => $symptomSlug, 'is_symptom' => true, 'desc' => $desc];
+        foreach ($rows as $r) {
+            $item = ecp_lab_shape_listing_item($r);
+            $out[$item['type'] === 'offer' ? 'offers' : ($item['type'] === 'test' ? 'tests' : 'packages')][] = $item;
+            $out['total']++;
+        }
+        return $out;
+    } catch (Throwable $e) {
+        error_log('[ecp_lab_symptom_listing] ' . $e->getMessage());
+        return $empty;
+    }
+}
+
+/**
+ * All lab categories that have at least $minProducts active products, for the
+ * hub page's category rail AND the sitemap. Cached per request.
+ *
+ * @return list<array{id:int,name:string,slug:string,n:int}>
+ */
+function ecp_lab_categories(int $minProducts = 1): array
+{
+    static $cache = null;
+    if ($cache === null) {
+        $cache = [];
+        if (function_exists('ecp_db') && ($db = ecp_db())) {
+            try {
+                $stmt = $db->query(
+                    'SELECT c.id, c.name, c.slug, COUNT(lpc.product_id) AS n
+                       FROM lab_categories c
+                       JOIN lab_product_categories lpc ON lpc.category_id = c.id
+                       JOIN lab_products lp ON lp.id = lpc.product_id AND lp.is_active = 1
+                      GROUP BY c.id
+                      ORDER BY n DESC, c.name ASC'
+                );
+                $cache = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (Throwable $e) {
+                error_log('[ecp_lab_categories] ' . $e->getMessage());
+            }
+        }
+    }
+    return array_values(array_filter($cache, static fn ($c) => (int) $c['n'] >= $minProducts));
+}
+
+/**
+ * Sort modes for the listing pages, as SQL ORDER BY fragments.
+ *
+ * 'popular' (the default) is a MERCHANDISED order, not a raw popularity sort:
+ *   1. is_featured  — hand-picked heroes per category. This is the key lever;
+ *                     editorial choice should always outrank any formula.
+ *   2. booked_count — Thyrocare's popularity number. NOTE: it is 0 for ~80% of
+ *                     the seeded catalog, so for most rows this is a tie and
+ *                     the next key decides. Replace it with our OWN order
+ *                     counts once bookings have run for a while.
+ *   3. value density — tests per rupee, NOT raw test_count. Raw count ranks
+ *                     bloated panels above genuinely useful ones and correlates
+ *                     with price, which quietly reproduces a price-desc sort.
+ *                     Density surfaces the package that feels like the best
+ *                     deal.
+ *
+ * PERF: density reads the STORED generated column `pr.value_density`
+ * (2026_07_27_lab_value_density_index.sql), NOT an inline
+ * `(lp.test_count / pr.offer_rate)` expression. A computed expression spanning
+ * two tables can't use an index, so it forced a filesort over the whole
+ * category on every page load — that's what made the listing pages slow. The
+ * generated column is indexed and precomputed. ecp_lab_sort_density_expr()
+ * falls back to the inline maths when the patch hasn't been run yet.
+ *
+ * The user-facing dropdown can override with price/test-count orders.
+ *
+ * @return array<string,array{0:string,1:string}> slug => [label, order-by SQL]
+ */
+function ecp_lab_sort_modes(): array
+{
+    $density = ecp_lab_sort_density_expr();
+
+    return [
+        'popular'    => ['Recommended',      "lp.is_featured DESC, lp.booked_count DESC, $density DESC, lp.name ASC"],
+        'price-asc'  => ['Price: Low to High', "pr.offer_rate ASC, lp.name ASC"],
+        'price-desc' => ['Price: High to Low', "pr.offer_rate DESC, lp.name ASC"],
+        'tests-desc' => ['Most Tests',       "lp.test_count DESC, pr.offer_rate ASC, lp.name ASC"],
+        'discount'   => ['Biggest Saving',   "((pr.mrp - pr.offer_rate) / NULLIF(pr.mrp,0)) DESC, lp.name ASC"],
+    ];
+}
+
+/**
+ * The value-density expression to sort on.
+ *
+ * Prefers the indexed STORED generated column added by
+ * 2026_07_27_lab_value_density_index.sql. If that patch hasn't been deployed
+ * yet the column doesn't exist and the query would fatal, so we fall back to
+ * the (slower, unindexed) inline division. Result is cached per request —
+ * information_schema is not something to hit on every listing render.
+ */
+function ecp_lab_sort_density_expr(): string
+{
+    static $expr = null;
+    if ($expr !== null) {
+        return $expr;
+    }
+
+    $expr = '(lp.test_count / NULLIF(pr.offer_rate,0))'; // safe default
+    if (!function_exists('ecp_db') || !($db = ecp_db())) {
+        return $expr;
+    }
+    try {
+        $has = $db->query(
+            "SELECT COUNT(*) FROM information_schema.COLUMNS
+              WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = 'lab_product_pricing'
+                AND COLUMN_NAME = 'value_density'"
+        )->fetchColumn();
+        if ((int) $has > 0) {
+            $expr = 'pr.value_density';
+        }
+    } catch (\Throwable $e) {
+        error_log('[ecp_lab_sort_density_expr] ' . $e->getMessage());
+    }
+
+    return $expr;
+}
+
+/** Resolve a ?sort= value to a safe ORDER BY fragment (never interpolate raw input). */
+function ecp_lab_sort_sql(?string $sort): string
+{
+    $modes = ecp_lab_sort_modes();
+    $key = strtolower(trim((string) $sort));
+
+    return $modes[$key][1] ?? $modes['popular'][1];
+}
+
+/**
+ * Products for a listing page. Pass a category slug to scope, or null for the
+ * hub ("All"). Returns items shaped for the listing grid, split by type so the
+ * page can show Packages / Offers / Tests sections or tabs.
+ *
+ * @return array{category: ?array, packages: list<array>, offers: list<array>, tests: list<array>, total: int}
+ */
+function ecp_lab_listing(?string $categorySlug = null, int $limit = 300, ?string $sort = null): array
+{
+    $empty = ['category' => null, 'packages' => [], 'offers' => [], 'tests' => [], 'total' => 0];
+    if (!function_exists('ecp_db') || !($db = ecp_db())) {
+        return $empty;
+    }
+
+    try {
+        $category = null;
+        $params = [];
+        $catJoin = '';
+        if ($categorySlug !== null && $categorySlug !== '' && $categorySlug !== 'all') {
+            $cstmt = $db->prepare('SELECT id, name, slug FROM lab_categories WHERE slug = ? LIMIT 1');
+            $cstmt->execute([$categorySlug]);
+            $category = $cstmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            if (!$category) {
+                return $empty; // unknown category → 404 upstream
+            }
+            $catJoin = 'JOIN lab_product_categories lpc ON lpc.product_id = lp.id AND lpc.category_id = :cat';
+            $params[':cat'] = (int) $category['id'];
+        }
+
+        $sql = "SELECT lp.id, lp.product_type, lp.slug, lp.name, lp.test_count,
+                       lp.fasting, lp.test_groups_json, pr.mrp, pr.offer_rate
+                FROM lab_products lp
+                $catJoin
+                JOIN lab_product_pricing pr ON pr.id = (
+                    SELECT p2.id FROM lab_product_pricing p2
+                    WHERE p2.product_id = lp.id
+                    ORDER BY p2.effective_from DESC, p2.id DESC LIMIT 1
+                )
+                WHERE lp.is_active = 1 AND pr.offer_rate > 0
+                ORDER BY " . ecp_lab_sort_sql($sort) . "
+                LIMIT " . (int) $limit;
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $out = $empty;
+        $out['category'] = $category;
+        foreach ($rows as $r) {
+            $item = ecp_lab_shape_listing_item($r);
+            if ($item['type'] === 'offer') {
+                $out['offers'][] = $item;
+            } elseif ($item['type'] === 'test') {
+                $out['tests'][] = $item;
+            } else {
+                $out['packages'][] = $item;
+            }
+            $out['total']++;
+        }
+        return $out;
+    } catch (Throwable $e) {
+        error_log('[ecp_lab_listing] ' . $e->getMessage());
+        return $empty;
+    }
+}
+
+/**
+ * Shape one DB product row into a listing-card item. Shared by category,
+ * symptom and hub listings so the card fields stay consistent.
+ *
+ * @param array<string,mixed> $r  a lab_products row joined with current pricing
+ * @return array<string,mixed>
+ */
+function ecp_lab_shape_listing_item(array $r): array
+{
+    $mrp   = (float) $r['mrp'];
+    $offer = (float) $r['offer_rate'];
+    $offPct = $mrp > 0 ? (int) round(($mrp - $offer) / $mrp * 100) : 0;
+    // Normalize DB product_type -> UI type: PROFILE renders as a "package"
+    // (the tab + card filter use 'package', not 'profile').
+    $uiType = match ($r['product_type']) {
+        'OFFER' => 'offer',
+        'TEST'  => 'test',
+        default => 'package', // PROFILE
+    };
+    // Top test groups (biggest first) + "+N more" remainder, so the visible
+    // chips reconcile with the headline test_count. Shared helper = same math
+    // as the /lab grid cards.
+    $breakdown = ecp_lab_group_breakdown($r['test_groups_json'] ?? null, 4);
+    return [
+        'type'   => $uiType,
+        'slug'   => (string) $r['slug'],
+        'title'  => ecp_lab_titlecase($r['name']),
+        'params' => (int) $r['test_count'],
+        'price'  => (int) round($offer),
+        'mrp'    => (int) round($mrp),
+        'off'    => $offPct,
+        'groups' => $breakdown['groups'],
+        'groups_remaining' => $breakdown['remaining'],
+        // 'CF' = fasting required, 'NF' = none, '' = n/a (for card chips).
+        'fasting' => (string) ($r['fasting'] ?? ''),
+        'url'    => $r['product_type'] === 'TEST'
+            ? ecp_lab_test_url((string) $r['slug'])
+            : ecp_lab_detail_url('package', (string) $r['slug']),
+    ];
+}
+
+/** Canonical URL for an individual test's SEO page. */
+function ecp_lab_test_url(string $slug): string
+{
+    return '/lab/test/' . rawurlencode($slug);
+}
+
+/** Canonical URL for a category listing page. */
+function ecp_lab_category_url(string $slug): string
+{
+    return '/lab/category/' . rawurlencode($slug);
+}
+
+/** Canonical URL for a "Book by Symptom" listing page. */
+function ecp_lab_symptom_url(string $slug): string
+{
+    return '/lab/symptom/' . rawurlencode($slug);
+}
+
+/**
+ * Look up a single TEST by slug for its /lab/test/{slug} page. Shaped like an
+ * ecp_lab_items() entry so lab-detail.php can render it. Null if not found.
+ */
+function ecp_lab_db_find_test(string $slug): ?array
+{
+    if (!function_exists('ecp_db') || !($db = ecp_db())) {
+        return null;
+    }
+    try {
+        $stmt = $db->prepare(
+            "SELECT lp.id, lp.slug, lp.name, lp.test_count, lp.description, lp.disease_group,
+                    pr.mrp, pr.offer_rate
+             FROM lab_products lp
+             JOIN lab_product_pricing pr ON pr.id = (
+                 SELECT p2.id FROM lab_product_pricing p2
+                 WHERE p2.product_id = lp.id
+                 ORDER BY p2.effective_from DESC, p2.id DESC LIMIT 1
+             )
+             WHERE lp.slug = ? AND lp.is_active = 1 AND lp.product_type = 'TEST'
+             LIMIT 1"
+        );
+        $stmt->execute([$slug]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return null;
+        }
+        $mrp   = (float) $row['mrp'];
+        $offer = (float) $row['offer_rate'];
+        $offPct = $mrp > 0 ? (int) round(($mrp - $offer) / $mrp * 100) : 0;
+        $photos = ecp_lab_photos();
+        $title = ecp_lab_titlecase($row['name']);
+        return [
+            'type'       => 'package', // reuse the package detail layout (has price + book)
+            'slug'       => (string) $row['slug'],
+            'title'      => $title,
+            'subtitle'   => 'Single diagnostic test'
+                            . ($offPct > 0 ? ' · ' . $offPct . '% off' : ''),
+            'blurb'      => $row['description']
+                            ?: 'Book ' . $title . ' online with free home sample collection and a digital report.',
+            'highlights' => [
+                'Free home sample collection',
+                'NABL-accredited lab processing',
+                'Digital report saved to your Health account',
+            ],
+            'tests'  => [$title],
+            'params' => '1',
+            'price'  => (string) (int) round($offer),
+            'mrp'    => (string) (int) round($mrp),
+            'off'    => (string) $offPct,
+            'cats'   => ['popular'],
+            'badge'  => '',
+            'photo'  => $photos['gal-' . (1 + (abs(crc32($slug)) % 8))] ?? $photos['hero-lab'],
+            'crumb'  => 'Individual Tests',
+        ];
+    } catch (Throwable $e) {
+        error_log('[ecp_lab_db_find_test] ' . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Build rich, type-specific detail content from a catalog item.
+ * @return array<string,mixed>
+ */
+function ecp_lab_build_detail(array $item): array
+{
+    $type = $item['type'];
+    $title = $item['title'];
+    $photos = ecp_lab_photos();
+    // Prefer the product's real banner (Thyrocare imageLocation) when we have
+    // one; otherwise fall back to the curated Unsplash photo for this item.
+    $hero = !empty($item['banner_image'])
+        ? (string) $item['banner_image']
+        : lab_photo($item['photo'], 1600, 900);
+    $galleryKeys = ['gal-1', 'gal-2', 'gal-3', 'gal-4', 'gal-5', 'gal-6'];
+    // Rotate gallery by slug hash so pages feel unique
+    $seed = crc32($type . ':' . $item['slug']);
+    $rotated = [];
+    for ($i = 0; $i < 4; $i++) {
+        $rotated[] = lab_photo($photos[$galleryKeys[($seed + $i) % count($galleryKeys)]], 800, 600);
+    }
+    // Prefer item photo first in gallery
+    array_unshift($rotated, lab_photo($item['photo'], 900, 700));
+    $rotated = array_slice(array_unique($rotated), 0, 4);
+
+    $related = array_values(array_filter(
+        ecp_lab_items($type),
+        static fn($r) => $r['slug'] !== $item['slug']
+    ));
+    shuffle($related);
+    $related = array_slice($related, 0, 4);
+
+    $baseProcess = [
+        ['Choose', 'Select this ' . ($type === 'package' ? 'package' : 'option') . ' or related tests that match your needs.'],
+        ['Book', 'Pick a convenient home collection slot — a trained phlebotomist visits you.'],
+        ['Test', 'Your sample is processed at NABL-accredited partner labs.'],
+        ['Report', 'Get digital reports on the app, saved to your Health account.'],
+    ];
+
+    $detail = [
+        'hero_image' => $hero,
+        'gallery' => $rotated,
+        'related' => $related,
+        'theme' => $type,
+        'eyebrow' => strtoupper(str_replace('-', ' ', $type)),
+    ];
+
+    switch ($type) {
+        case 'package':
+            $tests = $item['tests'] ?? [];
+            $highlights = $item['highlights'] ?? [];
+            // Real group names for an accurate "what's included" FAQ answer.
+            $grpNames = array_keys($item['test_groups'] ?? []);
+            $includedAnswer = $grpNames
+                ? 'This package covers ' . (int) ($item['params'] ?? count($tests))
+                  . ' parameters across ' . ecp_join_human(array_slice($grpNames, 0, 6))
+                  . (count($grpNames) > 6 ? ' and more.' : '.')
+                : 'This package includes ' . implode(', ', array_slice($tests, 0, 6))
+                  . (count($tests) > 6 ? ', and more' : '')
+                  . ' — ' . ($item['params'] ?? '') . ' parameters in total.';
+            // Fasting answer keyed off the real flag (CF/NF), not a guess.
+            $fastingAnswer = match ((string) ($item['fasting'] ?? '')) {
+                'CF' => 'Yes — this package requires 8–10 hours of fasting. Only plain water is allowed during the fasting window.',
+                'NF' => 'No fasting is required for this package. You can book a sample collection at any time of day.',
+                default => 'Fasting requirements depend on the specific markers. Exact prep instructions are confirmed at booking.',
+            };
+            $detail += [
+                'overview' => "The {$title} is a carefully curated diagnostic panel designed for clear, actionable insights. It includes {$item['params']} parameters spanning the markers clinicians use most often for prevention and early detection.",
+                'about' => "Built for people who want a reliable health snapshot without guesswork, this package brings together essential blood and related markers in one booking. Home sample collection, NABL-lab processing, and digital reports keep the journey simple from start to finish.",
+                'features' => array_merge($highlights, array_map(static fn($t) => "Includes {$t}", array_slice($tests, 0, 4))),
+                'benefits' => [
+                    'Save time with a single booking instead of ordering tests one by one',
+                    'Transparent pricing with up to ' . ($item['off'] ?? '60') . '% off MRP',
+                    'Reports typically available within 24 hours*',
+                    'Clear digital reports you can share with any doctor',
+                    'Safe home collection by trained professionals',
+                ],
+                'process' => $baseProcess,
+                'stats' => [
+                    ['value' => ($item['params'] ?? '—') . '+', 'label' => 'Parameters'],
+                    ['value' => '₹' . ($item['price'] ?? '—'), 'label' => 'Offer price'],
+                    ['value' => ($item['off'] ?? '—') . '%', 'label' => 'Off MRP'],
+                    ['value' => '24h*', 'label' => 'Report turnaround'],
+                ],
+                'faq' => [
+                    ['q' => "What is included in {$title}?", 'a' => $includedAnswer],
+                    ['q' => 'Do I need to fast before the test?', 'a' => $fastingAnswer],
+                    ['q' => 'How do I get my reports?', 'a' => 'Digital reports are saved to your eClinicPro Health account, where you can view and download them anytime.'],
+                    ['q' => 'Is home collection available?', 'a' => 'Yes. Choose a time slot and our phlebotomist will collect your sample at home.'],
+                ],
+                'cta_title' => "Ready to book {$title}?",
+                'cta_text' => 'Secure your slot for home collection and get digital reports saved to your Health account.',
+            ];
+            break;
+
+        case 'organ':
+            $organ = str_replace(' Health Tests', '', $title);
+            $detail += [
+                'overview' => "Explore lab tests focused on {$organ} health. Whether you are screening preventively or following up on symptoms, these panels help you and your clinician understand how this system is functioning.",
+                'about' => "{$organ}-focused diagnostics look at the biomarkers most relevant to this organ or system. On eClinicPro you can browse related packages, book home collection, and receive NABL-lab reports digitally.",
+                'features' => [
+                    "Targeted {$organ} biomarker panels",
+                    'Matched packages for common concerns',
+                    'Home sample collection available',
+                    'NABL-accredited lab processing',
+                    'Digital reports saved to your Health account',
+                ],
+                'benefits' => [
+                    "Catch {$organ}-related issues earlier with the right markers",
+                    'Avoid unnecessary full panels when you need focused testing',
+                    'Clear next steps after reviewing results with a clinician',
+                    'Convenient booking without clinic queues',
+                ],
+                'process' => [
+                    ['Browse', "Review {$organ} tests and related packages."],
+                    ['Book', 'Schedule home collection at a time that suits you.'],
+                    ['Analyse', 'Samples are tested at accredited labs.'],
+                    ['Act', 'Discuss digital reports with a doctor if needed.'],
+                ],
+                'stats' => [
+                    ['value' => 'NABL', 'label' => 'Lab network'],
+                    ['value' => 'Home', 'label' => 'Collection'],
+                    ['value' => '24h*', 'label' => 'Reports'],
+                    ['value' => 'Free', 'label' => 'Consult*'],
+                ],
+                'faq' => [
+                    ['q' => "Which {$organ} tests should I start with?", 'a' => "Start with the most common {$organ} markers for your age and symptoms, or choose a curated package that groups them together."],
+                    ['q' => 'Can I combine with other organ panels?', 'a' => 'Yes. Many people add related systems (for example heart + diabetes) for a broader view.'],
+                    ['q' => 'How soon will I get results?', 'a' => 'Most panels return digital reports within about 24 hours*, depending on the specific tests.'],
+                ],
+                'cta_title' => "Find the right {$organ} tests",
+                'cta_text' => 'Browse packages related to this system and book home collection in minutes.',
+            ];
+            break;
+
+        case 'symptom':
+            $detail += [
+                'overview' => "{$title} can have many causes — from short-lived infections to longer-term conditions. The right lab tests help narrow possibilities so you and your clinician can decide what to do next.",
+                'about' => "This guide highlights tests commonly considered when {$title} is a concern ({$item['blurb']}). It is educational, not a diagnosis. Always seek medical advice for severe, sudden, or lasting symptoms.",
+                'features' => [
+                    'Symptom-matched test suggestions',
+                    'Curated packages for common patterns',
+                    'Home collection when you feel unwell',
+                    'Fast digital reporting',
+                    'Easy to share results with your doctor',
+                ],
+                'benefits' => [
+                    'Move from guesswork to measurable markers',
+                    'Spot infections, deficiencies, or metabolic issues earlier',
+                    'Reduce unnecessary hospital visits for routine blood work',
+                    'Keep family members tested with the same easy flow',
+                ],
+                'process' => $baseProcess,
+                'stats' => [
+                    ['value' => 'Quick', 'label' => 'Booking'],
+                    ['value' => 'Safe', 'label' => 'Collection'],
+                    ['value' => '24h*', 'label' => 'Reports'],
+                    ['value' => 'Expert', 'label' => 'Review'],
+                ],
+                'faq' => [
+                    ['q' => "Should I test immediately for {$title}?", 'a' => 'Mild short-lived symptoms often settle on their own. Persistent, severe, or recurring symptoms deserve clinical advice and may need lab work.'],
+                    ['q' => 'Which package is best?', 'a' => 'Fever/infection, full body, vitamin, or organ-specific packages may apply depending on your history. Use filters on the lab page or ask a doctor.'],
+                    ['q' => 'Is this a diagnosis?', 'a' => 'No. Lab results support clinical decisions; only a qualified clinician can diagnose.'],
+                ],
+                'cta_title' => "Tests related to {$title}",
+                'cta_text' => 'Book a relevant package or panel with home collection and digital reports.',
+            ];
+            break;
+
+        case 'life':
+            $detail += [
+                'overview' => "{$title} packages focus on the screenings that matter most at this stage of life. {$item['blurb']}",
+                'about' => "Preventive testing looks different at every age. This life-stage pathway groups the markers clinicians often recommend so you can stay ahead of silent risks and track change over time.",
+                'features' => [
+                    'Age-appropriate screening focus',
+                    'Bundled pricing vs à-la-carte tests',
+                    'Home sample collection',
+                    'Digital reports for easy sharing with your doctor',
+                    'Findings laid out clearly in your report',
+                ],
+                'benefits' => [
+                    'Screening tailored to life stage — not one-size-fits-all',
+                    'Peace of mind for you and your family',
+                    'Baseline results to compare year after year',
+                    'Convenient booking around work and family schedules',
+                ],
+                'process' => $baseProcess,
+                'stats' => [
+                    ['value' => 'Stage', 'label' => 'Specific care'],
+                    ['value' => 'Home', 'label' => 'Collection'],
+                    ['value' => 'NABL', 'label' => 'Labs'],
+                    ['value' => 'App', 'label' => 'Reports'],
+                ],
+                'faq' => [
+                    ['q' => "Who is {$title} for?", 'a' => $item['blurb']],
+                    ['q' => 'How often should I repeat tests?', 'a' => 'Many adults screen annually; your clinician may suggest a different cadence based on results and risk factors.'],
+                    ['q' => 'Can multiple family members book together?', 'a' => 'Yes. Book separate profiles or slots so each person gets their own reports.'],
+                ],
+                'cta_title' => "Explore {$title}",
+                'cta_text' => 'Choose a matching package and schedule home collection today.',
+            ];
+            break;
+
+        case 'step':
+            $num = $item['step_num'] ?? '';
+            $detail += [
+                'overview' => "Step {$num}: {$title}. {$item['blurb']}",
+                'about' => "eClinicPro keeps diagnostics simple — from discovery to digital reports. This step is a key part of a four-stage journey designed around convenience, accuracy, and clinical follow-up.",
+                'features' => [
+                    'Clear guidance at every stage',
+                    'Mobile-friendly booking experience',
+                    'Trained collection staff',
+                    'Accredited lab partners',
+                    'Reports you can revisit anytime',
+                ],
+                'benefits' => [
+                    'Less friction than traditional walk-in labs',
+                    'Transparent status from booking to report',
+                    'Support if you need help choosing tests',
+                ],
+                'process' => $baseProcess,
+                'stats' => [
+                    ['value' => $num ?: '—', 'label' => 'Step'],
+                    ['value' => '4', 'label' => 'Total steps'],
+                    ['value' => 'Easy', 'label' => 'Flow'],
+                    ['value' => '24h*', 'label' => 'Reports'],
+                ],
+                'faq' => [
+                    ['q' => 'Do I have to complete steps in order?', 'a' => 'Yes — choose tests, book collection, lab processing, then reports. You can pause between steps if needed.'],
+                    ['q' => 'What if I need to reschedule collection?', 'a' => 'Contact support or use your booking tools (when live) to pick another slot.'],
+                ],
+                'cta_title' => 'Continue your lab journey',
+                'cta_text' => 'Browse packages and start with the test that fits you best.',
+            ];
+            break;
+
+        case 'why':
+        case 'partner':
+            $detail += [
+                'overview' => "{$title} — {$item['blurb']}",
+                'about' => "Quality, safety, and trust sit at the centre of eClinicPro diagnostics. {$title} is one of the reasons people choose to book lab tests with us: clear standards, careful handling, and results you can act on.",
+                'features' => [
+                    $item['blurb'],
+                    'Consistent processes across partner labs',
+                    'Privacy-minded handling of health data',
+                    'Support from booking through reports',
+                    'Designed for India-wide convenience',
+                ],
+                'benefits' => [
+                    'Confidence in where your sample is processed',
+                    'Fewer surprises on quality and turnaround',
+                    'A single place to book, track, and review',
+                ],
+                'process' => $baseProcess,
+                'stats' => [
+                    ['value' => 'NABL', 'label' => 'Standards'],
+                    ['value' => 'Pan-IN', 'label' => 'Reach'],
+                    ['value' => 'Secure', 'label' => 'Data'],
+                    ['value' => '24h*', 'label' => 'Speed'],
+                ],
+                'faq' => [
+                    ['q' => "What does {$title} mean for me?", 'a' => $item['blurb'] . ' In practice, it means clearer expectations on quality, convenience, and how your results are delivered.'],
+                    ['q' => 'Are partner labs named on this page?', 'a' => 'Named partnerships are shown only after agreements are signed. Until then we describe accredited, certified networks generically.'],
+                ],
+                'cta_title' => 'Book with confidence',
+                'cta_text' => 'Explore packages backed by accredited processing and careful home collection.',
+            ];
+            break;
+
+        default:
+            $detail += [
+                'overview' => $item['subtitle'] ?? $item['blurb'] ?? $title,
+                'about' => 'Learn more about this offering on eClinicPro Lab Tests & Health Packages.',
+                'features' => ['Home collection', 'NABL labs', 'Digital reports', 'Saved to your account'],
+                'benefits' => ['Convenient', 'Trusted', 'Affordable', 'Fast'],
+                'process' => $baseProcess,
+                'stats' => [
+                    ['value' => 'NABL', 'label' => 'Labs'],
+                    ['value' => 'Home', 'label' => 'Collection'],
+                    ['value' => '24h*', 'label' => 'Reports'],
+                    ['value' => 'App', 'label' => 'Access'],
+                ],
+                'faq' => [
+                    ['q' => 'How do I book?', 'a' => 'Open the lab page, choose a package, and complete booking when the flow is live.'],
+                ],
+                'cta_title' => 'Explore lab tests',
+                'cta_text' => 'Return to the catalog to find the right package.',
+            ];
+    }
+
+    // Deduplicate features / trim
+    $detail['features'] = array_values(array_unique(array_filter($detail['features'])));
+    $detail['features'] = array_slice($detail['features'], 0, 6);
+
+    return array_merge($item, $detail);
+}

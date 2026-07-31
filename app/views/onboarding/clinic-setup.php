@@ -8,6 +8,14 @@ $uhid = htmlspecialchars($config['uhid_prefix'] ?? 'MC');
 <h1 class="text-2xl font-semibold text-slate-900">Set up your clinic</h1>
 <p class="mt-1 text-sm text-slate-500">Basic details patients and staff will see</p>
 
+<?php if (!empty($newUsername)): ?>
+<div class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+    <strong>Your account is ready.</strong> Save your login username:
+    <span class="mt-1 block font-mono text-base font-semibold tracking-wide"><?= htmlspecialchars((string) $newUsername) ?></span>
+    <span class="mt-1 block text-xs text-emerald-800">Use this with your password at the login page.</span>
+</div>
+<?php endif; ?>
+
 <form method="post" action="/onboarding/clinic-setup" enctype="multipart/form-data"
       data-onboarding-draft="/onboarding/clinic-setup/draft"
       class="mt-8 space-y-6">

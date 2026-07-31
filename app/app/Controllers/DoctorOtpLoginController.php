@@ -100,6 +100,9 @@ final class DoctorOtpLoginController
             'resend_too_soon'   => $retryAfter
                                     ? "Please wait {$retryAfter}s before requesting another code."
                                     : 'Please wait before requesting another code.',
+            'not_whatsapp'      => 'This number does not appear to have WhatsApp active. Please enter a WhatsApp number.',
+            'whatsapp_unavailable' => 'WhatsApp OTP is not configured yet. Please contact support.',
+            'wa_send_failed'    => 'Could not send the code right now. Please try again.',
             'invalid_code'      => 'That code is incorrect. Try again.',
             'expired'           => 'Code expired. Tap Resend.',
             'too_many_attempts' => 'Too many attempts. Request a new code.',

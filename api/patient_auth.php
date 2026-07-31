@@ -97,12 +97,19 @@ switch ($action) {
             ecp_api_out(409, ['ok' => false, 'error' => 'account_exists']);
         }
 
-        $res = ecp_patient_send_otp($phone);
+        $captchaToken = (string) ($in['g-recaptcha-response'] ?? $in['captcha_token'] ?? '');
+        $remoteIp = $_SERVER['REMOTE_ADDR'] ?? null;
+        if (!ecp_recaptcha_verify($captchaToken !== '' ? $captchaToken : null, is_string($remoteIp) ? $remoteIp : null)) {
+            ecp_api_out(400, ['ok' => false, 'error' => 'captcha_failed']);
+        }
+
+        $res = ecp_patient_send_otp($phone, $intent);
 
         if (!$res['ok']) {
             $status = match ($res['error']) {
                 'invalid_phone'    => 400,
                 'resend_too_soon'  => 429,
+                'otp_locked'       => 429,
                 'db_unavailable'   => 503,
                 default            => 500,
             };
@@ -124,7 +131,7 @@ switch ($action) {
             'dev_code' => $res['dev_code'],
             'message'  => $res['mode'] === 'dev'
                 ? 'OTP printed to storage/logs/otp.log (dev mode)'
-                : 'OTP sent. Check your phone.',
+                : 'OTP sent on WhatsApp. Check your WhatsApp messages.',
         ]);
     }
 
@@ -139,6 +146,12 @@ switch ($action) {
 
         if ($phone === '' || $code === '') {
             ecp_api_out(400, ['ok' => false, 'error' => 'phone_and_code_required']);
+        }
+
+        $captchaToken = (string) ($in['g-recaptcha-response'] ?? $in['captcha_token'] ?? '');
+        $remoteIp = $_SERVER['REMOTE_ADDR'] ?? null;
+        if (!ecp_recaptcha_verify($captchaToken !== '' ? $captchaToken : null, is_string($remoteIp) ? $remoteIp : null)) {
+            ecp_api_out(400, ['ok' => false, 'error' => 'captcha_failed']);
         }
 
         $res = ecp_patient_verify_otp($phone, $code, $name);

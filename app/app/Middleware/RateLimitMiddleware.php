@@ -17,6 +17,9 @@ final class RateLimitMiddleware implements MiddlewareInterface
         if ($request->uri === '/forgot-password' && $request->method === 'GET') {
             return $next($request);
         }
+        if ($request->uri === '/forgot-username' && $request->method === 'GET') {
+            return $next($request);
+        }
 
         [$limit, $window] = $this->limitsFor($request);
         $subject = $this->rateSubject($request);
@@ -48,6 +51,9 @@ final class RateLimitMiddleware implements MiddlewareInterface
         if (str_starts_with($request->uri, '/forgot-password')) {
             return Response::redirect('/forgot-password?rate_limited=1');
         }
+        if (str_starts_with($request->uri, '/forgot-username')) {
+            return Response::redirect('/forgot-username?rate_limited=1');
+        }
 
         if ($request->uri === '/login') {
             return Response::redirect('/login?error=' . urlencode('Too many login attempts. Please wait a minute and try again.'));
@@ -69,6 +75,9 @@ final class RateLimitMiddleware implements MiddlewareInterface
             return [10, 60];
         }
         if (str_starts_with($request->uri, '/forgot-password')) {
+            return [5, 3600];
+        }
+        if (str_starts_with($request->uri, '/forgot-username')) {
             return [5, 3600];
         }
         if (str_starts_with($request->uri, '/api/')) {

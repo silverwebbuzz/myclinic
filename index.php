@@ -113,7 +113,7 @@ require __DIR__ . '/partials/header.php';
                 <div class="hp-paths">
                     <a href="/find-a-doctor" class="hp-path hp-path-patient">
                         <!-- <div class="hp-path-ic">🔍</div> -->
-                        <div class="hp-path-ic"><img src="/assets/img/icon/search-icon.svg" alt="Search" /></div>
+                        <div class="hp-path-ic"><img src="/assets/img/icon/search-icon.svg" alt="" width="26" height="26" /></div>
                         <div class="hp-path-body">
                             <div class="hp-path-title">Find a Doctor</div>
                             <div class="hp-path-sub">Find &amp; book a doctor in 60 seconds</div>
@@ -174,14 +174,14 @@ require __DIR__ . '/partials/header.php';
                     <img src="/assets/img/logos/carely-hero-img1.webp" alt="Doctor">
                     <div class="security">
                         <div class="security-item">
-                            <svg viewBox="0 0 24 24">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0c8b6f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <path d="M12 2l8 4v6c0 5-3.5 9.5-8 10-4.5-.5-8-5-8-10V6l8-4z" />
                             </svg>
                             <span>HIPAA Compliant</span>
                         </div>
 
                         <div class="security-item">
-                            <svg viewBox="0 0 24 24">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0c8b6f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <path d="M19 18H6a4 4 0 010-8 5 5 0 019.7-1.6A4.5 4.5 0 1119 18z" />
                                 <path d="M12 13v4m-2-2h4" />
                             </svg>
@@ -189,7 +189,7 @@ require __DIR__ . '/partials/header.php';
                         </div>
 
                         <div class="security-item">
-                            <svg viewBox="0 0 24 24">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0c8b6f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <path d="M3 12h4l2-5 4 10 2-5h6" />
                             </svg>
                             <span>99.9% Uptime</span>

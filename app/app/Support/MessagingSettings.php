@@ -55,6 +55,18 @@ final class MessagingSettings
         return self::get('messaging_enabled', '0') === '1';
     }
 
+    /** Toggle for doctor-side messaging limits (quota/quiet-hour caps). */
+    public static function doctorLimitsEnabled(): bool
+    {
+        return self::get('doctor_messaging_limits_enabled', '1') === '1';
+    }
+
+    /** Toggle for patient OTP send-attempt lock rules. */
+    public static function patientOtpLimitsEnabled(): bool
+    {
+        return self::get('patient_otp_limits_enabled', '1') === '1';
+    }
+
     // ---- WhatsApp creds ----
     public static function waAccessToken(): ?string   { return self::get('wa_access_token'); }
     public static function waPhoneNumberId(): ?string { return self::get('wa_phone_number_id'); }

@@ -47,6 +47,42 @@ try {
     $footerCities = [];
 }
 ?>
+<!-- Our Presence — city directory strip (images can be added later) -->
+<?php
+$presenceCities = [
+    'Agra', 'Ahmedabad', 'Aligarh', 'Bareilly', 'Bengaluru', 'Bhopal', 'Bhubaneswar', 'Bilaspur',
+    'Chennai', 'Chhattisgarh', 'Coimbatore', 'Dadar', 'Delhi', 'Dhanbad', 'Ernakulam', 'Faridabad',
+    'Ghaziabad', 'Goa', 'Gonda', 'Greater Noida', 'Gurgaon', 'Gwalior', 'Hyderabad', 'Indore',
+    'Jabalpur', 'Jaipur', 'Jamshedpur', 'Jhansi', 'Jodhpur', 'Kalyan', 'Kerala', 'Kochi',
+    'Kolkata', 'Kota', 'Lucknow', 'Ludhiana', 'Mangalore', 'Mulund', 'Mumbai', 'Navi Mumbai',
+    'Nizamabad', 'Noida', 'Panaji', 'Patiala', 'Patna', 'Pune', 'Rajkot', 'Ranchi',
+    'Ratnagiri', 'South Delhi', 'Surat', 'Tirupati', 'Udaipur', 'Varanasi', 'Venkateswara nagar',
+    'Vijayawada', 'Visakhapatnam', 'West Bengal', 'West Delhi',
+];
+$presenceTitle = $presenceTitle ?? 'Available in 50+ Cities';
+$presenceSub = $presenceSub ?? 'Find doctors & clinics across these cities';
+?>
+<section class="foot-presence" aria-labelledby="foot-presence-title">
+    <div class="wrap">
+        <h2 id="foot-presence-title" class="foot-presence-title"><?= e($presenceTitle) ?></h2>
+        <p class="foot-presence-sub"><?= e($presenceSub) ?></p>
+        <div class="foot-presence-rule" aria-hidden="true"></div>
+        <div class="foot-presence-list">
+            <?php foreach ($presenceCities as $i => $cityName): ?>
+                <?php
+                $slug = function_exists('ecp_slug_for_city') ? ecp_slug_for_city($cityName) : '';
+                $href = $slug !== '' ? '/find-a-doctor/' . rawurlencode($slug) : '/find-a-doctor';
+                ?>
+                <?php if ($i > 0): ?><span class="foot-presence-sep" aria-hidden="true">|</span><?php endif; ?>
+                <a class="foot-presence-link" href="<?= e($href) ?>"><?= e($cityName) ?></a>
+            <?php endforeach; ?>
+        </div>
+        <!-- Optional image grid (hidden until assets are added):
+             <div class="foot-presence-gallery" hidden>...</div>
+        -->
+    </div>
+</section>
+
 <?php if (!empty($footerCities)): ?>
     <section class="foot-cities">
         <div class="wrap">
@@ -80,9 +116,8 @@ try {
                 <h5>For patients</h5>
                 <ul>
                     <li><a href="/for-patients">Why eClinicPro</a></li>
-                    <li><a href="/patient">Register free</a></li>
+                    <li><a href="/patient">Sign in / Register</a></li>
                     <li><a href="/find-a-doctor">Find a doctor</a></li>
-                    <li><a href="/patient">My health panel</a></li>
                     <li><a href="/for-patients#family">Family profiles</a></li>
                     <li><a href="/for-patients#rx">E-prescriptions</a></li>
                 </ul>
@@ -128,7 +163,7 @@ try {
                     <li><a href="#">About</a></li>
                     <li><a href="#">Careers</a></li>
                     <li><a href="#">Press kit</a></li>
-                    <li><a href="#">Contact</a></li>
+                    <li><a href="/contact">Contact</a></li>
                 </ul>
             </div>
         </div>
@@ -152,52 +187,16 @@ try {
 
 <!-- Reveal-on-scroll: light replacement for the React IntersectionObserver -->
 
-<!-- jQuery (must be first) -->
-<!-- jQuery (FIRST) -->
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-
-<!-- Slick JS (AFTER jQuery) -->
-<script src="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js"></script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.9.0/slick.min.js"></script>
-
-
-
-<!-- Slick Init -->
-<!-- <script>
-jQuery(document).ready(function ($) {
-
-    if ($('.shop-list').length) {
-        $('.shop-list').slick({
-            slidesToShow: 5,
-            slidesToScroll: 1,
-            arrows: true,
-            dots: false,
-            autoplay: true,
-            autoplaySpeed: 3000,
-            responsive: [
-                {
-                    breakpoint: 1024,
-                    settings: { slidesToShow: 3 }
-                },
-                {
-                    breakpoint: 768,
-                    settings: { slidesToShow: 2 }
-                },
-                {
-                    breakpoint: 480,
-                    settings: { slidesToShow: 1 }
-                }
-            ]
-        });
-    }
-
-});
-</script> -->
+<!--
+  Removed from the global footer (2026-07-10, perf): jQuery 3.7.1, slick
+  (x2: jsdelivr 1.8.1 + cloudflare 1.9.0) and swiper (x2: v11 + v12).
+  These were render-blocking on EVERY page (~160 KiB from 4 CDNs) but:
+    - jQuery + slick were dead code (only user was the commented-out init below)
+    - swiper is used ONLY by /eclinicpro-health-store, which loads its own copy
+  Lighthouse network tree showed these as the main critical-path chain on
+  /find-a-doctor. If a future page needs a carousel, load swiper on that
+  page only (as health-store does), not here.
+-->
 
 
 <script>

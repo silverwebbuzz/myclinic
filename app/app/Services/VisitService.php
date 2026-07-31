@@ -82,7 +82,6 @@ final class VisitService
             'modalities',
             'srp',
             'lesion_description',
-            'body_map_note',
             'pain_location',
             'rom_assessment',
             'functional_goals',

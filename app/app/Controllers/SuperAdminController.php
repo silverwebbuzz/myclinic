@@ -13,6 +13,7 @@ use App\Services\ChurnOutreachService;
 use App\Services\CsrfService;
 use App\Services\ImpersonationService;
 use App\Services\PlanService;
+use App\Services\RecaptchaService;
 use App\Services\SuperAdminAuthService;
 use App\Services\SuperAdminJwtService;
 use App\Services\SuperAdminClinicService;
@@ -28,11 +29,30 @@ final class SuperAdminController
         return Response::html(View::render('admin/login', [
             'csrf' => CsrfService::token(),
             'error' => null,
+            'captchaEnabled' => RecaptchaService::enabled(),
+            'captchaSiteKey' => RecaptchaService::siteKey(),
         ]));
     }
 
     public function login(Request $request): Response
     {
+        $captchaOk = !RecaptchaService::enabled()
+            || RecaptchaService::verify(
+                is_string($request->post['g-recaptcha-response'] ?? null)
+                    ? $request->post['g-recaptcha-response']
+                    : null,
+                is_string($_SERVER['REMOTE_ADDR'] ?? null) ? $_SERVER['REMOTE_ADDR'] : null,
+            );
+
+        if (!$captchaOk) {
+            return Response::html(View::render('admin/login', [
+                'csrf' => CsrfService::token(),
+                'error' => 'Please complete the captcha.',
+                'captchaEnabled' => RecaptchaService::enabled(),
+                'captchaSiteKey' => RecaptchaService::siteKey(),
+            ]), 400);
+        }
+
         $admin = SuperAdminAuthService::attempt(
             $request->post['email'] ?? '',
             $request->post['password'] ?? '',
@@ -42,6 +62,8 @@ final class SuperAdminController
             return Response::html(View::render('admin/login', [
                 'csrf' => CsrfService::token(),
                 'error' => 'Invalid credentials.',
+                'captchaEnabled' => RecaptchaService::enabled(),
+                'captchaSiteKey' => RecaptchaService::siteKey(),
             ]), 401);
         }
 

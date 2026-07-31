@@ -34,9 +34,12 @@ use App\Controllers\DietTemplateController;
 use App\Controllers\DoctorScheduleController;
 use App\Controllers\HelpController;
 use App\Controllers\MessagingAdminController;
+use App\Controllers\MiscAdminController;
+use App\Controllers\RecaptchaAdminController;
 use App\Controllers\OnboardingController;
 use App\Controllers\EmailTemplateAdminController;
 use App\Controllers\SpecialtyAdminController;
+use App\Controllers\LocationAdminController;
 use App\Controllers\VitalsController;
 use App\Controllers\WebhookController;
 use App\Controllers\WordPressAdminController;
@@ -64,7 +67,11 @@ return static function (RouteRegistrar $router): void {
         $auth->post('/login', [AuthController::class, 'login']);
         $auth->post('/logout', [AuthController::class, 'logout']);
         $auth->get('/forgot-password', [AuthController::class, 'showForgotPassword']);
-        $auth->post('/forgot-password', [AuthController::class, 'forgotPassword']);
+        $auth->post('/forgot-password/send-otp', [AuthController::class, 'sendForgotPasswordOtp']);
+        $auth->post('/forgot-password/verify-otp', [AuthController::class, 'verifyForgotPasswordOtp']);
+        $auth->post('/forgot-password/reset', [AuthController::class, 'resetPasswordViaPhone']);
+        $auth->get('/forgot-username', [AuthController::class, 'showForgotUsername']);
+        $auth->post('/forgot-username', [AuthController::class, 'forgotUsername']);
         $auth->get('/reset-password/{token}', [AuthController::class, 'showResetPassword']);
         $auth->post('/reset-password/{token}', [AuthController::class, 'resetPassword']);
         $auth->get('/accept-invite/{token}', [AcceptInviteController::class, 'show']);
@@ -77,10 +84,10 @@ return static function (RouteRegistrar $router): void {
     });
 
     $router->get('/api/check-slug', [AuthController::class, 'checkSlug']);
+    $router->get('/api/check-username', [AuthController::class, 'checkUsername']);
 
     $router->post('/webhooks/stripe', [WebhookController::class, 'stripe']);
     $router->post('/webhooks/razorpay', [WebhookController::class, 'razorpay']);
-    $router->post('/webhooks/cashfree', [WebhookController::class, 'cashfree']);
     // Meta WhatsApp: GET = verify handshake, POST = delivery/inbound events.
     $router->get('/webhooks/whatsapp', [WebhookController::class, 'whatsapp']);
     $router->post('/webhooks/whatsapp', [WebhookController::class, 'whatsapp']);
@@ -201,10 +208,10 @@ return static function (RouteRegistrar $router): void {
 
         $app->get('/onboarding/plan-selection', [OnboardingController::class, 'planSelection']);
         $app->post('/onboarding/plan-selection', [OnboardingController::class, 'selectPlan']);
-        // Real gateway checkout (Cashfree) — used by onboarding + Settings.
+        // Real gateway checkout (Razorpay) — used by onboarding + Settings.
         $app->post('/subscription/checkout', [SubscriptionController::class, 'checkout']);
         $app->get('/onboarding/billing/success', [OnboardingController::class, 'billingSuccess']);
-        $app->get('/onboarding/billing/cashfree-return', [OnboardingController::class, 'cashfreeReturn']);
+        $app->get('/onboarding/billing/razorpay-return', [OnboardingController::class, 'razorpayReturn']);
         $app->get('/onboarding/clinic-setup', [OnboardingController::class, 'clinicSetup']);
         $app->post('/onboarding/clinic-setup', [OnboardingController::class, 'saveClinicSetup']);
         $app->post('/onboarding/clinic-setup/draft', [OnboardingController::class, 'draftClinicSetup']);
@@ -417,6 +424,12 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/cron/followup-reminders', [SuperAdminController::class, 'runFollowUpReminders']);
         $admin->post('/cron/followup-mark-missed', [SuperAdminController::class, 'runFollowUpMarkMissed']);
 
+        // Auth captcha control
+        $admin->get('/recaptcha', [RecaptchaAdminController::class, 'index']);
+        $admin->post('/recaptcha', [RecaptchaAdminController::class, 'save']);
+        $admin->get('/misc', [MiscAdminController::class, 'index']);
+        $admin->post('/misc', [MiscAdminController::class, 'save']);
+
         // WhatsApp/SMS messaging control centre
         $admin->get('/messaging', [MessagingAdminController::class, 'index']);
         $admin->post('/messaging/connection', [MessagingAdminController::class, 'saveConnection']);
@@ -428,6 +441,32 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/specialties', [SpecialtyAdminController::class, 'index']);
         $admin->post('/specialties', [SpecialtyAdminController::class, 'save']);
         $admin->post('/specialties/{id}/toggle', [SpecialtyAdminController::class, 'toggle']);
+
+        // Lab test catalog (Thyrocare-sourced products, categories, coupons)
+        $admin->get('/lab/products', [\App\Controllers\LabAdminController::class, 'products']);
+        // Static segments must be declared BEFORE /lab/products/{id}, otherwise
+        // the id route matches "cleanup"/"bulk-delete" and swallows them.
+        $admin->get('/lab/products/cleanup', [\App\Controllers\LabAdminController::class, 'cleanup']);
+        $admin->post('/lab/products/cleanup', [\App\Controllers\LabAdminController::class, 'cleanupRun']);
+        $admin->post('/lab/products/bulk-delete', [\App\Controllers\LabAdminController::class, 'bulkDeleteProducts']);
+        $admin->get('/lab/products/{id}', [\App\Controllers\LabAdminController::class, 'productDetail']);
+        $admin->post('/lab/products/{id}', [\App\Controllers\LabAdminController::class, 'saveProduct']);
+        $admin->post('/lab/products/{id}/toggle', [\App\Controllers\LabAdminController::class, 'toggleProduct']);
+        $admin->post('/lab/products/{id}/feature', [\App\Controllers\LabAdminController::class, 'toggleFeatured']);
+        $admin->post('/lab/products/{id}/delete', [\App\Controllers\LabAdminController::class, 'deleteProduct']);
+        $admin->get('/lab/categories', [\App\Controllers\LabAdminController::class, 'categories']);
+        $admin->post('/lab/categories', [\App\Controllers\LabAdminController::class, 'saveCategory']);
+        $admin->post('/lab/categories/{id}/toggle', [\App\Controllers\LabAdminController::class, 'toggleCategory']);
+        $admin->get('/lab/coupons', [\App\Controllers\LabAdminController::class, 'coupons']);
+        $admin->post('/lab/coupons', [\App\Controllers\LabAdminController::class, 'saveCoupon']);
+        $admin->post('/lab/coupons/{id}/toggle', [\App\Controllers\LabAdminController::class, 'toggleCoupon']);
+
+        // States & cities catalog (Listed on eClinicPro pickers)
+        $admin->get('/locations', [LocationAdminController::class, 'index']);
+        $admin->post('/locations/states', [LocationAdminController::class, 'saveState']);
+        $admin->post('/locations/states/{id}/toggle', [LocationAdminController::class, 'toggleState']);
+        $admin->post('/locations/cities', [LocationAdminController::class, 'saveCity']);
+        $admin->post('/locations/cities/{id}/toggle', [LocationAdminController::class, 'toggleCity']);
 
         // Plan catalog (source of truth for pricing / onboarding / checkout)
         $admin->get('/plans', [\App\Controllers\PlanAdminController::class, 'index']);

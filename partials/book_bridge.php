@@ -159,6 +159,46 @@ function ecp_book_build_week_days(int $windowDays, ?string $timezone = null): ar
 }
 
 /**
+ * Preferred dates for non-joined (unclaimed) directory doctors.
+ * Skips today and weekends; returns the next $count weekdays.
+ *
+ * @return list<array<string, mixed>>
+ */
+function ecp_book_build_lead_days(int $count = 7, ?string $timezone = null): array
+{
+    if ($count <= 0) {
+        $count = 7;
+    }
+
+    try {
+        $zone = new \DateTimeZone($timezone !== null && $timezone !== '' ? $timezone : date_default_timezone_get());
+    } catch (\Throwable) {
+        $zone = new \DateTimeZone(date_default_timezone_get());
+    }
+
+    $today = (new \DateTime('now', $zone))->setTime(0, 0, 0);
+    $days = [];
+    // Start at +1 day so "today" is never offered.
+    for ($i = 1; count($days) < $count && $i <= 60; $i++) {
+        $dt = (clone $today)->modify('+' . $i . ' day');
+        $dow = (int) $dt->format('w'); // 0 = Sunday, 6 = Saturday
+        if ($dow === 0 || $dow === 6) {
+            continue;
+        }
+        $days[] = [
+            'date' => $dt->format('Y-m-d'),
+            'weekday' => strtoupper($dt->format('D')),
+            'day' => (int) $dt->format('d'),
+            'month' => $dt->format('M'),
+            'is_today' => false,
+            'within_window' => true,
+        ];
+    }
+
+    return $days;
+}
+
+/**
  * Booking context for /book/{tenant-slug} when no directory profile exists yet.
  *
  * @param array<string, mixed> $clinic Row from PublicBookingService::clinicBySlug()
@@ -277,7 +317,7 @@ function ecp_profile_booking_context(array $profile): array
     if (empty($profile['is_claimed']) || empty($profile['tenant_slug'])) {
         return array_merge($base, [
             'mode' => 'lead',
-            'days' => ecp_book_build_week_days(7),
+            'days' => ecp_book_build_lead_days(7),
             'confirmation' => null,
             'bookingError' => is_string($bookingError) ? $bookingError : null,
         ]);
@@ -288,7 +328,11 @@ function ecp_profile_booking_context(array $profile): array
         $slug = (string) $profile['tenant_slug'];
         $clinic = \App\Services\PublicBookingService::clinicBySlug($slug);
         if ($clinic === null) {
-            return array_merge($base, ['mode' => 'lead', 'confirmation' => null]);
+            return array_merge($base, [
+                'mode' => 'lead',
+                'days' => ecp_book_build_lead_days(7),
+                'confirmation' => null,
+            ]);
         }
 
         $clinicId = (int) $clinic['id'];
@@ -317,6 +361,10 @@ function ecp_profile_booking_context(array $profile): array
     } catch (\Throwable $e) {
         error_log('[ecp_profile_booking_context] ' . $e->getMessage());
 
-        return array_merge($base, ['mode' => 'lead', 'confirmation' => null]);
+        return array_merge($base, [
+            'mode' => 'lead',
+            'days' => ecp_book_build_lead_days(7),
+            'confirmation' => null,
+        ]);
     }
 }

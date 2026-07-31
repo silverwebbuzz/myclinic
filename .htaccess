@@ -57,6 +57,25 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^find-a-doctor/([A-Za-z0-9][A-Za-z0-9\-]*)/([A-Za-z0-9][A-Za-z0-9\-]*)/?$ find-a-doctor.php?seo=$1/$2 [L,QSA,NC]
 
+# -------- Lab browse hub + category listings + test pages (SEO) --------
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^lab/tests/?$ lab-listing.php?type=hub [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^lab/category/([a-z0-9][a-z0-9\-]*)/?$ lab-listing.php?type=category&slug=$1 [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^lab/test/([a-z0-9][a-z0-9\-]*)/?$ lab-detail.php?type=test&slug=$1 [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^lab/symptom/([a-z0-9][a-z0-9\-]*)/?$ lab-listing.php?type=symptom&slug=$1 [L,QSA,NC]
+
+# -------- Lab detail pages (/lab/{type}/{slug}) --------
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^lab/(package|organ|life|step|why|partner)/([a-z0-9][a-z0-9\-]*)/?$ lab-detail.php?type=$1&slug=$2 [L,QSA,NC]
+
 # -------- Pricing moved into the For-doctors (features) page --------
 # Redirect the retired /pricing page to the new section so old links/SEO survive.
 RewriteRule ^pricing/?$ /features#pricing [R=301,L]
@@ -84,10 +103,15 @@ RewriteRule ^ /%1 [R=301,L]
 # -------- Block direct access to /partials/ --------
 RewriteRule ^partials/ - [F,L]
 
-# -------- Block access to backup / hidden files --------
-<FilesMatch "(^\.|~$|\.bak$|\.swp$|\.orig$)">
+# -------- Block access to backup / hidden / secret / data files --------
+# Covers dotfiles (.env, .git), editor backups, and raw data dumps that
+# scanners routinely probe for (/.env, /*.sql, /*.json, /*.log).
+<FilesMatch "(^\.|~$|\.bak$|\.swp$|\.orig$|\.env$|\.sql$|\.log$|\.ini$|composer\.(json|lock)$|package(-lock)?\.json$)">
     Require all denied
 </FilesMatch>
+
+# Block the whole .git directory if it was ever deployed by mistake.
+RewriteRule ^\.git/ - [F,L]
 
 # -------- Cache static assets aggressively --------
 <IfModule mod_expires.c>

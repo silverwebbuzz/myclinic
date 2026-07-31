@@ -85,26 +85,33 @@ final class PatientIdentityAuthService
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $pdo->prepare(
             'INSERT INTO patient_otp_codes (handle, channel, code_hash, expires_at)
-             VALUES (:h, "sms", :hash, DATE_ADD(NOW(), INTERVAL :ttl SECOND))'
+             VALUES (:h, "whatsapp", :hash, DATE_ADD(NOW(), INTERVAL :ttl SECOND))'
         )->execute(['h' => $phone, 'hash' => hash('sha256', $code), 'ttl' => self::TTL_SECONDS]);
 
-        $mode = strtolower((string) ($_ENV['ECP_SMS_MODE'] ?? 'dev'));
-        if ($mode === 'dev') {
-            return [
-                'ok' => true,
-                'mode' => 'dev',
-                'dev_code' => $code,
-                'exists' => $exists,
-                'name_hint' => $nameHint,
-            ];
+        $wa = WhatsAppService::send($phone, WaTemplateService::OTP_TEMPLATE, [
+            'code' => $code,
+            'body' => "OTP: {$code}",
+        ]);
+        $devMode = strtolower((string) ($_ENV['APP_ENV'] ?? 'local')) === 'local';
+
+        if (!$wa['ok']) {
+            $msg = strtolower((string) ($wa['message'] ?? ''));
+            if (str_contains($msg, 'not a valid whatsapp') || str_contains($msg, 'whatsapp user') || str_contains($msg, 'recipient')) {
+                return ['ok' => false, 'error' => 'not_whatsapp'];
+            }
+            if (str_contains($msg, 'no approved whatsapp template')) {
+                return ['ok' => false, 'error' => 'wa_template_missing'];
+            }
+            return ['ok' => false, 'error' => 'wa_send_failed'];
         }
 
-        $sent = SmsService::send($phone, "Your eClinicPro verification code is: {$code}\nValid for 10 minutes.");
-        if (empty($sent['ok'])) {
-            return ['ok' => false, 'error' => 'sms_failed'];
-        }
-
-        return ['ok' => true, 'mode' => 'live', 'exists' => $exists, 'name_hint' => $nameHint];
+        return [
+            'ok' => true,
+            'mode' => $devMode ? 'dev' : 'live',
+            'dev_code' => $devMode ? $code : null,
+            'exists' => $exists,
+            'name_hint' => $nameHint,
+        ];
     }
 
     /** @return array{ok: bool, error?: string, identity?: array<string,mixed>, is_new?: bool} */

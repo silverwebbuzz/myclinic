@@ -1,0 +1,25 @@
+# =====================================================================
+# api/mobile/.htaccess
+# The mobile app authenticates with `Authorization: Bearer <token>`.
+# Apache does NOT pass the Authorization header to PHP by default, so
+# $_SERVER['HTTP_AUTHORIZATION'] arrives empty and every Bearer request
+# looks logged out. These rules forward it explicitly.
+#
+# Only universally-safe mechanisms are used here (no CGIPassAuth, which
+# can 500 on some shared hosts). ecp_m_bearer_token() also reads
+# getallheaders() as a final fallback, so between the two the header is
+# recovered on essentially every Apache/PHP stack.
+# =====================================================================
+
+# Copy the incoming Authorization header into an env var PHP can read.
+# SetEnvIf populates $_SERVER['HTTP_AUTHORIZATION'] on most stacks.
+<IfModule mod_setenvif.c>
+    SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+</IfModule>
+
+# Rewrite fallback: many hosts expose it as REDIRECT_HTTP_AUTHORIZATION.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTP:Authorization} ^(.+)$
+    RewriteRule ^ - [E=HTTP_AUTHORIZATION:%1]
+</IfModule>

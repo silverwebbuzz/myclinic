@@ -215,6 +215,7 @@ final class MessagingAdminController
             'sms_sender_id', 'quota_whatsapp_base', 'quota_sms_base',
             'messaging_quiet_start', 'messaging_quiet_end', 'messaging_global_monthly_cap',
             'directory_doctor_wa_cap',
+            'patient_otp_attempts', 'patient_otp_lockout_minutes',
         ];
         foreach ($keys as $k) {
             if (array_key_exists($k, $request->post)) {
@@ -228,6 +229,8 @@ final class MessagingAdminController
         }
         // Checkbox: messaging_enabled is '1' only when present.
         MessagingSettings::set('messaging_enabled', isset($request->post['messaging_enabled']) ? '1' : '0');
+        MessagingSettings::set('doctor_messaging_limits_enabled', isset($request->post['doctor_messaging_limits_enabled']) ? '1' : '0');
+        MessagingSettings::set('patient_otp_limits_enabled', isset($request->post['patient_otp_limits_enabled']) ? '1' : '0');
 
         return Response::redirect('/admin/messaging?message=connection_saved');
     }
