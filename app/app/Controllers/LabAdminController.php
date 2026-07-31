@@ -451,6 +451,312 @@ final class LabAdminController
         return '/admin/lab/products?' . http_build_query($keep);
     }
 
+    // ---- Orders (bookings) -------------------------------------------------
+
+    /**
+     * GET /admin/lab/orders — the ops worklist: who booked what, and where.
+     *
+     * Backed by idx_lo_status (status, appointment_date), which the schema
+     * created for exactly this screen. Default sort is newest-booked first
+     * because the common question is "what came in today?", but the status
+     * filter + date range cover the other one ("what are we collecting
+     * tomorrow?").
+     *
+     * NOTE on placeholders: PDO runs with EMULATE_PREPARES=false, so a named
+     * placeholder may NOT be reused across positions (HY093, and the query
+     * silently returns nothing). The search term therefore gets one placeholder
+     * per occurrence, same as products() above.
+     */
+    public function orders(Request $request): Response
+    {
+        $pdo = Database::connection();
+
+        $q      = trim((string) ($request->query['q'] ?? ''));
+        $status = (string) ($request->query['status'] ?? '');
+        if (!in_array($status, ['pending', 'confirmed', 'collected', 'reported', 'cancelled'], true)) {
+            $status = '';
+        }
+        $payment = (string) ($request->query['payment'] ?? '');
+        if (!in_array($payment, ['unpaid', 'paid', 'refunded'], true)) {
+            $payment = '';
+        }
+        // Which date the range applies to. Ops think in two different dates:
+        // when it was booked (sales) vs when the phlebotomist goes out (logistics).
+        $dateField = ($request->query['date_field'] ?? '') === 'appointment' ? 'appointment' : 'created';
+        $from = trim((string) ($request->query['from'] ?? ''));
+        $to   = trim((string) ($request->query['to'] ?? ''));
+        $page = max(1, (int) ($request->query['page'] ?? 1));
+
+        $where  = [];
+        $params = [];
+        if ($q !== '') {
+            // Support desk searches by whatever the caller has to hand: the
+            // quoted order ref, their phone, their email, their name, or the
+            // test they booked.
+            $like = '%' . $q . '%';
+            $where[] = '(lo.order_ref LIKE :q1 OR lo.contact_phone LIKE :q2 OR lo.contact_email LIKE :q3
+                         OR lo.contact_name LIKE :q4 OR lo.product_name LIKE :q5 OR lo.pincode LIKE :q6)';
+            $params[':q1'] = $like;
+            $params[':q2'] = $like;
+            $params[':q3'] = $like;
+            $params[':q4'] = $like;
+            $params[':q5'] = $like;
+            $params[':q6'] = $like;
+        }
+        if ($status !== '') {
+            $where[] = 'lo.status = :status';
+            $params[':status'] = $status;
+        }
+        if ($payment !== '') {
+            $where[] = 'lo.payment_status = :payment';
+            $params[':payment'] = $payment;
+        }
+        $dateCol = $dateField === 'appointment' ? 'lo.appointment_date' : 'DATE(lo.created_at)';
+        if ($from !== '') {
+            $where[] = "$dateCol >= :from";
+            $params[':from'] = $from;
+        }
+        if ($to !== '') {
+            $where[] = "$dateCol <= :to";
+            $params[':to'] = $to;
+        }
+        $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
+
+        $rows = [];
+        $total = 0;
+        $stats = ['orders' => 0, 'revenue_paise' => 0, 'pending' => 0, 'today' => 0];
+        $tableMissing = false;
+        try {
+            $countStmt = $pdo->prepare("SELECT COUNT(*) FROM lab_orders lo $whereSql");
+            $countStmt->execute($params);
+            $total = (int) $countStmt->fetchColumn();
+
+            // Headline figures for the CURRENT filter, so narrowing to a month
+            // or a status answers "how much did that come to?" without export.
+            // Cancelled orders are excluded from revenue — they were never billed.
+            $sumStmt = $pdo->prepare(
+                "SELECT COUNT(*) AS orders,
+                        COALESCE(SUM(CASE WHEN lo.status <> 'cancelled' THEN lo.total_paise ELSE 0 END), 0) AS revenue_paise,
+                        COALESCE(SUM(lo.status = 'pending'), 0) AS pending,
+                        COALESCE(SUM(DATE(lo.created_at) = CURRENT_DATE), 0) AS today
+                   FROM lab_orders lo $whereSql"
+            );
+            $sumStmt->execute($params);
+            $stats = $sumStmt->fetch(PDO::FETCH_ASSOC) ?: $stats;
+
+            $offset = ($page - 1) * self::PER_PAGE;
+            // Beneficiary count comes along so the list can show "3 people"
+            // without a second query per row.
+            $sql = "SELECT lo.*,
+                           (SELECT COUNT(*) FROM lab_order_beneficiaries b WHERE b.order_id = lo.id) AS beneficiary_count
+                      FROM lab_orders lo
+                      $whereSql
+                      ORDER BY lo.created_at DESC, lo.id DESC
+                      LIMIT " . self::PER_PAGE . " OFFSET " . (int) $offset;
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            $tableMissing = !$this->tableExists('lab_orders');
+        }
+
+        return Response::html(View::render('admin/lab_orders', [
+            'admin'        => RequestContext::superAdmin(),
+            'csrf'         => CsrfService::token(),
+            'orders'       => $rows,
+            'total'        => $total,
+            'stats'        => $stats,
+            'page'         => $page,
+            'perPage'      => self::PER_PAGE,
+            'pages'        => (int) ceil(max(1, $total) / self::PER_PAGE),
+            'q'            => $q,
+            'status'       => $status,
+            'payment'      => $payment,
+            'dateField'    => $dateField,
+            'from'         => $from,
+            'to'           => $to,
+            'tableMissing' => $tableMissing,
+            'message'      => $request->query['message'] ?? null,
+        ]));
+    }
+
+    /**
+     * GET /admin/lab/orders/{id} — everything about one booking.
+     *
+     * Pulls the itemised bill and the beneficiaries, plus the patient identity
+     * behind the booking (the account it was placed from, which may differ from
+     * the contact details typed into the form).
+     */
+    public function orderDetail(Request $request, string $id): Response
+    {
+        $pdo = Database::connection();
+        $oid = (int) $id;
+
+        $order = null;
+        $items = [];
+        $people = [];
+        $identity = null;
+        try {
+            $stmt = $pdo->prepare('SELECT * FROM lab_orders WHERE id = ?');
+            $stmt->execute([$oid]);
+            $order = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+            if ($order) {
+                $istmt = $pdo->prepare(
+                    'SELECT * FROM lab_order_items WHERE order_id = ? ORDER BY sort_order ASC, id ASC'
+                );
+                $istmt->execute([$oid]);
+                $items = $istmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+                $bstmt = $pdo->prepare(
+                    'SELECT * FROM lab_order_beneficiaries WHERE order_id = ? ORDER BY position ASC, id ASC'
+                );
+                $bstmt->execute([$oid]);
+                $people = $bstmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+                // The account the booking was placed from. Wrapped separately:
+                // patient_identities living in another schema shouldn't 500 the
+                // whole order view.
+                try {
+                    $pstmt = $pdo->prepare(
+                        'SELECT id, name, phone, email, created_at
+                           FROM patient_identities WHERE id = ?'
+                    );
+                    $pstmt->execute([(int) $order['patient_identity_id']]);
+                    $identity = $pstmt->fetch(PDO::FETCH_ASSOC) ?: null;
+                } catch (\Throwable $e) { /* identity table unavailable */ }
+            }
+        } catch (\Throwable $e) { /* table missing */ }
+
+        if (!$order) {
+            return Response::redirect('/admin/lab/orders?message=not_found');
+        }
+
+        return Response::html(View::render('admin/lab_order_detail', [
+            'admin'    => RequestContext::superAdmin(),
+            'csrf'     => CsrfService::token(),
+            'order'    => $order,
+            'items'    => $items,
+            'people'   => $people,
+            'identity' => $identity,
+            'message'  => $request->query['message'] ?? null,
+        ]));
+    }
+
+    /**
+     * POST /admin/lab/orders/{id} — ops updates: status, payment, notes.
+     *
+     * Deliberately does NOT touch any money column. Amounts were recomputed on
+     * the server at booking time and are the billing record; if a price is
+     * genuinely wrong the order gets cancelled and rebooked, so there is no
+     * path here that silently rewrites what a patient was quoted.
+     */
+    public function saveOrder(Request $request, string $id): Response
+    {
+        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
+            return Response::redirect('/admin/lab/orders');
+        }
+        $oid = (int) $id;
+
+        $status = (string) ($request->post['status'] ?? '');
+        if (!in_array($status, ['pending', 'confirmed', 'collected', 'reported', 'cancelled'], true)) {
+            return Response::redirect('/admin/lab/orders/' . $oid . '?message=bad_status');
+        }
+        $payment = (string) ($request->post['payment_status'] ?? '');
+        if (!in_array($payment, ['unpaid', 'paid', 'refunded'], true)) {
+            $payment = 'unpaid';
+        }
+        $notes = trim((string) ($request->post['admin_notes'] ?? '')) ?: null;
+
+        try {
+            // cancelled_at is stamped on the transition INTO cancelled and
+            // cleared if the order is revived, so the column always agrees with
+            // status rather than keeping a stale timestamp.
+            Database::connection()->prepare(
+                "UPDATE lab_orders
+                    SET status = ?, payment_status = ?, admin_notes = ?,
+                        cancelled_at = CASE
+                            WHEN ? = 'cancelled' THEN COALESCE(cancelled_at, NOW())
+                            ELSE NULL
+                        END
+                  WHERE id = ?"
+            )->execute([$status, $payment, $notes, $status, $oid]);
+        } catch (\Throwable $e) {
+            return Response::redirect('/admin/lab/orders/' . $oid . '?message=save_error');
+        }
+
+        return Response::redirect('/admin/lab/orders/' . $oid . '?message=saved');
+    }
+
+    /**
+     * GET /admin/lab/orders/export — the current filter as CSV.
+     *
+     * Streams rather than building one big string: an unfiltered export grows
+     * with the whole order table, and ops habitually export "everything".
+     */
+    public function exportOrders(Request $request): Response
+    {
+        $status = (string) ($request->query['status'] ?? '');
+        if (!in_array($status, ['pending', 'confirmed', 'collected', 'reported', 'cancelled'], true)) {
+            $status = '';
+        }
+        $from = trim((string) ($request->query['from'] ?? ''));
+        $to   = trim((string) ($request->query['to'] ?? ''));
+        $dateField = ($request->query['date_field'] ?? '') === 'appointment' ? 'appointment' : 'created';
+
+        $where  = [];
+        $params = [];
+        if ($status !== '') {
+            $where[] = 'status = :status';
+            $params[':status'] = $status;
+        }
+        $dateCol = $dateField === 'appointment' ? 'appointment_date' : 'DATE(created_at)';
+        if ($from !== '') {
+            $where[] = "$dateCol >= :from";
+            $params[':from'] = $from;
+        }
+        if ($to !== '') {
+            $where[] = "$dateCol <= :to";
+            $params[':to'] = $to;
+        }
+        $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
+
+        $rows = [];
+        try {
+            $stmt = Database::connection()->prepare(
+                "SELECT order_ref, created_at, status, payment_status, contact_name, contact_phone,
+                        contact_email, product_name, persons, appointment_date, time_slot,
+                        address, pincode, city, state, coupon_code, total_paise, savings_paise, admin_notes
+                   FROM lab_orders $whereSql
+                  ORDER BY created_at DESC"
+            );
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) { /* table missing → empty export */ }
+
+        $out = fopen('php://temp', 'r+');
+        fputcsv($out, [
+            'Order Ref', 'Booked On', 'Status', 'Payment', 'Contact Name', 'Phone', 'Email',
+            'Test / Package', 'Persons', 'Appointment Date', 'Time Slot', 'Address',
+            'Pincode', 'City', 'State', 'Coupon', 'Total (INR)', 'Saved (INR)', 'Admin Notes',
+        ]);
+        foreach ($rows as $r) {
+            // Money back to rupees for the spreadsheet — paise is a storage
+            // detail, and finance will sum this column.
+            $r['total_paise']   = number_format((int) $r['total_paise'] / 100, 2, '.', '');
+            $r['savings_paise'] = number_format((int) $r['savings_paise'] / 100, 2, '.', '');
+            fputcsv($out, array_values($r));
+        }
+        rewind($out);
+        $csv = (string) stream_get_contents($out);
+        fclose($out);
+
+        return new Response($csv, 200, [
+            'Content-Type'        => 'text/csv; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="lab-orders-' . date('Y-m-d') . '.csv"',
+        ]);
+    }
+
     // ---- Categories --------------------------------------------------------
 
     public function categories(Request $request): Response

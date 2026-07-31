@@ -454,6 +454,13 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/lab/products/{id}/toggle', [\App\Controllers\LabAdminController::class, 'toggleProduct']);
         $admin->post('/lab/products/{id}/feature', [\App\Controllers\LabAdminController::class, 'toggleFeatured']);
         $admin->post('/lab/products/{id}/delete', [\App\Controllers\LabAdminController::class, 'deleteProduct']);
+        // Lab bookings (ops worklist). As with /lab/products above, the static
+        // "export" segment MUST be declared before /lab/orders/{id} or the id
+        // route matches "export" and swallows it.
+        $admin->get('/lab/orders', [\App\Controllers\LabAdminController::class, 'orders']);
+        $admin->get('/lab/orders/export', [\App\Controllers\LabAdminController::class, 'exportOrders']);
+        $admin->get('/lab/orders/{id}', [\App\Controllers\LabAdminController::class, 'orderDetail']);
+        $admin->post('/lab/orders/{id}', [\App\Controllers\LabAdminController::class, 'saveOrder']);
         $admin->get('/lab/categories', [\App\Controllers\LabAdminController::class, 'categories']);
         $admin->post('/lab/categories', [\App\Controllers\LabAdminController::class, 'saveCategory']);
         $admin->post('/lab/categories/{id}/toggle', [\App\Controllers\LabAdminController::class, 'toggleCategory']);
