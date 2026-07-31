@@ -358,7 +358,7 @@ function ecp_patient_clear_host_cookie(?bool $secure = null): void {
 }
 
 function ecp_patient_cookie_domain(): string {
-    $explicit = trim((string) (getenv('PATIENT_COOKIE_DOMAIN') ?: ''));
+    $explicit = trim(ecp_env('PATIENT_COOKIE_DOMAIN'));
     if ($explicit !== '') {
         return $explicit;
     }

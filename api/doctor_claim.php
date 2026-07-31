@@ -257,9 +257,9 @@ if ($action === 'submit') {
     // Best-effort: a mail problem must never fail the doctor's submission.
     try {
         require_once __DIR__ . '/../partials/mailer.php';
-        $adminEmail = trim((string) (getenv('PLATFORM_ADMIN_EMAIL') ?: ($_ENV['PLATFORM_ADMIN_EMAIL'] ?? 'eclinicpro.com@gmail.com')));
+        $adminEmail = trim(ecp_env('PLATFORM_ADMIN_EMAIL', 'eclinicpro.com@gmail.com'));
         if ($adminEmail !== '' && filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
-            $appUrl = rtrim((string) (getenv('APP_URL') ?: ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com')), '/');
+            $appUrl = rtrim(ecp_env('APP_URL', 'https://app.eclinicpro.com'), '/');
             $loc = trim($city . ($state ? ', ' . $state : ''));
             $rows = [
                 'Type'      => $type === 'claim' ? 'Claim existing listing' : 'New listing',

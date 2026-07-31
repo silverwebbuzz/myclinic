@@ -839,7 +839,7 @@ require __DIR__ . '/partials/header.php';
                         <p>Add your clinic in a minute — we'll review and get back to you.</p>
                     </div>
                     <a class="fd-listme-btn"
-                       href="<?= htmlspecialchars(rtrim($_ENV['APP_URL'] ?? 'http://localhost:8081', '/')) ?>/register">
+                       href="<?= e(ecp_portal_url('/register')) ?>">
                         List my clinic
                     </a>
                 </div>
