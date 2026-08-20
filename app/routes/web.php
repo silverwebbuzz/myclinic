@@ -261,6 +261,7 @@ return static function (RouteRegistrar $router): void {
         $api->get('/slots', [AppointmentController::class, 'slotsApi']);
         $api->get('/appointments/list', [AppointmentController::class, 'listApi']);
         $api->get('/appointments/calendar', [AppointmentController::class, 'calendarApi']);
+        $api->post('/appointments/{id}/status', [AppointmentController::class, 'statusApi']);
         $api->get('/queue', [QueueController::class, 'api']);
         $api->post('/visits/{id}/autosave', [VisitController::class, 'autosaveApi']);
         $api->post('/visits/{id}/immunizations/given', [VisitController::class, 'markImmunizationGiven']);

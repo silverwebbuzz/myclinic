@@ -459,7 +459,9 @@ final class AppointmentService
             return [];
         }
 
-        $sql = 'SELECT a.id, a.scheduled_at, a.status, a.type, p.name AS patient_name, u.name AS doctor_name
+        $sql = 'SELECT a.id, a.scheduled_at, a.status, a.type, a.token_number,
+                       p.id AS patient_id, p.name AS patient_name, p.phone AS patient_phone,
+                       u.name AS doctor_name
                 FROM appointments a
                 INNER JOIN patients p ON p.id = a.patient_id
                 INNER JOIN users u ON u.id = a.doctor_id
@@ -493,9 +495,12 @@ final class AppointmentService
                 'id' => $row['id'],
                 'title' => $row['patient_name'] . ' — ' . $row['doctor_name'],
                 'patient' => $row['patient_name'],
+                'patient_id' => (int) $row['patient_id'],
+                'phone' => $row['patient_phone'] ?? null,
                 'doctor' => $row['doctor_name'],
                 'status' => $row['status'],
                 'type' => $row['type'] ?? null,
+                'token' => $row['token_number'] !== null ? (int) $row['token_number'] : null,
                 'start' => date('Y-m-d\TH:i:s', strtotime($row['scheduled_at'])),
                 'end' => $end,
                 'backgroundColor' => $colors[$row['status']] ?? '#64748b',

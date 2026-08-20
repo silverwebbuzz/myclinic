@@ -96,10 +96,10 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
                     </div>
                     <div class="mt-1.5 space-y-1">
                         <template x-for="ev in cell.events.slice(0,4)" :key="ev.id">
-                            <a :href="ev.url" class="block truncate rounded px-1.5 py-1 text-[11px] leading-tight text-slate-700 hover:brightness-95"
+                            <button type="button" @click="openEvent(ev)" class="block w-full truncate rounded px-1.5 py-1 text-left text-[11px] leading-tight text-slate-700 hover:brightness-95"
                                :style="`background:${ev.color}1f;border-left:3px solid ${ev.color}`">
                                 <span class="font-semibold" x-text="ev.time"></span> <span x-text="ev.patient"></span>
-                            </a>
+                            </button>
                         </template>
                         <div x-show="cell.events.length > 4" class="px-1 text-[10px] text-slate-400" x-text="`+${cell.events.length-4} more`"></div>
                         <button type="button" x-show="!cell.past && cell.events.length===0" @click="bookDay(cell.iso)"
@@ -140,11 +140,11 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
                             </div>
                         </template>
                         <template x-for="ev in day.events" :key="ev.id">
-                            <a :href="ev.url" class="absolute overflow-hidden rounded-md px-1.5 py-0.5 text-[11px] leading-tight text-white shadow-sm ring-1 ring-black/5 hover:brightness-95"
+                            <button type="button" @click="openEvent(ev)" class="absolute overflow-hidden rounded-md px-1.5 py-0.5 text-left text-[11px] leading-tight text-white shadow-sm ring-1 ring-black/5 hover:brightness-95"
                                :style="`top:${ev.top}px;height:${ev.height}px;left:${ev.left}%;width:${ev.width}%;background:${ev.color}`">
                                 <div class="font-semibold truncate" x-text="ev.time"></div>
                                 <div class="truncate opacity-95" x-text="ev.patient"></div>
-                            </a>
+                            </button>
                         </template>
                         <div x-show="day.isToday && nowTop !== null" class="pointer-events-none absolute inset-x-0 z-10 border-t-2 border-red-500" :style="`top:${nowTop}px`">
                             <span class="absolute -left-1 -top-1 h-2 w-2 rounded-full bg-red-500"></span>
@@ -165,13 +165,13 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
                 <div class="sticky top-0 bg-white py-1 text-xs font-semibold uppercase tracking-wide text-slate-400" x-text="grp.label"></div>
                 <div class="divide-y divide-slate-100">
                     <template x-for="ev in grp.events" :key="ev.id">
-                        <a :href="ev.url" class="flex items-center gap-3 py-2.5 hover:bg-slate-50">
+                        <button type="button" @click="openEvent(ev)" class="flex w-full items-center gap-3 py-2.5 text-left hover:bg-slate-50">
                             <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="`background:${ev.color}`"></span>
                             <span class="w-20 shrink-0 text-sm font-medium text-slate-700" x-text="ev.time"></span>
                             <span class="flex-1 truncate text-sm text-slate-800" x-text="ev.patient"></span>
                             <span class="hidden truncate text-xs text-slate-400 sm:block" x-text="ev.doctor"></span>
                             <span class="rounded-full px-2 py-0.5 text-[11px] font-medium" :style="`background:${ev.color}1f;color:${ev.color}`" x-text="ev.statusLabel"></span>
-                        </a>
+                        </button>
                     </template>
                 </div>
             </div>
@@ -193,6 +193,60 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
             Click any empty slot to book
         </span>
     </div>
+
+    <!-- Appointment detail popup -->
+    <div x-show="selected" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4"
+         @keydown.escape.window="closeModal()">
+        <div class="absolute inset-0 bg-slate-900/40" @click="closeModal()"></div>
+        <div x-show="selected" x-transition class="relative w-full max-w-md rounded-2xl bg-white shadow-xl" @click.stop>
+            <template x-if="selected">
+                <div>
+                    <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+                        <div class="flex items-center gap-2 font-semibold text-slate-800">
+                            <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0" stroke-linecap="round"/><circle cx="18" cy="14" r="3.2"/><path d="M18 12.5v1.5l1 1" stroke-linecap="round"/></svg>
+                            Appointment
+                        </div>
+                        <button type="button" @click="closeModal()" class="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="px-5 py-4">
+                        <p class="text-lg font-bold text-slate-900" x-text="selected.patient"></p>
+                        <p class="text-sm text-slate-500" x-text="selected.subline"></p>
+                        <dl class="mt-3 space-y-1.5 text-sm text-slate-700">
+                            <div><dt class="inline font-semibold">When:</dt> <span x-text="selected.dateLabel + ' · ' + selected.time"></span></div>
+                            <div x-show="selected.phone"><dt class="inline font-semibold">Phone:</dt>
+                                <a :href="`tel:${selected.phone}`" class="text-blue-600 hover:underline" x-text="selected.phone"></a></div>
+                            <div><dt class="inline font-semibold">Status:</dt>
+                                <span class="ml-1 rounded-md px-2 py-0.5 text-xs font-medium text-white" :style="`background:${selected.color}`" x-text="selected.statusLabel"></span></div>
+                        </dl>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 px-5 py-3.5">
+                        <template x-if="primaryAction">
+                            <button type="button" @click="changeStatus(primaryAction.status)" :disabled="acting"
+                                    class="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                                    :style="`background:${primaryAction.color}`">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                <span x-text="primaryAction.label"></span>
+                            </button>
+                        </template>
+                        <button type="button" x-show="canCancel" @click="changeStatus('cancelled')" :disabled="acting"
+                                class="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 disabled:opacity-60">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+                            Cancel
+                        </button>
+                        <a :href="`/patients/${selected.patientId}`"
+                           class="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0" stroke-linecap="round"/></svg>
+                            Patient
+                        </a>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -204,12 +258,53 @@ function clinicCalendar(cfg) {
         doctorId: cfg.lockDoctorId ? String(cfg.lockDoctorId) : '',
         events: [],
         loading: false,
+        selected: null, acting: false,
         startH: cfg.startH, endH: cfg.endH, hourPx: cfg.hourPx, stepMin: cfg.stepMin,
         weekdayNames: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
         gridDays: [], monthCells: [], listGroups: [], rangeLabel: '',
 
         get viewSubtitle() { return this.view.charAt(0).toUpperCase() + this.view.slice(1) + ' view'; },
         pill(v) { return this.view===v ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'; },
+        typeLabel(t) { return ({walkin:'Walk-in', prebooked:'Pre-booked', online:'Online', followup:'Follow-up'})[t] || (t ? t.charAt(0).toUpperCase()+t.slice(1) : 'Appointment'); },
+
+        // --- appointment popup ---
+        openEvent(ev) { this.selected = ev; },
+        closeModal() { this.selected = null; },
+        get primaryAction() {
+            if (!this.selected) return null;
+            switch (this.selected.status) {
+                case 'scheduled':   return {label:'Arrived',       status:'confirmed',   color:'#22c55e'};
+                case 'confirmed':   return {label:'Start consult', status:'in_progress', color:'#3b82f6'};
+                case 'in_progress': return {label:'Complete',      status:'completed',   color:'#10b981'};
+                default: return null;
+            }
+        },
+        get canCancel() { return !!this.selected && !['completed','cancelled'].includes(this.selected.status); },
+        async changeStatus(status) {
+            if (!this.selected || this.acting) return;
+            this.acting = true;
+            try {
+                const r = await fetch(`/api/v1/appointments/${this.selected.id}/status`, {
+                    method:'POST',
+                    headers:{'Content-Type':'application/x-www-form-urlencoded', Accept:'application/json'},
+                    body: new URLSearchParams({status}),
+                });
+                const j = await r.json().catch(() => ({}));
+                if (r.ok && j.ok) {
+                    if (status === 'cancelled') { this.closeModal(); }
+                    else {
+                        const meta = this.cfg.statusMeta[j.status] || {};
+                        this.selected.status = j.status;
+                        this.selected.statusLabel = meta.label || j.status;
+                        this.selected.color = meta.color || this.selected.color;
+                    }
+                    await this.reload();
+                } else {
+                    alert(j.error === 'forbidden' ? 'You are not allowed to change this appointment.' : 'Could not update. Please try again.');
+                }
+            } catch (_) { alert('Network error. Please try again.'); }
+            this.acting = false;
+        },
         get hours() { const o=[]; for (let h=this.startH; h<this.endH; h++) o.push(h); return o; },
         get bodyHeight() { return (this.endH - this.startH) * this.hourPx; },
         get slotPx() { return this.hourPx * this.stepMin / 60; },
@@ -256,12 +351,17 @@ function clinicCalendar(cfg) {
         model(e) {
             const s=this.parse(e.start);
             const meta=this.cfg.statusMeta[e.status] || {color: e.backgroundColor||'#64748b', label: e.status||''};
+            const tl=this.typeLabel(e.type);
+            const subline = (e.token!=null ? `Token #${e.token} · ` : '') + tl;
             return {
                 id:e.id, url:e.url, start:s, iso:this.ymd(s),
                 color: e.backgroundColor || meta.color,
                 patient: e.patient || (e.title||'').split(' — ')[0] || 'Patient',
+                patientId: e.patient_id || 0, phone: e.phone || '',
                 doctor: e.doctor || '', status: e.status, statusLabel: meta.label,
-                time: this.fmtTime(s), _end: this.parse(e.end||e.start),
+                type: e.type || '', subline,
+                time: this.fmtTime(s), dateLabel: s.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'}),
+                _end: this.parse(e.end||e.start),
             };
         },
 

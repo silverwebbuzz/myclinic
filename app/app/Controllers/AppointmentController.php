@@ -551,6 +551,45 @@ final class AppointmentController
         return Response::json(AppointmentService::calendarEvents($clinicId, $start, $end, $doctorId));
     }
 
+    /**
+     * JSON status change for the calendar detail popup. Cancel routes through
+     * AppointmentService::cancel (slot release + cancellation notice); every
+     * other transition uses updateStatus (flow timestamps, token assignment).
+     */
+    public function statusApi(Request $request, string $id): Response
+    {
+        if ($denied = ModuleGate::require('appointments_basic')) {
+            return $denied;
+        }
+
+        $clinicId = (int) RequestContext::clinicId();
+        $user = RequestContext::user() ?? [];
+        $existing = AppointmentService::find($clinicId, (int) $id);
+        if ($existing === null) {
+            return Response::json(['ok' => false, 'error' => 'not_found'], 404);
+        }
+        $scope = RoleAccessService::appointmentDoctorScope($user);
+        $outOfScope = $scope !== null && (int) $existing['doctor_id'] !== $scope;
+        if (!RoleAccessService::canAccessAppointment($user, $existing) || $outOfScope) {
+            return Response::json(['ok' => false, 'error' => 'forbidden'], 403);
+        }
+
+        $status = (string) ($request->post['status'] ?? '');
+        try {
+            $appointment = $status === 'cancelled'
+                ? AppointmentService::cancel($clinicId, (int) $id)
+                : AppointmentService::updateStatus($clinicId, (int) $id, $status);
+        } catch (\InvalidArgumentException) {
+            return Response::json(['ok' => false, 'error' => 'invalid_status'], 422);
+        } catch (\Throwable) {
+            return Response::json(['ok' => false, 'error' => 'failed'], 500);
+        }
+
+        AuditService::log($request, 'UPDATE', 'appointments', (int) $id);
+
+        return Response::json(['ok' => true, 'status' => $appointment['status'] ?? $status]);
+    }
+
     /** @return array<string, mixed> */
     private function dataFromRequest(Request $request): array
     {
