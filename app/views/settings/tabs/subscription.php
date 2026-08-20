@@ -57,11 +57,29 @@ $onTrial = !empty($clinic['trial_ends_at']) && strtotime((string) $clinic['trial
     <?php
     // A payment that's still confirming (Razorpay webhook lands within a few
     // mins). Show the in-progress timeline so the doctor isn't left guessing.
-    $pending = array_values(array_filter($invoices, static fn ($i) => ($i['status'] ?? '') === 'pending'));
+    // The latest invoice (highest id) governs what's "in progress": show the
+    // Payment-in-progress card only when the newest attempt is still pending.
+    // Any older pending invoice was superseded by a later order/payment (e.g. a
+    // checkout the user closed without paying, then paid later) — it's treated
+    // as cancelled so an abandoned attempt doesn't linger as "awaiting".
+    $latestId = 0;
+    $latestRow = null;
+    foreach ($invoices as $i) {
+        if ((int) ($i['id'] ?? 0) > $latestId) {
+            $latestId = (int) $i['id'];
+            $latestRow = $i;
+        }
+    }
+    $pending = ($latestRow !== null && ($latestRow['status'] ?? '') === 'pending') ? [$latestRow] : [];
+    $displayStatus = static fn (array $inv): string =>
+        (($inv['status'] ?? '') === 'pending' && (int) ($inv['id'] ?? 0) !== $latestId)
+            ? 'cancelled'
+            : (string) ($inv['status'] ?? '');
     $statusTone = static fn (string $s): string => match ($s) {
         'paid' => 'bg-emerald-50 text-emerald-700',
         'pending' => 'bg-amber-50 text-amber-700',
         'failed' => 'bg-rose-50 text-rose-700',
+        'cancelled' => 'bg-slate-100 text-slate-500',
         default => 'bg-slate-100 text-slate-600',
     };
     ?>
@@ -150,7 +168,8 @@ $onTrial = !empty($clinic['trial_ends_at']) && strtotime((string) $clinic['trial
                 </td>
                 <td class="text-slate-700"><?= htmlspecialchars(ucfirst((string) ($inv['plan_id'] ?? '—'))) ?></td>
                 <td class="text-slate-700"><?= $sym ?><?= number_format($amt, 2) ?></td>
-                <td><span class="rounded-full px-2 py-0.5 text-xs capitalize <?= $statusTone($st) ?>"><?= htmlspecialchars($st) ?></span></td>
+                <?php $dispSt = $displayStatus($inv); ?>
+                <td><span class="rounded-full px-2 py-0.5 text-xs capitalize <?= $statusTone($dispSt) ?>"><?= htmlspecialchars($dispSt) ?></span></td>
                 <td class="text-right">
                     <?php if ($st === 'paid'): ?>
                     <a href="/settings/invoices/<?= (int) $inv['id'] ?>/pdf" target="_blank" class="text-xs font-medium text-brand hover:underline">Download</a>
