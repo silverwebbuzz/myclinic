@@ -20,8 +20,6 @@ final class DashboardController
 {
     public function index(Request $request): Response
     {
-        $__perf = isset($_GET['perf']);
-        $__t0 = microtime(true);
         $clinic = RequestContext::clinic();
         $clinicId = (int) $clinic['id'];
         $user = RequestContext::user() ?? [];
@@ -29,14 +27,11 @@ final class DashboardController
             return Response::redirect(OnboardingService::resumeUrl($clinicId));
         }
 
-        $__lap = [];
-        $__m = function (string $k) use (&$__lap) { $__lap[$k] = microtime(true); };
-        $__m('start');
-        $config = OnboardingService::specialtyConfig($clinicId) ?? [];  $__m('specialtyConfig');
-        $stats = DashboardService::stats($clinicId);                    $__m('stats');
-        $today = self::todayAppointments($clinicId, $user);             $__m('todayAppointments');
-        $visitedToday = self::todayVisited($clinicId, $user);           $__m('todayVisited');
-        $checklist = ChecklistService::progress($clinicId, $clinic, $config); $__m('checklist');
+        $config = OnboardingService::specialtyConfig($clinicId) ?? [];
+        $stats = DashboardService::stats($clinicId);
+        $today = self::todayAppointments($clinicId, $user);
+        $visitedToday = self::todayVisited($clinicId, $user);
+        $checklist = ChecklistService::progress($clinicId, $clinic, $config);
 
         // Phase 4: follow-up widget. Best-effort — empty before Phase 4 SQL.
         $followUps = ['overdue' => [], 'overdue_count' => 0, 'due_week' => 0, 'done_month' => 0];
@@ -45,19 +40,8 @@ final class DashboardController
         } catch (\Throwable $e) {
             // follow_ups table doesn't exist yet.
         }
-        $__m('followUps');
-        $listingStatus = \App\Services\DoctorClaimService::listingStatus($clinic); $__m('listingStatus');
-        if ($__perf) {
-            $__parts = []; $__keys = array_keys($__lap);
-            for ($i = 1; $i < count($__keys); $i++) {
-                $__parts[] = sprintf('%s=%.0fms', $__keys[$i], ($__lap[$__keys[$i]] - $__lap[$__keys[$i-1]]) * 1000);
-            }
-            @file_put_contents(dirname(__DIR__, 2) . '/storage/logs/perf.log',
-                '[' . date('H:i:s') . '] parts ' . implode('  ', $__parts) . "\n", FILE_APPEND);
-        }
 
-        $__tData = microtime(true);
-        $__html = Layout::page('dashboard/index', [
+        return Response::html(Layout::page('dashboard/index', [
             'stats' => $stats,
             'todayAppointments' => $today['appointments'],
             'todayCounts' => $today['counts'],
@@ -69,24 +53,9 @@ final class DashboardController
             'currency' => $clinic['currency'] ?? 'INR',
             'clinic' => $clinic,
             'isDirectoryListed' => (bool) ($clinic['is_directory_listed'] ?? false),
-            'listingStatus' => $listingStatus,
+            'listingStatus' => \App\Services\DoctorClaimService::listingStatus($clinic),
             'followUps' => $followUps,
-        ], 'Dashboard');
-        if ($__perf) {
-            $__tRender = microtime(true);
-            @file_put_contents(
-                dirname(__DIR__, 2) . '/storage/logs/perf.log',
-                sprintf(
-                    "[%s] dashboard data=%.0fms render=%.0fms total=%.0fms\n",
-                    date('H:i:s'),
-                    ($__tData - $__t0) * 1000,
-                    ($__tRender - $__tData) * 1000,
-                    ($__tRender - $__t0) * 1000
-                ),
-                FILE_APPEND
-            );
-        }
-        return Response::html($__html);
+        ], 'Dashboard'));
     }
 
     public function queueApi(Request $request): Response
