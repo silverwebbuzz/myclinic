@@ -743,6 +743,80 @@ require __DIR__ . '/partials/header.php';
         padding: 4px 6px;
     }
 
+    /* ── Talk-to-us card (WhatsApp + demo) ── */
+    .addon-help {
+        background: #f4faf6;
+        border: 1.5px solid #d8ecdf;
+        border-radius: 16px;
+        padding: 22px;
+    }
+
+    .addon-help-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0d1f12;
+        margin-bottom: 6px;
+    }
+
+    .addon-help-desc {
+        font-size: 13px;
+        color: #6b8a72;
+        line-height: 1.6;
+        margin-bottom: 16px;
+    }
+
+    .addon-help-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .addon-help-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        padding: 12px 16px;
+        border-radius: 999px;
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+        border: 1.5px solid transparent;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .addon-help-btn svg {
+        flex: 0 0 auto;
+    }
+
+    .addon-help-btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .addon-help-wa {
+        background: #25d366;
+        color: #08331b;
+        box-shadow: 0 6px 18px rgba(37, 211, 102, 0.28);
+    }
+
+    .addon-help-wa:hover {
+        background: #1fbb59;
+        box-shadow: 0 10px 24px rgba(37, 211, 102, 0.34);
+    }
+
+    .addon-help-demo {
+        background: #ffffff;
+        color: #1a7a4e;
+        border-color: #a8d8be;
+    }
+
+    .addon-help-demo:hover {
+        background: #eef8f1;
+        border-color: #1a7a4e;
+        box-shadow: 0 10px 24px rgba(26, 122, 78, 0.14);
+    }
+
     /* ═══════════════════════════════════════════
            SCROLL REVEAL
         ═══════════════════════════════════════════ */
@@ -979,6 +1053,33 @@ require __DIR__ . '/partials/header.php';
                     GST (18%) is added at checkout. After the 30-day trial you decide whether to
                     continue — no automatic charges and no card taken upfront.
                 </p>
+
+                <div class="addon-help">
+                    <div class="addon-help-title">Still have questions?</div>
+                    <p class="addon-help-desc">
+                        Chat with us on WhatsApp, or book a free 15-minute demo and we'll walk you
+                        through the whole system.
+                    </p>
+                    <div class="addon-help-actions">
+                        <a href="https://wa.me/918200165254?text=<?= rawurlencode('Hi, I would like to know more about the eClinicPro Standard Plan.') ?>"
+                           target="_blank" rel="noopener" class="addon-help-btn addon-help-wa">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.65.07-.3-.15-1.25-.46-2.38-1.47-.88-.79-1.48-1.75-1.65-2.05-.17-.3-.02-.46.13-.61.14-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.01-1.04 2.47s1.06 2.87 1.21 3.07c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.62.71.23 1.36.2 1.87.12.57-.09 1.75-.72 2-1.41.25-.69.25-1.28.17-1.41-.07-.13-.27-.2-.57-.35z"/>
+                                <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.46 1.32 4.96L2 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2zm0 18c-1.48 0-2.93-.4-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 01-1.26-4.38c0-4.54 3.7-8.23 8.24-8.23 2.2 0 4.27.86 5.83 2.41a8.18 8.18 0 012.41 5.83c0 4.54-3.7 8.23-8.24 8.23z"/>
+                            </svg>
+                            Chat on WhatsApp
+                        </a>
+                        <a href="/book-a-demo" data-open-demo-modal class="addon-help-btn addon-help-demo">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <rect x="3" y="4" width="18" height="18" rx="2"/>
+                                <line x1="16" y1="2" x2="16" y2="6"/>
+                                <line x1="8" y1="2" x2="8" y2="6"/>
+                                <line x1="3" y1="10" x2="21" y2="10"/>
+                            </svg>
+                            Book a Free Demo
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1040,5 +1141,11 @@ require __DIR__ . '/partials/header.php';
     });
 </script>
 
+
+<?php
+$demoDefaultSpecialty = 'General practice';
+$demoSpecKey = 'features';
+require __DIR__ . '/partials/demo-modal.php';
+?>
 
 <?php require __DIR__ . '/partials/footer.php'; ?>
