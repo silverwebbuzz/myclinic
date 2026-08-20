@@ -20,11 +20,24 @@ final class RedisClient
         }
 
         if (self::$client === null) {
+            // No REDIS_HOST configured -> Redis is disabled; use file cache
+            // directly and never pay a connection attempt per request.
+            $host = (string) ($_ENV['REDIS_HOST'] ?? '');
+            if ($host === '') {
+                self::$available = false;
+
+                return null;
+            }
             try {
                 self::$client = new Client([
-                    'host' => $_ENV['REDIS_HOST'] ?? '127.0.0.1',
+                    'host' => $host,
                     'port' => (int) ($_ENV['REDIS_PORT'] ?? 6379),
                     'password' => $_ENV['REDIS_PASSWORD'] ?: null,
+                    // Cap connect + read/write so an unreachable or slow Redis
+                    // can never stall a request (Predis default connect is 5s).
+                    // On failure we fall through to the file cache instead.
+                    'timeout' => 0.5,
+                    'read_write_timeout' => 0.5,
                 ]);
                 self::$client->ping();
             } catch (\Throwable) {

@@ -268,7 +268,7 @@ $qrSrc       = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=
             <button type="button" class="ui-btn ui-btn-primary mt-3 w-full" @click="phoneModal = false">Done</button>
         <?php else: ?>
             <form method="post" action="/settings/general/phone/send-otp" class="mt-4 space-y-3"
-                  x-data="{ digits: <?= json_encode($pendingDigits10) ?> }">
+                  x-data="{ digits: <?= htmlspecialchars(json_encode($pendingDigits10), ENT_QUOTES) ?> }">
                 <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
                 <div class="flex overflow-hidden rounded-lg border border-slate-300 bg-white focus-within:ring-2 focus-within:ring-emerald-200">
                     <span class="flex items-center bg-slate-50 px-3 text-sm font-semibold text-slate-700">+91</span>
