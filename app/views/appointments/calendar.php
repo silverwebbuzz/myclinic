@@ -307,7 +307,7 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
                 <!-- Doctor -->
                 <div>
                     <label class="mb-1 block text-xs font-medium text-slate-600">Doctor</label>
-                    <select x-model="booking.doctorId" class="ui-input" <?= $lockDoctorId !== null ? 'disabled' : '' ?>>
+                    <select x-model="booking.doctorId" @change="loadSlots()" class="ui-input" <?= $lockDoctorId !== null ? 'disabled' : '' ?>>
                         <option value="">Select doctor</option>
                         <?php foreach ($doctors as $d): ?>
                             <option value="<?= (int) $d['id'] ?>"><?= htmlspecialchars((string) ($d['name'] ?? 'Doctor')) ?></option>
@@ -319,11 +319,23 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="mb-1 block text-xs font-medium text-slate-600">Date</label>
-                        <input type="date" x-model="booking.date" :min="cfg.today" class="ui-input">
+                        <input type="date" x-model="booking.date" @change="loadSlots()" :min="cfg.today" class="ui-input">
                     </div>
                     <div>
                         <label class="mb-1 block text-xs font-medium text-slate-600">Time</label>
-                        <input type="time" x-model="booking.time" class="ui-input">
+                        <template x-if="booking.slots.length > 0">
+                            <select x-model="booking.time" class="ui-input">
+                                <option value="">Select time</option>
+                                <template x-for="s in booking.slots" :key="s.datetime">
+                                    <option :value="s.time" :disabled="!s.available" x-text="fmtSlotLabel(s.time) + (s.available ? '' : ' — booked')"></option>
+                                </template>
+                            </select>
+                        </template>
+                        <template x-if="booking.slots.length === 0">
+                            <input type="time" x-model="booking.time" class="ui-input">
+                        </template>
+                        <p x-show="booking.loadingSlots" class="mt-1 text-xs text-slate-400">loading slots…</p>
+                        <p x-show="!booking.loadingSlots && booking.noSlots" class="mt-1 text-xs text-slate-400">No preset slots — enter a time.</p>
                     </div>
                 </div>
                 <div>
@@ -552,10 +564,31 @@ function clinicCalendar(cfg) {
                 type: 'prebooked', complaint: '',
                 newMode: false, newName: '', newPhone: '',
                 patientId: '', patientLabel: '', query: '', results: [], searching: false,
+                slots: [], noSlots: false, loadingSlots: false,
                 saving: false, error: '',
             };
+            this.loadSlots();
         },
         closeBooking() { this.booking.open = false; },
+        async loadSlots() {
+            const b = this.booking;
+            const wanted = b.time;
+            b.slots = []; b.noSlots = false;
+            if (!b.doctorId || !b.date) return;
+            b.loadingSlots = true;
+            try {
+                const r = await fetch(`/api/v1/slots?doctor_id=${encodeURIComponent(b.doctorId)}&date=${encodeURIComponent(b.date)}`, {headers:{Accept:'application/json'}});
+                const j = r.ok ? await r.json() : {slots:[]};
+                b.slots = j.slots || [];
+                b.noSlots = b.slots.length === 0;
+                // keep the pre-clicked time only if it's an available slot; else clear
+                if (wanted && !b.slots.some(s => s.time === wanted && s.available)) {
+                    if (!b.noSlots) b.time = '';
+                }
+            } catch (_) { b.slots = []; b.noSlots = true; }
+            b.loadingSlots = false;
+        },
+        fmtSlotLabel(hhmm) { const [h,m] = (hhmm||'').split(':').map(Number); const ap = h<12?'AM':'PM'; const hh = h%12===0?12:h%12; return hh+':'+String(m).padStart(2,'0')+' '+ap; },
         selectPatient(p) {
             this.booking.patientId = String(p.id);
             this.booking.patientLabel = p.name + (p.phone ? ' · ' + p.phone : '');
