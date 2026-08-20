@@ -88,10 +88,23 @@ if (!defined('ECP_ADMIN_ALPINE_LOADED')) {
 </script>
 <style>
     :root { --brand: #334155; --brand-light: rgba(51,65,85,0.1); --brand-dark: #1e293b; }
-    /* Shift each admin page's <main> right to clear the fixed sidebar.
-       Pages render <main> as a direct child of <body> after this nav. */
-    body > main { margin-left: 16rem; max-width: none; }
-    @media (max-width: 768px) { body > main { margin-left: 0; } }
+    /* Reserve the fixed sidebar's width on <body> instead of on <main>: pages
+       render <main class="mx-auto max-w-6xl">, and a bare `body > main` rule
+       (specificity 0,0,2) loses to Tailwind's .mx-auto / .max-w-6xl (0,1,0),
+       so a margin set here would be silently dropped and the content would
+       slide under the sidebar. Padding the body needs no specificity fight,
+       and the fixed sidebar is unaffected by it. */
+    body { padding-left: 16rem; }
+    /* Each admin page picks its own max-w-* (3xl for forms, 7xl for tables);
+       leave that alone — it just centres inside the padded area now. */
+    @media (max-width: 768px) {
+        body { padding-left: 0; }
+        /* Clear the floating hamburger button. */
+        body > main[class] { padding-top: 3.5rem; }
+    }
+    /* Admin pages don't load a global x-cloak rule; the backdrop below needs it
+       so it can't flash before Alpine boots. */
+    [x-cloak] { display: none !important; }
     .admin-side { width: 16rem; }
     .admin-link.active { background: rgba(255,255,255,0.12); color: #fff; }
     .admin-link.active .admin-ico { color: #fff; }
@@ -139,6 +152,11 @@ if (!defined('ECP_ADMIN_ALPINE_LOADED')) {
         </button>
     </form>
 </aside>
+
+<!-- Mobile: dim + tap-to-close backdrop behind the open sidebar -->
+<div class="fixed inset-0 z-20 bg-slate-900/50 md:hidden" x-data x-cloak
+     x-show="$store.adminNav.open" @click="$store.adminNav.open = false"
+     x-transition.opacity aria-hidden="true"></div>
 
 <!-- Mobile: toggle button to reveal the sidebar -->
 <button type="button" class="fixed left-3 top-3 z-40 rounded-lg bg-slate-900 p-2 text-white md:hidden"
