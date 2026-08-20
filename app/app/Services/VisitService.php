@@ -272,6 +272,52 @@ final class VisitService
         ]);
     }
 
+    /**
+     * Ensure a completed visit exists for an appointment. Called when an
+     * appointment is marked completed (e.g. the dashboard "Done" shortcut), so
+     * "Today's Completed visit" reflects it. Writes to the visits table
+     * DIRECTLY (never via complete()/create(), which call back into
+     * AppointmentService::updateStatus) so there is no recursion.
+     */
+    public static function ensureCompletedForAppointment(int $clinicId, int $appointmentId): void
+    {
+        $visit = QueryBuilder::table('visits')
+            ->forClinic($clinicId)
+            ->where('appointment_id', '=', $appointmentId)
+            ->first();
+
+        $now = date('Y-m-d H:i:s');
+
+        if ($visit !== null) {
+            if (($visit['status'] ?? '') !== 'completed') {
+                $update = ['status' => 'completed'];
+                if (empty($visit['visited_at'])) {
+                    $update['visited_at'] = $now;
+                }
+                QueryBuilder::table('visits')
+                    ->forClinic($clinicId)
+                    ->where('id', '=', (int) $visit['id'])
+                    ->update($update);
+            }
+            return;
+        }
+
+        $appt = AppointmentService::find($clinicId, $appointmentId);
+        if ($appt === null) {
+            return;
+        }
+        QueryBuilder::table('visits')->insert([
+            'clinic_id' => $clinicId,
+            'appointment_id' => $appointmentId,
+            'patient_id' => (int) $appt['patient_id'],
+            'doctor_id' => (int) $appt['doctor_id'],
+            'visit_number' => self::nextVisitNumber($clinicId, (int) $appt['patient_id']),
+            'status' => 'completed',
+            'visited_at' => $now,
+            'chief_complaint' => trim((string) ($appt['chief_complaint'] ?? '')) ?: null,
+        ]);
+    }
+
     /** @return array<string, mixed> */
     public static function startForPatient(int $clinicId, int $patientId, ?int $doctorId = null): array
     {

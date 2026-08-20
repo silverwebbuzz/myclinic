@@ -312,6 +312,18 @@ final class AppointmentService
             ->where('id', '=', $id)
             ->update($update);
 
+        // Completing an appointment (incl. the dashboard "Done" shortcut) should
+        // register a completed visit, so "Today's Completed visit" counts it.
+        // ensureCompletedForAppointment writes visits directly (no callback into
+        // this method), so VisitService::complete() -> here stays recursion-free.
+        if ($status === 'completed') {
+            try {
+                VisitService::ensureCompletedForAppointment($clinicId, $id);
+            } catch (\Throwable $e) {
+                error_log('[appt.complete->visit] ' . $e->getMessage());
+            }
+        }
+
         DashboardService::invalidateStats($clinicId);
 
         return self::findDetailed($clinicId, $id) ?? [];
