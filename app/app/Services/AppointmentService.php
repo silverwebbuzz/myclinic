@@ -475,12 +475,15 @@ final class AppointmentService
         $stmt->execute($params);
         $rows = $stmt->fetchAll() ?: [];
 
+        // Canonical status → colour, matching the calendar legend and the rest
+        // of the appointment UI (Waiting / Confirmed / In Consult / …).
         $colors = [
-            'scheduled' => '#94a3b8',
-            'confirmed' => '#3b82f6',
-            'in_progress' => '#f59e0b',
-            'completed' => '#10b981',
-            'no_show' => '#ef4444',
+            'scheduled' => '#f59e0b',   // Waiting
+            'confirmed' => '#3b82f6',   // Confirmed
+            'in_progress' => '#6366f1', // In Consult
+            'completed' => '#10b981',   // Completed
+            'no_show' => '#ef4444',     // Not Arrived
+            'cancelled' => '#94a3b8',   // Cancelled
         ];
 
         return array_map(static function (array $row) use ($colors) {
@@ -489,6 +492,10 @@ final class AppointmentService
             return [
                 'id' => $row['id'],
                 'title' => $row['patient_name'] . ' — ' . $row['doctor_name'],
+                'patient' => $row['patient_name'],
+                'doctor' => $row['doctor_name'],
+                'status' => $row['status'],
+                'type' => $row['type'] ?? null,
                 'start' => date('Y-m-d\TH:i:s', strtotime($row['scheduled_at'])),
                 'end' => $end,
                 'backgroundColor' => $colors[$row['status']] ?? '#64748b',

@@ -171,14 +171,15 @@ final class AppointmentController
             $now = new \DateTime('now');
         }
 
-        // Status → colour must match AppointmentService::calendarEvents so the
-        // grid events and the legend agree.
+        // Status → [colour, label]. Must match AppointmentService::calendarEvents
+        // and the rest of the appointment UI so grid, pills and legend agree.
         $statusColors = [
-            'scheduled' => ['#94a3b8', 'Scheduled'],
+            'scheduled' => ['#f59e0b', 'Waiting'],
             'confirmed' => ['#3b82f6', 'Confirmed'],
-            'in_progress' => ['#f59e0b', 'In consult'],
+            'in_progress' => ['#6366f1', 'In Consult'],
             'completed' => ['#10b981', 'Completed'],
-            'no_show' => ['#ef4444', 'No show'],
+            'no_show' => ['#ef4444', 'Not Arrived'],
+            'cancelled' => ['#94a3b8', 'Cancelled'],
         ];
 
         return Response::html(Layout::page('appointments/calendar', [
