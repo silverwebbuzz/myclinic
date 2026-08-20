@@ -21,15 +21,26 @@ $sortIcon = static function (string $col) use ($sort, $dir): string {
     return $dir === 'asc' ? ' ↑' : ' ↓';
 };
 ?>
-<div class="space-y-4">
+<?php
+$hasActiveFilters = !empty($filters['q']) || !empty($filters['gender'])
+    || !empty($filters['blood_group']) || !empty($filters['veg_type'])
+    || !empty($filters['last_visit']);
+?>
+<div class="space-y-4" x-data="{ open: <?= $hasActiveFilters ? 'true' : 'false' ?> }">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <h2 class="ui-page-title">Patients <span class="ml-1 text-sm font-normal text-slate-500">(<?= (int) $total ?>)</span></h2>
         <div class="flex flex-wrap gap-2">
+            <button type="button" @click="open = !open" :aria-expanded="open" class="ui-btn ui-btn-secondary">
+                <?= ui_icon('search', 16) ?>
+                <span x-text="open ? 'Hide filters' : 'Search & filter'"></span>
+                <?php if ($hasActiveFilters): ?><span class="ml-1 rounded-full bg-brand px-1.5 text-[11px] font-medium text-white">on</span><?php endif; ?>
+                <span class="transition-transform" :class="open ? 'rotate-180' : ''"><?= ui_icon('chevron-down', 14) ?></span>
+            </button>
             <a href="/patients/new" class="ui-btn ui-btn-primary"><?= ui_icon('plus', 16) ?><span>New patient</span></a>
         </div>
     </div>
 
-    <form method="get" class="ui-card ui-card-pad">
+    <form method="get" class="ui-card ui-card-pad" x-show="open" x-collapse>
         <div class="flex flex-wrap gap-3">
             <input type="search" name="q" value="<?= htmlspecialchars($filters['q'] ?? '') ?>"
                    placeholder="Search name, phone, UHID…"
