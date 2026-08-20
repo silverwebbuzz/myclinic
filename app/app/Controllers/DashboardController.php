@@ -20,6 +20,8 @@ final class DashboardController
 {
     public function index(Request $request): Response
     {
+        $__perf = isset($_GET['perf']);
+        $__t0 = microtime(true);
         $clinic = RequestContext::clinic();
         $clinicId = (int) $clinic['id'];
         $user = RequestContext::user() ?? [];
@@ -41,7 +43,8 @@ final class DashboardController
             // follow_ups table doesn't exist yet.
         }
 
-        return Response::html(Layout::page('dashboard/index', [
+        $__tData = microtime(true);
+        $__html = Layout::page('dashboard/index', [
             'stats' => $stats,
             'todayAppointments' => $today['appointments'],
             'todayCounts' => $today['counts'],
@@ -55,7 +58,22 @@ final class DashboardController
             'isDirectoryListed' => (bool) ($clinic['is_directory_listed'] ?? false),
             'listingStatus' => \App\Services\DoctorClaimService::listingStatus($clinic),
             'followUps' => $followUps,
-        ], 'Dashboard'));
+        ], 'Dashboard');
+        if ($__perf) {
+            $__tRender = microtime(true);
+            @file_put_contents(
+                dirname(__DIR__, 2) . '/storage/logs/perf.log',
+                sprintf(
+                    "[%s] dashboard data=%.0fms render=%.0fms total=%.0fms\n",
+                    date('H:i:s'),
+                    ($__tData - $__t0) * 1000,
+                    ($__tRender - $__tData) * 1000,
+                    ($__tRender - $__t0) * 1000
+                ),
+                FILE_APPEND
+            );
+        }
+        return Response::html($__html);
     }
 
     public function queueApi(Request $request): Response
