@@ -155,6 +155,42 @@ final class AppointmentController
         ], 'Book appointment'));
     }
 
+    public function calendar(Request $request): Response
+    {
+        if ($denied = $this->requireModule()) {
+            return $denied;
+        }
+
+        $clinicId = (int) RequestContext::clinicId();
+        $user = RequestContext::user() ?? [];
+        $doctorScope = RoleAccessService::appointmentDoctorScope($user);
+        $tz = SlotService::clinicTimezone($clinicId);
+        try {
+            $now = new \DateTime('now', new \DateTimeZone($tz));
+        } catch (\Throwable) {
+            $now = new \DateTime('now');
+        }
+
+        // Status → colour must match AppointmentService::calendarEvents so the
+        // grid events and the legend agree.
+        $statusColors = [
+            'scheduled' => ['#94a3b8', 'Scheduled'],
+            'confirmed' => ['#3b82f6', 'Confirmed'],
+            'in_progress' => ['#f59e0b', 'In consult'],
+            'completed' => ['#10b981', 'Completed'],
+            'no_show' => ['#ef4444', 'No show'],
+        ];
+
+        return Response::html(Layout::page('appointments/calendar', [
+            'doctors' => AppointmentService::doctorsForClinic($clinicId),
+            'clinicTimezone' => $tz,
+            'todayLocal' => $now->format('Y-m-d'),
+            'nowLocal' => $now->format('Y-m-d\TH:i'),
+            'statusColors' => $statusColors,
+            'lockDoctorId' => $doctorScope,
+        ], 'Calendar'));
+    }
+
     public function store(Request $request): Response
     {
         if ($denied = $this->requireModule()) {

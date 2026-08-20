@@ -59,7 +59,7 @@ $tabs = [
             <p class="text-xs text-slate-500"><?= htmlspecialchars($displayDate) ?></p>
         </div>
         <div class="flex flex-wrap gap-2">
-            <a href="/appointments" class="ui-btn ui-btn-secondary ui-btn-sm">Calendar</a>
+            <a href="/appointments/calendar" class="ui-btn ui-btn-secondary ui-btn-sm">Calendar</a>
             <?php if ($canBookAppointments): ?>
             <a href="/appointments/new?date=<?= htmlspecialchars($date) ?>" class="ui-btn ui-btn-primary ui-btn-sm">+ Book</a>
             <?php endif; ?>

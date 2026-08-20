@@ -174,6 +174,8 @@ return static function (RouteRegistrar $router): void {
         $app->get('/appointments', [AppointmentController::class, 'index']);
         $app->get('/appointments/new', [AppointmentController::class, 'create']);
         $app->post('/appointments/new', [AppointmentController::class, 'store']);
+        // Must precede /appointments/{id} so "calendar" isn't captured as an id.
+        $app->get('/appointments/calendar', [AppointmentController::class, 'calendar']);
         $app->get('/appointments/{id}', [AppointmentController::class, 'edit']);
         $app->get('/appointments/{id}/edit', [AppointmentController::class, 'edit']);
         $app->post('/appointments/{id}', [AppointmentController::class, 'update']);
