@@ -86,7 +86,7 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
                 <div class="border-b border-r border-slate-200 bg-slate-50 px-2 py-2.5 font-semibold uppercase tracking-wide text-slate-500" x-text="d"></div>
             </template>
             <template x-for="cell in monthCells" :key="cell.iso">
-                <div class="min-h-[150px] border-b border-r border-slate-200 p-2 align-top"
+                <div class="min-h-[105px] border-b border-r border-slate-200 p-2 align-top"
                      :class="cell.inMonth ? 'bg-white' : 'bg-slate-50/40'">
                     <div class="flex items-center justify-between">
                         <span class="inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-sm font-semibold"
