@@ -572,19 +572,23 @@ function clinicCalendar(cfg) {
         closeBooking() { this.booking.open = false; },
         async loadSlots() {
             const b = this.booking;
-            const wanted = b.time;
+            const wanted = b.time; // time the user clicked on the week/day grid
             b.slots = []; b.noSlots = false;
             if (!b.doctorId || !b.date) return;
             b.loadingSlots = true;
             try {
                 const r = await fetch(`/api/v1/slots?doctor_id=${encodeURIComponent(b.doctorId)}&date=${encodeURIComponent(b.date)}`, {headers:{Accept:'application/json'}});
                 const j = r.ok ? await r.json() : {slots:[]};
-                b.slots = j.slots || [];
-                b.noSlots = b.slots.length === 0;
-                // keep the pre-clicked time only if it's an available slot; else clear
-                if (wanted && !b.slots.some(s => s.time === wanted && s.available)) {
-                    if (!b.noSlots) b.time = '';
+                let slots = j.slots || [];
+                // Honour a time the user explicitly clicked on the grid even if it
+                // isn't one of the preset slots — inject it so it stays selected.
+                if (wanted && !slots.some(s => s.time === wanted)) {
+                    slots = [...slots, {time: wanted, datetime: b.date + ' ' + wanted + ':00', available: true}]
+                        .sort((a, z) => a.time.localeCompare(z.time));
                 }
+                b.slots = slots;
+                b.noSlots = slots.length === 0;
+                // b.time is left as-is so the clicked slot stays selected.
             } catch (_) { b.slots = []; b.noSlots = true; }
             b.loadingSlots = false;
         },
