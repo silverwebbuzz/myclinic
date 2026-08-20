@@ -528,6 +528,59 @@ require __DIR__ . '/partials/header.php';
         margin-left: 4px;
     }
 
+    .plan-options {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 28px;
+    }
+
+    .plan-option {
+        display: grid;
+        grid-template-columns: 84px 1fr;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .plan-term {
+        border: 1.5px solid #1a7a4e;
+        border-radius: 6px;
+        color: #1a7a4e;
+        font-size: 16px;
+        line-height: 1.1;
+        padding: 7px 6px;
+        text-align: center;
+    }
+
+    .plan-option-price {
+        color: #0d1f12;
+        font-size: 34px;
+        font-weight: 600;
+        letter-spacing: -0.03em;
+        line-height: 1;
+        white-space: nowrap;
+    }
+
+    .plan-option-price .currency {
+        font-size: 20px;
+        margin-right: 3px;
+        vertical-align: super;
+    }
+
+    .plan-option-price .plan-strike {
+        color: #a4a7ae;
+        font-size: 25px;
+        font-weight: 400;
+        margin-left: 3px;
+    }
+
+    .plan-option-price .per {
+        color: #1a7a4e;
+        font-size: 16px;
+        font-weight: 400;
+        letter-spacing: 0;
+        margin-left: 4px;
+    }
+
     .plan-yearly {
         font-size: 13.5px;
         color: #6b8a72;
@@ -774,7 +827,7 @@ require __DIR__ . '/partials/header.php';
         <h1 class="h-display">Everything to run your clinic.<br><span class="grad">All in one place.</span></h1>
         <p class="feat-hero-sub">
             42+ features across 7 areas — patient records, prescriptions, billing,
-            WhatsApp/SMS and more. All included in one simple ₹16,000/year plan.
+            WhatsApp/SMS and more. All included in one simple Standard Plan.
         </p>
     </div>
 </section>
@@ -796,8 +849,8 @@ require __DIR__ . '/partials/header.php';
                 <div class="stat-label">Simple plan</div>
             </div>
             <div class="stat-item">
-                <div class="stat-num">₹16,000</div>
-                <div class="stat-label">Per year</div>
+                <div class="stat-num">₹899</div>
+                <div class="stat-label">Per month</div>
             </div>
         </div>
     </div>
@@ -865,12 +918,25 @@ require __DIR__ . '/partials/header.php';
             <!-- Plan card -->
             <div class="plan-card primary">
                 <span class="plan-badge">Standard Plan</span>
-                <div class="plan-price">
-                    <span class="currency">₹</span>16,000<span class="per">/year</span>
+                <div class="plan-options">
+                    <div class="plan-option">
+                        <span class="plan-term">4 Years</span>
+                        <div class="plan-option-price">
+                            <span class="currency">₹</span>899
+                            <span class="plan-strike">₹1,899</span>
+                            <span class="per">/month</span>
+                        </div>
+                    </div>
+                    <div class="plan-option">
+                        <span class="plan-term">1 Year</span>
+                        <div class="plan-option-price">
+                            <span class="currency">₹</span>999
+                            <span class="plan-strike">₹1,899</span>
+                            <span class="per">/month</span>
+                        </div>
+                    </div>
                 </div>
                 <p class="plan-yearly">
-                    <span class="plan-strike">₹17,988</span>
-                    <span class="plan-save">Save 10%</span><br>
                     + 18% GST at checkout
                 </p>
                 <ul class="plan-features">
