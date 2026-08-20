@@ -590,6 +590,40 @@ final class AppointmentController
         return Response::json(['ok' => true, 'status' => $appointment['status'] ?? $status]);
     }
 
+    /**
+     * JSON booking for the calendar "book" popup. Reuses the same patient
+     * resolution + validation as the full-page store(), so slot availability
+     * and the past-time guard still apply.
+     */
+    public function bookApi(Request $request): Response
+    {
+        if ($denied = $this->requireModule()) {
+            return $denied;
+        }
+        if ($denied = $this->requireBookAccess()) {
+            return $denied;
+        }
+
+        $clinicId = (int) RequestContext::clinicId();
+        try {
+            $patientId = $this->resolvePatientId($clinicId, $request);
+            if ($patientId === 0) {
+                throw new \RuntimeException('Select an existing patient, or enter a new patient name and phone.');
+            }
+            $data = $this->dataFromRequest($request);
+            $data['patient_id'] = $patientId;
+            if ((int) $data['doctor_id'] < 1) {
+                throw new \RuntimeException('Please select a doctor.');
+            }
+            $appointment = AppointmentService::create($clinicId, $data);
+            AuditService::log($request, 'INSERT', 'appointments', (int) $appointment['id']);
+
+            return Response::json(['ok' => true, 'id' => (int) $appointment['id']], 201);
+        } catch (\Throwable $e) {
+            return Response::json(['ok' => false, 'error' => $e->getMessage()], 422);
+        }
+    }
+
     /** @return array<string, mixed> */
     private function dataFromRequest(Request $request): array
     {

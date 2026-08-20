@@ -60,8 +60,8 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
                 <span class="min-w-[9.5rem] text-center text-lg font-semibold text-slate-900" x-text="rangeLabel"></span>
                 <button type="button" @click="shift(1)" class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-slate-600 hover:bg-slate-200">›</button>
                 <button type="button" @click="goToday()" class="rounded-lg border border-blue-600 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50">Today</button>
-                <a :href="bookUrl()" class="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>Book Appointment</a>
+                <button type="button" @click="openBooking({})" class="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>Book Appointment</button>
                 <span x-show="loading" class="text-xs text-slate-400">loading…</span>
             </div>
         </div>
@@ -247,6 +247,108 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
             </template>
         </div>
     </div>
+
+    <!-- Booking popup -->
+    <div x-show="booking.open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="closeBooking()">
+        <div class="absolute inset-0 bg-slate-900/40" @click="closeBooking()"></div>
+        <div x-show="booking.open" x-transition class="relative w-full max-w-md rounded-2xl bg-white shadow-xl" @click.stop>
+            <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+                <div class="flex items-center gap-2 font-semibold text-slate-800">
+                    <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v3M16 3v3M12 12v4M10 14h4" stroke-linecap="round"/></svg>
+                    Book appointment
+                </div>
+                <button type="button" @click="closeBooking()" class="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+
+            <form @submit.prevent="submitBooking()" class="space-y-3 px-5 py-4">
+                <!-- Patient -->
+                <div>
+                    <div class="mb-1 flex items-center justify-between">
+                        <label class="text-xs font-medium text-slate-600">Patient</label>
+                        <button type="button" @click="booking.newMode = !booking.newMode; clearPatient()" class="text-xs font-medium text-blue-600 hover:underline"
+                                x-text="booking.newMode ? 'Pick existing' : '+ New patient'"></button>
+                    </div>
+
+                    <template x-if="!booking.newMode">
+                        <div class="relative">
+                            <template x-if="booking.patientId">
+                                <div class="flex items-center justify-between rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm">
+                                    <span x-text="booking.patientLabel"></span>
+                                    <button type="button" @click="clearPatient()" class="text-slate-400 hover:text-slate-600">✕</button>
+                                </div>
+                            </template>
+                            <template x-if="!booking.patientId">
+                                <div>
+                                    <input type="text" x-model="booking.query" @input.debounce.300ms="searchPatients()" placeholder="Search name, phone, UHID…" class="ui-input">
+                                    <div x-show="booking.results.length" class="mt-1 max-h-44 overflow-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+                                        <template x-for="p in booking.results" :key="p.id">
+                                            <button type="button" @click="selectPatient(p)" class="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-slate-50">
+                                                <span class="font-medium text-slate-800" x-text="p.name"></span>
+                                                <span class="text-xs text-slate-400" x-text="p.phone"></span>
+                                            </button>
+                                        </template>
+                                    </div>
+                                    <p x-show="booking.searching" class="mt-1 text-xs text-slate-400">searching…</p>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+
+                    <template x-if="booking.newMode">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" x-model="booking.newName" placeholder="Full name" class="ui-input">
+                            <input type="tel" x-model="booking.newPhone" placeholder="Phone" class="ui-input">
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Doctor -->
+                <div>
+                    <label class="mb-1 block text-xs font-medium text-slate-600">Doctor</label>
+                    <select x-model="booking.doctorId" class="ui-input" <?= $lockDoctorId !== null ? 'disabled' : '' ?>>
+                        <option value="">Select doctor</option>
+                        <?php foreach ($doctors as $d): ?>
+                            <option value="<?= (int) $d['id'] ?>"><?= htmlspecialchars((string) ($d['name'] ?? 'Doctor')) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <!-- Date / time / type -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Date</label>
+                        <input type="date" x-model="booking.date" :min="cfg.today" class="ui-input">
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-slate-600">Time</label>
+                        <input type="time" x-model="booking.time" class="ui-input">
+                    </div>
+                </div>
+                <div>
+                    <label class="mb-1 block text-xs font-medium text-slate-600">Type</label>
+                    <select x-model="booking.type" class="ui-input">
+                        <option value="prebooked">Pre-booked</option>
+                        <option value="walkin">Walk-in</option>
+                        <option value="followup">Follow-up</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="mb-1 block text-xs font-medium text-slate-600">Reason (optional)</label>
+                    <input type="text" x-model="booking.complaint" placeholder="Chief complaint" class="ui-input">
+                </div>
+
+                <p x-show="booking.error" x-text="booking.error" class="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700"></p>
+
+                <div class="flex items-center justify-end gap-2 pt-1">
+                    <button type="button" @click="closeBooking()" class="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200">Cancel</button>
+                    <button type="submit" :disabled="booking.saving" class="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                            x-text="booking.saving ? 'Booking…' : 'Book'"></button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -259,6 +361,7 @@ function clinicCalendar(cfg) {
         events: [],
         loading: false,
         selected: null, acting: false,
+        booking: { open: false },
         startH: cfg.startH, endH: cfg.endH, hourPx: cfg.hourPx, stepMin: cfg.stepMin,
         weekdayNames: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
         gridDays: [], monthCells: [], listGroups: [], rangeLabel: '',
@@ -438,9 +541,65 @@ function clinicCalendar(cfg) {
             }
         },
 
-        book(iso, time) { const q=new URLSearchParams({date:iso, time, type:'prebooked'}); if (this.doctorId) q.set('doctor_id',this.doctorId); window.location='/appointments/new?'+q; },
-        bookDay(iso) { const q=new URLSearchParams({date:iso}); if (this.doctorId) q.set('doctor_id',this.doctorId); window.location='/appointments/new?'+q; },
-        bookUrl() { const q=new URLSearchParams(); if (this.doctorId) q.set('doctor_id',this.doctorId); const s=q.toString(); return '/appointments/new'+(s?'?'+s:''); },
+        book(iso, time) { this.openBooking({date:iso, time}); },
+        bookDay(iso) { this.openBooking({date:iso}); },
+
+        // --- booking popup ---
+        openBooking(opts) {
+            this.booking = {
+                open: true, date: opts.date || this.cfg.today, time: opts.time || '',
+                doctorId: this.doctorId || (this.cfg.lockDoctorId ? String(this.cfg.lockDoctorId) : (this.cfg.doctors.length===1 ? String(this.cfg.doctors[0].id) : '')),
+                type: 'prebooked', complaint: '',
+                newMode: false, newName: '', newPhone: '',
+                patientId: '', patientLabel: '', query: '', results: [], searching: false,
+                saving: false, error: '',
+            };
+        },
+        closeBooking() { this.booking.open = false; },
+        selectPatient(p) {
+            this.booking.patientId = String(p.id);
+            this.booking.patientLabel = p.name + (p.phone ? ' · ' + p.phone : '');
+            this.booking.results = []; this.booking.query = '';
+        },
+        clearPatient() { this.booking.patientId=''; this.booking.patientLabel=''; },
+        async searchPatients() {
+            const q = this.booking.query.trim();
+            if (q.length < 2) { this.booking.results = []; return; }
+            this.booking.searching = true;
+            try {
+                const r = await fetch('/api/v1/patients/search?q=' + encodeURIComponent(q), {headers:{Accept:'application/json'}});
+                const j = r.ok ? await r.json() : {rows:[]};
+                this.booking.results = (j.rows || []).slice(0, 6);
+            } catch (_) { this.booking.results = []; }
+            this.booking.searching = false;
+        },
+        async submitBooking() {
+            const b = this.booking;
+            if (b.saving) return;
+            b.error = '';
+            if (!b.doctorId) { b.error = 'Please select a doctor.'; return; }
+            if (!b.date || !b.time) { b.error = 'Please choose a date and time.'; return; }
+            if (b.newMode) { if (!b.newName.trim() || !b.newPhone.trim()) { b.error = 'Enter the new patient name and phone.'; return; } }
+            else if (!b.patientId) { b.error = 'Please select a patient.'; return; }
+
+            const body = new URLSearchParams({
+                doctor_id: b.doctorId, scheduled_date: b.date, scheduled_time: b.time,
+                type: b.type, chief_complaint: b.complaint,
+            });
+            if (b.newMode) { body.set('new_patient_name', b.newName); body.set('new_patient_phone', b.newPhone); }
+            else { body.set('patient_id', b.patientId); }
+
+            b.saving = true;
+            try {
+                const r = await fetch('/api/v1/appointments/book', {
+                    method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded', Accept:'application/json'}, body,
+                });
+                const j = await r.json().catch(() => ({}));
+                if (r.ok && j.ok) { b.open = false; await this.reload(); }
+                else { b.error = j.error || 'Could not book. Please try again.'; }
+            } catch (_) { b.error = 'Network error. Please try again.'; }
+            b.saving = false;
+        },
 
         parse(s){ const [d,t]=s.split('T'); const [y,mo,da]=d.split('-').map(Number); const [h,mi]=(t||'00:00').split(':').map(Number); return new Date(y,mo-1,da,h,mi,0,0); },
         ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); },
