@@ -16,3 +16,6 @@ document/private-*
 /storage/prescriptions/*
 /storage/saas_invoices/*
 !/storage/saas_invoices/.gitkeep
+
+# Node / frontend build
+/node_modules/

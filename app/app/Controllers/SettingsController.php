@@ -25,6 +25,7 @@ final class SettingsController
             'error' => null,
             'success' => $request->query['success'] ?? null,
             'userName' => $userId > 0 ? UserProfileService::displayName($userId) : '',
+            'username' => (string) ($user['username'] ?? ''),
             'roleLabel' => RoleAccessService::panelRoleLabel($user),
         ], 'My profile'));
     }
@@ -44,6 +45,7 @@ final class SettingsController
                 'error' => $result['error'],
                 'success' => null,
                 'userName' => $name,
+                'username' => (string) ($user['username'] ?? ''),
                 'roleLabel' => RoleAccessService::panelRoleLabel($user),
             ], 'My profile'), 422);
         }

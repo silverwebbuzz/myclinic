@@ -8,6 +8,14 @@
     <?php endif; ?>
     <form method="post" action="/settings/profile" class="mt-6 space-y-4">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+        <?php if (!empty($username)): ?>
+        <div>
+            <label class="block text-xs font-medium text-slate-600">Username</label>
+            <input type="text" value="<?= htmlspecialchars((string) $username) ?>" readonly
+                   class="ui-input bg-slate-50 text-slate-500 cursor-not-allowed">
+            <p class="mt-1 text-xs text-slate-400">Your login username. It cannot be changed here.</p>
+        </div>
+        <?php endif; ?>
         <div>
             <label class="block text-xs font-medium text-slate-600">Your name</label>
             <input name="name" type="text" required maxlength="120"

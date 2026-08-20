@@ -36,26 +36,10 @@
     <link rel="icon" type="image/svg+xml" href="https://eclinicpro.com/assets/img/logos/favicon.svg">
     <link rel="icon" type="image/png" sizes="64x64" href="https://eclinicpro.com/assets/img/logos/favicon.png">
     <link rel="apple-touch-icon" href="https://eclinicpro.com/assets/img/logos/apple-touch-icon.png">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/assets/app.css">
     <!-- Collapse plugin must load before Alpine core so x-collapse registers. -->
-    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.14.1/dist/cdn.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
-                    colors: {
-                        brand: {
-                            DEFAULT: 'var(--brand)',
-                            light: 'var(--brand-light)',
-                            dark: 'var(--brand-dark)',
-                        },
-                    },
-                },
-            },
-        };
-    </script>
+    <script defer src="/assets/alpine-collapse.min.js"></script>
+    <script defer src="/assets/alpine.min.js"></script>
     <?php
         // Design-system primary: Teal 600. Clinics that never picked a custom
         // brand carry the legacy green default in the DB — migrate it here so

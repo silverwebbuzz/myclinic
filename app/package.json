@@ -1,0 +1,18 @@
+{
+  "name": "myclinic-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build:css": "tailwindcss -i ./resources/css/app.css -o ./public/assets/app.css --minify",
+    "watch:css": "tailwindcss -i ./resources/css/app.css -o ./public/assets/app.css --watch",
+    "build:js": "node ./scripts/copy-vendor-js.mjs",
+    "build": "npm run build:css && npm run build:js"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.14"
+  },
+  "dependencies": {
+    "@alpinejs/collapse": "3.14.1",
+    "alpinejs": "3.14.1"
+  }
+}
