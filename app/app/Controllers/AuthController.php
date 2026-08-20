@@ -622,15 +622,6 @@ final class AuthController
 
         $password = $request->post['password'] ?? '';
         $confirm = $request->post['password_confirm'] ?? '';
-        $current = $request->post['current_password'] ?? '';
-
-        if (empty($user['must_change_password']) && !password_verify($current, $user['password_hash'] ?? '')) {
-            return Response::html($this->view('auth/change-password', [
-                'csrf' => CsrfService::token(),
-                'error' => 'Current password is incorrect.',
-                'required' => false,
-            ]), 422);
-        }
 
         $passwordError = $this->validatePassword($password, $confirm);
         if ($passwordError !== null) {

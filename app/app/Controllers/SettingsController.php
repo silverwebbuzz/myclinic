@@ -62,16 +62,8 @@ final class SettingsController
     public function updatePassword(Request $request): Response
     {
         $user = RequestContext::user();
-        $current = $request->post['current_password'] ?? '';
         $password = $request->post['password'] ?? '';
         $confirm = $request->post['password_confirm'] ?? '';
-
-        if (!password_verify($current, $user['password_hash'] ?? '')) {
-            return Response::html(Layout::page('settings/password', [
-                'error' => 'Current password is incorrect.',
-                'success' => null,
-            ], 'Change password'), 422);
-        }
 
         if (strlen($password) < 8 || !preg_match('/[A-Z]/', $password) || !preg_match('/[0-9]/', $password)) {
             return Response::html(Layout::page('settings/password', [

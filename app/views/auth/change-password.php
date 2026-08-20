@@ -18,14 +18,6 @@ ob_start();
     <form method="post" action="/change-password" class="mt-6 space-y-4">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
 
-        <?php if (!$required): ?>
-        <div>
-            <label class="block text-xs font-medium text-slate-600">Current password</label>
-            <input name="current_password" type="password" required autocomplete="current-password"
-                   class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
-        </div>
-        <?php endif; ?>
-
         <div>
             <label class="block text-xs font-medium text-slate-600">New password</label>
             <input name="password" type="password" required minlength="8" autocomplete="new-password"
