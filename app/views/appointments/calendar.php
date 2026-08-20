@@ -6,10 +6,9 @@
  * Month is a pill-grid (each day cell lists its appointments). List is a
  * chronological agenda for the visible month.
  *
- * Events come from GET /api/v1/appointments/calendar (colour + status per
- * appointment). Clicking an empty future slot/day deep-links into the existing
- * /appointments/new booking form (date/time/doctor prefilled). Past slots are
- * not clickable; AppointmentService::create is the authoritative server guard.
+ * Events come from GET /api/v1/appointments/calendar. Clicking an empty future
+ * slot/day deep-links into /appointments/new (date/time/doctor prefilled). Past
+ * slots are not clickable; AppointmentService::create is the server-side guard.
  *
  * @var array      $doctors
  * @var string     $clinicTimezone
@@ -23,79 +22,88 @@ foreach ($statusColors as $st => [$hex, $label]) {
     $statusMeta[$st] = ['color' => $hex, 'label' => $label];
 }
 $cfg = [
-    'today'   => $todayLocal,
-    'now'     => $nowLocal,
-    'startH'  => 8,
-    'endH'    => 20,
-    'stepMin' => 30,
-    'hourPx'  => 52,
-    'lockDoctorId' => $lockDoctorId,
-    'statusMeta' => $statusMeta,
-    'doctors' => array_map(static fn ($d) => [
-        'id' => (int) $d['id'], 'name' => (string) ($d['name'] ?? 'Doctor'),
-    ], $doctors),
+    'today' => $todayLocal, 'now' => $nowLocal,
+    'startH' => 8, 'endH' => 20, 'stepMin' => 30, 'hourPx' => 52,
+    'lockDoctorId' => $lockDoctorId, 'statusMeta' => $statusMeta,
+    'doctors' => array_map(static fn ($d) => ['id' => (int) $d['id'], 'name' => (string) ($d['name'] ?? 'Doctor')], $doctors),
 ];
+$showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
 ?>
-<div class="ui-card" x-data="clinicCalendar(<?= htmlspecialchars(json_encode($cfg), ENT_QUOTES) ?>)" x-cloak>
+<div class="ui-card overflow-hidden" x-data="clinicCalendar(<?= htmlspecialchars(json_encode($cfg), ENT_QUOTES) ?>)" x-cloak>
 
-    <!-- Toolbar -->
-    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
-        <div class="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-sm">
-            <template x-for="v in ['list','day','week','month']" :key="v">
-                <button type="button" @click="setView(v)"
-                        :class="view===v ? 'bg-brand text-white shadow-sm' : 'text-slate-600 hover:bg-white'"
-                        class="rounded-md px-3 py-1.5 capitalize" x-text="v"></button>
-            </template>
+    <!-- Header + toolbar -->
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
+        <div class="flex items-center gap-3">
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v3M16 3v3" stroke-linecap="round"/></svg>
+            </span>
+            <div>
+                <h1 class="text-2xl font-bold leading-tight text-slate-900">Calendar</h1>
+                <p class="text-sm text-slate-500" x-text="viewSubtitle"></p>
+            </div>
         </div>
 
-        <div class="flex items-center gap-2">
-            <button type="button" @click="shift(-1)" class="rounded-md border border-slate-200 px-2.5 py-1.5 text-slate-600 hover:bg-slate-50">‹</button>
-            <h2 class="min-w-[9rem] text-center text-base font-semibold text-slate-900" x-text="rangeLabel"></h2>
-            <button type="button" @click="shift(1)" class="rounded-md border border-slate-200 px-2.5 py-1.5 text-slate-600 hover:bg-slate-50">›</button>
-            <button type="button" @click="goToday()" class="rounded-md border border-brand px-3 py-1.5 text-sm font-medium text-brand hover:bg-brand-soft">Today</button>
-            <a :href="bookUrl()" class="ui-btn ui-btn-primary ui-btn-sm">+ Book Appointment</a>
-            <span x-show="loading" class="text-xs text-slate-400">loading…</span>
+        <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-2">
+                <button type="button" @click="setView('list')" :class="pill('list')" class="inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke-linecap="round"/></svg>List</button>
+                <button type="button" @click="setView('day')" :class="pill('day')" class="inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19" stroke-linecap="round"/></svg>Day</button>
+                <button type="button" @click="setView('week')" :class="pill('week')" class="inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v3M16 3v3" stroke-linecap="round"/></svg>Week</button>
+                <button type="button" @click="setView('month')" :class="pill('month')" class="inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v3M16 3v3M7 13h2M11 13h2M15 13h2M7 16.5h2M11 16.5h2" stroke-linecap="round"/></svg>Month</button>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button type="button" @click="shift(-1)" class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-slate-600 hover:bg-slate-200">‹</button>
+                <span class="min-w-[9.5rem] text-center text-lg font-semibold text-slate-900" x-text="rangeLabel"></span>
+                <button type="button" @click="shift(1)" class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-slate-600 hover:bg-slate-200">›</button>
+                <button type="button" @click="goToday()" class="rounded-lg border border-blue-600 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50">Today</button>
+                <a :href="bookUrl()" class="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>Book Appointment</a>
+                <span x-show="loading" class="text-xs text-slate-400">loading…</span>
+            </div>
         </div>
     </div>
 
-    <!-- Doctor filter -->
-    <div class="flex items-center gap-2 px-4 py-2 text-sm">
+    <?php if ($showDoctorFilter): ?>
+    <div class="flex items-center gap-2 border-b border-slate-100 px-5 py-2 text-sm">
         <span class="text-slate-500">Doctor:</span>
-        <select x-model="doctorId" @change="reload()" class="ui-input !w-auto py-1 text-sm" <?= $lockDoctorId !== null ? 'disabled' : '' ?>>
+        <select x-model="doctorId" @change="reload()" class="ui-input !w-auto py-1 text-sm">
             <option value="">All doctors</option>
             <?php foreach ($doctors as $d): ?>
-                <option value="<?= (int) $d['id'] ?>" <?= $lockDoctorId === (int) $d['id'] ? 'selected' : '' ?>>
-                    <?= htmlspecialchars((string) ($d['name'] ?? 'Doctor')) ?>
-                </option>
+                <option value="<?= (int) $d['id'] ?>"><?= htmlspecialchars((string) ($d['name'] ?? 'Doctor')) ?></option>
             <?php endforeach; ?>
         </select>
     </div>
+    <?php endif; ?>
 
     <!-- ============ MONTH ============ -->
-    <div x-show="view==='month'" class="px-3 pb-3">
-        <div class="grid grid-cols-7 border-l border-t border-slate-200 text-xs">
+    <div x-show="view==='month'" class="px-4 pb-3 pt-3">
+        <div class="grid grid-cols-7 overflow-hidden rounded-lg border-l border-t border-slate-200 text-xs">
             <template x-for="d in weekdayNames" :key="d">
-                <div class="border-b border-r border-slate-200 bg-slate-50 px-2 py-2 font-semibold uppercase tracking-wide text-slate-500" x-text="d"></div>
+                <div class="border-b border-r border-slate-200 bg-slate-50 px-2 py-2.5 font-semibold uppercase tracking-wide text-slate-500" x-text="d"></div>
             </template>
             <template x-for="cell in monthCells" :key="cell.iso">
-                <div class="min-h-[104px] border-b border-r border-slate-200 p-1.5 align-top"
-                     :class="cell.inMonth ? 'bg-white' : 'bg-slate-50/50'">
+                <div class="min-h-[150px] border-b border-r border-slate-200 p-2 align-top"
+                     :class="cell.inMonth ? 'bg-white' : 'bg-slate-50/40'">
                     <div class="flex items-center justify-between">
-                        <span class="inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs font-semibold"
-                              :class="cell.isToday ? 'bg-brand text-white' : (cell.inMonth ? 'text-slate-700' : 'text-slate-400')"
+                        <span class="inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-sm font-semibold"
+                              :class="cell.isToday ? 'bg-blue-600 text-white' : (cell.inMonth ? 'text-slate-700' : 'text-slate-400')"
                               x-text="cell.dnum"></span>
-                        <span x-show="cell.events.length" class="rounded-full bg-slate-100 px-1.5 text-[10px] text-slate-500" x-text="cell.events.length"></span>
+                        <span x-show="cell.events.length" class="rounded-full bg-slate-100 px-1.5 text-[10px] font-medium text-slate-500" x-text="cell.events.length"></span>
                     </div>
-                    <div class="mt-1 space-y-1">
-                        <template x-for="ev in cell.events.slice(0,3)" :key="ev.id">
-                            <a :href="ev.url" class="block truncate rounded px-1.5 py-0.5 text-[11px] leading-tight text-slate-700 hover:brightness-95"
+                    <div class="mt-1.5 space-y-1">
+                        <template x-for="ev in cell.events.slice(0,4)" :key="ev.id">
+                            <a :href="ev.url" class="block truncate rounded px-1.5 py-1 text-[11px] leading-tight text-slate-700 hover:brightness-95"
                                :style="`background:${ev.color}1f;border-left:3px solid ${ev.color}`">
-                                <span class="font-medium" x-text="ev.time"></span> <span x-text="ev.patient"></span>
+                                <span class="font-semibold" x-text="ev.time"></span> <span x-text="ev.patient"></span>
                             </a>
                         </template>
-                        <div x-show="cell.events.length > 3" class="px-1 text-[10px] text-slate-400" x-text="`+${cell.events.length-3} more`"></div>
+                        <div x-show="cell.events.length > 4" class="px-1 text-[10px] text-slate-400" x-text="`+${cell.events.length-4} more`"></div>
                         <button type="button" x-show="!cell.past && cell.events.length===0" @click="bookDay(cell.iso)"
-                                class="w-full rounded px-1 py-0.5 text-left text-[10px] text-slate-300 hover:bg-brand-soft hover:text-brand">+ book</button>
+                                class="w-full rounded px-1 py-0.5 text-left text-[10px] text-slate-300 hover:bg-blue-50 hover:text-blue-600">+ book</button>
                     </div>
                 </div>
             </template>
@@ -103,14 +111,14 @@ $cfg = [
     </div>
 
     <!-- ============ WEEK / DAY (time grid) ============ -->
-    <div x-show="view==='week' || view==='day'" class="overflow-x-auto px-3 pb-3">
+    <div x-show="view==='week' || view==='day'" class="overflow-x-auto px-4 pb-3 pt-3">
         <div :class="view==='day' ? 'min-w-[360px]' : 'min-w-[760px]'">
             <div class="flex border-b border-slate-200">
                 <div class="w-14 shrink-0"></div>
                 <template x-for="day in gridDays" :key="day.iso">
                     <div class="flex-1 px-2 py-2 text-center">
                         <div class="text-[11px] uppercase tracking-wide text-slate-400" x-text="day.dow"></div>
-                        <div class="text-sm font-semibold" :class="day.isToday ? 'text-brand' : 'text-slate-700'" x-text="day.dnum"></div>
+                        <div class="text-sm font-semibold" :class="day.isToday ? 'text-blue-600' : 'text-slate-700'" x-text="day.dnum"></div>
                     </div>
                 </template>
             </div>
@@ -127,7 +135,7 @@ $cfg = [
                         <template x-for="slot in day.slots" :key="slot.iso">
                             <div class="absolute inset-x-0" :style="`top:${slot.top}px;height:${slotPx}px`">
                                 <button type="button" x-show="!slot.past" @click="book(day.iso, slot.time)"
-                                        class="h-full w-full border-b border-slate-100 hover:bg-brand-soft" :title="`Book ${day.dow} ${slot.label}`"></button>
+                                        class="h-full w-full border-b border-slate-100 hover:bg-blue-50" :title="`Book ${day.dow} ${slot.label}`"></button>
                                 <div x-show="slot.past" class="h-full w-full border-b border-slate-100 bg-slate-50/60"></div>
                             </div>
                         </template>
@@ -148,21 +156,21 @@ $cfg = [
     </div>
 
     <!-- ============ LIST ============ -->
-    <div x-show="view==='list'" class="px-4 pb-4">
+    <div x-show="view==='list'" class="px-5 pb-4 pt-2">
         <template x-if="listGroups.length === 0">
-            <p class="py-8 text-center text-sm text-slate-400">No appointments this month.</p>
+            <p class="py-10 text-center text-sm text-slate-400">No appointments this month.</p>
         </template>
         <template x-for="grp in listGroups" :key="grp.iso">
             <div class="mt-3">
                 <div class="sticky top-0 bg-white py-1 text-xs font-semibold uppercase tracking-wide text-slate-400" x-text="grp.label"></div>
                 <div class="divide-y divide-slate-100">
                     <template x-for="ev in grp.events" :key="ev.id">
-                        <a :href="ev.url" class="flex items-center gap-3 py-2 hover:bg-slate-50">
+                        <a :href="ev.url" class="flex items-center gap-3 py-2.5 hover:bg-slate-50">
                             <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="`background:${ev.color}`"></span>
-                            <span class="w-16 shrink-0 text-sm font-medium text-slate-700" x-text="ev.time"></span>
+                            <span class="w-20 shrink-0 text-sm font-medium text-slate-700" x-text="ev.time"></span>
                             <span class="flex-1 truncate text-sm text-slate-800" x-text="ev.patient"></span>
                             <span class="hidden truncate text-xs text-slate-400 sm:block" x-text="ev.doctor"></span>
-                            <span class="rounded-full px-2 py-0.5 text-[11px]" :style="`background:${ev.color}1f;color:${ev.color}`" x-text="ev.statusLabel"></span>
+                            <span class="rounded-full px-2 py-0.5 text-[11px] font-medium" :style="`background:${ev.color}1f;color:${ev.color}`" x-text="ev.statusLabel"></span>
                         </a>
                     </template>
                 </div>
@@ -171,16 +179,19 @@ $cfg = [
     </div>
 
     <!-- Legend -->
-    <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-slate-200 px-4 py-3 text-xs text-slate-500">
-        <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+    <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-slate-200 px-5 py-3 text-sm text-slate-600">
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-1.5">
             <?php foreach ($statusColors as [$hex, $label]): ?>
-                <span class="inline-flex items-center gap-1.5">
-                    <span class="inline-block h-2.5 w-2.5 rounded-sm" style="background:<?= htmlspecialchars($hex) ?>"></span>
+                <span class="inline-flex items-center gap-2">
+                    <span class="inline-block h-3 w-3 rounded-full" style="background:<?= htmlspecialchars($hex) ?>"></span>
                     <?= htmlspecialchars($label) ?>
                 </span>
             <?php endforeach; ?>
         </div>
-        <span class="text-slate-400">Click any empty slot to book · past slots are locked</span>
+        <span class="inline-flex items-center gap-1.5 text-slate-400">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01" stroke-linecap="round"/></svg>
+            Click any empty slot to book
+        </span>
     </div>
 </div>
 
@@ -195,9 +206,10 @@ function clinicCalendar(cfg) {
         loading: false,
         startH: cfg.startH, endH: cfg.endH, hourPx: cfg.hourPx, stepMin: cfg.stepMin,
         weekdayNames: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
-        // built per reload:
         gridDays: [], monthCells: [], listGroups: [], rangeLabel: '',
 
+        get viewSubtitle() { return this.view.charAt(0).toUpperCase() + this.view.slice(1) + ' view'; },
+        pill(v) { return this.view===v ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'; },
         get hours() { const o=[]; for (let h=this.startH; h<this.endH; h++) o.push(h); return o; },
         get bodyHeight() { return (this.endH - this.startH) * this.hourPx; },
         get slotPx() { return this.hourPx * this.stepMin / 60; },
@@ -215,17 +227,15 @@ function clinicCalendar(cfg) {
             const d=this.parse(this.anchor+'T00:00');
             if (this.view==='day') d.setDate(d.getDate()+dir);
             else if (this.view==='week') d.setDate(d.getDate()+dir*7);
-            else d.setMonth(d.getMonth()+dir); // month + list
+            else d.setMonth(d.getMonth()+dir);
             this.anchor=this.ymd(d);
             this.reload();
         },
 
-        // Fetch range for the active view
         fetchRange() {
             const a=this.parse(this.anchor+'T00:00');
             if (this.view==='day') return [a, a];
             if (this.view==='week') { const mon=this.monday(a); const sun=new Date(mon); sun.setDate(mon.getDate()+6); return [mon, sun]; }
-            // month / list → full month-grid range
             const first=new Date(a.getFullYear(), a.getMonth(), 1);
             const last=new Date(a.getFullYear(), a.getMonth()+1, 0);
             return [this.monday(first), this.sunday(last)];
@@ -243,7 +253,6 @@ function clinicCalendar(cfg) {
             this.rebuild();
         },
 
-        // normalise one API event into a render model
         model(e) {
             const s=this.parse(e.start);
             const meta=this.cfg.statusMeta[e.status] || {color: e.backgroundColor||'#64748b', label: e.status||''};
@@ -251,10 +260,8 @@ function clinicCalendar(cfg) {
                 id:e.id, url:e.url, start:s, iso:this.ymd(s),
                 color: e.backgroundColor || meta.color,
                 patient: e.patient || (e.title||'').split(' — ')[0] || 'Patient',
-                doctor: e.doctor || '',
-                status: e.status, statusLabel: meta.label,
-                time: this.fmtTime(s),
-                _end: this.parse(e.end||e.start),
+                doctor: e.doctor || '', status: e.status, statusLabel: meta.label,
+                time: this.fmtTime(s), _end: this.parse(e.end||e.start),
             };
         },
 
@@ -274,19 +281,15 @@ function clinicCalendar(cfg) {
                 const d=new Date(start); d.setDate(start.getDate()+i);
                 const iso=this.ymd(d);
                 const dayEvents=models.filter(m=>m.iso===iso).sort((x,y)=>x.start-y.start);
-                const isPast=this.parse(iso+'T23:59') < this.now;
-                cells.push({
-                    iso, dnum:d.getDate(), inMonth:d.getMonth()===a.getMonth(),
-                    isToday:iso===this.cfg.today, past:isPast, events:dayEvents,
-                });
+                cells.push({ iso, dnum:d.getDate(), inMonth:d.getMonth()===a.getMonth(),
+                    isToday:iso===this.cfg.today, past:this.parse(iso+'T23:59')<this.now, events:dayEvents });
             }
             this.monthCells=cells;
         },
 
         buildList(models) {
             const a=this.parse(this.anchor+'T00:00');
-            const inMonth=models.filter(m=>m.start.getMonth()===a.getMonth() && m.start.getFullYear()===a.getFullYear())
-                                .sort((x,y)=>x.start-y.start);
+            const inMonth=models.filter(m=>m.start.getMonth()===a.getMonth() && m.start.getFullYear()===a.getFullYear()).sort((x,y)=>x.start-y.start);
             const groups={};
             for (const m of inMonth) { (groups[m.iso] ||= []).push(m); }
             this.listGroups=Object.keys(groups).sort().map(iso=>({
@@ -339,7 +342,6 @@ function clinicCalendar(cfg) {
         bookDay(iso) { const q=new URLSearchParams({date:iso}); if (this.doctorId) q.set('doctor_id',this.doctorId); window.location='/appointments/new?'+q; },
         bookUrl() { const q=new URLSearchParams(); if (this.doctorId) q.set('doctor_id',this.doctorId); const s=q.toString(); return '/appointments/new'+(s?'?'+s:''); },
 
-        // date helpers (all LOCAL wall-clock)
         parse(s){ const [d,t]=s.split('T'); const [y,mo,da]=d.split('-').map(Number); const [h,mi]=(t||'00:00').split(':').map(Number); return new Date(y,mo-1,da,h,mi,0,0); },
         ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); },
         monday(d){ const x=new Date(d); const dow=(x.getDay()+6)%7; x.setDate(x.getDate()-dow); return x; },

@@ -479,8 +479,8 @@ final class AppointmentService
         // of the appointment UI (Waiting / Confirmed / In Consult / …).
         $colors = [
             'scheduled' => '#f59e0b',   // Waiting
-            'confirmed' => '#3b82f6',   // Confirmed
-            'in_progress' => '#6366f1', // In Consult
+            'confirmed' => '#22c55e',   // Arrived
+            'in_progress' => '#3b82f6', // In Consult
             'completed' => '#10b981',   // Completed
             'no_show' => '#ef4444',     // Not Arrived
             'cancelled' => '#94a3b8',   // Cancelled
