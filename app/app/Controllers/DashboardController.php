@@ -29,11 +29,14 @@ final class DashboardController
             return Response::redirect(OnboardingService::resumeUrl($clinicId));
         }
 
-        $config = OnboardingService::specialtyConfig($clinicId) ?? [];
-        $stats = DashboardService::stats($clinicId);
-        $today = self::todayAppointments($clinicId, $user);
-        $visitedToday = self::todayVisited($clinicId, $user);
-        $checklist = ChecklistService::progress($clinicId, $clinic, $config);
+        $__lap = [];
+        $__m = function (string $k) use (&$__lap) { $__lap[$k] = microtime(true); };
+        $__m('start');
+        $config = OnboardingService::specialtyConfig($clinicId) ?? [];  $__m('specialtyConfig');
+        $stats = DashboardService::stats($clinicId);                    $__m('stats');
+        $today = self::todayAppointments($clinicId, $user);             $__m('todayAppointments');
+        $visitedToday = self::todayVisited($clinicId, $user);           $__m('todayVisited');
+        $checklist = ChecklistService::progress($clinicId, $clinic, $config); $__m('checklist');
 
         // Phase 4: follow-up widget. Best-effort — empty before Phase 4 SQL.
         $followUps = ['overdue' => [], 'overdue_count' => 0, 'due_week' => 0, 'done_month' => 0];
@@ -41,6 +44,16 @@ final class DashboardController
             $followUps = \App\Services\FollowUpService::dashboardData($clinicId);
         } catch (\Throwable $e) {
             // follow_ups table doesn't exist yet.
+        }
+        $__m('followUps');
+        $listingStatus = \App\Services\DoctorClaimService::listingStatus($clinic); $__m('listingStatus');
+        if ($__perf) {
+            $__parts = []; $__keys = array_keys($__lap);
+            for ($i = 1; $i < count($__keys); $i++) {
+                $__parts[] = sprintf('%s=%.0fms', $__keys[$i], ($__lap[$__keys[$i]] - $__lap[$__keys[$i-1]]) * 1000);
+            }
+            @file_put_contents(dirname(__DIR__, 2) . '/storage/logs/perf.log',
+                '[' . date('H:i:s') . '] parts ' . implode('  ', $__parts) . "\n", FILE_APPEND);
         }
 
         $__tData = microtime(true);
@@ -56,7 +69,7 @@ final class DashboardController
             'currency' => $clinic['currency'] ?? 'INR',
             'clinic' => $clinic,
             'isDirectoryListed' => (bool) ($clinic['is_directory_listed'] ?? false),
-            'listingStatus' => \App\Services\DoctorClaimService::listingStatus($clinic),
+            'listingStatus' => $listingStatus,
             'followUps' => $followUps,
         ], 'Dashboard');
         if ($__perf) {
