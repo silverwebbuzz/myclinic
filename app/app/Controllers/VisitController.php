@@ -159,6 +159,8 @@ final class VisitController
             'chargesPrefilled' => $chargeData['prefilled'],
             'visitInvoice' => $visitInvoice,
             'payment' => self::paymentStateForVisit($clinicId, $visitInvoice, $chargeData['items']),
+            'chronic' => PatientService::decodeTags($patient['chronic_conditions'] ?? null),
+            'historySummary' => self::historySummaryForPatient($clinicId, $patient),
             'showImmunizations' => $showImmunizations,
             'immunizationSummary' => $immunizationSummary,
             'immunizationsGiven' => $immunizationsGiven,
@@ -669,6 +671,43 @@ final class VisitController
     }
 
     /** @return array{items: list<array{description: string, amount: float}>, prefilled: bool} */
+    /**
+     * Right-sidebar "History summary": the standing facts a doctor wants in
+     * view during every consultation — chronic conditions, allergies, past
+     * surgeries, the medicines from the last visit, and when vitals were last
+     * taken. Everything here is read-only; it is edited on the patient record.
+     *
+     * @param array<string, mixed> $patient
+     * @return array<string, mixed>
+     */
+    private static function historySummaryForPatient(int $clinicId, array $patient): array
+    {
+        $patientId = (int) ($patient['id'] ?? 0);
+
+        $specialty = $patient['specialty_data'] ?? [];
+        if (is_string($specialty)) {
+            $specialty = json_decode($specialty, true) ?: [];
+        }
+        $medicalHistory = is_array($specialty['medical_history'] ?? null) ? $specialty['medical_history'] : [];
+
+        // Medicines the patient is actually on = whatever was last prescribed.
+        $lastVisit = VisitService::recentForPatient($clinicId, $patientId, 1);
+        $medications = trim((string) ($lastVisit[0]['medicines_summary'] ?? ''));
+
+        $vitalsRows = PatientService::vitals($clinicId, $patientId, 1);
+        $lastVitals = $vitalsRows !== [] ? end($vitalsRows) : null;
+
+        return [
+            'chronic' => PatientService::decodeTags($patient['chronic_conditions'] ?? null),
+            'allergies' => PatientService::decodeTags($patient['allergies'] ?? null),
+            'surgeries' => trim((string) ($medicalHistory['surgeries'] ?? '')),
+            'family_history' => trim((string) ($medicalHistory['family_history'] ?? '')),
+            'medications' => $medications,
+            'medications_date' => !empty($lastVisit[0]['visited_at']) ? (string) $lastVisit[0]['visited_at'] : '',
+            'last_vitals_at' => $lastVitals['recorded_at'] ?? '',
+        ];
+    }
+
     /**
      * Seed for the visit screen's Payment card. Reads back what was already
      * billed (amount, GST, mode, paid/due); for a visit with no invoice yet it

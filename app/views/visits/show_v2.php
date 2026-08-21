@@ -773,57 +773,6 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 </div>
             </details>
 
-            <?php if ($has('vitals')): ?>
-                <details class="rounded-lg border border-slate-200 bg-slate-50/50"
-                         @toggle="recordSection('vitals', $event.target.open)">
-                    <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Vitals</summary>
-                    <div class="px-4 pb-4 pt-2">
-                        <div class="grid gap-3 sm:grid-cols-3">
-                            <?php foreach ($vitalsFields as $f): ?>
-                                <label class="text-xs">
-                                    <span class="text-slate-500"><?= htmlspecialchars($f['label']) ?><?= !empty($f['unit']) ? ' (' . htmlspecialchars($f['unit']) . ')' : '' ?></span>
-                                    <?php if (($f['type'] ?? '') === 'select'): ?>
-                                        <select :disabled="!editable" x-model="vitals.<?= htmlspecialchars($f['key']) ?>"
-                                                class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
-                                            <option value="">—</option>
-                                            <?php foreach ($f['options'] ?? [] as $opt): ?>
-                                                <option value="<?= htmlspecialchars($opt) ?>"><?= htmlspecialchars($opt) ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    <?php elseif (!empty($f['extra'])): ?>
-                                        <input type="<?= $f['type'] === 'text' ? 'text' : 'number' ?>" step="any"
-                                               :disabled="!editable"
-                                               x-model="vitals.extra.<?= htmlspecialchars(substr($f['key'], 6)) ?>"
-                                               class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
-                                    <?php else: ?>
-                                        <input type="number" step="any" :disabled="!editable"
-                                               x-model="vitals.<?= htmlspecialchars($f['key']) ?>"
-                                               class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
-                                    <?php endif; ?>
-                                </label>
-                            <?php endforeach; ?>
-                        </div>
-                        <template x-if="vitalsWarnings.length">
-                            <div class="mt-2 space-y-1">
-                                <template x-for="w in vitalsWarnings" :key="w.message">
-                                    <p class="rounded bg-amber-50 px-2 py-1 text-xs text-amber-900" x-text="w.message"></p>
-                                </template>
-                            </div>
-                        </template>
-                    </div>
-                </details>
-            <?php endif; ?>
-
-            <?php if ($has('case_specialty') && $caseAvailable): ?>
-                <details class="rounded-lg border border-slate-200 bg-slate-50/50"
-                         @toggle="recordSection('case_specialty', $event.target.open)">
-                    <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Case taking</summary>
-                    <div class="px-4 pb-4 pt-2 space-y-3">
-                        <?php require $casePartialPath; ?>
-                    </div>
-                </details>
-            <?php endif; ?>
-
             <?php if ($has('diet') && !empty($hasDiet)): ?>
                 <details class="rounded-lg border border-slate-200 bg-slate-50/50"
                          @toggle="recordSection('diet', $event.target.open)">
@@ -919,8 +868,6 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 </dl>
 
                 <div class="mt-3 flex flex-wrap items-center gap-3">
-                    <button type="button" :disabled="!editable" @click="savePayment()"
-                            class="ui-btn ui-btn-primary ui-btn-sm">Save payment</button>
                     <span class="text-xs" x-show="chargesLabel"
                           :class="chargesStatus === 'error' ? 'text-rose-600' : (chargesStatus === 'saved' ? 'text-emerald-600' : 'text-amber-600')"
                           x-text="chargesLabel"></span>
@@ -929,6 +876,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                     <a :href="'/billing/' + invoiceId" x-show="invoiceId" class="text-xs font-medium text-brand hover:underline">Open invoice</a>
                 </div>
                 <p class="mt-2 text-xs text-slate-500">
+                    Saved together with the visit when you click <strong>Complete visit</strong>.
                     Marked <strong>Due</strong>? Reception can see the balance and settle it from
                     <a href="/billing" class="text-brand hover:underline">Patient Bills</a>.
                 </p>
@@ -973,9 +921,150 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
 
     </div><!-- /left column -->
 
-    <!-- ====== VISIT HISTORY (right column, sticky on desktop) ====== -->
-    <aside class="lg:col-span-1">
-    <section class="ui-card shadow-sm lg:sticky lg:top-20">
+    <!-- ====== RIGHT SIDEBAR — vitals, standing history, case taking,
+         reports and the visit list, in the order a doctor scans them ====== -->
+    <aside class="space-y-4 lg:col-span-1">
+
+    <?php if ($has('vitals')): ?>
+        <details class="ui-card" open
+                 @toggle="recordSection('vitals', $event.target.open)">
+            <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Vitals</summary>
+            <div class="px-4 pb-4 pt-2">
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <?php foreach ($vitalsFields as $f): ?>
+                        <label class="text-xs">
+                            <span class="text-slate-500"><?= htmlspecialchars($f['label']) ?><?= !empty($f['unit']) ? ' (' . htmlspecialchars($f['unit']) . ')' : '' ?></span>
+                            <?php if (($f['type'] ?? '') === 'select'): ?>
+                                <select :disabled="!editable" x-model="vitals.<?= htmlspecialchars($f['key']) ?>"
+                                        class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
+                                    <option value="">—</option>
+                                    <?php foreach ($f['options'] ?? [] as $opt): ?>
+                                        <option value="<?= htmlspecialchars($opt) ?>"><?= htmlspecialchars($opt) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            <?php elseif (!empty($f['extra'])): ?>
+                                <input type="<?= $f['type'] === 'text' ? 'text' : 'number' ?>" step="any"
+                                       :disabled="!editable"
+                                       x-model="vitals.extra.<?= htmlspecialchars(substr($f['key'], 6)) ?>"
+                                       class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
+                            <?php else: ?>
+                                <input type="number" step="any" :disabled="!editable"
+                                       x-model="vitals.<?= htmlspecialchars($f['key']) ?>"
+                                       class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
+                            <?php endif; ?>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+                <template x-if="vitalsWarnings.length">
+                    <div class="mt-2 space-y-1">
+                        <template x-for="w in vitalsWarnings" :key="w.message">
+                            <p class="rounded bg-amber-50 px-2 py-1 text-xs text-amber-900" x-text="w.message"></p>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </details>
+    <?php endif; ?>
+
+    <!-- ---- HISTORY SUMMARY (read-only; edited on the patient record) ---- -->
+    <?php
+    $hs = $historySummary ?? [];
+    $hasHistory = !empty($hs['chronic']) || !empty($hs['allergies']) || !empty($hs['surgeries'])
+        || !empty($hs['family_history']) || !empty($hs['medications']);
+    ?>
+    <section class="ui-card p-4">
+        <div class="flex items-center justify-between">
+            <h3 class="ui-section-title text-base">History summary</h3>
+            <a href="/patients/<?= (int) $patient['id'] ?>" class="text-xs font-medium text-brand hover:underline">Edit</a>
+        </div>
+        <?php if (!$hasHistory): ?>
+            <p class="mt-2 text-sm text-slate-400">Nothing recorded yet.</p>
+        <?php else: ?>
+        <dl class="mt-3 space-y-2.5 text-sm">
+            <?php if (!empty($hs['chronic'])): ?>
+            <div>
+                <dt class="ui-group-label">Chronic</dt>
+                <dd class="text-slate-700"><?= htmlspecialchars(implode(', ', $hs['chronic'])) ?></dd>
+            </div>
+            <?php endif; ?>
+            <?php if (!empty($hs['allergies'])): ?>
+            <div>
+                <dt class="ui-group-label text-rose-600">Allergies</dt>
+                <dd class="text-rose-700"><?= htmlspecialchars(implode(', ', $hs['allergies'])) ?></dd>
+            </div>
+            <?php endif; ?>
+            <?php if (!empty($hs['surgeries'])): ?>
+            <div>
+                <dt class="ui-group-label">Past surgeries</dt>
+                <dd class="whitespace-pre-line text-slate-700"><?= htmlspecialchars((string) $hs['surgeries']) ?></dd>
+            </div>
+            <?php endif; ?>
+            <?php if (!empty($hs['family_history'])): ?>
+            <div>
+                <dt class="ui-group-label">Family history</dt>
+                <dd class="whitespace-pre-line text-slate-700"><?= htmlspecialchars((string) $hs['family_history']) ?></dd>
+            </div>
+            <?php endif; ?>
+            <?php if (!empty($hs['medications'])): ?>
+            <div>
+                <dt class="ui-group-label">Medications
+                    <?php if (!empty($hs['medications_date'])): ?>
+                    <span class="font-normal normal-case tracking-normal text-slate-400">— last visit <?= htmlspecialchars(date('d M Y', strtotime((string) $hs['medications_date']))) ?></span>
+                    <?php endif; ?>
+                </dt>
+                <dd class="text-slate-700"><?= htmlspecialchars((string) $hs['medications']) ?></dd>
+            </div>
+            <?php endif; ?>
+        </dl>
+        <?php endif; ?>
+        <?php if (!empty($hs['last_vitals_at'])): ?>
+        <p class="mt-3 border-t border-slate-100 pt-2 text-xs text-slate-500">
+            Last vitals: <?= htmlspecialchars(date('d M Y', strtotime((string) $hs['last_vitals_at']))) ?>
+        </p>
+        <?php endif; ?>
+    </section>
+
+    <!-- ---- REPORTS SUMMARY — this visit's lab/investigation notes plus what
+         earlier visits recorded, so findings read as one thread ---- -->
+    <?php
+    $priorReports = [];
+    foreach (($recentVisits ?? []) as $rv) {
+        $rn = trim((string) ($rv['reports_notes'] ?? ''));
+        if ($rn !== '') {
+            $priorReports[] = ['date' => (string) ($rv['visited_at'] ?? ''), 'notes' => $rn];
+        }
+    }
+    ?>
+    <section class="ui-card p-4">
+        <h3 class="ui-section-title text-base">Reports summary</h3>
+        <div class="mt-2">
+            <p class="ui-group-label">This visit</p>
+            <p class="mt-0.5 whitespace-pre-line text-sm text-slate-700" x-show="reports_notes" x-text="reports_notes"></p>
+            <p class="mt-0.5 text-sm text-slate-400" x-show="!reports_notes">No findings recorded yet.</p>
+        </div>
+        <?php if ($priorReports !== []): ?>
+        <ul class="mt-3 space-y-2 border-t border-slate-100 pt-2">
+            <?php foreach ($priorReports as $pr): ?>
+            <li>
+                <p class="ui-group-label"><?= htmlspecialchars(date('d M Y', strtotime($pr['date']))) ?></p>
+                <p class="mt-0.5 whitespace-pre-line text-sm text-slate-600"><?= htmlspecialchars($pr['notes']) ?></p>
+            </li>
+            <?php endforeach; ?>
+        </ul>
+        <?php endif; ?>
+    </section>
+
+    <?php if ($has('case_specialty') && $caseAvailable): ?>
+        <details class="ui-card"
+                 @toggle="recordSection('case_specialty', $event.target.open)">
+            <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Case taking</summary>
+            <div class="px-4 pb-4 pt-2 space-y-3">
+                <?php require $casePartialPath; ?>
+            </div>
+        </details>
+    <?php endif; ?>
+
+    <section class="ui-card shadow-sm">
         <div class="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
             <h2 class="ui-section-title">Visit history</h2>
             <span class="text-xs text-slate-400"><?= count($recentVisits ?? []) ?> recent</span>
@@ -1201,11 +1290,6 @@ function visitScreenV2(cfg) {
             if (this.paymentAmountTouched) return;
             this.payment.amount = this.chargesTotal();
         },
-        async savePayment() {
-            // Charges and payment travel together — one save keeps the invoice
-            // lines and the money side consistent.
-            await this.saveCharges(true);
-        },
         chargesTotal() {
             return (this.charges || []).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
         },
@@ -1231,22 +1315,31 @@ function visitScreenV2(cfg) {
         // + draft save first so nothing entered just before is lost.
         async confirmComplete(ev) {
             ev.preventDefault();
+            // Grab the form NOW: currentTarget is only valid during dispatch,
+            // and the confirm dialog below awaits.
+            const form = ev.currentTarget || ev.target;
             if (this._completing) return;             // guard against double-submit
-            if (this.chargesDirty) {
-                uiAlert('Click "Save charges" / "Save payment" before completing the visit.', { title: 'Unsaved charges' });
-                return;
-            }
             if (!await uiConfirm('The visit will be locked read-only once completed.', {
                 title: 'Complete this visit?', confirmLabel: 'Complete visit',
             })) return;
 
             this._completing = true;
-            const form = ev.currentTarget;
             try {
-                // Flush symptoms + force-save the main form BEFORE the visit is
-                // locked. If the save fails, abort — completing now would lock the
-                // visit read-only and permanently lose the unsaved data.
+                // Flush symptoms, charges + payment, then force-save the main
+                // form BEFORE the visit is locked. If a save fails, abort —
+                // completing now would lock the visit read-only and permanently
+                // lose the unsaved data.
                 await this.persistSymptomsNow();
+                if (this.charges.length || this.payableBase() > 0) {
+                    await this.saveCharges(true);
+                    if (this.chargesStatus === 'error') {
+                        await uiAlert('Could not save charges / payment — ' + (this.chargesLabel || 'please try again') +
+                              '.\n\nThe visit was NOT completed so your data is safe.',
+                              { title: 'Visit not completed', danger: true });
+                        this._completing = false;
+                        return;
+                    }
+                }
                 const ok = await this.save(true);
                 if (!ok) {
                     await uiAlert('Could not save the visit before completing — ' +
