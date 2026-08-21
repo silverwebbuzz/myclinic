@@ -445,6 +445,13 @@ require __DIR__ . '/partials/header.php';
     /* ═══════════════════════════════════════════
            PRICING SECTION
         ═══════════════════════════════════════════ */
+    /* Deep links (#pricing, #screenshots from the nav dropdown) must clear the
+       80px site header AND the sticky category nav underneath it. */
+    #pricing,
+    #screenshots {
+        scroll-margin-top: 150px;
+    }
+
     .feat-pricing {
         background: #ffffff;
         border-top: 1.5px solid #ddeee5;

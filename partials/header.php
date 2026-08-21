@@ -222,7 +222,21 @@ a{color:inherit;text-decoration:none}
         <nav class="nav-links" :class="mobileNav ? 'is-open' : ''">
             <a href="/find-a-doctor" class="nav-link <?= nav_active('find') ?>">Find a doctor</a>
             <a href="/cervical-cancer" class="nav-link nav-link-awareness <?= nav_active('cervical') ?>">Cervical Cancer</a>
-            <a href="/clinic-management-software" class="nav-link <?= nav_active('features') ?>">For doctors</a>
+            <!-- For doctors — opens the product page; hovering (or tapping on
+                 mobile, where the submenu is always expanded) reveals the
+                 sections worth deep-linking to. -->
+            <div class="nav-drop">
+                <a href="/clinic-management-software" class="nav-link nav-link-drop <?= nav_active('features') ?>">
+                    For doctors
+                    <svg class="nav-drop-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                </a>
+                <div class="nav-drop-menu">
+                    <a href="/clinic-management-software" class="nav-drop-item">Clinic Management Software</a>
+                    <a href="/clinic-management-software#pricing" class="nav-drop-item">Software Pricing</a>
+                    <a href="/clinic-management-software#screenshots" class="nav-drop-item">Product Screens</a>
+                    <a href="/product-tour" class="nav-drop-item">Product Tour</a>
+                </div>
+            </div>
             <a href="/#specialties" class="nav-link <?= nav_active('specialties') ?>">Specialties</a>
             <a href="/security" class="nav-link <?= nav_active('security') ?>">Security</a>
         </nav>
