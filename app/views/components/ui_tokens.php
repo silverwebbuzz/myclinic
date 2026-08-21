@@ -44,7 +44,7 @@ if (!defined('UI_TOKENS_EMITTED')) {
     .ui-section-title     { font-size: 1.125rem; line-height: 1.5rem;   font-weight: 600; color: var(--ui-text); }                          /* 18/600 */
     .ui-section-sub       { font-size: 0.8125rem; line-height: 1.25rem; color: var(--ui-text-3); }
     .ui-label             { font-size: 0.8125rem; line-height: 1.25rem; font-weight: 500; color: #334155; }
-    .ui-group-label       { font-size: 0.6875rem; line-height: 1rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #94A3B8; }
+    .ui-group-label       { font-size: 0.6875rem; line-height: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #334155; }
     .ui-help              { font-size: 0.75rem;   line-height: 1.125rem; color: #94A3B8; }
 
     /* ============================================================

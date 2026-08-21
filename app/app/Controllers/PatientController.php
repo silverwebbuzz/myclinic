@@ -161,12 +161,25 @@ final class PatientController
         $patientId = (int) $id;
         $payload = $this->payloadFromRequest($request);
 
+        // The inline "Edit patient" panel (visit screen, patient header) posts a
+        // return_to so the doctor lands back where they were editing. Only a
+        // local path is honoured — never an absolute/off-site URL.
+        $returnTo = (string) ($request->post['return_to'] ?? '');
+        $returnTo = (str_starts_with($returnTo, '/') && !str_starts_with($returnTo, '//')) ? $returnTo : '';
+
         try {
             PatientService::update($clinicId, $patientId, $payload, $_FILES['photo'] ?? null);
             AuditService::log($request, 'UPDATE', 'patients', $patientId);
 
+            if ($returnTo !== '') {
+                return Response::redirect($this->withFlag($returnTo, 'patient_updated=1'));
+            }
+
             return Response::redirect('/patients/' . $patientId . '?updated=1');
         } catch (\Throwable $e) {
+            if ($returnTo !== '') {
+                return Response::redirect($this->withFlag($returnTo, 'patient_error=' . urlencode($e->getMessage())));
+            }
             return Response::html(Layout::page('patients/wizard', array_merge($this->wizardData($payload), [
                 'patient' => PatientService::find($clinicId, $patientId),
                 'editId' => $patientId,
@@ -327,6 +340,17 @@ final class PatientController
     }
 
     /** @return array<string, mixed> */
+    /** Append a query flag to a local path, dropping any previous patient_* flag. */
+    private function withFlag(string $path, string $flag): string
+    {
+        [$base, $query] = array_pad(explode('?', $path, 2), 2, '');
+        parse_str($query, $params);
+        unset($params['patient_updated'], $params['patient_error']);
+        $params = array_merge($params, [strstr($flag, '=', true) => substr(strstr($flag, '='), 1)]);
+
+        return $base . '?' . http_build_query($params);
+    }
+
     private function payloadFromRequest(Request $request): array
     {
         $specialtyData = [];

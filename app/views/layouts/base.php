@@ -153,7 +153,7 @@
                     <span>Dashboard</span>
                 </a>
                 <?php foreach ($nav['groups'] ?? [] as $group): ?>
-                <p class="ui-group-label mb-1 mt-5 px-3"><?= htmlspecialchars($group['label']) ?></p>
+                <p class="ui-group-label mb-1 mt-5 px-3 text-slate-400"><?= htmlspecialchars($group['label']) ?></p>
                 <?php foreach ($group['items'] as $item):
                     if (!\App\Services\RoleAccessService::canSeeNavHref($user ?? [], (string) $item['href'])) {
                         continue;

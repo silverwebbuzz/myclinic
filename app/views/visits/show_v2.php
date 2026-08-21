@@ -233,6 +233,18 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
 
         <div class="space-y-3 bg-slate-50/50 p-3">
 
+            <!-- ---- CHIEF COMPLAINT / CASE NOTES — first thing in the visit.
+                 Carries forward from the appointment/last visit; the doctor
+                 edits it only when the story has changed. ---- -->
+            <div class="rounded-lg border border-slate-200 bg-white p-3">
+                <label class="ui-group-label" for="chief-complaint">Chief complaint / Case notes</label>
+                <p class="ui-help mt-0.5">In the patient's own words — update if it has changed.</p>
+                <textarea id="chief-complaint" x-model="chief_complaint" :disabled="!editable" rows="5"
+                          @input="markDirty()"
+                          placeholder="e.g. Fever with sore throat for 3 days, worse at night. No cough."
+                          class="ui-input mt-1.5"></textarea>
+            </div>
+
             <!-- ---- SYMPTOMS — chip picker with autocomplete (Phase 3) ---- -->
             <div x-data="symptomPicker()" class="rounded-lg border border-slate-200 bg-white p-3">
                 <label class="ui-group-label">Symptoms</label>
@@ -330,13 +342,6 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                     </div>
                 </div>
 
-                <!-- Free-text complaint fallback (kept for migration parity + voice notes) -->
-                <details class="mt-2">
-                    <summary class="cursor-pointer text-xs text-slate-500 hover:text-slate-700">+ Narrative complaint (optional)</summary>
-                    <textarea x-model="chief_complaint" :disabled="!editable" rows="2"
-                              placeholder="Free-text complaint, in patient's own words"
-                              class="ui-input mt-1.5"></textarea>
-                </details>
             </div>
 
             <!-- ---- PRESCRIPTION ---- -->
