@@ -204,6 +204,7 @@ return static function (RouteRegistrar $router): void {
         $app->post('/visits/{id}/unlock', [VisitController::class, 'unlock']);
         $app->post('/visits/{id}/diet', [VisitController::class, 'saveDiet']);
         $app->post('/visits/{id}/diet/share', [VisitController::class, 'shareDiet']);
+        $app->post('/visits/{id}/send-rx', [VisitController::class, 'sendRxWhatsApp']);
 
         $app->get('/settings/profile', [SettingsController::class, 'showProfile']);
         $app->post('/settings/profile', [SettingsController::class, 'updateProfile']);

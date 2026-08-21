@@ -277,11 +277,12 @@ final class InvoiceService
      * Payment block on the visit screen: one call settles the money side of a
      * visit invoice.
      *
-     *   amount  — the payable base BEFORE tax (the "Amount (₹)" field). It is
+     *   amount  — the gross charge value (the "Amount (₹)" field). It is
      *             seeded from the charge lines but the doctor may edit it:
      *             lower than the line total is stored as a discount, higher
      *             adds an "Additional charges" line, so the invoice items and
      *             the amount always reconcile.
+     *   discount — money off, deducted before tax.
      *   gst     — add the clinic's tax percent on top (0 when unticked).
      *   type    — cash | online (stored as the invoice payment_mode).
      *   status  — paid | due. "paid" records a payment for the whole balance;
@@ -313,6 +314,8 @@ final class InvoiceService
             ? round(max(0, (float) $payment['amount']), 2)
             : $subtotal;
 
+        // Amount typed above the charge lines becomes an extra line; typed
+        // below them is stored as a discount, so items always reconcile.
         $discount = 0.0;
         if ($amount > $subtotal + 0.005) {
             self::addItem($invoiceId, [
@@ -320,9 +323,15 @@ final class InvoiceService
                 'item_type' => 'other',
                 'unit_price' => round($amount - $subtotal, 2),
             ]);
+            $subtotal = $amount;
         } elseif ($amount < $subtotal - 0.005) {
             $discount = round($subtotal - $amount, 2);
         }
+
+        // Explicit discount from the Payment card, on top of the above. Tax is
+        // charged on what is left, which is how a discounted bill reads.
+        $requested = round(max(0, (float) ($payment['discount'] ?? 0)), 2);
+        $discount = round(min($subtotal, $discount + $requested), 2);
 
         QueryBuilder::table('invoices')
             ->forClinic($clinicId)
@@ -403,6 +412,62 @@ final class InvoiceService
         }
 
         return $out;
+    }
+
+    /**
+     * Charge descriptions this clinic actually uses, most-used first, with the
+     * amount they are usually billed at — feeds the autocomplete on the visit
+     * screen's Charges rows. Seeded with the usual clinic lines so a brand-new
+     * clinic still gets suggestions.
+     *
+     * @return list<array{label: string, amount: float}>
+     */
+    public static function chargeSuggestions(int $clinicId, int $limit = 25): array
+    {
+        $rows = [];
+        if (Database::ping()) {
+            try {
+                $stmt = Database::connection()->prepare(
+                    "SELECT ii.description AS label,
+                            ROUND(AVG(ii.unit_price)) AS amount,
+                            COUNT(*) AS uses
+                       FROM invoice_items ii
+                       INNER JOIN invoices i ON i.id = ii.invoice_id
+                      WHERE i.clinic_id = ? AND TRIM(ii.description) != ''
+                      GROUP BY ii.description
+                      ORDER BY uses DESC, MAX(ii.id) DESC
+                      LIMIT " . (int) $limit,
+                );
+                $stmt->execute([$clinicId]);
+                foreach ($stmt->fetchAll() ?: [] as $row) {
+                    $rows[] = [
+                        'label' => (string) $row['label'],
+                        'amount' => (float) $row['amount'],
+                    ];
+                }
+            } catch (\Throwable $e) {
+                $rows = [];
+            }
+        }
+
+        $seen = array_map(static fn (array $r) => mb_strtolower($r['label']), $rows);
+        $fee = ClinicSettingsService::consultationFeeForClinic($clinicId);
+        $defaults = [
+            ['label' => 'Consultation fee', 'amount' => $fee > 0 ? $fee : 0.0],
+            ['label' => 'Follow-up consultation', 'amount' => 0.0],
+            ['label' => 'Procedure', 'amount' => 0.0],
+            ['label' => 'Dressing', 'amount' => 0.0],
+            ['label' => 'Injection', 'amount' => 0.0],
+            ['label' => 'Medicines', 'amount' => 0.0],
+            ['label' => 'Lab test', 'amount' => 0.0],
+        ];
+        foreach ($defaults as $d) {
+            if (!in_array(mb_strtolower($d['label']), $seen, true)) {
+                $rows[] = $d;
+            }
+        }
+
+        return $rows;
     }
 
     /** Amount still owed on an invoice (total − advance − payments). */

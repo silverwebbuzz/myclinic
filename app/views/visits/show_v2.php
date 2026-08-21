@@ -107,7 +107,8 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         'symptoms' => $visitSymptoms ?? [],   // hydrated by symptomPicker on mount
         'charges' => $charges ?? [],   // existing invoice line items {description, amount}
         'chargesPrefilled' => !empty($chargesPrefilled),
-        'payment' => $payment ?? ['amount' => 0, 'gst' => false, 'tax_percent' => 18, 'type' => 'cash', 'status' => 'due', 'paid_amount' => 0, 'due' => 0],
+        'chargeSuggestions' => $chargeSuggestions ?? [],
+        'payment' => $payment ?? ['amount' => 0, 'discount' => 0, 'discount_on' => false, 'gst' => false, 'tax_percent' => 18, 'type' => 'cash', 'status' => 'due', 'paid_amount' => 0, 'due' => 0],
         'invoiceId' => !empty($visitInvoice) ? (int) $visitInvoice['id'] : null,
         'invoiceNumber' => !empty($visitInvoice['invoice_number']) ? (string) $visitInvoice['invoice_number'] : null,
         'invoiceDate' => !empty($visitInvoice['created_at']) ? date('d M Y', strtotime((string) $visitInvoice['created_at'])) : null,
@@ -153,6 +154,17 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         . "\n— " . ($visit['doctor_name'] ?? '');
     $waHref = 'https://wa.me/' . $waPhone . '?text=' . rawurlencode($waText);
     ?>
+    <?php if (!empty($_GET['rx_sent'])): ?>
+    <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        ✓ Prescription queued for the patient's WhatsApp — it goes out within a couple of minutes.
+    </div>
+    <?php endif; ?>
+    <?php if (!empty($_GET['rx_error'])): ?>
+    <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+        <?= htmlspecialchars((string) $_GET['rx_error']) ?>
+    </div>
+    <?php endif; ?>
+
     <?php if (!empty($_GET['complete_save_error'])): ?>
     <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
         Could not save your notes before completing the visit. The visit was <strong>not</strong> completed — please click <strong>Save now</strong>, fix any errors, then try again.
@@ -167,7 +179,13 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
             <a href="/prescriptions/<?= $visitId ?>/pdf" target="_blank" class="ui-btn ui-btn-primary ui-btn-sm">Print prescription (A5)</a>
             <a href="/prescriptions/<?= $visitId ?>/pdf?paper=a4" target="_blank" class="ui-btn ui-btn-secondary ui-btn-sm">A4</a>
             <?php if ($waPhone !== ''): ?>
-            <a href="<?= htmlspecialchars($waHref) ?>" target="_blank" rel="noopener" class="ui-btn ui-btn-secondary ui-btn-sm">Share on WhatsApp</a>
+            <!-- Sends from the clinic's WhatsApp number via the notification
+                 queue (same rx_delivery message the app sends on completion). -->
+            <form method="post" action="/visits/<?= $visitId ?>/send-rx" class="inline">
+                <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+                <button type="submit" class="ui-btn ui-btn-primary ui-btn-sm">Send to patient's WhatsApp</button>
+            </form>
+            <a href="<?= htmlspecialchars($waHref) ?>" target="_blank" rel="noopener" class="ui-btn ui-btn-secondary ui-btn-sm">Open in my WhatsApp</a>
             <?php endif; ?>
             <?php endif; ?>
             <a href="/appointments/new?patient_id=<?= (int) $patient['id'] ?>" class="ui-btn ui-btn-secondary ui-btn-sm">Book follow-up</a>
@@ -741,9 +759,29 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 <div class="mt-2 space-y-2">
                     <template x-for="(c, idx) in charges" :key="c._k">
                         <div class="flex items-center gap-2">
-                            <input type="text" :disabled="!editable" x-model="c.description" @input="markChargesDirty()"
-                                   placeholder="e.g. Consultation, Procedure, Medicines"
-                                   class="ui-input flex-1">
+                            <div class="relative flex-1">
+                                <input type="text" :disabled="!editable" x-model="c.description"
+                                       @input="markChargesDirty(); chargeOpen = idx"
+                                       @focus="chargeOpen = idx"
+                                       @keydown.escape="chargeOpen = null"
+                                       autocomplete="off"
+                                       placeholder="e.g. Consultation, Procedure, Medicines"
+                                       class="ui-input w-full">
+                                <!-- Descriptions this clinic already bills, most-used first. -->
+                                <ul x-show="chargeOpen === idx && chargeMatches(c.description).length" x-cloak
+                                    @click.outside="chargeOpen = null"
+                                    class="absolute z-30 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                                    <template x-for="sug in chargeMatches(c.description)" :key="sug.label">
+                                        <li>
+                                            <button type="button" @click="applyChargeSuggestion(c, sug)"
+                                                    class="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm hover:bg-brand-light">
+                                                <span x-text="sug.label"></span>
+                                                <span class="text-xs text-slate-400" x-show="sug.amount > 0" x-text="'₹' + sug.amount"></span>
+                                            </button>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
                             <div class="flex items-center rounded border border-slate-300">
                                 <span class="px-2 text-sm text-slate-400">₹</span>
                                 <input type="number" min="0" step="1" :disabled="!editable" x-model.number="c.amount"
@@ -828,11 +866,18 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
             <div class="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <label class="ui-group-label flex items-center gap-1.5"><span class="text-brand">₹</span> Payment</label>
-                    <label class="flex items-center gap-2 text-sm text-slate-700">
-                        <input type="checkbox" class="ui-checkbox" :disabled="!editable"
-                               x-model="payment.gst" @change="markChargesDirty()">
-                        <span>Add GST (<span x-text="payment.tax_percent"></span>%)</span>
-                    </label>
+                    <div class="flex flex-wrap items-center gap-4">
+                        <label class="flex items-center gap-2 text-sm text-slate-700">
+                            <input type="checkbox" class="ui-checkbox" :disabled="!editable"
+                                   x-model="payment.discount_on" @change="onDiscountToggle()">
+                            <span>Discount</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-sm text-slate-700">
+                            <input type="checkbox" class="ui-checkbox" :disabled="!editable"
+                                   x-model="payment.gst" @change="markChargesDirty()">
+                            <span>Add GST (<span x-text="payment.tax_percent"></span>%)</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="mt-3 grid gap-3 sm:grid-cols-3">
@@ -840,6 +885,12 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                         <span class="ui-group-label">Amount (₹) <span class="font-normal normal-case tracking-normal text-slate-400">— auto total, editable</span></span>
                         <input type="number" min="0" step="1" :disabled="!editable"
                                x-model.number="payment.amount" @input="onPaymentAmountInput()"
+                               placeholder="0" class="ui-input mt-1">
+                    </label>
+                    <label class="block" x-show="payment.discount_on" x-cloak>
+                        <span class="ui-group-label">Discount (₹)</span>
+                        <input type="number" min="0" step="1" :disabled="!editable"
+                               x-model.number="payment.discount" @input="markChargesDirty()"
                                placeholder="0" class="ui-input mt-1">
                     </label>
                     <label class="block">
@@ -860,7 +911,9 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
 
                 <dl class="mt-3 space-y-1 border-t border-dashed border-slate-300 pt-3 text-sm">
                     <div class="flex justify-between"><dt class="text-slate-500">Subtotal</dt>
-                        <dd class="text-slate-700" x-text="'₹' + payableBase().toFixed(0)"></dd></div>
+                        <dd class="text-slate-700" x-text="'₹' + grossAmount().toFixed(0)"></dd></div>
+                    <div class="flex justify-between" x-show="discountAmount() > 0"><dt class="text-slate-500">Discount</dt>
+                        <dd class="text-rose-600" x-text="'− ₹' + discountAmount().toFixed(0)"></dd></div>
                     <div class="flex justify-between" x-show="payment.gst"><dt class="text-slate-500">GST (<span x-text="payment.tax_percent"></span>%)</dt>
                         <dd class="text-slate-700" x-text="'₹' + gstAmount().toFixed(0)"></dd></div>
                     <div class="flex justify-between font-semibold"><dt>Total payable</dt>
@@ -1334,13 +1387,48 @@ function visitScreenV2(cfg) {
             this.charges.push({ _k: 'c' + (++this._chargeKey), description: '', amount: null });
         },
         removeCharge(idx) { this.markChargesDirty(); this.charges.splice(idx, 1); this.syncPaymentAmount(); },
+        // ---- Charges autocomplete ----
+        chargeOpen: null,          // index of the row whose dropdown is open
+        chargeMatches(query) {
+            const q = (query || '').trim().toLowerCase();
+            const taken = (this.charges || []).map(c => (c.description || '').trim().toLowerCase());
+            return (this.chargeSuggestions || [])
+                .filter(s => {
+                    const label = (s.label || '').toLowerCase();
+                    if (q && !label.includes(q)) return false;
+                    // Hide lines already on this bill, unless it's what's being typed.
+                    return label === q || !taken.includes(label);
+                })
+                .slice(0, 8);
+        },
+        applyChargeSuggestion(line, sug) {
+            line.description = sug.label;
+            if (sug.amount > 0 && !(parseFloat(line.amount) > 0)) line.amount = sug.amount;
+            this.chargeOpen = null;
+            this.markChargesDirty();
+            this.syncPaymentAmount();
+        },
+
         // ---- Payment card ----
         // The amount field starts as the charges total and stays linked to it
         // until the doctor types their own figure (paymentAmountTouched).
         paymentAmountTouched: false,
-        payableBase() {
+        grossAmount() {
             const typed = parseFloat(this.payment.amount);
             return isNaN(typed) ? 0 : typed;
+        },
+        discountAmount() {
+            if (!this.payment.discount_on) return 0;
+            const d = parseFloat(this.payment.discount);
+            return isNaN(d) ? 0 : Math.min(Math.max(0, d), this.grossAmount());
+        },
+        onDiscountToggle() {
+            if (!this.payment.discount_on) this.payment.discount = 0;
+            this.markChargesDirty();
+        },
+        // What tax is charged on, and what the patient owes before tax.
+        payableBase() {
+            return Math.round((this.grossAmount() - this.discountAmount()) * 100) / 100;
         },
         gstAmount() {
             if (!this.payment.gst) return 0;
@@ -1438,7 +1526,8 @@ function visitScreenV2(cfg) {
                 const body = { items: items };
                 if (withPayment) {
                     body.payment = {
-                        amount: this.payableBase(),
+                        amount: this.grossAmount(),
+                        discount: this.discountAmount(),
                         gst: !!this.payment.gst,
                         type: this.payment.type,
                         status: this.payment.status,

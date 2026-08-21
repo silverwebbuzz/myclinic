@@ -159,6 +159,7 @@ final class VisitController
             'chargesPrefilled' => $chargeData['prefilled'],
             'visitInvoice' => $visitInvoice,
             'payment' => self::paymentStateForVisit($clinicId, $visitInvoice, $chargeData['items']),
+            'chargeSuggestions' => \App\Services\InvoiceService::chargeSuggestions($clinicId),
             'chronic' => PatientService::decodeTags($patient['chronic_conditions'] ?? null),
             'historySummary' => self::historySummaryForPatient($clinicId, $patient, (int) $id),
             'showImmunizations' => $showImmunizations,
@@ -207,6 +208,86 @@ final class VisitController
         DietService::share($clinicId, (int) $plan['id']);
 
         return Response::redirect('/visits/' . $id . '?diet_shared=1');
+    }
+
+    /**
+     * POST /visits/{id}/send-rx — WhatsApp the prescription PDF link to the
+     * patient. The same rx_delivery notification the app queues automatically
+     * when a visit completes, on demand: for a re-send, for a patient who
+     * changed their number, or when auto-delivery is switched off.
+     */
+    public function sendRxWhatsApp(Request $request, string $id): Response
+    {
+        if ($denied = $this->requireModule()) {
+            return $denied;
+        }
+
+        $clinicId = (int) RequestContext::clinicId();
+        $visitId = (int) $id;
+        $back = '/visits/' . $visitId;
+
+        $visit = VisitService::findDetailed($clinicId, $visitId);
+        if ($visit === null) {
+            return Response::redirect($back . '?rx_error=' . urlencode('Visit not found.'));
+        }
+
+        $patient = PatientService::find($clinicId, (int) $visit['patient_id']);
+        $clinic = RequestContext::clinic() ?? [];
+        $phone = preg_replace('/[^0-9]/', '', (string) ($patient['phone'] ?? '')) ?? '';
+        if ($patient === null || strlen($phone) < 7) {
+            return Response::redirect($back . '?rx_error=' . urlencode('This patient has no WhatsApp number on file.'));
+        }
+
+        $prescriptions = PrescriptionService::forVisit($clinicId, $visitId);
+        if ($prescriptions === []) {
+            return Response::redirect($back . '?rx_error=' . urlencode('No medicines on this visit yet.'));
+        }
+
+        // Regenerate rather than trust a stale file — the doctor may have
+        // edited the prescription since the PDF was written.
+        try {
+            $visit['diagnosis'] = $visit['diagnosis'] ?? '';
+            $rxPath = \App\Services\RxPdfService::generate($visit, $patient, $clinic, $prescriptions);
+            QueryBuilder::table('visits')
+                ->forClinic($clinicId)
+                ->where('id', '=', $visitId)
+                ->update(['rx_pdf_path' => $rxPath]);
+        } catch (\Throwable $e) {
+            return Response::redirect($back . '?rx_error=' . urlencode('Could not build the prescription PDF.'));
+        }
+
+        $rxUrl = $rxPath;
+        if ($rxUrl !== '' && str_starts_with($rxUrl, '/')) {
+            $rxUrl = rtrim($_ENV['APP_URL'] ?? '', '/') . $rxUrl;
+        }
+        $payload = [
+            'patient_name' => $patient['name'] ?? '',
+            'clinic_name' => $clinic['name'] ?? '',
+            'rx_url' => $rxUrl,
+        ];
+
+        \App\Services\NotificationService::queueWhatsApp(
+            $clinicId,
+            (int) $patient['id'],
+            (string) $patient['phone'],
+            'rx_delivery',
+            $payload,
+            date('Y-m-d H:i:s'),
+        );
+        if (!empty($patient['email'])) {
+            \App\Services\NotificationService::queueEmail(
+                $clinicId,
+                (int) $patient['id'],
+                (string) $patient['email'],
+                'rx_delivery',
+                $payload,
+                date('Y-m-d H:i:s'),
+            );
+        }
+
+        AuditService::log($request, 'INSERT', 'notifications', $visitId);
+
+        return Response::redirect($back . '?rx_sent=1');
     }
 
     public function complete(Request $request, string $id): Response
@@ -796,6 +877,8 @@ final class VisitController
 
             return [
                 'amount' => round($amount, 2),
+                'discount' => 0.0,
+                'discount_on' => false,
                 'gst' => false,
                 'tax_percent' => $clinicTaxPercent,
                 'type' => 'cash',
@@ -808,9 +891,12 @@ final class VisitController
 
         $taxPercent = (float) ($invoice['tax_percent'] ?? 0);
         $paid = (float) ($invoice['amount_paid'] ?? 0) + (float) ($invoice['advance_paid'] ?? 0);
+        $discount = round((float) ($invoice['discount_amount'] ?? 0), 2);
 
         return [
-            'amount' => round((float) ($invoice['subtotal'] ?? 0) - (float) ($invoice['discount_amount'] ?? 0), 2),
+            'amount' => round((float) ($invoice['subtotal'] ?? 0), 2),
+            'discount' => $discount,
+            'discount_on' => $discount > 0,
             'gst' => $taxPercent > 0,
             'tax_percent' => $taxPercent > 0 ? $taxPercent : $clinicTaxPercent,
             'type' => in_array($invoice['payment_mode'] ?? '', ['cash', 'online'], true) ? $invoice['payment_mode'] : 'cash',
