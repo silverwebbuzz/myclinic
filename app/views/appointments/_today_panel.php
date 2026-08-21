@@ -49,6 +49,14 @@ $tabs = [
     'cancelled' => 'Cancelled',
 ];
 ?>
+<?php if (!empty($_GET['message']) && in_array($_GET['message'], ['paid', 'partial'], true)): ?>
+<p class="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+    <?= $_GET['message'] === 'paid' ? '✓ Payment recorded — invoice settled.' : '✓ Part payment recorded.' ?>
+</p>
+<?php endif; ?>
+<?php if (!empty($_GET['error'])): ?>
+<p class="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800"><?= htmlspecialchars((string) $_GET['error']) ?></p>
+<?php endif; ?>
 <div class="space-y-4" x-data="apptPanel(<?= htmlspecialchars(json_encode(['filter' => $statusFilter], JSON_THROW_ON_ERROR), ENT_QUOTES) ?>)">
 
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -92,7 +100,7 @@ $tabs = [
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[1080px] text-sm">
+            <table class="w-full min-w-[1200px] text-sm">
                 <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr>
                         <th class="px-4 py-3">#</th>
@@ -105,6 +113,7 @@ $tabs = [
                         <th class="px-4 py-3">Doctor</th>
                         <th class="px-4 py-3">Complaint</th>
                         <th class="px-4 py-3">Status</th>
+                        <th class="px-4 py-3">Payment</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -167,6 +176,9 @@ $tabs = [
                             <span class="rounded px-2 py-0.5 text-xs font-medium <?= $statusBadge($status) ?>">
                                 <?= htmlspecialchars(str_replace('_', ' ', $status)) ?>
                             </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <?php require __DIR__ . '/_payment_cell.php'; ?>
                         </td>
                         <td class="px-4 py-3">
                             <?php

@@ -94,6 +94,11 @@ $walkinUrl = static function () use ($date, $doctorId): string {
     <?php if (!empty($_GET['error'])): ?>
     <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800"><?= htmlspecialchars((string) $_GET['error']) ?></p>
     <?php endif; ?>
+    <?php if (!empty($_GET['message']) && in_array($_GET['message'], ['paid', 'partial'], true)): ?>
+    <p class="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <?= $_GET['message'] === 'paid' ? '✓ Payment recorded — invoice settled.' : '✓ Part payment recorded.' ?>
+    </p>
+    <?php endif; ?>
     <?php if (!empty($_GET['updated'])): ?>
     <p class="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">Appointment updated.</p>
     <?php endif; ?>

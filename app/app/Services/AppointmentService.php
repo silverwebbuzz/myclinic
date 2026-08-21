@@ -400,8 +400,34 @@ final class AppointmentService
 
         $stmt = Database::connection()->prepare($sql);
         $stmt->execute($params);
+        $rows = $stmt->fetchAll() ?: [];
 
-        return $stmt->fetchAll() ?: [];
+        return self::attachPaymentState($clinicId, $rows);
+    }
+
+    /**
+     * Hang the visit invoice (total / due / paid) on each appointment so the
+     * day list can show payment status and let staff settle a due bill there.
+     *
+     * @param list<array<string, mixed>> $rows
+     * @return list<array<string, mixed>>
+     */
+    private static function attachPaymentState(int $clinicId, array $rows): array
+    {
+        if ($rows === []) {
+            return $rows;
+        }
+
+        $byAppointment = InvoiceService::forAppointments(
+            $clinicId,
+            array_map(static fn (array $r) => (int) $r['id'], $rows),
+        );
+        foreach ($rows as &$row) {
+            $row['invoice'] = $byAppointment[(int) $row['id']] ?? null;
+        }
+        unset($row);
+
+        return $rows;
     }
 
     /**
@@ -434,7 +460,7 @@ final class AppointmentService
         $stmt = Database::connection()->prepare($sql);
         $stmt->execute($params);
 
-        return $stmt->fetchAll() ?: [];
+        return self::attachPaymentState($clinicId, $stmt->fetchAll() ?: []);
     }
 
     public static function todayQueue(int $clinicId, ?int $doctorId = null): array

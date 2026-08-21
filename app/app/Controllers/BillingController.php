@@ -167,20 +167,24 @@ final class BillingController
         $amount = $amountRaw === '' ? null : (float) $amountRaw;
         $method = (string) ($request->post['method'] ?? 'cash');
 
-        // The billing list posts return_to=/billing so reception stays on the
-        // list after settling a due bill.
-        $back = ($request->post['return_to'] ?? '') === '/billing' ? '/billing' : '/billing/' . $id;
+        // The billing list and the appointment day lists post a return_to so
+        // staff stay where they were after settling a due bill. Local paths
+        // only — never an absolute/off-site URL.
+        $returnTo = (string) ($request->post['return_to'] ?? '');
+        $back = (str_starts_with($returnTo, '/') && !str_starts_with($returnTo, '//'))
+            ? $returnTo
+            : '/billing/' . $id;
 
         try {
             $invoice = InvoiceService::recordPayment($clinicId, (int) $id, $amount, $method);
         } catch (\Throwable $e) {
-            return Response::redirect($back . '?error=' . urlencode($e->getMessage()));
+            return Response::redirect($this->withFlag($back, 'error=' . urlencode($e->getMessage())));
         }
 
         AuditService::log($request, 'UPDATE', 'invoices', (int) $id);
         $msg = ($invoice['status'] ?? '') === 'paid' ? 'paid' : 'partial';
 
-        return Response::redirect($back . '?message=' . $msg);
+        return Response::redirect($this->withFlag($back, 'message=' . $msg));
     }
 
     public function exportExcel(Request $request): Response
@@ -248,6 +252,17 @@ final class BillingController
         BillingPaymentService::simulatePay($clinicId, (int) $id);
 
         return Response::json(['paid' => true]);
+    }
+
+    /** Append a flash flag to a local path that may already carry a query. */
+    private function withFlag(string $path, string $flag): string
+    {
+        [$base, $query] = array_pad(explode('?', $path, 2), 2, '');
+        parse_str($query, $params);
+        unset($params['message'], $params['error']);
+        $rebuilt = http_build_query($params);
+
+        return $base . '?' . ($rebuilt !== '' ? $rebuilt . '&' : '') . $flag;
     }
 
     /**

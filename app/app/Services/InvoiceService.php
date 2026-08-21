@@ -358,6 +358,53 @@ final class InvoiceService
         return self::findDetailed($clinicId, $invoiceId) ?? [];
     }
 
+    /**
+     * Payment state per appointment, for the day list: appointment → visit →
+     * invoice. Keyed by appointment id; appointments with no invoice yet are
+     * simply absent.
+     *
+     * @param list<int> $appointmentIds
+     * @return array<int, array{invoice_id: int, invoice_number: string, total: float, due: float, status: string, payment_mode: string}>
+     */
+    public static function forAppointments(int $clinicId, array $appointmentIds): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $appointmentIds))));
+        if ($ids === [] || !Database::ping()) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        try {
+            $stmt = Database::connection()->prepare(
+                "SELECT v.appointment_id, i.id, i.invoice_number, i.total, i.status, i.payment_mode,
+                        COALESCE(i.advance_paid, 0) AS advance_paid, COALESCE(i.amount_paid, 0) AS amount_paid
+                   FROM invoices i
+                   INNER JOIN visits v ON v.id = i.visit_id
+                  WHERE i.clinic_id = ? AND v.appointment_id IN ($placeholders)
+                        AND i.status != 'cancelled'
+                  ORDER BY i.id ASC",
+            );
+            $stmt->execute([$clinicId, ...$ids]);
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($stmt->fetchAll() ?: [] as $row) {
+            // ORDER BY id ASC + overwrite = the newest invoice wins.
+            $out[(int) $row['appointment_id']] = [
+                'invoice_id' => (int) $row['id'],
+                'invoice_number' => (string) ($row['invoice_number'] ?? ''),
+                'total' => (float) $row['total'],
+                'due' => round((float) $row['total'] - (float) $row['advance_paid'] - (float) $row['amount_paid'], 2),
+                'status' => (string) $row['status'],
+                'payment_mode' => (string) ($row['payment_mode'] ?? ''),
+            ];
+        }
+
+        return $out;
+    }
+
     /** Amount still owed on an invoice (total − advance − payments). */
     public static function balanceDue(array $invoice): float
     {
