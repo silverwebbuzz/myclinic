@@ -128,7 +128,7 @@
             };
         ?>
         <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
-               class="fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col border-r border-slate-200 bg-white transition-transform duration-150 lg:static lg:z-auto">
+               class="fixed inset-y-0 left-0 z-50 flex w-[224px] flex-col border-r border-slate-200 bg-white transition-transform duration-150 lg:static lg:z-auto">
             <div class="flex h-[72px] items-center gap-3 border-b border-slate-100 px-5">
                 <?php if (!empty($logoUrl)): ?>
                     <img src="<?= htmlspecialchars($logoUrl) ?>" alt="" class="h-9 w-9 rounded-lg object-cover shadow-sm">
@@ -290,7 +290,7 @@
                 </div>
             </header>
 
-            <main class="mx-auto w-full max-w-[1600px] flex-1 p-4 lg:p-6">
+            <main class="mx-auto w-full max-w-[1800px] flex-1 p-4 lg:px-5 lg:py-6">
                 <?= $content ?? '' ?>
             </main>
             <?php
