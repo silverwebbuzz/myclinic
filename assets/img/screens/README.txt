@@ -1,25 +1,20 @@
-Product screenshots for the gallery on /clinic-management-software
-(rendered by partials/screenshot-gallery.php).
+Product screenshots for the screen-by-screen showcase on
+/clinic-management-software (rendered by partials/product-showcase.php).
 
-The gallery SCANS this folder — every .png/.jpg/.webp in here becomes a tile,
-so adding or replacing a screenshot needs no code change. Delete a file and its
-tile disappears; if the folder is empty the whole section is skipped.
+Each file gets its own section — image on one side, heading, description and
+feature list on the other, alternating left/right down the page. A block whose
+image is missing is skipped, so the page never shows a broken frame.
 
-Titles and captions are matched by file name (without extension, case-
-insensitive) in the $ecpCaptions map at the top of the partial. A file that is
-not in that map still shows, titled from its file name — add an entry there to
-give it a proper caption.
+Current files and the section each one drives:
+  dashbord.png             Dashboard — the whole day on one screen
+  Patient-visit.png        Consultation — a full consultation in one page
+  Calender.png             Calendar — day / week / month views
+  Book-an-appointment.png  Booking — booked in under ten seconds
+  Walk-in.png              Walk-ins — tokens and the queue
+  Report.png               Reports — income and GST
 
-Current files:
-  dashbord.png             Dashboard — today's appointments, payment, revenue
-  Patient-visit.png        Consultation / EMR screen
-  Calender.png             Calendar, month view
-  Book-an-appointment.png  Calendar with the "Book appointment" popup open
-  Walk-in.png              Walk-in appointment form
-  Report.png               Income & GST report
+To change the copy, edit the $ecpScreens array at the top of the partial; to
+add a screen, add an entry there and drop the image in here.
 
-Guidance: PNG or JPG, roughly 2400px wide. Keep real patient data out of them —
-the demo clinic is fine.
-
-NOTE: after deploying a change to the partial, clear OPcache (cPanel -> Restart
-Services -> PHP-FPM) or the server keeps running the previous version.
+Guidance: PNG or JPG, ~2400px wide at roughly 16:9 (all six are between 1.75
+and 1.81 today). Keep real patient data out of them — the demo clinic is fine.

@@ -932,8 +932,8 @@ require __DIR__ . '/partials/header.php';
     </div>
 </div>
 
-<!-- ═══════ SCREENSHOT GALLERY ═══════ -->
-<?php require __DIR__ . '/partials/screenshot-gallery.php'; ?>
+<!-- ═══════ PRODUCT SHOWCASE (screen-by-screen) ═══════ -->
+<?php require __DIR__ . '/partials/product-showcase.php'; ?>
 
 <!-- ═══════ STICKY CATEGORY NAV ═══════ -->
 <nav class="feat-nav" id="featNav">
