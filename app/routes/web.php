@@ -18,6 +18,7 @@ use App\Controllers\PrescriptionController;
 use App\Controllers\SettingsController;
 use App\Controllers\VisitController;
 use App\Controllers\AnalyticsController;
+use App\Controllers\ReportController;
 use App\Controllers\StaffController;
 use App\Controllers\ApiV1Controller;
 use App\Controllers\DirectoryController;
@@ -148,6 +149,10 @@ return static function (RouteRegistrar $router): void {
         $app->post('/settings/branding/domain', [ClinicSettingsController::class, 'startDomainVerify']);
         $app->post('/settings/branding/domain/check', [ClinicSettingsController::class, 'checkDomainVerify']);
         $app->post('/impersonate/exit', [ImpersonateController::class, 'exit']);
+
+        // Income / GST report — available wherever Patient Bills is.
+        $app->get('/reports/income', [ReportController::class, 'income']);
+        $app->get('/reports/income/export', [ReportController::class, 'incomeCsv']);
 
         $app->get('/analytics', [AnalyticsController::class, 'index']);
         $app->post('/analytics/expenses', [AnalyticsController::class, 'storeExpense']);

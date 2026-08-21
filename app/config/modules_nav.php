@@ -37,6 +37,7 @@ return [
         'items' => [
             'analytics' => ['label' => 'Analytics', 'icon' => '📊', 'href' => '/analytics',
                 'feature_flag' => 'advanced_analytics'],
+            'invoicing_basic' => ['label' => 'Income', 'icon' => '📊', 'href' => '/reports/income', 'any_of' => ['invoicing_basic', 'billing_pro']],
             'staff' => ['label' => 'Staff', 'icon' => '👥', 'href' => '/staff/attendance'],
         ],
     ],

@@ -149,8 +149,8 @@ final class RoleAccessService
         return match ($role) {
             'doctor' => self::pathIn($path, [
                 '/dashboard', '/patients', '/visits', '/prescriptions', '/vitals',
-                '/appointments', '/queue', '/billing', '/follow-ups', '/help', '/staff/attendance',
-                '/doctor/schedule', '/blogs',
+                '/appointments', '/queue', '/billing', '/reports', '/follow-ups', '/help',
+                '/staff/attendance', '/doctor/schedule', '/blogs',
             ]),
             'nurse' => self::pathIn($path, [
                 '/dashboard', '/patients', '/visits', '/vitals',
@@ -158,7 +158,7 @@ final class RoleAccessService
             ]),
             'receptionist' => self::pathIn($path, [
                 '/dashboard', '/patients', '/appointments', '/queue', '/billing',
-                '/follow-ups', '/help', '/staff/attendance',
+                '/reports', '/follow-ups', '/help', '/staff/attendance',
             ]),
             'labtech' => self::pathIn($path, ['/dashboard', '/help', '/staff/attendance']),
             default => $path === '/help',
@@ -195,6 +195,7 @@ final class RoleAccessService
             '/appointments',
             '/queue',
             '/billing',
+            '/reports',
             '/follow-ups',
             '/help',
             '/staff/attendance',

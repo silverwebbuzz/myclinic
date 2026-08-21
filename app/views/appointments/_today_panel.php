@@ -100,7 +100,7 @@ $tabs = [
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[1200px] text-sm">
+            <table class="w-full min-w-[1040px] text-sm">
                 <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr>
                         <th class="px-4 py-3">#</th>
@@ -111,7 +111,6 @@ $tabs = [
                         <th class="px-4 py-3 text-center" title="Called into consult">In</th>
                         <th class="px-4 py-3 text-center" title="Consult finished">Out</th>
                         <th class="px-4 py-3">Doctor</th>
-                        <th class="px-4 py-3">Complaint</th>
                         <th class="px-4 py-3">Status</th>
                         <th class="px-4 py-3">Payment</th>
                         <th class="px-4 py-3 text-right">Actions</th>
@@ -169,9 +168,6 @@ $tabs = [
                             <?= !empty($a['completed_at']) ? htmlspecialchars(date('h:i A', strtotime((string) $a['completed_at']))) : '<span class="text-slate-300">—</span>' ?>
                         </td>
                         <td class="px-4 py-3 text-xs text-slate-600"><?= htmlspecialchars((string) ($a['doctor_name'] ?? '')) ?></td>
-                        <td class="px-4 py-3 text-xs text-slate-600 max-w-[200px] truncate" title="<?= htmlspecialchars((string) ($a['chief_complaint'] ?? '')) ?>">
-                            <?= htmlspecialchars((string) ($a['chief_complaint'] ?? '—')) ?>
-                        </td>
                         <td class="px-4 py-3">
                             <span class="rounded px-2 py-0.5 text-xs font-medium <?= $statusBadge($status) ?>">
                                 <?= htmlspecialchars(str_replace('_', ' ', $status)) ?>
