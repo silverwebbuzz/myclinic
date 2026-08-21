@@ -971,7 +971,8 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
     $hs = $historySummary ?? [];
     $hasHistory = !empty($hs['chronic']) || !empty($hs['allergies']) || !empty($hs['surgeries'])
         || !empty($hs['family_history']) || !empty($hs['medications']);
-    $hasLastVisit = !empty($hs['last_visit_at']) && (!empty($hs['last_complaint']) || !empty($hs['last_diagnosis']));
+    $hasLastVisit = !empty($hs['last_visit_at'])
+        && (!empty($hs['last_complaint']) || !empty($hs['last_diagnosis']) || !empty($hs['last_notes']));
     ?>
     <section class="ui-card p-4">
         <div class="flex items-center justify-between">
@@ -1005,8 +1006,14 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
             <?php if (!empty($hs['last_complaint'])): ?>
             <p class="mt-1 whitespace-pre-line text-sm text-slate-700"><?= htmlspecialchars((string) $hs['last_complaint']) ?></p>
             <?php endif; ?>
+            <?php if (empty($hs['last_complaint'])): ?>
+            <p class="mt-1 text-sm text-slate-400">No complaint recorded.</p>
+            <?php endif; ?>
             <?php if (!empty($hs['last_diagnosis'])): ?>
             <p class="mt-1 text-sm text-slate-600"><span class="text-slate-400">Dx:</span> <?= htmlspecialchars((string) $hs['last_diagnosis']) ?></p>
+            <?php endif; ?>
+            <?php if (!empty($hs['last_notes'])): ?>
+            <p class="mt-1 whitespace-pre-line text-sm text-slate-600"><span class="text-slate-400">Notes:</span> <?= htmlspecialchars((string) $hs['last_notes']) ?></p>
             <?php endif; ?>
             <?php if (!empty($hs['last_complaint'])): ?>
             <button type="button" :disabled="!editable"

@@ -160,7 +160,7 @@ final class VisitController
             'visitInvoice' => $visitInvoice,
             'payment' => self::paymentStateForVisit($clinicId, $visitInvoice, $chargeData['items']),
             'chronic' => PatientService::decodeTags($patient['chronic_conditions'] ?? null),
-            'historySummary' => self::historySummaryForPatient($clinicId, $patient),
+            'historySummary' => self::historySummaryForPatient($clinicId, $patient, (int) $id),
             'showImmunizations' => $showImmunizations,
             'immunizationSummary' => $immunizationSummary,
             'immunizationsGiven' => $immunizationsGiven,
@@ -680,7 +680,7 @@ final class VisitController
      * @param array<string, mixed> $patient
      * @return array<string, mixed>
      */
-    private static function historySummaryForPatient(int $clinicId, array $patient): array
+    private static function historySummaryForPatient(int $clinicId, array $patient, int $currentVisitId): array
     {
         $patientId = (int) ($patient['id'] ?? 0);
 
@@ -691,11 +691,21 @@ final class VisitController
         $medicalHistory = is_array($specialty['medical_history'] ?? null) ? $specialty['medical_history'] : [];
 
         // Medicines the patient is actually on = whatever was last prescribed.
-        $lastVisit = VisitService::recentForPatient($clinicId, $patientId, 1);
+        // Exclude the visit being written right now — otherwise "last visit"
+        // resolves to today's own (still empty) consultation.
+        $lastVisit = VisitService::recentForPatient($clinicId, $patientId, 1, $currentVisitId);
         $medications = trim((string) ($lastVisit[0]['medicines_summary'] ?? ''));
 
-        $vitalsRows = PatientService::vitals($clinicId, $patientId, 1);
-        $lastVitals = $vitalsRows !== [] ? end($vitalsRows) : null;
+        // Newest reading from an EARLIER visit — today's numbers are already on
+        // screen in the Vitals card, this block is the "last time" reference.
+        $lastVitals = null;
+        foreach (array_reverse(PatientService::vitals($clinicId, $patientId, 5)) as $row) {
+            if ((int) ($row['visit_id'] ?? 0) === $currentVisitId) {
+                continue;
+            }
+            $lastVitals = $row;
+            break;
+        }
 
         return [
             'chronic' => PatientService::decodeTags($patient['chronic_conditions'] ?? null),
@@ -711,6 +721,7 @@ final class VisitController
             'last_visit_at' => !empty($lastVisit[0]['visited_at']) ? (string) $lastVisit[0]['visited_at'] : '',
             'last_complaint' => trim((string) ($lastVisit[0]['chief_complaint'] ?? '')),
             'last_diagnosis' => trim((string) ($lastVisit[0]['diagnosis'] ?? '')),
+            'last_notes' => trim((string) ($lastVisit[0]['clinical_notes'] ?? '')),
         ];
     }
 
