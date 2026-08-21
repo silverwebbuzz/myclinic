@@ -7,12 +7,12 @@
  * image while screenshots are being refreshed.
  */
 $ecpShots = [
-    ['file' => 'dashboard.png',        'title' => 'Clinic dashboard',      'caption' => "Today's appointments, payment status and revenue at a glance."],
-    ['file' => 'consultation.png',     'title' => 'Consultation screen',   'caption' => 'Complaint, symptoms, prescription, notes and payment on one page — with the patient’s history alongside.'],
-    ['file' => 'calendar-month.png',   'title' => 'Appointment calendar',  'caption' => 'Day, week and month views. Click any empty slot to book.'],
-    ['file' => 'calendar-booking.png', 'title' => 'Book in two clicks',    'caption' => 'Search the patient, pick a slot, done — without leaving the calendar.'],
-    ['file' => 'walk-in.png',          'title' => 'Walk-in tokens',        'caption' => 'Register a walk-in and drop them into today’s queue instantly.'],
-    ['file' => 'income-report.png',    'title' => 'Income & GST report',   'caption' => 'Collected, billed, GST and outstanding — for today or any date range.'],
+    ['file' => 'dashbord.png',              'title' => 'Clinic dashboard',      'caption' => "Today's appointments, payment status and revenue at a glance."],
+    ['file' => 'Patient-visit.png',         'title' => 'Consultation screen',   'caption' => 'Complaint, symptoms, prescription, notes and payment on one page — with the patient’s history alongside.'],
+    ['file' => 'Calender.png',              'title' => 'Appointment calendar',  'caption' => 'Day, week and month views. Click any empty slot to book.'],
+    ['file' => 'Book-an-appointment.png',   'title' => 'Book in two clicks',    'caption' => 'Search the patient, pick a slot, done — without leaving the calendar.'],
+    ['file' => 'Walk-in.png',               'title' => 'Walk-in tokens',        'caption' => 'Register a walk-in and drop them into today’s queue instantly.'],
+    ['file' => 'Report.png',                'title' => 'Income & GST report',   'caption' => 'Collected, billed, GST and outstanding — for today or any date range.'],
 ];
 
 $ecpShots = array_values(array_filter(

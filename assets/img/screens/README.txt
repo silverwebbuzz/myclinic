@@ -1,16 +1,18 @@
 Product screenshots for the gallery on /clinic-management-software
 (rendered by partials/screenshot-gallery.php).
 
-Save the images here with EXACTLY these names — any file that is missing is
-skipped, so the section only shows what exists:
+Files currently wired up — replacing any of them updates the site with no code
+change; a missing file is skipped, so the section never shows a broken tile:
 
-  dashboard.png         Dashboard — today's appointments, payment, revenue
-  consultation.png      Consultation / EMR screen
-  calendar-month.png    Calendar, month view
-  calendar-booking.png  Calendar with the "Book appointment" popup open
-  walk-in.png           Walk-in appointment form
-  income-report.png     Income & GST report
+  dashbord.png             Dashboard — today's appointments, payment, revenue
+  Patient-visit.png        Consultation / EMR screen
+  Calender.png             Calendar, month view
+  Book-an-appointment.png  Calendar with the "Book appointment" popup open
+  Walk-in.png              Walk-in appointment form
+  Report.png               Income & GST report
 
-Guidance: PNG or JPG, roughly 2400px wide, taken at a 16:10-ish window so the
-grid stays even. Keep real patient names out of them (the demo clinic data is
-fine). Re-run nothing — the page picks the files up on the next request.
+To add or rename one, edit the $ecpShots list at the top of
+partials/screenshot-gallery.php (that is also where the captions live).
+
+Guidance: PNG or JPG, roughly 2400px wide. Keep real patient data out of them —
+the demo clinic is fine.
