@@ -705,7 +705,52 @@ final class VisitController
             'medications' => $medications,
             'medications_date' => !empty($lastVisit[0]['visited_at']) ? (string) $lastVisit[0]['visited_at'] : '',
             'last_vitals_at' => $lastVitals['recorded_at'] ?? '',
+            'last_vitals' => self::vitalSignPairs($lastVitals),
+            // What the patient came in with last time — the doctor reads this
+            // before writing today's complaint.
+            'last_visit_at' => !empty($lastVisit[0]['visited_at']) ? (string) $lastVisit[0]['visited_at'] : '',
+            'last_complaint' => trim((string) ($lastVisit[0]['chief_complaint'] ?? '')),
+            'last_diagnosis' => trim((string) ($lastVisit[0]['diagnosis'] ?? '')),
         ];
+    }
+
+    /**
+     * The handful of vitals worth showing at a glance, formatted with units.
+     *
+     * @param array<string, mixed>|null $row
+     * @return list<array{label: string, value: string}>
+     */
+    private static function vitalSignPairs(?array $row): array
+    {
+        if ($row === null) {
+            return [];
+        }
+
+        $pairs = [];
+        $sys = $row['bp_systolic'] ?? null;
+        $dia = $row['bp_diastolic'] ?? null;
+        if ($sys !== null && $dia !== null) {
+            $pairs[] = ['label' => 'BP', 'value' => (int) $sys . '/' . (int) $dia . ' mmHg'];
+        }
+        foreach ([
+            ['pulse_rate', 'Pulse', ' bpm'],
+            ['temperature', 'Temp', ' °F'],
+            ['spo2', 'SpO₂', '%'],
+            ['blood_sugar', 'Sugar', ' mg/dL'],
+            ['weight_kg', 'Weight', ' kg'],
+        ] as [$col, $label, $unit]) {
+            if (($row[$col] ?? null) === null || $row[$col] === '') {
+                continue;
+            }
+            $value = (string) $row[$col];
+            // 98.60 → 98.6, 120.00 → 120; never touch a plain integer (120).
+            if (str_contains($value, '.')) {
+                $value = rtrim(rtrim($value, '0'), '.');
+            }
+            $pairs[] = ['label' => $label, 'value' => $value . $unit];
+        }
+
+        return $pairs;
     }
 
     /**

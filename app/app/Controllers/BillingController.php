@@ -185,7 +185,7 @@ final class BillingController
 
     public function exportExcel(Request $request): Response
     {
-        if ($denied = $this->requireModule()) {
+        if ($denied = $this->requireBillingPro()) {
             return $denied;
         }
 
@@ -197,7 +197,7 @@ final class BillingController
 
     public function exportTally(Request $request): Response
     {
-        if ($denied = $this->requireModule()) {
+        if ($denied = $this->requireBillingPro()) {
             return $denied;
         }
 
@@ -250,7 +250,27 @@ final class BillingController
         return Response::json(['paid' => true]);
     }
 
+    /**
+     * Patient billing needs either module. The sidebar shows "Patient Bills"
+     * on invoicing_basic (see config/modules_nav.php), so gating these screens
+     * on billing_pro alone left Starter clinics — reception included — with a
+     * visible menu item that 402'd on every click. billing_pro still gates the
+     * extras: exports and the online payment gateway.
+     */
     private function requireModule(): ?Response
+    {
+        if (!ModuleGate::check('invoicing_basic') && !ModuleGate::check('billing_pro')) {
+            return Response::html(Layout::page('errors/module', [
+                'module' => 'invoicing_basic',
+                'label' => 'Patient Bills',
+            ], 'Module inactive'), 402);
+        }
+
+        return null;
+    }
+
+    /** Pro-only extras (Excel / Tally export). */
+    private function requireBillingPro(): ?Response
     {
         if (!ModuleGate::check('billing_pro')) {
             return Response::html(Layout::page('errors/module', [

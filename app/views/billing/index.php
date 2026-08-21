@@ -11,10 +11,12 @@ $statusStyles = [
 <div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <h2 class="ui-section-title">Billing <span class="ml-1 text-sm font-normal text-slate-500">(<?= (int) ($total ?? 0) ?>)</span></h2>
+        <?php if (\App\Gates\ModuleGate::check('billing_pro')): ?>
         <div class="flex flex-wrap gap-2">
             <a href="/billing/export/excel" class="ui-btn ui-btn-secondary ui-btn-sm">Export Excel</a>
             <a href="/billing/export/tally" class="ui-btn ui-btn-secondary ui-btn-sm">Tally XML</a>
         </div>
+        <?php endif; ?>
     </div>
 
     <?php if (!empty($_GET['error'])): ?>

@@ -971,14 +971,57 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
     $hs = $historySummary ?? [];
     $hasHistory = !empty($hs['chronic']) || !empty($hs['allergies']) || !empty($hs['surgeries'])
         || !empty($hs['family_history']) || !empty($hs['medications']);
+    $hasLastVisit = !empty($hs['last_visit_at']) && (!empty($hs['last_complaint']) || !empty($hs['last_diagnosis']));
     ?>
     <section class="ui-card p-4">
         <div class="flex items-center justify-between">
             <h3 class="ui-section-title text-base">History summary</h3>
             <a href="/patients/<?= (int) $patient['id'] ?>" class="text-xs font-medium text-brand hover:underline">Edit</a>
         </div>
+        <?php if (!empty($hs['last_vitals'])): ?>
+        <!-- Vitals as last recorded — today's readings are entered above. -->
+        <div class="mt-3">
+            <p class="ui-group-label">Vital signs
+                <?php if (!empty($hs['last_vitals_at'])): ?>
+                <span class="font-normal normal-case tracking-normal text-slate-400">— <?= htmlspecialchars(date('d M Y', strtotime((string) $hs['last_vitals_at']))) ?></span>
+                <?php endif; ?>
+            </p>
+            <div class="mt-1 flex flex-wrap gap-1.5">
+                <?php foreach ($hs['last_vitals'] as $vs): ?>
+                <span class="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-700">
+                    <?= htmlspecialchars($vs['label']) ?>: <span class="font-medium"><?= htmlspecialchars($vs['value']) ?></span>
+                </span>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <?php if ($hasLastVisit): ?>
+        <!-- What brought the patient in last time — the returning-visit context. -->
+        <div class="mt-3 rounded-lg bg-slate-50 p-2.5">
+            <p class="ui-group-label">Last visit
+                <span class="font-normal normal-case tracking-normal text-slate-400">— <?= htmlspecialchars(date('d M Y', strtotime((string) $hs['last_visit_at']))) ?></span>
+            </p>
+            <?php if (!empty($hs['last_complaint'])): ?>
+            <p class="mt-1 whitespace-pre-line text-sm text-slate-700"><?= htmlspecialchars((string) $hs['last_complaint']) ?></p>
+            <?php endif; ?>
+            <?php if (!empty($hs['last_diagnosis'])): ?>
+            <p class="mt-1 text-sm text-slate-600"><span class="text-slate-400">Dx:</span> <?= htmlspecialchars((string) $hs['last_diagnosis']) ?></p>
+            <?php endif; ?>
+            <?php if (!empty($hs['last_complaint'])): ?>
+            <button type="button" :disabled="!editable"
+                    @click="chief_complaint = chief_complaint || <?= htmlspecialchars(json_encode((string) $hs['last_complaint']), ENT_QUOTES) ?>; markDirty()"
+                    class="mt-1.5 text-xs font-medium text-brand hover:underline disabled:opacity-50">
+                ↻ Copy into today's complaint
+            </button>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+
         <?php if (!$hasHistory): ?>
+            <?php if (!$hasLastVisit && empty($hs['last_vitals'])): ?>
             <p class="mt-2 text-sm text-slate-400">Nothing recorded yet.</p>
+            <?php endif; ?>
         <?php else: ?>
         <dl class="mt-3 space-y-2.5 text-sm">
             <?php if (!empty($hs['chronic'])): ?>
@@ -1017,7 +1060,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
             <?php endif; ?>
         </dl>
         <?php endif; ?>
-        <?php if (!empty($hs['last_vitals_at'])): ?>
+        <?php if (!empty($hs['last_vitals_at']) && empty($hs['last_vitals'])): ?>
         <p class="mt-3 border-t border-slate-100 pt-2 text-xs text-slate-500">
             Last vitals: <?= htmlspecialchars(date('d M Y', strtotime((string) $hs['last_vitals_at']))) ?>
         </p>
