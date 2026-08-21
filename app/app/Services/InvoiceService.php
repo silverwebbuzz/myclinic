@@ -458,6 +458,9 @@ final class InvoiceService
             'method' => $method,
             'gateway_ref' => $gatewayRef,
             'recorded_by' => $user['id'] ?? null,
+            // Explicit, not left to a column default: every collection report
+            // (dashboard revenue, income report) buckets payments by paid_at.
+            'paid_at' => date('Y-m-d H:i:s'),
         ]);
 
         $newPaid = round($alreadyPaid + $amount, 2);

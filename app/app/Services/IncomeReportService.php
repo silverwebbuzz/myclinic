@@ -79,7 +79,7 @@ final class IncomeReportService
         try {
             $stmt = Database::connection()->prepare(
                 'SELECT COALESCE(SUM(amount), 0) AS c FROM payments
-                  WHERE clinic_id = ? AND DATE(created_at) BETWEEN ? AND ?',
+                  WHERE clinic_id = ? AND DATE(paid_at) BETWEEN ? AND ?',
             );
             $stmt->execute([$clinicId, $from, $to]);
 
@@ -99,7 +99,7 @@ final class IncomeReportService
         try {
             $stmt = Database::connection()->prepare(
                 'SELECT method, COALESCE(SUM(amount), 0) AS c FROM payments
-                  WHERE clinic_id = ? AND DATE(created_at) BETWEEN ? AND ?
+                  WHERE clinic_id = ? AND DATE(paid_at) BETWEEN ? AND ?
                   GROUP BY method ORDER BY c DESC',
             );
             $stmt->execute([$clinicId, $from, $to]);
