@@ -6,19 +6,48 @@
  * Any file that is missing is skipped, so the section never shows a broken
  * image while screenshots are being refreshed.
  */
-$ecpShots = [
-    ['file' => 'dashbord.png',              'title' => 'Clinic dashboard',      'caption' => "Today's appointments, payment status and revenue at a glance."],
-    ['file' => 'Patient-visit.png',         'title' => 'Consultation screen',   'caption' => 'Complaint, symptoms, prescription, notes and payment on one page — with the patient’s history alongside.'],
-    ['file' => 'Calender.png',              'title' => 'Appointment calendar',  'caption' => 'Day, week and month views. Click any empty slot to book.'],
-    ['file' => 'Book-an-appointment.png',   'title' => 'Book in two clicks',    'caption' => 'Search the patient, pick a slot, done — without leaving the calendar.'],
-    ['file' => 'Walk-in.png',               'title' => 'Walk-in tokens',        'caption' => 'Register a walk-in and drop them into today’s queue instantly.'],
-    ['file' => 'Report.png',                'title' => 'Income & GST report',   'caption' => 'Collected, billed, GST and outstanding — for today or any date range.'],
+// Captions keyed by file name (without extension), matched case-insensitively.
+// Anything in the folder that is not listed here still shows, titled from its
+// file name — so adding a screenshot needs no code change.
+$ecpCaptions = [
+    'dashbord'             => ['Clinic dashboard',     "Today's appointments, payment status and revenue at a glance."],
+    'dashboard'            => ['Clinic dashboard',     "Today's appointments, payment status and revenue at a glance."],
+    'patient-visit'        => ['Consultation screen',  'Complaint, symptoms, prescription, notes and payment on one page — with the patient’s history alongside.'],
+    'calender'             => ['Appointment calendar', 'Day, week and month views. Click any empty slot to book.'],
+    'calendar'             => ['Appointment calendar', 'Day, week and month views. Click any empty slot to book.'],
+    'book-an-appointment'  => ['Book in two clicks',   'Search the patient, pick a slot, done — without leaving the calendar.'],
+    'walk-in'              => ['Walk-in tokens',       'Register a walk-in and drop them into today’s queue instantly.'],
+    'report'               => ['Income & GST report',  'Collected, billed, GST and outstanding — for today or any date range.'],
 ];
 
-$ecpShots = array_values(array_filter(
-    $ecpShots,
-    static fn (array $s): bool => is_file(__DIR__ . '/../assets/img/screens/' . $s['file']),
-));
+// Display order; files not named here fall in after these, alphabetically.
+$ecpOrder = ['dashbord', 'dashboard', 'patient-visit', 'calender', 'calendar', 'book-an-appointment', 'walk-in', 'report'];
+
+// Read whatever is actually in the folder — no hardcoded file list to drift
+// out of sync, and no case-sensitivity trap on Linux.
+$ecpDir = __DIR__ . '/../assets/img/screens';
+$ecpFiles = [];
+foreach ((array) glob($ecpDir . '/*.{png,PNG,jpg,JPG,jpeg,JPEG,webp,WEBP}', GLOB_BRACE) as $ecpPath) {
+    $ecpFiles[] = basename((string) $ecpPath);
+}
+$ecpFiles = array_values(array_unique($ecpFiles));
+
+usort($ecpFiles, static function (string $a, string $b) use ($ecpOrder): int {
+    $ka = array_search(strtolower(pathinfo($a, PATHINFO_FILENAME)), $ecpOrder, true);
+    $kb = array_search(strtolower(pathinfo($b, PATHINFO_FILENAME)), $ecpOrder, true);
+    $ka = $ka === false ? PHP_INT_MAX : $ka;
+    $kb = $kb === false ? PHP_INT_MAX : $kb;
+
+    return $ka === $kb ? strcasecmp($a, $b) : $ka <=> $kb;
+});
+
+$ecpShots = [];
+foreach ($ecpFiles as $ecpFile) {
+    $key = strtolower(pathinfo($ecpFile, PATHINFO_FILENAME));
+    [$title, $caption] = $ecpCaptions[$key]
+        ?? [ucfirst(str_replace('-', ' ', $key)), 'eClinicPro clinic management software.'];
+    $ecpShots[] = ['file' => $ecpFile, 'title' => $title, 'caption' => $caption];
+}
 ?>
 <?php if ($ecpShots !== []): ?>
 <section class="ecp-gallery" id="screenshots">
