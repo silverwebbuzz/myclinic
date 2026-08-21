@@ -152,7 +152,7 @@ final class AppointmentController
             'clinicTimezone' => $tz,
             'todayLocal' => $todayLocal,
             'lockDoctorId' => $doctorScope,
-        ], 'Book appointment'));
+        ], $prefill['type'] === 'walkin' ? 'Walk-in appointment' : 'Book appointment'));
     }
 
     public function calendar(Request $request): Response

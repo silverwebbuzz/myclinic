@@ -15,6 +15,14 @@ declare(strict_types=1);
  * once promoted), but the feature_flag gates discoverability.
  */
 return [
+    'operations' => [
+        'label' => 'Operations',
+        'items' => [
+            'appointments_basic' => ['label' => 'Appointments', 'icon' => '📅', 'href' => '/appointments'],
+            'appointments_calendar' => ['label' => 'Calendar', 'icon' => '📅', 'href' => '/appointments/calendar', 'any_of' => ['appointments_basic']],
+            'invoicing_basic' => ['label' => 'Patient Bills', 'icon' => '🧾', 'href' => '/billing', 'any_of' => ['invoicing_basic', 'billing_pro']],
+        ],
+    ],
     'clinical' => [
         'label' => 'Clinical',
         'items' => [
@@ -22,14 +30,6 @@ return [
             'emr' => ['label' => 'Visits / EMR', 'icon' => '📋', 'href' => '/visits'],
             'prescription' => ['label' => 'Prescriptions', 'icon' => '💊', 'href' => '/prescriptions'],
             'vitals' => ['label' => 'Vitals', 'icon' => '❤️', 'href' => '/vitals'],
-        ],
-    ],
-    'operations' => [
-        'label' => 'Operations',
-        'items' => [
-            'appointments_basic' => ['label' => 'Appointments', 'icon' => '📅', 'href' => '/appointments'],
-            'appointments_calendar' => ['label' => 'Calendar', 'icon' => '📅', 'href' => '/appointments/calendar', 'any_of' => ['appointments_basic']],
-            'invoicing_basic' => ['label' => 'Patient Bills', 'icon' => '🧾', 'href' => '/billing', 'any_of' => ['invoicing_basic', 'billing_pro']],
         ],
     ],
     'reports' => [

@@ -32,6 +32,14 @@ $bookUrl = static function (?string $d = null, ?string $time = null) use ($date,
     ], static fn ($v) => $v !== null && $v !== '');
     return '/appointments/new' . ($params ? '?' . http_build_query($params) : '');
 };
+// Walk-in: same booking form, opened in walk-in mode (no slot — queue token).
+$walkinUrl = static function () use ($date, $doctorId): string {
+    return '/appointments/new?' . http_build_query(array_filter([
+        'type' => 'walkin',
+        'date' => $date,
+        'doctor_id' => $doctorId,
+    ], static fn ($v) => $v !== null && $v !== ''));
+};
 ?>
 <div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -77,6 +85,7 @@ $bookUrl = static function (?string $d = null, ?string $time = null) use ($date,
             </div>
 
             <?php if (!empty($canBookAppointments)): ?>
+            <a href="<?= htmlspecialchars($walkinUrl()) ?>" class="ui-btn ui-btn-secondary">Walk-in</a>
             <a href="<?= htmlspecialchars($bookUrl()) ?>" class="ui-btn ui-btn-primary">+ Book</a>
             <?php endif; ?>
         </div>

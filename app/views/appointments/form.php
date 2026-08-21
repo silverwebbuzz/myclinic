@@ -31,6 +31,9 @@ $doctorId = $isEdit ? (int) $appointment['doctor_id'] : (int) ($prefill['doctor_
 $type = $isEdit ? ($appointment['type'] ?? 'prebooked') : ($prefill['type'] ?? 'prebooked');
 $complaint = $isEdit ? ($appointment['chief_complaint'] ?? '') : ($prefill['chief_complaint'] ?? '');
 $isFollowup = !empty($appointment['is_followup']) || !empty($prefill['is_followup']);
+// Walk-in mode: same form, opened from the "Walk-in" button — no slot is
+// preselected so the visit is booked as a queue token.
+$isWalkin = !$isEdit && $type === 'walkin';
 
 // When the clinic has exactly one doctor, preselect it so slots load
 // immediately (the single-doctor simplicity of the reference app).
@@ -50,9 +53,15 @@ if (!$isEdit && $doctorId === 0 && count($doctors) === 1) {
     'isEdit' => $isEdit,
 ]), ENT_QUOTES) ?>)">
     <div class="flex flex-wrap items-center justify-between gap-2">
-        <h2 class="flex items-center gap-2 ui-section-title"><span class="text-brand"><?= ui_icon('appointments', 18) ?></span><?= $isEdit ? 'Edit appointment' : 'Book appointment' ?></h2>
+        <h2 class="flex items-center gap-2 ui-section-title"><span class="text-brand"><?= ui_icon('appointments', 18) ?></span><?= $isEdit ? 'Edit appointment' : ($isWalkin ? 'Walk-in appointment' : 'Book appointment') ?></h2>
         <a href="/appointments" class="text-sm text-slate-500 hover:underline">← Back</a>
     </div>
+
+    <?php if ($isWalkin): ?>
+    <p class="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        Walk-in — leave the time slot empty to add this patient to today's queue, or pick a slot to give them a fixed time.
+    </p>
+    <?php endif; ?>
 
     <?php if (!empty($error)): ?>
     <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800"><?= htmlspecialchars($error) ?></p>

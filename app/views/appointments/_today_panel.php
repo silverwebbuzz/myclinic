@@ -61,6 +61,7 @@ $tabs = [
         <div class="flex flex-wrap gap-2">
             <a href="/appointments/calendar" class="ui-btn ui-btn-secondary ui-btn-sm">Calendar</a>
             <?php if ($canBookAppointments): ?>
+            <a href="/appointments/new?type=walkin&amp;date=<?= htmlspecialchars($date) ?>" class="ui-btn ui-btn-secondary ui-btn-sm">Walk-in</a>
             <a href="/appointments/new?date=<?= htmlspecialchars($date) ?>" class="ui-btn ui-btn-primary ui-btn-sm">+ Book</a>
             <?php endif; ?>
         </div>
