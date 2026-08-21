@@ -55,7 +55,7 @@ foreach ($ecpFiles as $ecpFile) {
         <div class="ecp-gallery-head reveal">
             <p class="hp-eyebrow">See it in action</p>
             <h2 class="h-display">The software, screen by screen</h2>
-            <p class="ecp-gallery-sub">Real screens from eClinicPro — not mockups. Click any image to view it full size.</p>
+            <p class="ecp-gallery-sub">Real screens from eClinicPro — not mockups. Click any image to open it full size.</p>
         </div>
 
         <div class="ecp-gallery-grid">
@@ -105,7 +105,19 @@ foreach ($ecpFiles as $ecpFile) {
         transition: transform .18s ease, box-shadow .18s ease;
     }
     .ecp-shot-btn:hover { transform: translateY(-3px); box-shadow: 0 14px 34px -12px rgba(15,23,42,.3); }
-    .ecp-shot-btn img { display: block; width: 100%; height: auto; }
+    /* Every tile is the same 16:10 window regardless of how tall the source
+       screenshot is — the crop is anchored to the top so the header of each
+       screen stays visible. Full image is one click away in the lightbox. */
+    .ecp-shot-btn img {
+        display: block; width: 100%; aspect-ratio: 16 / 10;
+        object-fit: cover; object-position: top center;
+    }
+    /* Fallback for browsers without aspect-ratio */
+    @supports not (aspect-ratio: 16 / 10) {
+        .ecp-shot-btn { height: 0; padding-bottom: 62.5%; }
+        .ecp-shot-btn img { position: absolute; inset: 0; height: 100%; }
+    }
+    .ecp-shot figcaption { min-height: 76px; }
     .ecp-shot-zoom {
         position: absolute; right: 10px; bottom: 10px; width: 30px; height: 30px;
         display: grid; place-items: center; border-radius: 8px;
@@ -120,11 +132,17 @@ foreach ($ecpFiles as $ecpFile) {
         justify-content: center; gap: 8px; padding: 24px; background: rgba(2,6,23,.9);
     }
     .ecp-lb[hidden] { display: none; }
-    .ecp-lb-figure { margin: 0; max-width: min(1200px, 92vw); text-align: center; }
-    .ecp-lb-figure img {
-        max-width: 100%; max-height: 78vh; border-radius: 12px; background: #fff;
-        box-shadow: 0 30px 60px -20px rgba(0,0,0,.6);
+    .ecp-lb-figure {
+        margin: 0; max-width: min(1280px, 92vw); max-height: 88vh;
+        overflow: auto; text-align: center; -webkit-overflow-scrolling: touch;
     }
+    .ecp-lb-figure img {
+        max-width: 100%; max-height: 78vh; width: auto; border-radius: 12px; background: #fff;
+        box-shadow: 0 30px 60px -20px rgba(0,0,0,.6); cursor: zoom-in;
+        transition: max-height .18s ease;
+    }
+    /* Second click = actual size; the figure scrolls to let you read detail. */
+    .ecp-lb-figure.is-zoomed img { max-height: none; width: 100%; cursor: zoom-out; }
     .ecp-lb-figure figcaption { margin-top: 12px; color: #e2e8f0; font-size: .9rem; }
     .ecp-lb-close {
         position: absolute; top: 16px; right: 20px; width: 40px; height: 40px;
@@ -156,11 +174,15 @@ foreach ($ecpFiles as $ecpFile) {
     var cap = lb.querySelector('figcaption');
     var idx = 0;
 
+    var fig = lb.querySelector('.ecp-lb-figure');
+
     function show(i) {
         idx = (i + shots.length) % shots.length;
         img.src = shots[idx].src;
         img.alt = shots[idx].title;
         cap.textContent = shots[idx].title + ' — ' + shots[idx].caption;
+        fig.classList.remove('is-zoomed');   // always open fitted
+        fig.scrollTop = 0;
         lb.hidden = false;
         document.body.style.overflow = 'hidden';
     }
@@ -171,6 +193,12 @@ foreach ($ecpFiles as $ecpFile) {
 
     document.querySelectorAll('.ecp-shot-btn').forEach(function (btn, i) {
         btn.addEventListener('click', function () { show(i); });
+    });
+    // Click the image to toggle between fit-to-screen and actual size.
+    img.addEventListener('click', function (e) {
+        e.stopPropagation();
+        fig.classList.toggle('is-zoomed');
+        fig.scrollTop = 0;
     });
     lb.querySelector('.ecp-lb-close').addEventListener('click', close);
     lb.querySelector('.ecp-lb-prev').addEventListener('click', function () { show(idx - 1); });
