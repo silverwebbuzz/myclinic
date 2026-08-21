@@ -65,7 +65,7 @@ foreach ($ecpFiles as $ecpFile) {
                         aria-label="View <?= htmlspecialchars($shot['title']) ?> full size">
                     <img src="/assets/img/screens/<?= htmlspecialchars($shot['file']) ?>"
                          alt="<?= htmlspecialchars($shot['title']) ?> — eClinicPro clinic management software"
-                         loading="lazy" decoding="async" width="1200" height="800">
+                         loading="lazy" decoding="async" width="1600" height="900">
                     <span class="ecp-shot-zoom" aria-hidden="true">⤢</span>
                 </button>
                 <figcaption>
@@ -93,10 +93,13 @@ foreach ($ecpFiles as $ecpFile) {
     .ecp-gallery { padding: 72px 0 80px; background: #fff; }
     .ecp-gallery-head { text-align: center; max-width: 720px; margin: 0 auto 40px; }
     .ecp-gallery-sub { margin-top: 12px; color: #64748b; font-size: 1rem; line-height: 1.6; }
+    /* Two columns on desktop — the screenshots are wide, so bigger tiles read
+       far better than a three-up grid. One column on small screens. */
     .ecp-gallery-grid {
-        display: grid; gap: 22px;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        display: grid; gap: 28px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+    @media (max-width: 800px) { .ecp-gallery-grid { grid-template-columns: 1fr; gap: 22px; } }
     .ecp-shot { margin: 0; }
     .ecp-shot-btn {
         display: block; width: 100%; padding: 0; border: 1px solid #e2e8f0; cursor: zoom-in;
@@ -105,16 +108,16 @@ foreach ($ecpFiles as $ecpFile) {
         transition: transform .18s ease, box-shadow .18s ease;
     }
     .ecp-shot-btn:hover { transform: translateY(-3px); box-shadow: 0 14px 34px -12px rgba(15,23,42,.3); }
-    /* Every tile is the same 16:10 window regardless of how tall the source
-       screenshot is — the crop is anchored to the top so the header of each
-       screen stays visible. Full image is one click away in the lightbox. */
+    /* One 16:9 window for every tile, matching how the screenshots are
+       captured; the crop is anchored to the top so each screen's header stays
+       visible when a source image is taller. Full image is one click away. */
     .ecp-shot-btn img {
-        display: block; width: 100%; aspect-ratio: 16 / 10;
+        display: block; width: 100%; aspect-ratio: 16 / 9;
         object-fit: cover; object-position: top center;
     }
     /* Fallback for browsers without aspect-ratio */
-    @supports not (aspect-ratio: 16 / 10) {
-        .ecp-shot-btn { height: 0; padding-bottom: 62.5%; }
+    @supports not (aspect-ratio: 16 / 9) {
+        .ecp-shot-btn { height: 0; padding-bottom: 56.25%; }
         .ecp-shot-btn img { position: absolute; inset: 0; height: 100%; }
     }
     .ecp-shot figcaption { min-height: 76px; }
