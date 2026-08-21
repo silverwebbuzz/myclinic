@@ -16,6 +16,21 @@ $gross = round($base + $tax, 2);
 // "Paid" = there's a paid subscription invoice on file (vs. trial / free).
 $isPaid = !empty(array_filter($invoices, static fn ($i) => ($i['status'] ?? '') === 'paid'));
 $onTrial = !empty($clinic['trial_ends_at']) && strtotime((string) $clinic['trial_ends_at']) >= time();
+
+// Current term: the newest PAID invoice carries period_start / period_end;
+// tenants.plan_expires_at is the authority on when access actually lapses
+// (a manual extension by support moves it without a new invoice).
+$paidInvoices = array_values(array_filter($invoices, static fn ($i) => ($i['status'] ?? '') === 'paid'));
+usort($paidInvoices, static fn ($a, $b) => (int) ($b['id'] ?? 0) <=> (int) ($a['id'] ?? 0));
+$currentTerm = $paidInvoices[0] ?? null;
+
+$validFrom = $currentTerm['period_start'] ?? null;
+$validTill = $clinic['plan_expires_at'] ?? ($currentTerm['period_end'] ?? null);
+$cycle = (string) ($currentTerm['billing_cycle'] ?? 'yearly');
+
+$subStatus = \App\Services\SubscriptionStatus::forClinic($clinic);
+$daysLeft = $subStatus['days_left'];
+$fmtDate = static fn (?string $d): string => $d ? date('d M Y', strtotime((string) $d)) : '—';
 ?>
 <div class="space-y-4">
     <section class="ui-card ui-card-pad">
@@ -28,6 +43,41 @@ $onTrial = !empty($clinic['trial_ends_at']) && strtotime((string) $clinic['trial
         </p>
         <?php if ($onTrial && !$isPaid): ?>
         <p class="text-xs text-amber-700">Trial ends <?= htmlspecialchars(date('d M Y', strtotime((string) $clinic['trial_ends_at']))) ?> — subscribe to keep full access.</p>
+        <?php endif; ?>
+
+        <?php if ($isPaid || $validTill || $onTrial): ?>
+        <!-- Term at a glance: when this subscription started, when it lapses,
+             and how long that is from today. -->
+        <dl class="mt-3 grid gap-3 border-t border-slate-100 pt-3 sm:grid-cols-3">
+            <div>
+                <dt class="ui-group-label">Valid from</dt>
+                <dd class="text-sm text-slate-800"><?= htmlspecialchars($fmtDate($validFrom)) ?></dd>
+            </div>
+            <div>
+                <dt class="ui-group-label">Valid till</dt>
+                <dd class="text-sm text-slate-800"><?= htmlspecialchars($fmtDate($validTill ?? ($onTrial ? $clinic['trial_ends_at'] : null))) ?></dd>
+            </div>
+            <div>
+                <dt class="ui-group-label"><?= $onTrial && !$isPaid ? 'Subscribe by' : 'Renews on' ?></dt>
+                <dd class="text-sm font-medium <?= ($daysLeft !== null && $daysLeft <= 5) ? 'text-amber-700' : 'text-slate-800' ?>">
+                    <?= htmlspecialchars($fmtDate($subStatus['ends_on'] ?? $validTill)) ?>
+                    <?php if ($daysLeft !== null): ?>
+                    <span class="block text-xs font-normal <?= $daysLeft < 0 ? 'text-rose-600' : 'text-slate-500' ?>">
+                        <?php if ($daysLeft < 0): ?>
+                            expired <?= abs($daysLeft) ?> day<?= abs($daysLeft) === 1 ? '' : 's' ?> ago
+                        <?php elseif ($daysLeft === 0): ?>
+                            expires today
+                        <?php else: ?>
+                            in <?= $daysLeft ?> day<?= $daysLeft === 1 ? '' : 's' ?>
+                        <?php endif; ?>
+                    </span>
+                    <?php endif; ?>
+                </dd>
+            </div>
+        </dl>
+        <p class="mt-2 text-xs text-slate-500">
+            Billed <?= $cycle === 'monthly' ? 'monthly' : 'yearly' ?><?= $validTill ? ' · renews automatically unless cancelled' : '' ?>.
+        </p>
         <?php endif; ?>
 
         <?php if (!$isPaid): ?>
@@ -152,7 +202,7 @@ $onTrial = !empty($clinic['trial_ends_at']) && strtotime((string) $clinic['trial
         <?php else: ?>
         <table class="mt-3 w-full text-sm">
             <thead><tr class="text-left ui-group-label">
-                <th class="pb-2">Invoice</th><th class="pb-2">Plan</th><th class="pb-2">Amount</th><th class="pb-2">Status</th><th class="pb-2"></th>
+                <th class="pb-2">Invoice</th><th class="pb-2">Plan</th><th class="pb-2">Period</th><th class="pb-2">Amount</th><th class="pb-2">Status</th><th class="pb-2"></th>
             </tr></thead>
             <tbody class="divide-y divide-slate-100">
             <?php foreach ($invoices as $inv):
@@ -167,6 +217,13 @@ $onTrial = !empty($clinic['trial_ends_at']) && strtotime((string) $clinic['trial
                     <div class="text-[11px] text-slate-400"><?= htmlspecialchars(substr((string) ($inv['created_at'] ?? ''), 0, 10)) ?></div>
                 </td>
                 <td class="text-slate-700"><?= htmlspecialchars(ucfirst((string) ($inv['plan_id'] ?? '—'))) ?></td>
+                <td class="text-xs text-slate-600">
+                    <?php if (!empty($inv['period_start']) && !empty($inv['period_end'])): ?>
+                        <?= htmlspecialchars($fmtDate((string) $inv['period_start'])) ?>
+                        <span class="text-slate-400">–</span>
+                        <?= htmlspecialchars($fmtDate((string) $inv['period_end'])) ?>
+                    <?php else: ?><span class="text-slate-300">—</span><?php endif; ?>
+                </td>
                 <td class="text-slate-700"><?= $sym ?><?= number_format($amt, 2) ?></td>
                 <?php $dispSt = $displayStatus($inv); ?>
                 <td><span class="rounded-full px-2 py-0.5 text-xs capitalize <?= $statusTone($dispSt) ?>"><?= htmlspecialchars($dispSt) ?></span></td>
