@@ -273,6 +273,102 @@ final class InvoiceService
         return round($sum, 2);
     }
 
+    /**
+     * Payment block on the visit screen: one call settles the money side of a
+     * visit invoice.
+     *
+     *   amount  — the payable base BEFORE tax (the "Amount (₹)" field). It is
+     *             seeded from the charge lines but the doctor may edit it:
+     *             lower than the line total is stored as a discount, higher
+     *             adds an "Additional charges" line, so the invoice items and
+     *             the amount always reconcile.
+     *   gst     — add the clinic's tax percent on top (0 when unticked).
+     *   type    — cash | online (stored as the invoice payment_mode).
+     *   status  — paid | due. "paid" records a payment for the whole balance;
+     *             "due" leaves the balance open. Already-recorded payments are
+     *             never reversed here — that is a billing-screen action.
+     *
+     * @param array<string, mixed> $payment
+     * @return array<string, mixed> the refreshed invoice
+     */
+    public static function applyVisitPayment(int $clinicId, int $invoiceId, array $payment): array
+    {
+        $invoice = self::find($clinicId, $invoiceId);
+        if ($invoice === null) {
+            throw new \RuntimeException('Invoice not found');
+        }
+
+        $config = OnboardingService::specialtyConfig($clinicId) ?? [];
+        $gst = !empty($payment['gst']);
+        $taxPercent = $gst ? (float) ($config['invoice_tax_percent'] ?? 0) : 0.0;
+        if ($gst && $taxPercent <= 0) {
+            $taxPercent = 18.0;   // clinic never configured a rate — GST default
+        }
+
+        $type = in_array($payment['type'] ?? '', ['cash', 'online'], true) ? $payment['type'] : 'cash';
+        $status = ($payment['status'] ?? 'due') === 'paid' ? 'paid' : 'due';
+
+        $subtotal = self::itemsSubtotal($invoiceId);
+        $amount = array_key_exists('amount', $payment) && $payment['amount'] !== '' && $payment['amount'] !== null
+            ? round(max(0, (float) $payment['amount']), 2)
+            : $subtotal;
+
+        $discount = 0.0;
+        if ($amount > $subtotal + 0.005) {
+            self::addItem($invoiceId, [
+                'description' => 'Additional charges',
+                'item_type' => 'other',
+                'unit_price' => round($amount - $subtotal, 2),
+            ]);
+        } elseif ($amount < $subtotal - 0.005) {
+            $discount = round($subtotal - $amount, 2);
+        }
+
+        QueryBuilder::table('invoices')
+            ->forClinic($clinicId)
+            ->where('id', '=', $invoiceId)
+            ->update([
+                'discount_amount' => $discount,
+                'tax_percent' => $taxPercent,
+                'tax_label' => $config['invoice_tax_label'] ?? 'GST',
+                'payment_mode' => $type,
+            ]);
+
+        self::recalculate($clinicId, $invoiceId);
+
+        $invoice = self::find($clinicId, $invoiceId) ?? [];
+        $due = round(
+            (float) ($invoice['total'] ?? 0)
+            - (float) ($invoice['advance_paid'] ?? 0)
+            - (float) ($invoice['amount_paid'] ?? 0),
+            2,
+        );
+
+        if ($status === 'paid' && $due > 0.005) {
+            self::recordPayment($clinicId, $invoiceId, null, $type);
+        } elseif ($status === 'due' && (string) ($invoice['status'] ?? '') === 'draft' && $due > 0.005) {
+            // Draft reads as "not billed yet"; 'sent' is the open-balance state
+            // the billing list filters and chases.
+            QueryBuilder::table('invoices')
+                ->forClinic($clinicId)
+                ->where('id', '=', $invoiceId)
+                ->update(['status' => 'sent']);
+        }
+
+        return self::findDetailed($clinicId, $invoiceId) ?? [];
+    }
+
+    /** Amount still owed on an invoice (total − advance − payments). */
+    public static function balanceDue(array $invoice): float
+    {
+        return round(
+            (float) ($invoice['total'] ?? 0)
+            - (float) ($invoice['advance_paid'] ?? 0)
+            - (float) ($invoice['amount_paid'] ?? 0),
+            2,
+        );
+    }
+
     public static function markPaid(int $clinicId, int $invoiceId, string $method, ?string $gatewayRef = null): array
     {
         return self::recordPayment($clinicId, $invoiceId, null, $method, $gatewayRef);
@@ -506,7 +602,12 @@ final class InvoiceService
         $page = max(1, $page);
         $where = 'i.clinic_id = ?';
         $params = [$clinicId];
-        if (!empty($filters['status'])) {
+        if (($filters['status'] ?? '') === 'due') {
+            // "Due" is not a stored status — it is any live invoice that still
+            // has money outstanding, which is what reception chases.
+            $where .= " AND i.status NOT IN ('paid', 'cancelled', 'refunded')"
+                . ' AND (i.total - COALESCE(i.advance_paid, 0) - COALESCE(i.amount_paid, 0)) > 0.005';
+        } elseif (!empty($filters['status'])) {
             $where .= ' AND i.status = ?';
             $params[] = $filters['status'];
         }

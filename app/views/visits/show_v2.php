@@ -44,6 +44,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         'diagnosis' => $visit['diagnosis'] ?? '',
         'icd10_code' => $visit['icd10_code'] ?? '',
         'clinical_notes' => $visit['clinical_notes'] ?? '',
+        'reports_notes' => $visit['reports_notes'] ?? '',
         'condition_score' => $visit['condition_score'] ?? 5,
         'follow_up_date' => $visit['follow_up_date'] ?? '',
         'follow_up_reason' => $pendingFollowUp['reason'] ?? '',
@@ -106,6 +107,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         'symptoms' => $visitSymptoms ?? [],   // hydrated by symptomPicker on mount
         'charges' => $charges ?? [],   // existing invoice line items {description, amount}
         'chargesPrefilled' => !empty($chargesPrefilled),
+        'payment' => $payment ?? ['amount' => 0, 'gst' => false, 'tax_percent' => 18, 'type' => 'cash', 'status' => 'due', 'paid_amount' => 0, 'due' => 0],
         'invoiceId' => !empty($visitInvoice) ? (int) $visitInvoice['id'] : null,
         'invoiceNumber' => !empty($visitInvoice['invoice_number']) ? (string) $visitInvoice['invoice_number'] : null,
         'invoiceDate' => !empty($visitInvoice['created_at']) ? date('d M Y', strtotime((string) $visitInvoice['created_at'])) : null,
@@ -635,19 +637,38 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                 </div>
             </div>
 
-            <!-- ---- NOTES (always visible) ---- -->
+            <!-- ---- NOTES + REPORTS NOTES (side by side) ---- -->
             <div class="rounded-lg border border-slate-200 bg-white p-3">
-                <div class="flex items-center justify-between">
-                    <label class="ui-group-label">Notes &amp; next visit</label>
-                    <button type="button" :disabled="!editable" x-show="voiceSupported"
-                            @click="dictateInto('clinical_notes')"
-                            :class="listening === 'clinical_notes' ? 'text-rose-600 animate-pulse' : 'text-slate-500'"
-                            class="text-xs hover:text-brand disabled:opacity-50"
-                            title="Dictate notes"><span class="inline-flex items-center gap-1"><?= ui_icon('bell', 13) ?><span x-text="listening === 'clinical_notes' ? 'Listening…' : 'Voice'"></span></span></button>
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <label class="ui-group-label">Notes <span class="font-normal normal-case tracking-normal text-slate-400">— follow-up, observations</span></label>
+                            <button type="button" :disabled="!editable" x-show="voiceSupported"
+                                    @click="dictateInto('clinical_notes')"
+                                    :class="listening === 'clinical_notes' ? 'text-rose-600 animate-pulse' : 'text-slate-500'"
+                                    class="text-xs hover:text-brand disabled:opacity-50"
+                                    title="Dictate notes"><span class="inline-flex items-center gap-1"><?= ui_icon('bell', 13) ?><span x-text="listening === 'clinical_notes' ? 'Listening…' : 'Voice'"></span></span></button>
+                        </div>
+                        <textarea x-model="clinical_notes" :disabled="!editable" rows="4"
+                                  @input="markDirty()"
+                                  placeholder="e.g. Follow-up in 2 weeks, improvement noted…"
+                                  class="ui-input mt-1.5"></textarea>
+                    </div>
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <label class="ui-group-label">Reports - notes <span class="font-normal normal-case tracking-normal text-slate-400">— lab / investigation findings</span></label>
+                            <button type="button" :disabled="!editable" x-show="voiceSupported"
+                                    @click="dictateInto('reports_notes')"
+                                    :class="listening === 'reports_notes' ? 'text-rose-600 animate-pulse' : 'text-slate-500'"
+                                    class="text-xs hover:text-brand disabled:opacity-50"
+                                    title="Dictate report notes"><span class="inline-flex items-center gap-1"><?= ui_icon('bell', 13) ?><span x-text="listening === 'reports_notes' ? 'Listening…' : 'Voice'"></span></span></button>
+                        </div>
+                        <textarea x-model="reports_notes" :disabled="!editable" rows="4"
+                                  @input="markDirty()"
+                                  placeholder="e.g. CBC normal, Vit-D low, X-ray clear…"
+                                  class="ui-input mt-1.5"></textarea>
+                    </div>
                 </div>
-                <textarea x-model="clinical_notes" :disabled="!editable" rows="2"
-                          placeholder="Observations, advice, what changed"
-                          class="ui-input mt-1.5"></textarea>
 
                 <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
                     <span class="text-slate-500">Next visit:</span>
@@ -693,7 +714,8 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                    class="ui-input flex-1">
                             <div class="flex items-center rounded border border-slate-300">
                                 <span class="px-2 text-sm text-slate-400">₹</span>
-                                <input type="number" min="0" step="1" :disabled="!editable" x-model.number="c.amount" @input="markChargesDirty()"
+                                <input type="number" min="0" step="1" :disabled="!editable" x-model.number="c.amount"
+                                       @input="markChargesDirty(); syncPaymentAmount()"
                                        placeholder="0" class="w-24 border-0 px-1 py-1.5 text-sm focus:outline-none focus:ring-0">
                             </div>
                             <button type="button" :disabled="!editable" @click="removeCharge(idx)" class="text-rose-600 hover:underline disabled:opacity-50" title="Remove">×</button>
@@ -850,6 +872,67 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                     </div>
                 </template>
             <?php endif; ?>
+
+            <!-- ---- PAYMENT (last block — money side of the visit invoice) ---- -->
+            <div class="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <label class="ui-group-label flex items-center gap-1.5"><span class="text-brand">₹</span> Payment</label>
+                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                        <input type="checkbox" class="ui-checkbox" :disabled="!editable"
+                               x-model="payment.gst" @change="markChargesDirty()">
+                        <span>Add GST (<span x-text="payment.tax_percent"></span>%)</span>
+                    </label>
+                </div>
+
+                <div class="mt-3 grid gap-3 sm:grid-cols-3">
+                    <label class="block">
+                        <span class="ui-group-label">Amount (₹) <span class="font-normal normal-case tracking-normal text-slate-400">— auto total, editable</span></span>
+                        <input type="number" min="0" step="1" :disabled="!editable"
+                               x-model.number="payment.amount" @input="onPaymentAmountInput()"
+                               placeholder="0" class="ui-input mt-1">
+                    </label>
+                    <label class="block">
+                        <span class="ui-group-label">Payment type</span>
+                        <select x-model="payment.type" :disabled="!editable" @change="markChargesDirty()" class="ui-input mt-1">
+                            <option value="cash">Cash</option>
+                            <option value="online">Online</option>
+                        </select>
+                    </label>
+                    <label class="block">
+                        <span class="ui-group-label">Payment status</span>
+                        <select x-model="payment.status" :disabled="!editable" @change="markChargesDirty()" class="ui-input mt-1">
+                            <option value="paid">Paid</option>
+                            <option value="due">Due</option>
+                        </select>
+                    </label>
+                </div>
+
+                <dl class="mt-3 space-y-1 border-t border-dashed border-slate-300 pt-3 text-sm">
+                    <div class="flex justify-between"><dt class="text-slate-500">Subtotal</dt>
+                        <dd class="text-slate-700" x-text="'₹' + payableBase().toFixed(0)"></dd></div>
+                    <div class="flex justify-between" x-show="payment.gst"><dt class="text-slate-500">GST (<span x-text="payment.tax_percent"></span>%)</dt>
+                        <dd class="text-slate-700" x-text="'₹' + gstAmount().toFixed(0)"></dd></div>
+                    <div class="flex justify-between font-semibold"><dt>Total payable</dt>
+                        <dd x-text="'₹' + totalPayable().toFixed(0)"></dd></div>
+                    <div class="flex justify-between text-amber-700" x-show="payment.status === 'due' && totalPayable() > 0">
+                        <dt>Balance due</dt><dd x-text="'₹' + totalPayable().toFixed(0)"></dd></div>
+                </dl>
+
+                <div class="mt-3 flex flex-wrap items-center gap-3">
+                    <button type="button" :disabled="!editable" @click="savePayment()"
+                            class="ui-btn ui-btn-primary ui-btn-sm">Save payment</button>
+                    <span class="text-xs" x-show="chargesLabel"
+                          :class="chargesStatus === 'error' ? 'text-rose-600' : (chargesStatus === 'saved' ? 'text-emerald-600' : 'text-amber-600')"
+                          x-text="chargesLabel"></span>
+                    <span class="text-xs text-slate-500" x-show="payment.paid_amount > 0"
+                          x-text="'Already received ₹' + payment.paid_amount"></span>
+                    <a :href="'/billing/' + invoiceId" x-show="invoiceId" class="text-xs font-medium text-brand hover:underline">Open invoice</a>
+                </div>
+                <p class="mt-2 text-xs text-slate-500">
+                    Marked <strong>Due</strong>? Reception can see the balance and settle it from
+                    <a href="/billing" class="text-brand hover:underline">Patient Bills</a>.
+                </p>
+            </div>
 
             <!-- ---- Save / Complete actions ---- -->
             <div class="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
@@ -1091,11 +1174,38 @@ function visitScreenV2(cfg) {
             return 'Invoice';
         },
         markChargesDirty() { this.dirty = true; this.chargesDirty = true; },
+        // Editing the amount by hand unlinks it from the charge total.
+        onPaymentAmountInput() { this.paymentAmountTouched = true; this.markChargesDirty(); },
+
         addCharge() {
             this.markChargesDirty();
             this.charges.push({ _k: 'c' + (++this._chargeKey), description: '', amount: null });
         },
-        removeCharge(idx) { this.markChargesDirty(); this.charges.splice(idx, 1); },
+        removeCharge(idx) { this.markChargesDirty(); this.charges.splice(idx, 1); this.syncPaymentAmount(); },
+        // ---- Payment card ----
+        // The amount field starts as the charges total and stays linked to it
+        // until the doctor types their own figure (paymentAmountTouched).
+        paymentAmountTouched: false,
+        payableBase() {
+            const typed = parseFloat(this.payment.amount);
+            return isNaN(typed) ? 0 : typed;
+        },
+        gstAmount() {
+            if (!this.payment.gst) return 0;
+            return Math.round(this.payableBase() * (parseFloat(this.payment.tax_percent) || 0)) / 100;
+        },
+        totalPayable() {
+            return Math.round((this.payableBase() + this.gstAmount()) * 100) / 100;
+        },
+        syncPaymentAmount() {
+            if (this.paymentAmountTouched) return;
+            this.payment.amount = this.chargesTotal();
+        },
+        async savePayment() {
+            // Charges and payment travel together — one save keeps the invoice
+            // lines and the money side consistent.
+            await this.saveCharges(true);
+        },
         chargesTotal() {
             return (this.charges || []).reduce((s, c) => s + (parseFloat(c.amount) || 0), 0);
         },
@@ -1122,11 +1232,13 @@ function visitScreenV2(cfg) {
         async confirmComplete(ev) {
             ev.preventDefault();
             if (this._completing) return;             // guard against double-submit
-            if (this.chargesDirty && this.charges.length) {
-                alert('You have unsaved charges. Please click "Save charges" before completing the visit.');
+            if (this.chargesDirty) {
+                uiAlert('Click "Save charges" / "Save payment" before completing the visit.', { title: 'Unsaved charges' });
                 return;
             }
-            if (!confirm('Complete this visit?')) return;
+            if (!await uiConfirm('The visit will be locked read-only once completed.', {
+                title: 'Complete this visit?', confirmLabel: 'Complete visit',
+            })) return;
 
             this._completing = true;
             const form = ev.currentTarget;
@@ -1137,10 +1249,10 @@ function visitScreenV2(cfg) {
                 await this.persistSymptomsNow();
                 const ok = await this.save(true);
                 if (!ok) {
-                    alert('Could not save the visit before completing — ' +
+                    await uiAlert('Could not save the visit before completing — ' +
                           (this.saveLabel || 'please try again') +
                           '.\n\nThe visit was NOT completed so your data is safe. ' +
-                          'Fix the issue and try again.');
+                          'Fix the issue and try again.', { title: 'Visit not completed', danger: true });
                     this._completing = false;
                     return;
                 }
@@ -1154,27 +1266,43 @@ function visitScreenV2(cfg) {
                 form.submit();
             } catch (e) {
                 this._completing = false;
-                alert('Unexpected error before completing the visit. It was NOT completed — your data is safe. Please try again.');
+                uiAlert('Unexpected error before completing the visit. It was NOT completed — your data is safe. Please try again.', { title: 'Visit not completed', danger: true });
             }
         },
-        async saveCharges() {
-            if (!this.editable || this.charges.length === 0) return;
+        // withPayment=true also settles amount / GST / mode / paid-due; the
+        // Payment card uses that, the charge rows save on their own.
+        async saveCharges(withPayment = false) {
+            if (!this.editable) return;
+            if (this.charges.length === 0 && !withPayment) return;
             this.chargesStatus = 'saving';
             this.chargesLabel = 'Saving…';
             try {
                 // Strip the UI-only _k key before sending.
                 const items = this.charges.map(c => ({ description: c.description, amount: c.amount }));
+                const body = { items: items };
+                if (withPayment) {
+                    body.payment = {
+                        amount: this.payableBase(),
+                        gst: !!this.payment.gst,
+                        type: this.payment.type,
+                        status: this.payment.status,
+                    };
+                }
                 const r = await fetch('/api/v1/visits/' + this.visitId + '/charges', {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                    body: JSON.stringify({ items: items }),
+                    body: JSON.stringify(body),
                 });
                 const data = await r.json();
                 if (data.ok) {
                     this.chargesStatus = 'saved';
-                    this.chargesLabel = 'Saved · ₹' + (data.total || 0);
+                    this.chargesLabel = withPayment
+                        ? 'Saved · ₹' + (data.total || 0) + (data.due > 0 ? ' · ₹' + data.due + ' due' : ' · paid')
+                        : 'Saved · ₹' + (data.total || 0);
                     this.chargesDirty = false;   // clears the "unsaved" / required state
+                    if (data.status) this.payment.status = data.status === 'paid' ? 'paid' : 'due';
+                    if (data.due != null) this.payment.due = data.due;
                     if (data.invoice_id) {
                         this.invoiceId = data.invoice_id;
                         if (data.invoice_number) this.invoiceNumber = data.invoice_number;
@@ -1218,6 +1346,10 @@ function visitScreenV2(cfg) {
                 this.chargesDirty = true;
                 this.chargesLabel = 'Review and save charges';
             }
+            // An amount already billed wins; otherwise the field tracks the
+            // charge lines until someone types over it.
+            this.paymentAmountTouched = (parseFloat(this.payment.amount) || 0) > 0;
+            this.syncPaymentAmount();
             this.$nextTick(() => this.refreshAllFrequencySelects());
             if (!this.editable) return;
             this.$el.addEventListener('input', () => this.onFormEdit());
@@ -1397,6 +1529,7 @@ function visitScreenV2(cfg) {
                 diagnosis: this.diagnosis,
                 icd10_code: this.icd10_code,
                 clinical_notes: this.clinical_notes,
+                reports_notes: this.reports_notes,
                 condition_score: this.condition_score,
                 follow_up_date: this.follow_up_date,
                 follow_up_reason: this.follow_up_reason,
@@ -1521,7 +1654,9 @@ function visitScreenV2(cfg) {
             if (!this.editable) return;
             // Confirm overwrite if doctor already filled stuff.
             const hasData = this.diagnosis || this.chief_complaint || (this.prescriptions || []).some(p => p.drug_name);
-            if (hasData && !confirm('Overwrite current form with last visit? Existing entries will be replaced.')) return;
+            if (hasData && !await uiConfirm('Existing entries in this form will be replaced.', {
+                title: 'Copy last visit?', confirmLabel: 'Overwrite', danger: true,
+            })) return;
             try {
                 const r = await fetch('/api/v1/visits/' + this.visitId + '/clone-last', {
                     method: 'POST',
@@ -1533,10 +1668,10 @@ function visitScreenV2(cfg) {
                     // Reload the page so server-rendered fields reflect the merge.
                     location.reload();
                 } else {
-                    alert(data.error || 'No previous visit found.');
+                    uiAlert(data.error || 'No previous visit found.');
                 }
             } catch (e) {
-                alert('Network error — please try again.');
+                uiAlert('Network error — please try again.');
             }
         },
 
@@ -1663,7 +1798,7 @@ function visitScreenV2(cfg) {
         openSaveTemplate() {
             if (!this.editable) return;
             if (!this.hasRx) {
-                alert('Add at least one medicine before saving as template.');
+                uiAlert('Add at least one medicine before saving as template.');
                 return;
             }
             this.saveTplModal.name = (this.chief_complaint || '').trim().slice(0, 80);
@@ -1742,7 +1877,9 @@ function visitScreenV2(cfg) {
 
         async applyTemplate(templateId) {
             if (!this.editable) return;
-            if (this.hasRx && !confirm('Append template medicines to current prescription?')) return;
+            if (this.hasRx && !await uiConfirm('Template medicines will be appended to the current prescription.', {
+                title: 'Apply template?', confirmLabel: 'Append',
+            })) return;
             try {
                 const r = await fetch('/api/v1/prescriptions/templates/' + templateId + '/apply/' + this.visitId, {
                     method: 'POST',
@@ -1753,10 +1890,10 @@ function visitScreenV2(cfg) {
                     // Reload to pick up the newly inserted prescriptions.
                     location.reload();
                 } else {
-                    alert(data.error || 'Could not apply template.');
+                    uiAlert(data.error || 'Could not apply template.');
                 }
             } catch (e) {
-                alert('Network error.');
+                uiAlert('Network error.');
             }
         },
 
@@ -1771,7 +1908,7 @@ function visitScreenV2(cfg) {
                 });
                 this.loadTemplates();
             } catch (e) {
-                alert('Could not save template.');
+                uiAlert('Could not save template.');
             }
         },
 

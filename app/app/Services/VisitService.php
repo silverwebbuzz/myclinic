@@ -415,6 +415,20 @@ final class VisitService
             $update['specialty_data'] = json_encode($sd);
         }
 
+        // Lab / investigation findings live in their own column, added later
+        // than the rest — write it separately so a clinic that has not run the
+        // reports_notes patch yet still gets every other field saved.
+        if (array_key_exists('reports_notes', $payload)) {
+            try {
+                QueryBuilder::table('visits')
+                    ->forClinic($clinicId)
+                    ->where('id', '=', $visitId)
+                    ->update(['reports_notes' => $payload['reports_notes'] === '' ? null : $payload['reports_notes']]);
+            } catch (\Throwable $e) {
+                // column missing — ignore, the rest of the visit still saves.
+            }
+        }
+
         // Phase 2: stash the full client-side form blob for crash recovery.
         // The columns may not exist yet during phased rollout — wrap so a
         // missing column never breaks autosave.

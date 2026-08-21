@@ -158,6 +158,7 @@ final class VisitController
             'charges' => $chargeData['items'],
             'chargesPrefilled' => $chargeData['prefilled'],
             'visitInvoice' => $visitInvoice,
+            'payment' => self::paymentStateForVisit($clinicId, $visitInvoice, $chargeData['items']),
             'showImmunizations' => $showImmunizations,
             'immunizationSummary' => $immunizationSummary,
             'immunizationsGiven' => $immunizationsGiven,
@@ -473,6 +474,15 @@ final class VisitController
                 return Response::json(['error' => 'Could not create invoice'], 422);
             }
             $invoice = \App\Services\InvoiceService::update($clinicId, $invoiceId, ['items' => $items]);
+
+            // The Payment card posts alongside the charge lines so amount, GST,
+            // mode and paid/due are settled in the same round-trip.
+            if (is_array($payload['payment'] ?? null)) {
+                $invoice = \App\Services\InvoiceService::applyVisitPayment($clinicId, $invoiceId, $payload['payment']);
+            }
+
+            $due = \App\Services\InvoiceService::balanceDue($invoice);
+
             return Response::json([
                 'ok' => true,
                 'invoice_id' => $invoiceId,
@@ -480,7 +490,11 @@ final class VisitController
                 'invoice_date' => !empty($invoice['created_at'])
                     ? date('d M Y', strtotime((string) $invoice['created_at']))
                     : date('d M Y'),
+                'subtotal' => round((float) ($invoice['subtotal'] ?? 0) - (float) ($invoice['discount_amount'] ?? 0), 2),
+                'tax_amount' => (float) ($invoice['tax_amount'] ?? 0),
                 'total' => (float) ($invoice['total'] ?? 0),
+                'due' => $due,
+                'status' => $invoice['status'] ?? 'draft',
             ]);
         } catch (\Throwable $e) {
             return Response::json(['error' => $e->getMessage()], 422);
@@ -655,6 +669,53 @@ final class VisitController
     }
 
     /** @return array{items: list<array{description: string, amount: float}>, prefilled: bool} */
+    /**
+     * Seed for the visit screen's Payment card. Reads back what was already
+     * billed (amount, GST, mode, paid/due); for a visit with no invoice yet it
+     * falls back to the charge lines the doctor is about to save.
+     *
+     * @param array<string, mixed>|null $invoice
+     * @param list<array{description: string, amount: float}> $chargeItems
+     * @return array<string, mixed>
+     */
+    private static function paymentStateForVisit(int $clinicId, ?array $invoice, array $chargeItems): array
+    {
+        $config = \App\Services\OnboardingService::specialtyConfig($clinicId) ?? [];
+        $clinicTaxPercent = (float) ($config['invoice_tax_percent'] ?? 0) ?: 18.0;
+
+        if ($invoice === null) {
+            $amount = 0.0;
+            foreach ($chargeItems as $line) {
+                $amount += (float) ($line['amount'] ?? 0);
+            }
+
+            return [
+                'amount' => round($amount, 2),
+                'gst' => false,
+                'tax_percent' => $clinicTaxPercent,
+                'type' => 'cash',
+                'status' => 'due',
+                'paid_amount' => 0.0,
+                'due' => 0.0,
+                'invoice_status' => null,
+            ];
+        }
+
+        $taxPercent = (float) ($invoice['tax_percent'] ?? 0);
+        $paid = (float) ($invoice['amount_paid'] ?? 0) + (float) ($invoice['advance_paid'] ?? 0);
+
+        return [
+            'amount' => round((float) ($invoice['subtotal'] ?? 0) - (float) ($invoice['discount_amount'] ?? 0), 2),
+            'gst' => $taxPercent > 0,
+            'tax_percent' => $taxPercent > 0 ? $taxPercent : $clinicTaxPercent,
+            'type' => in_array($invoice['payment_mode'] ?? '', ['cash', 'online'], true) ? $invoice['payment_mode'] : 'cash',
+            'status' => (string) ($invoice['status'] ?? '') === 'paid' ? 'paid' : 'due',
+            'paid_amount' => round($paid, 2),
+            'due' => \App\Services\InvoiceService::balanceDue($invoice),
+            'invoice_status' => $invoice['status'] ?? null,
+        ];
+    }
+
     private static function chargesForVisit(int $clinicId, int $visitId, bool $editable): array
     {
         $existing = \App\Services\InvoiceService::chargeLinesForVisit($clinicId, $visitId);

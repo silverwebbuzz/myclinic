@@ -167,16 +167,20 @@ final class BillingController
         $amount = $amountRaw === '' ? null : (float) $amountRaw;
         $method = (string) ($request->post['method'] ?? 'cash');
 
+        // The billing list posts return_to=/billing so reception stays on the
+        // list after settling a due bill.
+        $back = ($request->post['return_to'] ?? '') === '/billing' ? '/billing' : '/billing/' . $id;
+
         try {
             $invoice = InvoiceService::recordPayment($clinicId, (int) $id, $amount, $method);
         } catch (\Throwable $e) {
-            return Response::redirect('/billing/' . $id . '?error=' . urlencode($e->getMessage()));
+            return Response::redirect($back . '?error=' . urlencode($e->getMessage()));
         }
 
         AuditService::log($request, 'UPDATE', 'invoices', (int) $id);
         $msg = ($invoice['status'] ?? '') === 'paid' ? 'paid' : 'partial';
 
-        return Response::redirect('/billing/' . $id . '?message=' . $msg);
+        return Response::redirect($back . '?message=' . $msg);
     }
 
     public function exportExcel(Request $request): Response

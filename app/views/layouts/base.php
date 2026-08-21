@@ -370,28 +370,64 @@
         };
     }
 
+    // ---- Global confirm / alert dialog (components/modal.php) ----------------
+    // One instance lives in <body>; window.uiConfirm / window.uiAlert drive it
+    // and hand back a Promise so callers read like the native confirm()/alert().
+    function uiDialog() {
+        return {
+            open: false,
+            mode: 'confirm',
+            title: '',
+            body: '',
+            confirmLabel: 'OK',
+            cancelLabel: 'Cancel',
+            danger: false,
+            _resolve: null,
+
+            ask(opts) {
+                this.mode = opts.mode || 'confirm';
+                this.title = opts.title || (this.mode === 'alert' ? 'Notice' : 'Confirm');
+                this.body = opts.body || '';
+                this.confirmLabel = opts.confirmLabel || 'OK';
+                this.cancelLabel = opts.cancelLabel || 'Cancel';
+                this.danger = !!opts.danger;
+                this.open = true;
+                this.$nextTick(() => this.$refs.confirmBtn && this.$refs.confirmBtn.focus());
+
+                return new Promise(resolve => { this._resolve = resolve; });
+            },
+            _settle(value) {
+                this.open = false;
+                const resolve = this._resolve;
+                this._resolve = null;
+                if (resolve) resolve(value);
+            },
+            accept() { this._settle(true); },
+            cancel() { this._settle(this.mode === 'alert'); },
+        };
+    }
+
+    // Text-first signature so `confirm('…')` becomes `await uiConfirm('…')`.
+    window.uiConfirm = function (body, opts = {}) {
+        if (!window.__uiDialog) return Promise.resolve(window.confirm(body));
+        return window.__uiDialog.ask(Object.assign({ mode: 'confirm', body }, opts));
+    };
+    window.uiAlert = function (body, opts = {}) {
+        if (!window.__uiDialog) { window.alert(body); return Promise.resolve(); }
+        return window.__uiDialog.ask(Object.assign({ mode: 'alert', body, confirmLabel: 'Got it' }, opts));
+    };
+
     function appShell() {
         return {
             sidebarOpen: false,
             toast: { show: false, message: '', type: 'success' },
-            modalOpen: false,
-            modalTitle: '',
-            modalBody: '',
-            modalConfirm: null,
             showToast(message, type = 'success') {
                 this.toast = { show: true, message, type };
                 setTimeout(() => { this.toast.show = false; }, 4000);
             },
             showModal(title, body, onConfirm = null) {
-                this.modalTitle = title;
-                this.modalBody = body;
-                this.modalConfirm = onConfirm;
-                this.modalOpen = true;
+                window.uiConfirm(body, { title }).then(ok => { if (ok && onConfirm) onConfirm(); });
             },
-            closeModal() {
-                this.modalOpen = false;
-                this.modalConfirm = null;
-            }
         };
     }
     </script>

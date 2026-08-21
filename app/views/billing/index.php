@@ -20,11 +20,17 @@ $statusStyles = [
     <?php if (!empty($_GET['error'])): ?>
     <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800"><?= htmlspecialchars((string) $_GET['error']) ?></p>
     <?php endif; ?>
+    <?php if (!empty($_GET['message'])): ?>
+    <p class="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <?= ($_GET['message'] === 'paid') ? '✓ Marked paid.' : '✓ Payment recorded.' ?>
+    </p>
+    <?php endif; ?>
 
     <form method="get" class="flex flex-wrap gap-2 ui-card p-4">
         <input type="search" name="q" value="<?= htmlspecialchars($filters['q'] ?? '') ?>" placeholder="Search invoice, patient…" class="min-w-[200px] flex-1 ui-input">
         <select name="status" class="ui-input">
             <option value="">All statuses</option>
+            <option value="due" <?= ($filters['status'] ?? '') === 'due' ? 'selected' : '' ?>>Due (unpaid balance)</option>
             <?php foreach (['draft','sent','partial','paid','overdue'] as $st): ?>
             <option value="<?= $st ?>" <?= ($filters['status'] ?? '') === $st ? 'selected' : '' ?>><?= ucfirst($st) ?></option>
             <?php endforeach; ?>
@@ -60,8 +66,8 @@ $statusStyles = [
                     </td>
                     <td class="px-4 py-3"><?= htmlspecialchars($inv['patient_name'] ?? '') ?></td>
                     <td class="px-4 py-3"><?= number_format((float) $inv['total'], 2) ?> <?= htmlspecialchars($inv['currency'] ?? '') ?></td>
-                    <td class="px-4 py-3 <?= $balance > 0 ? 'font-medium text-amber-700' : 'text-slate-400' ?>">
-                        <?= $balance > 0 ? number_format($balance, 2) : '—' ?>
+                    <td class="px-4 py-3 <?= $balance > 0 ? 'font-semibold text-amber-700' : 'text-slate-400' ?>">
+                        <?= $balance > 0 ? number_format($balance, 2) . ' <span class="text-[10px] uppercase">due</span>' : '—' ?>
                     </td>
                     <td class="px-4 py-3">
                         <span class="rounded-full px-2 py-0.5 text-xs capitalize <?= $statusStyles[$inv['status'] ?? ''] ?? 'bg-slate-100 text-slate-600' ?>">
@@ -71,7 +77,21 @@ $statusStyles = [
                     <td class="px-4 py-3 text-xs uppercase text-slate-500"><?= htmlspecialchars($inv['payment_mode'] ?? '—') ?></td>
                     <td class="px-4 py-3 text-xs"><?= htmlspecialchars(substr($inv['created_at'] ?? '', 0, 10)) ?></td>
                     <td class="px-4 py-3 text-right">
-                        <div class="flex justify-end gap-2">
+                        <div class="flex items-center justify-end gap-2">
+                            <?php if ($balance > 0 && ($inv['status'] ?? '') !== 'cancelled'): ?>
+                            <!-- Reception settles a due bill without leaving the list. -->
+                            <form method="post" action="/billing/<?= (int) $inv['id'] ?>/payment" class="flex items-center gap-1">
+                                <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf ?? '') ?>">
+                                <input type="hidden" name="return_to" value="/billing">
+                                <select name="method" class="rounded-lg border border-slate-300 px-2 py-1 text-xs">
+                                    <option value="cash">Cash</option>
+                                    <option value="online">Online</option>
+                                </select>
+                                <button type="submit" class="rounded-lg bg-brand px-2.5 py-1 text-xs font-semibold text-white hover:bg-brand-dark">
+                                    Mark paid
+                                </button>
+                            </form>
+                            <?php endif; ?>
                             <a href="/billing/<?= (int) $inv['id'] ?>" class="font-medium text-brand hover:underline">Open</a>
                             <a href="/billing/<?= (int) $inv['id'] ?>/pdf" class="text-slate-400 hover:text-slate-700" title="Download PDF"><?= ui_icon('emr', 16) ?></a>
                         </div>
