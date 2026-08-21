@@ -102,15 +102,41 @@
 
         <?php
             $currentUri = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
-            $isActive = static function (string $href) use ($currentUri): bool {
-                $hrefPath = (string) parse_url($href, PHP_URL_PATH);
+
+            // Every href the sidebar can render. Needed so that a nested item
+            // wins over its parent: /appointments/calendar must light up
+            // "Calendar" only, not "Appointments" as well.
+            $navHrefs = ['/dashboard'];
+            foreach ($nav['groups'] ?? [] as $navGroup) {
+                foreach ($navGroup['items'] ?? [] as $navItem) {
+                    $navHrefs[] = (string) parse_url((string) $navItem['href'], PHP_URL_PATH);
+                }
+            }
+            $navHrefs = array_merge($navHrefs, ['/follow-ups', '/blogs', '/doctor/schedule', '/settings', '/help']);
+
+            $matchesPath = static function (string $hrefPath) use ($currentUri): bool {
                 if ($hrefPath === '' || $hrefPath === '/') return $currentUri === '/';
-                // Dashboard matches only on /dashboard exactly.
-                if ($hrefPath === '/dashboard') return $currentUri === '/dashboard';
-                // Clinic settings — exact path only (not /settings/team, /settings/password, etc.).
-                if ($hrefPath === '/settings') return $currentUri === '/settings';
-                // Other items active when path begins with the href path segment.
+                // Dashboard and clinic settings match their exact path only
+                // (not /settings/team, /settings/password, …).
+                if ($hrefPath === '/dashboard' || $hrefPath === '/settings') return $currentUri === $hrefPath;
+
                 return $currentUri === $hrefPath || str_starts_with($currentUri, $hrefPath . '/');
+            };
+
+            $isActive = static function (string $href) use ($currentUri, $navHrefs, $matchesPath): bool {
+                $hrefPath = (string) parse_url($href, PHP_URL_PATH);
+                if (!$matchesPath($hrefPath)) {
+                    return false;
+                }
+                // A more specific sibling also matches? Let that one own the
+                // highlight — longest matching href wins.
+                foreach ($navHrefs as $other) {
+                    if ($other !== $hrefPath && strlen($other) > strlen($hrefPath) && $matchesPath($other)) {
+                        return false;
+                    }
+                }
+
+                return true;
             };
 
             // Map legacy emoji icons (config/modules_nav.php) to SVG registry

@@ -34,7 +34,7 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
     <!-- Header + toolbar -->
     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
         <div class="flex items-center gap-3">
-            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-light text-brand">
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v3M16 3v3" stroke-linecap="round"/></svg>
             </span>
             <div>
@@ -59,8 +59,8 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
                 <button type="button" @click="shift(-1)" class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-slate-600 hover:bg-slate-200">‹</button>
                 <span class="min-w-[9.5rem] text-center text-lg font-semibold text-slate-900" x-text="rangeLabel"></span>
                 <button type="button" @click="shift(1)" class="rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-slate-600 hover:bg-slate-200">›</button>
-                <button type="button" @click="goToday()" class="rounded-lg border border-blue-600 px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50">Today</button>
-                <button type="button" @click="openBooking({})" class="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+                <button type="button" @click="goToday()" class="rounded-lg border border-brand px-4 py-2 text-sm font-medium text-brand hover:bg-brand-light">Today</button>
+                <button type="button" @click="openBooking({})" class="inline-flex items-center gap-1 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>Book Appointment</button>
                 <span x-show="loading" class="text-xs text-slate-400">loading…</span>
             </div>
@@ -90,7 +90,7 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
                      :class="cell.inMonth ? 'bg-white' : 'bg-slate-50/40'">
                     <div class="flex items-center justify-between">
                         <span class="inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-sm font-semibold"
-                              :class="cell.isToday ? 'bg-blue-600 text-white' : (cell.inMonth ? 'text-slate-700' : 'text-slate-400')"
+                              :class="cell.isToday ? 'bg-brand text-white' : (cell.inMonth ? 'text-slate-700' : 'text-slate-400')"
                               x-text="cell.dnum"></span>
                         <span x-show="cell.events.length" class="rounded-full bg-slate-100 px-1.5 text-[10px] font-medium text-slate-500" x-text="cell.events.length"></span>
                     </div>
@@ -103,7 +103,7 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
                         </template>
                         <div x-show="cell.events.length > 4" class="px-1 text-[10px] text-slate-400" x-text="`+${cell.events.length-4} more`"></div>
                         <button type="button" x-show="!cell.past && cell.events.length===0" @click="bookDay(cell.iso)"
-                                class="w-full rounded px-1 py-0.5 text-left text-[10px] text-slate-300 hover:bg-blue-50 hover:text-blue-600">+ book</button>
+                                class="w-full rounded px-1 py-0.5 text-left text-[10px] text-slate-300 hover:bg-brand-light hover:text-brand">+ book</button>
                     </div>
                 </div>
             </template>
@@ -118,7 +118,7 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
                 <template x-for="day in gridDays" :key="day.iso">
                     <div class="flex-1 px-2 py-2 text-center">
                         <div class="text-[11px] uppercase tracking-wide text-slate-400" x-text="day.dow"></div>
-                        <div class="text-sm font-semibold" :class="day.isToday ? 'text-blue-600' : 'text-slate-700'" x-text="day.dnum"></div>
+                        <div class="text-sm font-semibold" :class="day.isToday ? 'text-brand' : 'text-slate-700'" x-text="day.dnum"></div>
                     </div>
                 </template>
             </div>
@@ -135,7 +135,7 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
                         <template x-for="slot in day.slots" :key="slot.iso">
                             <div class="absolute inset-x-0" :style="`top:${slot.top}px;height:${slotPx}px`">
                                 <button type="button" x-show="!slot.past" @click="book(day.iso, slot.time)"
-                                        class="h-full w-full border-b border-slate-100 hover:bg-blue-50" :title="`Book ${day.dow} ${slot.label}`"></button>
+                                        class="h-full w-full border-b border-slate-100 hover:bg-brand-light" :title="`Book ${day.dow} ${slot.label}`"></button>
                                 <div x-show="slot.past" class="h-full w-full border-b border-slate-100 bg-slate-50/60"></div>
                             </div>
                         </template>
@@ -203,7 +203,7 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
                 <div>
                     <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
                         <div class="flex items-center gap-2 font-semibold text-slate-800">
-                            <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0" stroke-linecap="round"/><circle cx="18" cy="14" r="3.2"/><path d="M18 12.5v1.5l1 1" stroke-linecap="round"/></svg>
+                            <svg class="h-5 w-5 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0" stroke-linecap="round"/><circle cx="18" cy="14" r="3.2"/><path d="M18 12.5v1.5l1 1" stroke-linecap="round"/></svg>
                             Appointment
                         </div>
                         <button type="button" @click="closeModal()" class="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
@@ -217,7 +217,7 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
                         <dl class="mt-3 space-y-1.5 text-sm text-slate-700">
                             <div><dt class="inline font-semibold">When:</dt> <span x-text="selected.dateLabel + ' · ' + selected.time"></span></div>
                             <div x-show="selected.phone"><dt class="inline font-semibold">Phone:</dt>
-                                <a :href="`tel:${selected.phone}`" class="text-blue-600 hover:underline" x-text="selected.phone"></a></div>
+                                <a :href="`tel:${selected.phone}`" class="text-brand hover:underline" x-text="selected.phone"></a></div>
                             <div><dt class="inline font-semibold">Status:</dt>
                                 <span class="ml-1 rounded-md px-2 py-0.5 text-xs font-medium text-white" :style="`background:${selected.color}`" x-text="selected.statusLabel"></span></div>
                         </dl>
@@ -254,7 +254,7 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
         <div x-show="booking.open" x-transition class="relative w-full max-w-md rounded-2xl bg-white shadow-xl" @click.stop>
             <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
                 <div class="flex items-center gap-2 font-semibold text-slate-800">
-                    <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v3M16 3v3M12 12v4M10 14h4" stroke-linecap="round"/></svg>
+                    <svg class="h-5 w-5 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v3M16 3v3M12 12v4M10 14h4" stroke-linecap="round"/></svg>
                     Book appointment
                 </div>
                 <button type="button" @click="closeBooking()" class="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
@@ -267,7 +267,7 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
                 <div>
                     <div class="mb-1 flex items-center justify-between">
                         <label class="text-xs font-medium text-slate-600">Patient</label>
-                        <button type="button" @click="booking.newMode = !booking.newMode; clearPatient()" class="text-xs font-medium text-blue-600 hover:underline"
+                        <button type="button" @click="booking.newMode = !booking.newMode; clearPatient()" class="text-xs font-medium text-brand hover:underline"
                                 x-text="booking.newMode ? 'Pick existing' : '+ New patient'"></button>
                     </div>
 
@@ -355,7 +355,7 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
 
                 <div class="flex items-center justify-end gap-2 pt-1">
                     <button type="button" @click="closeBooking()" class="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200">Cancel</button>
-                    <button type="submit" :disabled="booking.saving" class="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                    <button type="submit" :disabled="booking.saving" class="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-60"
                             x-text="booking.saving ? 'Booking…' : 'Book'"></button>
                 </div>
             </form>
@@ -379,7 +379,7 @@ function clinicCalendar(cfg) {
         gridDays: [], monthCells: [], listGroups: [], rangeLabel: '',
 
         get viewSubtitle() { return this.view.charAt(0).toUpperCase() + this.view.slice(1) + ' view'; },
-        pill(v) { return this.view===v ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'; },
+        pill(v) { return this.view===v ? 'bg-brand text-white border-brand' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'; },
         typeLabel(t) { return ({walkin:'Walk-in', prebooked:'Pre-booked', online:'Online', followup:'Follow-up'})[t] || (t ? t.charAt(0).toUpperCase()+t.slice(1) : 'Appointment'); },
 
         // --- appointment popup ---
