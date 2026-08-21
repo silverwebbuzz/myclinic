@@ -690,11 +690,24 @@ final class VisitController
         }
         $medicalHistory = is_array($specialty['medical_history'] ?? null) ? $specialty['medical_history'] : [];
 
-        // Medicines the patient is actually on = whatever was last prescribed.
-        // Exclude the visit being written right now — otherwise "last visit"
-        // resolves to today's own (still empty) consultation.
-        $lastVisit = VisitService::recentForPatient($clinicId, $patientId, 1, $currentVisitId);
-        $medications = trim((string) ($lastVisit[0]['medicines_summary'] ?? ''));
+        // The last three consultations, newest first. Excludes the visit being
+        // written right now — otherwise "last visit" resolves to today's own
+        // (still empty) consultation.
+        $recent = VisitService::recentForPatient($clinicId, $patientId, 3, $currentVisitId);
+        $medications = trim((string) ($recent[0]['medicines_summary'] ?? ''));
+
+        $previousVisits = [];
+        foreach ($recent as $v) {
+            $previousVisits[] = [
+                'id' => (int) ($v['id'] ?? 0),
+                'visited_at' => (string) ($v['visited_at'] ?? ''),
+                'visit_number' => (int) ($v['visit_number'] ?? 0),
+                'complaint' => trim((string) ($v['chief_complaint'] ?? '')),
+                'diagnosis' => trim((string) ($v['diagnosis'] ?? '')),
+                'notes' => trim((string) ($v['clinical_notes'] ?? '')),
+                'medicines' => trim((string) ($v['medicines_summary'] ?? '')),
+            ];
+        }
 
         // Newest reading from an EARLIER visit — today's numbers are already on
         // screen in the Vitals card, this block is the "last time" reference.
@@ -713,15 +726,12 @@ final class VisitController
             'surgeries' => trim((string) ($medicalHistory['surgeries'] ?? '')),
             'family_history' => trim((string) ($medicalHistory['family_history'] ?? '')),
             'medications' => $medications,
-            'medications_date' => !empty($lastVisit[0]['visited_at']) ? (string) $lastVisit[0]['visited_at'] : '',
+            'medications_date' => !empty($recent[0]['visited_at']) ? (string) $recent[0]['visited_at'] : '',
             'last_vitals_at' => $lastVitals['recorded_at'] ?? '',
             'last_vitals' => self::vitalSignPairs($lastVitals),
             // What the patient came in with last time — the doctor reads this
-            // before writing today's complaint.
-            'last_visit_at' => !empty($lastVisit[0]['visited_at']) ? (string) $lastVisit[0]['visited_at'] : '',
-            'last_complaint' => trim((string) ($lastVisit[0]['chief_complaint'] ?? '')),
-            'last_diagnosis' => trim((string) ($lastVisit[0]['diagnosis'] ?? '')),
-            'last_notes' => trim((string) ($lastVisit[0]['clinical_notes'] ?? '')),
+            // before writing today's complaint. Newest first.
+            'previous_visits' => $previousVisits,
         ];
     }
 

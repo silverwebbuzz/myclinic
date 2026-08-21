@@ -346,6 +346,36 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
 
             </div>
 
+            <!-- ---- DIAGNOSIS + ICD-10 — reads straight after the symptoms ---- -->
+            <details class="rounded-lg border border-slate-200 bg-slate-50/50">
+                <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">
+                    Diagnosis <span class="font-normal text-slate-400">— optional</span>
+                </summary>
+                <div class="px-4 pb-4 pt-2">
+                    <input type="text" x-model="diagnosis" :disabled="!editable"
+                           placeholder="e.g. Viral fever"
+                           class="ui-input">
+                    <div class="mt-2 flex items-center gap-2">
+                        <input type="search" x-model="icd10_code" :disabled="!editable"
+                               @input.debounce.300ms="searchIcd($event.target.value)"
+                               placeholder="ICD-10 code (optional)"
+                               class="w-40 rounded border border-slate-200 px-2 py-1 text-xs">
+                        <ul x-show="icdResults.length" class="ml-2 inline-flex max-h-32 flex-wrap gap-1 overflow-y-auto">
+                            <template x-for="c in icdResults" :key="c.code">
+                                <li>
+                                    <!-- Code alone is unreadable — show the label, and use it as
+                                         the diagnosis text when the doctor hasn't typed one. -->
+                                    <button type="button"
+                                            @click="icd10_code = c.code; if (!diagnosis) diagnosis = c.label; icdResults = []"
+                                            class="rounded bg-slate-100 px-2 py-0.5 text-xs hover:bg-brand-light"
+                                            x-text="c.code + ' · ' + c.label"></button>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+                </div>
+            </details>
+
             <!-- ---- PRESCRIPTION ---- -->
             <!-- Prescription state/methods now live in the parent visitScreenV2
                  scope (no nested x-data) so medicine inputs bind to one scope. -->
@@ -478,10 +508,6 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                         <span x-text="taperingTotalDays(line.tapering_steps) + ' days total'"></span>
                                     </div>
                                 </template>
-
-                                <input type="text" :disabled="!editable" x-model="line.instructions"
-                                       placeholder="Optional instructions"
-                                       class="sm:col-span-12 rounded border border-slate-100 px-2 py-1 text-xs">
                             </div>
 
                             <!-- [⋮] Drawer — per-row advanced options -->
@@ -504,6 +530,12 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                     <label class="block">
                                         <span class="text-slate-600">Dose amount</span>
                                         <input type="number" step="0.01" :disabled="!editable" x-model="line.dose_amount"
+                                               class="mt-1 w-full rounded border px-2 py-1">
+                                    </label>
+                                    <label class="block sm:col-span-3">
+                                        <span class="text-slate-600">Instructions</span>
+                                        <input type="text" :disabled="!editable" x-model="line.instructions"
+                                               placeholder="e.g. after breakfast, with plenty of water"
                                                class="mt-1 w-full rounded border px-2 py-1">
                                     </label>
                                     <label class="block">
@@ -743,36 +775,6 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
 
             <!-- ====== OPTIONAL SECTIONS — collapsed by default for a fast form ====== -->
 
-            <!-- ---- DIAGNOSIS + ICD-10 (collapsible; most visits skip it) ---- -->
-            <details class="rounded-lg border border-slate-200 bg-slate-50/50">
-                <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">
-                    Diagnosis <span class="font-normal text-slate-400">— optional</span>
-                </summary>
-                <div class="px-4 pb-4 pt-2">
-                    <input type="text" x-model="diagnosis" :disabled="!editable"
-                           placeholder="e.g. Viral fever"
-                           class="ui-input">
-                    <div class="mt-2 flex items-center gap-2">
-                        <input type="search" x-model="icd10_code" :disabled="!editable"
-                               @input.debounce.300ms="searchIcd($event.target.value)"
-                               placeholder="ICD-10 code (optional)"
-                               class="w-40 rounded border border-slate-200 px-2 py-1 text-xs">
-                        <ul x-show="icdResults.length" class="ml-2 inline-flex max-h-32 flex-wrap gap-1 overflow-y-auto">
-                            <template x-for="c in icdResults" :key="c.code">
-                                <li>
-                                    <!-- Code alone is unreadable — show the label, and use it as
-                                         the diagnosis text when the doctor hasn't typed one. -->
-                                    <button type="button"
-                                            @click="icd10_code = c.code; if (!diagnosis) diagnosis = c.label; icdResults = []"
-                                            class="rounded bg-slate-100 px-2 py-0.5 text-xs hover:bg-brand-light"
-                                            x-text="c.code + ' · ' + c.label"></button>
-                                </li>
-                            </template>
-                        </ul>
-                    </div>
-                </div>
-            </details>
-
             <?php if ($has('diet') && !empty($hasDiet)): ?>
                 <details class="rounded-lg border border-slate-200 bg-slate-50/50"
                          @toggle="recordSection('diet', $event.target.open)">
@@ -971,8 +973,8 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
     $hs = $historySummary ?? [];
     $hasHistory = !empty($hs['chronic']) || !empty($hs['allergies']) || !empty($hs['surgeries'])
         || !empty($hs['family_history']) || !empty($hs['medications']);
-    $hasLastVisit = !empty($hs['last_visit_at'])
-        && (!empty($hs['last_complaint']) || !empty($hs['last_diagnosis']) || !empty($hs['last_notes']));
+    $prevVisits = $hs['previous_visits'] ?? [];
+    $hasLastVisit = $prevVisits !== [];
     ?>
     <section class="ui-card p-4">
         <div class="flex items-center justify-between">
@@ -998,30 +1000,41 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         <?php endif; ?>
 
         <?php if ($hasLastVisit): ?>
-        <!-- What brought the patient in last time — the returning-visit context. -->
-        <div class="mt-3 rounded-lg bg-slate-50 p-2.5">
-            <p class="ui-group-label">Last visit
-                <span class="font-normal normal-case tracking-normal text-slate-400">— <?= htmlspecialchars(date('d M Y', strtotime((string) $hs['last_visit_at']))) ?></span>
-            </p>
-            <?php if (!empty($hs['last_complaint'])): ?>
-            <p class="mt-1 whitespace-pre-line text-sm text-slate-700"><?= htmlspecialchars((string) $hs['last_complaint']) ?></p>
-            <?php endif; ?>
-            <?php if (empty($hs['last_complaint'])): ?>
-            <p class="mt-1 text-sm text-slate-400">No complaint recorded.</p>
-            <?php endif; ?>
-            <?php if (!empty($hs['last_diagnosis'])): ?>
-            <p class="mt-1 text-sm text-slate-600"><span class="text-slate-400">Dx:</span> <?= htmlspecialchars((string) $hs['last_diagnosis']) ?></p>
-            <?php endif; ?>
-            <?php if (!empty($hs['last_notes'])): ?>
-            <p class="mt-1 whitespace-pre-line text-sm text-slate-600"><span class="text-slate-400">Notes:</span> <?= htmlspecialchars((string) $hs['last_notes']) ?></p>
-            <?php endif; ?>
-            <?php if (!empty($hs['last_complaint'])): ?>
-            <button type="button" :disabled="!editable"
-                    @click="chief_complaint = chief_complaint || <?= htmlspecialchars(json_encode((string) $hs['last_complaint']), ENT_QUOTES) ?>; markDirty()"
-                    class="mt-1.5 text-xs font-medium text-brand hover:underline disabled:opacity-50">
-                ↻ Copy into today's complaint
-            </button>
-            <?php endif; ?>
+        <!-- The last three consultations — what the patient came in with, what
+             it was called, and what was given. -->
+        <div class="mt-3 space-y-2">
+            <p class="ui-group-label">Last <?= count($prevVisits) ?> visit<?= count($prevVisits) === 1 ? '' : 's' ?></p>
+            <?php foreach ($prevVisits as $i => $pv): ?>
+            <div class="rounded-lg bg-slate-50 p-2.5">
+                <div class="flex items-baseline justify-between gap-2">
+                    <a href="/visits/<?= (int) $pv['id'] ?>" class="text-xs font-semibold text-brand hover:underline">
+                        <?= htmlspecialchars(date('d M Y', strtotime((string) $pv['visited_at']))) ?>
+                    </a>
+                    <span class="text-[11px] text-slate-400">#<?= (int) $pv['visit_number'] ?></span>
+                </div>
+                <?php if ($pv['complaint'] !== ''): ?>
+                <p class="mt-1 whitespace-pre-line text-sm text-slate-700"><?= htmlspecialchars($pv['complaint']) ?></p>
+                <?php else: ?>
+                <p class="mt-1 text-sm text-slate-400">No complaint recorded.</p>
+                <?php endif; ?>
+                <?php if ($pv['diagnosis'] !== ''): ?>
+                <p class="mt-1 text-sm text-slate-600"><span class="text-slate-400">Dx:</span> <?= htmlspecialchars($pv['diagnosis']) ?></p>
+                <?php endif; ?>
+                <?php if ($pv['medicines'] !== ''): ?>
+                <p class="mt-1 text-xs text-slate-600"><span class="text-slate-400">Rx:</span> <?= htmlspecialchars($pv['medicines']) ?></p>
+                <?php endif; ?>
+                <?php if ($pv['notes'] !== ''): ?>
+                <p class="mt-1 whitespace-pre-line text-xs text-slate-600"><span class="text-slate-400">Notes:</span> <?= htmlspecialchars($pv['notes']) ?></p>
+                <?php endif; ?>
+                <?php if ($i === 0 && $pv['complaint'] !== ''): ?>
+                <button type="button" :disabled="!editable"
+                        @click="chief_complaint = chief_complaint || <?= htmlspecialchars(json_encode($pv['complaint']), ENT_QUOTES) ?>; markDirty()"
+                        class="mt-1.5 text-xs font-medium text-brand hover:underline disabled:opacity-50">
+                    ↻ Copy into today's complaint
+                </button>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
         </div>
         <?php endif; ?>
 
