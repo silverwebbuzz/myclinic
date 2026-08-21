@@ -1173,8 +1173,18 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
     <?php if ($has('case_specialty') && $caseAvailable): ?>
         <details class="ui-card"
                  @toggle="recordSection('case_specialty', $event.target.open)">
-            <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">Case taking</summary>
+            <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">
+                Case taking
+                <?php if (!empty($caseCarriedFrom)): ?>
+                <span class="ml-1 rounded bg-brand-light px-1.5 py-0.5 text-[10px] font-normal uppercase tracking-wide text-brand">carried forward</span>
+                <?php endif; ?>
+            </summary>
             <div class="px-4 pb-4 pt-2 space-y-3">
+                <?php if (!empty($caseCarriedFrom)): ?>
+                <p class="rounded-lg bg-brand-light/60 px-2.5 py-1.5 text-xs text-slate-600">
+                    Filled from the visit on <?= htmlspecialchars(date('d M Y', strtotime((string) $caseCarriedFrom))) ?> — edit anything that has changed.
+                </p>
+                <?php endif; ?>
                 <?php require $casePartialPath; ?>
             </div>
         </details>

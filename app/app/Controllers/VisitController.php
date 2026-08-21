@@ -110,7 +110,11 @@ final class VisitController
             $visibleModules[] = 'case_specialty';
         }
 
-        $caseTaking = VisitService::extractCaseTaking($visit);
+        // Case taking carries forward: a follow-up opens with the history the
+        // doctor already recorded, editable as usual.
+        $carry = VisitService::caseTakingWithCarryForward($clinicId, $visit);
+        $caseTaking = $carry['case'];
+        $caseCarriedFrom = $carry['carried_from'];
         $visit['specialty_data'] = array_merge($visit['specialty_data'] ?? [], ['case_taking' => $caseTaking]);
 
         $chargeData = self::chargesForVisit($clinicId, (int) $id, $editable);
@@ -144,6 +148,7 @@ final class VisitController
             'vitalsFields' => SpecialtyAdapter::vitalsFields(),
             'casePartial' => SpecialtyAdapter::caseTakingPartial(),
             'caseTaking' => $caseTaking,
+            'caseCarriedFrom' => $caseCarriedFrom,
             'rxMode' => SpecialtyAdapter::prescriptionMode(),
             'useHomeo' => SpecialtyAdapter::usesHomeopathicRx(),
             'editable' => $editable,

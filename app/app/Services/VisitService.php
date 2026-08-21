@@ -55,6 +55,57 @@ final class VisitService
     }
 
     /**
+     * Case taking for a visit, with anything the doctor recorded earlier
+     * carried forward: history, family history, generals and the like are
+     * standing facts about the patient, so a follow-up should open with them
+     * already filled instead of a blank form.
+     *
+     * Only EMPTY fields are filled — whatever was typed on this visit always
+     * wins — and the carried values become part of this visit once it saves.
+     *
+     * @param array<string, mixed> $visit
+     * @return array{case: array<string, mixed>, carried_from: string|null}
+     */
+    public static function caseTakingWithCarryForward(int $clinicId, array $visit): array
+    {
+        $case = self::extractCaseTaking($visit);
+        $patientId = (int) ($visit['patient_id'] ?? 0);
+        $visitId = (int) ($visit['id'] ?? 0);
+        if ($patientId < 1) {
+            return ['case' => $case, 'carried_from' => null];
+        }
+
+        $carriedFrom = null;
+        foreach (self::recentForPatient($clinicId, $patientId, 5, $visitId) as $prior) {
+            foreach (self::extractCaseTaking($prior) as $key => $value) {
+                if (!self::caseValueFilled($value) || self::caseValueFilled($case[$key] ?? null)) {
+                    continue;
+                }
+                $case[$key] = $value;
+                $carriedFrom ??= (string) ($prior['visited_at'] ?? '');
+            }
+        }
+
+        return ['case' => $case, 'carried_from' => $carriedFrom];
+    }
+
+    /** Deep "has the doctor actually put something here?" test. */
+    private static function caseValueFilled(mixed $value): bool
+    {
+        if (is_array($value)) {
+            foreach ($value as $item) {
+                if (self::caseValueFilled($item)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        return self::hasNonEmptyScalar($value);
+    }
+
+    /**
      * @param array<string, mixed> $sd
      * @return array<string, mixed>
      */
