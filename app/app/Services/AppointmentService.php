@@ -385,9 +385,10 @@ final class AppointmentService
             $sql .= ' AND a.doctor_id = ?';
             $params[] = $doctorId;
         }
-        // Active/upcoming first, finished last. Within each group, earliest slot
-        // first — so the doctor's next turn is at the top and completed/cancelled
-        // (and no-shows) sink to the bottom.
+        // Active/upcoming first, finished last; within each group the LATEST
+        // slot leads, so the most recent activity is what staff see first.
+        // (The calling order for the waiting room lives on /queue, which sorts
+        // by token — this list is a day log, not the call sheet.)
         $sql .= " ORDER BY CASE a.status
                     WHEN 'in_progress' THEN 0
                     WHEN 'confirmed'   THEN 1
@@ -396,7 +397,7 @@ final class AppointmentService
                     WHEN 'no_show'     THEN 4
                     WHEN 'cancelled'   THEN 5
                     ELSE 6 END ASC,
-                  a.scheduled_at ASC, a.id ASC";
+                  a.scheduled_at DESC, a.id DESC";
 
         $stmt = Database::connection()->prepare($sql);
         $stmt->execute($params);
