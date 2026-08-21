@@ -364,6 +364,19 @@ $showDoctorFilter = $lockDoctorId === null && count($doctors) > 1;
 </div>
 
 <script>
+// Empty booking-popup state. Used for the initial value AND on every open, so
+// the popup's bindings never touch an undefined key.
+function blankBooking() {
+    return {
+        open: false, date: '', time: '', doctorId: '',
+        type: 'prebooked', complaint: '',
+        newMode: false, newName: '', newPhone: '',
+        patientId: '', patientLabel: '', query: '', results: [], searching: false,
+        slots: [], noSlots: false, loadingSlots: false,
+        saving: false, error: '',
+    };
+}
+
 function clinicCalendar(cfg) {
     return {
         cfg,
@@ -373,7 +386,10 @@ function clinicCalendar(cfg) {
         events: [],
         loading: false,
         selected: null, acting: false,
-        booking: { open: false },
+        // Full shape from the start: the popup is x-show (always in the DOM),
+        // so every binding — booking.slots.length included — has to resolve
+        // before it is ever opened.
+        booking: blankBooking(),
         startH: cfg.startH, endH: cfg.endH, hourPx: cfg.hourPx, stepMin: cfg.stepMin,
         weekdayNames: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
         gridDays: [], monthCells: [], listGroups: [], rangeLabel: '',
@@ -558,15 +574,10 @@ function clinicCalendar(cfg) {
 
         // --- booking popup ---
         openBooking(opts) {
-            this.booking = {
+            this.booking = Object.assign(blankBooking(), {
                 open: true, date: opts.date || this.cfg.today, time: opts.time || '',
                 doctorId: this.doctorId || (this.cfg.lockDoctorId ? String(this.cfg.lockDoctorId) : (this.cfg.doctors.length===1 ? String(this.cfg.doctors[0].id) : '')),
-                type: 'prebooked', complaint: '',
-                newMode: false, newName: '', newPhone: '',
-                patientId: '', patientLabel: '', query: '', results: [], searching: false,
-                slots: [], noSlots: false, loadingSlots: false,
-                saving: false, error: '',
-            };
+            });
             this.loadSlots();
         },
         closeBooking() { this.booking.open = false; },

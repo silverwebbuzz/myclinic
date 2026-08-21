@@ -129,9 +129,9 @@ $presenceSub = $presenceSub ?? 'Find doctors & clinics across these cities';
                     <li><a href="/eclinicpro-health-store">Health Store</a></li>
                     <li><a href="/lab">Lab Tests</a></li>
                     <li><a href="/health-insurance">Health Insurance</a></li>
-                    <li><a href="/features">For doctors</a></li>
+                    <li><a href="/clinic-management-software">For doctors</a></li>
                     <li><a href="/product-tour">Product tour</a></li>
-                    <li><a href="/features#pricing">Pricing</a></li>
+                    <li><a href="/clinic-management-software#pricing">Pricing</a></li>
                 </ul>
             </div>
             <div class="foot-col">

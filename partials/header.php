@@ -222,7 +222,7 @@ a{color:inherit;text-decoration:none}
         <nav class="nav-links" :class="mobileNav ? 'is-open' : ''">
             <a href="/find-a-doctor" class="nav-link <?= nav_active('find') ?>">Find a doctor</a>
             <a href="/cervical-cancer" class="nav-link nav-link-awareness <?= nav_active('cervical') ?>">Cervical Cancer</a>
-            <a href="/features" class="nav-link <?= nav_active('features') ?>">For doctors</a>
+            <a href="/clinic-management-software" class="nav-link <?= nav_active('features') ?>">For doctors</a>
             <a href="/#specialties" class="nav-link <?= nav_active('specialties') ?>">Specialties</a>
             <a href="/security" class="nav-link <?= nav_active('security') ?>">Security</a>
         </nav>

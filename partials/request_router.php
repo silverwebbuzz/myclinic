@@ -45,6 +45,13 @@ function ecp_dispatch_clean_url(string $requestUri): bool
         return true;
     }
 
+    // /features was renamed to /clinic-management-software — keep old links alive.
+    if (preg_match('#^/features/?$#i', $uri)) {
+        header('Location: /clinic-management-software', true, 301);
+
+        return true;
+    }
+
     if ($uri === '/sitemap.xml') {
         require __DIR__ . '/../sitemap.php';
 
@@ -95,7 +102,7 @@ function ecp_dispatch_clean_url(string $requestUri): bool
     }
 
     if (preg_match('#^/pricing/?$#', $uri)) {
-        header('Location: /features#pricing', true, 301);
+        header('Location: /clinic-management-software#pricing', true, 301);
         exit;
     }
 

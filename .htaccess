@@ -76,12 +76,17 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^lab/(package|organ|life|step|why|partner)/([a-z0-9][a-z0-9\-]*)/?$ lab-detail.php?type=$1&slug=$2 [L,QSA,NC]
 
-# -------- Pricing moved into the For-doctors (features) page --------
+# -------- Pricing moved into the For-doctors page --------
 # Redirect the retired /pricing page to the new section so old links/SEO survive.
-RewriteRule ^pricing/?$ /features#pricing [R=301,L]
+RewriteRule ^pricing/?$ /clinic-management-software#pricing [R=301,L]
+
+# -------- /features renamed to /clinic-management-software (keyword URL) --------
+# Permanent redirect so existing links, ads and search results keep working.
+RewriteRule ^features/?$ /clinic-management-software [R=301,L]
 
 # -------- Clean URLs --------
-# /features -> features.php (internal rewrite, browser still sees /features)
+# /clinic-management-software -> clinic-management-software.php
+# (internal rewrite, browser still sees the clean URL)
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}.php -f
 RewriteRule ^([^.]+)$ $1.php [L]

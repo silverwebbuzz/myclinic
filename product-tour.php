@@ -117,7 +117,7 @@ $screenCount = array_sum(array_map(fn($c) => count($c['screens']), $chapters));
         </p>
         <div class="pt-hero-cta">
             <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg">Start 30-day free trial</a>
-            <a href="/features" class="btn btn-ghost-dark btn-lg">See all features</a>
+            <a href="/clinic-management-software" class="btn btn-ghost-dark btn-lg">See all features</a>
         </div>
     </div>
 </section>

@@ -1,11 +1,13 @@
 <?php
 // =====================================================================
-// features.php — full feature catalog (standalone, no partials needed)
+// clinic-management-software.php — full feature catalog for doctors.
+// Served at /clinic-management-software (was /features, 301 in .htaccess).
 // =====================================================================
 require_once __DIR__ . '/partials/helpers.php';
 
-$pageTitle = 'Features — eClinicPro';
-$metaDesc  = 'Everything to run your clinic — patient records, prescriptions, appointments, billing, WhatsApp/SMS, and more. All included in one simple plan.';
+$activePage = 'features';
+$pageTitle = 'Clinic Management Software — eClinicPro';
+$metaDesc  = 'Clinic management software for Indian clinics — patient records, prescriptions, appointments, billing, WhatsApp/SMS, and reports. All included in one simple plan.';
 
 $cats = [
     [
@@ -929,6 +931,9 @@ require __DIR__ . '/partials/header.php';
         </div>
     </div>
 </div>
+
+<!-- ═══════ SCREENSHOT GALLERY ═══════ -->
+<?php require __DIR__ . '/partials/screenshot-gallery.php'; ?>
 
 <!-- ═══════ STICKY CATEGORY NAV ═══════ -->
 <nav class="feat-nav" id="featNav">
