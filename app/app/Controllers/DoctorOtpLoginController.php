@@ -82,6 +82,7 @@ final class DoctorOtpLoginController
         $token   = JwtService::issue($user, $clinicId);
         $refresh = AuthService::establishSession($user, $request, true);
         JwtService::setAuthCookies($token, $refresh);
+        JwtService::clearImpersonationCookie();
 
         QueryBuilder::table('users')->where('id', '=', (int) $user['id'])->update([
             'last_login_at' => date('Y-m-d H:i:s'),

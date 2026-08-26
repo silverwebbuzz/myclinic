@@ -47,14 +47,6 @@ final class ImpersonateController
     public function exit(Request $request): Response
     {
         JwtService::clearAuthCookies();
-        $secure = ($_ENV['APP_ENV'] ?? 'local') !== 'local';
-        setcookie('mc_impersonate', '', [
-            'expires'  => time() - 3600,
-            'path'     => '/',
-            'secure'   => $secure,
-            'httponly' => false,
-            'samesite' => 'Strict',
-        ]);
 
         // Superadmin session (mc_sa_token) is kept on a separate cookie path.
         $returnTo = !empty($_COOKIE['mc_sa_token']) ? '/admin/clinics' : '/admin/login';

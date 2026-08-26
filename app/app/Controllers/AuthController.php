@@ -252,6 +252,7 @@ final class AuthController
         $token = JwtService::issue($user, $result['tenant_id']);
         $refresh = AuthService::establishSession($user, $request, true);
         JwtService::setAuthCookies($token, $refresh);
+        JwtService::clearImpersonationCookie();
 
         AuditService::log($request, 'INSERT', 'users', $result['user_id']);
 
@@ -346,6 +347,7 @@ final class AuthController
         $token = JwtService::issue($user, $clinicId);
         $refresh = AuthService::establishSession($user, $request, $remember);
         JwtService::setAuthCookies($token, $refresh);
+        JwtService::clearImpersonationCookie();
 
         QueryBuilder::table('users')->where('id', '=', $user['id'])->update([
             'last_login_at' => date('Y-m-d H:i:s'),
@@ -686,6 +688,7 @@ final class AuthController
         $token = JwtService::issue($user, (int) $user['clinic_id']);
         $refresh = AuthService::establishSession($user, $request, true);
         JwtService::setAuthCookies($token, $refresh);
+        JwtService::clearImpersonationCookie();
 
         AuditService::log($request, 'LOGIN', 'users', (int) $user['id']);
 

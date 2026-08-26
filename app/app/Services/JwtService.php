@@ -75,6 +75,23 @@ final class JwtService
     {
         setcookie('mc_token', '', ['expires' => time() - 3600, 'path' => '/']);
         setcookie('mc_refresh', '', ['expires' => time() - 3600, 'path' => '/']);
+        self::clearImpersonationCookie();
+    }
+
+    /**
+     * The support-impersonation banner is driven purely by this cookie, so it
+     * has to die with any session change - otherwise it keeps showing after a
+     * normal logout / fresh login until its 30 min expiry.
+     */
+    public static function clearImpersonationCookie(): void
+    {
+        setcookie('mc_impersonate', '', [
+            'expires' => time() - 3600,
+            'path' => '/',
+            'secure' => ($_ENV['APP_ENV'] ?? 'local') !== 'local',
+            'httponly' => false,
+            'samesite' => 'Strict',
+        ]);
     }
 
     private static function secret(): string

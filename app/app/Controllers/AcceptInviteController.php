@@ -61,6 +61,7 @@ final class AcceptInviteController
             $token = JwtService::issue($user, (int) $user['clinic_id']);
             $refresh = AuthService::establishSession($user, $request, true);
             JwtService::setAuthCookies($token, $refresh);
+            JwtService::clearImpersonationCookie();
 
             return Response::redirect('/dashboard');
         } catch (\Throwable $e) {
