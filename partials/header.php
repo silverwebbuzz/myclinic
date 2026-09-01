@@ -130,7 +130,8 @@ $ecpPatientJson = $ecpPatient
         gtag('js', new Date());
         gtag('config', 'G-YTM2L1L5RZ');
     </script>
-
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3947971704697505"
+     crossorigin="anonymous"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <!-- Non-blocking font load: swap-in once downloaded, system font shown first. -->
