@@ -77,6 +77,7 @@ $ecpPatientJson = $ecpPatient
     <meta name="robots" content="noindex, nofollow" />
     <?php endif; ?>
     <meta name="theme-color" content="#0F9B6E" />
+    <meta name="google-adsense-account" content="ca-pub-3947971704697505">
     <title><?= e($pageTitle) ?></title>
 
     <!-- Canonical -->
