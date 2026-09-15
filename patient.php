@@ -19,6 +19,11 @@ $noindex    = true;                  // private — don't index logged-in/empty 
 
 $me = ecp_patient_current();   // null when logged out
 
+// The logged-in panel runs wider than the rest of the site (it holds a fixed
+// 1480px booking frame); this widens the site header to match. The logged-out
+// view keeps the standard 1280px layout.
+$bodyClass = $me ? 'patient-wide' : '';
+
 require __DIR__ . '/partials/header.php';
 ?>
 
@@ -1294,9 +1299,20 @@ require __DIR__ . '/partials/header.php';
     padding: 120px 0 80px;
   }
 
-  .pt-hero .wrap,
-  .pt-main .wrap {
+  .pt-hero .wrap {
     max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  /* The logged-in panel is wider than the rest of the site so the booking
+     frame fits without a horizontal scrollbar:
+       1480 frame + 2 border + 48 pane padding + 2 card border + 40 wrap
+       padding = 1572px.
+     Below that width the frame's own wrapper scrolls (see .pt-labframe-scroll),
+     so narrow screens still work. */
+  .pt-main .wrap {
+    max-width: 1572px;
     margin: 0 auto;
     padding: 0 20px;
   }

@@ -158,6 +158,10 @@ a{color:inherit;text-decoration:none}
 .btn-primary{background:var(--teal-600);color:#fff}
 .nav{position:fixed;top:0;left:0;right:0;z-index:100;background:#fff;backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--line);transition:all .25s ease;height:80px;display:flex;align-items:center}
 .nav-inner{max-width:1280px;margin:0 auto;padding:0 20px;width:100%}
+/* The patient panel runs wider than the rest of the site (it holds a fixed
+   1480px booking frame), so the header matches it there — otherwise the logo
+   and nav sit visibly narrower than the content directly below them. */
+body.patient-wide .nav-inner{max-width:1572px}
 .nav .nav-inner{display:flex;align-items:center;gap:28px}
 .logo{font-size:18px;font-weight:600;letter-spacing:-.4px;color:var(--ink);display:inline-flex;align-items:center;width:180px;height:40px;flex-shrink:0}
 .logo em{color:var(--teal-600);font-style:normal;font-weight:600}
