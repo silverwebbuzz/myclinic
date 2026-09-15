@@ -101,13 +101,6 @@ function ecp_dispatch_clean_url(string $requestUri): bool
         return true;
     }
 
-    // Patient lab booking — /patient/lab (full-width partner embed).
-    if (preg_match('#^/patient/lab/?$#i', $uri)) {
-        require __DIR__ . '/../patient-lab.php';
-
-        return true;
-    }
-
     if (preg_match('#^/pricing/?$#', $uri)) {
         header('Location: /clinic-management-software#pricing', true, 301);
         exit;
