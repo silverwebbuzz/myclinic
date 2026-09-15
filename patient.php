@@ -2460,25 +2460,22 @@ require __DIR__ . '/partials/header.php';
   }
 
   /* -------- Embedded partner booking portal -------- */
+  /* The frame stays INSIDE the panel card. An earlier full-bleed attempt
+     (100vw + negative margins) let the partner's own header run edge-to-edge,
+     which made the card look like it ended above the frame — the layout read
+     as broken at every window size. The partner page is fluid: extra width
+     just stretches its hero art, it never "snaps" to a better layout. So cap
+     the frame at a sane reading width and centre it instead of chasing the
+     viewport. */
   .pt-labframe-wrap {
     position: relative;
-    /* Tall enough that the partner's own flow rarely needs inner scrolling on
-       desktop; the iframe scrolls internally when it does. */
     height: 1100px;
-    /* Break out of the 1280px .wrap entirely and span the viewport. The
-       partner page is responsive but picks a wide two-column desktop layout,
-       which was getting clipped at the ~1238px the panel column gave it.
-       Full-bleed gives it the room that layout expects.
-       (100vw vs 100% avoids the parent's padding; the negative margin
-       re-centres it against the viewport, not the column.) */
-    width: 100vw;
-    max-width: 100vw;
-    margin-left: calc(50% - 50vw);
-    margin-right: calc(50% - 50vw);
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
     border: 1px solid var(--line);
-    border-left: 0;
-    border-right: 0;
-    border-radius: 0;
+    border-radius: 14px;
+    overflow: hidden;
     background: var(--bg-3);
   }
 
@@ -3370,8 +3367,7 @@ require __DIR__ . '/partials/header.php';
          a short frame means scrolling a tiny window inside a big page. */
       height: 86vh;
       min-height: 600px;
-      /* Full-bleed is inherited from the desktop rule (calc(50% - 50vw));
-         don't re-inset it here or the frame narrows again. */
+      border-radius: 10px;
     }
 
     /* Card headers: let the name/actions wrap instead of overflowing the card
