@@ -40,45 +40,72 @@ require __DIR__ . '/partials/header.php';
             <!-- Lab partnership offer. Co-branded lockup, feature row, split
                  coupon, CTA into the sign-in card on the right. -->
             <div class="pt-offer">
-              <div class="pt-offer-lockup">
-                <img src="/assets/img/logos/logo.svg" alt="eClinicPro" class="pt-offer-logo" width="180" height="40">
-                <span class="pt-offer-lockup-sep" aria-hidden="true"></span>
-                <img src="/assets/img/logos/thyrocare-logo.webp" alt="Thyrocare — tests you can trust"
-                  class="pt-offer-partner-logo" width="180" height="40" loading="lazy">
+              <!-- Accreditation strip: partner + the certifications that make
+                   the offer credible. Our own logo is already in the site
+                   header directly above, so repeating it here added nothing. -->
+              <div class="pt-offer-assoc">
+                <span class="pt-offer-assoc-label">In association with</span>
+                <div class="pt-offer-assoc-logos">
+                  <img src="/assets/img/logos/thyrocare-logo.webp" alt="Thyrocare — tests you can trust"
+                    width="150" height="44" loading="lazy">
+                  <img src="/assets/img/logos/cap-accredited-logo.webp" alt="CAP accredited — College of American Pathologists"
+                    width="150" height="44" loading="lazy">
+                  <img src="/assets/img/logos/nabl-logo.webp" alt="NABL accredited"
+                    width="150" height="44" loading="lazy">
+                  <img src="/assets/img/logos/isologo.webp" alt="ISO 9001 certified"
+                    width="150" height="44" loading="lazy">
+                </div>
               </div>
 
               <span class="pt-offer-badge">Patient exclusive offer</span>
               <h1>Trusted Lab Tests,<br><em>Now on eClinicPro</em></h1>
               <p class="pt-offer-lede">
-                In partnership with Thyrocare, book your lab tests easily and
+                Associated with Thyrocare, book your lab tests easily and
                 get accurate reports — all in one place.
               </p>
 
+              <!-- Four accreditation/service cards, per the reference. -->
               <ul class="pt-offer-feats">
                 <li>
-                  <span class="pt-offer-feat-ic" aria-hidden="true">🏠</span>
-                  <span>Home<br>Sample Collection</span>
+                  <span class="pt-offer-feat-ic" aria-hidden="true">🧪</span>
+                  <span class="pt-offer-feat-tx">
+                    <strong>NABL Certified Labs</strong>
+                    <em>Trusted &amp; Accurate Reports</em>
+                  </span>
                 </li>
                 <li>
-                  <span class="pt-offer-feat-ic" aria-hidden="true">📋</span>
-                  <span>Trusted &amp;<br>Accurate Reports</span>
+                  <span class="pt-offer-feat-ic" aria-hidden="true">🏠</span>
+                  <span class="pt-offer-feat-tx">
+                    <strong>Home Sample Collection</strong>
+                    <em>Safe &amp; Convenient</em>
+                  </span>
+                </li>
+                <li>
+                  <span class="pt-offer-feat-ic" aria-hidden="true">🕒</span>
+                  <span class="pt-offer-feat-tx">
+                    <strong>Reports in 24 Hours*</strong>
+                    <em>Quick &amp; Hassle-Free</em>
+                  </span>
                 </li>
                 <li>
                   <span class="pt-offer-feat-ic" aria-hidden="true">🛡️</span>
-                  <span>Convenient<br>&amp; Secure</span>
+                  <span class="pt-offer-feat-tx">
+                    <strong>Secure &amp; Private</strong>
+                    <em>Your Data Is Safe</em>
+                  </span>
                 </li>
               </ul>
 
+              <ul class="pt-offer-reassure">
+                <li>Advanced technology</li>
+                <li>Expert pathologists</li>
+                <li>100% Quality Assured</li>
+              </ul>
+
               <div class="pt-offer-coupon">
-                <div class="pt-offer-coupon-main">
-                  <span class="pt-offer-get">Get</span>
-                  <span class="pt-offer-pct">20% <b>OFF</b></span>
-                  <span class="pt-offer-sub">on Monsoon Fever Panels</span>
-                </div>
-                <div class="pt-offer-coupon-alt">
-                  <strong>6 Testing Options</strong>
-                  <span>From Mini to Advanced, including Rapid &amp; Influenza.</span>
-                </div>
+                <p class="pt-offer-coupon-line">
+                  Sign Up and Get <b class="pt-offer-pct">20% OFF</b> on all Lab Test.
+                </p>
               </div>
 
               <button type="button" class="pt-offer-cta"
@@ -1388,16 +1415,26 @@ require __DIR__ . '/partials/header.php';
     max-width: 460px;
   }
 
+  /* All five chips hold one row; they scroll rather than wrap if the column
+     is too narrow for them. */
   .pt-feat-chips {
     list-style: none;
     padding: 0;
     margin: 0;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .pt-feat-chips::-webkit-scrollbar {
+    display: none;
   }
 
   .pt-feat-chips li {
+    white-space: nowrap;
+    flex: 0 0 auto;
     font-size: 12.5px;
     font-weight: 600;
     color: var(--ink-2);
@@ -2355,132 +2392,136 @@ require __DIR__ . '/partials/header.php';
     max-width: 44ch;
   }
 
-  /* Co-branded lockup: our logo | partner wordmark. */
-  .pt-offer-lockup {
+  /* Accreditation strip. */
+  .pt-offer-assoc {
+    margin-bottom: 22px;
+  }
+
+  .pt-offer-assoc-label {
+    display: block;
+    font-size: 12.5px;
+    font-style: italic;
+    color: var(--mute);
+    margin-bottom: 12px;
+  }
+
+  .pt-offer-assoc-logos {
     display: flex;
     align-items: center;
-    gap: 18px;
-    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 14px 26px;
   }
 
-  .pt-offer-logo {
-    height: 38px;
+  /* Each mark ships at a different aspect ratio, so cap the height and let
+     width follow rather than forcing a common box. */
+  .pt-offer-assoc-logos img {
+    height: 44px;
     width: auto;
+    object-fit: contain;
   }
 
-  .pt-offer-lockup-sep {
-    width: 1px;
-    height: 34px;
-    background: var(--teal-100);
-  }
-
-  /* Partner wordmark ships with its own tagline baked into the asset, so it
-     only needs sizing — height matches our logo so the lockup reads level. */
-  .pt-offer-partner-logo {
-    height: 38px;
-    width: auto;
-  }
-
-  /* Three-up feature row with hairline dividers. */
+  /* Four service cards: icon left, title + subtitle right. */
   .pt-offer-feats {
     list-style: none;
     padding: 0;
-    margin: 0 0 22px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px 0;
+    margin: 0 0 14px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
   }
 
   .pt-offer-feats li {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 8px;
-    text-align: center;
-    padding: 0 22px;
-    font-size: 12.5px;
-    font-weight: 600;
-    color: var(--ink-2);
-    line-height: 1.35;
-  }
-
-  .pt-offer-feats li + li {
-    border-left: 1px solid var(--teal-100);
+    gap: 11px;
+    background: #fff;
+    border: 1px solid var(--teal-100);
+    border-radius: 12px;
+    padding: 12px 14px;
+    min-width: 0;
   }
 
   .pt-offer-feat-ic {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.85);
-    font-size: 19px;
+    background: var(--teal-50);
+    font-size: 17px;
   }
 
-  /* Dashed "coupon" block: offer on the left, what's included on the right. */
-  .pt-offer-coupon {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 14px 26px;
-    background: rgba(255, 255, 255, 0.72);
-    border: 2px dashed var(--teal-400);
-    border-radius: 14px;
-    padding: 16px 24px;
-    margin-bottom: 22px;
-  }
-
-  .pt-offer-coupon-main {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
-    gap: 4px 12px;
-  }
-
-  .pt-offer-coupon-alt {
+  .pt-offer-feat-tx {
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    padding-left: 26px;
-    border-left: 1px solid var(--teal-100);
-    font-size: 13px;
-    color: var(--ink-2);
-    max-width: 30ch;
+    gap: 2px;
+    min-width: 0;
   }
 
-  .pt-offer-coupon-alt strong {
-    font-size: 15px;
+  .pt-offer-feat-tx strong {
+    font-size: 13px;
     font-weight: 700;
     color: var(--ink);
+    line-height: 1.25;
   }
 
-  .pt-offer-get {
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+  .pt-offer-feat-tx em {
+    font-style: normal;
+    font-size: 11.5px;
     color: var(--mute);
+    line-height: 1.3;
   }
 
-  .pt-offer-pct {
-    font-size: clamp(30px, 4.2vw, 44px);
-    font-weight: 700;
-    letter-spacing: -1.4px;
-    line-height: 1;
+  /* Tick-separated reassurance line under the cards. */
+  .pt-offer-reassure {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 22px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 18px;
+    font-size: 12.5px;
+    font-weight: 600;
     color: var(--teal-700);
   }
 
-  .pt-offer-pct b {
-    color: var(--ink);
-    font-weight: 700;
+  .pt-offer-reassure li::before {
+    content: "✓ ";
   }
 
-  .pt-offer-sub {
-    font-size: 14px;
+  .pt-offer-reassure li + li::after {
+    content: "";
+  }
+
+  /* Dashed coupon: one sentence, the discount carrying the emphasis. */
+  .pt-offer-coupon {
+    background: rgba(255, 255, 255, 0.72);
+    border: 2px dashed var(--teal-400);
+    border-radius: 14px;
+    padding: 18px 24px;
+    margin-bottom: 22px;
+    text-align: center;
+  }
+
+  .pt-offer-coupon-line {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
     color: var(--ink-2);
-    width: 100%;
+    line-height: 1.35;
+  }
+
+  /* Sits inline inside the coupon sentence, so it stays on the text baseline
+     while carrying the emphasis. */
+  .pt-offer-pct {
+    font-size: clamp(26px, 3.4vw, 36px);
+    font-weight: 700;
+    letter-spacing: -1px;
+    color: var(--teal-700);
+    padding: 0 4px;
   }
 
   .pt-offer-cta {
@@ -3457,37 +3498,25 @@ require __DIR__ . '/partials/header.php';
       padding: 22px 20px;
     }
 
-    /* Feature row: let the three items wrap and drop the dividers, which
-       only read correctly on a single line. */
-    .pt-offer-feats li {
-      flex: 1 1 30%;
-      padding: 0 8px;
+    /* Four cards can't hold one row on a phone — go two-up. */
+    .pt-offer-feats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .pt-offer-feats li + li {
-      border-left: 0;
+    .pt-offer-assoc-logos {
+      gap: 12px 18px;
     }
 
-    /* Coupon stacks, so the vertical rule becomes a horizontal one. */
+    .pt-offer-assoc-logos img {
+      height: 34px;
+    }
+
     .pt-offer-coupon {
-      gap: 12px;
+      padding: 16px 18px;
     }
 
-    .pt-offer-coupon-alt {
-      padding-left: 0;
-      padding-top: 12px;
-      border-left: 0;
-      border-top: 1px solid var(--teal-100);
-      max-width: none;
-      width: 100%;
-    }
-
-    .pt-offer-lockup {
-      gap: 12px;
-    }
-
-    .pt-offer-logo {
-      height: 30px;
+    .pt-offer-coupon-line {
+      font-size: 15px;
     }
 
     .pt-offer-coupon {
