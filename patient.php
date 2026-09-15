@@ -46,14 +46,21 @@ require __DIR__ . '/partials/header.php';
               <div class="pt-offer-assoc">
                 <span class="pt-offer-assoc-label">In association with</span>
                 <div class="pt-offer-assoc-logos">
-                  <img src="/assets/img/logos/thyrocare-logo.webp" alt="Thyrocare — tests you can trust"
-                    width="150" height="44" loading="lazy">
-                  <img src="/assets/img/logos/cap-accredited-logo.webp" alt="CAP accredited — College of American Pathologists"
-                    width="150" height="44" loading="lazy">
-                  <img src="/assets/img/logos/nabl-logo.webp" alt="NABL accredited"
-                    width="150" height="44" loading="lazy">
-                  <img src="/assets/img/logos/isologo.webp" alt="ISO 9001 certified"
-                    width="150" height="44" loading="lazy">
+                  <!-- The Thyrocare asset has "In association with" baked into
+                       the artwork; it's cropped visually so the label above
+                       isn't printed twice. -->
+                  <span class="pt-offer-assoc-item is-partner">
+                    <img src="/assets/img/logos/thyrocare-logo.webp" alt="Thyrocare — tests you can trust" loading="lazy">
+                  </span>
+                  <span class="pt-offer-assoc-item">
+                    <img src="/assets/img/logos/cap-accredited-logo.webp" alt="CAP accredited — College of American Pathologists" loading="lazy">
+                  </span>
+                  <span class="pt-offer-assoc-item">
+                    <img src="/assets/img/logos/nabl-logo.webp" alt="NABL accredited" loading="lazy">
+                  </span>
+                  <span class="pt-offer-assoc-item">
+                    <img src="/assets/img/logos/isologo.webp" alt="ISO 9001 certified" loading="lazy">
+                  </span>
                 </div>
               </div>
 
@@ -67,28 +74,48 @@ require __DIR__ . '/partials/header.php';
               <!-- Four accreditation/service cards, per the reference. -->
               <ul class="pt-offer-feats">
                 <li>
-                  <span class="pt-offer-feat-ic" aria-hidden="true">🧪</span>
+                  <span class="pt-offer-feat-ic" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M9 3h6M10 3v7.5L5.6 18a2.5 2.5 0 0 0 2.1 3.8h8.6a2.5 2.5 0 0 0 2.1-3.8L14 10.5V3" />
+                      <path d="M7.5 15h9" />
+                    </svg>
+                  </span>
                   <span class="pt-offer-feat-tx">
                     <strong>NABL Certified Labs</strong>
                     <em>Trusted &amp; Accurate Reports</em>
                   </span>
                 </li>
                 <li>
-                  <span class="pt-offer-feat-ic" aria-hidden="true">🏠</span>
+                  <span class="pt-offer-feat-ic" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 10.5 12 3l9 7.5" />
+                      <path d="M5.5 9.5V20a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V9.5" />
+                    </svg>
+                  </span>
                   <span class="pt-offer-feat-tx">
                     <strong>Home Sample Collection</strong>
                     <em>Safe &amp; Convenient</em>
                   </span>
                 </li>
                 <li>
-                  <span class="pt-offer-feat-ic" aria-hidden="true">🕒</span>
+                  <span class="pt-offer-feat-ic" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="M12 7v5.2l3.4 2" />
+                    </svg>
+                  </span>
                   <span class="pt-offer-feat-tx">
                     <strong>Reports in 24 Hours*</strong>
                     <em>Quick &amp; Hassle-Free</em>
                   </span>
                 </li>
                 <li>
-                  <span class="pt-offer-feat-ic" aria-hidden="true">🛡️</span>
+                  <span class="pt-offer-feat-ic" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 3 5 6v5.5c0 4.2 2.9 7.9 7 9.5 4.1-1.6 7-5.3 7-9.5V6l-7-3Z" />
+                      <path d="m9.2 12.2 2 2 3.6-3.8" />
+                    </svg>
+                  </span>
                   <span class="pt-offer-feat-tx">
                     <strong>Secure &amp; Private</strong>
                     <em>Your Data Is Safe</em>
@@ -2409,24 +2436,46 @@ require __DIR__ . '/partials/header.php';
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 14px 26px;
+    gap: 10px 22px;
   }
 
-  /* Each mark ships at a different aspect ratio, so cap the height and let
-     width follow rather than forcing a common box. */
-  .pt-offer-assoc-logos img {
-    height: 44px;
+  /* The four marks ship at wildly different aspect ratios (wide wordmark vs
+     square seals). Giving each a fixed box and containing inside it keeps the
+     row optically level instead of letting the widest mark tower over the
+     others. */
+  .pt-offer-assoc-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 42px;
+    width: 96px;
+  }
+
+  .pt-offer-assoc-item img {
+    max-height: 100%;
+    max-width: 100%;
     width: auto;
+    height: auto;
     object-fit: contain;
   }
 
+  /* The partner wordmark carries its own "In association with" line and
+     tagline, so it needs more room than the square seals. */
+  .pt-offer-assoc-item.is-partner {
+    width: 130px;
+    height: 48px;
+  }
+
   /* Four service cards: icon left, title + subtitle right. */
+  /* 2x2, not 4x1: in this column four cards across forced every title to wrap
+     onto three lines ("NABL / Certified / Labs"). Two per row gives each card
+     enough width for its title to sit on one or two lines. */
   .pt-offer-feats {
     list-style: none;
     padding: 0;
     margin: 0 0 14px;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
   }
 
@@ -2450,7 +2499,15 @@ require __DIR__ . '/partials/header.php';
     flex-shrink: 0;
     border-radius: 50%;
     background: var(--teal-50);
-    font-size: 17px;
+    color: var(--teal-700);
+  }
+
+  /* Line icons rather than emoji: emoji render as different coloured glyphs
+     per platform and never match the flat outlined set in the design. */
+  .pt-offer-feat-ic svg {
+    width: 19px;
+    height: 19px;
+    display: block;
   }
 
   .pt-offer-feat-tx {
@@ -3498,9 +3555,10 @@ require __DIR__ . '/partials/header.php';
       padding: 22px 20px;
     }
 
-    /* Four cards can't hold one row on a phone — go two-up. */
+    /* One per row on a phone: two cramped cards is what forced the titles to
+       wrap onto three lines in the first place. */
     .pt-offer-feats {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 1fr);
     }
 
     .pt-offer-assoc-logos {
