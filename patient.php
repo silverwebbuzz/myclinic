@@ -129,16 +129,21 @@ require __DIR__ . '/partials/header.php';
                 <li>100% Quality Assured</li>
               </ul>
 
-              <div class="pt-offer-coupon">
-                <p class="pt-offer-coupon-line">
-                  Sign Up and Get <b class="pt-offer-pct">20% OFF</b> on all Lab Test.
-                </p>
+              <!-- Offer and action together: discount, then the button. -->
+              <div class="pt-offer-deal">
+                <div class="pt-offer-deal-copy">
+                  <p class="pt-offer-coupon-line">
+                    <b class="pt-offer-pct">20% OFF</b>
+                    <span>Sign up and get 20% off on all lab tests.</span>
+                  </p>
+                  <span class="pt-offer-deal-note">Applied automatically at checkout · New patients</span>
+                </div>
+                <button type="button" class="pt-offer-cta"
+                  @click="document.querySelector('.pt-card-signin')?.scrollIntoView({behavior:'smooth', block:'center'})">
+                  Book Your Lab Test →
+                </button>
               </div>
 
-              <button type="button" class="pt-offer-cta"
-                @click="document.querySelector('.pt-card-signin')?.scrollIntoView({behavior:'smooth', block:'center'})">
-                Book Your Lab Test →
-              </button>
               <p class="pt-offer-new">
                 Already have an account?
                 <button type="button" class="pt-linkbtn"
@@ -1464,16 +1469,18 @@ require __DIR__ . '/partials/header.php';
     gap: 8px;
   }
 
+  /* Part of the teal system rather than neutral grey pills, which read as
+     leftover filler under a teal card. */
   .pt-feat-chips li {
     flex: 0 1 auto;
     min-width: 0;
     white-space: nowrap;
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 600;
-    color: var(--ink-2);
-    background: var(--bg-2);
-    border: 1px solid var(--line);
-    padding: 7px 11px;
+    color: var(--teal-800);
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid var(--teal-100);
+    padding: 7px 14px;
     border-radius: 999px;
   }
 
@@ -1488,11 +1495,14 @@ require __DIR__ . '/partials/header.php';
   /* Sits below the offer now, so sticky positioning no longer applies. Capped
      and centred: a sign-in form stretched across the full panel width would
      put the phone field miles from its label. */
+  /* Pulled up under the offer so the two read as one continuous flow rather
+     than two disconnected slabs with dead space between them. */
   .pt-card-signin {
     position: static;
     width: 100%;
-    max-width: 560px;
-    margin: 0 auto;
+    max-width: 520px;
+    margin: -8px auto 0;
+    padding: 28px 32px 26px;
   }
 
   .pt-card-head h1,
@@ -2387,7 +2397,7 @@ require __DIR__ . '/partials/header.php';
     background: linear-gradient(135deg, #EAF7F1 0%, #F4FBF7 55%, #EFF8F3 100%);
     border: 1px solid var(--teal-100);
     border-radius: 20px;
-    padding: 30px 32px 28px;
+    padding: 34px 38px 30px;
   }
 
   .pt-offer-badge {
@@ -2572,45 +2582,68 @@ require __DIR__ . '/partials/header.php';
     content: "";
   }
 
-  /* Dashed coupon: one sentence, the discount carrying the emphasis. */
-  .pt-offer-coupon {
-    background: rgba(255, 255, 255, 0.72);
-    border: 2px dashed var(--teal-400);
-    border-radius: 14px;
-    padding: 18px 24px;
-    margin-bottom: 22px;
-    text-align: center;
+  /* Offer + CTA form ONE decision block on a solid white card, so the eye
+     goes discount -> button in a single move. Previously the dashed coupon
+     was a large near-empty box and the CTA a small pill floating left of a
+     1080px card, so neither anchored anything. */
+  .pt-offer-deal {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    background: #fff;
+    border: 1px solid var(--teal-100);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 14px;
+    box-shadow: 0 6px 20px rgba(3, 56, 42, 0.05);
+  }
+
+  .pt-offer-deal-copy {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .pt-offer-coupon-line {
     margin: 0;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
     color: var(--ink-2);
-    line-height: 1.35;
+    line-height: 1.3;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0 8px;
   }
 
-  /* Sits inline inside the coupon sentence, so it stays on the text baseline
-     while carrying the emphasis. */
   .pt-offer-pct {
-    font-size: clamp(26px, 3.4vw, 36px);
-    font-weight: 700;
-    letter-spacing: -1px;
+    font-size: clamp(30px, 3.2vw, 40px);
+    font-weight: 800;
+    letter-spacing: -1.4px;
     color: var(--teal-700);
-    padding: 0 4px;
+    line-height: 1;
   }
 
-  .pt-offer-cta {
+  /* The small print that used to be a separate dashed line. */
+  .pt-offer-deal-note {
     display: block;
-    width: 100%;
-    max-width: 380px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--mute);
+    margin-top: 5px;
+  }
+
+  /* Sits inside the deal row, so it sizes to its label instead of stretching:
+     a 100%-wide button in a 1080px card read as a banner, not an action. */
+  .pt-offer-cta {
+    flex: 0 0 auto;
+    white-space: nowrap;
     background: var(--teal-600);
     color: #fff;
     border: 0;
     font: inherit;
-    font-size: 16px;
+    font-size: 15.5px;
     font-weight: 700;
-    padding: 16px 28px;
+    padding: 15px 30px;
     border-radius: 12px;
     cursor: pointer;
     transition: background .15s, transform .15s, box-shadow .15s;
@@ -2622,12 +2655,13 @@ require __DIR__ . '/partials/header.php';
     box-shadow: 0 8px 20px rgba(15, 155, 110, 0.25);
   }
 
+  /* Left-aligned with the rest of the copy. It was centred inside an
+     invisible 380px box, which put it at a third of the card's width and
+     looked like a mistake. */
   .pt-offer-new {
-    font-size: 14px;
-    color: var(--ink-2);
-    margin: 12px 0 22px;
-    max-width: 380px;
-    text-align: center;
+    font-size: 13.5px;
+    color: var(--mute);
+    margin: 0 0 20px;
   }
 
   /* -------- Lab promo banner -------- */
@@ -3588,22 +3622,29 @@ require __DIR__ . '/partials/header.php';
       height: 34px;
     }
 
-    .pt-offer-coupon {
-      padding: 16px 18px;
+    /* The deal row stacks: side-by-side pushed the CTA off a phone screen. */
+    .pt-offer-deal {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 16px;
+      padding: 18px;
     }
 
     .pt-offer-coupon-line {
-      font-size: 15px;
+      font-size: 14.5px;
+      gap: 0 6px;
     }
 
-    .pt-offer-coupon {
+    .pt-offer-cta {
       width: 100%;
-      padding: 14px 18px;
+      text-align: center;
+      white-space: normal;
     }
 
-    .pt-offer-cta,
-    .pt-offer-new {
-      max-width: none;
+    /* Reassurance ticks read better left-aligned once they wrap. */
+    .pt-offer-reassure {
+      justify-content: flex-start;
+      gap: 4px 14px;
     }
 
     /* The scroll container matches the tighter mobile pane padding. */
