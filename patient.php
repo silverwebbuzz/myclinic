@@ -347,10 +347,7 @@ require __DIR__ . '/partials/header.php';
 
       <!-- Promo banner — full-width above the panel. Clicking it just switches
            to the booking tab (no page load), so it costs nothing to show. -->
-      <div class="pt-promo" role="button" tabindex="0"
-        @click="go('labbook')"
-        @keydown.enter.prevent="go('labbook')"
-        @keydown.space.prevent="go('labbook')">
+      <a class="pt-promo" href="/patient/lab">
         <div class="pt-promo-copy">
           <span class="pt-promo-badge">Lab tests</span>
           <h2>Book a lab test from home</h2>
@@ -364,7 +361,7 @@ require __DIR__ . '/partials/header.php';
         <div class="pt-promo-cta">
           <span class="pt-promo-btn">Book now →</span>
         </div>
-      </div>
+      </a>
 
       <!-- Single-column layout: horizontal nav bar, then full-width content.
            The old 280px right rail made every pane (and especially the embedded
@@ -372,50 +369,6 @@ require __DIR__ . '/partials/header.php';
       <div class="pt-grid is-stacked">
 
         <div class="pt-section pt-section-tabbed">
-
-          <!-- ============ BOOK LAB TEST TAB (default) ============ -->
-          <!-- Booking is handled end-to-end inside our lab partner's portal,
-               embedded below. Nothing about this flow touches our lab_orders
-               tables: the patient transacts with the partner directly, so the
-               "Lab bookings" tab only ever lists orders placed the old way.
-               The copy below says so plainly rather than implying otherwise. -->
-          <div x-show="tab === 'labbook'" class="pt-tab-pane">
-            <div class="pt-section-head">
-              <h3>Book a lab test</h3>
-            </div>
-            <p class="pt-section-note">
-              Choose a test or health package, pick a home-collection slot and pay securely.
-              You'll get your booking confirmation by SMS and email.
-            </p>
-
-            <div class="pt-labframe-wrap">
-              <!-- Skeleton sits under the iframe and is covered once it paints.
-                   No partner link is surfaced here — the embed is the only
-                   booking surface we expose to the patient. -->
-              <div class="pt-labframe-skeleton" x-show="!labFrameReady">
-                <div class="pt-labframe-spinner" aria-hidden="true"></div>
-                <p>Loading the booking portal…</p>
-              </div>
-
-              <template x-if="labFrameLoaded">
-                <iframe
-                  class="pt-labframe"
-                  :class="labFrameReady ? 'is-ready' : ''"
-                  :src="labBookUrl"
-                  title="Book a lab test"
-                  loading="lazy"
-                  referrerpolicy="no-referrer-when-downgrade"
-                  allow="payment; clipboard-write; geolocation"
-                  @load="labFrameReady = true"></iframe>
-              </template>
-            </div>
-
-            <p class="pt-labframe-foot">
-              Reports are delivered by the lab — save a copy to
-              <button type="button" class="pt-linkbtn" @click="go('labs')">Lab reports</button>
-              to keep everything in one place.
-            </p>
-          </div>
 
           <!-- ============ BOOKINGS TAB ============ -->
           <div x-show="tab === 'bookings'" class="pt-tab-pane">
@@ -887,7 +840,7 @@ require __DIR__ . '/partials/header.php';
           <div x-show="tab === 'laborders'" class="pt-tab-pane">
             <div class="pt-section-head">
               <h3>Lab bookings</h3>
-              <button type="button" class="btn-mini primary" @click="go('labbook')">Book a test</button>
+              <a class="btn-mini primary" href="/patient/lab">Book a test</a>
             </div>
             <p class="pt-section-note">
               Lab tests booked through eClinicPro — the slot, who it’s for, and what it costs.
@@ -1004,7 +957,7 @@ require __DIR__ . '/partials/header.php';
                 <div class="glyph">🧾</div>
                 <h3>No lab bookings yet</h3>
                 <p>Book a lab test with free home sample collection — a technician comes to you, and our lab partner sends your report by SMS and email.</p>
-                <button type="button" class="btn btn-primary" @click="go('labbook')">Book a lab test</button>
+                <a class="btn btn-primary" href="/patient/lab">Book a lab test</a>
               </div>
             </template>
           </div>
@@ -1220,12 +1173,12 @@ require __DIR__ . '/partials/header.php';
           <nav class="pt-navmenu" role="tablist" aria-label="Patient panel sections">
             <!-- Order is deliberate: lab booking first (the revenue surface and
                  the default tab), lab reports second, then everything else. -->
-            <button type="button" role="tab"
-              :class="tab === 'labbook' ? 'is-active' : ''"
-              @click="go('labbook')">
+            <!-- Leaves the panel: booking needs the full window (see
+                 patient-lab.php), so this is a link, not a tab. -->
+            <a href="/patient/lab" class="pt-navlink" role="tab">
               <span class="pt-nav-ic">🧬</span>
               <span class="pt-nav-label">Book lab test</span>
-            </button>
+            </a>
             <button type="button" role="tab"
               :class="tab === 'labs' ? 'is-active' : ''"
               @click="go('labs')">
@@ -2459,83 +2412,10 @@ require __DIR__ . '/partials/header.php';
     white-space: nowrap;
   }
 
-  /* -------- Embedded partner booking portal -------- */
-  /* The frame stays INSIDE the panel card. An earlier full-bleed attempt
-     (100vw + negative margins) let the partner's own header run edge-to-edge,
-     which made the card look like it ended above the frame — the layout read
-     as broken at every window size. The partner page is fluid: extra width
-     just stretches its hero art, it never "snaps" to a better layout. So cap
-     the frame at a sane reading width and centre it instead of chasing the
-     viewport. */
-  .pt-labframe-wrap {
-    position: relative;
-    height: 1100px;
-    width: 100%;
-    max-width: 1100px;
-    margin: 0 auto;
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    overflow: hidden;
-    background: var(--bg-3);
-  }
-
-  .pt-labframe {
-    width: 100%;
-    height: 100%;
-    border: 0;
-    display: block;
-    opacity: 0;
-    transition: opacity .25s;
-  }
-
-  .pt-labframe.is-ready {
-    opacity: 1;
-  }
-
-  .pt-labframe-skeleton {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    text-align: center;
-    padding: 20px;
-    color: var(--mute);
-    font-size: 14px;
-  }
-
-  .pt-labframe-spinner {
-    width: 26px;
-    height: 26px;
-    border: 3px solid var(--teal-100);
-    border-top-color: var(--teal-600);
-    border-radius: 50%;
-    animation: pt-spin .8s linear infinite;
-  }
-
-  @keyframes pt-spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .pt-labframe-spinner {
-      animation-duration: 2.4s;
-    }
-
     .pt-promo {
       transition: none;
     }
-  }
-
-  .pt-labframe-foot {
-    font-size: 12.5px;
-    color: var(--mute);
-    margin: 12px 0 0;
-    line-height: 1.6;
   }
 
   /* A button that reads as an inline link (keeps tab-switching keyboard- and
@@ -2588,6 +2468,26 @@ require __DIR__ . '/partials/header.php';
   .pt-navmenu button.is-active {
     background: var(--teal-50);
     color: var(--teal-800);
+  }
+
+  /* "Book lab test" is an <a> (it leaves the panel for /patient/lab) but must
+     sit in the bar exactly like the tab buttons around it. */
+  .pt-navmenu .pt-navlink {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 11px 12px;
+    border-radius: 11px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--teal-800);
+    background: var(--teal-50);
+    text-decoration: none;
+    transition: background .15s, color .15s;
+  }
+
+  .pt-navmenu .pt-navlink:hover {
+    background: var(--teal-100);
   }
 
   .pt-nav-ic {
@@ -3360,16 +3260,6 @@ require __DIR__ . '/partials/header.php';
       text-align: center;
     }
 
-    /* A fixed 1100px frame is unusable on a phone — fall back to most of the
-       viewport so the partner's flow scrolls inside itself, not the page. */
-    .pt-labframe-wrap {
-      /* Taller on mobile: the partner's flow stacks into one long column, so
-         a short frame means scrolling a tiny window inside a big page. */
-      height: 86vh;
-      min-height: 600px;
-      border-radius: 10px;
-    }
-
     /* Card headers: let the name/actions wrap instead of overflowing the card
        on a narrow screen. */
     .pt-fam-head {
@@ -3810,18 +3700,10 @@ require __DIR__ . '/partials/header.php';
   function patientPanel(isLoggedIn) {
     return {
       loggedIn: !!isLoggedIn,
-      // Lab booking is the default landing tab — it's the revenue surface and
-      // the one most patients arrive for. 'bookings' (appointments) is one click
-      // away in the nav. Order here mirrors the nav order in the sidebar.
-      tab: 'labbook',
-      // Thyrocare's booking portal is embedded lazily: the iframe src is only
-      // set once the patient actually opens the tab, so a patient who never
-      // touches lab booking never pays for that third-party page load.
-      labFrameLoaded: false,
-      labFrameReady: false,
-      // Partner booking portal. Kept as one constant so the pageId (which
-      // identifies our account to the lab) lives in exactly one place.
-      labBookUrl: 'https://booking.thyrocare.com/landing-page?pageId=52bfad4a63ca45569c449d2571789471178618152e8b59bbd8476b98df109713',
+      // Booking itself lives on its own full-width page (/patient/lab) — the
+      // partner portal needs the whole window. The panel's first tab is the
+      // patient's own lab history instead.
+      tab: 'laborders',
       wishlist: [],
       loading: false,
       // Hero avatar photo state — seeded from the server, updated live on upload.
@@ -4671,7 +4553,7 @@ require __DIR__ . '/partials/header.php';
         }
         // Deep links: /patient?tab=labs, or #labs from an email/banner CTA.
         // Anything unrecognised falls through to the default tab.
-        const known = ['labbook', 'laborders', 'labs', 'bookings', 'shortlist', 'family', 'rx', 'profile'];
+        const known = ['laborders', 'labs', 'bookings', 'shortlist', 'family', 'rx', 'profile'];
         let want = '';
         try {
           want = new URLSearchParams(window.location.search).get('tab') || '';
@@ -4692,8 +4574,7 @@ require __DIR__ . '/partials/header.php';
       // booking tab is shown. Nav buttons and deep links both route through it.
       go(next) {
         this.tab = next;
-        if (next === 'labbook') this.labFrameLoaded = true;
-        else if (next === 'laborders') this.labOrders.loadOnce();
+        if (next === 'laborders') this.labOrders.loadOnce();
         else if (next === 'labs') this.labs.loadOnce();
         else if (next === 'family') this.family.loadOnce();
         else if (next === 'rx') this.rx.loadOnce();

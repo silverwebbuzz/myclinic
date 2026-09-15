@@ -37,6 +37,11 @@ RewriteRule ^L/([a-f0-9]{16})/?$ L.php?t=$1 [L,QSA]
 RewriteRule ^book/([a-z0-9-]+)/slots/?$ api/book.php?slug=$1 [L,QSA]
 RewriteRule ^book/([a-z0-9-]+)/?$ book.php?slug=$1 [L,QSA]
 
+# -------- Patient lab booking (full-width partner embed) --------
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^patient/lab/?$ patient-lab.php [L,QSA,NC]
+
 # -------- Directory profile pages --------
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
