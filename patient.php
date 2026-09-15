@@ -322,10 +322,82 @@ require __DIR__ . '/partials/header.php';
         </div>
       </div>
 
+      <!-- Promo banner — full-width above the panel. Clicking it just switches
+           to the booking tab (no page load), so it costs nothing to show. -->
+      <div class="pt-promo" role="button" tabindex="0"
+        @click="go('labbook')"
+        @keydown.enter.prevent="go('labbook')"
+        @keydown.space.prevent="go('labbook')">
+        <div class="pt-promo-copy">
+          <span class="pt-promo-badge">Lab tests</span>
+          <h2>Book a lab test from home</h2>
+          <p>Full-body checks and health packages, with free home sample collection and digital reports.</p>
+          <ul class="pt-promo-points">
+            <li>🏠 Home collection</li>
+            <li>🔬 Accredited labs</li>
+            <li>📄 Reports in 24–48 hrs</li>
+          </ul>
+        </div>
+        <div class="pt-promo-cta">
+          <span class="pt-promo-btn">Book now →</span>
+        </div>
+      </div>
+
       <!-- 2-column layout: tabbed main + coming-soon sidebar -->
       <div class="pt-grid">
 
         <div class="pt-section pt-section-tabbed">
+
+          <!-- ============ BOOK LAB TEST TAB (default) ============ -->
+          <!-- Booking is handled end-to-end inside our lab partner's portal,
+               embedded below. Nothing about this flow touches our lab_orders
+               tables: the patient transacts with the partner directly, so the
+               "Lab bookings" tab only ever lists orders placed the old way.
+               The copy below says so plainly rather than implying otherwise. -->
+          <div x-show="tab === 'labbook'" class="pt-tab-pane">
+            <div class="pt-section-head">
+              <h3>Book a lab test</h3>
+              <a class="btn-mini" :href="labBookUrl" target="_blank" rel="noopener noreferrer">Open in new tab ↗</a>
+            </div>
+            <p class="pt-section-note">
+              Choose a test or health package, pick a home-collection slot and pay securely.
+              Booking, payment and your report are handled by our accredited lab partner —
+              you'll get their confirmation by SMS and email.
+            </p>
+
+            <div class="pt-labframe-wrap">
+              <!-- Skeleton sits under the iframe and is covered once it paints.
+                   Cross-origin means we can't detect much beyond load, so the
+                   fallback link is always visible above rather than only on error. -->
+              <div class="pt-labframe-skeleton" x-show="!labFrameReady">
+                <div class="pt-labframe-spinner" aria-hidden="true"></div>
+                <p>Loading the lab booking portal…</p>
+                <p class="pt-labframe-hint">
+                  Taking too long?
+                  <a :href="labBookUrl" target="_blank" rel="noopener noreferrer">Open the booking page in a new tab</a>.
+                </p>
+              </div>
+
+              <template x-if="labFrameLoaded">
+                <iframe
+                  class="pt-labframe"
+                  :class="labFrameReady ? 'is-ready' : ''"
+                  :src="labBookUrl"
+                  title="Book a lab test"
+                  loading="lazy"
+                  referrerpolicy="no-referrer-when-downgrade"
+                  allow="payment; clipboard-write; geolocation"
+                  @load="labFrameReady = true"></iframe>
+              </template>
+            </div>
+
+            <p class="pt-labframe-foot">
+              Prices, availability and payment are set by our lab partner.
+              Reports are delivered by the lab — save a copy to
+              <button type="button" class="pt-linkbtn" @click="go('labs')">Lab reports</button>
+              to keep everything in one place.
+            </p>
+          </div>
 
           <!-- ============ BOOKINGS TAB ============ -->
           <div x-show="tab === 'bookings'" class="pt-tab-pane">
@@ -797,11 +869,12 @@ require __DIR__ . '/partials/header.php';
           <div x-show="tab === 'laborders'" class="pt-tab-pane">
             <div class="pt-section-head">
               <h3>Lab bookings</h3>
-              <a class="btn-mini primary" href="/lab#lab-packages">Book a test</a>
+              <button type="button" class="btn-mini primary" @click="go('labbook')">Book a test</button>
             </div>
             <p class="pt-section-note">
-              Every lab test you’ve booked with us — the slot, who it’s for, and what it costs.
+              Lab tests booked through eClinicPro — the slot, who it’s for, and what it costs.
               Open any booking to see the full bill and collection details.
+              Tests you book with our lab partner are confirmed by them directly and won’t appear here.
             </p>
 
             <div x-show="labOrders.loading" class="pt-loading">Loading your lab bookings…</div>
@@ -912,8 +985,8 @@ require __DIR__ . '/partials/header.php';
               <div class="pt-empty">
                 <div class="glyph">🧾</div>
                 <h3>No lab bookings yet</h3>
-                <p>Book a lab test with free home sample collection — a technician comes to you, and your report lands right here.</p>
-                <a class="btn btn-primary" href="/lab#lab-packages">Browse lab packages</a>
+                <p>Book a lab test with free home sample collection — a technician comes to you, and our lab partner sends your report by SMS and email.</p>
+                <button type="button" class="btn btn-primary" @click="go('labbook')">Book a lab test</button>
               </div>
             </template>
           </div>
@@ -1127,9 +1200,31 @@ require __DIR__ . '/partials/header.php';
 
           <!-- Vertical tab nav -->
           <nav class="pt-navmenu" role="tablist" aria-label="Patient panel sections">
+            <!-- Order is deliberate: lab booking first (the revenue surface and
+                 the default tab), lab reports second, then everything else. -->
+            <button type="button" role="tab"
+              :class="tab === 'labbook' ? 'is-active' : ''"
+              @click="go('labbook')">
+              <span class="pt-nav-ic">🧬</span>
+              <span class="pt-nav-label">Book lab test</span>
+            </button>
+            <button type="button" role="tab"
+              :class="tab === 'labs' ? 'is-active' : ''"
+              @click="go('labs')">
+              <span class="pt-nav-ic">🧪</span>
+              <span class="pt-nav-label">Lab reports</span>
+              <span class="pt-tab-count" x-show="labs.items.length > 0" x-text="labs.items.length"></span>
+            </button>
+            <button type="button" role="tab"
+              :class="tab === 'laborders' ? 'is-active' : ''"
+              @click="go('laborders')">
+              <span class="pt-nav-ic">🧾</span>
+              <span class="pt-nav-label">Lab bookings</span>
+              <span class="pt-tab-count" x-show="labOrders.items.length > 0" x-text="labOrders.items.length"></span>
+            </button>
             <button type="button" role="tab"
               :class="tab === 'bookings' ? 'is-active' : ''"
-              @click="tab = 'bookings'">
+              @click="go('bookings')">
               <span class="pt-nav-ic">📅</span>
               <span class="pt-nav-label">My bookings</span>
               <span class="pt-tab-count" x-show="bookings.upcoming.length + bookings.pending.length > 0"
@@ -1137,42 +1232,28 @@ require __DIR__ . '/partials/header.php';
             </button>
             <button type="button" role="tab"
               :class="tab === 'shortlist' ? 'is-active' : ''"
-              @click="tab = 'shortlist'">
+              @click="go('shortlist')">
               <span class="pt-nav-ic">❤️</span>
               <span class="pt-nav-label">Shortlist</span>
               <span class="pt-tab-count" x-show="wishlist.length > 0" x-text="wishlist.length + '/5'"></span>
             </button>
             <button type="button" role="tab"
               :class="tab === 'family' ? 'is-active' : ''"
-              @click="tab = 'family'; family.loadOnce()">
+              @click="go('family')">
               <span class="pt-nav-ic">👨‍👩‍👧</span>
               <span class="pt-nav-label">Family</span>
               <span class="pt-tab-count" x-show="family.members.length > 0" x-text="family.members.length"></span>
             </button>
             <button type="button" role="tab"
               :class="tab === 'rx' ? 'is-active' : ''"
-              @click="tab = 'rx'; rx.loadOnce()">
+              @click="go('rx')">
               <span class="pt-nav-ic">💊</span>
               <span class="pt-nav-label">E-prescriptions</span>
               <span class="pt-tab-count" x-show="rx.items.length > 0" x-text="rx.items.length"></span>
             </button>
             <button type="button" role="tab"
-              :class="tab === 'labs' ? 'is-active' : ''"
-              @click="tab = 'labs'; labs.loadOnce()">
-              <span class="pt-nav-ic">🧪</span>
-              <span class="pt-nav-label">Lab reports</span>
-              <span class="pt-tab-count" x-show="labs.items.length > 0" x-text="labs.items.length"></span>
-            </button>
-            <button type="button" role="tab"
-              :class="tab === 'laborders' ? 'is-active' : ''"
-              @click="tab = 'laborders'; labOrders.loadOnce()">
-              <span class="pt-nav-ic">🧾</span>
-              <span class="pt-nav-label">Lab bookings</span>
-              <span class="pt-tab-count" x-show="labOrders.items.length > 0" x-text="labOrders.items.length"></span>
-            </button>
-            <button type="button" role="tab"
               :class="tab === 'profile' ? 'is-active' : ''"
-              @click="tab = 'profile'; profile.loadOnce()">
+              @click="go('profile')">
               <span class="pt-nav-ic">👤</span>
               <span class="pt-nav-label">My Profile</span>
             </button>
@@ -2179,6 +2260,175 @@ require __DIR__ . '/partials/header.php';
     padding: 0;
   }
 
+  /* -------- Lab promo banner -------- */
+  .pt-promo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    background: linear-gradient(135deg, var(--teal-950) 0%, var(--teal-800) 55%, var(--teal-700) 100%);
+    color: #fff;
+    border-radius: 18px;
+    padding: 26px 30px;
+    margin-bottom: 20px;
+    cursor: pointer;
+    transition: transform .15s, box-shadow .15s;
+  }
+
+  .pt-promo:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 28px rgba(3, 56, 42, 0.22);
+  }
+
+  .pt-promo:focus-visible {
+    outline: 2px solid var(--teal-400);
+    outline-offset: 3px;
+  }
+
+  .pt-promo-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.16);
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin-bottom: 12px;
+  }
+
+  .pt-promo-copy h2 {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    margin: 0 0 6px;
+  }
+
+  .pt-promo-copy p {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.82);
+    margin: 0;
+    max-width: 52ch;
+  }
+
+  .pt-promo-points {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .pt-promo-btn {
+    display: inline-block;
+    background: #fff;
+    color: var(--teal-800);
+    font-size: 14px;
+    font-weight: 700;
+    padding: 13px 24px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  /* -------- Embedded partner booking portal -------- */
+  .pt-labframe-wrap {
+    position: relative;
+    /* Tall enough that the partner's own flow rarely needs inner scrolling on
+       desktop; the iframe scrolls internally when it does. */
+    height: 1100px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--bg-3);
+  }
+
+  .pt-labframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+    opacity: 0;
+    transition: opacity .25s;
+  }
+
+  .pt-labframe.is-ready {
+    opacity: 1;
+  }
+
+  .pt-labframe-skeleton {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-align: center;
+    padding: 20px;
+    color: var(--mute);
+    font-size: 14px;
+  }
+
+  .pt-labframe-hint {
+    font-size: 13px;
+  }
+
+  .pt-labframe-hint a {
+    color: var(--teal-700);
+    font-weight: 600;
+    text-decoration: underline;
+  }
+
+  .pt-labframe-spinner {
+    width: 26px;
+    height: 26px;
+    border: 3px solid var(--teal-100);
+    border-top-color: var(--teal-600);
+    border-radius: 50%;
+    animation: pt-spin .8s linear infinite;
+  }
+
+  @keyframes pt-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pt-labframe-spinner {
+      animation-duration: 2.4s;
+    }
+
+    .pt-promo {
+      transition: none;
+    }
+  }
+
+  .pt-labframe-foot {
+    font-size: 12.5px;
+    color: var(--mute);
+    margin: 12px 0 0;
+    line-height: 1.6;
+  }
+
+  /* A button that reads as an inline link (keeps tab-switching keyboard- and
+     screen-reader-correct without faking it with an <a href="#">). */
+  .pt-linkbtn {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    font-weight: 600;
+    color: var(--teal-700);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
   /* Vertical nav menu in the right sidebar. */
   .pt-navmenu {
     background: #fff;
@@ -2952,6 +3202,34 @@ require __DIR__ . '/partials/header.php';
       min-width: 72px;
     }
 
+    /* Promo banner stacks and loses the side-by-side CTA on narrow screens. */
+    .pt-promo {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 22px 20px;
+    }
+
+    .pt-promo-copy h2 {
+      font-size: 20px;
+    }
+
+    .pt-promo-cta {
+      width: 100%;
+    }
+
+    .pt-promo-btn {
+      display: block;
+      text-align: center;
+    }
+
+    /* A fixed 1100px frame is unusable on a phone — fall back to most of the
+       viewport so the partner's flow scrolls inside itself, not the page. */
+    .pt-labframe-wrap {
+      height: 78vh;
+      min-height: 560px;
+    }
+
     /* Card headers: let the name/actions wrap instead of overflowing the card
        on a narrow screen. */
     .pt-fam-head {
@@ -3393,7 +3671,18 @@ require __DIR__ . '/partials/header.php';
   function patientPanel(isLoggedIn) {
     return {
       loggedIn: !!isLoggedIn,
-      tab: 'bookings', // 'bookings' | 'shortlist'
+      // Lab booking is the default landing tab — it's the revenue surface and
+      // the one most patients arrive for. 'bookings' (appointments) is one click
+      // away in the nav. Order here mirrors the nav order in the sidebar.
+      tab: 'labbook',
+      // Thyrocare's booking portal is embedded lazily: the iframe src is only
+      // set once the patient actually opens the tab, so a patient who never
+      // touches lab booking never pays for that third-party page load.
+      labFrameLoaded: false,
+      labFrameReady: false,
+      // Partner booking portal. Kept as one constant so the pageId (which
+      // identifies our account to the lab) lives in exactly one place.
+      labBookUrl: 'https://booking.thyrocare.com/landing-page?pageId=52bfad4a63ca45569c449d2571789471178618152e8b59bbd8476b98df109713',
       wishlist: [],
       loading: false,
       // Hero avatar photo state — seeded from the server, updated live on upload.
@@ -4241,7 +4530,35 @@ require __DIR__ . '/partials/header.php';
         if (!this.loggedIn) {
           return;
         }
+        // Deep links: /patient?tab=labs, or #labs from an email/banner CTA.
+        // Anything unrecognised falls through to the default tab.
+        const known = ['labbook', 'laborders', 'labs', 'bookings', 'shortlist', 'family', 'rx', 'profile'];
+        let want = '';
+        try {
+          want = new URLSearchParams(window.location.search).get('tab') || '';
+        } catch (e) { /* older browsers — fall back to the hash below */ }
+        if (!want && window.location.hash) {
+          want = window.location.hash.replace(/^#/, '');
+        }
+        if (known.indexOf(want) !== -1) {
+          this.go(want);
+        } else {
+          this.go(this.tab);
+        }
         await Promise.all([this.loadWishlist(), this.loadBookings()]);
+      },
+
+      // Single entry point for switching tabs: sets the tab, lazy-loads that
+      // pane's data, and mounts the Thyrocare iframe the first time the lab
+      // booking tab is shown. Nav buttons and deep links both route through it.
+      go(next) {
+        this.tab = next;
+        if (next === 'labbook') this.labFrameLoaded = true;
+        else if (next === 'laborders') this.labOrders.loadOnce();
+        else if (next === 'labs') this.labs.loadOnce();
+        else if (next === 'family') this.family.loadOnce();
+        else if (next === 'rx') this.rx.loadOnce();
+        else if (next === 'profile') this.profile.loadOnce();
       },
 
       async loadWishlist() {
