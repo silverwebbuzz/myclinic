@@ -154,30 +154,7 @@ require __DIR__ . '/partials/header.php';
               </ul>
             </div>
 
-            <div class="ct-list-card">
-              <div class="ct-card">
-                <div class="ct-card-icon">
-                  <img src="assets/img/icon/eclinicpro-doctor-fil.png" alt="Doctor" width="70" height="50">
-                </div>
-                <h3>Find Trusted Doctors</h3>
-                <p>Connect with verified healthcare experts.</p>
-              </div>
-              <div class="ct-card">
-                <div class="ct-card-icon">
-                  <img src="assets/img/icon/eclinicpro-online-booking.png" alt="Doctor" width="70" height="50">
-                </div>
-                <h3>Book in Seconds</h3>
-                <p>Schedule appointments instantly.</p>
-              </div>
-              <div class="ct-card">
-                <div class="ct-card-icon">
-                  <img src="assets/img/icon/eclinicpro-medical-aid.png" alt="Doctor" width="70" height="50">
-                </div>
-                <h3>Health Records</h3>
-                <p>Keep records safe and accessible.</p>
-              </div>
-            </div>
-          </div>
+</div>
           <?php
           $ptCaptcha        = ecp_recaptcha_config();
           $ptCaptchaEnabled = !empty($ptCaptcha['enabled']);
@@ -277,6 +254,32 @@ require __DIR__ . '/partials/header.php';
               <span>🇮🇳 ABHA-ready</span>
             </div>
           </div>
+
+          <!-- Value props: sit under both sections so they read as a
+               footer row rather than part of the offer. -->
+            <div class="ct-list-card">
+              <div class="ct-card">
+                <div class="ct-card-icon">
+                  <img src="assets/img/icon/eclinicpro-doctor-fil.png" alt="Doctor" width="70" height="50">
+                </div>
+                <h3>Find Trusted Doctors</h3>
+                <p>Connect with verified healthcare experts.</p>
+              </div>
+              <div class="ct-card">
+                <div class="ct-card-icon">
+                  <img src="assets/img/icon/eclinicpro-online-booking.png" alt="Doctor" width="70" height="50">
+                </div>
+                <h3>Book in Seconds</h3>
+                <p>Schedule appointments instantly.</p>
+              </div>
+              <div class="ct-card">
+                <div class="ct-card-icon">
+                  <img src="assets/img/icon/eclinicpro-medical-aid.png" alt="Doctor" width="70" height="50">
+                </div>
+                <h3>Health Records</h3>
+                <p>Keep records safe and accessible.</p>
+              </div>
+            </div>
         </div>
 
 
@@ -1401,11 +1404,18 @@ require __DIR__ . '/partials/header.php';
     padding-top: 24px;
   }
 
+  /* Stacked, not side-by-side: the offer panel is tall and the sign-in card
+     is short, so a 2-column split left a large empty white column beside the
+     form. Offer first, sign-in beneath it.
+     Capped and centred because the logged-in panel widened .pt-main to 1572px
+     for the booking frame — at that width an uncapped offer card strands its
+     headline and CTA against a mostly empty right half. */
   .pt-hero-split {
     display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-    gap: 40px;
-    /* align-items: center; */
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+    max-width: 1080px;
+    margin: 0 auto;
   }
 
   /* Left column: copy + feature list */
@@ -1451,8 +1461,7 @@ require __DIR__ . '/partials/header.php';
     margin: 0;
     display: flex;
     flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 6px;
+    gap: 8px;
   }
 
   .pt-feat-chips li {
@@ -1476,9 +1485,14 @@ require __DIR__ . '/partials/header.php';
     box-shadow: 0 18px 48px rgba(0, 0, 0, 0.05);
   }
 
+  /* Sits below the offer now, so sticky positioning no longer applies. Capped
+     and centred: a sign-in form stretched across the full panel width would
+     put the phone field miles from its label. */
   .pt-card-signin {
-    position: sticky;
-    top: 100px;
+    position: static;
+    width: 100%;
+    max-width: 560px;
+    margin: 0 auto;
   }
 
   .pt-card-head h1,
@@ -1746,16 +1760,13 @@ require __DIR__ . '/partials/header.php';
     cursor: not-allowed;
   }
 
-  /* Stack the split on narrower screens */
+  /* The split is stacked at every width now (see .pt-hero-split), so this
+     only tightens type on small screens. The old `order: -1` that floated the
+     sign-in card above the copy is gone: it would invert the intended
+     offer-then-signup reading order. */
   @media (max-width: 860px) {
     .pt-hero-split {
-      grid-template-columns: 1fr;
-      gap: 28px;
-    }
-
-    .pt-card-signin {
-      position: static;
-      order: -1;
+      gap: 22px;
     }
 
     .pt-hero-copy h1 {
