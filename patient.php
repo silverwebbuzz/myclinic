@@ -146,11 +146,11 @@ require __DIR__ . '/partials/header.php';
               </p>
 
               <ul class="pt-feat-chips">
-                <li>🩸 Fever Panels</li>
-                <li>📄 Healthy Reports</li>
-                <li>📅 Flexible Booking</li>
-                <li>🏠 Home Collection</li>
-                <li>🛡️ Trusted Partner</li>
+                <li>Fever Panels</li>
+                <li>Healthy Reports</li>
+                <li>Flexible Booking</li>
+                <li>Home Collection</li>
+                <li>Trusted Partner</li>
               </ul>
             </div>
 
@@ -1442,32 +1442,29 @@ require __DIR__ . '/partials/header.php';
     max-width: 460px;
   }
 
-  /* All five chips hold one row; they scroll rather than wrap if the column
-     is too narrow for them. */
+  /* Five chips on one row, each sized to its own label. An equal-width grid
+     crushed the longer labels into each other, so they size to content and
+     wrap to a second row only if the column genuinely cannot hold them. */
   .pt-feat-chips {
     list-style: none;
     padding: 0;
     margin: 0;
     display: flex;
-    flex-wrap: nowrap;
-    gap: 8px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .pt-feat-chips::-webkit-scrollbar {
-    display: none;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 6px;
   }
 
   .pt-feat-chips li {
+    flex: 0 1 auto;
+    min-width: 0;
     white-space: nowrap;
-    flex: 0 0 auto;
-    font-size: 12.5px;
+    font-size: 11.5px;
     font-weight: 600;
     color: var(--ink-2);
     background: var(--bg-2);
     border: 1px solid var(--line);
-    padding: 6px 12px;
+    padding: 7px 11px;
     border-radius: 999px;
   }
 
@@ -2432,23 +2429,28 @@ require __DIR__ . '/partials/header.php';
     margin-bottom: 12px;
   }
 
+  /* One row that shrinks — wrapping put ISO alone on a second line, which
+     read as a mistake rather than a strip. */
   .pt-offer-assoc-logos {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 10px 22px;
+    flex-wrap: nowrap;
+    gap: 10px 16px;
   }
 
   /* The four marks ship at wildly different aspect ratios (wide wordmark vs
      square seals). Giving each a fixed box and containing inside it keeps the
      row optically level instead of letting the widest mark tower over the
      others. */
+  /* Equal flex boxes made the wide wordmark render small and the square seals
+     render large. Sizing each mark by its own aspect ratio instead keeps them
+     optically matched: seals get a square box, the wordmark a wide one. */
   .pt-offer-assoc-item {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 42px;
-    width: 96px;
+    flex: 0 0 auto;
+    height: 40px;
   }
 
   .pt-offer-assoc-item img {
@@ -2459,11 +2461,17 @@ require __DIR__ . '/partials/header.php';
     object-fit: contain;
   }
 
+  /* Square accreditation seals read heavier than a wordmark at equal height,
+     so they sit slightly smaller. */
+  .pt-offer-assoc-item:not(.is-partner) {
+    height: 34px;
+  }
+
   /* The partner wordmark carries its own "In association with" line and
-     tagline, so it needs more room than the square seals. */
+     tagline baked into the artwork, so it needs the most room. */
   .pt-offer-assoc-item.is-partner {
-    width: 130px;
-    height: 48px;
+    height: 46px;
+    margin-right: 4px;
   }
 
   /* Four service cards: icon left, title + subtitle right. */
