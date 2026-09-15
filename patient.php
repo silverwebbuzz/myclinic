@@ -37,42 +37,66 @@ require __DIR__ . '/partials/header.php';
 
           <!-- Left: value proposition + compact feature chips -->
           <div class="pt-hero-copy">
-            <!-- Offer banner. Light/airy per the reference: tinted card, dark
-                 headline, dashed coupon block, primary CTA into the sign-in
-                 card on the right (which is the whole point of this page). -->
+            <!-- Lab partnership offer. Co-branded lockup, feature row, split
+                 coupon, CTA into the sign-in card on the right. -->
             <div class="pt-offer">
+              <div class="pt-offer-lockup">
+                <img src="/assets/img/logos/logo.svg" alt="eClinicPro" class="pt-offer-logo" width="180" height="40">
+                <span class="pt-offer-lockup-sep" aria-hidden="true"></span>
+                <img src="/assets/img/logos/thyrocare-logo.webp" alt="Thyrocare — tests you can trust"
+                  class="pt-offer-partner-logo" width="180" height="40" loading="lazy">
+              </div>
+
               <span class="pt-offer-badge">Patient exclusive offer</span>
-              <h1>Quality Healthcare,<br><em>Whenever You Need It</em></h1>
+              <h1>Trusted Lab Tests,<br><em>Now on eClinicPro</em></h1>
               <p class="pt-offer-lede">
-                Log in to your account to book appointments, view medical records,
-                manage prescriptions and more.
+                In partnership with Thyrocare, book your lab tests easily and
+                get accurate reports — all in one place.
               </p>
 
+              <ul class="pt-offer-feats">
+                <li>
+                  <span class="pt-offer-feat-ic" aria-hidden="true">🏠</span>
+                  <span>Home<br>Sample Collection</span>
+                </li>
+                <li>
+                  <span class="pt-offer-feat-ic" aria-hidden="true">📋</span>
+                  <span>Trusted &amp;<br>Accurate Reports</span>
+                </li>
+                <li>
+                  <span class="pt-offer-feat-ic" aria-hidden="true">🛡️</span>
+                  <span>Convenient<br>&amp; Secure</span>
+                </li>
+              </ul>
+
               <div class="pt-offer-coupon">
-                <span class="pt-offer-get">Get</span>
-                <span class="pt-offer-pct">20% <b>OFF</b></span>
-                <span class="pt-offer-sub">your first year on eClinicPro</span>
+                <div class="pt-offer-coupon-main">
+                  <span class="pt-offer-get">Get</span>
+                  <span class="pt-offer-pct">20% <b>OFF</b></span>
+                  <span class="pt-offer-sub">on Monsoon Fever Panels</span>
+                </div>
+                <div class="pt-offer-coupon-alt">
+                  <strong>6 Testing Options</strong>
+                  <span>From Mini to Advanced, including Rapid &amp; Influenza.</span>
+                </div>
               </div>
 
               <button type="button" class="pt-offer-cta"
-                @click="window.ecpAuth ? window.ecpAuth.open('default') : (document.querySelector('.pt-card-signin')?.scrollIntoView({behavior:'smooth', block:'center'}))">
-                Patient Login →
+                @click="document.querySelector('.pt-card-signin')?.scrollIntoView({behavior:'smooth', block:'center'})">
+                Book Your Lab Test →
               </button>
               <p class="pt-offer-new">
-                New here?
+                Already have an account?
                 <button type="button" class="pt-linkbtn"
-                  @click="document.querySelector('.pt-card-signin')?.scrollIntoView({behavior:'smooth', block:'center'})">Create an account</button>
+                  @click="document.querySelector('.pt-card-signin')?.scrollIntoView({behavior:'smooth', block:'center'})">Patient Login</button>
               </p>
 
               <ul class="pt-feat-chips">
-                <li>✅ Online Consultations</li>
-                <li>✅ Clinic Visits</li>
-                <li>✅ Appointment Booking</li>
-                <li>✅ Health Records</li>
-                <li>✅ Prescriptions</li>
-                <li>✅ Test Reports</li>
-                <li>✅ Follow-up Care</li>
-                <li>✅ Appointment Reminders</li>
+                <li>🩸 Fever Panels</li>
+                <li>📄 Healthy Reports</li>
+                <li>📅 Flexible Booking</li>
+                <li>🏠 Home Collection</li>
+                <li>🛡️ Trusted Partner</li>
               </ul>
             </div>
 
@@ -2331,17 +2355,105 @@ require __DIR__ . '/partials/header.php';
     max-width: 44ch;
   }
 
-  /* Dashed "coupon" block. */
-  .pt-offer-coupon {
-    display: inline-flex;
-    align-items: baseline;
+  /* Co-branded lockup: our logo | partner wordmark. */
+  .pt-offer-lockup {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 20px;
+  }
+
+  .pt-offer-logo {
+    height: 38px;
+    width: auto;
+  }
+
+  .pt-offer-lockup-sep {
+    width: 1px;
+    height: 34px;
+    background: var(--teal-100);
+  }
+
+  /* Partner wordmark ships with its own tagline baked into the asset, so it
+     only needs sizing — height matches our logo so the lockup reads level. */
+  .pt-offer-partner-logo {
+    height: 38px;
+    width: auto;
+  }
+
+  /* Three-up feature row with hairline dividers. */
+  .pt-offer-feats {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 22px;
+    display: flex;
     flex-wrap: wrap;
-    gap: 4px 12px;
+    gap: 10px 0;
+  }
+
+  .pt-offer-feats li {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    padding: 0 22px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink-2);
+    line-height: 1.35;
+  }
+
+  .pt-offer-feats li + li {
+    border-left: 1px solid var(--teal-100);
+  }
+
+  .pt-offer-feat-ic {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.85);
+    font-size: 19px;
+  }
+
+  /* Dashed "coupon" block: offer on the left, what's included on the right. */
+  .pt-offer-coupon {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px 26px;
     background: rgba(255, 255, 255, 0.72);
     border: 2px dashed var(--teal-400);
     border-radius: 14px;
     padding: 16px 24px;
     margin-bottom: 22px;
+  }
+
+  .pt-offer-coupon-main {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+  }
+
+  .pt-offer-coupon-alt {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding-left: 26px;
+    border-left: 1px solid var(--teal-100);
+    font-size: 13px;
+    color: var(--ink-2);
+    max-width: 30ch;
+  }
+
+  .pt-offer-coupon-alt strong {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
   }
 
   .pt-offer-get {
@@ -3343,6 +3455,39 @@ require __DIR__ . '/partials/header.php';
     /* Logged-out offer banner: tighter padding, full-width CTA. */
     .pt-offer {
       padding: 22px 20px;
+    }
+
+    /* Feature row: let the three items wrap and drop the dividers, which
+       only read correctly on a single line. */
+    .pt-offer-feats li {
+      flex: 1 1 30%;
+      padding: 0 8px;
+    }
+
+    .pt-offer-feats li + li {
+      border-left: 0;
+    }
+
+    /* Coupon stacks, so the vertical rule becomes a horizontal one. */
+    .pt-offer-coupon {
+      gap: 12px;
+    }
+
+    .pt-offer-coupon-alt {
+      padding-left: 0;
+      padding-top: 12px;
+      border-left: 0;
+      border-top: 1px solid var(--teal-100);
+      max-width: none;
+      width: 100%;
+    }
+
+    .pt-offer-lockup {
+      gap: 12px;
+    }
+
+    .pt-offer-logo {
+      height: 30px;
     }
 
     .pt-offer-coupon {
