@@ -2465,16 +2465,20 @@ require __DIR__ . '/partials/header.php';
     /* Tall enough that the partner's own flow rarely needs inner scrolling on
        desktop; the iframe scrolls internally when it does. */
     height: 1100px;
-    /* Edge-to-edge inside the pane: cancel the .pt-tab-pane side padding
-       (24px desktop) so the booking frame uses the full panel width. Side
-       borders go with it; only the top/bottom rules remain. */
-    margin-left: -24px;
-    margin-right: -24px;
+    /* Break out of the 1280px .wrap entirely and span the viewport. The
+       partner page is responsive but picks a wide two-column desktop layout,
+       which was getting clipped at the ~1238px the panel column gave it.
+       Full-bleed gives it the room that layout expects.
+       (100vw vs 100% avoids the parent's padding; the negative margin
+       re-centres it against the viewport, not the column.) */
+    width: 100vw;
+    max-width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
     border: 1px solid var(--line);
     border-left: 0;
     border-right: 0;
     border-radius: 0;
-    overflow: hidden;
     background: var(--bg-3);
   }
 
@@ -3362,12 +3366,12 @@ require __DIR__ . '/partials/header.php';
     /* A fixed 1100px frame is unusable on a phone — fall back to most of the
        viewport so the partner's flow scrolls inside itself, not the page. */
     .pt-labframe-wrap {
-      height: 78vh;
-      min-height: 560px;
-      /* Mobile pane padding is 14px, not 24px — match it or the frame
-         overflows the card and the page scrolls sideways. */
-      margin-left: -14px;
-      margin-right: -14px;
+      /* Taller on mobile: the partner's flow stacks into one long column, so
+         a short frame means scrolling a tiny window inside a big page. */
+      height: 86vh;
+      min-height: 600px;
+      /* Full-bleed is inherited from the desktop rule (calc(50% - 50vw));
+         don't re-inset it here or the frame narrows again. */
     }
 
     /* Card headers: let the name/actions wrap instead of overflowing the card
