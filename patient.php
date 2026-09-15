@@ -40,6 +40,7 @@ require __DIR__ . '/partials/header.php';
             <!-- Lab partnership offer. Co-branded lockup, feature row, split
                  coupon, CTA into the sign-in card on the right. -->
             <div class="pt-offer">
+             <div class="pt-offer-main">
               <!-- Accreditation strip: partner + the certifications that make
                    the offer credible. Our own logo is already in the site
                    header directly above, so repeating it here added nothing. -->
@@ -157,6 +158,16 @@ require __DIR__ . '/partials/header.php';
                 <li>Home Collection</li>
                 <li>Trusted Partner</li>
               </ul>
+             </div>
+
+             <!-- Photo column. Decorative: everything it conveys (home
+                  collection, accredited partner) is already stated in the copy
+                  beside it, so it carries an empty alt and is hidden on the
+                  narrow layout rather than pushing the CTA below the fold. -->
+             <div class="pt-offer-media" aria-hidden="true">
+               <img src="/assets/img/eclinicpro-thyrocare-hero.jpg" alt=""
+                 width="1200" height="800" loading="eager" decoding="async">
+             </div>
             </div>
 
 </div>
@@ -2393,11 +2404,48 @@ require __DIR__ . '/partials/header.php';
   }
 
   /* -------- Logged-out offer banner -------- */
+  /* Two columns: copy left, photo bleeding to the card's right edge. The
+     photo is what fills the space the copy alone left empty. */
   .pt-offer {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.46fr);
+    align-items: stretch;
+    gap: 0;
     background: linear-gradient(135deg, #EAF7F1 0%, #F4FBF7 55%, #EFF8F3 100%);
     border: 1px solid var(--teal-100);
     border-radius: 20px;
-    padding: 34px 38px 30px;
+    overflow: hidden;
+  }
+
+  .pt-offer-main {
+    padding: 34px 32px 30px 38px;
+    min-width: 0;
+  }
+
+  .pt-offer-media {
+    position: relative;
+    min-width: 0;
+  }
+
+  .pt-offer-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* Favour the patient's face and the draw itself. Pulling further left
+       only crops the poster mid-word; further right loses the arm. */
+    object-position: 72% 46%;
+    display: block;
+  }
+
+  /* Feathers the photo's left edge into the card's gradient so it reads as
+     one surface rather than a pasted-in rectangle. */
+  .pt-offer-media::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, #EFF8F3 0%, rgba(239, 248, 243, 0.82) 18%, rgba(239, 248, 243, 0) 46%);
+    pointer-events: none;
   }
 
   .pt-offer-badge {
@@ -3603,9 +3651,19 @@ require __DIR__ . '/partials/header.php';
       min-width: 72px;
     }
 
-    /* Logged-out offer banner: tighter padding, full-width CTA. */
+    /* Logged-out offer banner: single column, tighter padding. */
     .pt-offer {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .pt-offer-main {
       padding: 22px 20px;
+    }
+
+    /* The photo would push the CTA off the first screen on a phone, and a
+       short letterbox crop of it reads as decoration rather than proof. */
+    .pt-offer-media {
+      display: none;
     }
 
     /* One per row on a phone: two cramped cards is what forced the titles to
