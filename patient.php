@@ -32,21 +32,44 @@ require __DIR__ . '/partials/header.php';
 
           <!-- Left: value proposition + compact feature chips -->
           <div class="pt-hero-copy">
-            <span class="pt-eyebrow">Your free patient account</span>
-            <h1>Quality Healthcare, Whenever You Need It</h1>
-            <p class="pt-hero-lede">
-            Book clinic visits or online consultations, access prescriptions and medical records, and manage your healthcare securely through the eClinicPro patient portal.
-            </p>
-            <ul class="pt-feat-chips">
-              <li>✅ Online Consultations</li>
-              <li>✅ Clinic Visits</li>
-              <li>✅ Appointment Booking</li>
-              <li>✅ Health Records</li>
-              <li>✅ Prescriptions</li>
-              <li>✅ Test Reports</li>
-              <li>✅ Follow-up Care</li>
-              <li>✅ Appointment Reminders</li>
-            </ul>
+            <!-- Offer banner. Light/airy per the reference: tinted card, dark
+                 headline, dashed coupon block, primary CTA into the sign-in
+                 card on the right (which is the whole point of this page). -->
+            <div class="pt-offer">
+              <span class="pt-offer-badge">Patient exclusive offer</span>
+              <h1>Quality Healthcare,<br><em>Whenever You Need It</em></h1>
+              <p class="pt-offer-lede">
+                Log in to your account to book appointments, view medical records,
+                manage prescriptions and more.
+              </p>
+
+              <div class="pt-offer-coupon">
+                <span class="pt-offer-get">Get</span>
+                <span class="pt-offer-pct">20% <b>OFF</b></span>
+                <span class="pt-offer-sub">your first year on eClinicPro</span>
+              </div>
+
+              <button type="button" class="pt-offer-cta"
+                @click="window.ecpAuth ? window.ecpAuth.open('default') : (document.querySelector('.pt-card-signin')?.scrollIntoView({behavior:'smooth', block:'center'}))">
+                Patient Login →
+              </button>
+              <p class="pt-offer-new">
+                New here?
+                <button type="button" class="pt-linkbtn"
+                  @click="document.querySelector('.pt-card-signin')?.scrollIntoView({behavior:'smooth', block:'center'})">Create an account</button>
+              </p>
+
+              <ul class="pt-feat-chips">
+                <li>✅ Online Consultations</li>
+                <li>✅ Clinic Visits</li>
+                <li>✅ Appointment Booking</li>
+                <li>✅ Health Records</li>
+                <li>✅ Prescriptions</li>
+                <li>✅ Test Reports</li>
+                <li>✅ Follow-up Care</li>
+                <li>✅ Appointment Reminders</li>
+              </ul>
+            </div>
 
             <div class="ct-list-card">
               <div class="ct-card">
@@ -343,8 +366,10 @@ require __DIR__ . '/partials/header.php';
         </div>
       </div>
 
-      <!-- 2-column layout: tabbed main + coming-soon sidebar -->
-      <div class="pt-grid">
+      <!-- Single-column layout: horizontal nav bar, then full-width content.
+           The old 280px right rail made every pane (and especially the embedded
+           booking frame) feel cramped, so the nav moved above the content. -->
+      <div class="pt-grid is-stacked">
 
         <div class="pt-section pt-section-tabbed">
 
@@ -357,25 +382,19 @@ require __DIR__ . '/partials/header.php';
           <div x-show="tab === 'labbook'" class="pt-tab-pane">
             <div class="pt-section-head">
               <h3>Book a lab test</h3>
-              <a class="btn-mini" :href="labBookUrl" target="_blank" rel="noopener noreferrer">Open in new tab ↗</a>
             </div>
             <p class="pt-section-note">
               Choose a test or health package, pick a home-collection slot and pay securely.
-              Booking, payment and your report are handled by our accredited lab partner —
-              you'll get their confirmation by SMS and email.
+              You'll get your booking confirmation by SMS and email.
             </p>
 
             <div class="pt-labframe-wrap">
               <!-- Skeleton sits under the iframe and is covered once it paints.
-                   Cross-origin means we can't detect much beyond load, so the
-                   fallback link is always visible above rather than only on error. -->
+                   No partner link is surfaced here — the embed is the only
+                   booking surface we expose to the patient. -->
               <div class="pt-labframe-skeleton" x-show="!labFrameReady">
                 <div class="pt-labframe-spinner" aria-hidden="true"></div>
-                <p>Loading the lab booking portal…</p>
-                <p class="pt-labframe-hint">
-                  Taking too long?
-                  <a :href="labBookUrl" target="_blank" rel="noopener noreferrer">Open the booking page in a new tab</a>.
-                </p>
+                <p>Loading the booking portal…</p>
               </div>
 
               <template x-if="labFrameLoaded">
@@ -392,7 +411,6 @@ require __DIR__ . '/partials/header.php';
             </div>
 
             <p class="pt-labframe-foot">
-              Prices, availability and payment are set by our lab partner.
               Reports are delivered by the lab — save a copy to
               <button type="button" class="pt-linkbtn" @click="go('labs')">Lab reports</button>
               to keep everything in one place.
@@ -1258,17 +1276,6 @@ require __DIR__ . '/partials/header.php';
               <span class="pt-nav-label">My Profile</span>
             </button>
           </nav>
-
-          <!-- Coming soon -->
-          <div class="pt-soon">
-            <h3>Coming soon</h3>
-            <ul>
-              <li>
-                <span class="ic">🩺</span>
-                <div><b>Video consult</b><span>Talk to a doctor from home</span></div>
-              </li>
-            </ul>
-          </div>
         </aside>
       </div>
     </div>
@@ -2023,15 +2030,61 @@ require __DIR__ . '/partials/header.php';
     align-items: start;
   }
 
-  .pt-section,
-  .pt-soon {
+  /* Stacked variant: nav bar on top, content full width underneath. The
+     sidebar rail left every pane ~280px narrower for no gain, and the
+     embedded booking frame in particular needs the whole column. */
+  .pt-grid.is-stacked {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  /* The <aside> is second in source order (so the tab panes stay first for
+     screen readers and keyboard users); order:-1 floats it visually on top. */
+  .pt-grid.is-stacked .pt-side {
+    order: -1;
+    position: static;
+    display: block;
+  }
+
+  /* Vertical menu becomes a horizontal, scrollable tab bar. */
+  .pt-grid.is-stacked .pt-navmenu {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 6px;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .pt-grid.is-stacked .pt-navmenu::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pt-grid.is-stacked .pt-navmenu button {
+    position: relative;
+    width: auto;
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    white-space: nowrap;
+    padding: 10px 16px;
+  }
+
+  /* Counts sit inline in the bar rather than pinned to a row's right edge. */
+  .pt-grid.is-stacked .pt-nav-label {
+    flex: 0 0 auto;
+  }
+
+  .pt-section {
     background: #fff;
     border: 1px solid var(--line);
     border-radius: 18px;
     padding: 22px 24px;
   }
 
-  /* Right sidebar wrapper — nav + coming-soon, sticks while scrolling. */
+  /* Sidebar wrapper. In the stacked layout this is overridden to a static,
+     full-width nav bar above the content (see .pt-grid.is-stacked). */
   .pt-side {
     display: flex;
     flex-direction: column;
@@ -2205,59 +2258,130 @@ require __DIR__ . '/partials/header.php';
   }
 
   /* Coming-soon sidebar */
-  .pt-soon h3 {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--mute);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    margin: 0 0 14px;
-  }
 
-  .pt-soon ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
 
-  .pt-soon li {
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-    font-size: 13px;
-  }
 
-  .pt-soon li .ic {
-    width: 32px;
-    height: 32px;
-    border-radius: 9px;
-    background: var(--bg-2);
-    display: grid;
-    place-items: center;
-    font-size: 16px;
-    flex-shrink: 0;
-  }
 
-  .pt-soon li b {
-    display: block;
-    font-weight: 600;
-    color: var(--ink);
-    font-size: 13.5px;
-  }
 
-  .pt-soon li span {
-    display: block;
-    color: var(--mute);
-    font-size: 12.5px;
-    margin-top: 1px;
-  }
 
   /* -------- Tabs (Bookings / Shortlist) -------- */
   .pt-section-tabbed {
     padding: 0;
+  }
+
+  /* -------- Logged-out offer banner -------- */
+  .pt-offer {
+    background: linear-gradient(135deg, #EAF7F1 0%, #F4FBF7 55%, #EFF8F3 100%);
+    border: 1px solid var(--teal-100);
+    border-radius: 20px;
+    padding: 30px 32px 28px;
+  }
+
+  .pt-offer-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--teal-800);
+    background: #fff;
+    border: 1px solid var(--teal-100);
+    padding: 6px 14px;
+    border-radius: 999px;
+    margin-bottom: 18px;
+  }
+
+  .pt-offer h1 {
+    font-size: clamp(26px, 3.4vw, 40px);
+    font-weight: 700;
+    letter-spacing: -0.8px;
+    line-height: 1.14;
+    color: var(--ink);
+    margin: 0 0 12px;
+  }
+
+  /* Second line picks up the brand teal, as in the reference. */
+  .pt-offer h1 em {
+    font-style: normal;
+    color: var(--teal-700);
+  }
+
+  .pt-offer-lede {
+    color: var(--ink-2);
+    font-size: 15.5px;
+    line-height: 1.55;
+    margin: 0 0 22px;
+    max-width: 44ch;
+  }
+
+  /* Dashed "coupon" block. */
+  .pt-offer-coupon {
+    display: inline-flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 2px dashed var(--teal-400);
+    border-radius: 14px;
+    padding: 16px 24px;
+    margin-bottom: 22px;
+  }
+
+  .pt-offer-get {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--mute);
+  }
+
+  .pt-offer-pct {
+    font-size: clamp(30px, 4.2vw, 44px);
+    font-weight: 700;
+    letter-spacing: -1.4px;
+    line-height: 1;
+    color: var(--teal-700);
+  }
+
+  .pt-offer-pct b {
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  .pt-offer-sub {
+    font-size: 14px;
+    color: var(--ink-2);
+    width: 100%;
+  }
+
+  .pt-offer-cta {
+    display: block;
+    width: 100%;
+    max-width: 380px;
+    background: var(--teal-600);
+    color: #fff;
+    border: 0;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 16px 28px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background .15s, transform .15s, box-shadow .15s;
+  }
+
+  .pt-offer-cta:hover {
+    background: var(--teal-700);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(15, 155, 110, 0.25);
+  }
+
+  .pt-offer-new {
+    font-size: 14px;
+    color: var(--ink-2);
+    margin: 12px 0 22px;
+    max-width: 380px;
+    text-align: center;
   }
 
   /* -------- Lab promo banner -------- */
@@ -2341,8 +2465,15 @@ require __DIR__ . '/partials/header.php';
     /* Tall enough that the partner's own flow rarely needs inner scrolling on
        desktop; the iframe scrolls internally when it does. */
     height: 1100px;
+    /* Edge-to-edge inside the pane: cancel the .pt-tab-pane side padding
+       (24px desktop) so the booking frame uses the full panel width. Side
+       borders go with it; only the top/bottom rules remain. */
+    margin-left: -24px;
+    margin-right: -24px;
     border: 1px solid var(--line);
-    border-radius: 14px;
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
     overflow: hidden;
     background: var(--bg-3);
   }
@@ -2372,16 +2503,6 @@ require __DIR__ . '/partials/header.php';
     padding: 20px;
     color: var(--mute);
     font-size: 14px;
-  }
-
-  .pt-labframe-hint {
-    font-size: 13px;
-  }
-
-  .pt-labframe-hint a {
-    color: var(--teal-700);
-    font-weight: 600;
-    text-decoration: underline;
   }
 
   .pt-labframe-spinner {
@@ -3202,6 +3323,21 @@ require __DIR__ . '/partials/header.php';
       min-width: 72px;
     }
 
+    /* Logged-out offer banner: tighter padding, full-width CTA. */
+    .pt-offer {
+      padding: 22px 20px;
+    }
+
+    .pt-offer-coupon {
+      width: 100%;
+      padding: 14px 18px;
+    }
+
+    .pt-offer-cta,
+    .pt-offer-new {
+      max-width: none;
+    }
+
     /* Promo banner stacks and loses the side-by-side CTA on narrow screens. */
     .pt-promo {
       flex-direction: column;
@@ -3228,6 +3364,10 @@ require __DIR__ . '/partials/header.php';
     .pt-labframe-wrap {
       height: 78vh;
       min-height: 560px;
+      /* Mobile pane padding is 14px, not 24px — match it or the frame
+         overflows the card and the page scrolls sideways. */
+      margin-left: -14px;
+      margin-right: -14px;
     }
 
     /* Card headers: let the name/actions wrap instead of overflowing the card
@@ -3339,8 +3479,7 @@ require __DIR__ . '/partials/header.php';
       flex: 1;
     }
 
-    .pt-section,
-    .pt-soon {
+    .pt-section {
       padding: 18px 16px;
     }
 
