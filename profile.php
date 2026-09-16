@@ -37,4 +37,8 @@ if (($bookingCtx['mode'] ?? '') === 'claimed') {
 
 require __DIR__ . '/partials/header.php';
 require __DIR__ . '/partials/views/directory-profile.php';
+// Claim flow (public, OTP-verified) — only unclaimed listings show the CTA.
+if (empty($p['is_claimed']) && empty($p['tenant_slug'])) {
+    require __DIR__ . '/partials/doctor-claim-modal.php';
+}
 require __DIR__ . '/partials/footer.php';

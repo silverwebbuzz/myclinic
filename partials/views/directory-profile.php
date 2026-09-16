@@ -250,7 +250,22 @@ $ratingVal = (float) ($p['rating'] ?? 0);
                 <div class="dp-side-card dp-claim-card">
                     <div class="dp-claim-head"><span class="dp-claim-ico"><?= dp_icon('clinic') ?></span><strong>Is this your <?= ($p['entity_type'] ?? '') === 'clinic' ? 'clinic' : 'practice' ?>?</strong></div>
                     <p class="dp-claim-text">Claim this listing to manage your info, add timings and accept online bookings — free.</p>
-                    <a href="/onboarding/get-listed" class="dp-btn dp-btn-book">Claim this <?= ($p['entity_type'] ?? '') === 'clinic' ? 'clinic' : 'listing' ?></a>
+                    <?php
+                    // Context for the shared claim modal. Encoded once and passed via a
+                    // data- attribute: inlining json_encode() straight into onclick="..."
+                    // breaks the attribute on the first quote of any string value.
+                    $claimCtx = e(json_encode([
+                        'id'         => (int) ($p['id'] ?? 0),
+                        'name'       => (string) ($p['display_name'] ?? ''),
+                        'clinicName' => (string) ($p['clinic_name'] ?? ''),
+                        'doctorName' => (string) ($p['doctor_name'] ?? ''),
+                        'area'       => (string) ($p['area'] ?? ''),
+                        'city'       => (string) ($p['city'] ?? ''),
+                        'spec'       => (string) ($p['specialty'] ?? ''),
+                    ], JSON_UNESCAPED_UNICODE));
+                    ?>
+                    <button type="button" class="dp-btn dp-btn-book" data-claim-ctx="<?= $claimCtx ?>"
+                            onclick="window.ecpClaim &amp;&amp; window.ecpClaim.open('claim', JSON.parse(this.dataset.claimCtx))">Claim this <?= ($p['entity_type'] ?? '') === 'clinic' ? 'clinic' : 'listing' ?></button>
                 </div>
                 <?php endif; ?>
             </aside>
