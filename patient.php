@@ -3705,23 +3705,57 @@ require __DIR__ . '/partials/header.php';
       gap: 4px 14px;
     }
 
-    /* No sideways scrolling on a phone — the frame is the width of the
-       screen, so nothing overflows. */
+    /* Edge to edge on a phone. The frame sits inside .pt-tab-pane (14px) >
+       .pt-section (14px + 1px border) > .wrap (20px) — ~68px of width lost to
+       nested padding before the partner page gets any. 100vw plus a viewport-
+       relative offset cancels all three layers at once, whatever they are. */
     .pt-labframe-scroll {
       overflow-x: visible;
-      margin: 0 -14px;
-      padding: 0 14px;
+      width: 100vw;
+      margin-left: calc(50% - 50vw);
+      margin-right: calc(50% - 50vw);
+      padding: 0;
     }
 
     /* An iframe picks its layout from its OWN rendered width — there is no
        parameter or header that tells it what device it sits on. Leaving the
        desktop 1480px here made the partner portal serve its desktop layout to
-       phones (and forced a swipe). At 100% it sees a ~390px viewport and
-       renders the mobile layout its own site uses. */
+       phones (and forced a swipe). Full viewport width gives their mobile
+       layout every pixel the screen has. */
     .pt-labframe-wrap {
       width: 100%;
-      height: 88vh;
-      min-height: 620px;
+      /* Their flow is one long column; the taller the window, the less
+         double-scrolling. Falls back to vh where dvh is unsupported. */
+      height: 92vh;
+      height: 92dvh;
+      min-height: 640px;
+      border-left: 0;
+      border-right: 0;
+      border-radius: 0;
+    }
+
+    /* Trim the chrome around the frame so the booking flow starts higher: the
+       pane's padding, the intro copy and the footnote were pushing it most of
+       a screen down. Scoped to the pane that CONTAINS the frame — two later
+       600px rules re-pad .pt-tab-pane, and :has() beats them on specificity
+       instead of needing a third override further down the file. */
+    .pt-tab-pane:has(.pt-labframe-scroll) {
+      padding: 12px 0 0;
+    }
+
+    /* The head and intro keep their gutter; only the frame goes full width. */
+    .pt-tab-pane:has(.pt-labframe-scroll) > .pt-section-head,
+    .pt-tab-pane:has(.pt-labframe-scroll) > .pt-section-note {
+      padding-left: 14px;
+      padding-right: 14px;
+    }
+
+    .pt-tab-pane:has(.pt-labframe-scroll) > .pt-section-note {
+      margin-bottom: 10px;
+    }
+
+    .pt-labframe-foot {
+      margin: 10px 14px 16px;
     }
 
     /* Promo banner stacks and loses the side-by-side CTA on narrow screens. */
