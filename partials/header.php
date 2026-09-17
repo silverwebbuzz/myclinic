@@ -181,7 +181,11 @@ body.patient-wide .nav-inner{max-width:1572px}
 .nav-user-caret{color:var(--mute)}
 .nav-burger{display:none;background:transparent;border:0;margin-left:4px;cursor:pointer;color:var(--ink);border-radius:8px}
 .nav-burger svg{width:28px;height:28px}
-@media (max-width:900px){.nav-inner{padding:0 20px;gap:12px}.nav-burger{display:inline-flex;align-items:center;justify-content:center}.nav-signin{display:none}.nav-user-hi{display:none}.nav-user-caret{display:none}.nav .btn{padding:8px 14px;font-size:13px;line-height:1.2}.nav-links{display:none}}
+/* Auth entry inside the burger menu. Desktop uses the .nav-signin pill, so
+   this is hidden there and only appears in the mobile panel. */
+.nav-link-auth{display:none!important}
+.nav-link-auth[x-cloak]{display:none!important}
+@media (max-width:900px){.nav-inner{padding:0 20px;gap:12px}.nav-burger{display:inline-flex;align-items:center;justify-content:center}.nav-signin{display:none}.nav-user-hi{display:none}.nav-user-caret{display:none}.nav .btn{padding:8px 14px;font-size:13px;line-height:1.2}.nav-links{display:none}.nav-links.is-open .nav-link-auth{display:block!important;font:inherit;font-size:16px;font-weight:600;color:var(--teal-700);background:none;border:0;border-top:1px solid var(--line);margin-top:8px;padding-top:14px;text-align:left;width:100%;cursor:pointer}.nav-links.is-open .nav-link-auth[x-cloak]{display:none!important}}
 /* Safety net before Alpine + full CSS: hide cloaked UI; keep icons from exploding. */
 [x-cloak]{display:none!important}
 .hp-path-ic img{width:26px;height:auto;object-fit:contain}
@@ -245,6 +249,16 @@ body.patient-wide .nav-inner{max-width:1572px}
             </div>
             <a href="/#specialties" class="nav-link <?= nav_active('specialties') ?>">Specialties</a>
             <a href="/security" class="nav-link <?= nav_active('security') ?>">Security</a>
+
+            <!-- Auth lives in the burger on mobile: .nav-signin is display:none
+                 below 900px, so without this a patient on a phone has no way
+                 into their account from the header at all. Hidden on desktop,
+                 where the pill in .nav-cta does the job. -->
+            <button type="button" class="nav-link nav-link-auth" x-show="!patient"<?= $ecpPatient ? ' x-cloak' : '' ?>
+                    @click="mobileNav = false; window.ecpAuth && window.ecpAuth.open('default')">
+                Patient login
+            </button>
+            <a href="/patient" class="nav-link nav-link-auth" x-show="patient"<?= $ecpPatient ? '' : ' x-cloak' ?>>My Health</a>
         </nav>
 
         <div class="nav-cta">
