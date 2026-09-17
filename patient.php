@@ -3705,15 +3705,21 @@ require __DIR__ . '/partials/header.php';
       gap: 4px 14px;
     }
 
-    /* The scroll container matches the tighter mobile pane padding. */
+    /* No sideways scrolling on a phone — the frame is the width of the
+       screen, so nothing overflows. */
     .pt-labframe-scroll {
+      overflow-x: visible;
       margin: 0 -14px;
       padding: 0 14px;
     }
 
-    /* Keep the 1480px width (the partner layout needs it — the wrapper
-       scrolls) but a 1100px-tall box is far taller than a phone screen. */
+    /* An iframe picks its layout from its OWN rendered width — there is no
+       parameter or header that tells it what device it sits on. Leaving the
+       desktop 1480px here made the partner portal serve its desktop layout to
+       phones (and forced a swipe). At 100% it sees a ~390px viewport and
+       renders the mobile layout its own site uses. */
     .pt-labframe-wrap {
+      width: 100%;
       height: 88vh;
       min-height: 620px;
     }
