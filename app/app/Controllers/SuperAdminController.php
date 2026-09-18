@@ -307,6 +307,7 @@ final class SuperAdminController
             'modules' => $modules,
             'available' => $available,
             'flags' => $flags,
+            'payments' => \App\Services\SaasInvoiceService::forClinic($clinicId, 10),
             'message' => $request->query['message'] ?? null,
             'error' => $request->query['error'] ?? null,
         ]));

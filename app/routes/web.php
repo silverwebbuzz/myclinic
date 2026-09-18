@@ -504,6 +504,12 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/discounts/{id}/toggle', [\App\Controllers\DiscountAdminController::class, 'toggle']);
         $admin->post('/discounts/{id}/delete', [\App\Controllers\DiscountAdminController::class, 'delete']);
 
+        // Subscription (plan) payments — who paid, Razorpay refs, renewals.
+        $admin->get('/payments', [\App\Controllers\SubscriptionPaymentAdminController::class, 'index']);
+        $admin->get('/payments/export', [\App\Controllers\SubscriptionPaymentAdminController::class, 'export']);
+        $admin->get('/payments/{id}/pdf', [\App\Controllers\SubscriptionPaymentAdminController::class, 'pdf']);
+        $admin->post('/payments/{id}/recheck', [\App\Controllers\SubscriptionPaymentAdminController::class, 'recheck']);
+
         // Master prescription templates (system-provided per specialty)
         $admin->get('/rx-templates', [\App\Controllers\MasterTemplateAdminController::class, 'index']);
         $admin->get('/rx-templates/new', [\App\Controllers\MasterTemplateAdminController::class, 'create']);

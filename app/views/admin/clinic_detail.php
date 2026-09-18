@@ -253,6 +253,56 @@
             </form>
         </section>
 
+        <!-- ====== Subscription payments ====== -->
+        <section class="rounded-xl border bg-white p-5">
+            <div class="flex items-center justify-between">
+                <h2 class="text-sm font-semibold">Subscription payments</h2>
+                <a href="/admin/payments?clinic=<?= (int) $tenant['id'] ?>" class="text-xs text-sky-700 hover:underline">View all →</a>
+            </div>
+            <?php $paidCount = count(array_filter($payments ?? [], static fn ($p) => ($p['status'] ?? '') === 'paid')); ?>
+            <?php if (empty($payments)): ?>
+                <p class="mt-2 text-xs text-slate-500">No plan payments yet.</p>
+            <?php else: ?>
+                <p class="mt-1 text-xs text-slate-500"><?= $paidCount ?> paid of the last <?= count($payments) ?> checkout<?= count($payments) === 1 ? '' : 's' ?>.</p>
+                <table class="mt-3 w-full text-left text-sm">
+                    <thead class="text-xs text-slate-500">
+                        <tr><th class="py-2">Invoice</th><th>Date</th><th class="text-right">Amount</th><th>Razorpay payment / order</th><th>Status</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($payments as $p): ?>
+                        <?php $pStatus = (string) ($p['status'] ?? ''); ?>
+                        <tr class="border-t align-top">
+                            <td class="py-2 font-medium"><?= htmlspecialchars($p['invoice_no'] ?? '—') ?></td>
+                            <td class="text-xs text-slate-600"><?= htmlspecialchars((string) ($p['paid_at'] ?? $p['created_at'] ?? '—')) ?></td>
+                            <td class="text-right">₹<?= number_format((float) ($p['amount'] ?? 0), 2) ?></td>
+                            <td class="pl-3 font-mono text-xs">
+                                <div><?= htmlspecialchars($p['gateway_payment_id'] ?? '—') ?></div>
+                                <div class="text-slate-500"><?= htmlspecialchars($p['gateway_order_id'] ?? '') ?></div>
+                            </td>
+                            <td>
+                                <span class="rounded px-2 py-0.5 text-xs font-semibold <?= ['paid' => 'bg-emerald-100 text-emerald-700', 'pending' => 'bg-amber-100 text-amber-700', 'failed' => 'bg-rose-100 text-rose-700'][$pStatus] ?? 'bg-slate-100 text-slate-600' ?>">
+                                    <?= htmlspecialchars(ucfirst($pStatus ?: '—')) ?>
+                                </span>
+                            </td>
+                            <td class="text-right whitespace-nowrap">
+                                <?php if ($pStatus === 'paid'): ?>
+                                <a href="/admin/payments/<?= (int) $p['id'] ?>/pdf" target="_blank" class="text-xs text-sky-700 hover:underline">PDF</a>
+                                <?php elseif (($p['gateway'] ?? '') === 'razorpay' && !empty($p['gateway_order_id'])): ?>
+                                <form method="post" action="/admin/payments/<?= (int) $p['id'] ?>/recheck"
+                                      onsubmit="return confirm('Ask Razorpay about this order? If it was paid, the plan will be activated.');">
+                                    <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+                                    <input type="hidden" name="back" value="/admin/clinics/<?= (int) $tenant['id'] ?>">
+                                    <button type="submit" class="rounded border px-2 py-0.5 text-xs hover:bg-slate-50">Re-check</button>
+                                </form>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
+        </section>
+
         <!-- ====== Add-ons ====== -->
         <section class="rounded-xl border bg-white p-5">
             <h2 class="text-sm font-semibold">Active add-ons</h2>
