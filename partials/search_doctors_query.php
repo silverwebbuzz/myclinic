@@ -221,15 +221,28 @@ function ecp_search_doctors(array $filters): array {
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $total = null;
     if ($page === 1) {
-        $cnt = $db->prepare("SELECT COUNT(*) FROM $fromSql WHERE $whereSql");
-        foreach ($params as $k => $v) {
-            if (in_array($k, ['lim', 'off', 'max_km', 'ulat1', 'ulat2', 'ulng1', 'qrel'], true)) {
-                continue;
-            }
-            $cnt->bindValue(':' . $k, $v);
+        // This COUNT(*) runs the same WHERE as the search itself and costs about
+        // as much (measured: page 1 ~13.5s vs page 2 ~8.0s before indexing, and
+        // still ~4-5s after). The number only feeds a "N doctors found" label and
+        // barely moves between requests, so cache it per filter-set for 10 min.
+        $countParams = $params;
+        foreach (['lim', 'off', 'max_km', 'ulat1', 'ulat2', 'ulng1', 'qrel'] as $skip) {
+            unset($countParams[$skip]);
         }
-        $cnt->execute();
-        $total = (int) $cnt->fetchColumn();
+        $cacheKey = sha1($fromSql . '|' . $whereSql . '|' . json_encode($countParams));
+        $cacheFile = sys_get_temp_dir() . '/ecp_fd_count_' . $cacheKey . '.txt';
+
+        if (is_file($cacheFile) && (time() - (int) @filemtime($cacheFile)) < 600) {
+            $total = (int) @file_get_contents($cacheFile);
+        } else {
+            $cnt = $db->prepare("SELECT COUNT(*) FROM $fromSql WHERE $whereSql");
+            foreach ($countParams as $k => $v) {
+                $cnt->bindValue(':' . $k, $v);
+            }
+            $cnt->execute();
+            $total = (int) $cnt->fetchColumn();
+            @file_put_contents($cacheFile, (string) $total, LOCK_EX);
+        }
     }
 
     $resp = [

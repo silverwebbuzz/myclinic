@@ -127,6 +127,28 @@ function ecp_wordpress_author_ids_for_listing(PDO $db, array $row, string $entit
 /** @param list<int> $authorIds @return list<array{title: string, excerpt: string, link: string, date: string, image: string, image_alt: string, category: string, category_slug: string, author_name: string, author_avatar: string}> */
 function ecp_wordpress_fetch_posts(array $authorIds, int $limit = 6): array
 {
+    // Blog posts are a small extra block on the profile page — never worth
+    // making a visitor wait on a third-party server for. Two guards:
+    //   1. a 15-min disk cache per author set, so at most one fetch per window
+    //   2. a circuit breaker: after a failed fetch, skip WordPress entirely
+    //      for 5 min instead of re-paying the connect timeout on every view
+    // Without these, an unreachable WP server cost a full CURLOPT_TIMEOUT
+    // (12s) per author on every single page load.
+    $cacheDir = sys_get_temp_dir();
+    $breaker = $cacheDir . '/ecp_wp_posts_down.lock';
+    if (is_file($breaker) && (time() - (int) @filemtime($breaker)) < 300) {
+        return [];
+    }
+
+    sort($authorIds);
+    $cacheFile = $cacheDir . '/ecp_wp_posts_' . sha1(implode(',', $authorIds) . '|' . $limit) . '.json';
+    if (is_file($cacheFile) && (time() - (int) @filemtime($cacheFile)) < 900) {
+        $cached = json_decode((string) @file_get_contents($cacheFile), true);
+        if (is_array($cached)) {
+            return $cached;
+        }
+    }
+
     $base = rtrim(ecp_wordpress_setting('wordpress_api_url'), '/');
     $user = ecp_wordpress_setting('wordpress_api_user');
     $pass = str_replace(' ', '', ecp_wordpress_setting('wordpress_api_app_password'));
@@ -134,6 +156,7 @@ function ecp_wordpress_fetch_posts(array $authorIds, int $limit = 6): array
 
     $all = [];
     $seenLinks = [];
+    $failed = false;
     foreach ($authorIds as $authorId) {
         $query = http_build_query([
             'author' => $authorId,
@@ -156,18 +179,23 @@ function ecp_wordpress_fetch_posts(array $authorIds, int $limit = 6): array
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_TIMEOUT => 12,
-            CURLOPT_CONNECTTIMEOUT => 5,
+            // Kept short on purpose: this runs while a visitor waits for the
+            // page. A slow blog must degrade to "no posts", never to a slow page.
+            CURLOPT_TIMEOUT => 3,
+            CURLOPT_CONNECTTIMEOUT => 2,
         ]);
         $raw = curl_exec($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        if ($raw === false) {
+        if ($raw === false || $status < 200 || $status >= 300) {
+            $failed = true;
             continue;
         }
 
         $decoded = json_decode((string) $raw, true);
         if (!is_array($decoded)) {
+            $failed = true;
             continue;
         }
 
@@ -185,8 +213,17 @@ function ecp_wordpress_fetch_posts(array $authorIds, int $limit = 6): array
     }
 
     usort($all, static fn (array $a, array $b) => strcmp($b['date'], $a['date']));
+    $result = array_slice($all, 0, $limit);
 
-    return array_slice($all, 0, $limit);
+    if ($failed && $all === []) {
+        // Every call failed — trip the breaker so the next 5 min of page views
+        // skip WordPress instead of each paying the connect timeout again.
+        @touch($breaker);
+    } else {
+        @file_put_contents($cacheFile, json_encode($result), LOCK_EX);
+    }
+
+    return $result;
 }
 
 /** @param array<string, mixed> $post @return array{title: string, excerpt: string, link: string, date: string, image: string, image_alt: string, category: string, category_slug: string, author_name: string, author_avatar: string}|null */
@@ -268,12 +305,30 @@ function ecp_wordpress_shape_post(array $post): ?array
     ];
 }
 
-/** Revoke links when the WordPress author was deleted outside eClinicPro. */
+/**
+ * Revoke links when the WordPress author was deleted outside eClinicPro.
+ *
+ * This makes one blocking HTTP call PER ACTIVE LINK. It used to run on every
+ * single profile page view, so a slow or unreachable WordPress server stalled
+ * the page for seconds per link (measured: profile pages pinned at 10-16s,
+ * while pages that skipped this path served in ~0.6s). It is housekeeping, not
+ * page content, so it now runs at most once an hour per server via a lock file
+ * — the page render never waits on it more than that.
+ */
 function ecp_wordpress_sync_stale_links(PDO $db): void
 {
     if (!ecp_wordpress_is_configured()) {
         return;
     }
+
+    // Throttle: only the first request after the interval does the sync.
+    $lock = sys_get_temp_dir() . '/ecp_wp_link_sync.lock';
+    $now = time();
+    if (is_file($lock) && ($now - (int) @filemtime($lock)) < 3600) {
+        return;
+    }
+    // Touch BEFORE the work so concurrent requests don't all pile in.
+    @touch($lock);
 
     try {
         $db->query('SELECT 1 FROM wordpress_doctor_links LIMIT 1');
@@ -322,8 +377,10 @@ function ecp_wordpress_user_exists(int $wpUserId): bool
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HTTPHEADER => $headers,
-        CURLOPT_TIMEOUT => 8,
-        CURLOPT_CONNECTTIMEOUT => 4,
+        // Short: called once per active link by the (now hourly) stale-link
+        // sync. A hung blog must not hold a page render open.
+        CURLOPT_TIMEOUT => 3,
+        CURLOPT_CONNECTTIMEOUT => 2,
         CURLOPT_NOBODY => false,
     ]);
     curl_exec($ch);
