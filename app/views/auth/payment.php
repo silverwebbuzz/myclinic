@@ -19,8 +19,11 @@ ob_start();
 
     <dl class="mt-5 space-y-2 rounded-xl bg-slate-50 p-4 text-sm">
         <div class="flex justify-between gap-3"><dt class="text-slate-500">Clinic</dt><dd class="truncate text-right text-slate-800"><?= htmlspecialchars((string) ($clinic['name'] ?? '')) ?></dd></div>
-        <div class="flex justify-between gap-3"><dt class="text-slate-500">Plan</dt><dd class="text-slate-800">Standard · Monthly</dd></div>
-        <div class="flex justify-between gap-3"><dt class="text-slate-500">1 month</dt><dd class="text-slate-800"><?= $inr($price['base'], 2) ?></dd></div>
+        <div class="flex justify-between gap-3"><dt class="text-slate-500">Plan</dt><dd class="text-slate-800"><?= htmlspecialchars(\App\Services\BillingGatewayService::planName()) ?> · Monthly</dd></div>
+        <div class="flex justify-between gap-3"><dt class="text-slate-500">1 month</dt><dd class="text-slate-800"><?= $inr($price['list'], 2) ?></dd></div>
+        <?php if (($price['discount'] ?? 0) > 0): ?>
+            <div class="flex justify-between gap-3"><dt class="text-emerald-700">Discount (<?= htmlspecialchars((string) $price['code']) ?>)</dt><dd class="whitespace-nowrap text-emerald-700">− <?= $inr($price['discount'], 2) ?></dd></div>
+        <?php endif; ?>
         <div class="flex justify-between gap-3"><dt class="text-slate-500">GST (18%)</dt><dd class="text-slate-800"><?= $inr($price['tax'], 2) ?></dd></div>
         <div class="flex justify-between gap-3 border-t border-dashed border-slate-200 pt-2 text-base font-semibold"><dt class="text-slate-900">Total</dt><dd class="text-slate-900"><?= $inr($price['gross'], 2) ?></dd></div>
     </dl>

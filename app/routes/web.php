@@ -217,6 +217,7 @@ return static function (RouteRegistrar $router): void {
         // Registration steps 4–5 (Checkout → Payment). Needs the new account's
         // session, so it lives here rather than in the guest /register group.
         $app->get('/register/checkout', [\App\Controllers\SignupCheckoutController::class, 'show']);
+        $app->post('/register/checkout/code', [\App\Controllers\SignupCheckoutController::class, 'code']);
         $app->post('/register/payment', [\App\Controllers\SignupCheckoutController::class, 'pay']);
         $app->get('/register/payment', static fn () => \App\Http\Response::redirect('/register/checkout'));
 
@@ -496,6 +497,12 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/plans', [\App\Controllers\PlanAdminController::class, 'save']);
         $admin->post('/plans/{id}/toggle', [\App\Controllers\PlanAdminController::class, 'toggle']);
         $admin->post('/plans/{id}/delete', [\App\Controllers\PlanAdminController::class, 'delete']);
+
+        // Plan discount codes (applied on the signup checkout)
+        $admin->get('/discounts', [\App\Controllers\DiscountAdminController::class, 'index']);
+        $admin->post('/discounts', [\App\Controllers\DiscountAdminController::class, 'save']);
+        $admin->post('/discounts/{id}/toggle', [\App\Controllers\DiscountAdminController::class, 'toggle']);
+        $admin->post('/discounts/{id}/delete', [\App\Controllers\DiscountAdminController::class, 'delete']);
 
         // Master prescription templates (system-provided per specialty)
         $admin->get('/rx-templates', [\App\Controllers\MasterTemplateAdminController::class, 'index']);

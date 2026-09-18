@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($title ?? 'ManageClinic') ?></title>
     <link rel="stylesheet" href="/assets/app.css">
+    <style>[x-cloak]{display:none!important}</style>
     <script defer src="/assets/alpine.min.js"></script>
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-900">

@@ -9,9 +9,13 @@
 // =====================================================================
 require_once __DIR__ . '/partials/helpers.php';
 
+// Plan name + price come from the app admin (/admin/plans → 'standard').
+$plan = ecp_standard_plan();
+$priceLabel = '₹' . number_format($plan['monthly'], fmod($plan['monthly'], 1.0) ? 2 : 0);
+
 $activePage = 'features';
 $pageTitle = 'Clinic Management Software for Small & Large Clinics — eClinicPro';
-$metaDesc  = 'eClinicPro clinic management software: patient records, appointments & walk-in queue, prescriptions, GST billing, vitals & follow-ups, daily reports and a public doctor profile — ₹999/month + GST with unlimited patients and staff.';
+$metaDesc  = 'eClinicPro clinic management software: patient records, appointments & walk-in queue, prescriptions, GST billing, vitals & follow-ups, daily reports and a public doctor profile — ' . $priceLabel . '/month + GST with unlimited patients and staff.';
 
 $signupUrl = ecp_portal_url('/register');
 
@@ -162,14 +166,14 @@ $challenges = [
 ];
 
 $steps = [
-    ['Sign up', 'Verify your phone, add your clinic details and pay ₹999 + GST.'],
+    ['Sign up', 'Verify your phone, add your clinic details and pay ' . $priceLabel . ' + GST.'],
     ['Set up your clinic', 'Add timings, doctors and staff. We help with data import.'],
     ['See patients', 'Book appointments, write prescriptions and bill — from day one.'],
 ];
 
 $faqs = [
     ['What is included in the plan?', 'Patient records, appointments & walk-in queue, prescriptions, GST billing & invoicing, vitals, diagnosis & follow-up tracking, daily reports, unlimited patients and staff users, a public doctor profile on eclinicpro.com and 1 Instagram Reel post per month.'],
-    ['How much does it cost?', '₹999 per month + 18% GST (₹1,178.82 in total), billed monthly. There are no per-user or per-patient charges.'],
+    ['How much does it cost?', $priceLabel . ' per month + ' . (int) $plan['gst_percent'] . '% GST (₹' . number_format($plan['total'], 2) . ' in total), billed monthly. There are no per-user or per-patient charges.'],
     ['Do I need to install anything?', 'No. eClinicPro runs in your web browser on any laptop, desktop or tablet — nothing to install or maintain.'],
     ['Can more than one doctor use it?', 'Yes. Staff users are unlimited, so every doctor, nurse and receptionist can have their own login with the right access.'],
     ['Is my patients’ data safe?', 'Data is encrypted, each clinic’s data is kept separate, and staff only see what their role allows.'],
@@ -399,7 +403,7 @@ require __DIR__ . '/partials/header.php';
                 eClinicPro runs your whole clinic — appointments, patient records, prescriptions
                 and GST billing — in one simple system. Made in India, for Indian clinics.
             </p>
-            <p class="cms-hero-tag"><b>One plan,</b> everything included — ₹999/month.</p>
+            <p class="cms-hero-tag"><b>One plan,</b> everything included — <?= e($priceLabel) ?>/month.</p>
             <div class="cms-hero-ctas">
                 <a href="/book-a-demo" data-open-demo-modal class="cms-btn cms-btn-solid">Book a Demo</a>
                 <a href="/contact" class="cms-btn cms-btn-line">Contact Us</a>
@@ -437,7 +441,7 @@ require __DIR__ . '/partials/header.php';
     <div class="wrap cms-stats-grid">
         <div class="cms-stat"><b>9</b><span>Things included in one plan</span></div>
         <div class="cms-stat"><b>Unlimited</b><span>Patients &amp; staff users</span></div>
-        <div class="cms-stat"><b>₹999</b><span>Per month + GST</span></div>
+        <div class="cms-stat"><b><?= e($priceLabel) ?></b><span>Per month + GST</span></div>
         <div class="cms-stat"><b>No install</b><span>Runs in your web browser</span></div>
     </div>
 </div>
@@ -593,7 +597,7 @@ require __DIR__ . '/partials/header.php';
         <div class="cms-price reveal">
             <div>
                 <span class="cms-eyebrow">Simple pricing</span>
-                <div class="cms-price-amt"><small>₹</small>999 <span>/month + GST</span></div>
+                <div class="cms-price-amt"><small>₹</small><?= e(ltrim($priceLabel, '₹')) ?> <span>/month + GST</span></div>
                 <p class="cms-price-sub">One plan. Everything included. Billed monthly — no long contract.</p>
                 <div class="cms-price-actions">
                     <a href="<?= e($signupUrl) ?>" class="cms-btn cms-btn-solid">Sign up →</a>
@@ -651,7 +655,7 @@ require __DIR__ . '/partials/header.php';
             'applicationCategory' => 'BusinessApplication',
             'operatingSystem' => 'Web',
             'description' => $metaDesc,
-            'offers' => ['@type' => 'Offer', 'price' => '999', 'priceCurrency' => 'INR'],
+            'offers' => ['@type' => 'Offer', 'price' => (string) $plan['monthly'], 'priceCurrency' => 'INR'],
         ],
         [
             '@type' => 'FAQPage',

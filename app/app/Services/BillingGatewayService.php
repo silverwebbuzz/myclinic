@@ -32,39 +32,87 @@ final class BillingGatewayService
      *   amount?: int, currency?: string, name?: string, prefill?: array<string,string>,
      *   mode?: string, message?: string}
      */
-    public static function startCheckout(int $clinicId, string $planId, string $billingCycle, string $countryCode): array
+    public static function startCheckout(int $clinicId, string $planId, string $billingCycle, string $countryCode, ?array $discountCode = null): array
     {
         $plan = PlanService::get($planId);
         if ($plan === null || $planId === 'free') {
             return ['type' => 'error', 'message' => 'Invalid plan'];
         }
 
-        // Single monthly plan (₹999 + GST) — used by signup and renewals alike.
-        if (self::razorpayConfigured()) {
-            return self::razorpayCheckout($clinicId, $planId, 'monthly', 1);
+        // A 100%-off code leaves nothing to charge — activate straight away
+        // (Razorpay can't take a ₹0 order).
+        if ($discountCode !== null && self::monthlyBreakdown($discountCode)['gross'] <= 0) {
+            $price = self::monthlyBreakdown($discountCode);
+            PlanService::applyPlanToTenant($clinicId, $planId, false, 1);
+            DiscountService::redeem((int) $discountCode['id'], $clinicId, 'free_' . $clinicId . '_' . bin2hex(random_bytes(6)), $price['list'], $price['discount']);
+
+            return ['type' => 'redirect', 'url' => '/onboarding/billing/razorpay-return?free=1'];
         }
 
-        return self::simulatePaidPlan($clinicId, $planId);
+        // Single monthly plan (admin price + GST) — used by signup and renewals alike.
+        if (self::razorpayConfigured()) {
+            return self::razorpayCheckout($clinicId, $planId, 'monthly', 1, $discountCode);
+        }
+
+        $result = self::simulatePaidPlan($clinicId, $planId);
+        if ($discountCode !== null) {
+            $price = self::monthlyBreakdown($discountCode);
+            DiscountService::redeem((int) $discountCode['id'], $clinicId, 'sim_' . $clinicId . '_' . bin2hex(random_bytes(6)), $price['list'], $price['discount']);
+        }
+
+        return $result;
     }
 
     /**
-     * The one plan we sell: Standard, ₹999/month + GST, paid one month at a
-     * time. Used for both the signup Checkout → Payment steps and renewals
-     * from Settings. MUST match the marketing /pricing page (pricing.php).
+     * The one plan we sell: Standard, paid one month at a time (+ GST). Used
+     * for both the signup Checkout → Payment steps and renewals from Settings.
+     * The price is admin-managed — see monthlyPriceInr().
      */
-    public const MONTHLY_PRICE_INR = 999;
+    public const MONTHLY_PRICE_INR = 999; // fallback only — see monthlyPriceInr()
 
     /**
-     * GST breakdown for one month: base + 18% = gross.
-     *
-     * @return array{base: float, tax: float, gross: float, percent: float}
+     * Monthly price (excl. GST) of the Standard plan as set in /admin/plans
+     * (plans.monthly_inr). The marketing /pricing page reads the same row.
      */
-    public static function monthlyBreakdown(): array
+    public static function monthlyPriceInr(): float
     {
-        $base = (float) self::MONTHLY_PRICE_INR;
+        $monthly = (float) (PlanService::get('standard')['monthly_usd'] ?? 0);
+
+        return $monthly > 0 ? $monthly : (float) self::MONTHLY_PRICE_INR;
+    }
+
+    /** Display name of the Standard plan from /admin/plans. */
+    public static function planName(): string
+    {
+        $name = trim((string) (PlanService::get('standard')['name'] ?? ''));
+
+        return $name !== '' ? $name : 'Standard plan';
+    }
+
+    /**
+     * One month's price: list price − discount = base (taxable), + 18% GST =
+     * gross (what we charge). Pass a validated plan_discount_codes row to
+     * apply a discount code.
+     *
+     * @param array<string, mixed>|null $discountCode
+     * @return array{list: float, discount: float, base: float, tax: float, gross: float, percent: float, code: ?string}
+     */
+    public static function monthlyBreakdown(?array $discountCode = null): array
+    {
+        $list = self::monthlyPriceInr();
+        $discount = $discountCode !== null ? DiscountService::amountOff($discountCode, $list) : 0.0;
+        $base = round($list - $discount, 2);
         $tax = round($base * self::GST_PERCENT / 100, 2);
 
-        return ['base' => $base, 'tax' => $tax, 'gross' => round($base + $tax, 2), 'percent' => self::GST_PERCENT];
+        return [
+            'list' => $list,
+            'discount' => $discount,
+            'base' => $base,
+            'tax' => $tax,
+            'gross' => round($base + $tax, 2),
+            'percent' => self::GST_PERCENT,
+            'code' => $discountCode !== null ? (string) $discountCode['code'] : null,
+        ];
     }
 
     private static function razorpayConfigured(): bool
@@ -167,7 +215,7 @@ final class BillingGatewayService
      * @return array{type: string, key_id?: string, order_id?: string, amount?: int,
      *   currency?: string, name?: string, prefill?: array<string,string>, mode?: string, message?: string}
      */
-    private static function razorpayCheckout(int $clinicId, string $planId, string $billingCycle, ?int $termMonths = null): array
+    private static function razorpayCheckout(int $clinicId, string $planId, string $billingCycle, ?int $termMonths = null, ?array $discountCode = null): array
     {
         $key = $_ENV['RAZORPAY_KEY_ID'] ?? '';
         $secret = $_ENV['RAZORPAY_KEY_SECRET'] ?? '';
@@ -175,7 +223,7 @@ final class BillingGatewayService
             return self::simulatePaidPlan($clinicId, $planId);
         }
 
-        $price = $termMonths !== null ? self::monthlyBreakdown() : self::priceBreakdown($planId, $billingCycle);
+        $price = $termMonths !== null ? self::monthlyBreakdown($discountCode) : self::priceBreakdown($planId, $billingCycle);
         $amount = $price['gross']; // GST-inclusive total actually charged
         if ($amount <= 0) {
             return self::simulatePaidPlan($clinicId, $planId);
@@ -199,6 +247,10 @@ final class BillingGatewayService
                 'plan' => $planId,
                 'billing_cycle' => $billingCycle,
                 'term_months' => (string) ($termMonths ?? 12),
+                // Discount code: redeemed (counted) only once the payment is captured.
+                'discount_code_id' => (string) ($discountCode['id'] ?? ''),
+                'list_amount' => (string) ($price['list'] ?? $price['base']),
+                'discount_amount' => (string) ($price['discount'] ?? 0),
             ],
         ], JSON_THROW_ON_ERROR);
 
@@ -251,7 +303,7 @@ final class BillingGatewayService
                 'amount' => $amountPaise,
                 'currency' => 'INR',
                 'name' => $termMonths !== null
-                    ? 'eClinicPro Standard plan (monthly)'
+                    ? 'eClinicPro ' . self::planName() . ' (monthly)'
                     : 'eClinicPro ' . ucfirst($planId) . ' plan (' . $billingCycle . ')',
                 'prefill' => [
                     'name' => (string) ($clinic['name'] ?? ''),
@@ -312,6 +364,7 @@ final class BillingGatewayService
         }
 
         PlanService::applyPlanToTenant($clinicId, $plan, false, $termMonths);
+        self::redeemDiscountFromNotes($order['notes'] ?? [], $clinicId, $orderId);
 
         // Mark the pending SaaS invoice paid, generate the PDF + email it.
         // Idempotent — safe if the webhook already did this.
@@ -326,6 +379,26 @@ final class BillingGatewayService
         );
 
         return true;
+    }
+
+    /**
+     * If the paid order carried a discount code, record the redemption
+     * (idempotent per order id).
+     *
+     * @param array<string, mixed> $notes
+     */
+    private static function redeemDiscountFromNotes(array $notes, int $clinicId, string $orderId): void
+    {
+        $codeId = (int) ($notes['discount_code_id'] ?? 0);
+        if ($codeId > 0) {
+            DiscountService::redeem(
+                $codeId,
+                $clinicId,
+                $orderId,
+                (float) ($notes['list_amount'] ?? 0),
+                (float) ($notes['discount_amount'] ?? 0),
+            );
+        }
     }
 
     /**
@@ -466,6 +539,7 @@ final class BillingGatewayService
         }
 
         PlanService::applyPlanToTenant($clinicId, $plan, false, $termMonths);
+        self::redeemDiscountFromNotes($order['notes'] ?? [], $clinicId, $orderId);
         SaasInvoiceService::markPaidByOrder($orderId, $paymentId !== '' ? $paymentId : null);
         PartnerCommissionService::recordPaidConversion(
             $clinicId,

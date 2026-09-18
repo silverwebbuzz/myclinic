@@ -227,6 +227,48 @@ function ecp_plans(): array
 }
 
 /**
+ * The one plan we sell, as set in the app admin (/admin/plans → plan_id
+ * 'standard'). Drives the price and name shown on /pricing and
+ * /clinic-management-software, so an admin edit shows up on the site.
+ * Falls back to the launch values if the DB/table is unavailable.
+ *
+ * @return array{name: string, monthly: float, gst_percent: float, gst: float, total: float}
+ */
+function ecp_standard_plan(): array
+{
+    static $plan = null;
+    if ($plan !== null) return $plan;
+
+    $name = 'Standard plan';
+    $monthly = 999.0;
+    $db = ecp_db();
+    if ($db) {
+        try {
+            $stmt = $db->prepare("SELECT name, monthly_inr FROM plans WHERE plan_id = 'standard' AND is_active = 1 LIMIT 1");
+            $stmt->execute();
+            $row = $stmt->fetch();
+            if ($row) {
+                $name = trim((string) $row['name']) !== '' ? (string) $row['name'] : $name;
+                $monthly = (float) $row['monthly_inr'] > 0 ? (float) $row['monthly_inr'] : $monthly;
+            }
+        } catch (Throwable $e) {
+            // plans table missing — keep the defaults
+        }
+    }
+
+    $gstPct = 18.0; // must match BillingGatewayService::GST_PERCENT
+    $gst = round($monthly * $gstPct / 100, 2);
+
+    return $plan = [
+        'name' => $name,
+        'monthly' => $monthly,
+        'gst_percent' => $gstPct,
+        'gst' => $gst,
+        'total' => round($monthly + $gst, 2),
+    ];
+}
+
+/**
  * Logs a demo request. Creates the table on first use so we don't need a migration.
  */
 function ecp_save_demo_request(array $data): bool

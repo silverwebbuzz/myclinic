@@ -6,19 +6,22 @@
 // trial — every "Sign up" goes to the app's /register flow
 // (phone → code → details → checkout → payment).
 //
-// The price here MUST match BillingGatewayService::MONTHLY_PRICE_INR in the
-// app — that is what Razorpay actually charges.
+// Name and monthly price come from the app admin (/admin/plans → 'standard')
+// via ecp_standard_plan() — the same row checkout charges from.
 // =====================================================================
 require_once __DIR__ . '/partials/helpers.php';
 
+$plan = ecp_standard_plan();
+$gstPct = $plan['gst_percent'];
+$perMonth = $plan['monthly'];
+$gst = $plan['gst'];
+$total = $plan['total'];
+$priceLabel = '₹' . number_format($perMonth, fmod($perMonth, 1.0) ? 2 : 0);
+
 $activePage = 'pricing';
 $pageTitle = 'Pricing — eClinicPro Clinic Management Software';
-$metaDesc  = 'Simple, transparent pricing for eClinicPro clinic management software. One plan with everything included — ₹999/month + GST, billed monthly. Unlimited patients and staff.';
+$metaDesc  = 'Simple, transparent pricing for eClinicPro clinic management software. One plan with everything included — ' . $priceLabel . '/month + GST, billed monthly. Unlimited patients and staff.';
 
-$gstPct = 18;
-$perMonth = 999;
-$gst = round($perMonth * $gstPct / 100, 2);
-$total = $perMonth + $gst;
 $signupUrl = ecp_portal_url('/register');
 
 $inr = static fn (float $n, int $dec = 0): string => '₹' . number_format($n, $dec);
@@ -57,7 +60,7 @@ $faqs = [
     ['How is GST charged?', '18% GST is added at checkout and shown clearly before you pay. You get a GST invoice by email right after payment.'],
     ['How do I pay?', 'Payment is handled by Razorpay. You can pay with UPI, debit or credit card, net banking or wallets.'],
     ['When can I start using it?', 'Immediately. As soon as the payment is confirmed your account is activated and you can log in and set up your clinic.'],
-    ['How does monthly billing work?', 'You pay ₹999 + GST for one month at a time. We remind you before the month ends and you renew from Settings → Subscription in a couple of clicks. No long contract, and your data is never deleted.'],
+    ['How does monthly billing work?', 'You pay ' . $priceLabel . ' + GST for one month at a time. We remind you before the month ends and you renew from Settings → Subscription in a couple of clicks. No long contract, and your data is never deleted.'],
     ['Can I add more doctors or staff later?', 'Yes. Staff users are unlimited on every plan. Only extra clinic branches are charged, through the Clinic Network add-on.'],
 ];
 
@@ -356,13 +359,13 @@ require __DIR__ . '/partials/header.php';
             <article class="pr-plan is-featured">
                 <span class="pr-plan-ribbon">★ Everything included</span>
                 <div class="pr-plan-top">
-                    <span class="pr-plan-term">Standard plan</span>
+                    <span class="pr-plan-term"><?= e($plan['name']) ?></span>
                     <span class="pr-plan-off">Billed monthly</span>
                 </div>
                 <p class="pr-plan-note">The complete clinic system. Pay month to month — no long contract.</p>
 
                 <div class="pr-plan-price">
-                    <span class="pr-plan-amt"><small>₹</small><?= number_format($perMonth) ?></span>
+                    <span class="pr-plan-amt"><small>₹</small><?= e(ltrim($priceLabel, '₹')) ?></span>
                     <span class="pr-plan-per">/month + GST</span>
                 </div>
 

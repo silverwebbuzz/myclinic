@@ -77,8 +77,10 @@ final class OnboardingController
     {
         $orderId = (string) ($request->query['order_id'] ?? '');
         $paid = $orderId !== '' && BillingGatewayService::verifyRazorpayOrder($orderId);
-        // Dev without Razorpay keys: startCheckout() already activated the plan.
-        if (!empty($request->query['simulated'])) {
+        // Dev without Razorpay keys, or a 100%-off discount code:
+        // startCheckout() already activated the plan (these flags only pick
+        // the message — activation state is re-read from the DB below).
+        if (!empty($request->query['simulated']) || !empty($request->query['free'])) {
             $paid = true;
         }
 
