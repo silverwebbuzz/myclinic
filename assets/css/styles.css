@@ -264,6 +264,24 @@ button {
   color: var(--teal-600);
 }
 
+/* 901–1180px: six menu items + two CTAs must share one row — tighten before
+   the burger takes over at 900px. (Mirrored in header.php critical CSS.) */
+.nav-link { white-space: nowrap; }
+@media (min-width: 901px) and (max-width: 1180px) {
+  .nav .nav-inner { gap: 16px; }
+  .nav-links { gap: 14px; }
+  .nav-link { font-size: 14.5px; }
+  .logo { width: 140px; }
+  .logo-img { max-width: 140px; }
+  .nav .nav-cta .btn { padding: 7px 12px; font-size: 14px; }
+  .nav .nav-cta .nav-signin { padding: 7px 10px; font-size: 13px; }
+}
+/* Narrowest desktop band: Patient login pill collapses to its icon (the
+   label stays in the DOM for screen readers). */
+@media (min-width: 901px) and (max-width: 1040px) {
+  .nav .nav-cta .nav-signin { font-size: 0; gap: 0; padding: 8px; }
+}
+
 /* ---- nav dropdown (For doctors) ---- */
 .nav-drop {
   position: relative;

@@ -373,12 +373,15 @@ require __DIR__ . '/partials/header.php';
                 </div>
 
                 <ul class="pr-plan-list">
-                    <li>All modules — records, Rx, billing, queue, reports</li>
-                    <li>Unlimited patients &amp; staff users</li>
-                    <li>Teleconsultation &amp; public doctor profile</li>
-                    <li>50+ specialty-aware forms</li>
-                    <li>Free setup help &amp; data import</li>
-                    <li>GST invoice emailed every month</li>
+                    <li>Patient Records</li>
+                    <li>Appointments &amp; walk-in queue</li>
+                    <li>Prescriptions &amp; Pharmacy</li>
+                    <li>Billing &amp; invoicing (GST-ready)</li>
+                    <li>Vitals, diagnosis, follow-up tracking</li>
+                    <li>Daily reports &amp; analytics</li>
+                    <li>Unlimited patients, unlimited staff users</li>
+                    <li>Public doctor profile on eclinicpro.com</li>
+                    <li>1 Instagram Reel post per month</li>
                 </ul>
 
                 <a href="<?= e($signupUrl) ?>" class="pr-btn pr-btn-solid">Sign up →</a>

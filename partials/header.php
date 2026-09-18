@@ -169,6 +169,10 @@ body.patient-wide .nav-inner{max-width:1572px}
 .nav-links{display:flex;gap:24px;flex:1;min-width:0}
 .nav-link{font-size:16px;font-weight:500;color:var(--ink-2);position:relative;padding:4px 0;transition:color .15s}
 .nav-cta{display:flex;gap:8px;align-items:center;flex-shrink:0}
+/* 901–1180px: six menu items + two CTAs must share one row — tighten before the burger takes over at 900px. */
+.nav-link{white-space:nowrap}
+@media (min-width:901px) and (max-width:1180px){.nav .nav-inner{gap:16px}.nav-links{gap:14px}.nav-link{font-size:14.5px}.logo{width:140px}.logo-img{max-width:140px}.nav .nav-cta .btn{padding:7px 12px;font-size:14px}.nav .nav-cta .nav-signin{padding:7px 10px;font-size:13px}}
+@media (min-width:901px) and (max-width:1040px){.nav .nav-cta .nav-signin{font-size:0;gap:0;padding:8px}}
 .nav .btn{padding:7px 16px;font-size:16px}
 .nav-signin{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:var(--teal-700,#0b7a56);background:#fff;border:1px solid var(--teal-600);border-radius:999px;padding:7px 14px;cursor:pointer;line-height:1.2;transition:background .15s,color .15s}
 .nav-signin:hover{background:var(--teal-600);color:#fff}
@@ -247,6 +251,7 @@ body.patient-wide .nav-inner{max-width:1572px}
                     <a href="/product-tour" class="nav-drop-item">Product Tour</a>
                 </div>
             </div>
+            <a href="/pricing" class="nav-link <?= nav_active('pricing') ?>">Pricing</a>
             <a href="/#specialties" class="nav-link <?= nav_active('specialties') ?>">Specialties</a>
             <a href="/security" class="nav-link <?= nav_active('security') ?>">Security</a>
 
@@ -265,7 +270,7 @@ body.patient-wide .nav-inner{max-width:1572px}
             <!-- Logged out: opens the shared login modal.
                  Server-render the correct branch so we don't flash both states
                  before Alpine boots; x-cloak only on the inactive branch. -->
-            <button type="button" class="nav-signin" x-show="!patient"<?= $ecpPatient ? ' x-cloak' : '' ?>
+            <button type="button" class="nav-signin" title="Patient login" x-show="!patient"<?= $ecpPatient ? ' x-cloak' : '' ?>
                     @click="window.ecpAuth && window.ecpAuth.open('default')">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 Patient login
