@@ -42,9 +42,10 @@ $rzpDash = 'https://dashboard.razorpay.com/app/payments/';
         </div>
         <?php endif; ?>
 
-        <?php if (!empty($tableMissing)): ?>
+        <?php if (!empty($loadError)): ?>
         <div class="rounded bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900">
-            Couldn't load payments (the <code>saas_invoices</code> table may be missing). Check the server error log.
+            Couldn't load payments from <code>saas_invoices</code>:
+            <code class="block mt-1 text-xs break-all"><?= htmlspecialchars((string) $loadError) ?></code>
         </div>
         <?php endif; ?>
 

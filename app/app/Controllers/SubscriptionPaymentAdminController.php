@@ -12,7 +12,6 @@ use App\Http\Response;
 use App\Services\AuditService;
 use App\Services\BillingGatewayService;
 use App\Services\CsrfService;
-use App\Services\DiscountService;
 use App\Services\SaasInvoiceService;
 use App\Support\View;
 use PDO;
@@ -36,7 +35,6 @@ final class SubscriptionPaymentAdminController
 
     public function index(Request $request): Response
     {
-        DiscountService::ensureSchema(); // list joins the redemption tables
         $filters = $this->filters($request);
         [$whereSql, $params] = $this->where($filters);
         $pdo = Database::connection();
@@ -44,12 +42,12 @@ final class SubscriptionPaymentAdminController
         $rows = [];
         $total = 0;
         $stats = ['paid_count' => 0, 'paid_amount' => 0.0, 'pending' => 0, 'failed' => 0, 'repeat_clinics' => 0];
-        $tableMissing = false;
+        $loadError = null;
         $pages = 1;
         $page = $filters['page'];
 
         try {
-            $countStmt = $pdo->prepare("SELECT COUNT(*) FROM saas_invoices i LEFT JOIN tenants t ON t.id = i.clinic_id $whereSql");
+            $countStmt = $pdo->prepare("SELECT COUNT(*) FROM saas_invoices i $whereSql");
             $countStmt->execute($params);
             $total = (int) $countStmt->fetchColumn();
             $pages = max(1, (int) ceil($total / self::PER_PAGE));
@@ -58,8 +56,13 @@ final class SubscriptionPaymentAdminController
 
             $stmt = $pdo->prepare($this->listSql($whereSql) . ' LIMIT ' . self::PER_PAGE . ' OFFSET ' . $offset);
             $stmt->execute($params);
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $rows = $this->enrich($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []);
+        } catch (\Throwable $e) {
+            error_log('[SubscriptionPaymentAdmin] list failed: ' . $e->getMessage());
+            $loadError = $e->getMessage();
+        }
 
+        try {
             // Headline numbers ignore the filters — the whole-business view.
             $s = $pdo->query(
                 "SELECT
@@ -78,8 +81,8 @@ final class SubscriptionPaymentAdminController
                   GROUP BY clinic_id HAVING COUNT(*) > 1) x"
             )->fetchColumn();
         } catch (\Throwable $e) {
-            error_log('[SubscriptionPaymentAdmin] list failed: ' . $e->getMessage());
-            $tableMissing = true;
+            error_log('[SubscriptionPaymentAdmin] stats failed: ' . $e->getMessage());
+            $loadError ??= $e->getMessage();
         }
 
         $clinicName = null;
@@ -97,7 +100,7 @@ final class SubscriptionPaymentAdminController
             'filters' => $filters,
             'clinicName' => $clinicName,
             'stats' => $stats,
-            'tableMissing' => $tableMissing,
+            'loadError' => $loadError,
             'message' => $request->query['message'] ?? null,
         ]));
     }
@@ -105,15 +108,16 @@ final class SubscriptionPaymentAdminController
     /** GET /admin/payments/export — CSV of the current filter (no paging). */
     public function export(Request $request): Response
     {
-        DiscountService::ensureSchema();
         [$whereSql, $params] = $this->where($this->filters($request));
 
         $rows = [];
         try {
             $stmt = Database::connection()->prepare($this->listSql($whereSql));
             $stmt->execute($params);
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        } catch (\Throwable $e) { /* table missing → empty export */ }
+            $rows = $this->enrich($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []);
+        } catch (\Throwable $e) {
+            error_log('[SubscriptionPaymentAdmin] export failed: ' . $e->getMessage());
+        }
 
         $out = fopen('php://temp', 'r+');
         fputcsv($out, [
@@ -204,16 +208,15 @@ final class SubscriptionPaymentAdminController
     }
 
     /**
-     * Rows for the list/export. pay_seq = this clinic's Nth paid invoice
-     * (1 = first purchase, 2+ = renewal/repeat). dup_nearby flags another paid
-     * invoice for the same clinic within 3 days — a likely double charge.
+     * Rows for the list/export — saas_invoices only, so a schema difference in
+     * another table can't blank the page. pay_seq = this clinic's Nth paid
+     * invoice (1 = first purchase, 2+ = renewal/repeat). dup_nearby flags
+     * another paid invoice for the same clinic within 72h — a likely double
+     * charge. Clinic, payer and discount details are added by enrich().
      */
     private function listSql(string $whereSql): string
     {
         return "SELECT i.*,
-                       t.name AS clinic_name, t.email AS payer_email, t.phone AS payer_phone,
-                       (SELECT u.name FROM users u WHERE u.clinic_id = i.clinic_id
-                         ORDER BY (u.role = 'admin') DESC, u.id ASC LIMIT 1) AS payer_name,
                        (SELECT COUNT(*) FROM saas_invoices p
                          WHERE p.clinic_id = i.clinic_id AND p.status = 'paid' AND p.id <= i.id) AS pay_seq,
                        (SELECT COUNT(*) FROM saas_invoices p
@@ -221,18 +224,88 @@ final class SubscriptionPaymentAdminController
                        (SELECT COUNT(*) FROM saas_invoices p
                          WHERE p.clinic_id = i.clinic_id AND p.status = 'paid' AND p.id <> i.id
                            AND i.status = 'paid'
-                           AND ABS(TIMESTAMPDIFF(HOUR, p.paid_at, i.paid_at)) <= 72) AS dup_nearby,
-                       (SELECT d.code FROM plan_discount_redemptions r
-                          JOIN plan_discount_codes d ON d.id = r.discount_code_id
-                         WHERE r.gateway_order_id = i.gateway_order_id LIMIT 1) AS discount_code,
-                       (SELECT r.discount_amount FROM plan_discount_redemptions r
-                         WHERE r.gateway_order_id = i.gateway_order_id LIMIT 1) AS discount_amount
+                           AND ABS(TIMESTAMPDIFF(HOUR, p.paid_at, i.paid_at)) <= 72) AS dup_nearby
                   FROM saas_invoices i
-             LEFT JOIN tenants t ON t.id = i.clinic_id
                 $whereSql
               ORDER BY i.created_at DESC, i.id DESC";
     }
 
+    /**
+     * Attach clinic name/email/phone, the clinic's admin user (payer) and any
+     * discount code. Each lookup is separate and best-effort: a missing column
+     * or table (or a collation mismatch on the discount tables) just leaves
+     * that field blank instead of failing the whole list.
+     *
+     * @param list<array<string, mixed>> $rows
+     * @return list<array<string, mixed>>
+     */
+    private function enrich(array $rows): array
+    {
+        if ($rows === []) {
+            return $rows;
+        }
+        $pdo = Database::connection();
+        $clinicIds = array_values(array_unique(array_map(static fn ($r) => (int) $r['clinic_id'], $rows)));
+        $idList = implode(',', $clinicIds); // ints only
+
+        $tenants = [];
+        try {
+            foreach ($pdo->query("SELECT * FROM tenants WHERE id IN ($idList)")->fetchAll(PDO::FETCH_ASSOC) as $t) {
+                $tenants[(int) $t['id']] = $t;
+            }
+        } catch (\Throwable $e) {
+            error_log('[SubscriptionPaymentAdmin] tenants lookup failed: ' . $e->getMessage());
+        }
+
+        // Payer = the clinic's first admin user, else its first user.
+        $payers = [];
+        try {
+            $users = $pdo->query("SELECT * FROM users WHERE clinic_id IN ($idList) ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($users as $u) {
+                $cid = (int) $u['clinic_id'];
+                $isAdmin = ($u['role'] ?? '') === 'admin';
+                if (!isset($payers[$cid]) || ($isAdmin && ($payers[$cid]['role'] ?? '') !== 'admin')) {
+                    $payers[$cid] = $u;
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[SubscriptionPaymentAdmin] users lookup failed: ' . $e->getMessage());
+        }
+
+        $discounts = [];
+        $orderIds = array_values(array_filter(array_map(static fn ($r) => (string) ($r['gateway_order_id'] ?? ''), $rows)));
+        if ($orderIds !== []) {
+            try {
+                $in = implode(',', array_fill(0, count($orderIds), '?'));
+                $stmt = $pdo->prepare(
+                    "SELECT r.gateway_order_id, r.discount_amount, d.code
+                       FROM plan_discount_redemptions r
+                  LEFT JOIN plan_discount_codes d ON d.id = r.discount_code_id
+                      WHERE r.gateway_order_id IN ($in)"
+                );
+                $stmt->execute($orderIds);
+                foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $d) {
+                    $discounts[(string) $d['gateway_order_id']] = $d;
+                }
+            } catch (\Throwable $e) { /* discount tables not created yet */ }
+        }
+
+        foreach ($rows as &$r) {
+            $cid = (int) $r['clinic_id'];
+            $t = $tenants[$cid] ?? [];
+            $u = $payers[$cid] ?? [];
+            $d = $discounts[(string) ($r['gateway_order_id'] ?? '')] ?? [];
+            $r['clinic_name'] = $t['name'] ?? null;
+            $r['payer_name'] = $u['name'] ?? null;
+            $r['payer_email'] = ($t['email'] ?? '') !== '' ? $t['email'] : ($u['email'] ?? null);
+            $r['payer_phone'] = ($t['phone'] ?? '') !== '' ? $t['phone'] : ($u['phone'] ?? null);
+            $r['discount_code'] = $d['code'] ?? null;
+            $r['discount_amount'] = $d['discount_amount'] ?? null;
+        }
+        unset($r);
+
+        return $rows;
+    }
     /** @return array{q: string, status: string, from: string, to: string, clinic: int, page: int} */
     private function filters(Request $request): array
     {
@@ -260,10 +333,19 @@ final class SubscriptionPaymentAdminController
         if ($f['q'] !== '') {
             // Native prepares: one placeholder per occurrence (no reuse).
             $like = '%' . $f['q'] . '%';
-            $where[] = '(i.gateway_payment_id LIKE :q1 OR i.gateway_order_id LIKE :q2 OR i.invoice_no LIKE :q3
-                         OR t.name LIKE :q4 OR t.email LIKE :q5 OR t.phone LIKE :q6)';
-            for ($n = 1; $n <= 6; $n++) {
-                $params[":q$n"] = $like;
+            $or = ['i.gateway_payment_id LIKE :q1', 'i.gateway_order_id LIKE :q2', 'i.invoice_no LIKE :q3'];
+            $tenantOr = [];
+            $n = 4;
+            foreach (array_intersect(['name', 'email', 'phone'], $this->tenantColumns()) as $col) {
+                $tenantOr[] = "$col LIKE :q$n";
+                $n++;
+            }
+            if ($tenantOr !== []) {
+                $or[] = 'i.clinic_id IN (SELECT id FROM tenants WHERE ' . implode(' OR ', $tenantOr) . ')';
+            }
+            $where[] = '(' . implode(' OR ', $or) . ')';
+            for ($k = 1; $k < $n; $k++) {
+                $params[":q$k"] = $like;
             }
         }
         if ($f['status'] !== '') {
@@ -284,6 +366,16 @@ final class SubscriptionPaymentAdminController
         }
 
         return [$where ? 'WHERE ' . implode(' AND ', $where) : '', $params];
+    }
+
+    /** @return list<string> */
+    private function tenantColumns(): array
+    {
+        try {
+            return Database::connection()->query('SHOW COLUMNS FROM tenants')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        } catch (\Throwable $e) {
+            return [];
+        }
     }
 
     /** Return to the page the action came from (list or clinic detail) — local paths only. */
