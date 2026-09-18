@@ -1,6 +1,10 @@
 -- =====================================================================
 -- 2026_09_18_fix_default_sort_index.sql
--- Fix the 8-15s /api/search_doctors response on the DEFAULT listing.
+-- Fix the slow /find-a-doctor listing AND the slow clinic detail pages.
+--
+-- Two separate problems, same root cause (an index that doesn't match the
+-- query): the listing API took 8-15s, and clinic detail/booking pages took
+-- 7-15s. Sections 1-3 fix the listing, section 4 fixes the detail pages.
 --
 -- Problem: idx_browse (added 2026_07_09) stops at quality_score:
 --     country, is_active, status, is_claimed, has_photo, quality_score
@@ -83,7 +87,25 @@ CALL ecp_add_index_if_missing(
     'country, is_active, status, consultation_fee'
 );
 
--- --- 4. Retire the now-redundant idx_browse ---------------------------
+-- --- 4. Profile / detail pages (the 7-15s "clinic detail" pages) ------
+-- partials/directory_profile.php runs two city-scoped queries per page:
+--   a) "related clinics":  WHERE city=? AND specialty=? AND id<>?
+--   b) sibling-doctor fallback: WHERE city=? AND id<>? AND name LIKE '%..%'
+-- NO existing index starts with `city` — idx_country_state_city leads with
+-- (country, state) and idx_browse_city leads with country — so both queries
+-- scan the whole table. Measured before this migration:
+--   profile page WITH portal doctors (fallback skipped):  0.58s
+--   profile page WITHOUT them        (fallback runs):     6.7-15.8s
+--
+-- (b)'s leading-wildcard LIKE can never use an index for the name match,
+-- but with `city` indexed MySQL narrows to that city's rows first and only
+-- LIKE-scans those, instead of all ~84k rows.
+CALL ecp_add_index_if_missing(
+    'directory_doctors', 'idx_city_specialty',
+    'city, is_active, status, specialty, is_claimed, rating'
+);
+
+-- --- 5. Retire the now-redundant idx_browse ---------------------------
 -- idx_browse is a strict prefix of idx_browse_rank, so it can never be
 -- chosen over it; keeping both just slows writes and wastes disk.
 -- Guarded: only drops if the replacement actually exists.
@@ -118,4 +140,9 @@ DROP PROCEDURE IF EXISTS ecp_add_index_if_missing;
 -- Then from anywhere (should drop from ~8-15s to well under 1s):
 --   curl -s -o /dev/null -w "%{time_starttransfer}\n" \
 --     "https://eclinicpro.com/api/search_doctors?page=1"
+--
+-- And a detail page that has NO portal doctors (these were the 7-15s ones;
+-- pick any clinic whose page shows no doctor cards):
+--   curl -s -o /dev/null -w "%{time_starttransfer}\n" \
+--     "https://eclinicpro.com/ahmedabad/clinic/aashish-s-clinic"
 -- =====================================================================
