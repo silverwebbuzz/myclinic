@@ -86,6 +86,40 @@ final class SubscriptionStatus
         return !empty($clinic['payment_pending']);
     }
 
+    /**
+     * Make sure tenants.payment_pending exists (same DDL as
+     * database/patches/2026_09_18_tenants_payment_pending.sql). Without the
+     * column the signup gate can't be stored and new clinics would skip
+     * Checkout → Payment, so registration self-heals instead of relying on
+     * the patch having been run. Checked once per request; returns false if
+     * the column is still missing (e.g. no ALTER privilege).
+     */
+    public static function ensurePendingColumn(): bool
+    {
+        static $ok = null;
+        if ($ok !== null) {
+            return $ok;
+        }
+
+        try {
+            $pdo = \App\Core\Database::connection();
+            $exists = (int) $pdo->query(
+                "SELECT COUNT(*) FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tenants' AND COLUMN_NAME = 'payment_pending'"
+            )->fetchColumn();
+            if ($exists === 0) {
+                $pdo->exec('ALTER TABLE `tenants` ADD COLUMN `payment_pending` TINYINT(1) NOT NULL DEFAULT 0');
+                error_log('[SubscriptionStatus] added missing tenants.payment_pending column');
+            }
+
+            return $ok = true;
+        } catch (\Throwable $e) {
+            error_log('[SubscriptionStatus] payment_pending column unavailable: ' . $e->getMessage());
+
+            return $ok = false;
+        }
+    }
+
     public static function isExpired(?array $clinic = null): bool
     {
         return self::forClinic($clinic)['expired'];
