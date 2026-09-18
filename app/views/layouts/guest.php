@@ -9,7 +9,7 @@
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-900">
     <div class="flex min-h-screen items-center justify-center p-4">
-        <div class="w-full max-w-md">
+        <div class="w-full <?= htmlspecialchars($maxWidth ?? 'max-w-md') ?>">
             <?= $content ?? '' ?>
         </div>
     </div>

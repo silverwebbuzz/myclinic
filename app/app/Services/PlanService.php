@@ -178,7 +178,7 @@ final class PlanService
         return is_array($plan['modules']) ? $plan['modules'] : [];
     }
 
-    public static function applyPlanToTenant(int $clinicId, string $planId, bool $withTrial = false): void
+    public static function applyPlanToTenant(int $clinicId, string $planId, bool $withTrial = false, int $termMonths = 12): void
     {
         // tenants.plan has a foreign key to plans.plan_id (fk_tenants_plan), so
         // it can only hold a plan_id that exists in the catalog. Guard against a
@@ -217,11 +217,25 @@ final class PlanService
         // past trial date so it doesn't keep the clinic blocked after paying.
         // (See SubscriptionStatus: a date that exists and is in the past blocks.)
         if (!$withTrial && $planId !== 'free') {
-            $data['plan_expires_at'] = date('Y-m-d', strtotime('+1 year'));
+            // Renewing before expiry extends from the current end date, so
+            // paying early never loses the days already paid for.
+            $current = QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first()['plan_expires_at'] ?? null;
+            $from = ($current && strtotime((string) $current) > time()) ? (string) $current : 'today';
+            $data['plan_expires_at'] = date('Y-m-d', strtotime($from . ' +' . max(1, $termMonths) . ' months'));
             $data['trial_ends_at'] = null;
         }
 
         QueryBuilder::table('tenants')->where('id', '=', $clinicId)->update($data);
+
+        // Paid → unlock a clinic that signed up via Checkout → Payment. Own
+        // write so a missing column (patch not run) never blocks activation.
+        if (!$withTrial && $planId !== 'free') {
+            try {
+                QueryBuilder::table('tenants')->where('id', '=', $clinicId)->update(['payment_pending' => 0]);
+            } catch (\Throwable $e) {
+                // Column not present — nothing to unlock.
+            }
+        }
         self::activatePlanModules($clinicId, $planId);
     }
 }

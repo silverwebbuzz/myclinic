@@ -15,7 +15,7 @@ ob_start();
 ?>
 <div class="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
     <h1 class="text-xl font-semibold text-slate-900">Start your clinic</h1>
-    <p class="mt-1 text-sm text-slate-500">30-day free trial · No credit card required</p>
+    <p class="mt-1 text-sm text-slate-500">Create your account, pay ₹999/month + GST securely — and start using eClinicPro.</p>
 
     <?php if (!empty($info)): ?>
         <div class="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800"><?= htmlspecialchars((string) $info) ?></div>
@@ -32,21 +32,9 @@ ob_start();
     }
     ?>
 
-    <div class="mt-5 flex items-center gap-1 text-[11px] text-slate-500">
-        <div class="flex items-center gap-1 <?= $phoneStep !== 'phone' ? 'text-emerald-700' : 'text-emerald-700 font-medium' ?>">
-            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-bold text-white"><?= $phoneStep === 'phone' ? '1' : '✓' ?></span>
-            Verify phone
-        </div>
-        <span class="h-px flex-1 bg-slate-200"></span>
-        <div class="flex items-center gap-1 <?= $phoneStep === 'code' ? 'text-emerald-700 font-medium' : ($phoneStep === 'details' ? 'text-emerald-700' : '') ?>">
-            <span class="flex h-5 w-5 items-center justify-center rounded-full <?= in_array($phoneStep, ['code', 'details'], true) ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-500' ?> text-[10px] font-bold"><?= $phoneStep === 'details' ? '✓' : '2' ?></span>
-            Enter code
-        </div>
-        <span class="h-px flex-1 bg-slate-200"></span>
-        <div class="flex items-center gap-1 <?= $phoneStep === 'details' ? 'text-emerald-700 font-medium' : '' ?>">
-            <span class="flex h-5 w-5 items-center justify-center rounded-full <?= $phoneStep === 'details' ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-500' ?> text-[10px] font-bold">3</span>
-            Your details
-        </div>
+    <div class="mt-5">
+        <?php $signupStep = match ($phoneStep) { 'code' => 2, 'details' => 3, default => 1 }; ?>
+        <?php require __DIR__ . '/_signup_steps.php'; ?>
     </div>
 
     <?php if ($phoneStep === 'phone'): ?>
@@ -177,7 +165,7 @@ ob_start();
             <?php endif; ?>
 
             <button type="submit" class="w-full rounded-lg bg-emerald-600 py-2.5 text-sm font-medium text-white hover:bg-emerald-700">
-                Create clinic account
+                Continue to checkout →
             </button>
         </form>
     <?php endif; ?>

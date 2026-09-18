@@ -101,11 +101,6 @@ function ecp_dispatch_clean_url(string $requestUri): bool
         return true;
     }
 
-    if (preg_match('#^/pricing/?$#', $uri)) {
-        header('Location: /clinic-management-software#pricing', true, 301);
-        exit;
-    }
-
     if (preg_match('#^/([^.]+)/?$#', $uri, $m)) {
         $php = __DIR__ . '/../' . $m[1] . '.php';
         if (is_file($php)) {

@@ -242,7 +242,7 @@ body.patient-wide .nav-inner{max-width:1572px}
                 </a>
                 <div class="nav-drop-menu">
                     <a href="/clinic-management-software" class="nav-drop-item">Clinic Management Software</a>
-                    <a href="/clinic-management-software#pricing" class="nav-drop-item">Software Pricing</a>
+                    <a href="/pricing" class="nav-drop-item">Software Pricing</a>
                     <a href="/clinic-management-software#screenshots" class="nav-drop-item">Product Screens</a>
                     <a href="/product-tour" class="nav-drop-item">Product Tour</a>
                 </div>

@@ -133,7 +133,7 @@ $presenceSub = $presenceSub ?? 'Find doctors & clinics across these cities';
                     <li><a href="/health-insurance">Health Insurance</a></li>
                     <li><a href="/clinic-management-software">For doctors</a></li>
                     <li><a href="/product-tour">Product tour</a></li>
-                    <li><a href="/clinic-management-software#pricing">Pricing</a></li>
+                    <li><a href="/pricing">Pricing</a></li>
                 </ul>
             </div>
             <div class="foot-col">
@@ -200,6 +200,56 @@ $presenceSub = $presenceSub ?? 'Find doctors & clinics across these cities';
   page only (as health-store does), not here.
 -->
 
+
+<!-- Floating chat widget (bottom-right). Opens a small panel with
+     WhatsApp / call / email. No third-party script — plain links. -->
+<?php
+$chatPhone = '919998010029';
+$chatMsg   = 'Hi eClinicPro, I have a question.';
+?>
+<div class="ecp-chat" id="ecpChat">
+    <div class="ecp-chat-panel" id="ecpChatPanel" role="dialog" aria-labelledby="ecpChatTitle" hidden>
+        <div class="ecp-chat-head">
+            <div>
+                <b id="ecpChatTitle">Chat with us</b>
+                <span>We usually reply within a few minutes.</span>
+            </div>
+            <button type="button" class="ecp-chat-x" aria-label="Close chat" data-chat-close>&times;</button>
+        </div>
+        <div class="ecp-chat-body">
+            <p class="ecp-chat-bubble">👋 Hi there! How can we help you today?</p>
+            <a class="ecp-chat-opt ecp-chat-wa" href="https://wa.me/<?= e($chatPhone) ?>?text=<?= rawurlencode($chatMsg) ?>" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.64.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48 0 1.46 1.07 2.88 1.21 3.07.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35zM12.05 21.5h-.01a9.4 9.4 0 0 1-4.8-1.32l-.34-.2-3.57.94.95-3.48-.22-.36a9.4 9.4 0 0 1-1.44-5.02c0-5.2 4.23-9.43 9.44-9.43a9.37 9.37 0 0 1 9.43 9.44c0 5.2-4.23 9.43-9.44 9.43zm8.03-17.46A11.3 11.3 0 0 0 12.05.7C5.8.7.7 5.8.7 12.05c0 2 .52 3.95 1.52 5.67L.6 23.3l5.72-1.5a11.3 11.3 0 0 0 5.42 1.38h.01c6.25 0 11.35-5.1 11.35-11.35 0-3.03-1.18-5.88-3.32-8.02z"/></svg>
+                Chat on WhatsApp
+            </a>
+            <a class="ecp-chat-opt" href="tel:+<?= e($chatPhone) ?>">📞 Call +91 99980 10029</a>
+            <a class="ecp-chat-opt" href="mailto:hello@eclinicpro.com">✉️ hello@eclinicpro.com</a>
+        </div>
+    </div>
+    <button type="button" class="ecp-chat-btn" id="ecpChatBtn" aria-label="Open chat" aria-expanded="false" aria-controls="ecpChatPanel">
+        <svg class="ecp-chat-ic-open" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8l-4 4V6a2 2 0 0 1 2-2zm3 6a1.2 1.2 0 1 0 0 2.4A1.2 1.2 0 0 0 7 10zm5 0a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zm5 0a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/></svg>
+        <svg class="ecp-chat-ic-close" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M18.3 5.7a1 1 0 0 0-1.4 0L12 10.6 7.1 5.7a1 1 0 0 0-1.4 1.4l4.9 4.9-4.9 4.9a1 1 0 1 0 1.4 1.4l4.9-4.9 4.9 4.9a1 1 0 0 0 1.4-1.4L13.4 12l4.9-4.9a1 1 0 0 0 0-1.4z"/></svg>
+    </button>
+</div>
+
+<script>
+    (function () {
+        const btn = document.getElementById('ecpChatBtn');
+        const panel = document.getElementById('ecpChatPanel');
+        const root = document.getElementById('ecpChat');
+        if (!btn || !panel) return;
+        const setOpen = (open) => {
+            panel.hidden = !open;
+            root.classList.toggle('is-open', open);
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            btn.setAttribute('aria-label', open ? 'Close chat' : 'Open chat');
+        };
+        btn.addEventListener('click', () => setOpen(panel.hidden));
+        panel.querySelector('[data-chat-close]').addEventListener('click', () => setOpen(false));
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panel.hidden) setOpen(false); });
+        document.addEventListener('click', (e) => { if (!panel.hidden && !root.contains(e.target)) setOpen(false); });
+    })();
+</script>
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {

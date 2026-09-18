@@ -65,7 +65,7 @@ final class SubscriptionController
         }
 
         $planId = (string) ($request->post['plan'] ?? 'standard');
-        $cycle = ($request->post['billing_cycle'] ?? 'yearly') === 'monthly' ? 'monthly' : 'yearly';
+        $cycle = 'monthly'; // single plan: ₹999/month + GST
 
         // Free plan is admin-assigned only — not self-serve.
         if ($planId === 'free') {

@@ -261,7 +261,8 @@ final class AuthController
             SessionFlash::put('new_username', $username);
         }
 
-        return Response::redirect('/onboarding/clinic-setup');
+        // Registration continues with the last two steps: Checkout → Payment.
+        return Response::redirect('/register/checkout');
     }
 
     /**
@@ -825,6 +826,11 @@ final class AuthController
 
         if ($tenant === null) {
             return '/dashboard';
+        }
+
+        // Registered but never paid → finish checkout before anything else.
+        if (\App\Services\SubscriptionStatus::paymentPending($tenant)) {
+            return '/register/checkout';
         }
 
         $step = (int) ($tenant['onboarding_step'] ?? 1);

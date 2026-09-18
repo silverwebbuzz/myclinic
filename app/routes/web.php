@@ -214,6 +214,12 @@ return static function (RouteRegistrar $router): void {
         $app->post('/settings/sessions/revoke-all', [SettingsController::class, 'revokeOtherSessions']);
         $app->post('/settings/sessions/revoke/{id}', [SettingsController::class, 'revokeSession']);
 
+        // Registration steps 4–5 (Checkout → Payment). Needs the new account's
+        // session, so it lives here rather than in the guest /register group.
+        $app->get('/register/checkout', [\App\Controllers\SignupCheckoutController::class, 'show']);
+        $app->post('/register/payment', [\App\Controllers\SignupCheckoutController::class, 'pay']);
+        $app->get('/register/payment', static fn () => \App\Http\Response::redirect('/register/checkout'));
+
         $app->get('/onboarding/plan-selection', [OnboardingController::class, 'planSelection']);
         $app->post('/onboarding/plan-selection', [OnboardingController::class, 'selectPlan']);
         // Real gateway checkout (Razorpay) — used by onboarding + Settings.

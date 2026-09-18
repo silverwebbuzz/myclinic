@@ -77,6 +77,21 @@ final class OnboardingController
     {
         $orderId = (string) ($request->query['order_id'] ?? '');
         $paid = $orderId !== '' && BillingGatewayService::verifyRazorpayOrder($orderId);
+        // Dev without Razorpay keys: startCheckout() already activated the plan.
+        if (!empty($request->query['simulated'])) {
+            $paid = true;
+        }
+
+        // New signup paying at the end of registration. verify() cleared
+        // payment_pending on success; refresh the cached tenant so this
+        // request (and the redirect) sees the unlocked clinic.
+        $clinicId = RequestContext::clinicId();
+        if ($clinicId !== null) {
+            OnboardingService::refreshClinicContext($clinicId);
+        }
+        if (\App\Services\SubscriptionStatus::paymentPending()) {
+            return Response::redirect('/register/checkout?payment=' . ($paid ? 'pending' : 'failed'));
+        }
 
         // A doctor who has already finished onboarding (step >= 5) is paying a
         // RENEWAL/UPGRADE from Settings — they must NOT be dropped back into the

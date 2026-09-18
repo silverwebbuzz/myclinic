@@ -37,6 +37,7 @@ final class SaasInvoiceService
         array $price,
         string $gateway,
         string $gatewayOrderId,
+        ?int $termMonths = null,
     ): int {
         if (!Database::ping()) {
             return 0;
@@ -57,9 +58,11 @@ final class SaasInvoiceService
             }
 
             $now = date('Y-m-d');
-            $periodEnd = $billingCycle === 'yearly'
-                ? date('Y-m-d', strtotime('+1 year'))
-                : date('Y-m-d', strtotime('+1 month'));
+            $periodEnd = match (true) {
+                $termMonths !== null => date('Y-m-d', strtotime('+' . $termMonths . ' months')),
+                $billingCycle === 'yearly' => date('Y-m-d', strtotime('+1 year')),
+                default => date('Y-m-d', strtotime('+1 month')),
+            };
 
             $row = [
                 'clinic_id' => $clinicId,

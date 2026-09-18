@@ -147,6 +147,15 @@ final class AuthService
 
         PlanService::applyPlanToTenant($tenantId, 'standard', true);
 
+        // Signup ends with Checkout → Payment (no free trial). The panel stays
+        // locked on /register/checkout until the first payment is captured.
+        // Separate write so a missing column (patch not run) can't break signup.
+        try {
+            QueryBuilder::table('tenants')->where('id', '=', $tenantId)->update(['payment_pending' => 1]);
+        } catch (\Throwable $e) {
+            error_log('[registerClinicViaPhone] payment_pending not set: ' . $e->getMessage());
+        }
+
         if ($email !== '') {
             try {
                 MailService::send($email, 'welcome', [

@@ -39,11 +39,32 @@ final class BillingGatewayService
             return ['type' => 'error', 'message' => 'Invalid plan'];
         }
 
+        // Single monthly plan (₹999 + GST) — used by signup and renewals alike.
         if (self::razorpayConfigured()) {
-            return self::razorpayCheckout($clinicId, $planId, $billingCycle);
+            return self::razorpayCheckout($clinicId, $planId, 'monthly', 1);
         }
 
         return self::simulatePaidPlan($clinicId, $planId);
+    }
+
+    /**
+     * The one plan we sell: Standard, ₹999/month + GST, paid one month at a
+     * time. Used for both the signup Checkout → Payment steps and renewals
+     * from Settings. MUST match the marketing /pricing page (pricing.php).
+     */
+    public const MONTHLY_PRICE_INR = 999;
+
+    /**
+     * GST breakdown for one month: base + 18% = gross.
+     *
+     * @return array{base: float, tax: float, gross: float, percent: float}
+     */
+    public static function monthlyBreakdown(): array
+    {
+        $base = (float) self::MONTHLY_PRICE_INR;
+        $tax = round($base * self::GST_PERCENT / 100, 2);
+
+        return ['base' => $base, 'tax' => $tax, 'gross' => round($base + $tax, 2), 'percent' => self::GST_PERCENT];
     }
 
     private static function razorpayConfigured(): bool
@@ -146,7 +167,7 @@ final class BillingGatewayService
      * @return array{type: string, key_id?: string, order_id?: string, amount?: int,
      *   currency?: string, name?: string, prefill?: array<string,string>, mode?: string, message?: string}
      */
-    private static function razorpayCheckout(int $clinicId, string $planId, string $billingCycle): array
+    private static function razorpayCheckout(int $clinicId, string $planId, string $billingCycle, ?int $termMonths = null): array
     {
         $key = $_ENV['RAZORPAY_KEY_ID'] ?? '';
         $secret = $_ENV['RAZORPAY_KEY_SECRET'] ?? '';
@@ -154,7 +175,7 @@ final class BillingGatewayService
             return self::simulatePaidPlan($clinicId, $planId);
         }
 
-        $price = self::priceBreakdown($planId, $billingCycle);
+        $price = $termMonths !== null ? self::monthlyBreakdown() : self::priceBreakdown($planId, $billingCycle);
         $amount = $price['gross']; // GST-inclusive total actually charged
         if ($amount <= 0) {
             return self::simulatePaidPlan($clinicId, $planId);
@@ -177,6 +198,7 @@ final class BillingGatewayService
                 'clinic_id' => (string) $clinicId,
                 'plan' => $planId,
                 'billing_cycle' => $billingCycle,
+                'term_months' => (string) ($termMonths ?? 12),
             ],
         ], JSON_THROW_ON_ERROR);
 
@@ -210,7 +232,7 @@ final class BillingGatewayService
             // Create the pending SaaS invoice so the doctor sees it in their
             // billing timeline while payment is in progress. Marked paid +
             // emailed on success (webhook / return-URL verify).
-            SaasInvoiceService::createPending($clinicId, $planId, $billingCycle, $price, 'razorpay', (string) $orderId);
+            SaasInvoiceService::createPending($clinicId, $planId, $billingCycle, $price, 'razorpay', (string) $orderId, $termMonths);
 
             // Normalise prefill values for the Razorpay modal (all optional).
             $rawPhone = preg_replace('/\D+/', '', (string) ($clinic['phone'] ?? '')) ?? '';
@@ -228,7 +250,9 @@ final class BillingGatewayService
                 'order_id' => (string) $orderId,
                 'amount' => $amountPaise,
                 'currency' => 'INR',
-                'name' => 'eClinicPro ' . ucfirst($planId) . ' plan (' . $billingCycle . ')',
+                'name' => $termMonths !== null
+                    ? 'eClinicPro Standard plan (monthly)'
+                    : 'eClinicPro ' . ucfirst($planId) . ' plan (' . $billingCycle . ')',
                 'prefill' => [
                     'name' => (string) ($clinic['name'] ?? ''),
                     'email' => $email,
@@ -282,12 +306,12 @@ final class BillingGatewayService
             }
         }
 
-        [$clinicId, $plan] = self::clinicAndPlanFromOrder($order, $orderId);
+        [$clinicId, $plan, $termMonths] = self::clinicAndPlanFromOrder($order, $orderId);
         if ($clinicId <= 0) {
             return false;
         }
 
-        PlanService::applyPlanToTenant($clinicId, $plan, false);
+        PlanService::applyPlanToTenant($clinicId, $plan, false, $termMonths);
 
         // Mark the pending SaaS invoice paid, generate the PDF + email it.
         // Idempotent — safe if the webhook already did this.
@@ -331,7 +355,7 @@ final class BillingGatewayService
      * to parsing the "sub_{clinic}_{plan}_{rand}" receipt.
      *
      * @param array<string, mixed> $order
-     * @return array{0: int, 1: string}
+     * @return array{0: int, 1: string, 2: int}  clinic id, plan id, term months
      */
     private static function clinicAndPlanFromOrder(array $order, string $orderId): array
     {
@@ -353,7 +377,14 @@ final class BillingGatewayService
             $plan = 'standard';
         }
 
-        return [$clinicId, $plan];
+        // Term length paid for (monthly plan → 1). Older orders carry no
+        // term → the historical 1-year activation.
+        $termMonths = (int) ($notes['term_months'] ?? 12);
+        if ($termMonths < 1 || $termMonths > 48) {
+            $termMonths = 12;
+        }
+
+        return [$clinicId, $plan, $termMonths];
     }
 
     /**
@@ -429,12 +460,12 @@ final class BillingGatewayService
             'receipt' => $event['payload']['order']['entity']['receipt'] ?? '',
         ];
 
-        [$clinicId, $plan] = self::clinicAndPlanFromOrder($order, $orderId);
+        [$clinicId, $plan, $termMonths] = self::clinicAndPlanFromOrder($order, $orderId);
         if ($clinicId <= 0) {
             return false;
         }
 
-        PlanService::applyPlanToTenant($clinicId, $plan, false);
+        PlanService::applyPlanToTenant($clinicId, $plan, false, $termMonths);
         SaasInvoiceService::markPaidByOrder($orderId, $paymentId !== '' ? $paymentId : null);
         PartnerCommissionService::recordPaidConversion(
             $clinicId,
@@ -452,7 +483,7 @@ final class BillingGatewayService
      */
     private static function simulatePaidPlan(int $clinicId, string $planId): array
     {
-        PlanService::applyPlanToTenant($clinicId, $planId, true);
+        PlanService::applyPlanToTenant($clinicId, $planId, false, 1);
         // Record a simulated customer marker. Wrapped so a missing razorpay_*
         // column never breaks dev onboarding.
         try {
@@ -467,7 +498,7 @@ final class BillingGatewayService
         // Simulated payments have no saas_invoice row, so we pass a reference.
         PartnerCommissionService::recordPaidConversion(
             $clinicId,
-            self::yearlyInrAmount($planId),
+            self::monthlyBreakdown()['base'],
             'INR',
             null,
             'sim:' . $planId . ':' . date('Y-m-d'),
@@ -475,7 +506,7 @@ final class BillingGatewayService
 
         return [
             'type' => 'redirect',
-            'url' => '/onboarding/clinic-setup?simulated=1',
+            'url' => '/onboarding/billing/razorpay-return?simulated=1',
         ];
     }
 

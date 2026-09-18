@@ -1,17 +1,16 @@
 <?php
-// Annual "Standard" plan model. Old enum values kept as a defensive fallback.
+// Monthly "Standard" plan model (₹999/month + GST). Old enum values kept as a defensive fallback.
 $planKey = $clinic['plan'] ?? 'standard';
 $plan = $plans[$planKey] ?? ($plans['standard'] ?? reset($plans));
 $seatLimit = (int) ($clinic['seat_limit'] ?? 2) + (int) ($clinic['extra_seats_purchased'] ?? 0);
 
-// Single-plan model: the one purchasable plan is 'standard'. Pricing is read
-// from the plans table (PlanService::all()), so admin edits at /admin/plans
-// flow through here — nothing about the price is hardcoded.
+// Single-plan model: Standard at ₹999/month + GST, paid a month at a time.
+// The price lives in BillingGatewayService (what Razorpay actually charges).
 $standard = $plans['standard'] ?? reset($plans) ?: [];
-$base = (float) ($standard['yearly_usd'] ?? 16000);
-$taxPct = 18.0;
-$tax = round($base * $taxPct / 100, 2);
-$gross = round($base + $tax, 2);
+$monthly = \App\Services\BillingGatewayService::monthlyBreakdown();
+$base = $monthly['base'];
+$tax = $monthly['tax'];
+$gross = $monthly['gross'];
 
 // "Paid" = there's a paid subscription invoice on file (vs. trial / free).
 $isPaid = !empty(array_filter($invoices, static fn ($i) => ($i['status'] ?? '') === 'paid'));
@@ -76,26 +75,31 @@ $fmtDate = static fn (?string $d): string => $d ? date('d M Y', strtotime((strin
             </div>
         </dl>
         <p class="mt-2 text-xs text-slate-500">
-            Billed <?= $cycle === 'monthly' ? 'monthly' : 'yearly' ?><?= $validTill ? ' · renews automatically unless cancelled' : '' ?>.
+            Billed <?= $cycle === 'monthly' ? 'monthly' : 'yearly' ?><?= $validTill ? ' · renew below before it ends to keep access' : '' ?>.
         </p>
         <?php endif; ?>
 
-        <?php if (!$isPaid): ?>
-        <!-- Subscribe / upgrade — triggers real Razorpay checkout -->
+        <?php
+        // Show the pay card to anyone not yet paid, and to paid clinics whose
+        // month is ending or over (monthly plan → they renew here each month).
+        $renewDue = in_array($subStatus['state'] ?? '', ['expiring_soon', 'expired'], true);
+        ?>
+        <?php if (!$isPaid || $renewDue): ?>
+        <!-- Subscribe / renew — triggers real Razorpay checkout -->
         <div class="mt-4 rounded-xl border border-slate-200 p-4" style="max-width:380px;">
-            <p class="text-sm font-semibold text-slate-800"><?= htmlspecialchars((string) ($standard['name'] ?? 'Standard')) ?> — Annual</p>
+            <p class="text-sm font-semibold text-slate-800"><?= htmlspecialchars((string) ($standard['name'] ?? 'Standard')) ?> — Monthly</p>
             <p class="text-xs text-slate-500"><?= htmlspecialchars((string) ($standard['tagline'] ?? 'Everything to run your clinic · unlimited patients & users')) ?></p>
             <dl class="mt-3 space-y-1 text-sm">
                 <div class="flex justify-between"><dt class="text-slate-500">Plan price</dt><dd class="text-slate-800">₹<?= number_format($base, 2) ?></dd></div>
                 <div class="flex justify-between"><dt class="text-slate-500">GST (18%)</dt><dd class="text-slate-800">₹<?= number_format($tax, 2) ?></dd></div>
-                <div class="mt-1 flex justify-between border-t border-slate-100 pt-1.5"><dt class="font-semibold text-slate-900">Total / year</dt><dd class="font-bold text-slate-900">₹<?= number_format($gross, 2) ?></dd></div>
+                <div class="mt-1 flex justify-between border-t border-slate-100 pt-1.5"><dt class="font-semibold text-slate-900">Total / month</dt><dd class="font-bold text-slate-900">₹<?= number_format($gross, 2) ?></dd></div>
             </dl>
             <form method="post" action="/subscription/checkout" class="mt-3"
                   @submit="$el.querySelector('button').disabled = true">
                 <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
                 <input type="hidden" name="plan" value="standard">
-                <input type="hidden" name="billing_cycle" value="yearly">
-                <button type="submit" class="ui-btn ui-btn-primary w-full">Subscribe now · ₹<?= number_format($gross, 0) ?></button>
+                <input type="hidden" name="billing_cycle" value="monthly">
+                <button type="submit" class="ui-btn ui-btn-primary w-full"><?= $isPaid ? 'Renew 1 month' : 'Subscribe now' ?> · ₹<?= number_format($gross, 2) ?></button>
             </form>
             <p class="mt-2 text-center text-[11px] text-slate-400">Secure payment via Razorpay</p>
         </div>
@@ -186,7 +190,7 @@ $fmtDate = static fn (?string $d): string => $d ? date('d M Y', strtotime((strin
               @submit="$el.querySelector('button').disabled = true">
             <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
             <input type="hidden" name="plan" value="standard">
-            <input type="hidden" name="billing_cycle" value="yearly">
+            <input type="hidden" name="billing_cycle" value="monthly">
             <button type="submit" class="ui-btn ui-btn-primary">Retry payment</button>
         </form>
     </section>

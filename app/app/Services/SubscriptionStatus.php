@@ -75,6 +75,17 @@ final class SubscriptionStatus
                 'reason' => $reason, 'days_left' => $daysLeft, 'ends_on' => $ends];
     }
 
+    /**
+     * True for a clinic that registered but hasn't completed its first payment
+     * (Checkout → Payment signup). Such clinics can only reach checkout.
+     */
+    public static function paymentPending(?array $clinic = null): bool
+    {
+        $clinic ??= RequestContext::clinic();
+
+        return !empty($clinic['payment_pending']);
+    }
+
     public static function isExpired(?array $clinic = null): bool
     {
         return self::forClinic($clinic)['expired'];

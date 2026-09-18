@@ -38,19 +38,49 @@ final class SubscriptionMiddleware implements MiddlewareInterface
         '/help',
     ];
 
+    /**
+     * Paths reachable by a clinic that registered but hasn't paid yet
+     * (tenants.payment_pending). Everything else goes to /register/checkout.
+     */
+    private const PAYMENT_PENDING_ALLOW = [
+        '/register/checkout',
+        '/register/payment',
+        '/onboarding/billing/razorpay-return', // Razorpay hands back here after paying
+        '/logout',
+        '/impersonate/exit',
+        '/help',
+    ];
+
     public function handle(Request $request, callable $next): Response
     {
+        $path = parse_url($request->uri, PHP_URL_PATH) ?: $request->uri;
+
+        if (SubscriptionStatus::paymentPending()) {
+            return self::allowed($path, self::PAYMENT_PENDING_ALLOW)
+                ? $next()
+                : Response::redirect('/register/checkout');
+        }
+
         if (!SubscriptionStatus::isExpired()) {
             return $next();
         }
 
-        $path = parse_url($request->uri, PHP_URL_PATH) ?: $request->uri;
-        foreach (self::ALLOW_PREFIXES as $allowed) {
-            if ($path === $allowed || str_starts_with($path, $allowed . '/') || str_starts_with($path, $allowed . '?')) {
-                return $next();
-            }
+        if (self::allowed($path, self::ALLOW_PREFIXES)) {
+            return $next();
         }
 
         return Response::redirect('/subscription-expired');
+    }
+
+    /** @param list<string> $prefixes */
+    private static function allowed(string $path, array $prefixes): bool
+    {
+        foreach ($prefixes as $allowed) {
+            if ($path === $allowed || str_starts_with($path, $allowed . '/') || str_starts_with($path, $allowed . '?')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
