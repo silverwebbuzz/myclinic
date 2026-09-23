@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com"></link>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Sora:wght@400;600;700;800&amp;display=swap" rel="stylesheet"></link>
+<style>
+body{margin:0;background:#dededf;display:flex;justify-content:center;padding:28px 12px;font-family:Manrope,sans-serif}
+a{color:#111113;text-decoration:underline;text-underline-offset:3px}a:hover{color:#4a4b4f}
+:root{--bg:#ffffff;--card:#fafafa;--ink:#0e0e0f;--sub:#6b6c6f;--line:#e6e6e8;--brand:#111113;--brand-deep:#0e0e10;--brand-soft:#f0f0f2;--blue:#4a4b4f;--blue-soft:#eeeef0;--gold:#6f5410;--gold-soft:#f4eedd;--chip:#f1f1f3;--navbg:rgba(255,255,255,0.93);--red:#a33421;--red-soft:#f7e8e4;--onbrand:#f3f3f4;--onaccent:#ffffff;--shadow:0 1px 2px rgba(0,0,0,0.05),0 10px 28px rgba(0,0,0,0.06)}
+[data-theme="dark"]{--bg:#0b0b0c;--card:#151517;--ink:#f2f2f3;--sub:#9a9b9e;--line:#2a2a2d;--brand:#e9e9ec;--brand-deep:#161618;--brand-soft:#212124;--blue:#a9aaae;--blue-soft:#232326;--gold:#d9b46a;--gold-soft:#332a14;--chip:#222225;--navbg:rgba(13,13,14,0.93);--red:#e08a72;--red-soft:#3a201c;--onbrand:#ececee;--onaccent:#111113;--shadow:0 1px 2px rgba(0,0,0,0.5),0 10px 28px rgba(0,0,0,0.35)}
+@keyframes ecpPulse{0%,100%{opacity:1}50%{opacity:0.35}}
+::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ isDark }}" hint-size="402px,874px">
+<div data-theme="{{ themeName }}" style="height:100%;position:relative;background:var(--bg);color:var(--ink);font-family:Manrope,sans-serif;overflow:hidden">
+
+<sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
+<div style="height:100%;display:flex;flex-direction:column;padding:120px 28px 48px;box-sizing:border-box">
+  <div style="width:52px;height:52px;border-radius:16px;background:var(--brand-deep);display:flex;align-items:center;justify-content:center">
+    <div style="width:20px;height:20px;border-radius:50%;border:3.5px solid var(--onbrand)"></div>
+  </div>
+  <div style="font:800 28px/1.15 Sora;letter-spacing:-0.02em;margin-top:16px">eClinicPro <span style="color:var(--sub);font-weight:400">Doctor</span></div>
+  <div style="font:500 14.5px/1.5 Manrope;color:var(--sub);margin-top:8px;max-width:280px">Your clinic's day, in your pocket. Queue, visits, prescriptions and billing.</div>
+  <div style="margin-top:44px">
+    <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin-bottom:10px">Registered mobile number</div>
+    <div style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:var(--shadow)">
+      <span style="font:700 17px Sora;color:var(--sub)">+91</span>
+      <input value="{{ phone }}" onChange="{{ setPhone }}" placeholder="98980 12345" style="flex:1;border:none;outline:none;background:transparent;font:700 17px Sora;color:var(--ink);letter-spacing:0.04em;min-width:0"></input>
+    </div>
+    <div onClick="{{ login }}" style="margin-top:12px;background: {{ loginBg }};color: {{ loginFg }};border-radius:16px;padding:17px;text-align:center;font:800 15px Manrope;cursor:pointer">Sign in with OTP</div>
+    <div style="font:500 12px/1.5 Manrope;color:var(--sub);text-align:center;margin-top:10px">Only approved doctor accounts can sign in here</div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+<div style="height:100%;overflow-y:auto;padding:64px 20px 110px;box-sizing:border-box">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+    <div style="flex:1">
+      <div style="font:600 13px Manrope;color:var(--sub)">{{ todayDate }}</div>
+      <div style="font:800 22px Sora;letter-spacing:-0.02em">Dr. Arjun Shah</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;background:var(--brand-soft);border-radius:999px;padding:6px 12px"><div style="width:6px;height:6px;border-radius:50%;background:var(--brand);animation:ecpPulse 1.6s infinite"></div><span style="font:700 11px Manrope;color:var(--brand)">CLINIC OPEN</span></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 10px;box-shadow:var(--shadow)"><div style="font:800 18px Sora">{{ stBooked }}</div><div style="font:600 10.5px Manrope;color:var(--sub)">Booked</div></div>
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 10px;box-shadow:var(--shadow)"><div style="font:800 18px Sora;color:var(--brand)">{{ stDone }}</div><div style="font:600 10.5px Manrope;color:var(--sub)">Done</div></div>
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 10px;box-shadow:var(--shadow)"><div style="font:800 18px Sora;color:var(--gold)">{{ stWaiting }}</div><div style="font:600 10.5px Manrope;color:var(--sub)">Waiting</div></div>
+    <div onClick="{{ toggleMoney }}" style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 10px;box-shadow:var(--shadow);cursor:pointer"><div style="font:800 15px Sora;margin-top:2px">{{ stRevenueShow }}</div><div style="font:600 10.5px Manrope;color:var(--sub)">{{ stRevenueLabel }}</div></div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <div onClick="{{ goWalkin }}" style="flex:1;display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:11px 12px;cursor:pointer">
+      <div style="width:26px;height:26px;border-radius:9px;background:var(--brand-soft);color:var(--brand);display:flex;align-items:center;justify-content:center;font:800 16px Sora;flex:none">+</div>
+      <div style="min-width:0"><div style="font:800 12.5px Manrope">Add walk-in</div><div style="font:600 10.5px Manrope;color:var(--sub)">Token {{ nextTokLabel }} next</div></div>
+    </div>
+    <div onClick="{{ goBilling }}" style="flex:1;display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:11px 12px;cursor:pointer">
+      <div style="width:26px;height:26px;border-radius:9px;background:var(--gold-soft);color:var(--gold);display:flex;align-items:center;justify-content:center;font:800 13px Sora;flex:none">₹</div>
+      <div style="min-width:0"><div style="font:800 12.5px Manrope">Front desk</div><div style="font:600 10.5px Manrope;color:var(--sub)">{{ billPendNote }}</div></div>
+    </div>
+  </div>
+  <sc-if value="{{ hasQueue }}" hint-placeholder-val="{{ true }}">
+  <div style="margin-top:14px;background:var(--brand-deep);border-radius:20px;padding:18px;color:var(--onbrand);box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,0.09)">
+    <div style="display:flex;align-items:center">
+      <div style="font:800 10.5px Manrope;letter-spacing:0.12em;text-transform:uppercase;opacity:0.7">In consultation</div>
+      <div style="margin-left:auto;font:800 20px Sora">{{ curToken }}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:10px">
+      <div style="width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font:800 15px Sora">{{ curInitials }}</div>
+      <div style="flex:1">
+        <div style="font:700 16px Sora">{{ curName }}</div>
+        <div style="font:600 12.5px Manrope;opacity:0.75">{{ curAge }} · {{ curReason }}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <div onClick="{{ openVisit }}" style="flex:1.4;background:#fff;color:var(--brand-deep);border-radius:12px;padding:12px;text-align:center;font:800 13px Manrope;cursor:pointer">Open visit →</div>
+      <div onClick="{{ callNext }}" style="flex:1;background:rgba(255,255,255,0.12);border-radius:12px;padding:12px;text-align:center;font:800 13px Manrope;cursor:pointer">Call next</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:baseline;justify-content:space-between;margin:20px 0 10px">
+    <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub)">Today's queue</div>
+    <div style="font:600 12px Manrope;color:var(--sub)">Avg. consult 7 min</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <sc-for list="{{ queue }}" as="row" hint-placeholder-count="4">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:12px 14px;display:flex;align-items:center;gap:12px">
+      <div style="width:42px;text-align:center"><div style="font:800 15px Sora;color: {{ row.tokC }}">{{ row.tok }}</div></div>
+      <div onClick="{{ row.openPat }}" style="flex:1;min-width:0;cursor:pointer">
+        <div style="font:700 13.5px Manrope">{{ row.name }} <span style="font:600 11.5px Manrope;color:var(--sub)">· {{ row.age }}</span></div>
+        <div style="font:600 11.5px Manrope;color:var(--sub);margin-top:1px">{{ row.reason }}</div>
+      </div>
+      <sc-if value="{{ row.wi }}" hint-placeholder-val="{{ false }}"><div style="font:800 9.5px Manrope;background:var(--blue-soft);color:var(--blue);border-radius:999px;padding:4px 8px">WALK-IN</div></sc-if>
+      <sc-if value="{{ row.fu }}" hint-placeholder-val="{{ false }}"><div style="font:800 9.5px Manrope;background:var(--gold-soft);color:var(--gold);border-radius:999px;padding:4px 8px">F/U DUE</div></sc-if>
+      <div onClick="{{ row.act }}" style="font:800 11px Manrope;letter-spacing:0.04em;background: {{ row.stBg }};color: {{ row.stFg }};border-radius:999px;padding:6px 11px;cursor:pointer">{{ row.st }}</div>
+    </div>
+    </sc-for>
+  </div>
+  </sc-if>
+  <sc-if value="{{ noQueue }}" hint-placeholder-val="{{ false }}">
+  <div style="margin-top:14px;background:var(--brand-deep);border-radius:20px;padding:22px;color:var(--onbrand);box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,0.09)">
+    <div style="font:800 10.5px Manrope;letter-spacing:0.12em;text-transform:uppercase;opacity:0.7">No appointments yet</div>
+    <div style="font:700 18px/1.35 Sora;margin-top:8px;text-wrap:pretty">A quiet morning. Share your booking link and let patients book themselves.</div>
+    <div style="font:600 12.5px/1.5 Manrope;opacity:0.75;margin-top:6px">Patients who book online get a token and WhatsApp reminders automatically — no calls to your reception.</div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <div style="flex:1.3;background:#fff;color:var(--brand-deep);border-radius:12px;padding:12px;text-align:center;font:800 13px Manrope;cursor:pointer">Share booking link</div>
+      <div onClick="{{ goWalkin }}" style="flex:1;background:rgba(255,255,255,0.12);border-radius:12px;padding:12px;text-align:center;font:800 13px Manrope;cursor:pointer">Add walk-in</div>
+    </div>
+  </div>
+  </sc-if>
+  <div style="display:flex;align-items:baseline;justify-content:space-between;margin:20px 0 10px">
+    <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub)">Follow-ups due</div>
+    <div style="font:700 12px Manrope;color:var(--brand);cursor:pointer">View all</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <sc-for list="{{ followUps }}" as="fu" hint-placeholder-count="2">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:12px 14px;display:flex;align-items:center;gap:12px">
+      <div style="width:8px;height:8px;border-radius:50%;background: {{ fu.dot }};flex:none"></div>
+      <div style="flex:1"><div style="font:700 13px Manrope">{{ fu.name }}</div><div style="font:600 11.5px Manrope;color:var(--sub)">{{ fu.why }}</div></div>
+      <div style="font:600 11px Manrope;color: {{ fu.whenC }}">{{ fu.when }}</div>
+    </div>
+    </sc-for>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isVisit }}" hint-placeholder-val="{{ false }}">
+<div style="height:100%;overflow-y:auto;padding:0 0 40px;box-sizing:border-box">
+  <div style="display:flex;align-items:center;gap:12px;padding:64px 20px 10px">
+    <div onClick="{{ back }}" style="width:36px;height:36px;border-radius:12px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+    <div style="min-width:0"><div style="font:700 9px Manrope;letter-spacing:0.14em;text-transform:uppercase;color:var(--sub)">{{ crumbTrail }}</div><div style="font:700 15px Sora;margin-top:1px">Visit · {{ curToken }}</div></div>
+    <div style="margin-left:auto;font:600 10.5px Manrope;color:var(--sub)">Draft saved · just now</div>
+  </div>
+  <div style="margin:6px 20px 0;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:13px 14px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:40px;height:40px;border-radius:12px;background:var(--brand-soft);color:var(--brand);display:flex;align-items:center;justify-content:center;font:800 13px Sora">{{ curInitials }}</div>
+      <div style="flex:1"><div style="font:700 14.5px Manrope">{{ curName }}</div><div style="font:600 11.5px Manrope;color:var(--sub)">{{ curAge }} · {{ curPhone }} · Visit #{{ curVisitNo }}</div></div>
+      <div onClick="{{ openCurPat }}" style="font:700 12px Manrope;color:var(--brand);cursor:pointer">History</div>
+    </div>
+    <sc-if value="{{ curHasFlags }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+      <sc-for list="{{ curFlags }}" as="fl" hint-placeholder-count="2">
+      <div style="font:800 10px Manrope;letter-spacing:0.04em;background: {{ fl.bg }};color: {{ fl.fg }};border-radius:999px;padding:4px 9px">{{ fl.label }}</div>
+      </sc-for>
+    </div>
+    </sc-if>
+  </div>
+  <div style="padding:14px 20px;display:flex;flex-direction:column;gap:16px">
+    <div onClick="{{ cloneLast }}" style="align-self:flex-start;font:700 12px Manrope;color:var(--brand);background:var(--brand-soft);border-radius:999px;padding:7px 13px;cursor:pointer">↺ Same as last visit</div>
+    <div>
+      <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin-bottom:8px">Symptoms</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <sc-for list="{{ symChips }}" as="sy" hint-placeholder-count="6">
+        <div onClick="{{ sy.pick }}" style="padding:8px 13px;border-radius:999px;font:700 12px Manrope;cursor:pointer;background: {{ sy.bg }};color: {{ sy.fg }};border:1px solid {{ sy.bd }}">{{ sy.label }}</div>
+        </sc-for>
+      </div>
+    </div>
+    <div>
+      <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin-bottom:8px">Diagnosis</div>
+      <input value="{{ dx }}" onChange="{{ setDx }}" placeholder="Free text or ICD-10" style="border:1px solid var(--line);outline:none;background:var(--card);border-radius:14px;padding:13px 16px;font:700 14px Manrope;color:var(--ink);width:100%;box-sizing:border-box;box-shadow:var(--shadow)"></input>
+    </div>
+    <div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px">
+        <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub)">Prescription</div>
+        <div style="font:600 11px Manrope;color:var(--sub)">Templates</div>
+      </div>
+      <div style="display:flex;gap:6px;overflow-x:auto;margin:0 -20px 10px;padding:0 20px">
+        <sc-for list="{{ rxTemplates }}" as="tp" hint-placeholder-count="3">
+        <div onClick="{{ tp.apply }}" style="flex:none;padding:8px 13px;border-radius:999px;font:700 12px Manrope;cursor:pointer;background:var(--blue-soft);color:var(--blue)">{{ tp.name }}</div>
+        </sc-for>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ rxRows }}" as="r" hint-placeholder-count="2">
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:12px 14px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <input value="{{ r.med }}" onChange="{{ r.setMed }}" placeholder="Medicine name" style="flex:1;border:none;outline:none;background:transparent;font:700 14px Manrope;color:var(--ink);min-width:0"></input>
+            <div onClick="{{ r.remove }}" style="font:700 14px Manrope;color:var(--sub);cursor:pointer;padding:2px 6px">✕</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:10px;flex-wrap:wrap">
+            <sc-for list="{{ r.freqs }}" as="fq" hint-placeholder-count="4">
+            <div onClick="{{ fq.pick }}" style="padding:6px 10px;border-radius:9px;font:800 11.5px Sora;cursor:pointer;background: {{ fq.bg }};color: {{ fq.fg }};border:1px solid {{ fq.bd }}">{{ fq.label }}</div>
+            </sc-for>
+            <div style="display:flex;align-items:center;gap:4px;margin-left:auto">
+              <input value="{{ r.days }}" onChange="{{ r.setDays }}" style="width:32px;border:1px solid var(--line);outline:none;background:transparent;border-radius:8px;padding:5px 0;font:800 12px Sora;color:var(--ink);text-align:center"></input>
+              <span style="font:600 11px Manrope;color:var(--sub)">days</span>
+            </div>
+            <div onClick="{{ r.foodToggle }}" style="padding:6px 10px;border-radius:9px;font:700 11px Manrope;cursor:pointer;background:var(--chip);color:var(--sub)">{{ r.food }}</div>
+          </div>
+        </div>
+        </sc-for>
+      </div>
+      <div onClick="{{ addRow }}" style="margin-top:8px;border:1.5px dashed var(--line);border-radius:14px;padding:12px;text-align:center;font:700 13px Manrope;color:var(--brand);cursor:pointer">+ Add medicine</div>
+    </div>
+    <div>
+      <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin-bottom:8px">Notes &amp; next visit</div>
+      <input value="{{ notes }}" onChange="{{ setNotes }}" placeholder="Advice, diet, dictated notes…" style="border:1px solid var(--line);outline:none;background:var(--card);border-radius:14px;padding:13px 16px;font:600 13.5px Manrope;color:var(--ink);width:100%;box-sizing:border-box;box-shadow:var(--shadow)"></input>
+      <div style="display:flex;gap:6px;margin-top:10px;align-items:center">
+        <span style="font:600 11.5px Manrope;color:var(--sub)">Follow-up:</span>
+        <sc-for list="{{ fuChips }}" as="fc" hint-placeholder-count="4">
+        <div onClick="{{ fc.pick }}" style="padding:7px 11px;border-radius:999px;font:800 11.5px Sora;cursor:pointer;background: {{ fc.bg }};color: {{ fc.fg }};border:1px solid {{ fc.bd }}">{{ fc.label }}</div>
+        </sc-for>
+      </div>
+    </div>
+    <div onClick="{{ completeVisit }}" style="background: {{ cvBg }};color: {{ cvFg }};border-radius:16px;padding:16px;text-align:center;font:800 15px Manrope;cursor:pointer">{{ cvCta }}</div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isVisitDone }}" hint-placeholder-val="{{ false }}">
+<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 32px;box-sizing:border-box;text-align:center">
+  <div style="width:76px;height:76px;border-radius:50%;background:var(--brand-soft);display:flex;align-items:center;justify-content:center">
+    <svg width="34" height="34" viewBox="0 0 24 24" style="color:var(--brand)"><path d="M4.5 12.5l5 5 10-11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+  </div>
+  <div style="font:800 22px Sora;margin-top:20px;letter-spacing:-0.02em">Visit completed</div>
+  <div style="font:600 14px/1.6 Manrope;color:var(--sub);margin-top:8px">{{ vdSummary }}</div>
+  <div style="display:flex;gap:8px;margin-top:22px;width:100%">
+    <div style="flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:13px;font:800 13px Manrope;cursor:pointer">Print A5</div>
+    <div style="flex:1.4;background:var(--brand);color:var(--onaccent);border-radius:14px;padding:13px;font:800 13px Manrope;cursor:pointer">Send on WhatsApp</div>
+  </div>
+  <div style="font:600 12px Manrope;color:var(--sub);margin-top:12px">{{ vdFu }}</div>
+  <div style="margin-top:18px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:13px 14px;display:flex;align-items:center;gap:11px;text-align:left">
+    <div style="width:32px;height:32px;border-radius:11px;background:var(--gold-soft);color:var(--gold);display:flex;align-items:center;justify-content:center;font:800 14px Sora;flex:none">₹</div>
+    <div style="flex:1;min-width:0">
+      <div style="font:700 13px Manrope">{{ vdBillHead }}</div>
+      <div style="font:600 11.5px/1.45 Manrope;color:var(--sub);margin-top:1px">{{ vdBillNote }}</div>
+    </div>
+    <div onClick="{{ goBilling }}" style="font:800 11px Manrope;color:var(--brand);cursor:pointer;flex:none">View</div>
+  </div>
+  <div onClick="{{ nextPatient }}" style="margin-top:22px;background:var(--brand-deep);color:var(--onbrand);border-radius:16px;padding:15px 32px;font:800 14px Manrope;cursor:pointer">Call next patient →</div>
+  <div onClick="{{ goTodayTab }}" style="margin-top:12px;font:700 13px Manrope;color:var(--brand);cursor:pointer">Back to today</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isPatients }}" hint-placeholder-val="{{ false }}">
+<div style="height:100%;overflow-y:auto;padding:64px 20px 110px;box-sizing:border-box">
+  <div style="font:800 22px Sora;letter-spacing:-0.02em;margin-bottom:14px">Patients</div>
+  <div style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:12px 14px">
+    <svg width="16" height="16" viewBox="0 0 24 24" style="color:var(--sub)"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.9"></circle><path d="M16 16l5 5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path></svg>
+    <input value="{{ pq }}" onChange="{{ setPq }}" placeholder="Name, phone or patient ID" style="flex:1;border:none;outline:none;background:transparent;font:600 14px Manrope;color:var(--ink);min-width:0"></input>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+    <sc-for list="{{ patients }}" as="p" hint-placeholder-count="4">
+    <div onClick="{{ p.open }}" style="background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">
+      <div style="width:40px;height:40px;border-radius:12px;background:var(--brand-soft);color:var(--brand);display:flex;align-items:center;justify-content:center;font:800 13px Sora">{{ p.initials }}</div>
+      <div style="flex:1;min-width:0"><div style="font:700 13.5px Manrope">{{ p.name }}</div><div style="font:600 11.5px Manrope;color:var(--sub)">{{ p.age }} · {{ p.id }} · {{ p.visits }} visits</div></div>
+      <div style="text-align:right"><div style="font:600 11px Manrope;color:var(--sub)">Last visit</div><div style="font:700 11.5px Manrope">{{ p.last }}</div></div>
+    </div>
+    </sc-for>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isPatDetail }}" hint-placeholder-val="{{ false }}">
+<div style="height:100%;overflow-y:auto;padding:0 0 40px;box-sizing:border-box">
+  <div style="display:flex;align-items:center;gap:12px;padding:64px 20px 12px">
+    <div onClick="{{ back }}" style="width:36px;height:36px;border-radius:12px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+    <div style="min-width:0"><div style="font:700 9px Manrope;letter-spacing:0.14em;text-transform:uppercase;color:var(--sub)">{{ crumbTrail }}</div><div style="font:700 15px Sora;margin-top:1px">Patient record</div></div>
+  </div>
+  <div style="padding:8px 20px">
+    <div style="display:flex;gap:14px;align-items:center">
+      <div style="width:60px;height:60px;border-radius:18px;background:var(--brand-soft);color:var(--brand);display:flex;align-items:center;justify-content:center;font:800 19px Sora">{{ selPat.initials }}</div>
+      <div style="flex:1">
+        <div style="font:800 18px Sora;letter-spacing:-0.01em">{{ selPat.name }}</div>
+        <div style="font:600 12.5px Manrope;color:var(--sub)">{{ selPat.age }} · {{ selPat.phone }} · {{ selPat.id }}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">
+      <sc-for list="{{ selPatFlags }}" as="fl" hint-placeholder-count="2">
+      <div style="font:800 10px Manrope;letter-spacing:0.04em;background: {{ fl.bg }};color: {{ fl.fg }};border-radius:999px;padding:5px 10px">{{ fl.label }}</div>
+      </sc-for>
+    </div>
+    <div style="margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:14px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub)">BP trend · systolic</div>
+        <div style="font:800 15px Sora;color:var(--brand)">{{ selPat.bpLatest }}</div>
+      </div>
+      <svg viewBox="0 0 280 60" style="width:100%;height:60px;margin-top:8px">
+        <polyline points="{{ bpSpark }}" fill="none" stroke="var(--brand)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+        <circle cx="{{ bpCx }}" cy="{{ bpCy }}" r="4" fill="var(--brand)"></circle>
+      </svg>
+      <div style="display:flex;justify-content:space-between;font:600 10.5px Manrope;color:var(--sub)"><span>May</span><span>Aug</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+      <div onClick="{{ newVisitForPat }}" style="background:var(--brand);color:var(--onaccent);border-radius:14px;padding:13px;text-align:center;font:800 13px Manrope;cursor:pointer">Start new visit</div>
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:13px;text-align:center;font:800 13px Manrope;cursor:pointer">Send last Rx</div>
+    </div>
+    <div style="margin-top:18px;font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub)">Visit history</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+      <sc-for list="{{ selPatVisits }}" as="v" hint-placeholder-count="3">
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:13px 14px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font:700 13.5px Manrope">{{ v.dx }}</div><div style="font:600 11px Manrope;color:var(--sub)">{{ v.date }}</div></div>
+        <div style="font:600 12px Manrope;color:var(--sub);margin-top:3px">{{ v.meds }}</div>
+      </div>
+      </sc-for>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isCal }}" hint-placeholder-val="{{ false }}">
+<div style="height:100%;overflow-y:auto;padding:64px 20px 110px;box-sizing:border-box">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+    <div onClick="{{ back }}" style="width:36px;height:36px;border-radius:12px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+    <div style="min-width:0"><div style="font:700 9px Manrope;letter-spacing:0.14em;text-transform:uppercase;color:var(--sub)">{{ crumbTrail }}</div><div style="font:700 15px Sora;margin-top:1px">Schedule</div></div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <sc-for list="{{ calDays }}" as="cd" hint-placeholder-count="3">
+    <div onClick="{{ cd.pick }}" style="flex:1;padding:10px 0;border-radius:14px;text-align:center;cursor:pointer;background: {{ cd.bg }};color: {{ cd.fg }};border:1px solid {{ cd.bd }}">
+      <div style="font:700 11px Manrope;opacity:0.7">{{ cd.day }}</div>
+      <div style="font:800 17px Sora">{{ cd.date }}</div>
+    </div>
+    </sc-for>
+  </div>
+  <div style="display:flex;gap:14px;margin:14px 0 10px;font:600 11px Manrope;color:var(--sub)">
+    <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:3px;background:var(--blue)"></span>Booked</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:3px;background:var(--brand-soft);border:1px solid var(--brand)"></span>Available</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:3px;background:var(--chip)"></span>Blocked</span>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <sc-for list="{{ calSlots }}" as="cs" hint-placeholder-count="8">
+    <div onClick="{{ cs.tap }}" style="display:flex;align-items:center;gap:12px;background: {{ cs.bg }};border:1px solid {{ cs.bd }};border-radius:12px;padding:11px 14px;cursor:pointer">
+      <div style="font:800 12px Sora;width:64px;color: {{ cs.timeC }}">{{ cs.time }}</div>
+      <div style="flex:1;font:700 12.5px Manrope;color: {{ cs.fg }}">{{ cs.label }}</div>
+      <div style="font:600 10.5px Manrope;color: {{ cs.fg }};opacity:0.7">{{ cs.tag }}</div>
+    </div>
+    </sc-for>
+  </div>
+  <div style="margin-top:12px;background:var(--gold-soft);color:var(--gold);border-radius:14px;padding:12px 14px;font:600 12.5px/1.5 Manrope">Tap an available slot to add a walk-in. Online bookings appear here instantly with a token.</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isEarnings }}" hint-placeholder-val="{{ false }}">
+<div style="height:100%;overflow-y:auto;padding:64px 20px 110px;box-sizing:border-box">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+    <div onClick="{{ back }}" style="width:36px;height:36px;border-radius:12px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+    <div style="min-width:0"><div style="font:700 9px Manrope;letter-spacing:0.14em;text-transform:uppercase;color:var(--sub)">{{ crumbTrail }}</div><div style="font:700 15px Sora;margin-top:1px">Earnings</div></div>
+  </div>
+  <div style="background:var(--brand-deep);color:var(--onbrand);border-radius:20px;padding:18px;box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,0.09)">
+    <div style="font:800 10.5px Manrope;letter-spacing:0.12em;text-transform:uppercase;opacity:0.7">Collected today</div>
+    <div style="font:800 34px Sora;margin-top:4px">{{ eTotal }}</div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <div style="flex:1;background:rgba(255,255,255,0.08);border-radius:12px;padding:10px"><div style="font:800 15px Sora">{{ eCash }}</div><div style="font:600 11px Manrope;opacity:0.7">Cash</div></div>
+      <div style="flex:1;background:rgba(255,255,255,0.08);border-radius:12px;padding:10px"><div style="font:800 15px Sora">{{ eUpi }}</div><div style="font:600 11px Manrope;opacity:0.7">UPI</div></div>
+      <div style="flex:1;background:rgba(255,255,255,0.08);border-radius:12px;padding:10px"><div style="font:800 15px Sora">{{ ePending }}</div><div style="font:600 11px Manrope;opacity:0.7">Pending</div></div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:baseline;justify-content:space-between;margin:20px 0 10px">
+    <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub)">Today's invoices</div>
+    <div style="font:600 12px Manrope;color:var(--sub)">Tap pending to mark paid</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <sc-for list="{{ invoices }}" as="inv" hint-placeholder-count="4">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:13px 14px;display:flex;align-items:center;gap:12px">
+      <div style="flex:1"><div style="font:700 13.5px Manrope">{{ inv.name }}</div><div style="font:600 11.5px Manrope;color:var(--sub)">{{ inv.item }} · {{ inv.time }}</div></div>
+      <div style="font:800 14px Sora">₹{{ inv.amt }}</div>
+      <div onClick="{{ inv.toggle }}" style="font:800 10.5px Manrope;letter-spacing:0.04em;background: {{ inv.stBg }};color: {{ inv.stFg }};border-radius:999px;padding:6px 10px;cursor:pointer">{{ inv.st }}</div>
+    </div>
+    </sc-for>
+  </div>
+  <div style="margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:13px 14px;display:flex;justify-content:space-between;align-items:center">
+    <div><div style="font:700 13.5px Manrope">GST summary · August</div><div style="font:600 11.5px Manrope;color:var(--sub)">Ready for your accountant</div></div>
+    <div style="font:700 12px Manrope;color:var(--brand);cursor:pointer">Export</div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isDash }}" hint-placeholder-val="{{ false }}">
+<div style="height:100%;overflow-y:auto;padding:64px 20px 110px;box-sizing:border-box">
+  <div style="font:800 22px Sora;letter-spacing:-0.02em;margin-bottom:14px">Dashboard</div>
+  <sc-if value="{{ notOwner }}" hint-placeholder-val="{{ false }}">
+  <div style="background:var(--brand-deep);color:var(--onbrand);border-radius:20px;padding:18px;box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,0.09)">
+    <div style="display:flex;align-items:center">
+      <div style="font:800 10.5px Manrope;letter-spacing:0.12em;text-transform:uppercase;opacity:0.7">My consultations · August</div>
+      <div onClick="{{ toggleMoney }}" style="margin-left:auto;font:700 11px Manrope;background:rgba(255,255,255,0.12);border-radius:999px;padding:5px 11px;cursor:pointer">{{ eyeLabel }}</div>
+    </div>
+    <div style="font:800 32px Sora;margin-top:6px">186 <span style="font:600 14px Manrope;opacity:0.7">patients seen</span></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <div style="flex:1;background:rgba(255,255,255,0.08);border-radius:12px;padding:10px"><div style="font:800 14px Sora">9</div><div style="font:600 11px Manrope;opacity:0.7">Today</div></div>
+      <div style="flex:1;background:rgba(255,255,255,0.08);border-radius:12px;padding:10px"><div style="font:800 14px Sora">{{ dMyFees }}</div><div style="font:600 11px Manrope;opacity:0.7">My fees</div></div>
+      <div style="flex:1;background:rgba(255,255,255,0.08);border-radius:12px;padding:10px"><div style="font:800 14px Sora">4.7 ★</div><div style="font:600 11px Manrope;opacity:0.7">Rating</div></div>
+    </div>
+    <div style="font:600 11px/1.5 Manrope;opacity:0.6;margin-top:10px">Clinic-wide earnings are visible to the clinic owner only.</div>
+  </div>
+  </sc-if>
+  <sc-if value="{{ isOwner }}" hint-placeholder-val="{{ true }}">
+  <div style="background:var(--brand-deep);color:var(--onbrand);border-radius:20px;padding:18px;box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,0.09)">
+    <div style="display:flex;align-items:center">
+      <div style="font:800 10.5px Manrope;letter-spacing:0.12em;text-transform:uppercase;opacity:0.7">Revenue · August</div>
+      <div onClick="{{ toggleMoney }}" style="margin-left:auto;font:700 11px Manrope;background:rgba(255,255,255,0.12);border-radius:999px;padding:5px 11px;cursor:pointer">{{ eyeLabel }}</div>
+    </div>
+    <div style="font:800 32px Sora;margin-top:6px">{{ dRevMonth }}</div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <div style="flex:1;background:rgba(255,255,255,0.08);border-radius:12px;padding:10px"><div style="font:800 14px Sora">{{ dRevToday }}</div><div style="font:600 11px Manrope;opacity:0.7">Today</div></div>
+      <div style="flex:1;background:rgba(255,255,255,0.08);border-radius:12px;padding:10px"><div style="font:800 14px Sora">{{ dRevPending }}</div><div style="font:600 11px Manrope;opacity:0.7">Pending</div></div>
+      <div onClick="{{ goEarnings }}" style="flex:1;background:#fff;color:var(--brand-deep);border-radius:12px;padding:10px;display:flex;align-items:center;justify-content:center;font:800 12px Manrope;cursor:pointer">Earnings →</div>
+    </div>
+  </div>
+  </sc-if>
+  <div style="margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:14px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub)">Patients this week</div>
+      <div style="font:700 12px Manrope;color:var(--brand)">{{ dWeekTotal }} seen</div>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:8px;height:64px;margin-top:12px">
+      <sc-for list="{{ weekBars }}" as="wb" hint-placeholder-count="7">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;justify-content:flex-end;height:100%">
+        <div style="width:100%;border-radius:6px 6px 3px 3px;background: {{ wb.bg }};height: {{ wb.h }}"></div>
+        <div style="font:700 9.5px Manrope;color: {{ wb.lc }}">{{ wb.d }}</div>
+      </div>
+      </sc-for>
+    </div>
+    <div style="font:600 11.5px Manrope;color:var(--sub);margin-top:10px">{{ dWeekNote }}</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+    <div onClick="{{ goCal }}" style="background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:14px;cursor:pointer">
+      <div style="font:800 10px Manrope;letter-spacing:0.1em;text-transform:uppercase;color:var(--sub)">Schedule</div>
+      <div style="font:800 18px Sora;margin-top:6px">12<span style="font:600 13px Manrope;color:var(--sub)">/16 slots</span></div>
+      <div style="font:600 11.5px Manrope;color:var(--sub);margin-top:2px">Next free · 10:30 AM</div>
+      <div style="font:800 12px Manrope;color:var(--brand);margin-top:8px">Open schedule →</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:14px">
+      <div style="font:800 10px Manrope;letter-spacing:0.1em;text-transform:uppercase;color:var(--sub)">Follow-ups</div>
+      <div style="font:800 18px Sora;margin-top:6px;color:var(--red)">1<span style="font:600 13px Manrope;color:var(--sub)"> overdue</span></div>
+      <div style="font:600 11.5px Manrope;color:var(--sub);margin-top:2px">4 due this week · 12 done in Aug</div>
+      <div onClick="{{ goTodayTab }}" style="font:800 12px Manrope;color:var(--brand);margin-top:8px;cursor:pointer">View list →</div>
+    </div>
+  </div>
+  <sc-if value="{{ hasLeads }}" hint-placeholder-val="{{ true }}">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;margin:18px 0 8px">
+    <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub)">Booking requests · find-a-doctor</div>
+    <div style="font:800 11px Manrope;background:var(--red-soft);color:var(--red);border-radius:999px;padding:3px 9px">{{ leadCount }} NEW</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <sc-for list="{{ leads }}" as="ld" hint-placeholder-count="2">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:13px 14px;display:flex;align-items:center;gap:12px">
+      <div style="flex:1;min-width:0"><div style="font:700 13.5px Manrope">{{ ld.name }}</div><div style="font:600 11.5px Manrope;color:var(--sub)">{{ ld.reason }} · {{ ld.when }}</div></div>
+      <div style="font:700 12px Manrope;color:var(--sub);cursor:pointer">Call</div>
+      <div onClick="{{ ld.confirm }}" style="font:800 12px Manrope;background:var(--brand);color:var(--onaccent);border-radius:999px;padding:7px 14px;cursor:pointer">Confirm</div>
+    </div>
+    </sc-for>
+  </div>
+  </sc-if>
+  <sc-if value="{{ isOwner }}" hint-placeholder-val="{{ true }}">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;margin:18px 0 8px">
+    <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub)">Clinic team</div>
+    <div onClick="{{ goTeam }}" style="font:700 12px Manrope;color:var(--brand);cursor:pointer">Manage team</div>
+  </div>
+  <div style="background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:14px">
+    <div style="display:flex;gap:8px">
+      <div style="flex:1;text-align:center"><div style="font:800 17px Sora">{{ teamOnDuty }}</div><div style="font:600 10.5px Manrope;color:var(--sub)">On duty</div></div>
+      <div style="width:1px;background:var(--line)"></div>
+      <div style="flex:1;text-align:center"><div style="font:800 17px Sora">{{ teamTotal }}</div><div style="font:600 10.5px Manrope;color:var(--sub)">Members</div></div>
+      <div style="width:1px;background:var(--line)"></div>
+      <div style="flex:1;text-align:center"><div style="font:800 17px Sora;color:var(--gold)">{{ teamPending }}</div><div style="font:600 10.5px Manrope;color:var(--sub)">Invites sent</div></div>
+    </div>
+    <div style="height:1px;background:var(--line);margin:12px 0"></div>
+    <div style="font:800 10px Manrope;letter-spacing:0.1em;text-transform:uppercase;color:var(--sub);margin-bottom:8px">Recent staff activity</div>
+    <div style="display:flex;flex-direction:column;gap:9px">
+      <sc-for list="{{ teamFeed }}" as="af" hint-placeholder-count="3">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:26px;height:26px;border-radius:9px;background: {{ af.avBg }};color: {{ af.avFg }};display:flex;align-items:center;justify-content:center;font:800 9.5px Sora;flex:none">{{ af.initials }}</div>
+        <div style="flex:1;min-width:0"><div style="font:600 12px Manrope;text-wrap:pretty">{{ af.text }}</div></div>
+        <div style="font:600 10.5px Manrope;color:var(--sub);flex:none">{{ af.time }}</div>
+      </div>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+  <div style="margin-top:18px;font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin-bottom:8px">Patient Connect · WhatsApp</div>
+  <div style="background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:14px">
+    <div style="display:flex;justify-content:space-between;font:600 12px Manrope;color:var(--sub)"><span>WhatsApp messages</span><span style="font-weight:700;color:var(--ink)">212 / 300</span></div>
+    <div style="height:6px;border-radius:999px;background:var(--chip);overflow:hidden;margin-top:6px"><div style="height:100%;width:71%;border-radius:999px;background:var(--brand)"></div></div>
+    <div style="display:flex;justify-content:space-between;font:600 12px Manrope;color:var(--sub);margin-top:10px"><span>SMS fallback</span><span style="font-weight:700;color:var(--ink)">34 / 300</span></div>
+    <div style="height:6px;border-radius:999px;background:var(--chip);overflow:hidden;margin-top:6px"><div style="height:100%;width:11%;border-radius:999px;background:var(--gold)"></div></div>
+    <div style="font:600 11.5px/1.5 Manrope;color:var(--sub);margin-top:10px">Reminders, confirmations and report shares this month. Quota resets 1 Sep.</div>
+  </div>
+  <div style="margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:13px 14px;display:flex;justify-content:space-between;align-items:center">
+    <div><div style="font:700 13.5px Manrope">Standard plan · active</div><div style="font:600 11.5px Manrope;color:var(--sub)">Renews 14 Mar 2027 · Patient Connect add-on active</div></div>
+    <div style="font:700 12px Manrope;color:var(--brand);cursor:pointer">Manage</div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isWalkin }}" hint-placeholder-val="{{ false }}">
+<div style="height:100%;overflow-y:auto;padding:0 0 40px;box-sizing:border-box">
+  <div style="display:flex;align-items:center;gap:12px;padding:64px 20px 12px">
+    <div onClick="{{ back }}" style="width:36px;height:36px;border-radius:12px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+    <div style="min-width:0"><div style="font:700 9px Manrope;letter-spacing:0.14em;text-transform:uppercase;color:var(--sub)">{{ crumbTrail }}</div><div style="font:700 15px Sora;margin-top:1px">Walk-in patient</div></div>
+    <div style="margin-left:auto;text-align:right"><div style="font:600 10px Manrope;color:var(--sub)">Token</div><div style="font:800 16px Sora">{{ nextTokLabel }}</div></div>
+  </div>
+  <div style="padding:6px 20px">
+    <div style="font:600 12.5px/1.55 Manrope;color:var(--sub);text-wrap:pretty">{{ walkinWho }}</div>
+    <div style="margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:14px;display:flex;flex-direction:column;gap:12px">
+      <div>
+        <div style="font:800 10.5px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin-bottom:6px">Patient name</div>
+        <input value="{{ wName }}" onChange="{{ setWName }}" placeholder="e.g. Nilesh Chauhan" style="width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:12px;background:var(--bg);outline:none;padding:12px 13px;font:600 14px Manrope;color:var(--ink)"></input>
+      </div>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1.6">
+          <div style="font:800 10.5px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin-bottom:6px">Mobile</div>
+          <input value="{{ wPhone }}" onChange="{{ setWPhone }}" placeholder="98980 12345" style="width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:12px;background:var(--bg);outline:none;padding:12px 13px;font:700 14px Sora;letter-spacing:0.03em;color:var(--ink)"></input>
+        </div>
+        <div style="flex:1">
+          <div style="font:800 10.5px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin-bottom:6px">Age</div>
+          <input value="{{ wAge }}" onChange="{{ setWAge }}" placeholder="34" style="width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:12px;background:var(--bg);outline:none;padding:12px 13px;font:700 14px Sora;color:var(--ink)"></input>
+        </div>
+      </div>
+      <div>
+        <div style="font:800 10.5px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin-bottom:7px">Sex</div>
+        <div style="display:flex;gap:6px">
+          <sc-for list="{{ wSexOpts }}" as="o" hint-placeholder-count="3">
+          <div onClick="{{ o.pick }}" style="flex:1;text-align:center;padding:9px 0;border-radius:11px;cursor:pointer;background: {{ o.bg }};color: {{ o.fg }};border:1px solid {{ o.bd }};font:700 12.5px Manrope">{{ o.label }}</div>
+          </sc-for>
+        </div>
+      </div>
+      <div>
+        <div style="font:800 10.5px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin-bottom:7px">Reason for visit</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <sc-for list="{{ wReasonOpts }}" as="o" hint-placeholder-count="5">
+          <div onClick="{{ o.pick }}" style="padding:8px 12px;border-radius:999px;cursor:pointer;background: {{ o.bg }};color: {{ o.fg }};border:1px solid {{ o.bd }};font:700 12px Manrope">{{ o.label }}</div>
+          </sc-for>
+        </div>
+      </div>
+      <div>
+        <div style="font:800 10.5px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin-bottom:7px">Seeing</div>
+        <div style="display:flex;gap:6px">
+          <sc-for list="{{ wDocOpts }}" as="o" hint-placeholder-count="2">
+          <div onClick="{{ o.pick }}" style="flex:1;text-align:center;padding:9px 6px;border-radius:11px;cursor:pointer;background: {{ o.bg }};color: {{ o.fg }};border:1px solid {{ o.bd }};font:700 12px Manrope">{{ o.label }}</div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:14px">
+      <div style="font:800 10.5px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin-bottom:7px">Consultation fee</div>
+      <div style="display:flex;gap:6px">
+        <sc-for list="{{ wFeeOpts }}" as="o" hint-placeholder-count="3">
+        <div onClick="{{ o.pick }}" style="flex:1;text-align:center;padding:10px 0;border-radius:11px;cursor:pointer;background: {{ o.bg }};color: {{ o.fg }};border:1px solid {{ o.bd }};font:800 13px Sora">{{ o.label }}</div>
+        </sc-for>
+      </div>
+      <div style="font:800 10.5px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin:14px 0 7px">Payment</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <sc-for list="{{ wPayOpts }}" as="o" hint-placeholder-count="2">
+        <div onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;cursor:pointer;background: {{ o.bg }};border:1px solid {{ o.bd }}">
+          <div style="width:16px;height:16px;border-radius:50%;border:2px solid {{ o.dot }};display:flex;align-items:center;justify-content:center;flex:none"><div style="width:7px;height:7px;border-radius:50%;background: {{ o.fill }}"></div></div>
+          <div style="min-width:0"><div style="font:700 12.5px Manrope;color: {{ o.fg }}">{{ o.label }}</div><div style="font:600 11px Manrope;color:var(--sub)">{{ o.sub }}</div></div>
+        </div>
+        </sc-for>
+      </div>
+    </div>
+    <div onClick="{{ walkinSave }}" style="margin-top:14px;background: {{ wBg }};color: {{ wFg }};border-radius:16px;padding:16px;text-align:center;font:800 15px Manrope;cursor:pointer">{{ wCta }}</div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isWalkinDone }}" hint-placeholder-val="{{ false }}">
+<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 28px;box-sizing:border-box;text-align:center">
+  <div style="font:800 10.5px Manrope;letter-spacing:0.14em;text-transform:uppercase;color:var(--sub)">Added to today's queue</div>
+  <div style="margin-top:14px;width:100%;background:var(--brand-deep);color:var(--onbrand);border-radius:22px;padding:24px;box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,0.09)">
+    <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;opacity:0.7">Token</div>
+    <div style="font:800 46px/1 Sora;letter-spacing:-0.03em;margin-top:6px">{{ wdToken }}</div>
+    <div style="font:700 15px Sora;margin-top:14px">{{ wdName }}</div>
+    <div style="font:600 12.5px Manrope;opacity:0.75;margin-top:2px">{{ wdMeta }}</div>
+    <div style="height:1px;background:rgba(255,255,255,0.14);margin:16px 0"></div>
+    <div style="display:flex;justify-content:space-between;font:600 12.5px Manrope;opacity:0.8"><span>Approx. wait</span><span style="font-weight:800;opacity:1">{{ wdWait }}</span></div>
+    <div style="display:flex;justify-content:space-between;font:600 12.5px Manrope;opacity:0.8;margin-top:6px"><span>Fee</span><span style="font-weight:800;opacity:1">{{ wdFee }}</span></div>
+  </div>
+  <div style="font:600 12.5px/1.55 Manrope;color:var(--sub);margin-top:14px;text-wrap:pretty">{{ wdPayNote }}</div>
+  <div style="display:flex;gap:8px;margin-top:18px;width:100%">
+    <div style="flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:13px;font:800 13px Manrope;cursor:pointer">Print token</div>
+    <div style="flex:1.3;background:var(--brand);color:var(--onaccent);border-radius:14px;padding:13px;font:800 13px Manrope;cursor:pointer">Send on WhatsApp</div>
+  </div>
+  <div onClick="{{ goWalkin }}" style="margin-top:18px;font:700 13px Manrope;color:var(--brand);cursor:pointer">Add another walk-in</div>
+  <div onClick="{{ goTodayTab }}" style="margin-top:12px;font:700 13px Manrope;color:var(--sub);cursor:pointer">Back to today</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isBilling }}" hint-placeholder-val="{{ false }}">
+<div style="height:100%;overflow-y:auto;padding:0 0 40px;box-sizing:border-box">
+  <div style="display:flex;align-items:center;gap:12px;padding:64px 20px 12px">
+    <div onClick="{{ back }}" style="width:36px;height:36px;border-radius:12px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+    <div style="min-width:0"><div style="font:700 9px Manrope;letter-spacing:0.14em;text-transform:uppercase;color:var(--sub)">{{ crumbTrail }}</div><div style="font:700 15px Sora;margin-top:1px">Front desk billing</div></div>
+  </div>
+  <div style="padding:6px 20px">
+    <div style="display:flex;align-items:center;gap:10px;background: {{ deskBandBg }};border-radius:14px;padding:11px 13px">
+      <div style="width:28px;height:28px;border-radius:9px;background: {{ deskAvBg }};color: {{ deskAvFg }};display:flex;align-items:center;justify-content:center;font:800 11px Sora;flex:none">{{ deskAvInit }}</div>
+      <div style="min-width:0"><div style="font:700 12.5px Manrope">{{ deskWho }}</div><div style="font:600 11px/1.4 Manrope;color:var(--sub);text-wrap:pretty">{{ deskNote }}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:13px"><div style="font:800 19px Sora;color:var(--gold)">{{ billPendAmt }}</div><div style="font:600 11px Manrope;color:var(--sub)">To collect · {{ billPendCount }} bills</div></div>
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:13px"><div style="font:800 19px Sora">{{ billPaidAmt }}</div><div style="font:600 11px Manrope;color:var(--sub)">Collected · cash {{ billCash }}</div></div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:12px">
+      <sc-for list="{{ billTabs }}" as="t" hint-placeholder-count="2">
+      <div onClick="{{ t.pick }}" style="flex:1;text-align:center;padding:9px 0;border-radius:11px;cursor:pointer;background: {{ t.bg }};color: {{ t.fg }};border:1px solid {{ t.bd }};font:700 12.5px Manrope">{{ t.label }}</div>
+      </sc-for>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+      <sc-for list="{{ billRows }}" as="b" hint-placeholder-count="3">
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:13px 14px">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div style="width:40px;text-align:center;flex:none"><div style="font:800 13px Sora;color:var(--sub)">{{ b.tok }}</div></div>
+          <div style="flex:1;min-width:0">
+            <div style="font:700 13.5px Manrope">{{ b.name }}</div>
+            <div style="font:600 11.5px Manrope;color:var(--sub);margin-top:1px">{{ b.item }} · {{ b.time }}</div>
+          </div>
+          <div style="text-align:right;flex:none"><div style="font:800 15px Sora">₹{{ b.amt }}</div><div style="font:800 9.5px Manrope;color: {{ b.stFg }}">{{ b.st }}</div></div>
+        </div>
+        <sc-if value="{{ b.showCollect }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ b.collect }}" style="margin-top:11px;background:var(--brand);color:var(--onaccent);border-radius:12px;padding:11px;text-align:center;font:800 12.5px Manrope;cursor:pointer">Collect payment</div>
+        </sc-if>
+        <sc-if value="{{ b.showBlocked }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:11px;background:var(--chip);color:var(--sub);border-radius:12px;padding:11px;text-align:center;font:700 12px Manrope">Front desk collects this</div>
+        </sc-if>
+        <sc-if value="{{ b.showBy }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:9px;font:600 11px Manrope;color:var(--sub)">{{ b.by }}</div>
+        </sc-if>
+      </div>
+      </sc-for>
+    </div>
+    <sc-if value="{{ billEmpty }}" hint-placeholder-val="{{ false }}">
+    <div style="margin-top:10px;background:var(--card);border:1px dashed var(--line);border-radius:16px;padding:26px 18px;text-align:center">
+      <div style="font:700 14px Sora">Nothing pending</div>
+      <div style="font:600 12px/1.5 Manrope;color:var(--sub);margin-top:5px">Every completed visit has been settled at the desk.</div>
+    </div>
+    </sc-if>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ payOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;z-index:40;background:rgba(10,10,12,0.44);display:flex;align-items:flex-end">
+  <div onClick="{{ closePay }}" style="position:absolute;inset:0;cursor:pointer"></div>
+  <div style="position:relative;width:100%;background:var(--bg);border-radius:24px 24px 0 0;padding:20px 20px 30px;box-sizing:border-box;box-shadow:0 -12px 40px rgba(0,0,0,0.22)">
+    <div style="width:38px;height:4px;border-radius:999px;background:var(--line);margin:0 auto 16px"></div>
+    <div style="display:flex;align-items:baseline;gap:8px">
+      <div style="font:800 18px Sora;letter-spacing:-0.01em">Collect payment</div>
+      <div style="margin-left:auto;font:800 12px Sora;color:var(--sub)">{{ payTok }}</div>
+    </div>
+    <div style="font:600 12.5px Manrope;color:var(--sub);margin-top:3px">{{ payName }} · {{ payItem }}</div>
+    <div style="margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px">
+      <div style="display:flex;justify-content:space-between;font:600 12.5px Manrope;color:var(--sub)"><span>Consultation</span><span style="color:var(--ink);font-weight:700">₹{{ payBase }}</span></div>
+      <div style="display:flex;justify-content:space-between;font:600 12.5px Manrope;color:var(--sub);margin-top:6px"><span>Concession</span><span style="color:var(--ink);font-weight:700">− ₹{{ payDiscVal }}</span></div>
+      <div style="height:1px;background:var(--line);margin:11px 0"></div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:800 12px Manrope">Payable</span><span style="font:800 22px Sora">₹{{ payNet }}</span></div>
+    </div>
+    <div style="font:800 10.5px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin:14px 0 7px">Concession</div>
+    <div style="display:flex;gap:6px">
+      <sc-for list="{{ payDiscOpts }}" as="o" hint-placeholder-count="3">
+      <div onClick="{{ o.pick }}" style="flex:1;text-align:center;padding:9px 0;border-radius:11px;cursor:pointer;background: {{ o.bg }};color: {{ o.fg }};border:1px solid {{ o.bd }};font:700 12.5px Manrope">{{ o.label }}</div>
+      </sc-for>
+    </div>
+    <div style="font:800 10.5px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin:14px 0 7px">Mode</div>
+    <div style="display:flex;gap:6px">
+      <sc-for list="{{ payModeOpts }}" as="o" hint-placeholder-count="3">
+      <div onClick="{{ o.pick }}" style="flex:1;text-align:center;padding:11px 0;border-radius:11px;cursor:pointer;background: {{ o.bg }};color: {{ o.fg }};border:1px solid {{ o.bd }};font:700 12.5px Manrope">{{ o.label }}</div>
+      </sc-for>
+    </div>
+    <div onClick="{{ confirmPay }}" style="margin-top:16px;background:var(--brand);color:var(--onaccent);border-radius:16px;padding:16px;text-align:center;font:800 15px Manrope;cursor:pointer">{{ payCta }}</div>
+    <div style="font:600 11.5px Manrope;color:var(--sub);text-align:center;margin-top:9px">{{ payBy }}</div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isTeam }}" hint-placeholder-val="{{ false }}">
+<div style="height:100%;overflow-y:auto;padding:0 0 40px;box-sizing:border-box">
+  <div style="display:flex;align-items:center;gap:12px;padding:64px 20px 12px">
+    <div onClick="{{ back }}" style="width:36px;height:36px;border-radius:12px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+    <div style="min-width:0"><div style="font:700 9px Manrope;letter-spacing:0.14em;text-transform:uppercase;color:var(--sub)">{{ crumbTrail }}</div><div style="font:700 15px Sora;margin-top:1px">Clinic team</div></div>
+    <div onClick="{{ goStaffAdd }}" style="margin-left:auto;font:800 12px Manrope;background:var(--brand);color:var(--onaccent);border-radius:999px;padding:8px 14px;cursor:pointer">+ Add</div>
+  </div>
+  <div style="padding:6px 20px">
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <sc-for list="{{ teamFilters }}" as="tf" hint-placeholder-count="4">
+      <div onClick="{{ tf.pick }}" style="flex:1;padding:9px 0;border-radius:11px;text-align:center;font:700 12px Manrope;cursor:pointer;background: {{ tf.bg }};color: {{ tf.fg }};border:1px solid {{ tf.bd }}">{{ tf.label }}</div>
+      </sc-for>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <sc-for list="{{ staff }}" as="st" hint-placeholder-count="4">
+      <div onClick="{{ st.open }}" style="background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer">
+        <div style="width:40px;height:40px;border-radius:12px;background: {{ st.avBg }};color: {{ st.avFg }};display:flex;align-items:center;justify-content:center;font:800 13px Sora;flex:none">{{ st.initials }}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font:700 13.5px Manrope">{{ st.name }}</div>
+          <div style="font:600 11.5px Manrope;color:var(--sub)">{{ st.role }} · {{ st.shift }}</div>
+        </div>
+        <div style="text-align:right;flex:none">
+          <div style="font:800 9.5px Manrope;letter-spacing:0.04em;background: {{ st.stBg }};color: {{ st.stFg }};border-radius:999px;padding:4px 9px">{{ st.status }}</div>
+          <div style="font:600 10.5px Manrope;color:var(--sub);margin-top:4px">{{ st.metric }}</div>
+        </div>
+      </div>
+      </sc-for>
+    </div>
+    <div style="margin-top:14px;background:var(--gold-soft);color:var(--gold);border-radius:14px;padding:12px 14px;font:600 12.5px/1.5 Manrope">Each member signs in with their own number. Roles decide what they can see — receptionists never see clinical notes.</div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isStaffDetail }}" hint-placeholder-val="{{ false }}">
+<div style="height:100%;overflow-y:auto;padding:0 0 40px;box-sizing:border-box">
+  <div style="display:flex;align-items:center;gap:12px;padding:64px 20px 12px">
+    <div onClick="{{ back }}" style="width:36px;height:36px;border-radius:12px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+    <div style="min-width:0"><div style="font:700 9px Manrope;letter-spacing:0.14em;text-transform:uppercase;color:var(--sub)">{{ crumbTrail }}</div><div style="font:700 15px Sora;margin-top:1px">Team member</div></div>
+  </div>
+  <div style="padding:8px 20px">
+    <div style="display:flex;gap:14px;align-items:center">
+      <div style="width:60px;height:60px;border-radius:18px;background: {{ selStaff.avBg }};color: {{ selStaff.avFg }};display:flex;align-items:center;justify-content:center;font:800 19px Sora">{{ selStaff.initials }}</div>
+      <div style="flex:1">
+        <div style="font:800 18px Sora;letter-spacing:-0.01em">{{ selStaff.name }}</div>
+        <div style="font:600 12.5px Manrope;color:var(--sub)">{{ selStaff.role }} · {{ selStaff.phone }}</div>
+        <div style="font:600 12px Manrope;color:var(--sub);margin-top:2px">{{ selStaff.joined }}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <div style="flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:12px;text-align:center"><div style="font:800 15px Sora">{{ selStaff.statA }}</div><div style="font:600 10.5px Manrope;color:var(--sub)">{{ selStaff.statAL }}</div></div>
+      <div style="flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:12px;text-align:center"><div style="font:800 15px Sora">{{ selStaff.statB }}</div><div style="font:600 10.5px Manrope;color:var(--sub)">{{ selStaff.statBL }}</div></div>
+      <div style="flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:12px;text-align:center"><div style="font:800 15px Sora">{{ selStaff.statC }}</div><div style="font:600 10.5px Manrope;color:var(--sub)">{{ selStaff.statCL }}</div></div>
+    </div>
+    <div style="margin-top:18px;font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub)">Access &amp; permissions</div>
+    <div style="margin-top:8px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:4px 14px">
+      <sc-for list="{{ selStaffPerms }}" as="pm" hint-placeholder-count="4">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line)">
+        <div style="font:700 12.5px Manrope">{{ pm.label }}</div>
+        <div onClick="{{ pm.toggle }}" style="width:42px;height:24px;border-radius:999px;background: {{ pm.swBg }};position:relative;cursor:pointer;transition:background 0.2s;flex:none">
+          <div style="position:absolute;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);transition:left 0.2s;left: {{ pm.swLeft }}"></div>
+        </div>
+      </div>
+      </sc-for>
+    </div>
+    <div style="margin-top:18px;font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub)">Activity log</div>
+    <div style="margin-top:8px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:4px 14px">
+      <sc-for list="{{ selStaffLog }}" as="lg" hint-placeholder-count="4">
+      <div style="display:flex;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)">
+        <div style="width:7px;height:7px;border-radius:50%;background:var(--brand);margin-top:5px;flex:none"></div>
+        <div style="flex:1;min-width:0"><div style="font:600 12.5px/1.45 Manrope;text-wrap:pretty">{{ lg.text }}</div></div>
+        <div style="font:600 10.5px Manrope;color:var(--sub);flex:none">{{ lg.time }}</div>
+      </div>
+      </sc-for>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px">
+      <div onClick="{{ staffToggleDuty }}" style="background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:14px;text-align:center;font:800 13px Manrope;cursor:pointer">{{ dutyCta }}</div>
+      <div onClick="{{ staffRemove }}" style="background:var(--red-soft);color:var(--red);border-radius:14px;padding:14px;text-align:center;font:800 13px Manrope;cursor:pointer">Remove access</div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isStaffAdd }}" hint-placeholder-val="{{ false }}">
+<div style="height:100%;overflow-y:auto;padding:0 0 40px;box-sizing:border-box">
+  <div style="display:flex;align-items:center;gap:12px;padding:64px 20px 12px">
+    <div onClick="{{ back }}" style="width:36px;height:36px;border-radius:12px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="16" height="16" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+    <div style="min-width:0"><div style="font:700 9px Manrope;letter-spacing:0.14em;text-transform:uppercase;color:var(--sub)">{{ crumbTrail }}</div><div style="font:700 15px Sora;margin-top:1px">Add team member</div></div>
+  </div>
+  <div style="padding:8px 20px;display:flex;flex-direction:column;gap:18px">
+    <div>
+      <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin-bottom:8px">Role</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <sc-for list="{{ roleOpts }}" as="ro" hint-placeholder-count="4">
+        <div onClick="{{ ro.pick }}" style="padding:9px 14px;border-radius:999px;font:700 12.5px Manrope;cursor:pointer;background: {{ ro.bg }};color: {{ ro.fg }};border:1px solid {{ ro.bd }}">{{ ro.label }}</div>
+        </sc-for>
+      </div>
+      <div style="font:600 11.5px/1.5 Manrope;color:var(--sub);margin-top:8px">{{ roleHint }}</div>
+    </div>
+    <div>
+      <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin-bottom:8px">Full name</div>
+      <input value="{{ nsName }}" onChange="{{ setNsName }}" placeholder="e.g. Dr. Neha Trivedi" style="border:1px solid var(--line);outline:none;background:var(--card);border-radius:14px;padding:14px 16px;font:700 15px Manrope;color:var(--ink);width:100%;box-sizing:border-box;box-shadow:var(--shadow)"></input>
+    </div>
+    <div>
+      <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin-bottom:8px">Mobile number · their login</div>
+      <div style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 16px;box-shadow:var(--shadow)">
+        <span style="font:700 14px Sora;color:var(--sub)">+91</span>
+        <input value="{{ nsPhone }}" onChange="{{ setNsPhone }}" placeholder="98980 12345" style="flex:1;border:none;outline:none;background:transparent;font:700 14px Manrope;color:var(--ink);min-width:0"></input>
+      </div>
+    </div>
+    <sc-if value="{{ nsIsDoctor }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin-bottom:8px">Registration number</div>
+      <input value="{{ nsReg }}" onChange="{{ setNsReg }}" placeholder="e.g. G-51204" style="border:1px solid var(--line);outline:none;background:var(--card);border-radius:14px;padding:14px 16px;font:700 14px Manrope;color:var(--ink);width:100%;box-sizing:border-box;box-shadow:var(--shadow)"></input>
+    </div>
+    </sc-if>
+    <div>
+      <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin-bottom:8px">Shift</div>
+      <div style="display:flex;gap:8px">
+        <sc-for list="{{ shiftOpts }}" as="sh" hint-placeholder-count="3">
+        <div onClick="{{ sh.pick }}" style="flex:1;padding:11px 0;border-radius:12px;text-align:center;font:700 12px Manrope;cursor:pointer;background: {{ sh.bg }};color: {{ sh.fg }};border:1px solid {{ sh.bd }}">{{ sh.label }}</div>
+        </sc-for>
+      </div>
+    </div>
+    <div>
+      <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin-bottom:8px">Permissions for this role</div>
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:4px 14px">
+        <sc-for list="{{ nsPerms }}" as="np" hint-placeholder-count="4">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line)">
+          <div style="font:700 12.5px Manrope;color: {{ np.fg }}">{{ np.label }}</div>
+          <div style="font:800 10.5px Manrope;color: {{ np.tagFg }}">{{ np.tag }}</div>
+        </div>
+        </sc-for>
+      </div>
+      <div style="font:600 11.5px/1.5 Manrope;color:var(--sub);margin-top:8px">Defaults for the role — fine-tune any of these after they accept the invite.</div>
+    </div>
+    <div onClick="{{ staffSave }}" style="background: {{ nsBg }};color: {{ nsFg }};border-radius:16px;padding:16px;text-align:center;font:800 15px Manrope;cursor:pointer">{{ nsCta }}</div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+<div style="height:100%;overflow-y:auto;padding:64px 20px 110px;box-sizing:border-box">
+  <div style="font:800 22px Sora;letter-spacing:-0.02em;margin-bottom:14px">Settings</div>
+  <div style="background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:16px;display:flex;align-items:center;gap:14px">
+    <div style="width:56px;height:56px;border-radius:18px;background:var(--brand-soft);color:var(--brand);display:flex;align-items:center;justify-content:center;font:800 18px Sora">AS</div>
+    <div style="flex:1"><div style="font:800 16px Sora">Dr. Arjun Shah</div><div style="font:600 12.5px Manrope;color:var(--sub)">General Physician · Reg. G-44218</div><div style="font:600 12px Manrope;color:var(--sub)">Shah Family Clinic, Navrangpura</div><div style="font:800 9.5px Manrope;letter-spacing:0.06em;background:var(--brand-soft);color:var(--brand);border-radius:999px;padding:4px 9px;display:inline-block;margin-top:6px">{{ roleBadge }}</div></div>
+    <div style="font:700 12px Manrope;color:var(--brand);cursor:pointer">Edit</div>
+  </div>
+  <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin:20px 0 8px">Clinic</div>
+  <div style="background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:4px 14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line);font:700 13.5px Manrope"><span>Consultation fee</span><span style="color:var(--sub);font-weight:600">₹400 ›</span></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line);font:700 13.5px Manrope"><span>Working hours</span><span style="color:var(--sub);font-weight:600">9:30–1 · 4:30–8 ›</span></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line);font:700 13.5px Manrope"><span>Prescription pad</span><span style="color:var(--sub);font-weight:600">A5 · custom header ›</span></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line);font:700 13.5px Manrope"><span>Patient Connect · WhatsApp</span><span style="color:var(--brand);font-weight:700">Active</span></div>
+    <sc-if value="{{ isOwner }}" hint-placeholder-val="{{ true }}">
+    <div onClick="{{ goTeam }}" style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;font:700 13.5px Manrope;cursor:pointer"><span>Team &amp; permissions</span><span style="color:var(--sub);font-weight:600">{{ teamTotal }} members ›</span></div>
+    </sc-if>
+  </div>
+  <div style="font:800 11px Manrope;letter-spacing:0.12em;text-transform:uppercase;color:var(--sub);margin:20px 0 8px">App</div>
+  <div style="background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:4px 14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line)">
+      <div style="font:700 13.5px Manrope">Dark mode</div>
+      <div onClick="{{ toggleTheme }}" style="width:46px;height:26px;border-radius:999px;background: {{ swBg }};position:relative;cursor:pointer;transition:background 0.2s">
+        <div style="position:absolute;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);transition:left 0.2s;left: {{ swLeft }}"></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line);font:700 13.5px Manrope"><span>Voice dictation language</span><span style="color:var(--sub);font-weight:600">en-IN ›</span></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 0;font:700 13.5px Manrope"><span>Help &amp; support</span><span style="color:var(--sub)">›</span></div>
+  </div>
+  <div onClick="{{ logout }}" style="margin-top:16px;background:var(--red-soft);color:var(--red);border-radius:16px;padding:15px;text-align:center;font:800 14px Manrope;cursor:pointer">Log out</div>
+  <div style="font:600 11px Manrope;color:var(--sub);text-align:center;margin-top:14px">eClinicPro Doctor · v3.1.0</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showTabs }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:0;right:0;bottom:0;display:flex;padding:10px 8px 28px;background:var(--navbg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--line)">
+  <div onClick="{{ goTodayTab }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;color: {{ tcToday }}">
+    <svg width="21" height="21" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9h-5.5v-5.5h-5V20H4z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"></path></svg>
+    <span style="font:700 10px Manrope">Today</span>
+  </div>
+  <div onClick="{{ goPatientsTab }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;color: {{ tcPatients }}">
+    <svg width="21" height="21" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.9"></circle><path d="M4.5 20.5c1.5-4 4.5-5.5 7.5-5.5s6 1.5 7.5 5.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path></svg>
+    <span style="font:700 10px Manrope">Patients</span>
+  </div>
+  <div onClick="{{ goDashTab }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;color: {{ tcDash }}">
+    <svg width="21" height="21" viewBox="0 0 24 24"><rect x="4" y="12" width="4" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.9"></rect><rect x="10" y="7" width="4" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.9"></rect><rect x="16" y="4" width="4" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.9"></rect></svg>
+    <span style="font:700 10px Manrope">Dashboard</span>
+  </div>
+  <div onClick="{{ goSettingsTab }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;color: {{ tcSettings }}">
+    <svg width="21" height="21" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="1.9"></circle><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-dasharray="3.5 3"></circle></svg>
+    <span style="font:700 10px Manrope">Settings</span>
+  </div>
+</div>
+</sc-if>
+
+</div>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 450, &quot;height&quot;: 940}, &quot;startScreen&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;today&quot;, &quot;login&quot;, &quot;walkin&quot;, &quot;billing&quot;], &quot;default&quot;: &quot;today&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Demo&quot;}, &quot;emptyDay&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Demo&quot;}, &quot;isOwner&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Demo&quot;}, &quot;frontDeskMode&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Demo&quot;}}">
+const PATIENTS = [
+  { id: 'PT-1042', name: 'Ananya Sharma', initials: 'AS', age: '29 · F', phone: '98765 43210', visits: 4, last: '12 Aug', flags: [{ label: 'TYPE 2 DIABETES', kind: 'chronic' }, { label: 'ALLERGY: SULFA', kind: 'allergy' }], bp: [126, 124, 122, 121], bpLatest: '121/80', history: [ { date: '12 Aug 26', dx: 'T2DM — routine review', meds: 'Metformin 500 · Telmisartan 40 · Vit D3' }, { date: '14 May 26', dx: 'T2DM — dose adjusted', meds: 'Metformin 500 · Telmisartan 40' }, { date: '10 Feb 26', dx: 'T2DM — newly diagnosed', meds: 'Metformin 500' } ] },
+  { id: 'PT-0871', name: 'Ramesh Patel', initials: 'RP', age: '52 · M', phone: '99251 88012', visits: 9, last: '24 Jul', flags: [{ label: 'HYPERTENSION', kind: 'chronic' }], bp: [148, 142, 138, 134], bpLatest: '134/86', history: [ { date: '24 Jul 26', dx: 'HTN — well controlled', meds: 'Amlodipine 5 · Telmisartan 40' }, { date: '20 Jun 26', dx: 'HTN review', meds: 'Amlodipine 5 · Telmisartan 40' } ] },
+  { id: 'PT-1198', name: 'Priya Joshi', initials: 'PJ', age: '34 · F', phone: '90999 21200', visits: 2, last: 'Today', flags: [], bp: [118, 116, 118, 117], bpLatest: '117/76', history: [ { date: '21 Aug 26', dx: 'Viral fever', meds: 'Paracetamol 650 · Cetirizine 10' } ] },
+  { id: 'PT-0334', name: 'Suresh Mehta', initials: 'SM', age: '58 · M', phone: '98240 55671', visits: 14, last: 'Today', flags: [{ label: 'TYPE 2 DIABETES', kind: 'chronic' }, { label: 'ALLERGY: PENICILLIN', kind: 'allergy' }], bp: [140, 136, 132, 130], bpLatest: '130/84', history: [ { date: '21 Aug 26', dx: 'T2DM follow-up', meds: 'Metformin 1000 · Glimepiride 1' } ] },
+  { id: 'PT-1277', name: 'Kiran Rao', initials: 'KR', age: '41 · M', phone: '97245 10388', visits: 1, last: 'Today', flags: [], bp: [124, 124, 122, 123], bpLatest: '123/80', history: [] },
+  { id: 'PT-1301', name: 'Divya Bhatt', initials: 'DB', age: '26 · F', phone: '98790 44521', visits: 3, last: '02 Aug', flags: [{ label: 'MIGRAINE', kind: 'chronic' }], bp: [112, 114, 110, 112], bpLatest: '112/74', history: [ { date: '02 Aug 26', dx: 'Migraine with aura', meds: 'Sumatriptan 50 · Domperidone 10' } ] },
+];
+const QUEUE0 = [
+  { tok: 7, pat: 'PT-0334', reason: 'Diabetes follow-up', status: 'done', fu: false },
+  { tok: 8, pat: 'PT-1198', reason: 'Fever, 3 days', status: 'done', fu: false },
+  { tok: 9, pat: 'PT-0871', reason: 'BP review', status: 'in', fu: false },
+  { tok: 10, pat: 'PT-1042', reason: 'Diabetes review', status: 'wait', fu: true },
+  { tok: 11, pat: 'PT-1277', reason: 'Cough & cold', status: 'wait', fu: false },
+  { tok: 12, pat: 'PT-1301', reason: 'Migraine episode', status: 'wait', fu: false },
+];
+const SYMPTOMS = ['Headache', 'Fever', 'Cough', 'Fatigue', 'Body ache', 'Dizziness', 'Sore throat', 'Nausea', 'Breathlessness'];
+const FREQS = ['1-0-0', '1-0-1', '1-1-1', '0-0-1'];
+const FU_CHIPS = ['+3d', '+5d', '+1w', '+2w', 'None'];
+const RX_TEMPLATES = [
+  { name: 'Viral fever combo', rows: [ { med: 'Paracetamol 650 mg', freq: '1-1-1', days: '3', food: 'After food' }, { med: 'Cetirizine 10 mg', freq: '0-0-1', days: '3', food: 'After food' } ] },
+  { name: 'Diabetes review', rows: [ { med: 'Metformin 500 mg', freq: '1-0-1', days: '15', food: 'After food' }, { med: 'Telmisartan 40 mg', freq: '1-0-0', days: '15', food: 'Before food' } ] },
+  { name: 'Hypertension', rows: [ { med: 'Amlodipine 5 mg', freq: '1-0-0', days: '30', food: 'After food' } ] },
+  { name: 'Gastritis', rows: [ { med: 'Pantoprazole 40 mg', freq: '1-0-0', days: '10', food: 'Before food' } ] },
+];
+const FOLLOWUPS = [
+  { name: 'Meena Iyer', why: 'HbA1c review — overdue by 4 days', when: 'OVERDUE', late: true },
+  { name: 'Jayesh Trivedi', why: 'Post-fever recheck', when: 'Today', late: false },
+  { name: 'Ananya Sharma', why: 'HbA1c review', when: '28 Aug', late: false },
+];
+const CAL_DAYS = [ { day: 'Today', date: '21' }, { day: 'Fri', date: '22' }, { day: 'Sat', date: '23' } ];
+const CAL_SLOTS = {
+  0: [ { time: '9:30', label: 'Suresh Mehta · Diabetes follow-up', s: 'booked' }, { time: '9:50', label: 'Priya Joshi · Fever', s: 'booked' }, { time: '10:10', label: 'Ramesh Patel · BP review', s: 'booked' }, { time: '10:30', label: 'Available', s: 'avail' }, { time: '10:50', label: 'Ananya Sharma · Diabetes review', s: 'booked' }, { time: '11:10', label: 'Available', s: 'avail' }, { time: '11:30', label: 'Kiran Rao · Cough & cold', s: 'booked' }, { time: '12:00', label: 'Lunch — blocked', s: 'blocked' }, { time: '4:30', label: 'Divya Bhatt · Migraine', s: 'booked' }, { time: '5:00', label: 'Available', s: 'avail' } ],
+  1: [ { time: '9:30', label: 'Available', s: 'avail' }, { time: '9:50', label: 'Nita Shah · Thyroid review', s: 'booked' }, { time: '10:10', label: 'Available', s: 'avail' }, { time: '10:30', label: 'Available', s: 'avail' }, { time: '11:00', label: 'Camp visit — blocked', s: 'blocked' }, { time: '4:30', label: 'Available', s: 'avail' }, { time: '5:00', label: 'Rahul Vora · Annual check', s: 'booked' } ],
+  2: [ { time: '9:30', label: 'Available', s: 'avail' }, { time: '9:50', label: 'Available', s: 'avail' }, { time: '10:10', label: 'Hetal Desai · Vaccination', s: 'booked' }, { time: '10:30', label: 'Available', s: 'avail' }, { time: '11:00', label: 'Available', s: 'avail' } ],
+};
+const INVOICES0 = [
+  { id: 1, name: 'Suresh Mehta', tok: 'A-07', item: 'Consultation', time: '9:42 AM', amt: '400', mode: 'Cash', paid: true, by: 'Pooja Makwana · front desk' },
+  { id: 2, name: 'Priya Joshi', tok: 'A-08', item: 'Consultation + injection', time: '10:05 AM', amt: '550', mode: 'UPI', paid: true, by: 'Pooja Makwana · front desk' },
+  { id: 3, name: 'Ramesh Patel', tok: 'A-09', item: 'Consultation', time: '10:24 AM', amt: '400', mode: 'Cash', paid: false, by: '' },
+  { id: 4, name: 'Meena Iyer', tok: 'A-02', item: 'Consultation · yesterday', time: '7:10 PM', amt: '400', mode: 'Cash', paid: false, by: '' },
+];
+const W_REASONS = ['Fever & body ache', 'Cough & cold', 'BP check', 'Sugar review', 'Injection / dressing', 'Stomach pain', 'Other'];
+const pat = id => PATIENTS.find(p => p.id === id);
+const ROLE_STYLE = { Doctor: { avBg: 'var(--brand-soft)', avFg: 'var(--brand)' }, Nurse: { avBg: 'var(--blue-soft)', avFg: 'var(--blue)' }, Receptionist: { avBg: 'var(--gold-soft)', avFg: 'var(--gold)' }, Owner: { avBg: 'var(--brand-soft)', avFg: 'var(--brand)' } };
+const PERM_SETS = {
+  Doctor: [['Own visits & prescriptions', true], ['All patient records', true], ['Billing & invoices', false], ['Clinic earnings', false], ['Manage team', false]],
+  Nurse: [['Vitals entry', true], ['Patient records — view only', true], ['Prescriptions', false], ['Billing & invoices', false], ['Clinic earnings', false]],
+  Receptionist: [['Token queue & check-in', true], ['Appointments & walk-ins', true], ['Billing & invoices', true], ['Clinical notes', false], ['Clinic earnings', false]],
+  Owner: [['Everything clinical', true], ['Billing & earnings', true], ['Manage team', true], ['Clinic settings', true], ['Export GST reports', true]],
+};
+const STAFF0 = [
+  { id: 's1', name: 'Dr. Arjun Shah (You)', initials: 'AS', role: 'Owner', shift: 'Mon–Sat, full day', phone: '98980 12345', joined: 'Owner since Mar 2024', duty: true, invited: false, statA: '15', statAL: 'Seen today', statB: '4.8', statBL: 'Rating', statC: '312', statCL: 'This month', log: [ { text: 'Completed visit for Ramesh Patel · A-09', time: '10:24' }, { text: 'Updated consultation fee to ₹400', time: '09:02' } ] },
+  { id: 's2', name: 'Dr. Neha Trivedi', initials: 'NT', role: 'Doctor', shift: 'Evening, 4:30–8', phone: '98250 71144', joined: 'Joined Jan 2026', duty: true, invited: false, statA: '9', statAL: 'Seen today', statB: '4.7', statBL: 'Rating', statC: '186', statCL: 'This month', log: [ { text: 'Prescribed for Divya Bhatt · migraine protocol', time: '11:40' }, { text: 'Marked follow-up for Hetal Desai (+1w)', time: '11:38' }, { text: 'Signed in from a new device', time: '09:15' } ] },
+  { id: 's3', name: 'Sister Vaishali Rana', initials: 'VR', role: 'Nurse', shift: 'Morning, 9–2', phone: '99045 22013', joined: 'Joined Aug 2024', duty: true, invited: false, statA: '22', statAL: 'Vitals taken', statB: '6', statBL: 'Injections', statC: '2', statCL: 'Dressings', log: [ { text: 'Recorded vitals for Kiran Rao · BP 123/80', time: '11:12' }, { text: 'Administered Tetanus shot · Priya Joshi', time: '10:31' }, { text: 'Flagged low stock: disposable syringes', time: '09:48' } ] },
+  { id: 's4', name: 'Pooja Makwana', initials: 'PM', role: 'Receptionist', shift: 'Mon–Sat, full day', phone: '97140 88266', joined: 'Joined Jun 2025', duty: true, invited: false, statA: '18', statAL: 'Checked in', statB: '₹1,350', statBL: 'Collected', statC: '3', statCL: 'Walk-ins', log: [ { text: 'Collected ₹400 cash from Ramesh Patel', time: '10:26' }, { text: 'Added walk-in at 11:30 · Kiran Rao', time: '10:05' }, { text: 'Rescheduled Nita Shah to Fri 9:50 AM', time: '09:41' }, { text: 'Opened the clinic · queue started', time: '09:15' } ] },
+  { id: 's5', name: 'Hardik Joshi', initials: 'HJ', role: 'Receptionist', shift: 'Evening, 4:30–8', phone: '98795 30012', joined: 'Invite sent 19 Aug', duty: false, invited: true, statA: '—', statAL: 'Checked in', statB: '—', statBL: 'Collected', statC: '—', statCL: 'Walk-ins', log: [ { text: 'Invite sent to +91 98795 30012 · awaiting first sign-in', time: '19 Aug' } ] },
+];
+const TEAM_FEED = [
+  { initials: 'PM', role: 'Receptionist', text: 'Pooja collected ₹400 cash from Ramesh Patel', time: '10:26' },
+  { initials: 'VR', role: 'Nurse', text: 'Vaishali recorded vitals for Kiran Rao', time: '11:12' },
+  { initials: 'NT', role: 'Doctor', text: 'Dr. Neha completed a visit for Divya Bhatt', time: '11:40' },
+  { initials: 'PM', role: 'Receptionist', text: 'Pooja added a walk-in for 11:30 AM', time: '10:05' },
+];
+const ROLE_HINTS = {
+  Doctor: 'Runs their own visits and prescriptions. Cannot see clinic earnings or manage the team.',
+  Nurse: 'Records vitals and assists. Read-only on records, no prescribing rights.',
+  Receptionist: 'Runs the front desk — queue, appointments and cash. Never sees clinical notes.',
+};
+
+class Component extends DCLogic {
+  state = { screen: null, stack: [], phone: '', theme: 'light', queue: QUEUE0, visitPat: null, syms: [], dx: '', rxRows: [{ med: '', freq: '1-0-1', days: '5', food: 'After food' }], notes: '', fu: '+1w', pq: '', selPat: PATIENTS[0], calDay: 0, calBooked: {}, invoices: INVOICES0, lastDone: null, revealMoney: false, staff: STAFF0, selStaff: STAFF0[1], teamFilter: 'All', perms: {}, nsRole: 'Receptionist', nsName: '', nsPhone: '', nsReg: '', nsShift: 'Full day', leads: [ { id: 1, name: 'Nita Shah', reason: 'Thyroid review', when: 'Fri 22, 9:50 AM' }, { id: 2, name: 'Rahul Vora', reason: 'Annual check-up', when: 'Sat 23, 10:30 AM' } ], pats: PATIENTS, wName: '', wPhone: '', wAge: '', wSex: 'Male', wReason: 'Fever & body ache', wDoc: 'Dr. Arjun Shah (you)', wFee: '400', wPay: 'After checkup', wToken: null, wSaved: '', billTab: 'Pending', payFor: null, payMode: 'Cash', payDisc: '0' };
+
+  cur() { return this.state.screen ?? (this.props.startScreen ?? 'today'); }
+  go(name, extra = {}) { const from = this.cur(); this.setState(s => ({ ...extra, screen: name, stack: [...s.stack, from] })); }
+  goBack() { this.setState(s => { const stack = [...s.stack]; const prev = stack.pop() ?? 'today'; return { screen: prev, stack }; }); }
+  tab(name) { this.setState({ screen: name, stack: [] }); }
+  chip(sel) { return sel ? { bg: 'var(--brand)', fg: 'var(--onaccent)', bd: 'var(--brand)' } : { bg: 'var(--card)', fg: 'var(--ink)', bd: 'var(--line)' }; }
+  updRow(i, patch) { this.setState(st => ({ rxRows: st.rxRows.map((r, j) => j === i ? { ...r, ...patch } : r) })); }
+  advanceQueue() { this.setState(st => { const q = st.queue.map(r => ({ ...r })); const cur = q.find(r => r.status === 'in'); if (cur) cur.status = 'done'; const next = q.find(r => r.status === 'wait'); if (next) next.status = 'in'; return { queue: q, lastDone: cur ? cur.pat : st.lastDone }; }); }
+  startVisit(p, reason) { this.go('visit', { visitPat: p, syms: [], dx: '', rxRows: [{ med: '', freq: '1-0-1', days: '5', food: 'After food' }], notes: reason || '', fu: '+1w' }); }
+  openPay(inv) { const patch = { payFor: inv.id, payMode: 'Cash', payDisc: '0' }; if (this.cur() === 'billing') this.setState(patch); else this.go('billing', patch); }
+
+  renderVals() {
+    const s = this.state, screen = this.cur(), dark = s.theme === 'dark';
+    const pat = id => s.pats.find(p => p.id === id) || PATIENTS[0];
+    const emptyDay = this.props.emptyDay ?? false;
+    const inRow = s.queue.find(r => r.status === 'in');
+    const onVisitScreens = ['visit', 'visitDone', 'patDetail'].includes(screen);
+    const curP = (onVisitScreens ? s.visitPat : null) ?? (inRow ? pat(inRow.pat) : (s.visitPat ?? PATIENTS[1]));
+    const curRow = s.queue.find(r => pat(r.pat) === curP) || inRow;
+    const doneCount = 6 + s.queue.filter(r => r.status === 'done').length;
+    const waitCount = s.queue.filter(r => r.status === 'wait').length;
+    const flagStyle = f => f.kind === 'allergy' ? { bg: 'var(--red-soft)', fg: 'var(--red)' } : { bg: 'var(--gold-soft)', fg: 'var(--gold)' };
+    const queue = s.queue.map(r => {
+      const p = pat(r.pat);
+      const st = r.status === 'in' ? { st: 'IN ROOM', stBg: 'var(--brand)', stFg: 'var(--onaccent)', tokC: 'var(--brand)' } : r.status === 'done' ? { st: 'DONE', stBg: 'var(--chip)', stFg: 'var(--sub)', tokC: 'var(--sub)' } : { st: 'START', stBg: 'var(--brand-soft)', stFg: 'var(--brand)', tokC: 'var(--ink)' };
+      return { ...st, tok: 'A-' + String(r.tok).padStart(2, '0'), name: p.name, age: p.age, reason: r.reason, fu: r.fu, wi: !!r.walkin,
+        openPat: () => this.go('patDetail', { selPat: p }),
+        act: () => { if (r.status === 'wait') { this.setState(st2 => ({ queue: st2.queue.map(x => x.tok === r.tok ? { ...x, status: 'in' } : (x.status === 'in' ? { ...x, status: 'wait' } : x)) })); this.startVisit(p, ''); } else if (r.status === 'in') { this.startVisit(p, ''); } } };
+    });
+    const rxFilled = s.rxRows.some(r => r.med.trim());
+    const cvReady = rxFilled || s.dx.trim();
+    const paid = s.invoices.filter(i => i.paid);
+    const sum = arr => arr.reduce((a, i) => a + parseInt(i.amt.replace(/,/g, '')), 0);
+    const LBL = { today: 'Today', patients: 'Patients', dash: 'Dashboard', cal: 'Schedule', earnings: 'Earnings', settings: 'Settings', visit: 'Visit', visitDone: 'Done', patDetail: 'Patient', login: 'Sign in', team: 'Team', staffDetail: 'Member', staffAdd: 'Add member', walkin: 'Walk-in', walkinDone: 'Token', billing: 'Billing' };
+    const isOwner = this.props.isOwner ?? true;
+    const sel = s.selStaff;
+    const permKey = (id, label) => id + '|' + label;
+    const basePerms = PERM_SETS[sel.role] || [];
+    const nsReady = s.nsName.trim() && s.nsPhone.length === 10;
+    const mask = v => s.revealMoney ? v : '₹ ••,•••';
+    const WEEK = [ { d: 'Mon', v: 22 }, { d: 'Tue', v: 18 }, { d: 'Wed', v: 24 }, { d: 'Thu', v: 15 }, { d: 'Fri', v: 0 }, { d: 'Sat', v: 0 }, { d: 'Sun', v: 0 } ];
+    const wmax = Math.max(...WEEK.map(w => w.v), 1);
+    let trail = [...s.stack, screen].map(k => LBL[k] ?? k).filter((l, i, a) => l !== a[i - 1]);
+    if (trail.length > 3) trail = ['…', ...trail.slice(-3)];
+    const bp = s.selPat.bp, bmin = Math.min(...bp), bmax = Math.max(...bp), bpad = (bmax - bmin) || 1;
+    const bpts = bp.map((v, i) => [10 + i * (260 / (bp.length - 1)), 50 - ((v - bmin) / bpad) * 36]);
+    const pql = s.pq.trim().toLowerCase();
+    const slots = (CAL_SLOTS[s.calDay] || []).map((sl, i) => {
+      const key = s.calDay + '-' + i;
+      const booked = s.calBooked[key];
+      const eff = booked ? 'booked' : sl.s;
+      const style = eff === 'booked' ? { bg: 'var(--blue-soft)', bd: 'var(--blue-soft)', fg: 'var(--blue)', timeC: 'var(--blue)', tag: booked ? 'WALK-IN' : 'TOKEN' } : eff === 'avail' ? { bg: 'var(--card)', bd: 'var(--line)', fg: 'var(--sub)', timeC: 'var(--ink)', tag: 'TAP TO ADD' } : { bg: 'var(--chip)', bd: 'var(--chip)', fg: 'var(--sub)', timeC: 'var(--sub)', tag: '' };
+      return { ...style, time: sl.time, label: booked ? 'Walk-in patient' : sl.label, tap: () => { if (sl.s === 'avail' && !booked) this.setState(st => ({ calBooked: { ...st.calBooked, [key]: true } })); } };
+    });
+    const frontDesk = this.props.frontDeskMode ?? false;
+    const canCollect = frontDesk || isOwner;
+    const collector = frontDesk ? 'Pooja Makwana · front desk' : 'Dr. Arjun Shah · owner override';
+    const tokLabel = n => 'A-' + String(n).padStart(2, '0');
+    const nextTok = Math.max(...s.queue.map(r => r.tok), 0) + 1;
+    const wReady = s.wName.trim().length > 2 && s.wPhone.length === 10;
+    const payInv = s.invoices.find(i => i.id === s.payFor) || null;
+    const payBase = payInv ? parseInt(payInv.amt.replace(/,/g, '')) : 0;
+    const payDisc = parseInt(s.payDisc || '0') || 0;
+    const payNet = Math.max(payBase - payDisc, 0);
+    const pendInv = s.invoices.filter(i => !i.paid);
+    const billList = s.billTab === 'Pending' ? pendInv : paid;
+    const radio = on => on ? { bg: 'var(--brand-soft)', bd: 'var(--brand)', fg: 'var(--ink)', dot: 'var(--brand)', fill: 'var(--brand)' } : { bg: 'var(--card)', bd: 'var(--line)', fg: 'var(--ink)', dot: 'var(--line)', fill: 'transparent' };
+    const waitAhead = s.queue.filter(r => r.status === 'wait').length;
+    return {
+      themeName: s.theme, isDark: dark, crumbTrail: trail.join('  ›  '),
+      todayDate: 'Thursday, 21 August', showTabs: ['today', 'patients', 'dash', 'settings'].includes(screen),
+      isLogin: screen === 'login', isToday: screen === 'today', isVisit: screen === 'visit', isVisitDone: screen === 'visitDone', isPatients: screen === 'patients', isPatDetail: screen === 'patDetail', isCal: screen === 'cal', isEarnings: screen === 'earnings', isSettings: screen === 'settings', isDash: screen === 'dash', isWalkin: screen === 'walkin', isWalkinDone: screen === 'walkinDone', isBilling: screen === 'billing',
+      phone: s.phone, setPhone: e => this.setState({ phone: e.target.value.replace(/\D/g, '').slice(0, 10) }),
+      loginBg: s.phone.length === 10 ? 'var(--brand)' : 'var(--chip)', loginFg: s.phone.length === 10 ? 'var(--onaccent)' : 'var(--sub)',
+      login: () => { if (s.phone.length === 10) this.setState({ screen: 'today', stack: [] }); },
+      back: () => this.goBack(),
+      goTodayTab: () => this.tab('today'), goPatientsTab: () => this.tab('patients'), goDashTab: () => this.tab('dash'), goSettingsTab: () => this.tab('settings'),
+      goCalTab: () => this.go('cal'), goCal: () => this.go('cal'), goEarnings: () => this.go('earnings'),
+      tcToday: screen === 'today' ? 'var(--brand)' : 'var(--sub)', tcPatients: screen === 'patients' ? 'var(--brand)' : 'var(--sub)', tcDash: screen === 'dash' ? 'var(--brand)' : 'var(--sub)', tcSettings: screen === 'settings' ? 'var(--brand)' : 'var(--sub)',
+      toggleMoney: () => this.setState(st => ({ revealMoney: !st.revealMoney })),
+      eyeGlyph: s.revealMoney ? '· hide' : '· show', eyeLabel: s.revealMoney ? 'Hide' : 'Show',
+      stRevenueShow: emptyDay ? '₹0' : (s.revealMoney ? (isOwner ? '₹' + sum(paid).toLocaleString('en-IN') : '₹3,600') : '₹ ••••'),
+      dRevMonth: mask('₹84,250'), dRevToday: mask('₹' + sum(paid).toLocaleString('en-IN')), dRevPending: mask('₹' + sum(s.invoices.filter(i => !i.paid)).toLocaleString('en-IN')),
+      weekBars: WEEK.map((w, i) => ({ d: w.d, h: Math.max(Math.round((w.v / wmax) * 52), 3) + 'px', bg: i === 3 ? 'var(--brand)' : (w.v ? 'var(--brand-soft)' : 'var(--chip)'), lc: i === 3 ? 'var(--brand)' : 'var(--sub)' })),
+      dWeekTotal: WEEK.reduce((a, w) => a + w.v, 0), dWeekNote: 'Thu is in progress — 15 seen so far, 6 waiting. Wed was your busiest day.',
+      leads: s.leads.map(ld => ({ ...ld, confirm: () => this.setState(st => ({ leads: st.leads.filter(x => x.id !== ld.id) })) })),
+      hasLeads: s.leads.length > 0, leadCount: s.leads.length,
+      isOwner, notOwner: !isOwner, roleBadge: isOwner ? 'CLINIC OWNER' : 'DOCTOR',
+      dMyFees: mask('₹3,600'),
+      stRevenueLabel: (isOwner ? 'Collected ' : 'My fees ') + (s.revealMoney ? '· hide' : '· show'),
+      isTeam: screen === 'team', isStaffDetail: screen === 'staffDetail', isStaffAdd: screen === 'staffAdd',
+      goTeam: () => this.go('team'), goStaffAdd: () => this.go('staffAdd', { nsName: '', nsPhone: '', nsReg: '', nsRole: 'Receptionist', nsShift: 'Full day' }),
+      teamTotal: s.staff.length, teamOnDuty: s.staff.filter(x => x.duty).length, teamPending: s.staff.filter(x => x.invited).length,
+      teamFeed: TEAM_FEED.map(f => ({ ...f, ...(ROLE_STYLE[f.role] || ROLE_STYLE.Doctor) })),
+      teamFilters: ['All', 'Doctors', 'Nurses', 'Front desk'].map(label => ({ label, ...this.chip(s.teamFilter === label), pick: () => this.setState({ teamFilter: label }) })),
+      staff: s.staff.filter(x => s.teamFilter === 'All' || (s.teamFilter === 'Doctors' && (x.role === 'Doctor' || x.role === 'Owner')) || (s.teamFilter === 'Nurses' && x.role === 'Nurse') || (s.teamFilter === 'Front desk' && x.role === 'Receptionist')).map(x => ({
+        ...x, ...(ROLE_STYLE[x.role] || ROLE_STYLE.Doctor),
+        status: x.invited ? 'INVITED' : (x.duty ? 'ON DUTY' : 'OFF DUTY'),
+        stBg: x.invited ? 'var(--gold-soft)' : (x.duty ? 'var(--brand-soft)' : 'var(--chip)'),
+        stFg: x.invited ? 'var(--gold)' : (x.duty ? 'var(--brand)' : 'var(--sub)'),
+        metric: x.role === 'Receptionist' ? x.statA + ' check-ins' : x.role === 'Nurse' ? x.statA + ' vitals' : x.statA + ' seen',
+        open: () => this.go('staffDetail', { selStaff: x }),
+      })),
+      selStaff: { ...sel, ...(ROLE_STYLE[sel.role] || ROLE_STYLE.Doctor) },
+      selStaffPerms: basePerms.map(([label, def]) => {
+        const on = s.perms[permKey(sel.id, label)] ?? def;
+        return { label, swBg: on ? 'var(--brand)' : 'var(--chip)', swLeft: on ? '21px' : '3px', toggle: () => this.setState(st => ({ perms: { ...st.perms, [permKey(sel.id, label)]: !on } })) };
+      }),
+      selStaffLog: sel.log,
+      dutyCta: sel.duty ? 'Mark off duty' : 'Mark on duty',
+      staffToggleDuty: () => this.setState(st => { const upd = st.staff.map(x => x.id === sel.id ? { ...x, duty: !x.duty } : x); return { staff: upd, selStaff: upd.find(x => x.id === sel.id) }; }),
+      staffRemove: () => this.setState(st => ({ staff: st.staff.filter(x => x.id !== sel.id), screen: 'team', stack: ['dash'] })),
+      roleOpts: ['Doctor', 'Nurse', 'Receptionist'].map(label => ({ label, ...this.chip(s.nsRole === label), pick: () => this.setState({ nsRole: label }) })),
+      roleHint: ROLE_HINTS[s.nsRole], nsIsDoctor: s.nsRole === 'Doctor',
+      nsName: s.nsName, setNsName: e => this.setState({ nsName: e.target.value }),
+      nsPhone: s.nsPhone, setNsPhone: e => this.setState({ nsPhone: e.target.value.replace(/\D/g, '').slice(0, 10) }),
+      nsReg: s.nsReg, setNsReg: e => this.setState({ nsReg: e.target.value }),
+      shiftOpts: ['Morning', 'Evening', 'Full day'].map(label => ({ label, ...this.chip(s.nsShift === label), pick: () => this.setState({ nsShift: label }) })),
+      nsPerms: (PERM_SETS[s.nsRole] || []).map(([label, on]) => ({ label, fg: on ? 'var(--ink)' : 'var(--sub)', tag: on ? 'ALLOWED' : 'BLOCKED', tagFg: on ? 'var(--brand)' : 'var(--sub)' })),
+      nsBg: nsReady ? 'var(--brand)' : 'var(--chip)', nsFg: nsReady ? 'var(--onaccent)' : 'var(--sub)',
+      nsCta: nsReady ? 'Send invite on WhatsApp' : 'Enter name and mobile number',
+      staffSave: () => {
+        if (!nsReady) return;
+        const initials = s.nsName.trim().replace(/^(Dr\.?|Sister)\s+/i, '').split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+        const shift = s.nsShift === 'Morning' ? 'Morning, 9–2' : s.nsShift === 'Evening' ? 'Evening, 4:30–8' : 'Mon–Sat, full day';
+        const nm = { id: 'n' + Date.now(), name: s.nsName.trim(), initials, role: s.nsRole, shift, phone: s.nsPhone.replace(/(\d{5})(\d{5})/, '$1 $2'), joined: 'Invite sent today', duty: false, invited: true, statA: '—', statAL: 'Seen today', statB: '—', statBL: 'Rating', statC: '—', statCL: 'This month', log: [{ text: 'Invite sent to +91 ' + s.nsPhone + ' · awaiting first sign-in', time: 'now' }] };
+        this.setState(st => ({ staff: [...st.staff, nm], screen: 'team', stack: ['dash'] }));
+      },
+      hasQueue: !emptyDay, noQueue: emptyDay,
+      nextTokLabel: tokLabel(nextTok),
+      billPendNote: pendInv.length ? '₹' + sum(pendInv).toLocaleString('en-IN') + ' to collect' : 'All settled',
+      goWalkin: () => this.go('walkin', { wName: '', wPhone: '', wAge: '', wSex: 'Male', wReason: 'Fever & body ache', wFee: '400', wPay: 'After checkup' }),
+      goBilling: () => this.go('billing', { billTab: 'Pending', payFor: null }),
+      walkinWho: frontDesk ? 'Front desk · Pooja Makwana. Register the patient, hand over the token slip — the fee is settled here after the doctor finishes.' : 'Registering a walk-in yourself. The token slip and the bill both go to the front desk automatically.',
+      wName: s.wName, setWName: e => this.setState({ wName: e.target.value }),
+      wPhone: s.wPhone, setWPhone: e => this.setState({ wPhone: e.target.value.replace(/\D/g, '').slice(0, 10) }),
+      wAge: s.wAge, setWAge: e => this.setState({ wAge: e.target.value.replace(/\D/g, '').slice(0, 3) }),
+      wSexOpts: ['Male', 'Female', 'Other'].map(label => ({ label, ...this.chip(s.wSex === label), pick: () => this.setState({ wSex: label }) })),
+      wReasonOpts: W_REASONS.map(label => ({ label, ...this.chip(s.wReason === label), pick: () => this.setState({ wReason: label }) })),
+      wDocOpts: ['Dr. Arjun Shah (you)', 'Dr. Neha Trivedi · evening'].map(label => ({ label, ...this.chip(s.wDoc === label), pick: () => this.setState({ wDoc: label }) })),
+      wFeeOpts: ['200', '400', '600'].map(v => ({ label: '₹' + v, ...this.chip(s.wFee === v), pick: () => this.setState({ wFee: v }) })),
+      wPayOpts: [['After checkup', 'Bill goes to the front desk when the visit is done — recommended'], ['Now at desk', 'Advance collected at registration']].map(([label, sub]) => ({ label, sub, ...radio(s.wPay === label), pick: () => this.setState({ wPay: label }) })),
+      wBg: wReady ? 'var(--brand)' : 'var(--chip)', wFg: wReady ? 'var(--onaccent)' : 'var(--sub)',
+      wCta: wReady ? 'Add to queue · ' + tokLabel(nextTok) : 'Enter name and mobile number',
+      walkinSave: () => {
+        if (!wReady) return;
+        const nm = s.wName.trim();
+        const initials = nm.replace(/^(Mr|Mrs|Ms|Dr)\.?\s+/i, '').split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+        const id = 'PT-' + (1400 + s.pats.length);
+        const np = { id, name: nm, initials, age: (s.wAge || '—') + ' · ' + s.wSex[0], phone: s.wPhone.replace(/(\d{5})(\d{5})/, '$1 $2'), visits: 0, last: 'Today', flags: [], bp: [120, 120, 120, 120], bpLatest: '—', history: [] };
+        const prepaid = s.wPay === 'Now at desk';
+        const row = { tok: nextTok, pat: id, reason: s.wReason, status: 'wait', fu: false, walkin: true, prepaid };
+        const adv = prepaid ? [{ id: Date.now(), name: nm, tok: tokLabel(nextTok), item: 'Consultation · advance', time: 'Just now', amt: s.wFee, mode: 'Cash', paid: true, by: collector }] : [];
+        this.setState(st => ({ pats: [...st.pats, np], queue: [...st.queue, row], invoices: [...st.invoices, ...adv], wToken: tokLabel(nextTok), wSaved: nm, screen: 'walkinDone', stack: [...st.stack, 'walkin'] }));
+      },
+      wdToken: s.wToken || tokLabel(nextTok), wdName: s.wSaved || s.wName,
+      wdMeta: (s.wAge ? s.wAge + ' · ' + s.wSex[0] + ' · ' : '') + s.wReason,
+      wdWait: waitAhead > 1 ? 'about ' + (waitAhead - 1) * 7 + ' min · ' + (waitAhead - 1) + ' ahead' : 'next after current patient',
+      wdFee: '₹' + s.wFee + (s.wPay === 'Now at desk' ? ' · paid in advance' : ' · to be collected'),
+      wdPayNote: s.wPay === 'Now at desk' ? 'Advance of ₹' + s.wFee + ' recorded at the desk. Receipt sent on WhatsApp.' : 'No money is taken now. The moment the doctor completes the visit, the bill appears at the front desk for collection.',
+      deskWho: frontDesk ? 'Pooja Makwana · Front desk' : isOwner ? 'Dr. Arjun Shah · Owner' : 'Dr. Arjun Shah · Doctor',
+      deskNote: frontDesk ? 'You can collect cash, UPI or card and print receipts.' : isOwner ? 'Front desk normally collects — as owner you can settle a bill yourself.' : 'View only. The front desk collects payments after each checkup.',
+      deskBandBg: canCollect ? 'var(--brand-soft)' : 'var(--chip)',
+      deskAvBg: frontDesk ? 'var(--gold-soft)' : 'var(--brand-soft)', deskAvFg: frontDesk ? 'var(--gold)' : 'var(--brand)', deskAvInit: frontDesk ? 'PM' : 'AS',
+      billPendAmt: '₹' + sum(pendInv).toLocaleString('en-IN'), billPendCount: pendInv.length,
+      billPaidAmt: '₹' + sum(paid).toLocaleString('en-IN'),
+      billCash: '₹' + sum(paid.filter(i => i.mode === 'Cash')).toLocaleString('en-IN'),
+      billTabs: ['Pending', 'Collected'].map(label => ({ label: label === 'Pending' ? 'To collect · ' + pendInv.length : 'Collected · ' + paid.length, ...this.chip(s.billTab === label), pick: () => this.setState({ billTab: label }) })),
+      billEmpty: billList.length === 0,
+      billRows: billList.map(inv => ({
+        ...inv, tok: inv.tok || '—',
+        st: inv.paid ? 'PAID · ' + inv.mode.toUpperCase() : 'AWAITING',
+        stFg: inv.paid ? 'var(--brand)' : 'var(--gold)',
+        showCollect: !inv.paid && canCollect, showBlocked: !inv.paid && !canCollect,
+        showBy: !!inv.paid && !!inv.by, by: 'Collected by ' + (inv.by || collector),
+        collect: () => { if (canCollect) this.openPay(inv); },
+      })),
+      payOpen: !!payInv, payName: payInv ? payInv.name : '', payTok: payInv ? (payInv.tok || '') : '', payItem: payInv ? payInv.item : '',
+      payBase, payDiscVal: payDisc, payNet,
+      payDiscOpts: ['0', '50', '100'].map(v => ({ label: v === '0' ? 'None' : '₹' + v, ...this.chip(s.payDisc === v), pick: () => this.setState({ payDisc: v }) })),
+      payModeOpts: ['Cash', 'UPI', 'Card'].map(label => ({ label, ...this.chip(s.payMode === label), pick: () => this.setState({ payMode: label }) })),
+      payCta: 'Mark ₹' + payNet + ' received · ' + s.payMode,
+      payBy: 'Recorded against ' + collector,
+      closePay: () => this.setState({ payFor: null }),
+      confirmPay: () => { if (!payInv) return; this.setState(st => ({ invoices: st.invoices.map(x => x.id === payInv.id ? { ...x, paid: true, amt: String(payNet), mode: st.payMode, by: collector, time: 'Just now' } : x), payFor: null, billTab: 'Collected' })); },
+      stBooked: emptyDay ? 0 : 18, stDone: emptyDay ? 0 : doneCount, stWaiting: emptyDay ? 0 : waitCount, stRevenue: emptyDay ? '₹0' : '₹' + (sum(paid)).toLocaleString('en-IN'),
+      curToken: curRow ? 'A-' + String(curRow.tok).padStart(2, '0') : 'A-09', curName: curP.name, curAge: curP.age, curReason: curRow ? curRow.reason : 'Consultation', curInitials: curP.initials, curPhone: curP.phone, curVisitNo: curP.visits + 1,
+      curFlags: curP.flags.map(f => ({ label: f.label, ...flagStyle(f) })), curHasFlags: curP.flags.length > 0,
+      openVisit: () => this.startVisit(inRow ? pat(inRow.pat) : curP, ''),
+      openCurPat: () => this.go('patDetail', { selPat: curP }),
+      callNext: () => this.advanceQueue(),
+      queue, followUps: FOLLOWUPS.map(f => ({ ...f, dot: f.late ? 'var(--red)' : 'var(--gold)', whenC: f.late ? 'var(--red)' : 'var(--sub)' })),
+      symChips: SYMPTOMS.map(label => { const on = s.syms.includes(label); return { label: on ? label + ' ✓' : label, ...this.chip(on), pick: () => this.setState(st => ({ syms: on ? st.syms.filter(x => x !== label) : [...st.syms, label] })) }; }),
+      dx: s.dx, setDx: e => this.setState({ dx: e.target.value }),
+      notes: s.notes, setNotes: e => this.setState({ notes: e.target.value }),
+      rxTemplates: RX_TEMPLATES.map(t => ({ name: t.name, apply: () => this.setState({ rxRows: t.rows.map(r => ({ ...r })) }) })),
+      rxRows: s.rxRows.map((r, i) => ({ ...r,
+        setMed: e => this.updRow(i, { med: e.target.value }),
+        setDays: e => this.updRow(i, { days: e.target.value.replace(/\D/g, '').slice(0, 2) }),
+        remove: () => this.setState(st => ({ rxRows: st.rxRows.length > 1 ? st.rxRows.filter((_, j) => j !== i) : st.rxRows })),
+        foodToggle: () => this.updRow(i, { food: r.food === 'After food' ? 'Before food' : 'After food' }),
+        freqs: FREQS.map(f => ({ label: f, ...(r.freq === f ? { bg: 'var(--brand)', fg: 'var(--onaccent)', bd: 'var(--brand)' } : { bg: 'transparent', fg: 'var(--sub)', bd: 'var(--line)' }), pick: () => this.updRow(i, { freq: f }) })),
+      })),
+      addRow: () => this.setState(st => ({ rxRows: [...st.rxRows, { med: '', freq: '1-0-1', days: '5', food: 'After food' }] })),
+      cloneLast: () => { const h = curP.history[0]; this.setState({ syms: ['Fatigue'], dx: h ? h.dx : '', rxRows: h ? h.meds.split(' · ').map(m => ({ med: m, freq: '1-0-1', days: '15', food: 'After food' })) : s.rxRows }); },
+      fuChips: FU_CHIPS.map(label => ({ label, ...this.chip(s.fu === label), pick: () => this.setState({ fu: label }) })),
+      cvBg: cvReady ? 'var(--brand)' : 'var(--chip)', cvFg: cvReady ? 'var(--onaccent)' : 'var(--sub)',
+      cvCta: cvReady ? 'Complete visit' : 'Add a diagnosis or medicine',
+      completeVisit: () => { if (!cvReady) return; const prepaid = curRow && curRow.prepaid; this.setState(st => ({ queue: st.queue.map(x => pat(x.pat) === curP && x.status !== 'done' ? { ...x, status: 'done' } : x), invoices: prepaid ? st.invoices : [...st.invoices, { id: Date.now(), name: curP.name, tok: curRow ? 'A-' + String(curRow.tok).padStart(2, '0') : '—', item: 'Consultation', time: 'Just now', amt: '400', mode: 'Cash', paid: false, by: '' }] })); this.go('visitDone'); },
+      vdSummary: `${curP.name} · ${s.dx || 'Consultation'} · ${s.rxRows.filter(r => r.med.trim()).length} medicines`,
+      vdFu: s.fu === 'None' ? 'No follow-up scheduled' : `Follow-up reminder set for ${s.fu} — WhatsApp nudge goes out automatically`,
+      nextPatient: () => { this.advanceQueue(); this.setState({ visitPat: null }); this.tab('today'); },
+      
+      pq: s.pq, setPq: e => this.setState({ pq: e.target.value }),
+      vdBillHead: (curRow && curRow.prepaid) ? '₹400 already paid in advance' : '₹400 bill sent to the front desk',
+      vdBillNote: (curRow && curRow.prepaid) ? 'Walk-in paid at registration · receipt already issued' : 'Pooja Makwana will collect it at the desk — you don’t handle cash',
+      patients: s.pats.filter(p => !pql || (p.name + p.phone + p.id).toLowerCase().includes(pql)).map(p => ({ ...p, open: () => this.go('patDetail', { selPat: p }) })),
+      selPat: s.selPat, selPatFlags: s.selPat.flags.length ? s.selPat.flags.map(f => ({ label: f.label, ...flagStyle(f) })) : [{ label: 'NO KNOWN ALLERGIES', bg: 'var(--chip)', fg: 'var(--sub)' }],
+      selPatVisits: s.selPat.history.length ? s.selPat.history : [{ date: '—', dx: 'No visits yet', meds: 'First consultation pending' }],
+      bpSpark: bpts.map(p => p.map(n => n.toFixed(1)).join(',')).join(' '), bpCx: bpts[bpts.length - 1][0].toFixed(1), bpCy: bpts[bpts.length - 1][1].toFixed(1),
+      newVisitForPat: () => this.startVisit(s.selPat, ''),
+      calDays: CAL_DAYS.map((d, i) => ({ ...d, ...this.chip(s.calDay === i), pick: () => this.setState({ calDay: i }) })),
+      calSlots: slots,
+      eTotal: '₹' + sum(paid).toLocaleString('en-IN'),
+      eCash: '₹' + sum(paid.filter(i => i.mode === 'Cash')).toLocaleString('en-IN'),
+      eUpi: '₹' + sum(paid.filter(i => i.mode === 'UPI')).toLocaleString('en-IN'),
+      ePending: '₹' + sum(s.invoices.filter(i => !i.paid)).toLocaleString('en-IN'),
+      invoices: s.invoices.map(inv => ({ ...inv, st: inv.paid ? 'PAID · ' + inv.mode.toUpperCase() : 'PENDING', stBg: inv.paid ? 'var(--brand-soft)' : 'var(--gold-soft)', stFg: inv.paid ? 'var(--brand)' : 'var(--gold)', toggle: () => { if (!inv.paid) this.openPay(inv); } })),
+      toggleTheme: () => this.setState(st => ({ theme: st.theme === 'dark' ? 'light' : 'dark' })),
+      swBg: dark ? 'var(--brand)' : 'var(--chip)', swLeft: dark ? '23px' : '3px',
+      logout: () => this.setState({ screen: 'login', stack: [], phone: '' }),
+    };
+  }
+}
+</script>
+</body>
+</html>
