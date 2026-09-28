@@ -45,6 +45,9 @@ use App\Controllers\VitalsController;
 use App\Controllers\WebhookController;
 use App\Controllers\WordPressAdminController;
 use App\Controllers\BlogController;
+use App\Controllers\StoreAdminController;
+use App\Controllers\VendorAuthController;
+use App\Controllers\VendorPortalController;
 use App\Core\GroupedRouteRegistrar;
 use App\Core\RouteRegistrar;
 
@@ -559,6 +562,50 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/partners/{id}/status', [PartnerAdminController::class, 'setStatus']);
         $admin->post('/partners/{id}/override', [PartnerAdminController::class, 'setOverride']);
         $admin->post('/partners/{id}/document', [PartnerAdminController::class, 'reviewDocument']);
+
+        // Store marketplace — sellers + settings (chunk 1). Static segments
+        // before {id} routes so "settings" etc. never match an id.
+        $admin->get('/store', static fn () => \App\Http\Response::redirect('/admin/store/vendors'));
+        $admin->get('/store/settings', [StoreAdminController::class, 'settings']);
+        $admin->post('/store/settings', [StoreAdminController::class, 'saveSettings']);
+        $admin->get('/store/vendors', [StoreAdminController::class, 'vendors']);
+        $admin->get('/store/vendors/{id}', [StoreAdminController::class, 'vendorDetail']);
+        $admin->post('/store/vendors/{id}/status', [StoreAdminController::class, 'vendorStatus']);
+        $admin->post('/store/vendors/{id}/reset-password', [StoreAdminController::class, 'resetPassword']);
+        $admin->post('/store/vendors/{id}/feature', [StoreAdminController::class, 'toggleFeatured']);
+        $admin->get('/store/documents/{id}/file', [StoreAdminController::class, 'documentFile']);
+        $admin->post('/store/documents/{id}/review', [StoreAdminController::class, 'reviewDocument']);
+        $admin->post('/store/bank/{id}/verify', [StoreAdminController::class, 'verifyBank']);
+        $admin->post('/store/bank/{id}/reveal', [StoreAdminController::class, 'revealBank']);
+    });
+
+    // Store marketplace — seller portal. Own guard (mc_vendor_token, path /vendor),
+    // separate from clinic users, admins and partners.
+    $router->get('/vendor', static fn () => \App\Http\Response::redirect('/vendor/dashboard'));
+    $router->group([
+        'prefix' => '/vendor',
+        'middleware' => ['rate', 'csrf', 'vendor'],
+    ], static function (GroupedRouteRegistrar $vendor): void {
+        // Public (VendorAuthMiddleware lets exactly these two paths through)
+        $vendor->get('/login', [VendorAuthController::class, 'showLogin']);
+        $vendor->post('/login', [VendorAuthController::class, 'login']);
+        $vendor->get('/register', [VendorAuthController::class, 'showRegister']);
+        $vendor->post('/register', [VendorAuthController::class, 'register']);
+        $vendor->post('/logout', [VendorAuthController::class, 'logout']);
+
+        // Authenticated onboarding
+        $vendor->get('/dashboard', [VendorPortalController::class, 'dashboard']);
+        $vendor->post('/submit', [VendorPortalController::class, 'submit']);
+        $vendor->get('/profile', [VendorPortalController::class, 'profile']);
+        $vendor->post('/profile', [VendorPortalController::class, 'saveProfile']);
+        $vendor->get('/addresses', [VendorPortalController::class, 'addresses']);
+        $vendor->post('/addresses', [VendorPortalController::class, 'addAddress']);
+        $vendor->post('/addresses/{id}/remove', [VendorPortalController::class, 'removeAddress']);
+        $vendor->get('/bank', [VendorPortalController::class, 'bank']);
+        $vendor->post('/bank', [VendorPortalController::class, 'saveBank']);
+        $vendor->get('/documents', [VendorPortalController::class, 'documents']);
+        $vendor->post('/documents', [VendorPortalController::class, 'uploadDocument']);
+        $vendor->get('/documents/{id}/file', [VendorPortalController::class, 'documentFile']);
     });
 
     // Partner program — public auth pages + guarded partner dashboard.

@@ -17,6 +17,10 @@ final class RequestContext
     private static ?array $superAdmin = null;
     private static ?array $partner = null;
 
+    /** Store marketplace vendor (store_vendors row) + the logged-in store_vendor_users row. */
+    private static ?array $vendor = null;
+    private static ?array $vendorUser = null;
+
     /** @var array{clinic_id: int, scopes: list<string>, key_id: int}|null */
     private static ?array $apiAuth = null;
 
@@ -101,6 +105,31 @@ final class RequestContext
         return isset(self::$partner['id']) ? (int) self::$partner['id'] : null;
     }
 
+    /**
+     * @param array<string, mixed> $vendor
+     * @param array<string, mixed> $user
+     */
+    public static function setVendor(array $vendor, array $user): void
+    {
+        self::$vendor = $vendor;
+        self::$vendorUser = $user;
+    }
+
+    public static function vendor(): ?array
+    {
+        return self::$vendor;
+    }
+
+    public static function vendorId(): ?int
+    {
+        return isset(self::$vendor['id']) ? (int) self::$vendor['id'] : null;
+    }
+
+    public static function vendorUser(): ?array
+    {
+        return self::$vendorUser;
+    }
+
     /** @param array{clinic_id: int, scopes: list<string>, key_id: int} $auth */
     public static function setApiAuth(array $auth): void
     {
@@ -145,6 +174,8 @@ final class RequestContext
         self::$user = null;
         self::$portalPatient = null;
         self::$superAdmin = null;
+        self::$vendor = null;
+        self::$vendorUser = null;
         self::$apiAuth = null;
         self::$impersonation = null;
         self::$refreshedAuth = null;

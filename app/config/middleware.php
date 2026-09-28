@@ -13,6 +13,7 @@ use App\Middleware\RefreshTokenMiddleware;
 use App\Middleware\SubscriptionMiddleware;
 use App\Middleware\SuperAdminAuthMiddleware;
 use App\Middleware\TenantMiddleware;
+use App\Middleware\VendorAuthMiddleware;
 
 return [
     'refresh' => RefreshTokenMiddleware::class,
@@ -25,5 +26,6 @@ return [
     'rate' => RateLimitMiddleware::class,
     'superadmin' => SuperAdminAuthMiddleware::class,
     'partner' => PartnerAuthMiddleware::class,
+    'vendor' => VendorAuthMiddleware::class,
     'api_bearer' => ApiBearerMiddleware::class,
 ];

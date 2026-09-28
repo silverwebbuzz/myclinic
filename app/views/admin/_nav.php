@@ -51,6 +51,10 @@ $navGroups = [
         ['/admin/lab/categories', 'Categories', 'M4 6h16M4 10h16M4 14h10M4 18h10'],
         ['/admin/lab/coupons', 'Discount Coupons', 'M9 5H7a2 2 0 00-2 2v3a2 2 0 010 4v3a2 2 0 002 2h2M9 5h8a2 2 0 012 2v3a2 2 0 000 4v3a2 2 0 01-2 2H9M9 5v14'],
     ],
+    'Store' => [
+        ['/admin/store/vendors', 'Sellers', 'M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6', \App\Services\Store\VendorService::pendingReviewCount()],
+        ['/admin/store/settings', 'Store settings', 'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-2.82 1.17V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-2.82-1.17l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15H4.5a2 2 0 110-4h.09a1.65 1.65 0 001.17-2.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 0011.4 4.6V4.5a2 2 0 114 0v.09a1.65 1.65 0 002.82 1.17l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 11h.1a2 2 0 110 4h-.1z'],
+    ],
     'Growth' => [
         ['/admin/partners', 'Partners', 'M17 21v-2a4 4 0 00-3-3.87M9 21v-2a4 4 0 013-3.87M12 7a4 4 0 100 8 4 4 0 000-8z'],
         ['/admin/partner-payouts', 'Payouts', 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6'],

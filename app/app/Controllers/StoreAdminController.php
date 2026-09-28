@@ -1,0 +1,217 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Controllers;
+
+use App\Core\QueryBuilder;
+use App\Core\RequestContext;
+use App\Http\Request;
+use App\Http\Response;
+use App\Services\CsrfService;
+use App\Services\Store\StoreAudit;
+use App\Services\Store\StoreCrypto;
+use App\Services\Store\StoreSettings;
+use App\Services\Store\VendorService;
+use App\Support\SessionFlash;
+use App\Support\View;
+
+/**
+ * /admin/store/* (super-admin only) — marketplace administration.
+ * Chunk 1: seller review (profile, addresses, bank, KYC documents), status
+ * decisions, password reset, featured flag, and store settings (on/off + preview).
+ */
+final class StoreAdminController
+{
+    private const STATUSES = ['draft', 'pending_review', 'approved', 'rejected', 'suspended', 'closed'];
+
+    public function vendors(Request $request): Response
+    {
+        $status = (string) ($request->query['status'] ?? 'pending_review');
+        if ($status !== '' && !in_array($status, self::STATUSES, true)) {
+            $status = '';
+        }
+        $q = trim((string) ($request->query['q'] ?? ''));
+        try {
+            $data = VendorService::adminList($status, $q);
+            $tableMissing = false;
+        } catch (\Throwable $e) {
+            error_log('[StoreAdmin::vendors] ' . $e->getMessage());
+            $data = ['rows' => [], 'counts' => []];
+            $tableMissing = true;
+        }
+
+        return $this->render('admin/store_vendors', [
+            'rows' => $data['rows'],
+            'counts' => $data['counts'],
+            'status' => $status,
+            'q' => $q,
+            'tableMissing' => $tableMissing,
+        ]);
+    }
+
+    public function vendorDetail(Request $request, string $id): Response
+    {
+        $vendor = VendorService::find((int) $id);
+        if ($vendor === null) {
+            return Response::html('Seller not found', 404);
+        }
+        $vendorId = (int) $vendor['id'];
+
+        return $this->render('admin/store_vendor_detail', [
+            'vendor' => $vendor,
+            'owner' => QueryBuilder::table('store_vendor_users')->where('vendor_id', '=', $vendorId)->where('role', '=', 'owner')->first(),
+            'addresses' => VendorService::addresses($vendorId, false),
+            'bank' => VendorService::primaryBank($vendorId),
+            'documents' => VendorService::documents($vendorId),
+            'docTypes' => VendorService::DOC_TYPES,
+            'checklist' => VendorService::checklist($vendor),
+            'audit' => VendorService::adminAuditTrail($vendorId),
+            'businessTypes' => VendorService::BUSINESS_TYPES,
+            'tempPassword' => SessionFlash::pull('store_temp_password'),
+        ]);
+    }
+
+    public function vendorStatus(Request $request, string $id): Response
+    {
+        $result = VendorService::adminSetStatus(
+            (int) $id,
+            (string) ($request->post['action'] ?? ''),
+            (string) ($request->post['reason'] ?? ''),
+            $this->adminId(),
+        );
+        $this->flash($result, 'Seller status updated.');
+
+        return Response::redirect('/admin/store/vendors/' . (int) $id);
+    }
+
+    public function resetPassword(Request $request, string $id): Response
+    {
+        $result = VendorService::adminResetPassword((int) $id);
+        if ($result['ok']) {
+            // Shown once on the next page load, never stored in plain text.
+            SessionFlash::put('store_temp_password', $result['password']);
+        }
+        $this->flash($result, 'Temporary password generated. Share it with the seller securely.');
+
+        return Response::redirect('/admin/store/vendors/' . (int) $id);
+    }
+
+    public function toggleFeatured(Request $request, string $id): Response
+    {
+        VendorService::adminToggleFeatured((int) $id);
+
+        return Response::redirect('/admin/store/vendors/' . (int) $id);
+    }
+
+    public function reviewDocument(Request $request, string $id): Response
+    {
+        $doc = QueryBuilder::table('store_vendor_documents')->where('id', '=', (int) $id)->first();
+        $result = VendorService::adminReviewDocument(
+            (int) $id,
+            (string) ($request->post['decision'] ?? ''),
+            (string) ($request->post['reason'] ?? ''),
+            $this->adminId(),
+        );
+        $this->flash($result, 'Document updated.');
+
+        return Response::redirect('/admin/store/vendors/' . (int) ($doc['vendor_id'] ?? 0));
+    }
+
+    public function documentFile(Request $request, string $id): Response
+    {
+        $doc = QueryBuilder::table('store_vendor_documents')->where('id', '=', (int) $id)->first();
+        if ($doc === null) {
+            return Response::html('Not found', 404);
+        }
+        StoreAudit::log('vendor_document.view', 'vendor_document', (int) $doc['id']);
+
+        return VendorService::documentResponse($doc);
+    }
+
+    public function verifyBank(Request $request, string $id): Response
+    {
+        $bank = QueryBuilder::table('store_vendor_bank_accounts')->where('id', '=', (int) $id)->first();
+        $result = VendorService::adminVerifyBank((int) $id, (string) ($request->post['decision'] ?? ''));
+        $this->flash($result + ['error' => 'Could not update bank status.'], 'Bank account updated.');
+
+        return Response::redirect('/admin/store/vendors/' . (int) ($bank['vendor_id'] ?? 0));
+    }
+
+    /** JSON: full account number, only on explicit request (audited). */
+    public function revealBank(Request $request, string $id): Response
+    {
+        $acct = VendorService::adminRevealAccount((int) $id);
+
+        return $acct === null
+            ? Response::json(['error' => 'Unavailable (missing record or encryption key).'], 404)
+            : Response::json(['account' => $acct]);
+    }
+
+    // ---- Settings -------------------------------------------------------------
+
+    public function settings(Request $request): Response
+    {
+        $previewKey = StoreSettings::get('store_preview_key');
+
+        return $this->render('admin/store_settings', [
+            'enabled' => StoreSettings::enabled(),
+            'previewUrl' => $previewKey !== '' ? 'https://eclinicpro.com/store/?preview=' . $previewKey : null,
+            'cryptoReady' => StoreCrypto::isConfigured(),
+            'settings' => [
+                'store_require_product_approval' => StoreSettings::get('store_require_product_approval', '1'),
+                'store_default_return_window_days' => StoreSettings::get('store_default_return_window_days', '7'),
+            ],
+        ]);
+    }
+
+    public function saveSettings(Request $request): Response
+    {
+        $action = (string) ($request->post['action'] ?? '');
+        try {
+            if ($action === 'toggle_enabled') {
+                $on = !StoreSettings::enabled();
+                StoreSettings::set('store_enabled', $on ? '1' : '0');
+                StoreAudit::log('store.' . ($on ? 'enable' : 'disable'), 'setting', null);
+                SessionFlash::put('store_ok', $on ? 'Store is now LIVE for customers.' : 'Store is now hidden from customers.');
+            } elseif ($action === 'new_preview_key') {
+                StoreSettings::set('store_preview_key', bin2hex(random_bytes(16)), true);
+                StoreAudit::log('store.preview_key_rotate', 'setting', null);
+                SessionFlash::put('store_ok', 'New preview link generated. Old preview links stop working.');
+            } elseif ($action === 'save') {
+                StoreSettings::set('store_require_product_approval', !empty($request->post['store_require_product_approval']) ? '1' : '0');
+                StoreSettings::set('store_default_return_window_days', (string) max(0, min(30, (int) ($request->post['store_default_return_window_days'] ?? 7))));
+                StoreAudit::log('store.settings_save', 'setting', null);
+                SessionFlash::put('store_ok', 'Settings saved.');
+            }
+        } catch (\Throwable $e) {
+            error_log('[StoreAdmin::saveSettings] ' . $e->getMessage());
+            SessionFlash::put('store_err', 'Could not save. Have the store database patches been run?');
+        }
+
+        return Response::redirect('/admin/store/settings');
+    }
+
+    // ---- Helpers --------------------------------------------------------------
+
+    private function adminId(): int
+    {
+        return (int) (RequestContext::superAdmin()['id'] ?? 0);
+    }
+
+    /** @param array{ok: bool, error?: string} $result */
+    private function flash(array $result, string $success): void
+    {
+        SessionFlash::put($result['ok'] ? 'store_ok' : 'store_err', $result['ok'] ? $success : ($result['error'] ?? 'Something went wrong.'));
+    }
+
+    /** @param array<string, mixed> $data */
+    private function render(string $view, array $data): Response
+    {
+        return Response::html(View::render($view, $data + [
+            'csrf' => CsrfService::token(),
+            'flashOk' => SessionFlash::pull('store_ok'),
+            'flashErr' => SessionFlash::pull('store_err'),
+        ]));
+    }
+}
