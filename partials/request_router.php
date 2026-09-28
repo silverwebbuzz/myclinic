@@ -101,6 +101,35 @@ function ecp_dispatch_clean_url(string $requestUri): bool
         return true;
     }
 
+    // eClinicPro Store — mirrors the /store rules in the root .htaccess.
+    if (preg_match('#^/store(/.*)?$#i', $uri)) {
+        $storeDir = __DIR__ . '/../store/';
+        $routes = [
+            '#^/store/?$#' => ['index.php', []],
+            '#^/store/c/([a-z0-9][a-z0-9\-]*)/([a-z0-9][a-z0-9\-]*)/?$#i' => ['listing.php', ['_r_type' => 'category', '_r_a' => 1, '_r_b' => 2]],
+            '#^/store/c/([a-z0-9][a-z0-9\-]*)/?$#i' => ['listing.php', ['_r_type' => 'category', '_r_a' => 1]],
+            '#^/store/(need|goal|brand)/([a-z0-9][a-z0-9\-]*)/?$#i' => ['listing.php', ['_r_type' => 1, '_r_a' => 2]],
+            '#^/store/search/?$#i' => ['listing.php', ['_r_type' => 'search']],
+            '#^/store/p/([a-z0-9][a-z0-9\-]*)/?$#i' => ['product.php', ['_r_a' => 1]],
+            '#^/store/seller/([a-z0-9][a-z0-9\-]*)/?$#i' => ['seller.php', ['_r_a' => 1]],
+            '#^/store/(categories|wishlist|cart|checkout)/?$#i' => [null, []],
+            '#^/store/order/([A-Za-z0-9\-]+)/?$#' => ['order.php', ['_r_a' => 1]],
+        ];
+        foreach ($routes as $re => [$file, $params]) {
+            if (!preg_match($re, $uri, $m)) {
+                continue;
+            }
+            foreach ($params as $k => $v) {
+                $_GET[$k] = is_int($v) ? strtolower($m[$v]) : $v;
+            }
+            require $storeDir . ($file ?? strtolower($m[1]) . '.php');
+
+            return true;
+        }
+
+        return false;   // e.g. /store/_lib.php → 404, never executed
+    }
+
     if (preg_match('#^/([^.]+)/?$#', $uri, $m)) {
         $php = __DIR__ . '/../' . $m[1] . '.php';
         if (is_file($php)) {

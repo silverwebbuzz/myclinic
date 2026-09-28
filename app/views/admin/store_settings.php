@@ -81,6 +81,30 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
             <span class="text-slate-600">Default return window (days)</span>
             <input type="number" min="0" max="30" name="store_default_return_window_days" value="<?= $e($settings['store_default_return_window_days']) ?>" class="mt-1 w-32 rounded border px-2 py-1.5 text-sm">
         </label>
+
+        <h2 class="pt-2 font-semibold">Orders &amp; money</h2>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <label class="block text-sm">
+                <span class="text-slate-600">Shipping fee per seller (₹)</span>
+                <input name="ship_flat" inputmode="decimal" value="<?= $e($shipping !== null ? \App\Services\Store\ProductService::rupees((int) $shipping['flat_fee_paise']) : '49') ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
+                <span class="text-xs text-slate-400">Charged once per seller in an order (each seller ships separately).</span>
+            </label>
+            <label class="block text-sm">
+                <span class="text-slate-600">Free shipping when that seller's items total at least (₹)</span>
+                <input name="ship_free_above" inputmode="decimal" value="<?= $e($shipping !== null && $shipping['free_above_paise'] !== null ? \App\Services\Store\ProductService::rupees((int) $shipping['free_above_paise']) : '') ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm" placeholder="Blank = never free">
+            </label>
+            <label class="block text-sm">
+                <span class="text-slate-600">Default commission (%)</span>
+                <input name="store_default_commission_pct" type="number" step="0.01" min="0" max="50" value="<?= $e((int) $settings['store_default_commission_bp'] / 100) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
+                <span class="text-xs text-slate-400">On the price the customer pays. 18% GST on commission is added on top (verify with your CA).</span>
+            </label>
+            <label class="block text-sm">
+                <span class="text-slate-600">Payment window (minutes)</span>
+                <input name="store_payment_window_minutes" type="number" min="10" max="120" value="<?= $e($settings['store_payment_window_minutes']) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
+                <span class="text-xs text-slate-400">Unpaid orders are cancelled after this and their stock is released.</span>
+            </label>
+        </div>
+        <?php if ($shipping === null): ?><p class="text-xs text-amber-700">Import <code>2026_09_29_store_orders.sql</code> to enable shipping settings.</p><?php endif; ?>
         <button class="rounded bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">Save</button>
     </form>
 </main>

@@ -13,7 +13,12 @@ use App\Core\QueryBuilder;
  */
 final class CatalogService
 {
-    public const GST_RATES_BP = [0 => '0%', 500 => '5%', 1200 => '12%', 1800 => '18%', 2800 => '28%'];
+    /**
+     * GST slabs after the 22 Sep 2025 rationalisation (0 / 5 / 18 / 40%).
+     * The seller is the seller of record and picks the rate for their HSN code.
+     * Products saved earlier at 12% / 28% must be re-picked on their next edit.
+     */
+    public const GST_RATES_BP = [0 => '0% (nil / exempt)', 500 => '5%', 1800 => '18%', 4000 => '40%'];
 
     public const CLASS_LABELS = [
         'general' => 'General',

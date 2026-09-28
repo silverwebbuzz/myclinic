@@ -76,6 +76,18 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^lab/(package|organ|life|step|why|partner)/([a-z0-9][a-z0-9\-]*)/?$ lab-detail.php?type=$1&slug=$2 [L,QSA,NC]
 
+# -------- eClinicPro Store (/store/…) --------
+# store/_*.php are include-only partials: never reachable directly.
+RewriteRule ^store/_ - [F,L]
+RewriteRule ^store/c/([a-z0-9][a-z0-9\-]*)/([a-z0-9][a-z0-9\-]*)/?$ store/listing.php?_r_type=category&_r_a=$1&_r_b=$2 [L,QSA,NC]
+RewriteRule ^store/c/([a-z0-9][a-z0-9\-]*)/?$ store/listing.php?_r_type=category&_r_a=$1 [L,QSA,NC]
+RewriteRule ^store/(need|goal|brand)/([a-z0-9][a-z0-9\-]*)/?$ store/listing.php?_r_type=$1&_r_a=$2 [L,QSA,NC]
+RewriteRule ^store/search/?$ store/listing.php?_r_type=search [L,QSA,NC]
+RewriteRule ^store/p/([a-z0-9][a-z0-9\-]*)/?$ store/product.php?_r_a=$1 [L,QSA,NC]
+RewriteRule ^store/seller/([a-z0-9][a-z0-9\-]*)/?$ store/seller.php?_r_a=$1 [L,QSA,NC]
+RewriteRule ^store/(categories|wishlist|cart|checkout)/?$ store/$1.php [L,QSA,NC]
+RewriteRule ^store/order/([A-Za-z0-9\-]+)/?$ store/order.php?_r_a=$1 [L,QSA]
+
 # -------- /features renamed to /clinic-management-software (keyword URL) --------
 # Permanent redirect so existing links, ads and search results keep working.
 RewriteRule ^features/?$ /clinic-management-software [R=301,L]

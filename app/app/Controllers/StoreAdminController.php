@@ -161,8 +161,21 @@ final class StoreAdminController
             'settings' => [
                 'store_require_product_approval' => StoreSettings::get('store_require_product_approval', '1'),
                 'store_default_return_window_days' => StoreSettings::get('store_default_return_window_days', '7'),
+                'store_payment_window_minutes' => StoreSettings::get('store_payment_window_minutes', '30'),
+                'store_default_commission_bp' => StoreSettings::get('store_default_commission_bp', '1000'),
             ],
+            'shipping' => $this->defaultShippingRule(),
         ]);
+    }
+
+    /** Platform default shipping rule (vendor_id NULL), or null if the orders patch isn't imported yet. */
+    private function defaultShippingRule(): ?array
+    {
+        try {
+            return QueryBuilder::table('store_shipping_rules')->where('vendor_id', 'IS')->where('is_active', '=', 1)->first();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function saveSettings(Request $request): Response
@@ -181,6 +194,24 @@ final class StoreAdminController
             } elseif ($action === 'save') {
                 StoreSettings::set('store_require_product_approval', !empty($request->post['store_require_product_approval']) ? '1' : '0');
                 StoreSettings::set('store_default_return_window_days', (string) max(0, min(30, (int) ($request->post['store_default_return_window_days'] ?? 7))));
+                StoreSettings::set('store_payment_window_minutes', (string) max(10, min(120, (int) ($request->post['store_payment_window_minutes'] ?? 30))));
+                $commissionPct = (float) ($request->post['store_default_commission_pct'] ?? 10);
+                $commissionBp = (int) round(max(0, min(50, $commissionPct)) * 100);
+                StoreSettings::set('store_default_commission_bp', (string) $commissionBp);
+                // Keep the 'default' commission rule row in step with the setting.
+                \App\Core\Database::connection()->prepare(
+                    "UPDATE store_commission_rules SET rate_bp = :bp, type = 'percent' WHERE scope = 'default'"
+                )->execute(['bp' => $commissionBp]);
+                $flat = \App\Services\Store\ProductService::toPaise((string) ($request->post['ship_flat'] ?? ''));
+                $freeRaw = trim((string) ($request->post['ship_free_above'] ?? ''));
+                $free = $freeRaw === '' ? null : \App\Services\Store\ProductService::toPaise($freeRaw);
+                if ($flat !== null) {
+                    $rule = $this->defaultShippingRule();
+                    $row = ['flat_fee_paise' => $flat, 'free_above_paise' => $free];
+                    $rule !== null
+                        ? QueryBuilder::table('store_shipping_rules')->where('id', '=', (int) $rule['id'])->update($row)
+                        : QueryBuilder::table('store_shipping_rules')->insert($row + ['vendor_id' => null, 'is_active' => 1]);
+                }
                 StoreAudit::log('store.settings_save', 'setting', null);
                 SessionFlash::put('store_ok', 'Settings saved.');
             }

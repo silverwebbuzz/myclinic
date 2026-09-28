@@ -273,13 +273,23 @@ ob_start();
                 <span class="text-slate-600">HSN code</span>
                 <input name="hsn_code" maxlength="8" inputmode="numeric" value="<?= $e($val('hsn_code')) ?>" class="<?= $input ?>">
             </label>
+            <?php
+            $gstCur = (string) $val('gst_bp', '');
+            $gstKnown = $gstCur !== '' && array_key_exists((int) $gstCur, CatalogService::GST_RATES_BP);
+            ?>
             <label class="block text-sm">
                 <span class="text-slate-600">GST rate</span>
-                <select name="gst_bp" class="<?= $input ?>">
+                <select name="gst_bp" required class="<?= $input ?>">
+                    <option value="" <?= $gstKnown ? '' : 'selected' ?>>Choose GST rate…</option>
                     <?php foreach (CatalogService::GST_RATES_BP as $bp => $label): ?>
-                        <option value="<?= $bp ?>" <?= (int) $val('gst_bp', 1800) === $bp ? 'selected' : '' ?>><?= $e($label) ?></option>
+                        <option value="<?= $bp ?>" <?= $gstKnown && (int) $gstCur === $bp ? 'selected' : '' ?>><?= $e($label) ?></option>
                     <?php endforeach; ?>
                 </select>
+                <?php if (!$isNew && $gstCur !== '' && !$gstKnown): ?>
+                    <span class="text-xs text-amber-700">Saved earlier at <?= (int) $gstCur / 100 ?>%, which is no longer a GST slab. Please choose the current rate.</span>
+                <?php else: ?>
+                    <span class="text-xs text-slate-400">Prices include GST. Your CA can confirm the rate for this HSN code.</span>
+                <?php endif; ?>
             </label>
             <label class="block text-sm">
                 <span class="text-slate-600">Manufacturer</span>

@@ -159,9 +159,11 @@ final class ProductService
             $brandId = 0;
         }
 
-        $gst = (int) ($in['gst_bp'] ?? 1800);
-        if (!array_key_exists($gst, CatalogService::GST_RATES_BP)) {
-            return ['ok' => false, 'error' => 'Choose a GST rate.'];
+        // Blank must NOT fall through as (int) 0 = "0%": make the seller choose.
+        $gstRaw = trim((string) ($in['gst_bp'] ?? ''));
+        $gst = (int) $gstRaw;
+        if ($gstRaw === '' || !ctype_digit($gstRaw) || !array_key_exists($gst, CatalogService::GST_RATES_BP)) {
+            return ['ok' => false, 'error' => 'Choose the GST rate for this product (ask your CA if unsure; it depends on the HSN code).'];
         }
         $hsn = preg_replace('/\D/', '', (string) ($in['hsn_code'] ?? '')) ?? '';
         if ($hsn !== '' && !preg_match('/^\d{4,8}$/', $hsn)) {

@@ -589,6 +589,11 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/store/categories/{id}', [StoreCatalogAdminController::class, 'saveCategory']);
         $admin->get('/store/brands', [StoreCatalogAdminController::class, 'brands']);
         $admin->post('/store/brands', [StoreCatalogAdminController::class, 'saveBrand']);
+
+        // Store orders (P5)
+        $admin->get('/store/orders', [\App\Controllers\StoreOrderAdminController::class, 'index']);
+        $admin->get('/store/orders/{id}', [\App\Controllers\StoreOrderAdminController::class, 'show']);
+        $admin->post('/store/orders/{id}/cancel', [\App\Controllers\StoreOrderAdminController::class, 'cancel']);
     });
 
     // Store marketplace — seller portal. Own guard (mc_vendor_token, path /vendor),
