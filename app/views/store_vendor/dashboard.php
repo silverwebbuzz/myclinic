@@ -21,7 +21,8 @@ ob_start();
 <?php if ($status === 'approved'): ?>
     <div class="mt-4 rounded-2xl border border-[#d5e6da] bg-[#edf5ef] p-6">
         <h2 class="text-lg font-semibold text-[#0e4d34]">Your store is approved 🎉</h2>
-        <p class="mt-1 text-sm text-slate-600">Product listing opens in the next update. You'll add products, set prices and stock from the <strong>Products</strong> menu.</p>
+        <p class="mt-1 text-sm text-slate-600">Add your products, set prices and stock from the <strong>Products</strong> menu. Each product is checked by our team before it goes live.</p>
+        <a href="/vendor/products/new" class="mt-3 inline-block rounded-full bg-[#0e4d34] px-5 py-2 text-sm font-medium text-white hover:bg-[#17774f]">+ Add a product</a>
         <?php if (!empty($vendor['slug'])): ?>
             <p class="mt-3 text-sm text-slate-600">Your public store page will be: <code class="rounded bg-white px-1.5 py-0.5">eclinicpro.com/store/seller/<?= $e($vendor['slug']) ?></code></p>
         <?php endif; ?>

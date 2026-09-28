@@ -46,6 +46,8 @@ use App\Controllers\WebhookController;
 use App\Controllers\WordPressAdminController;
 use App\Controllers\BlogController;
 use App\Controllers\StoreAdminController;
+use App\Controllers\StoreCatalogAdminController;
+use App\Controllers\VendorProductController;
 use App\Controllers\VendorAuthController;
 use App\Controllers\VendorPortalController;
 use App\Core\GroupedRouteRegistrar;
@@ -577,6 +579,16 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/store/documents/{id}/review', [StoreAdminController::class, 'reviewDocument']);
         $admin->post('/store/bank/{id}/verify', [StoreAdminController::class, 'verifyBank']);
         $admin->post('/store/bank/{id}/reveal', [StoreAdminController::class, 'revealBank']);
+
+        // Store catalog moderation (chunk 2)
+        $admin->get('/store/products', [StoreCatalogAdminController::class, 'products']);
+        $admin->get('/store/products/{id}', [StoreCatalogAdminController::class, 'productDetail']);
+        $admin->post('/store/products/{id}/decision', [StoreCatalogAdminController::class, 'productDecision']);
+        $admin->post('/store/products/{id}/feature', [StoreCatalogAdminController::class, 'productFeature']);
+        $admin->get('/store/categories', [StoreCatalogAdminController::class, 'categories']);
+        $admin->post('/store/categories/{id}', [StoreCatalogAdminController::class, 'saveCategory']);
+        $admin->get('/store/brands', [StoreCatalogAdminController::class, 'brands']);
+        $admin->post('/store/brands', [StoreCatalogAdminController::class, 'saveBrand']);
     });
 
     // Store marketplace — seller portal. Own guard (mc_vendor_token, path /vendor),
@@ -606,6 +618,18 @@ return static function (RouteRegistrar $router): void {
         $vendor->get('/documents', [VendorPortalController::class, 'documents']);
         $vendor->post('/documents', [VendorPortalController::class, 'uploadDocument']);
         $vendor->get('/documents/{id}/file', [VendorPortalController::class, 'documentFile']);
+
+        // Products (chunk 2). "new" is declared before {id}.
+        $vendor->get('/products', [VendorProductController::class, 'index']);
+        $vendor->get('/products/new', [VendorProductController::class, 'create']);
+        $vendor->post('/products', [VendorProductController::class, 'store']);
+        $vendor->get('/products/{id}', [VendorProductController::class, 'edit']);
+        $vendor->post('/products/{id}', [VendorProductController::class, 'update']);
+        $vendor->post('/products/{id}/images', [VendorProductController::class, 'uploadImages']);
+        $vendor->post('/products/{id}/images/{imageId}/delete', [VendorProductController::class, 'deleteImage']);
+        $vendor->post('/products/{id}/images/{imageId}/cover', [VendorProductController::class, 'coverImage']);
+        $vendor->post('/products/{id}/submit', [VendorProductController::class, 'submit']);
+        $vendor->post('/products/{id}/archive', [VendorProductController::class, 'archive']);
     });
 
     // Partner program — public auth pages + guarded partner dashboard.

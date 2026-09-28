@@ -53,6 +53,9 @@ $navGroups = [
     ],
     'Store' => [
         ['/admin/store/vendors', 'Sellers', 'M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6', \App\Services\Store\VendorService::pendingReviewCount()],
+        ['/admin/store/products', 'Products', 'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16zM3.3 7L12 12l8.7-5M12 22V12', \App\Services\Store\ProductService::pendingReviewCount()],
+        ['/admin/store/categories', 'Categories', 'M4 6h16M4 10h16M4 14h10M4 18h10'],
+        ['/admin/store/brands', 'Brands', 'M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82zM7 7h.01'],
         ['/admin/store/settings', 'Store settings', 'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-2.82 1.17V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-2.82-1.17l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15H4.5a2 2 0 110-4h.09a1.65 1.65 0 001.17-2.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 0011.4 4.6V4.5a2 2 0 114 0v.09a1.65 1.65 0 002.82 1.17l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 11h.1a2 2 0 110 4h-.1z'],
     ],
     'Growth' => [

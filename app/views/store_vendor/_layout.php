@@ -57,7 +57,11 @@ $nav = [
         <?php foreach ($nav as [$href, $label]): ?>
             <a href="<?= $e($href) ?>" class="block rounded-lg px-3 py-2 <?= $path === $href ? 'bg-[#0e4d34] text-white' : 'hover:bg-white' ?>"><?= $e($label) ?></a>
         <?php endforeach; ?>
-        <span class="block cursor-not-allowed rounded-lg px-3 py-2 text-slate-400" title="Opens after your account is approved">Products <span class="text-xs">(soon)</span></span>
+        <?php if (in_array($status, ['approved', 'suspended'], true)): ?>
+            <a href="/vendor/products" class="block rounded-lg px-3 py-2 <?= str_starts_with($path, '/vendor/products') ? 'bg-[#0e4d34] text-white' : 'hover:bg-white' ?>">Products</a>
+        <?php else: ?>
+            <span class="block cursor-not-allowed rounded-lg px-3 py-2 text-slate-400" title="Opens after your account is approved">Products <span class="text-xs">(after approval)</span></span>
+        <?php endif; ?>
         <span class="block cursor-not-allowed rounded-lg px-3 py-2 text-slate-400">Orders <span class="text-xs">(soon)</span></span>
     </nav>
 
