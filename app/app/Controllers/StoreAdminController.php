@@ -160,6 +160,7 @@ final class StoreAdminController
             'cryptoReady' => StoreCrypto::isConfigured(),
             'settings' => [
                 'store_require_product_approval' => StoreSettings::get('store_require_product_approval', '1'),
+                'store_reviews_auto_publish' => StoreSettings::get('store_reviews_auto_publish', '0'),
                 'store_default_return_window_days' => StoreSettings::get('store_default_return_window_days', '7'),
                 'store_payment_window_minutes' => StoreSettings::get('store_payment_window_minutes', '30'),
                 'store_default_commission_bp' => StoreSettings::get('store_default_commission_bp', '1000'),
@@ -217,6 +218,7 @@ final class StoreAdminController
                 SessionFlash::put('store_ok', 'New preview link generated. Old preview links stop working.');
             } elseif ($action === 'save') {
                 StoreSettings::set('store_require_product_approval', !empty($request->post['store_require_product_approval']) ? '1' : '0');
+                StoreSettings::set('store_reviews_auto_publish', !empty($request->post['store_reviews_auto_publish']) ? '1' : '0');
                 StoreSettings::set('store_default_return_window_days', (string) max(0, min(30, (int) ($request->post['store_default_return_window_days'] ?? 7))));
                 StoreSettings::set('store_payment_window_minutes', (string) max(10, min(120, (int) ($request->post['store_payment_window_minutes'] ?? 30))));
                 $commissionPct = (float) ($request->post['store_default_commission_pct'] ?? 10);

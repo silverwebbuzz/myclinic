@@ -21,8 +21,19 @@ if (!$featured) {
 
 $sellers = [];
 $brands = [];
+$banners = [];
 $db = ecp_db();
 if ($db) {
+    try {
+        $banners = $db->query(
+            "SELECT title, image_path, link FROM store_banners
+              WHERE is_active = 1 AND placement = 'home_strip'
+                AND (starts_at IS NULL OR starts_at <= NOW()) AND (ends_at IS NULL OR ends_at >= NOW())
+              ORDER BY sort_order, id DESC LIMIT 3"
+        )->fetchAll();
+    } catch (Throwable) {
+        $banners = [];
+    }
     try {
         $sellers = $db->query(
             "SELECT v.slug, v.display_name, v.logo_path,
@@ -77,6 +88,19 @@ require __DIR__ . '/_header.php';
       <div class="st-trust-item"><span class="st-trust-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20.5s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.3a4.3 4.3 0 0 1 7.5 3.2c0 5.4-7.5 10-7.5 10z"/></svg></span><div><strong>Healthcare first</strong><span>From the team behind eClinicPro</span></div></div>
     </div>
   </section>
+
+  <?php if ($banners): ?>
+  <section class="st-wrap" style="padding-top:28px">
+    <div class="st-banners">
+      <?php foreach ($banners as $b): ?>
+        <?php $img = store_img($b['image_path']); ?>
+        <?php if ($img): ?>
+          <a href="<?= e($b['link'] ?: store_url()) ?>" class="st-banner"><img src="<?= e($img) ?>" alt="<?= e($b['title'] ?? '') ?>" loading="lazy"></a>
+        <?php endif; ?>
+      <?php endforeach; ?>
+    </div>
+  </section>
+  <?php endif; ?>
 
   <!-- Shop by need -->
   <?php if ($tiles): ?>

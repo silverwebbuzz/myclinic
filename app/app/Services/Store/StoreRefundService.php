@@ -99,7 +99,8 @@ final class StoreRefundService
 
                     return ['ok' => false, 'error' => $it['name'] . ': only ' . $open . ' unit(s) can be cancelled.'];
                 }
-                $lineAmt = (int) $it['unit_price_paise'] * $q;
+                // What the customer actually paid for these units (after any coupon).
+                $lineAmt = PricingService::unitShare((int) $it['line_total_paise'], (int) $it['qty'], (int) $it['qty_refunded'], $q);
                 $amount += $lineAmt;
                 $lines[] = ['item' => $it, 'qty' => $q, 'amount' => $lineAmt];
                 $touchedVo[(int) $it['vo_id']] = true;

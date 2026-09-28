@@ -11,7 +11,9 @@ store_app_required();
 
 $cart = store_cart(false);
 $items = $cart !== null ? \App\Services\Store\CartService::items((int) $cart['id']) : [];
-$quote = \App\Services\Store\PricingService::quote($items);
+$meForCoupon = ecp_patient_current();
+$cc = $cart !== null ? \App\Services\Store\PricingService::cartCoupon($cart, $meForCoupon ? (int) $meForCoupon['id'] : null) : ['coupon' => null, 'error' => null];
+$quote = \App\Services\Store\PricingService::quote($items, $cc['coupon']);
 $problems = array_filter($items, static fn ($i) => $i['problem'] !== null);
 $priceChanged = array_filter($items, static fn ($i) => $i['problem'] === null && $i['price_changed']);
 if ($cart !== null && $priceChanged) {
@@ -109,9 +111,27 @@ require __DIR__ . '/_header.php';
         <dl>
           <dt>Items (<?= (int) $quote['item_count'] ?>)</dt><dd><?= e(store_rupees((int) $quote['subtotal'])) ?></dd>
           <?php if ($quote['savings'] > 0): ?><dt>You save</dt><dd class="st-save">−<?= e(store_rupees((int) $quote['savings'])) ?> <small>vs MRP</small></dd><?php endif; ?>
+          <?php if ($quote['discount'] > 0): ?><dt>Coupon <?= e($quote['coupon']['code']) ?></dt><dd class="st-save">−<?= e(store_rupees((int) $quote['discount'])) ?></dd><?php endif; ?>
           <dt>Shipping<?= count($quote['groups']) > 1 ? ' (' . count($quote['groups']) . ' sellers)' : '' ?></dt><dd><?= $quote['shipping'] > 0 ? e(store_rupees((int) $quote['shipping'])) : 'Free' ?></dd>
           <dt class="st-total">Total</dt><dd class="st-total"><?= e(store_rupees((int) $quote['grand_total'])) ?></dd>
         </dl>
+        <div class="st-coupon" x-data="{ code: '', busy: false, err: '' }">
+          <?php if ($quote['coupon'] !== null): ?>
+            <div class="st-coupon-applied">
+              <span><strong><?= e($quote['coupon']['code']) ?></strong> · <?= e($quote['coupon']['label']) ?>
+                <?php if (!$quote['coupon']['applied']): ?><br><small class="st-line-problem" style="font-weight:500"><?= e($quote['coupon']['note'] ?? 'Not applicable to these items.') ?></small><?php endif; ?></span>
+              <button type="button" class="st-link-btn" @click="setCoupon('')">Remove</button>
+            </div>
+          <?php else: ?>
+            <?php if ($cc['error']): ?><p class="st-line-problem" style="margin:0 0 6px"><?= e($cc['error']) ?></p><?php endif; ?>
+            <form @submit.prevent="setCoupon(code)" style="display:flex;gap:6px">
+              <label class="st-sr" for="st-coupon-in">Coupon code</label>
+              <input id="st-coupon-in" x-model="code" class="st-input" placeholder="Coupon code" style="text-transform:uppercase;height:38px">
+              <button class="st-btn st-btn-ghost st-btn-sm" :disabled="busy || !code">Apply</button>
+            </form>
+          <?php endif; ?>
+          <p class="st-line-problem" x-show="err" x-text="err" x-cloak style="margin:6px 0 0"></p>
+        </div>
         <p class="st-summary-note">Prices include GST. Each seller ships separately; you'll get tracking for each package.</p>
         <?php if ($quote['item_count'] === 0): ?>
           <button class="st-btn st-btn-primary" style="width:100%" disabled>Checkout</button>
@@ -129,6 +149,18 @@ require __DIR__ . '/_header.php';
   <?php endif; ?>
 </main>
 <script>
+async function setCoupon(code) {
+  const box = document.querySelector('.st-coupon');
+  const r = await fetch('/api/store_cart', {
+    method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({ action: 'coupon', code: (code || '').trim().toUpperCase() }),
+  }).catch(() => null);
+  const j = r ? await r.json().catch(() => ({})) : {};
+  if (j.ok) { location.reload(); return; }
+  if (box && box._x_dataStack) { box._x_dataStack[0].err = j.error || 'Could not apply the coupon.'; }
+  else { storeToast(j.error || 'Could not apply the coupon.'); }
+}
 function storeCart() {
   return {
     busy: false,

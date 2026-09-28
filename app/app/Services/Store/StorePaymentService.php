@@ -274,6 +274,10 @@ final class StorePaymentService
             foreach (array_unique(array_map(static fn ($r) => (int) $r['product_id'], $rows)) as $pid) {
                 ProductService::refreshDenormalized($pid);
             }
+            if (!empty($order['coupon_id'])) {
+                // A coupon counts as used only once the order is paid.
+                CouponService::redeem((int) $order['coupon_id'], $orderId, (int) $order['identity_id'], (int) $order['discount_paise']);
+            }
             $pdo->commit();
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) {

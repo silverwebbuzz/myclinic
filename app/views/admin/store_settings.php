@@ -114,6 +114,10 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
             <input type="checkbox" name="store_require_product_approval" value="1" <?= $settings['store_require_product_approval'] === '1' ? 'checked' : '' ?>>
             New products need admin approval before going live
         </label>
+        <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="store_reviews_auto_publish" value="1" <?= ($settings['store_reviews_auto_publish'] ?? '0') === '1' ? 'checked' : '' ?>>
+            Publish customer reviews without moderation <span class="text-slate-400">(not recommended for health products)</span>
+        </label>
         <label class="block text-sm">
             <span class="text-slate-600">Default return window (days)</span>
             <input type="number" min="0" max="30" name="store_default_return_window_days" value="<?= $e($settings['store_default_return_window_days']) ?>" class="mt-1 w-32 rounded border px-2 py-1.5 text-sm">

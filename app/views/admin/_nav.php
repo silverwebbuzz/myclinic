@@ -52,6 +52,7 @@ $navGroups = [
         ['/admin/lab/coupons', 'Discount Coupons', 'M9 5H7a2 2 0 00-2 2v3a2 2 0 010 4v3a2 2 0 002 2h2M9 5h8a2 2 0 012 2v3a2 2 0 000 4v3a2 2 0 01-2 2H9M9 5v14'],
     ],
     'Store' => [
+        ['/admin/store/dashboard', 'Store dashboard', 'M3 12l9-9 9 9M5 10v10h14V10'],
         ['/admin/store/orders', 'Orders', 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11'],
         ['/admin/store/returns', 'Returns', 'M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5'],
         ['/admin/store/payouts', 'Seller payouts', 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6'],
@@ -59,6 +60,9 @@ $navGroups = [
         ['/admin/store/vendors', 'Sellers', 'M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6', \App\Services\Store\VendorService::pendingReviewCount()],
         ['/admin/store/products', 'Products', 'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16zM3.3 7L12 12l8.7-5M12 22V12', \App\Services\Store\ProductService::pendingReviewCount()],
         ['/admin/store/categories', 'Categories', 'M4 6h16M4 10h16M4 14h10M4 18h10'],
+        ['/admin/store/coupons', 'Coupons', 'M9 14l6-6M9.5 8.5h.01M14.5 13.5h.01M5 3h14a2 2 0 012 2v14l-3-2-3 2-3-2-3 2-3-2-3 2V5a2 2 0 012-2z'],
+        ['/admin/store/reviews', 'Reviews', 'M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z'],
+        ['/admin/store/banners', 'Banners', 'M3 5h18v14H3zM3 15l5-5 4 4 3-3 6 6'],
         ['/admin/store/brands', 'Brands', 'M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82zM7 7h.01'],
         ['/admin/store/settings', 'Store settings', 'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-2.82 1.17V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-2.82-1.17l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15H4.5a2 2 0 110-4h.09a1.65 1.65 0 001.17-2.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 0011.4 4.6V4.5a2 2 0 114 0v.09a1.65 1.65 0 002.82 1.17l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 11h.1a2 2 0 110 4h-.1z'],
     ],

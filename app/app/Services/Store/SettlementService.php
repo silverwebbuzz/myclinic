@@ -33,11 +33,15 @@ final class SettlementService
         if ($vo === null) {
             return;
         }
-        $st = Database::connection()->prepare(
-            'SELECT COALESCE(SUM((qty - qty_cancelled) * unit_price_paise), 0) FROM store_order_items WHERE vendor_order_id = :v'
-        );
+        // Seller revenue on the units actually delivered (cancelled units excluded;
+        // seller-funded coupon discounts deducted, platform-funded ones not).
+        $st = Database::connection()->prepare('SELECT * FROM store_order_items WHERE vendor_order_id = :v');
         $st->execute(['v' => $vendorOrderId]);
-        $sale = (int) $st->fetchColumn();
+        $sale = 0;
+        foreach ($st->fetchAll() as $it) {
+            $rev = PricingService::sellerRevenue($it);
+            $sale += $rev - PricingService::unitShare($rev, (int) $it['qty'], 0, (int) $it['qty_cancelled']);
+        }
         $commission = max(0, (int) $vo['commission_paise']);
         $commissionGst = (int) round($commission * CommissionService::COMMISSION_GST_BP / 10000);
         $availableAt = $vo['settle_after'] ?? date('Y-m-d H:i:s', time() + 7 * 86400);

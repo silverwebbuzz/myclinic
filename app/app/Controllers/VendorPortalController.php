@@ -30,7 +30,77 @@ final class VendorPortalController
         return $this->render('store_vendor/dashboard', [
             'checklist' => VendorService::checklist($vendor),
             'welcome' => !empty($request->query['welcome']),
+            'stats' => $vendor['status'] === 'approved' ? self::stats((int) $vendor['id']) : null,
         ]);
+    }
+
+    /** Seller KPIs for the dashboard (own data only). @return array<string, mixed> */
+    private static function stats(int $vendorId): array
+    {
+        $pdo = \App\Core\Database::connection();
+        $q = static function (string $sql) use ($pdo, $vendorId): int {
+            try {
+                $st = $pdo->prepare($sql);
+                $st->execute(['v' => $vendorId]);
+
+                return (int) $st->fetchColumn();
+            } catch (\Throwable) {
+                return 0;
+            }
+        };
+        $paid = "JOIN store_orders o ON o.id = vo.order_id AND o.payment_status IN ('paid','partially_refunded','refunded')";
+        $lowStock = [];
+        try {
+            $st = $pdo->prepare(
+                "SELECT p.id, p.name, sv.title, sv.sku, sv.stock_qty, sv.reserved_qty, sv.low_stock_threshold
+                   FROM store_product_variants sv JOIN store_products p ON p.id = sv.product_id
+                  WHERE sv.vendor_id = :v AND sv.is_active = 1 AND p.status = 'live' AND p.deleted_at IS NULL
+                    AND sv.stock_qty <= sv.reserved_qty + sv.low_stock_threshold
+                  ORDER BY sv.stock_qty - sv.reserved_qty LIMIT 20"
+            );
+            $st->execute(['v' => $vendorId]);
+            $lowStock = $st->fetchAll();
+        } catch (\Throwable) {
+        }
+        $bal = ['available' => 0, 'pending' => 0];
+        try {
+            $bal = \App\Services\Store\SettlementService::balances($vendorId);
+        } catch (\Throwable) {
+        }
+        $vendor = VendorService::find($vendorId) ?? [];
+
+        return [
+            'to_accept' => $q("SELECT COUNT(*) FROM store_vendor_orders vo $paid WHERE vo.vendor_id = :v AND vo.status = 'new'"),
+            'in_progress' => $q("SELECT COUNT(*) FROM store_vendor_orders vo $paid WHERE vo.vendor_id = :v AND vo.status IN ('accepted','packed','ready_to_ship')"),
+            'month_sales' => $q("SELECT COALESCE(SUM(vo.items_subtotal_paise - vo.vendor_discount_paise),0) FROM store_vendor_orders vo $paid
+                                  WHERE vo.vendor_id = :v AND o.paid_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')"),
+            'open_returns' => $q("SELECT COUNT(*) FROM store_returns r JOIN store_vendor_orders vo ON vo.id = r.vendor_order_id
+                                  WHERE vo.vendor_id = :v AND r.status IN ('requested','approved','pickup_scheduled','picked_up','received')"),
+            'live_products' => $q("SELECT COUNT(*) FROM store_products WHERE vendor_id = :v AND status = 'live' AND deleted_at IS NULL"),
+            'available' => (int) $bal['available'],
+            'pending' => (int) $bal['pending'],
+            'rating' => (float) ($vendor['rating_avg'] ?? 0),
+            'rating_count' => (int) ($vendor['rating_count'] ?? 0),
+            'low_stock' => $lowStock,
+        ];
+    }
+
+    public function reviews(Request $request): Response
+    {
+        $rows = [];
+        try {
+            $rows = \App\Services\Store\ReviewService::list((int) $this->vendor()['id'], 'published');
+        } catch (\Throwable) {
+        }
+
+        return $this->render('store_vendor/reviews', ['rows' => $rows]);
+    }
+
+    public function replyReview(Request $request, string $id): Response
+    {
+        $this->flash(\App\Services\Store\ReviewService::reply((int) $this->vendor()['id'], (int) $id, (string) ($request->post['reply'] ?? '')), 'Reply saved.');
+
+        return Response::redirect('/vendor/reviews');
     }
 
     public function submit(Request $request): Response

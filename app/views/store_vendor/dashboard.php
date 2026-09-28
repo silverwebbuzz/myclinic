@@ -23,6 +23,38 @@ ob_start();
         <h2 class="text-lg font-semibold text-[#0e4d34]">Your store is approved 🎉</h2>
         <p class="mt-1 text-sm text-slate-600">Add your products, set prices and stock from the <strong>Products</strong> menu. Each product is checked by our team before it goes live.</p>
         <a href="/vendor/products/new" class="mt-3 inline-block rounded-full bg-[#0e4d34] px-5 py-2 text-sm font-medium text-white hover:bg-[#17774f]">+ Add a product</a>
+    </div>
+    <?php if (!empty($stats)): ?>
+    <?php $rp = static fn ($p): string => '₹' . \App\Services\Store\ProductService::rupees((int) $p); ?>
+    <div class="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <?php foreach ([
+            ['/vendor/orders', 'To accept', (string) $stats['to_accept'], $stats['to_accept'] > 0],
+            ['/vendor/orders', 'In progress', (string) $stats['in_progress'], false],
+            ['/vendor/returns', 'Open returns', (string) $stats['open_returns'], $stats['open_returns'] > 0],
+            ['/vendor/payouts', 'Sales this month', $rp($stats['month_sales']), false],
+            ['/vendor/payouts', 'Ready for payout', $rp($stats['available']), false],
+            ['/vendor/reviews', 'Rating', $stats['rating_count'] > 0 ? '★ ' . number_format($stats['rating'], 1) . ' (' . $stats['rating_count'] . ')' : 'No reviews', false],
+        ] as [$href, $label, $value, $alert]): ?>
+            <a href="<?= $e($href) ?>" class="rounded-2xl border <?= $alert ? 'border-amber-300 bg-amber-50' : 'border-[#ece8df] bg-white' ?> p-4 hover:shadow-sm">
+                <div class="text-xs uppercase tracking-wide text-slate-500"><?= $e($label) ?></div>
+                <div class="mt-1 text-lg font-semibold"><?= $e($value) ?></div>
+            </a>
+        <?php endforeach; ?>
+    </div>
+    <?php if ($stats['low_stock']): ?>
+        <section class="mt-4 rounded-2xl border border-amber-200 bg-white p-5">
+            <h2 class="font-semibold text-amber-800">Low stock</h2>
+            <ul class="mt-2 divide-y text-sm">
+                <?php foreach ($stats['low_stock'] as $ls): ?>
+                    <?php $left = max(0, (int) $ls['stock_qty'] - (int) $ls['reserved_qty']); ?>
+                    <li class="flex justify-between py-1.5"><a href="/vendor/products/<?= (int) $ls['id'] ?>" class="hover:underline"><?= $e($ls['name']) ?><?= $ls['title'] ? ' · ' . $e($ls['title']) : '' ?> <span class="font-mono text-xs text-slate-400"><?= $e($ls['sku']) ?></span></a>
+                        <span class="<?= $left === 0 ? 'font-semibold text-red-600' : 'text-amber-700' ?>"><?= $left === 0 ? 'Out of stock' : $left . ' left' ?></span></li>
+                <?php endforeach; ?>
+            </ul>
+        </section>
+    <?php endif; ?>
+    <div>
+    <?php endif; ?>
         <?php if (!empty($vendor['slug'])): ?>
             <p class="mt-3 text-sm text-slate-600">Your public store page will be: <code class="rounded bg-white px-1.5 py-0.5">eclinicpro.com/store/seller/<?= $e($vendor['slug']) ?></code></p>
         <?php endif; ?>

@@ -510,6 +510,33 @@ function store_seller(string $slug): ?array
     }
 }
 
+/** Published reviews for a product, with the reviewer's first name + initial only. @return list<array<string,mixed>> */
+function store_reviews(int $productId, int $limit = 20): array
+{
+    $db = ecp_db();
+    if (!$db) {
+        return [];
+    }
+    try {
+        $st = $db->prepare(
+            "SELECT r.rating, r.title, r.body, r.vendor_reply, r.created_at, pi.name
+               FROM store_reviews r LEFT JOIN patient_identities pi ON pi.id = r.identity_id
+              WHERE r.product_id = :p AND r.status = 'published' ORDER BY r.id DESC LIMIT " . max(1, min(50, $limit))
+        );
+        $st->execute(['p' => $productId]);
+        $rows = $st->fetchAll();
+        foreach ($rows as &$r) {
+            $parts = preg_split('/\s+/', trim((string) ($r['name'] ?? ''))) ?: [];
+            $r['display_name'] = ($parts[0] ?? '') !== '' ? $parts[0] . (isset($parts[1]) ? ' ' . mb_substr($parts[1], 0, 1) . '.' : '') : 'Verified buyer';
+            unset($r['name']);
+        }
+
+        return $rows;
+    } catch (Throwable) {
+        return [];
+    }
+}
+
 // ---------------------------------------------------------------------
 // Wishlist (customer = patient identity)
 // ---------------------------------------------------------------------

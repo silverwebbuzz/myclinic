@@ -60,6 +60,21 @@ try {
         $ok = \App\Services\Store\CartService::setQty($cartId, (int) ($in['item_id'] ?? 0), (int) ($in['qty'] ?? 0));
         store_cart_out($ok ? 200 : 404, ['ok' => $ok, 'count' => \App\Services\Store\CartService::count($cartId)]);
     }
+    if ($action === 'coupon') {
+        $code = strtoupper(trim((string) ($in['code'] ?? '')));
+        if ($code === '') {   // remove
+            \App\Core\QueryBuilder::table('store_carts')->where('id', '=', $cartId)->update(['coupon_code' => null]);
+            store_cart_out(200, ['ok' => true]);
+        }
+        $c = \App\Services\Store\CouponService::findByCode($code);
+        $me = ecp_patient_current();
+        $why = $c === null ? 'That coupon code isn\'t valid.' : \App\Services\Store\CouponService::unusableReason($c, $me ? (int) $me['id'] : null);
+        if ($why !== null) {
+            store_cart_out(422, ['ok' => false, 'error' => $why]);
+        }
+        \App\Core\QueryBuilder::table('store_carts')->where('id', '=', $cartId)->update(['coupon_code' => $code]);
+        store_cart_out(200, ['ok' => true]);
+    }
     store_cart_out(400, ['ok' => false, 'error' => 'unknown_action']);
 } catch (Throwable $e) {
     error_log('[api/store_cart] ' . $e->getMessage());

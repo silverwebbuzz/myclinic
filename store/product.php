@@ -185,6 +185,27 @@ require __DIR__ . '/_header.php';
   </section>
   <?php endif; ?>
 
+  <?php $reviews = store_reviews((int) $p['id']); ?>
+  <section class="st-tabs-section" id="reviews">
+    <h2 class="st-h2" style="font-size:30px">Customer reviews</h2>
+    <?php if (!$reviews): ?>
+      <p class="st-summary-note">No reviews yet. Only customers who bought this product can review it.</p>
+    <?php else: ?>
+      <p class="st-rating" style="margin-top:6px"><b>★ <?= e(number_format((float) $p['rating_avg'], 1)) ?></b> out of 5 · <?= (int) $p['rating_count'] ?> verified review<?= (int) $p['rating_count'] === 1 ? '' : 's' ?></p>
+      <div style="display:grid;gap:14px;margin-top:16px;max-width:780px">
+        <?php foreach ($reviews as $rv): ?>
+          <article style="padding:14px 16px;border:1px solid var(--st-line);border-radius:16px">
+            <div style="color:var(--st-green-700)"><?= str_repeat('★', (int) $rv['rating']) ?><span style="color:#cfd6d2"><?= str_repeat('★', 5 - (int) $rv['rating']) ?></span>
+              <?php if ($rv['title']): ?><strong style="color:var(--st-navy);margin-left:6px"><?= e($rv['title']) ?></strong><?php endif; ?></div>
+            <?php if ($rv['body']): ?><p style="margin:6px 0 0;white-space:pre-line;color:var(--st-ink-2)"><?= e($rv['body']) ?></p><?php endif; ?>
+            <div class="st-line-meta" style="margin-top:6px"><?= e($rv['display_name']) ?> · Verified buyer · <?= e(date('M Y', (int) strtotime((string) $rv['created_at']))) ?></div>
+            <?php if ($rv['vendor_reply']): ?><div class="st-note" style="margin-top:8px;font-size:13px"><strong>Seller replied:</strong> <?= e($rv['vendor_reply']) ?></div><?php endif; ?>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+  </section>
+
   <?php if ($related): ?>
   <section class="st-section" style="padding-top:36px">
     <div class="st-head"><h2 class="st-h2" style="font-size:32px">You may also like</h2></div>

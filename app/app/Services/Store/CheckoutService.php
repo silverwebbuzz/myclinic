@@ -79,7 +79,18 @@ final class CheckoutService
                     return ['ok' => false, 'error' => $it['name'] . ': ' . $it['problem'] . '. Please update your cart.'];
                 }
             }
-            $quote = PricingService::quote($items);
+            $cartRow = QueryBuilder::table('store_carts')->where('id', '=', $cartId)->first() ?? [];
+            $cc = PricingService::cartCoupon($cartRow, $identityId);
+            if ($cc['error'] !== null) {
+                // The price the customer saw included a coupon that no longer works: stop and explain.
+                $pdo->rollBack();
+                // After the rollback, or the rollback would undo it.
+                QueryBuilder::table('store_carts')->where('id', '=', $cartId)->update(['coupon_code' => null]);
+
+                return ['ok' => false, 'error' => $cc['error'] . ' It has been removed; please review your total.'];
+            }
+            $quote = PricingService::quote($items, $cc['coupon']);
+            $couponApplied = $quote['coupon'] !== null && $quote['coupon']['applied'];
 
             // Reserve stock; the WHERE guard makes this safe against concurrent checkouts.
             $reserve = $pdo->prepare(
@@ -114,7 +125,9 @@ final class CheckoutService
                 'ship_address_json' => json_encode($ship, JSON_UNESCAPED_UNICODE),
                 'bill_address_json' => json_encode($ship, JSON_UNESCAPED_UNICODE),
                 'items_subtotal_paise' => $quote['subtotal'],
-                'discount_paise' => 0,
+                'discount_paise' => $quote['discount'],
+                'coupon_id' => $couponApplied ? (int) $quote['coupon']['id'] : null,
+                'coupon_code' => $couponApplied ? (string) $quote['coupon']['code'] : null,
                 'shipping_paise' => $quote['shipping'],
                 'tax_included_paise' => $quote['tax_included'],
                 'platform_fee_paise' => 0,
@@ -135,6 +148,8 @@ final class CheckoutService
                     'vendor_id' => (int) $g['vendor_id'],
                     'status' => 'pending_payment',
                     'items_subtotal_paise' => $g['subtotal'],
+                    'vendor_discount_paise' => $g['vendor_discount'],
+                    'platform_discount_paise' => $g['platform_discount'],
                     'shipping_paise' => $g['shipping'],
                     'tax_included_paise' => $g['tax'],
                     'commission_paise' => $g['commission'],
@@ -161,6 +176,8 @@ final class CheckoutService
                         'mrp_paise' => (int) $l['mrp_paise'],
                         'unit_price_paise' => $l['unit_price_paise'],
                         'line_subtotal_paise' => $l['line_subtotal_paise'],
+                        'vendor_discount_paise' => $l['vendor_discount_paise'],
+                        'platform_discount_paise' => $l['platform_discount_paise'],
                         'tax_included_paise' => $l['tax_included_paise'],
                         'line_total_paise' => $l['line_total_paise'],
                         'commission_type' => $l['commission_type'],

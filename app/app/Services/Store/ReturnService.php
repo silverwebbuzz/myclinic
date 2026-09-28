@@ -268,9 +268,13 @@ final class ReturnService
             $st->execute(['r' => $returnId]);
             $lines = $st->fetchAll();
             $amount = 0;
-            foreach ($lines as $l) {
-                $amount += (int) $l['unit_price_paise'] * (int) $l['rqty'];
+            foreach ($lines as &$l) {
+                // What the customer paid for these units (after any coupon); seller revenue for the ledger.
+                $l['_refund'] = PricingService::unitShare((int) $l['line_total_paise'], (int) $l['qty'], (int) $l['qty_refunded'], (int) $l['rqty']);
+                $l['_seller'] = PricingService::unitShare(PricingService::sellerRevenue($l), (int) $l['qty'], (int) $l['qty_refunded'], (int) $l['rqty']);
+                $amount += $l['_refund'];
             }
+            unset($l);
             if ($amount <= 0 || (int) $pay['refunded_paise'] + $amount > (int) $pay['amount_paise']) {
                 $pdo->rollBack();
 
@@ -297,7 +301,7 @@ final class ReturnService
             $vo = QueryBuilder::table('store_vendor_orders')->where('id', '=', (int) $r['vendor_order_id'])->first();
             foreach ($lines as $l) {
                 $q = (int) $l['rqty'];
-                $amt = (int) $l['unit_price_paise'] * $q;
+                $amt = (int) $l['_refund'];
                 $pdo->prepare('INSERT INTO store_refund_items (refund_id, order_item_id, qty, amount_paise, shipping_paise) VALUES (:r, :i, :q, :a, 0)')
                     ->execute(['r' => $refundId, 'i' => (int) $l['id'], 'q' => $q, 'a' => $amt]);
                 $pdo->prepare("UPDATE store_order_items SET qty_returned = qty_returned + :q1, qty_refunded = qty_refunded + :q2,
@@ -313,7 +317,9 @@ final class ReturnService
                 // Seller ledger: take back the sale, give back the matching commission + its GST.
                 $commissionShare = (int) round((int) $l['commission_paise'] * $q / max(1, (int) $l['qty']));
                 $gstShare = (int) round($commissionShare * CommissionService::COMMISSION_GST_BP / 10000);
-                $net = -$amt + $commissionShare + $gstShare;
+                // Take back what the seller earned on these units (not what the customer paid:
+                // a platform-funded coupon never came out of the seller's pocket).
+                $net = -(int) $l['_seller'] + $commissionShare + $gstShare;
                 if ($vo !== null && $net !== 0) {
                     $pdo->prepare(
                         "INSERT IGNORE INTO store_vendor_ledger

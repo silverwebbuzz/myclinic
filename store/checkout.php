@@ -73,7 +73,8 @@ if ($me) {
         }
     }
 
-    $quote = PricingService::quote($items);
+    $cc = PricingService::cartCoupon(store_cart(false) ?? [], $identityId);
+    $quote = PricingService::quote($items, $cc['coupon']);
     $addresses = AddressService::list($identityId);
 }
 
@@ -158,6 +159,7 @@ $sel = (string) ($old['address_id'] ?? ($addresses[0]['id'] ?? 'new'));
         <h2>Order summary</h2>
         <dl>
           <dt>Items (<?= (int) $quote['item_count'] ?>)</dt><dd><?= e(store_rupees((int) $quote['subtotal'])) ?></dd>
+          <?php if ($quote['discount'] > 0): ?><dt>Coupon <?= e($quote['coupon']['code']) ?></dt><dd class="st-save">−<?= e(store_rupees((int) $quote['discount'])) ?></dd><?php endif; ?>
           <dt>Shipping</dt><dd><?= $quote['shipping'] > 0 ? e(store_rupees((int) $quote['shipping'])) : 'Free' ?></dd>
           <dt class="st-total">To pay</dt><dd class="st-total"><?= e(store_rupees((int) $quote['grand_total'])) ?></dd>
         </dl>

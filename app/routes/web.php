@@ -569,7 +569,14 @@ return static function (RouteRegistrar $router): void {
 
         // Store marketplace — sellers + settings (chunk 1). Static segments
         // before {id} routes so "settings" etc. never match an id.
-        $admin->get('/store', static fn () => \App\Http\Response::redirect('/admin/store/vendors'));
+        $admin->get('/store', static fn () => \App\Http\Response::redirect('/admin/store/dashboard'));
+        $admin->get('/store/dashboard', [\App\Controllers\StoreMerchAdminController::class, 'dashboard']);
+        $admin->get('/store/coupons', [\App\Controllers\StoreMerchAdminController::class, 'coupons']);
+        $admin->post('/store/coupons', [\App\Controllers\StoreMerchAdminController::class, 'saveCoupon']);
+        $admin->get('/store/reviews', [\App\Controllers\StoreMerchAdminController::class, 'reviews']);
+        $admin->post('/store/reviews/{id}', [\App\Controllers\StoreMerchAdminController::class, 'moderateReview']);
+        $admin->get('/store/banners', [\App\Controllers\StoreMerchAdminController::class, 'banners']);
+        $admin->post('/store/banners', [\App\Controllers\StoreMerchAdminController::class, 'saveBanner']);
         $admin->get('/store/settings', [StoreAdminController::class, 'settings']);
         $admin->post('/store/settings', [StoreAdminController::class, 'saveSettings']);
         $admin->get('/store/vendors', [StoreAdminController::class, 'vendors']);
@@ -667,6 +674,10 @@ return static function (RouteRegistrar $router): void {
         $vendor->post('/orders/{id}/packed', [\App\Controllers\VendorOrderController::class, 'packed']);
         $vendor->post('/orders/{id}/cancel', [\App\Controllers\VendorOrderController::class, 'cancelItems']);
         $vendor->post('/orders/{id}/book', [\App\Controllers\VendorOrderController::class, 'book']);
+
+        // Reviews (P11)
+        $vendor->get('/reviews', [VendorPortalController::class, 'reviews']);
+        $vendor->post('/reviews/{id}/reply', [VendorPortalController::class, 'replyReview']);
 
         // Returns (P10)
         $vendor->get('/returns', [\App\Controllers\StoreReturnController::class, 'vendorIndex']);

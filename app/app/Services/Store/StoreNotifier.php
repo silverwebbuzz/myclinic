@@ -236,6 +236,53 @@ final class StoreNotifier
         }
     }
 
+    /**
+     * Once a day per seller: email the list of live variants at/below their low-stock level.
+     * Deduped via store_notifications (event stock.low, created today).
+     */
+    public static function lowStockDigests(): int
+    {
+        $sent = 0;
+        try {
+            $pdo = \App\Core\Database::connection();
+            $rows = $pdo->query(
+                "SELECT sv.vendor_id, p.name, sv.title, sv.sku, GREATEST(CAST(sv.stock_qty AS SIGNED) - CAST(sv.reserved_qty AS SIGNED), 0) AS left_qty
+                   FROM store_product_variants sv JOIN store_products p ON p.id = sv.product_id
+                  WHERE sv.is_active = 1 AND p.status = 'live' AND p.deleted_at IS NULL
+                    AND sv.stock_qty <= sv.reserved_qty + sv.low_stock_threshold
+                  ORDER BY sv.vendor_id, left_qty"
+            )->fetchAll();
+            $byVendor = [];
+            foreach ($rows as $r) {
+                $byVendor[(int) $r['vendor_id']][] = $r;
+            }
+            $portalBase = rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/');
+            foreach ($byVendor as $vid => $items) {
+                $owner = QueryBuilder::table('store_vendor_users')->where('vendor_id', '=', $vid)->where('role', '=', 'owner')->first();
+                if ($owner === null) {
+                    continue;
+                }
+                $st = $pdo->prepare("SELECT 1 FROM store_notifications WHERE recipient_type = 'vendor_user' AND recipient_id = :u AND event = 'stock.low' AND created_at >= CURDATE() LIMIT 1");
+                $st->execute(['u' => (int) $owner['id']]);
+                if ($st->fetchColumn() !== false) {
+                    continue;   // already told today
+                }
+                $lines = array_map(static fn ($i) => '  - ' . $i['sku'] . ' | ' . $i['name'] . ($i['title'] ? ' (' . $i['title'] . ')' : '')
+                    . ': ' . ((int) $i['left_qty'] === 0 ? 'OUT OF STOCK' : $i['left_qty'] . ' left'), array_slice($items, 0, 40));
+                $vendor = VendorService::find($vid);
+                self::mail((string) ($vendor['email'] ?? ''), 'Low stock: ' . count($items) . ' product(s) need restocking',
+                    "These products are running low on eClinicPro Store:\n" . implode("\n", $lines)
+                    . "\n\nUpdate stock: {$portalBase}/vendor/products\n\n— eClinicPro Store");
+                self::inApp('vendor_user', (int) $owner['id'], 'stock.low', count($items) . ' product(s) low on stock', 'Restock to avoid cancellations', '/vendor/dashboard');
+                $sent++;
+            }
+        } catch (\Throwable $e) {
+            error_log('[StoreNotifier::lowStockDigests] ' . $e->getMessage());
+        }
+
+        return $sent;
+    }
+
     public static function payoutPaid(int $payoutId): void
     {
         try {

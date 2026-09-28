@@ -23,4 +23,6 @@ $autoCancelled = FulfilmentService::autoCancelOverdue(50);
 $polled = \App\Services\Store\ShippingService::pollDue(40);
 // 4. return windows that ended → seller earnings become available for payout
 $released = \App\Services\Store\SettlementService::releaseMatured();
+// 5. once a day per seller: low-stock email
+\App\Services\Store\StoreNotifier::lowStockDigests();
 echo date('Y-m-d H:i:s') . " store: expired {$expired} unpaid order(s), auto-cancelled {$autoCancelled} late package(s), polled {$polled} shipment(s), released {$released} ledger entr(ies)\n";

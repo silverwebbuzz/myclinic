@@ -55,6 +55,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '')
     header('Location: /store/order/' . rawurlencode($orderNo) . '?' . http_build_query(['r' => $res['ok'] ? 'ok' : 'err', 'm' => $msg]));
     exit;
 }
+// Customer reviews a delivered item.
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '') === 'review' && store_same_origin()) {
+    $res = \App\Services\Store\ReviewService::create((int) $me['id'], (int) ($_POST['order_item_id'] ?? 0), (int) ($_POST['rating'] ?? 0),
+        (string) ($_POST['title'] ?? ''), (string) ($_POST['body'] ?? ''));
+    $msg = $res['ok'] ? 'Thanks for your review! It will appear on the product page after a quick check.' : ($res['error'] ?? 'Could not save your review.');
+    header('Location: /store/order/' . rawurlencode($orderNo) . '?' . http_build_query(['r' => $res['ok'] ? 'ok' : 'err', 'm' => $msg]));
+    exit;
+}
 // Customer requests a return on a delivered package.
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '') === 'return_request' && store_same_origin()) {
     $qty = [];
@@ -92,6 +100,7 @@ $statusText = [
     'payment_failed' => ['Payment failed', 'is-err'],
 ][$order['status']] ?? [ucwords(str_replace('_', ' ', (string) $order['status'])), 'is-muted'];
 $a = $order['ship_address'];
+$reviewable = \App\Services\Store\ReviewService::reviewable((int) $me['id'], (int) $order['id']);
 $shipByVo = [];
 foreach (\App\Services\Store\ShippingService::forOrder((int) $order['id']) as $s) {
     if ($s['status'] !== 'cancelled' && $s['direction'] === 'forward') {
@@ -166,7 +175,24 @@ require __DIR__ . '/_header.php';
               <span class="st-line-img" style="width:56px;height:56px"><?php if ($img = store_img($it['image_path'])): ?><img src="<?= e($img) ?>" alt=""><?php endif; ?></span>
               <div class="st-line-body"><span class="st-line-name"><?= e($it['name']) ?></span>
                 <div class="st-line-meta"><?= $it['variant_title'] ? e($it['variant_title']) . ' · ' : '' ?>Qty <?= (int) $it['qty'] ?> × <?= e(store_rupees((int) $it['unit_price_paise'])) ?></div>
-                <?php if ((int) $it['qty_cancelled'] > 0): ?><div class="st-line-problem"><?= (int) $it['qty_cancelled'] ?> cancelled &amp; refunded</div><?php endif; ?></div>
+                <?php if ((int) $it['qty_cancelled'] > 0): ?><div class="st-line-problem"><?= (int) $it['qty_cancelled'] ?> cancelled &amp; refunded</div><?php endif; ?>
+                <?php if (isset($reviewable[(int) $it['id']])): ?>
+                  <details style="margin-top:6px">
+                    <summary class="st-link-btn" style="list-style:none">★ Rate this product</summary>
+                    <form method="post" style="display:grid;gap:6px;margin-top:8px;font-size:14px">
+                      <input type="hidden" name="action" value="review">
+                      <input type="hidden" name="order_item_id" value="<?= (int) $it['id'] ?>">
+                      <select name="rating" class="st-select" required style="height:34px">
+                        <option value="">Your rating…</option>
+                        <?php for ($s = 5; $s >= 1; $s--): ?><option value="<?= $s ?>"><?= str_repeat('★', $s) . str_repeat('☆', 5 - $s) ?></option><?php endfor; ?>
+                      </select>
+                      <input name="title" maxlength="190" class="st-input" placeholder="Headline (optional)">
+                      <textarea name="body" rows="3" maxlength="3000" class="st-input" style="height:auto;padding:8px 12px" placeholder="How was it? Quality, packaging, value…"></textarea>
+                      <p class="st-summary-note" style="margin:0">Please share your experience with the product, not medical claims.</p>
+                      <button class="st-btn st-btn-ghost st-btn-sm">Submit review</button>
+                    </form>
+                  </details>
+                <?php endif; ?></div>
               <div class="st-line-total"><?= e(store_rupees((int) $it['line_total_paise'])) ?></div>
             </div>
           <?php endforeach; ?>
@@ -250,6 +276,7 @@ require __DIR__ . '/_header.php';
       <h2>Payment summary</h2>
       <dl>
         <dt>Items</dt><dd><?= e(store_rupees((int) $order['items_subtotal_paise'])) ?></dd>
+        <?php if ((int) $order['discount_paise'] > 0): ?><dt>Coupon <?= e((string) $order['coupon_code']) ?></dt><dd class="st-save">−<?= e(store_rupees((int) $order['discount_paise'])) ?></dd><?php endif; ?>
         <dt>Shipping</dt><dd><?= (int) $order['shipping_paise'] > 0 ? e(store_rupees((int) $order['shipping_paise'])) : 'Free' ?></dd>
         <dt class="st-total">Total</dt><dd class="st-total"><?= e(store_rupees((int) $order['grand_total_paise'])) ?></dd>
       </dl>
