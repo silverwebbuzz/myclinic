@@ -94,6 +94,8 @@ return static function (RouteRegistrar $router): void {
 
     $router->post('/webhooks/stripe', [WebhookController::class, 'stripe']);
     $router->post('/webhooks/razorpay', [WebhookController::class, 'razorpay']);
+    // Shiprocket tracking. The URL avoids the words "shiprocket"/"sr", which Shiprocket rejects in webhook URLs (VERIFY).
+    $router->post('/webhooks/store-tracking', [WebhookController::class, 'storeTracking']);
     // Meta WhatsApp: GET = verify handshake, POST = delivery/inbound events.
     $router->get('/webhooks/whatsapp', [WebhookController::class, 'whatsapp']);
     $router->post('/webhooks/whatsapp', [WebhookController::class, 'whatsapp']);
@@ -596,6 +598,9 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/store/orders/{id}/cancel', [\App\Controllers\StoreOrderAdminController::class, 'cancel']);
         $admin->post('/store/orders/{id}/recheck', [\App\Controllers\StoreOrderAdminController::class, 'recheck']);
         $admin->post('/store/orders/{id}/cancel-items', [\App\Controllers\StoreOrderAdminController::class, 'cancelItems']);
+        $admin->post('/store/orders/{id}/packages/{voId}/ship', [\App\Controllers\StoreOrderAdminController::class, 'shipBook']);
+        $admin->post('/store/orders/{id}/shipments/{shipmentId}/cancel', [\App\Controllers\StoreOrderAdminController::class, 'shipCancel']);
+        $admin->post('/store/orders/{id}/shipments/{shipmentId}/refresh', [\App\Controllers\StoreOrderAdminController::class, 'shipRefresh']);
     });
 
     // Store marketplace — seller portal. Own guard (mc_vendor_token, path /vendor),
@@ -644,6 +649,7 @@ return static function (RouteRegistrar $router): void {
         $vendor->post('/orders/{id}/accept', [\App\Controllers\VendorOrderController::class, 'accept']);
         $vendor->post('/orders/{id}/packed', [\App\Controllers\VendorOrderController::class, 'packed']);
         $vendor->post('/orders/{id}/cancel', [\App\Controllers\VendorOrderController::class, 'cancelItems']);
+        $vendor->post('/orders/{id}/book', [\App\Controllers\VendorOrderController::class, 'book']);
     });
 
     // Partner program — public auth pages + guarded partner dashboard.

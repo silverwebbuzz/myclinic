@@ -56,8 +56,30 @@ final class VendorOrderController
     public function show(Request $request, string $id): Response
     {
         $vo = $this->load((int) $id);
+        if ($vo === null) {
+            return Response::html('Order not found', 404);
+        }
 
-        return $vo === null ? Response::html('Order not found', 404) : $this->render('store_vendor/order_detail', ['vo' => $vo]);
+        return $this->render('store_vendor/order_detail', [
+            'vo' => $vo,
+            'shipment' => \App\Services\Store\ShippingService::activeShipment((int) $vo['id']),
+            'suggest' => \App\Services\Store\ShippingService::suggestPackage((int) $vo['id']),
+            'courierOn' => \App\Services\Store\ShiprocketClient::configured(),
+        ]);
+    }
+
+    /** Book (or retry booking) courier pickup via Shiprocket. */
+    public function book(Request $request, string $id): Response
+    {
+        $res = \App\Services\Store\ShippingService::book((int) $id, (int) $this->vendor()['id'], [
+            'weight_g' => (int) ($request->post['weight_g'] ?? 0),
+            'length_cm' => (float) ($request->post['length_cm'] ?? 0),
+            'breadth_cm' => (float) ($request->post['breadth_cm'] ?? 0),
+            'height_cm' => (float) ($request->post['height_cm'] ?? 0),
+        ], 'vendor_user', $this->userId());
+        $this->flash($res, 'Courier booked. Print the label, stick it on the package, and hand it over at pickup.');
+
+        return Response::redirect('/vendor/orders/' . (int) $id);
     }
 
     public function accept(Request $request, string $id): Response

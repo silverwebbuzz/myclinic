@@ -69,6 +69,43 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
         </p>
     </section>
 
+    <section class="rounded-xl border bg-white p-5 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="font-semibold">Shiprocket (courier)</h2>
+            <span class="rounded-full px-2 py-0.5 text-xs font-medium <?= $shiprocket['enabled'] ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600' ?>"><?= $shiprocket['enabled'] ? 'On' : 'Off' ?></span>
+        </div>
+        <p class="mt-1 text-sm text-slate-500">Use a Shiprocket <strong>API user</strong> (Shiprocket → Settings → API → Configure → Create API user), not your normal login. Sellers can book pickups only while this is on.</p>
+        <form method="post" action="/admin/store/settings" class="mt-3 grid gap-3 sm:grid-cols-2" autocomplete="off">
+            <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+            <input type="hidden" name="action" value="shiprocket_save">
+            <label class="text-sm"><span class="text-slate-600">API user email</span>
+                <input name="sr_email" type="email" value="<?= $e($shiprocket['email']) ?>" class="mt-1 w-full rounded border px-2 py-1.5"></label>
+            <label class="text-sm"><span class="text-slate-600">API user password</span>
+                <input name="sr_password" type="password" autocomplete="new-password" placeholder="<?= $shiprocket['has_password'] ? 'Saved (leave blank to keep)' : '' ?>" class="mt-1 w-full rounded border px-2 py-1.5"></label>
+            <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="sr_enabled" value="1" <?= $shiprocket['enabled'] ? 'checked' : '' ?>> Courier booking on</label>
+            <div class="flex gap-2 sm:justify-end">
+                <button class="rounded bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700">Save</button>
+            </div>
+        </form>
+        <form method="post" action="/admin/store/settings" class="mt-2">
+            <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><input type="hidden" name="action" value="shiprocket_test">
+            <button class="rounded border px-3 py-1.5 text-sm hover:bg-slate-50">Test connection</button>
+        </form>
+        <div class="mt-4 border-t pt-3 text-sm">
+            <p class="font-medium">Tracking webhook</p>
+            <p class="text-slate-500">In Shiprocket → Settings → API → Webhooks, add this URL and token (sent as the <code>x-api-key</code> header):</p>
+            <input readonly value="<?= $e($shiprocket['webhook_url']) ?>" onclick="this.select()" class="mt-2 w-full rounded border bg-slate-50 px-3 py-1.5 font-mono text-xs">
+            <?php if ($shiprocket['webhook_key'] !== ''): ?>
+                <input readonly value="<?= $e($shiprocket['webhook_key']) ?>" onclick="this.select()" class="mt-2 w-full rounded border bg-slate-50 px-3 py-1.5 font-mono text-xs">
+            <?php endif; ?>
+            <form method="post" action="/admin/store/settings" class="mt-2">
+                <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><input type="hidden" name="action" value="shiprocket_webhook_key">
+                <button class="rounded border px-3 py-1.5 text-sm hover:bg-slate-50"><?= $shiprocket['webhook_key'] !== '' ? 'Generate a new token' : 'Generate token' ?></button>
+            </form>
+            <p class="mt-2 text-xs text-slate-500">Without the webhook, tracking still updates every ~2 hours by polling (cron).</p>
+        </div>
+    </section>
+
     <form method="post" action="/admin/store/settings" class="rounded-xl border bg-white p-5 shadow-sm space-y-4">
         <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
         <input type="hidden" name="action" value="save">

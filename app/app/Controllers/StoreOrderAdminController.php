@@ -36,7 +36,19 @@ final class StoreOrderAdminController
     {
         $order = OrderService::load((int) $id);
 
-        return $order === null ? Response::html('Order not found', 404) : $this->render('admin/store_order_detail', ['order' => $order]);
+        if ($order === null) {
+            return Response::html('Order not found', 404);
+        }
+        $shipments = [];
+        foreach (\App\Services\Store\ShippingService::forOrder((int) $order['id']) as $s) {
+            $shipments[(int) $s['vendor_order_id']][] = $s;
+        }
+
+        return $this->render('admin/store_order_detail', [
+            'order' => $order,
+            'shipments' => $shipments,
+            'courierOn' => \App\Services\Store\ShiprocketClient::configured(),
+        ]);
     }
 
     /** Cancel an UNPAID order (releases reserved stock). Paid-order cancellation comes with refunds (P6+). */
@@ -62,6 +74,39 @@ final class StoreOrderAdminController
         SessionFlash::put($res['ok'] ? 'store_ok' : 'store_err', $res['ok']
             ? 'Cancelled and refunded ₹' . \App\Services\Store\ProductService::rupees((int) $res['refunded']) . ' (' . $res['refund_no'] . ').'
             : ($res['error'] ?? 'Could not cancel.'));
+
+        return Response::redirect('/admin/store/orders/' . (int) $id);
+    }
+
+    // ---- Shipments (P8) ------------------------------------------------------------
+
+    /** Admin books (or finishes booking) courier pickup for a package. */
+    public function shipBook(Request $request, string $id, string $voId): Response
+    {
+        $res = \App\Services\Store\ShippingService::book((int) $voId, null, [
+            'weight_g' => (int) ($request->post['weight_g'] ?? 0),
+            'length_cm' => (float) ($request->post['length_cm'] ?? 0),
+            'breadth_cm' => (float) ($request->post['breadth_cm'] ?? 0),
+            'height_cm' => (float) ($request->post['height_cm'] ?? 0),
+        ], 'admin', (int) (RequestContext::superAdmin()['id'] ?? 0));
+        SessionFlash::put($res['ok'] ? 'store_ok' : 'store_err', $res['ok'] ? 'Courier booked.' : ($res['error'] ?? 'Booking failed.'));
+
+        return Response::redirect('/admin/store/orders/' . (int) $id);
+    }
+
+    public function shipCancel(Request $request, string $id, string $shipmentId): Response
+    {
+        $res = \App\Services\Store\ShippingService::cancel((int) $shipmentId, (int) (RequestContext::superAdmin()['id'] ?? 0));
+        SessionFlash::put($res['ok'] ? 'store_ok' : 'store_err', $res['ok'] ? 'Shipment cancelled; the package is back to "packed".' : ($res['error'] ?? 'Could not cancel.'));
+
+        return Response::redirect('/admin/store/orders/' . (int) $id);
+    }
+
+    public function shipRefresh(Request $request, string $id, string $shipmentId): Response
+    {
+        $s = \App\Core\QueryBuilder::table('store_shipments')->where('id', '=', (int) $shipmentId)->first();
+        $ok = $s !== null && \App\Services\Store\ShippingService::refresh($s);
+        SessionFlash::put($ok ? 'store_ok' : 'store_err', $ok ? 'Tracking refreshed from Shiprocket.' : 'No tracking available yet.');
 
         return Response::redirect('/admin/store/orders/' . (int) $id);
     }

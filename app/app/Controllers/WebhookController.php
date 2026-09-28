@@ -63,6 +63,18 @@ final class WebhookController
      * order.paid (activate) and payment.failed (mark invoice failed).
      * Signature-verified in BillingGatewayService.
      */
+    /**
+     * Shiprocket shipment-status webhook for the store. Authenticated by the
+     * x-api-key token configured in Shiprocket (= store_shiprocket_webhook_key).
+     * Always 200 for authenticated calls so Shiprocket doesn't disable the hook.
+     */
+    public function storeTracking(Request $request): Response
+    {
+        $ok = \App\Services\Store\ShippingService::handleWebhook($request->rawBody ?? '', $request->header('x-api-key'));
+
+        return $ok ? Response::json(['received' => true]) : Response::json(['error' => 'Unauthorized'], 401);
+    }
+
     public function razorpay(Request $request): Response
     {
         $payload = $request->rawBody ?? '';

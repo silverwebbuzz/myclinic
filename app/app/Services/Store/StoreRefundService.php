@@ -105,6 +105,16 @@ final class StoreRefundService
                 $touchedVo[(int) $it['vo_id']] = true;
             }
 
+            // A booked courier would still collect the box: cancel the booking first.
+            foreach (array_keys($touchedVo) as $voId) {
+                $active = ShippingService::activeShipment($voId);
+                if ($active !== null && !empty($active['sr_shipment_id'])) {
+                    $pdo->rollBack();
+
+                    return ['ok' => false, 'error' => 'A courier is already booked for this package. Cancel the courier booking first (admin → order → shipment).'];
+                }
+            }
+
             // Shipping comes back when a seller's whole package is cancelled.
             $shippingBack = [];
             foreach (array_keys($touchedVo) as $voId) {

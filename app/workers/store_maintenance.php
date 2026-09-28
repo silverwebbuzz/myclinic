@@ -19,4 +19,6 @@ if (is_file($base . '/.env')) {
 
 $expired = OrderService::expireStale(200);
 $autoCancelled = FulfilmentService::autoCancelOverdue(50);
-echo date('Y-m-d H:i:s') . " store: expired {$expired} unpaid order(s), auto-cancelled {$autoCancelled} late package(s)\n";
+// 3. shipments with no courier update for ~2h → pull tracking from Shiprocket (webhook backup)
+$polled = \App\Services\Store\ShippingService::pollDue(40);
+echo date('Y-m-d H:i:s') . " store: expired {$expired} unpaid order(s), auto-cancelled {$autoCancelled} late package(s), polled {$polled} shipment(s)\n";

@@ -82,6 +82,58 @@ $a = $order['ship_address'];
                 <?php endforeach; ?>
                 </tbody>
             </table>
+            <?php $voShip = $shipments[(int) $vo['id']] ?? []; ?>
+            <div class="mt-3 rounded border bg-slate-50 p-3 text-sm">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <strong>Shipping</strong>
+                    <?php if (!$courierOn): ?><span class="text-xs text-amber-700">Shiprocket not connected (Store settings)</span><?php endif; ?>
+                </div>
+                <?php foreach ($voShip as $s): ?>
+                    <div class="mt-2 rounded border bg-white p-2 <?= $s['status'] === 'cancelled' ? 'opacity-50' : '' ?>">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <span><span class="font-mono"><?= $e($s['shipment_no']) ?></span> · <strong><?= $e(str_replace('_', ' ', (string) $s['status'])) ?></strong>
+                                <?= !empty($s['courier_name']) ? ' · ' . $e($s['courier_name']) : '' ?>
+                                <?= !empty($s['awb_code']) ? ' · AWB <span class="font-mono">' . $e($s['awb_code']) . '</span>' : '' ?>
+                                <?= !empty($s['pickup_scheduled_for']) ? ' · pickup ' . $e($s['pickup_scheduled_for']) : '' ?>
+                                · <?= (int) $s['weight_g'] ?> g, <?= (int) $s['length_mm'] / 10 ?>×<?= (int) $s['breadth_mm'] / 10 ?>×<?= (int) $s['height_mm'] / 10 ?> cm</span>
+                            <span class="flex gap-2">
+                                <?php if (!empty($s['label_url'])): ?><a href="<?= $e($s['label_url']) ?>" target="_blank" rel="noopener" class="text-sky-700 hover:underline">Label</a><?php endif; ?>
+                                <?php if (!empty($s['awb_code'])): ?>
+                                    <form method="post" action="/admin/store/orders/<?= (int) $order['id'] ?>/shipments/<?= (int) $s['id'] ?>/refresh"><input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><button class="text-sky-700 hover:underline">Refresh tracking</button></form>
+                                <?php endif; ?>
+                                <?php if ($s['status'] !== 'cancelled' && (int) $s['status_rank'] < 40): ?>
+                                    <form method="post" action="/admin/store/orders/<?= (int) $order['id'] ?>/shipments/<?= (int) $s['id'] ?>/cancel" onsubmit="return confirm('Cancel this courier booking?')"><input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><button class="text-red-600 hover:underline">Cancel shipment</button></form>
+                                <?php endif; ?>
+                            </span>
+                        </div>
+                        <?php if (!empty($s['last_error']) && empty($s['label_url'])): ?>
+                            <p class="mt-1 text-xs text-red-700">Last error: <?= $e(mb_substr((string) $s['last_error'], 0, 300)) ?></p>
+                            <form method="post" action="/admin/store/orders/<?= (int) $order['id'] ?>/packages/<?= (int) $vo['id'] ?>/ship" class="mt-1"><input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><button class="rounded bg-slate-800 px-2 py-1 text-xs text-white">Retry booking</button></form>
+                        <?php endif; ?>
+                        <?php if ($s['events']): ?>
+                            <ul class="mt-2 space-y-0.5 text-xs text-slate-600">
+                                <?php foreach ($s['events'] as $ev): ?>
+                                    <li><span class="text-slate-400"><?= $e(substr((string) $ev['event_at'], 0, 16)) ?></span> · <?= $e($ev['raw_status']) ?><?= $ev['internal_status'] === null ? ' <span class="text-amber-600">(unmapped)</span>' : '' ?><?= !empty($ev['location']) ? ' · ' . $e($ev['location']) : '' ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+                <?php $hasActive = (bool) array_filter($voShip, static fn ($s) => $s['status'] !== 'cancelled'); ?>
+                <?php if ($courierOn && !$hasActive && $vo['status'] === 'packed'): ?>
+                    <?php $sg = \App\Services\Store\ShippingService::suggestPackage((int) $vo['id']); ?>
+                    <form method="post" action="/admin/store/orders/<?= (int) $order['id'] ?>/packages/<?= (int) $vo['id'] ?>/ship" class="mt-2 flex flex-wrap items-end gap-2 text-xs">
+                        <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+                        <label>Weight g<input name="weight_g" type="number" value="<?= (int) $sg['weight_g'] ?>" class="ml-1 w-20 rounded border px-1 py-0.5"></label>
+                        <label>L<input name="length_cm" type="number" step="0.5" value="<?= $e($sg['length_cm']) ?>" class="ml-1 w-14 rounded border px-1 py-0.5"></label>
+                        <label>B<input name="breadth_cm" type="number" step="0.5" value="<?= $e($sg['breadth_cm']) ?>" class="ml-1 w-14 rounded border px-1 py-0.5"></label>
+                        <label>H<input name="height_cm" type="number" step="0.5" value="<?= $e($sg['height_cm']) ?>" class="ml-1 w-14 rounded border px-1 py-0.5"></label>
+                        <button class="rounded bg-slate-800 px-2 py-1 text-white">Book pickup</button>
+                    </form>
+                <?php elseif (!$voShip): ?>
+                    <p class="mt-1 text-xs text-slate-500">No shipment yet<?= $vo['status'] === 'packed' ? '' : ' (package must be packed first)' ?>.</p>
+                <?php endif; ?>
+            </div>
             <?php
             $open = array_filter($vo['items'], static fn ($it) => (int) $it['qty'] > (int) $it['qty_cancelled']);
             $adminCan = $open && in_array($vo['status'], \App\Services\Store\StoreRefundService::CANCELLABLE['admin'], true)

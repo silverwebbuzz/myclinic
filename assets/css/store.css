@@ -310,5 +310,10 @@ button { font: inherit; }
 .st-pay-box { margin-top: 20px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px;
   padding: 18px 20px; border-radius: 18px; background: #fff7e6; border: 1px solid #f3dfb0; }
 
+.st-track { margin: 10px 0 6px; padding: 12px 14px; border-radius: 14px; background: var(--st-green-25); border: 1px solid #d5e6da; font-size: 14px; }
+.st-track-head { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; }
+.st-track-events { margin: 8px 0 0; padding-left: 18px; font-size: 13px; color: var(--st-ink-2); display: grid; gap: 3px; }
+.st-track-events span { color: var(--st-mute); }
+
 /* ---------- Toast ---------- */
 .st-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 900; background: var(--st-navy); color: #fff; padding: 12px 20px; border-radius: 999px; font-size: 14px; box-shadow: 0 12px 30px -10px rgba(19,41,75,.5); }

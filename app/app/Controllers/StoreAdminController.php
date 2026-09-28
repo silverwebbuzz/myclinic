@@ -165,6 +165,13 @@ final class StoreAdminController
                 'store_default_commission_bp' => StoreSettings::get('store_default_commission_bp', '1000'),
             ],
             'shipping' => $this->defaultShippingRule(),
+            'shiprocket' => [
+                'enabled' => StoreSettings::get('store_shiprocket_enabled', '0') === '1',
+                'email' => StoreSettings::get('store_shiprocket_email'),
+                'has_password' => StoreSettings::get('store_shiprocket_password') !== '',
+                'webhook_key' => StoreSettings::get('store_shiprocket_webhook_key'),
+                'webhook_url' => rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/') . '/webhooks/store-tracking',
+            ],
         ]);
     }
 
@@ -187,6 +194,23 @@ final class StoreAdminController
                 StoreSettings::set('store_enabled', $on ? '1' : '0');
                 StoreAudit::log('store.' . ($on ? 'enable' : 'disable'), 'setting', null);
                 SessionFlash::put('store_ok', $on ? 'Store is now LIVE for customers.' : 'Store is now hidden from customers.');
+            } elseif ($action === 'shiprocket_save') {
+                $email = trim((string) ($request->post['sr_email'] ?? ''));
+                $password = (string) ($request->post['sr_password'] ?? '');
+                if ($password !== '' && !StoreCrypto::isConfigured()) {
+                    throw new \RuntimeException('STORE_DATA_KEY missing: cannot store the Shiprocket password securely.');
+                }
+                \App\Services\Store\ShiprocketClient::saveCredentials($email, $password);
+                StoreSettings::set('store_shiprocket_enabled', !empty($request->post['sr_enabled']) ? '1' : '0');
+                StoreAudit::log('store.shiprocket_save', 'setting', null, null, ['email' => $email, 'password_changed' => $password !== '']);
+                SessionFlash::put('store_ok', 'Shiprocket settings saved. Use "Test connection" to check the login.');
+            } elseif ($action === 'shiprocket_test') {
+                $res = \App\Services\Store\ShiprocketClient::testLogin();
+                SessionFlash::put($res['ok'] ? 'store_ok' : 'store_err', $res['ok'] ? 'Connected to Shiprocket ✓' : 'Shiprocket login failed: ' . ($res['error'] ?? ''));
+            } elseif ($action === 'shiprocket_webhook_key') {
+                StoreSettings::set('store_shiprocket_webhook_key', bin2hex(random_bytes(20)), true);
+                StoreAudit::log('store.shiprocket_webhook_key_rotate', 'setting', null);
+                SessionFlash::put('store_ok', 'New webhook token generated. Paste it into Shiprocket (the old one stops working).');
             } elseif ($action === 'new_preview_key') {
                 StoreSettings::set('store_preview_key', bin2hex(random_bytes(16)), true);
                 StoreAudit::log('store.preview_key_rotate', 'setting', null);

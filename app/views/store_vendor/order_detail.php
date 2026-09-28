@@ -49,8 +49,41 @@ ob_start();
             <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
             <button class="rounded-full bg-[#0e4d34] px-6 py-2 text-sm font-medium text-white hover:bg-[#17774f]">Mark as packed</button>
         </form>
-    <?php elseif ($status === 'packed'): ?>
-        <p class="text-sm"><strong>Packed. Waiting for courier pickup.</strong> Booking the courier and printing the label from this page is coming in the next update.</p>
+    <?php elseif (in_array($status, ['packed', 'ready_to_ship'], true)): ?>
+        <?php if (!empty($shipment['awb_code'])): ?>
+            <p class="text-sm"><strong>Courier booked.</strong> <?= !empty($shipment['courier_name']) ? $e($shipment['courier_name']) . ' · ' : '' ?>AWB <span class="font-mono"><?= $e($shipment['awb_code']) ?></span>
+                <?= !empty($shipment['pickup_scheduled_for']) ? ' · pickup on ' . $e(date('D j M', (int) strtotime((string) $shipment['pickup_scheduled_for']))) : '' ?></p>
+            <p class="mt-1 text-sm">Print the label, stick it on the box, and hand it to the courier at pickup.</p>
+            <div class="mt-3 flex flex-wrap gap-3">
+                <?php if (!empty($shipment['label_url'])): ?>
+                    <a href="<?= $e($shipment['label_url']) ?>" target="_blank" rel="noopener" class="rounded-full bg-[#0e4d34] px-5 py-2 text-sm font-medium text-white hover:bg-[#17774f]">Download label</a>
+                <?php endif; ?>
+                <?php if (empty($shipment['label_url']) || empty($shipment['pickup_scheduled_for'])): ?>
+                    <form method="post" action="/vendor/orders/<?= (int) $vo['id'] ?>/book"><input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+                        <button class="rounded-full border border-[#0e4d34] px-5 py-2 text-sm font-medium text-[#0e4d34] hover:bg-white">Finish booking (label / pickup)</button></form>
+                <?php endif; ?>
+            </div>
+        <?php elseif ($shipment !== null): ?>
+            <p class="text-sm"><strong>Courier booking didn't finish.</strong> <?= $e(mb_substr((string) ($shipment['last_error'] ?? ''), 0, 180)) ?></p>
+            <form method="post" action="/vendor/orders/<?= (int) $vo['id'] ?>/book" class="mt-3"><input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+                <button class="rounded-full bg-[#0e4d34] px-5 py-2 text-sm font-medium text-white hover:bg-[#17774f]">Retry booking</button></form>
+        <?php elseif (!$courierOn): ?>
+            <p class="text-sm"><strong>Packed. Waiting for courier pickup.</strong> Booking the courier from this page will be switched on shortly.</p>
+        <?php else: ?>
+            <p class="text-sm"><strong>Book courier pickup.</strong> Weigh the packed box and measure it. Couriers charge by the larger of actual and volumetric weight.</p>
+            <form method="post" action="/vendor/orders/<?= (int) $vo['id'] ?>/book" class="mt-3 grid gap-3 text-sm sm:grid-cols-5 sm:items-end">
+                <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+                <label class="block"><span class="text-slate-600">Weight (g)</span>
+                    <input name="weight_g" type="number" min="10" max="50000" required value="<?= (int) $suggest['weight_g'] ?>" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"></label>
+                <label class="block"><span class="text-slate-600">Length (cm)</span>
+                    <input name="length_cm" type="number" step="0.5" min="1" max="300" required value="<?= $e($suggest['length_cm']) ?>" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"></label>
+                <label class="block"><span class="text-slate-600">Breadth (cm)</span>
+                    <input name="breadth_cm" type="number" step="0.5" min="1" max="300" required value="<?= $e($suggest['breadth_cm']) ?>" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"></label>
+                <label class="block"><span class="text-slate-600">Height (cm)</span>
+                    <input name="height_cm" type="number" step="0.5" min="1" max="300" required value="<?= $e($suggest['height_cm']) ?>" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"></label>
+                <button class="rounded-full bg-[#0e4d34] px-5 py-2 text-sm font-medium text-white hover:bg-[#17774f]">Book pickup</button>
+            </form>
+        <?php endif; ?>
     <?php else: ?>
         <p class="text-sm">Status: <strong><?= $e(ucfirst(str_replace('_', ' ', $status))) ?></strong></p>
     <?php endif; ?>

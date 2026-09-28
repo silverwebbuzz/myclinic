@@ -77,6 +77,19 @@ $statusText = [
     'payment_failed' => ['Payment failed', 'is-err'],
 ][$order['status']] ?? [ucwords(str_replace('_', ' ', (string) $order['status'])), 'is-muted'];
 $a = $order['ship_address'];
+$shipByVo = [];
+foreach (\App\Services\Store\ShippingService::forOrder((int) $order['id']) as $s) {
+    if ($s['status'] !== 'cancelled' && $s['direction'] === 'forward') {
+        $shipByVo[(int) $s['vendor_order_id']] = $s;   // latest active shipment per package
+    }
+}
+$trackLabel = [
+    'sr_order_created' => 'Preparing shipment', 'awb_assigned' => 'Courier assigned', 'pickup_scheduled' => 'Pickup scheduled',
+    'pickup_failed' => 'Pickup being rescheduled', 'picked_up' => 'Picked up', 'in_transit' => 'In transit',
+    'out_for_delivery' => 'Out for delivery', 'ndr' => 'Delivery attempt failed: courier will retry',
+    'delivered' => 'Delivered', 'rto_initiated' => 'Returning to seller', 'rto_delivered' => 'Returned to seller',
+    'lost' => 'Lost in transit (we\'re on it)', 'damaged' => 'Damaged in transit (we\'re on it)',
+];
 
 $storeTitle = 'Order ' . $order['order_no'] . ' | eClinicPro Store';
 require __DIR__ . '/_header.php';
@@ -142,6 +155,23 @@ require __DIR__ . '/_header.php';
               <div class="st-line-total"><?= e(store_rupees((int) $it['line_total_paise'])) ?></div>
             </div>
           <?php endforeach; ?>
+          <?php $sh = $shipByVo[(int) $vo['id']] ?? null; ?>
+          <?php if ($sh !== null && !empty($sh['awb_code'])): ?>
+            <div class="st-track">
+              <div class="st-track-head">
+                <strong><?= e($trackLabel[$sh['status']] ?? ucfirst(str_replace('_', ' ', (string) $sh['status']))) ?></strong>
+                <span class="st-line-meta"><?= !empty($sh['courier_name']) ? e($sh['courier_name']) . ' · ' : '' ?>AWB <?= e($sh['awb_code']) ?></span>
+                <a class="st-link-btn" href="https://shiprocket.co/tracking/<?= rawurlencode((string) $sh['awb_code']) ?>" target="_blank" rel="noopener">Track package ↗</a>
+              </div>
+              <?php if ($sh['events']): ?>
+                <ol class="st-track-events">
+                  <?php foreach (array_slice($sh['events'], 0, 4) as $ev): ?>
+                    <li><span><?= e(date('j M, g:i a', (int) strtotime((string) $ev['event_at']))) ?></span> <?= e(ucwords(strtolower((string) $ev['raw_status']))) ?><?= !empty($ev['location']) ? ' · ' . e($ev['location']) : '' ?></li>
+                  <?php endforeach; ?>
+                </ol>
+              <?php endif; ?>
+            </div>
+          <?php endif; ?>
           <?php
           $openLines = array_filter($vo['items'], static fn ($it) => (int) $it['qty'] > (int) $it['qty_cancelled']);
           $customerCanCancel = in_array($vo['status'], \App\Services\Store\StoreRefundService::CANCELLABLE['customer'], true)

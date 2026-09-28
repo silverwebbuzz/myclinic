@@ -135,6 +135,49 @@ final class StoreNotifier
         }
     }
 
+    /** Shipment milestones: customer hears "shipped"/"delivered"; the team hears about problems. */
+    public static function shipmentUpdate(int $shipmentId, string $event): void
+    {
+        try {
+            $s = QueryBuilder::table('store_shipments')->where('id', '=', $shipmentId)->first();
+            if ($s === null) {
+                return;
+            }
+            $o = QueryBuilder::table('store_orders')->where('id', '=', (int) $s['order_id'])->first();
+            $vo = QueryBuilder::table('store_vendor_orders')->where('id', '=', (int) $s['vendor_order_id'])->first();
+            $vendor = VendorService::find((int) $s['vendor_id']);
+            if ($o === null || $vo === null) {
+                return;
+            }
+            $storeBase = rtrim((string) ($_ENV['STORE_BASE_URL'] ?? 'https://eclinicpro.com'), '/');
+            $link = "{$storeBase}/store/order/{$o['order_no']}";
+            $from = $vendor['display_name'] ?? 'the seller';
+            if (in_array($event, ['shipped', 'delivered'], true) && !empty($o['contact_email'])) {
+                $subject = $event === 'shipped' ? "Shipped: your package from $from" : "Delivered: your package from $from";
+                $body = $event === 'shipped'
+                    ? "Hi {$o['contact_name']},\n\nYour package from $from (order {$o['order_no']}) is on its way"
+                      . (!empty($s['courier_name']) ? ' with ' . $s['courier_name'] : '') . ".\nTracking number (AWB): {$s['awb_code']}\n\nTrack it here: $link\n\n— eClinicPro Store"
+                    : "Hi {$o['contact_name']},\n\nYour package from $from (order {$o['order_no']}) has been delivered. We hope it helps!\n\n"
+                      . "If something is wrong with it, reply to this email or write to help@eclinicpro.com with your order number.\n$link\n\n— eClinicPro Store";
+                self::mail((string) $o['contact_email'], $subject, $body);
+            }
+            if (in_array($event, ['ndr', 'pickup_failed', 'lost', 'damaged', 'rto_initiated', 'rto'], true)) {
+                $admin = (string) ($_ENV['STORE_ADMIN_EMAIL'] ?? $_ENV['HELP_FROM'] ?? 'help@eclinicpro.com');
+                $portalBase = rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/');
+                self::mail($admin, "Shipment problem ($event): {$vo['sub_order_no']}",
+                    "AWB {$s['awb_code']} · {$from}\nLast courier status: {$s['last_raw_status']}\n{$portalBase}/admin/store/orders/{$o['id']}");
+                if ($vendor !== null && in_array($event, ['pickup_failed', 'rto_initiated'], true)) {
+                    self::mail((string) $vendor['email'], "Courier update for {$vo['sub_order_no']}: " . str_replace('_', ' ', $event),
+                        "The courier reported: {$s['last_raw_status']} for AWB {$s['awb_code']}.\n"
+                        . ($event === 'pickup_failed' ? "Please keep the package ready; pickup will be re-attempted.\n" : "The package is being returned to you.\n")
+                        . "\n— eClinicPro Store");
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[StoreNotifier::shipmentUpdate] ' . $e->getMessage());
+        }
+    }
+
     public static function inApp(string $recipientType, int $recipientId, string $event, string $title, string $body, string $link): void
     {
         try {
