@@ -106,6 +106,36 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
         </div>
     </section>
 
+    <section class="rounded-xl border bg-white p-5 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="font-semibold">Invoicing (GST)</h2>
+            <span class="rounded-full px-2 py-0.5 text-xs font-medium <?= $invoicing['ready'] ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' ?>"><?= $invoicing['ready'] ? 'Ready' : 'Details missing' ?></span>
+        </div>
+        <p class="mt-1 text-sm text-slate-500">Sellers' goods are invoiced in <em>their</em> name automatically. The <strong>delivery charge</strong> is eClinicPro's own service, so eClinicPro issues a separate small invoice for it, using these details. Until they're filled in, delivery charges are not invoiced. See <a class="underline" href="/admin/store/gst">GST register</a>.</p>
+        <form method="post" action="/admin/store/settings" class="mt-3 grid gap-3 sm:grid-cols-2">
+            <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+            <input type="hidden" name="action" value="invoicing_save">
+            <label class="text-sm"><span class="text-slate-600">Legal name (as on GST registration)</span>
+                <input name="platform_legal_name" value="<?= $e($invoicing['legal_name']) ?>" class="mt-1 w-full rounded border px-2 py-1.5"></label>
+            <label class="text-sm"><span class="text-slate-600">GSTIN</span>
+                <input name="platform_gstin" maxlength="15" value="<?= $e($invoicing['gstin']) ?>" class="mt-1 w-full rounded border px-2 py-1.5 font-mono uppercase"></label>
+            <label class="text-sm sm:col-span-2"><span class="text-slate-600">Registered address (printed on invoices)</span>
+                <textarea name="platform_address" rows="2" class="mt-1 w-full rounded border px-2 py-1.5"><?= $e($invoicing['address']) ?></textarea></label>
+            <label class="text-sm"><span class="text-slate-600">SAC code for delivery charges</span>
+                <input name="delivery_sac" maxlength="8" value="<?= $e($invoicing['sac']) ?>" class="mt-1 w-full rounded border px-2 py-1.5">
+                <span class="text-xs text-slate-400">996812 = courier services. Confirm with your CA.</span></label>
+            <label class="text-sm"><span class="text-slate-600">GST included in the delivery charge</span>
+                <select name="delivery_gst_bp" class="mt-1 w-full rounded border px-2 py-1.5">
+                    <?php foreach (\App\Services\Store\CatalogService::GST_RATES_BP as $bp => $label): ?>
+                        <option value="<?= (int) $bp ?>" <?= (int) $bp === (int) $invoicing['gst_bp'] ? 'selected' : '' ?>><?= $e($label) ?></option>
+                    <?php endforeach; ?>
+                </select></label>
+            <label class="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" name="require_gstin" value="1" <?= $invoicing['require_gstin'] ? 'checked' : '' ?>>
+                Sellers must have a GSTIN to be approved <span class="text-slate-400">(recommended; without one, their invoices become a bill of supply with no GST)</span></label>
+            <div class="sm:col-span-2"><button class="rounded bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700">Save invoicing details</button></div>
+        </form>
+    </section>
+
     <form method="post" action="/admin/store/settings" class="rounded-xl border bg-white p-5 shadow-sm space-y-4">
         <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
         <input type="hidden" name="action" value="save">
@@ -137,7 +167,7 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
             <label class="block text-sm">
                 <span class="text-slate-600">Default commission (%)</span>
                 <input name="store_default_commission_pct" type="number" step="0.01" min="0" max="50" value="<?= $e((int) $settings['store_default_commission_bp'] / 100) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
-                <span class="text-xs text-slate-400">On the price the customer pays. 18% GST on commission is added on top (verify with your CA).</span>
+                <span class="text-xs text-slate-400">On the seller's selling price (after any discount the seller funds). 18% GST on commission is added on top (verify with your CA).</span>
             </label>
             <label class="block text-sm">
                 <span class="text-slate-600">Payment window (minutes)</span>

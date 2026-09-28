@@ -57,6 +57,12 @@ final class AddressService
                 return ['ok' => false, 'error' => "$label is required."];
             }
         }
+        // Canonical state name: decides CGST+SGST vs IGST on the invoice.
+        $code = GstStates::codeFor($row['state']);
+        if ($code === null) {
+            return ['ok' => false, 'error' => 'Choose your state from the list.'];
+        }
+        $row['state'] = GstStates::name($code);
         if (!preg_match('/^\+91[6-9]\d{9}$/', $row['phone'])) {
             return ['ok' => false, 'error' => 'Enter a valid 10-digit mobile number for delivery.'];
         }

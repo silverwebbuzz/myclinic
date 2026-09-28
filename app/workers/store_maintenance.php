@@ -25,4 +25,6 @@ $polled = \App\Services\Store\ShippingService::pollDue(40);
 $released = \App\Services\Store\SettlementService::releaseMatured();
 // 5. once a day per seller: low-stock email
 \App\Services\Store\StoreNotifier::lowStockDigests();
-echo date('Y-m-d H:i:s') . " store: expired {$expired} unpaid order(s), auto-cancelled {$autoCancelled} late package(s), polled {$polled} shipment(s), released {$released} ledger entr(ies)\n";
+// 6. dispatched packages without a GST invoice (safety net; normally issued at dispatch)
+$invoiced = \App\Services\Store\TaxDocumentService::issueMissing(50);
+echo date('Y-m-d H:i:s') . " store: expired {$expired} unpaid order(s), auto-cancelled {$autoCancelled} late package(s), polled {$polled} shipment(s), released {$released} ledger entr(ies), invoiced {$invoiced} package(s)\n";

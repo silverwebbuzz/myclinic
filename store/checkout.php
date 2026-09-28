@@ -120,7 +120,13 @@ $sel = (string) ($old['address_id'] ?? ($addresses[0]['id'] ?? 'new'));
             <label>Landmark <span>(optional)</span><input class="st-input" name="addr[landmark]" value="<?= e((string) ($na['landmark'] ?? '')) ?>"></label>
             <label>Pincode<input class="st-input" name="addr[pincode]" inputmode="numeric" maxlength="6" value="<?= e((string) ($na['pincode'] ?? '')) ?>" :required="addr === 'new'"></label>
             <label>City<input class="st-input" name="addr[city]" value="<?= e((string) ($na['city'] ?? '')) ?>" :required="addr === 'new'"></label>
-            <label>State<input class="st-input" name="addr[state]" value="<?= e((string) ($na['state'] ?? '')) ?>" :required="addr === 'new'"></label>
+            <label>State<select class="st-input st-select" name="addr[state]" :required="addr === 'new'">
+              <option value="">Choose…</option>
+              <?php $naState = \App\Services\Store\GstStates::name(\App\Services\Store\GstStates::codeFor((string) ($na['state'] ?? ''))); ?>
+              <?php foreach (\App\Services\Store\GstStates::STATES as $stName): ?>
+                <option value="<?= e($stName) ?>" <?= $naState === $stName ? 'selected' : '' ?>><?= e($stName) ?></option>
+              <?php endforeach; ?>
+            </select></label>
             <label>Save as <span>(optional)</span><input class="st-input" name="addr[label]" placeholder="Home / Office" value="<?= e((string) ($na['label'] ?? '')) ?>"></label>
           </div>
         </section>

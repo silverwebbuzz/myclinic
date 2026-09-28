@@ -139,7 +139,8 @@ final class OrderService
         $st = Database::connection()->prepare('SELECT status FROM store_vendor_orders WHERE order_id = :o');
         $st->execute(['o' => $orderId]);
         $statuses = array_column($st->fetchAll(), 'status');
-        $cancelled = ['cancelled_by_customer', 'cancelled_by_vendor', 'cancelled_by_admin', 'auto_cancelled'];
+        // Packages that will never be delivered (cancelled, returned to seller, lost) don't count.
+        $cancelled = ['cancelled_by_customer', 'cancelled_by_vendor', 'cancelled_by_admin', 'auto_cancelled', 'rto', 'lost_in_transit'];
         $live = array_values(array_diff($statuses, $cancelled));
         $count = static fn (array $want) => count(array_intersect($live, $want));
 

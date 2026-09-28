@@ -28,14 +28,19 @@ final class StoreRefundService
         'system' => ['new'],
     ];
 
+    /** Package states from which admin can refund an undelivered package (RTO / lost / damaged). */
+    public const UNDELIVERED_FROM = ['ready_to_ship', 'shipped', 'rto'];
+
     /**
      * @param array<int, int> $itemQty order_item_id => units to cancel
      * @param string $actorType customer | vendor_user | admin | system
      * @param int|null $scopeVendorId when set (seller actions), items must belong to this seller
+     * @param array{undelivered?: string, refund_shipping?: bool, compensate_seller?: bool} $opts
+     *        undelivered = rto | lost | damaged: admin refunds a package that left but never reached the customer
      * @return array{ok: bool, error?: string, refunded?: int, refund_no?: string}
      */
     public static function cancelItems(int $orderId, array $itemQty, string $reason, string $actorType, ?int $actorId,
-        bool $restock, ?int $scopeVendorId = null): array
+        bool $restock, ?int $scopeVendorId = null, array $opts = []): array
     {
         $itemQty = array_filter(array_map('intval', $itemQty), static fn ($q) => $q > 0);
         if (!$itemQty) {
@@ -45,7 +50,9 @@ final class StoreRefundService
         if ($reason === '') {
             return ['ok' => false, 'error' => 'Please give a reason.'];
         }
-        $allowed = self::CANCELLABLE[$actorType] ?? [];
+        $undelivered = in_array($opts['undelivered'] ?? '', ['rto', 'lost', 'damaged'], true) && $actorType === 'admin'
+            ? (string) $opts['undelivered'] : null;
+        $allowed = $undelivered !== null ? self::UNDELIVERED_FROM : (self::CANCELLABLE[$actorType] ?? []);
 
         $pdo = Database::connection();
         $pdo->beginTransaction();
@@ -93,7 +100,7 @@ final class StoreRefundService
 
                     return ['ok' => false, 'error' => 'This package can no longer be cancelled (' . str_replace('_', ' ', (string) $it['vo_status']) . ').'];
                 }
-                $open = (int) $it['qty'] - (int) $it['qty_cancelled'];
+                $open = (int) $it['qty'] - (int) $it['qty_cancelled'] - (int) $it['qty_returned'];
                 if ($q > $open) {
                     $pdo->rollBack();
 
@@ -107,7 +114,8 @@ final class StoreRefundService
             }
 
             // A booked courier would still collect the box: cancel the booking first.
-            foreach (array_keys($touchedVo) as $voId) {
+            // (Not for undelivered packages: the courier already has/had it.)
+            foreach ($undelivered !== null ? [] : array_keys($touchedVo) as $voId) {
                 $active = ShippingService::activeShipment($voId);
                 if ($active !== null && !empty($active['sr_shipment_id'])) {
                     $pdo->rollBack();
@@ -132,7 +140,8 @@ final class StoreRefundService
                 }
                 if ($fully) {
                     $vo = QueryBuilder::table('store_vendor_orders')->where('id', '=', $voId)->first();
-                    $shippingBack[$voId] = (int) ($vo['shipping_paise'] ?? 0);
+                    // Undelivered: the delivery charge comes back only if admin says so (e.g. lost by courier).
+                    $shippingBack[$voId] = $undelivered !== null && empty($opts['refund_shipping']) ? 0 : (int) ($vo['shipping_paise'] ?? 0);
                     $amount += $shippingBack[$voId];
                 }
             }
@@ -165,7 +174,7 @@ final class StoreRefundService
                 'payment_id' => (int) $pay['id'],
                 'rzp_refund_id' => (string) $res['id'],
                 'amount_paise' => $amount,
-                'reason' => self::reasonCode($actorType),
+                'reason' => $undelivered ?? self::reasonCode($actorType),
                 'note' => mb_substr($reason, 0, 500),
                 'status' => ($res['status'] ?? '') === 'processed' ? 'processed' : 'pending',
                 'initiated_by_type' => in_array($actorType, ['system', 'customer', 'vendor_user', 'admin'], true) ? $actorType : 'system',
@@ -202,6 +211,18 @@ final class StoreRefundService
                 $vp = (int) round((int) $it['vendor_payable_paise'] * $q / max(1, (int) $it['qty']));
                 $cm = (int) round((int) $it['commission_paise'] * $q / max(1, (int) $it['qty']));
                 $updVo->execute(['vp' => $vp, 'c1' => $cm, 'c2' => $cm, 'id' => (int) $it['vo_id']]);
+                // Lost/damaged by the courier is not the seller's fault: pay them what they would have earned.
+                if ($undelivered !== null && $undelivered !== 'rto' && !empty($opts['compensate_seller']) && $vp > 0) {
+                    $pdo->prepare(
+                        "INSERT IGNORE INTO store_vendor_ledger
+                            (vendor_id, vendor_order_id, order_item_id, entry_type, amount_paise, status, available_at, dedupe_key, memo, created_by_type, created_by_id)
+                         VALUES (:v, :vo, :oi, 'adjustment', :a, 'available', NOW(), :k, :m, 'admin', :u)"
+                    )->execute([
+                        'v' => (int) $it['vendor_id'], 'vo' => (int) $it['vo_id'], 'oi' => (int) $it['id'], 'a' => $vp,
+                        'k' => 'lost:' . $refundId . ':item:' . (int) $it['id'],
+                        'm' => 'Compensation: ' . $q . ' × ' . $it['sku'] . ' ' . $undelivered . ' in transit', 'u' => $actorId,
+                    ]);
+                }
                 if ($restock) {
                     $restockQ->execute(['q' => $q, 'v' => (int) $it['variant_id']]);
                     $move->execute(['v' => (int) $it['variant_id'], 'd' => $q, 'r' => $refundId,
@@ -210,7 +231,7 @@ final class StoreRefundService
                 }
             }
 
-            $voStatus = match ($actorType) {
+            $voStatus = $undelivered !== null ? ($undelivered === 'rto' ? 'rto' : 'lost_in_transit') : match ($actorType) {
                 'customer' => 'cancelled_by_customer',
                 'vendor_user' => 'cancelled_by_vendor',
                 'admin' => 'cancelled_by_admin',
@@ -222,11 +243,16 @@ final class StoreRefundService
                         't' => $actorType === 'vendor_user' ? 'vendor_user' : (in_array($actorType, ['customer', 'admin'], true) ? $actorType : 'system'),
                         'i' => $actorId, 'id' => $voId]);
                 if ($ship > 0) {
-                    $pdo->prepare('UPDATE store_refund_items SET shipping_paise = :s WHERE refund_id = :r ORDER BY order_item_id LIMIT 1')
-                        ->execute(['s' => $ship, 'r' => $refundId]);
+                    // Record it on a line of THIS package (credit notes are per package).
+                    $pdo->prepare('UPDATE store_refund_items SET shipping_paise = :s WHERE refund_id = :r
+                                     AND order_item_id IN (SELECT id FROM store_order_items WHERE vendor_order_id = :vo)
+                                   ORDER BY order_item_id LIMIT 1')
+                        ->execute(['s' => $ship, 'r' => $refundId, 'vo' => $voId]);
                 }
                 OrderService::history($orderId, $voId, 'vendor_order', $voId, null, $voStatus, $actorType, $actorId, $reason);
             }
+            // Units that were already invoiced get a credit note (same transaction as the refund).
+            TaxDocumentService::creditForRefund((int) $refundId, $undelivered ?? 'cancel');
 
             $newRefunded = (int) $pay['refunded_paise'] + $amount;
             $fullyRefunded = $newRefunded >= $captured;
@@ -257,6 +283,34 @@ final class StoreRefundService
         StoreNotifier::itemsCancelled($orderId, $refundNo, $amount, $actorType, $reason);
 
         return ['ok' => true, 'refunded' => $amount, 'refund_no' => $refundNo];
+    }
+
+    /**
+     * Admin: refund a package that was dispatched but never reached the customer.
+     *   rto     = came back to the seller (refused / unreachable / bad address) → usually keep the delivery charge
+     *   lost    = lost by the courier → refund everything, optionally pay the seller (we claim from Shiprocket)
+     *   damaged = destroyed in transit → same as lost
+     */
+    public static function refundUndelivered(int $vendorOrderId, string $cause, bool $refundShipping, bool $restock,
+        bool $compensateSeller, string $note, int $adminId): array
+    {
+        $vo = QueryBuilder::table('store_vendor_orders')->where('id', '=', $vendorOrderId)->first();
+        if ($vo === null) {
+            return ['ok' => false, 'error' => 'Package not found.'];
+        }
+        $st = Database::connection()->prepare('SELECT id, qty, qty_cancelled, qty_returned FROM store_order_items WHERE vendor_order_id = :v');
+        $st->execute(['v' => $vendorOrderId]);
+        $qty = [];
+        foreach ($st->fetchAll() as $it) {
+            $open = (int) $it['qty'] - (int) $it['qty_cancelled'] - (int) $it['qty_returned'];
+            if ($open > 0) {
+                $qty[(int) $it['id']] = $open;
+            }
+        }
+        $label = ['rto' => 'Returned to seller', 'lost' => 'Lost in transit', 'damaged' => 'Damaged in transit'][$cause] ?? 'Undelivered';
+
+        return self::cancelItems((int) $vo['order_id'], $qty, $label . (trim($note) !== '' ? ': ' . trim($note) : ''), 'admin', $adminId,
+            $restock, (int) $vo['vendor_id'], ['undelivered' => $cause, 'refund_shipping' => $refundShipping, 'compensate_seller' => $compensateSeller]);
     }
 
     /** Cancel everything still open in one seller's package. */

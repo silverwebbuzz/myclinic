@@ -520,6 +520,14 @@ final class VendorService
             ['key' => 'doc_pan', 'label' => 'Upload PAN card', 'done' => in_array('pan', $docTypes, true), 'href' => '/vendor/documents'],
             ['key' => 'doc_cheque', 'label' => 'Upload cancelled cheque / bank proof', 'done' => in_array('cancelled_cheque', $docTypes, true), 'href' => '/vendor/documents'],
         ];
+        // Sellers on an e-commerce marketplace generally must be GST-registered (VERIFY WITH CA);
+        // admin can relax this in settings, then those sellers issue a bill of supply without GST.
+        if (StoreSettings::get('store_require_gstin', '1') === '1') {
+            $items[] = ['key' => 'gstin', 'label' => 'GSTIN (needed to sell on the marketplace; printed on your invoices)',
+                'done' => !empty($vendor['gstin']), 'href' => '/vendor/profile'];
+        }
+        $items[] = ['key' => 'terms', 'label' => 'Read and accept the seller rules & terms',
+            'done' => !StorePolicyService::needsAcceptance($vendorId), 'href' => '/vendor/terms'];
         if (!empty($vendor['gstin'])) {
             $items[] = ['key' => 'doc_gst', 'label' => 'Upload GST certificate', 'done' => in_array('gst_cert', $docTypes, true), 'href' => '/vendor/documents'];
         }

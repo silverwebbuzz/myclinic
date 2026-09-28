@@ -166,8 +166,9 @@ final class ProductService
             return ['ok' => false, 'error' => 'Choose the GST rate for this product (ask your CA if unsure; it depends on the HSN code).'];
         }
         $hsn = preg_replace('/\D/', '', (string) ($in['hsn_code'] ?? '')) ?? '';
-        if ($hsn !== '' && !preg_match('/^\d{4,8}$/', $hsn)) {
-            return ['ok' => false, 'error' => 'HSN code should be 4–8 digits.'];
+        // Required: every line on the seller's GST invoice must carry its HSN code.
+        if (!preg_match('/^\d{4,8}$/', $hsn)) {
+            return ['ok' => false, 'error' => 'Enter the product\'s HSN code (4–8 digits; it\'s on your purchase invoice, or ask your CA). It is printed on the GST invoice.'];
         }
         $returnWindow = trim((string) ($in['return_window_days'] ?? ''));
 

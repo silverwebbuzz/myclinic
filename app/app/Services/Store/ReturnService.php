@@ -331,6 +331,8 @@ final class ReturnService
                     ]);
                 }
             }
+            // GST: credit note against the seller's invoice for the returned units.
+            TaxDocumentService::creditForRefund((int) $refundId, 'return');
             $newRefunded = (int) $pay['refunded_paise'] + $amount;
             $full = $newRefunded >= (int) $pay['amount_paise'];
             $pdo->prepare('UPDATE store_payments SET refunded_paise = :r, status = :s WHERE id = :id')

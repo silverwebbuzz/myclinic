@@ -10,7 +10,8 @@ use App\Core\Database;
  * The ONLY place cart/order totals are computed. The browser's numbers are
  * never trusted; checkout stores what the browser showed only as a diagnostic.
  *
- *  - Prices are GST-inclusive; GST is extracted per line from what the customer pays.
+ *  - Prices are GST-inclusive; GST is extracted per line from the seller's selling price
+ *    (price − seller-funded discount), which is what the seller's tax invoice shows.
  *  - Shipping is charged per SELLER sub-order: flat fee, free above a threshold.
  *  - Coupons (optional) are spread across eligible lines in proportion to value:
  *        customer pays   = subtotal − vendor-funded − platform-funded discount
@@ -88,7 +89,9 @@ final class PricingService
             $paid = $subtotal - $disc;                    // what the customer pays for this line
             $sellerRevenue = $subtotal - $vDisc;          // what the seller is selling it for
             $gstBp = (int) $it['gst_bp'];
-            $tax = (int) round($paid * $gstBp / (10000 + $gstBp));
+            // GST is on the seller's selling price: a platform-funded coupon doesn't lower the
+            // seller's invoice (we pay the seller the difference). VERIFY WITH CA.
+            $tax = (int) round($sellerRevenue * $gstBp / (10000 + $gstBp));
             $rule = CommissionService::resolve($vid, (int) $it['category_id'], (int) ($it['dept_id'] ?? 0), (int) $it['product_id']);
             $commission = CommissionService::amount($rule, $sellerRevenue, $qty);
             $commissionGst = (int) round($commission * CommissionService::COMMISSION_GST_BP / 10000);

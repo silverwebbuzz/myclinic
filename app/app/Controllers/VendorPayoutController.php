@@ -21,14 +21,18 @@ final class VendorPayoutController
     public function index(Request $request): Response
     {
         $vendorId = (int) $this->vendor()['id'];
-        SettlementService::releaseMatured();
-        $st = Database::connection()->prepare('SELECT * FROM store_payouts WHERE vendor_id = :v ORDER BY id DESC LIMIT 50');
-        $st->execute(['v' => $vendorId]);
+        try {
+            SettlementService::releaseMatured();
+            $st = Database::connection()->prepare('SELECT * FROM store_payouts WHERE vendor_id = :v ORDER BY id DESC LIMIT 50');
+            $st->execute(['v' => $vendorId]);
+            $data = ['balances' => SettlementService::balances($vendorId), 'ledger' => SettlementService::ledger($vendorId, 100), 'payouts' => $st->fetchAll()];
+        } catch (\Throwable $e) {
+            error_log('[VendorPayout::index] ' . $e->getMessage());
+            SessionFlash::put('store_err', 'Payouts are temporarily unavailable. Please try again shortly.');
+            $data = ['balances' => ['pending' => 0, 'available' => 0, 'in_payout' => 0, 'paid' => 0], 'ledger' => [], 'payouts' => []];
+        }
 
-        return Response::html(View::render('store_vendor/payouts', [
-            'balances' => SettlementService::balances($vendorId),
-            'ledger' => SettlementService::ledger($vendorId, 100),
-            'payouts' => $st->fetchAll(),
+        return Response::html(View::render('store_vendor/payouts', $data + [
             'bank' => VendorService::primaryBank($vendorId),
             'vendor' => VendorService::find($vendorId) ?? $this->vendor(),
             'vendorUser' => RequestContext::vendorUser(),

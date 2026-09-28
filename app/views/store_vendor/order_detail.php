@@ -44,7 +44,7 @@ ob_start();
             <button class="rounded-full bg-[#0e4d34] px-6 py-2 text-sm font-medium text-white hover:bg-[#17774f]">Accept order</button>
         </form>
     <?php elseif ($status === 'accepted'): ?>
-        <p class="text-sm"><strong>Pack the items below</strong> securely, with the invoice inside. Then mark the package as packed.</p>
+        <p class="text-sm"><strong>Pack the items below</strong> securely, then mark the package as packed. You can then print the GST invoice to put inside the box.</p>
         <form method="post" action="/vendor/orders/<?= (int) $vo['id'] ?>/packed" class="mt-3">
             <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
             <button class="rounded-full bg-[#0e4d34] px-6 py-2 text-sm font-medium text-white hover:bg-[#17774f]">Mark as packed</button>
@@ -86,6 +86,24 @@ ob_start();
         <?php endif; ?>
     <?php else: ?>
         <p class="text-sm">Status: <strong><?= $e(ucfirst(str_replace('_', ' ', $status))) ?></strong></p>
+    <?php endif; ?>
+</section>
+<?php endif; ?>
+
+<?php $myDocs = array_values(array_filter($taxDocs ?? [], static fn ($d) => $d['issuer'] === 'vendor')); ?>
+<?php if ($myDocs || in_array($status, ['packed', 'ready_to_ship', 'shipped', 'delivered', 'completed'], true)): ?>
+<section class="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-[#ece8df] bg-white p-4 text-sm">
+    <strong>GST documents</strong>
+    <?php foreach ($myDocs as $d): ?>
+        <a href="/vendor/gst/documents/<?= (int) $d['id'] ?>" target="_blank" class="rounded-full border px-3 py-1 font-mono text-xs <?= $d['doc_type'] === 'credit_note' ? 'border-amber-300 bg-amber-50 text-amber-800' : 'border-[#0e4d34] text-[#0e4d34]' ?>">
+            <?= $d['doc_type'] === 'credit_note' ? 'Credit note' : 'Invoice' ?> <?= $e($d['doc_no']) ?></a>
+    <?php endforeach; ?>
+    <?php if (!$myDocs): ?>
+        <form method="post" action="/vendor/orders/<?= (int) $vo['id'] ?>/invoice" target="_blank">
+            <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+            <button class="rounded-full bg-[#0e4d34] px-4 py-1.5 text-xs font-medium text-white hover:bg-[#17774f]">Print GST invoice</button>
+        </form>
+        <span class="text-xs text-slate-500">Issued in your name. It is also created automatically when the courier is booked.</span>
     <?php endif; ?>
 </section>
 <?php endif; ?>

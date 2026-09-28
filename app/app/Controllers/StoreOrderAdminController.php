@@ -48,6 +48,7 @@ final class StoreOrderAdminController
             'order' => $order,
             'shipments' => $shipments,
             'courierOn' => \App\Services\Store\ShiprocketClient::configured(),
+            'taxDocs' => \App\Services\Store\TaxDocumentService::forOrder((int) $order['id']),
         ]);
     }
 
@@ -108,6 +109,39 @@ final class StoreOrderAdminController
     {
         $res = \App\Services\Store\FulfilmentService::adminMarkDelivered((int) $voId, (int) (RequestContext::superAdmin()['id'] ?? 0));
         SessionFlash::put($res['ok'] ? 'store_ok' : 'store_err', $res['ok'] ? 'Marked delivered. The seller\'s earnings are pending until the return window ends.' : ($res['error'] ?? 'Failed.'));
+
+        return Response::redirect('/admin/store/orders/' . (int) $id);
+    }
+
+    /** Package dispatched but never delivered (returned to seller / lost / damaged) → refund + credit note. */
+    public function refundUndelivered(Request $request, string $id, string $voId): Response
+    {
+        $cause = (string) ($request->post['cause'] ?? '');
+        if (!in_array($cause, ['rto', 'lost', 'damaged'], true)) {
+            SessionFlash::put('store_err', 'Choose what happened to the package.');
+
+            return Response::redirect('/admin/store/orders/' . (int) $id);
+        }
+        $res = \App\Services\Store\StoreRefundService::refundUndelivered((int) $voId, $cause, !empty($request->post['refund_shipping']),
+            !empty($request->post['restock']), !empty($request->post['compensate']), trim((string) ($request->post['note'] ?? '')),
+            (int) (RequestContext::superAdmin()['id'] ?? 0));
+        SessionFlash::put($res['ok'] ? 'store_ok' : 'store_err', $res['ok']
+            ? 'Refunded ₹' . \App\Services\Store\ProductService::rupees((int) $res['refunded']) . ' (' . $res['refund_no'] . '). A credit note was issued if the package had an invoice.'
+            : ($res['error'] ?? 'Could not refund.'));
+
+        return Response::redirect('/admin/store/orders/' . (int) $id);
+    }
+
+    /** Issue the package's invoice now (normally automatic at dispatch). */
+    public function issueInvoice(Request $request, string $id, string $voId): Response
+    {
+        try {
+            $docId = \App\Services\Store\TaxDocumentService::issueInvoice((int) $voId);
+        } catch (\Throwable $e) {
+            error_log('[StoreOrderAdmin::issueInvoice] ' . $e->getMessage());
+            $docId = null;
+        }
+        SessionFlash::put($docId ? 'store_ok' : 'store_err', $docId ? 'Invoice issued.' : 'An invoice can be issued once the package is packed (and has items left).');
 
         return Response::redirect('/admin/store/orders/' . (int) $id);
     }

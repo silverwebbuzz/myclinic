@@ -28,9 +28,21 @@ final class VendorOrderController
         FulfilmentService::autoCancelOverdue();
         $vendorId = (int) $this->vendor()['id'];
         $tab = (string) ($request->query['tab'] ?? 'todo');
+        try {
+            return $this->ordersPage($vendorId, $tab);
+        } catch (\Throwable $e) {
+            error_log('[VendorOrder::index] ' . $e->getMessage());
+            SessionFlash::put('store_err', 'Orders are temporarily unavailable. Please try again shortly.');
+
+            return $this->render('store_vendor/orders', ['rows' => [], 'tab' => $tab, 'counts' => []]);
+        }
+    }
+
+    private function ordersPage(int $vendorId, string $tab): Response
+    {
         $filter = match ($tab) {
             'todo' => "AND vo.status IN ('new','accepted','packed','ready_to_ship')",
-            'shipped' => "AND vo.status IN ('shipped','delivered','completed','rto')",
+            'shipped' => "AND vo.status IN ('shipped','delivered','completed','rto','lost_in_transit')",
             'cancelled' => "AND vo.status IN ('cancelled_by_customer','cancelled_by_vendor','cancelled_by_admin','auto_cancelled')",
             default => '',
         };
@@ -65,6 +77,10 @@ final class VendorOrderController
             'shipment' => \App\Services\Store\ShippingService::activeShipment((int) $vo['id']),
             'suggest' => \App\Services\Store\ShippingService::suggestPackage((int) $vo['id']),
             'courierOn' => \App\Services\Store\ShiprocketClient::configured(),
+            'taxDocs' => array_values(array_filter(
+                \App\Services\Store\TaxDocumentService::forOrder((int) $vo['order_id'], (int) $this->vendor()['id']),
+                static fn ($d) => (int) $d['vendor_order_id'] === (int) $vo['id']
+            )),
         ]);
     }
 

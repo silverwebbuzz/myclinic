@@ -173,6 +173,15 @@ final class StoreAdminController
                 'webhook_key' => StoreSettings::get('store_shiprocket_webhook_key'),
                 'webhook_url' => rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/') . '/webhooks/store-tracking',
             ],
+            'invoicing' => [
+                'legal_name' => StoreSettings::get('store_platform_legal_name'),
+                'gstin' => StoreSettings::get('store_platform_gstin'),
+                'address' => StoreSettings::get('store_platform_address'),
+                'sac' => StoreSettings::get('store_delivery_sac', '996812'),
+                'gst_bp' => StoreSettings::int('store_delivery_gst_bp', 1800),
+                'require_gstin' => StoreSettings::get('store_require_gstin', '1') === '1',
+                'ready' => \App\Services\Store\TaxDocumentService::platformReady(),
+            ],
         ]);
     }
 
@@ -212,6 +221,24 @@ final class StoreAdminController
                 StoreSettings::set('store_shiprocket_webhook_key', bin2hex(random_bytes(20)), true);
                 StoreAudit::log('store.shiprocket_webhook_key_rotate', 'setting', null);
                 SessionFlash::put('store_ok', 'New webhook token generated. Paste it into Shiprocket (the old one stops working).');
+            } elseif ($action === 'invoicing_save') {
+                $gstin = strtoupper(preg_replace('/\s+/', '', (string) ($request->post['platform_gstin'] ?? '')) ?? '');
+                if ($gstin !== '' && !\App\Services\Store\GstStates::validGstin($gstin)) {
+                    throw new \InvalidArgumentException('That GSTIN doesn\'t look right (15 characters, starting with the state code).');
+                }
+                $sac = preg_replace('/\D/', '', (string) ($request->post['delivery_sac'] ?? '')) ?? '';
+                $bp = (int) ($request->post['delivery_gst_bp'] ?? 1800);
+                if (!array_key_exists($bp, \App\Services\Store\CatalogService::GST_RATES_BP)) {
+                    throw new \InvalidArgumentException('Choose a valid GST rate for delivery charges.');
+                }
+                StoreSettings::set('store_platform_legal_name', mb_substr(trim((string) ($request->post['platform_legal_name'] ?? '')), 0, 190));
+                StoreSettings::set('store_platform_gstin', $gstin);
+                StoreSettings::set('store_platform_address', mb_substr(trim((string) ($request->post['platform_address'] ?? '')), 0, 400));
+                StoreSettings::set('store_delivery_sac', $sac !== '' ? mb_substr($sac, 0, 8) : '996812');
+                StoreSettings::set('store_delivery_gst_bp', (string) $bp);
+                StoreSettings::set('store_require_gstin', !empty($request->post['require_gstin']) ? '1' : '0');
+                StoreAudit::log('store.invoicing_save', 'setting', null, null, ['gstin' => $gstin, 'sac' => $sac, 'gst_bp' => $bp]);
+                SessionFlash::put('store_ok', 'Invoicing details saved.');
             } elseif ($action === 'new_preview_key') {
                 StoreSettings::set('store_preview_key', bin2hex(random_bytes(16)), true);
                 StoreAudit::log('store.preview_key_rotate', 'setting', null);
@@ -241,6 +268,8 @@ final class StoreAdminController
                 StoreAudit::log('store.settings_save', 'setting', null);
                 SessionFlash::put('store_ok', 'Settings saved.');
             }
+        } catch (\InvalidArgumentException $e) {
+            SessionFlash::put('store_err', $e->getMessage());
         } catch (\Throwable $e) {
             error_log('[StoreAdmin::saveSettings] ' . $e->getMessage());
             SessionFlash::put('store_err', 'Could not save. Have the store database patches been run?');

@@ -61,6 +61,12 @@ final class StoreMerchAdminController
             ['Reviews to moderate', $one("SELECT COUNT(*) FROM store_reviews WHERE status = 'pending'"), '/admin/store/reviews'],
             ['Failed refunds', $one("SELECT COUNT(*) FROM store_refunds WHERE status = 'failed'"), '/admin/store/orders'],
             ['Payouts approved, not yet paid', $one("SELECT COUNT(*) FROM store_payouts WHERE status IN ('approved','processing')"), '/admin/store/payouts?status=approved'],
+            ['Returned to seller, customer not yet refunded', $one("SELECT COUNT(*) FROM store_vendor_orders vo WHERE vo.status = 'rto'
+                AND EXISTS (SELECT 1 FROM store_order_items oi WHERE oi.vendor_order_id = vo.id AND oi.qty > oi.qty_cancelled + oi.qty_returned)"), '/admin/store/orders'],
+            ['Sellers yet to accept the latest terms', $one("SELECT COUNT(*) FROM store_vendors v JOIN store_policy_pages p ON p.slug = 'seller_terms'
+                WHERE v.status = 'approved' AND NOT EXISTS (SELECT 1 FROM store_policy_acceptances a WHERE a.vendor_id = v.id AND a.slug = 'seller_terms' AND a.version = p.version)"),
+                '/admin/store/policies/seller_terms'],
+            ['eClinicPro GST details missing (delivery charges not invoiced)', \App\Services\Store\TaxDocumentService::platformReady() ? 0 : 1, '/admin/store/settings'],
         ];
         $days = $all(
             "SELECT DATE(paid_at) d, COUNT(*) n, SUM(grand_total_paise) s FROM store_orders

@@ -159,6 +159,7 @@ final class ShippingService
         if ($rts->rowCount() === 1) {
             OrderService::history((int) $vo['order_id'], (int) $vo['id'], 'shipment', $sid, 'created', 'awb_assigned', $actorType, $actorId, 'AWB ' . $s['awb_code']);
         }
+        TaxDocumentService::issueForPackage((int) $vo['id']);   // invoice goes in the box with the label
 
         // 4. Pickup request.
         if (empty($s['pickup_scheduled_for'])) {
@@ -406,6 +407,9 @@ final class ShippingService
             $st = $pdo->prepare("UPDATE store_vendor_orders SET status = 'rto' WHERE id = :id AND status <> 'rto'");
             $st->execute(['id' => $voId]);
             $changed = $st->rowCount() ? 'rto' : null;
+        }
+        if ($changed === 'shipped' || $changed === 'delivered') {
+            TaxDocumentService::issueForPackage($voId);   // no-op if already issued at booking
         }
         if ($changed !== null) {
             OrderService::history($orderId, $voId, 'vendor_order', $voId, null, $changed, 'webhook', null, 'Courier: ' . $internal);

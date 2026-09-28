@@ -176,6 +176,46 @@ $a = $order['ship_address'];
                     </form>
                 </details>
             <?php endif; ?>
+            <?php $voDocs = array_filter($taxDocs ?? [], static fn ($d) => (int) $d['vendor_order_id'] === (int) $vo['id']); ?>
+            <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                <strong class="text-slate-600">GST documents:</strong>
+                <?php foreach ($voDocs as $d): ?>
+                    <a href="/admin/store/gst/documents/<?= (int) $d['id'] ?>" target="_blank" class="rounded border px-2 py-0.5 font-mono <?= $d['doc_type'] === 'credit_note' ? 'border-amber-300 bg-amber-50 text-amber-800' : 'text-sky-700' ?>"
+                       title="<?= $d['issuer'] === 'platform' ? 'eClinicPro delivery charge' : 'Seller' ?> <?= $d['doc_type'] === 'credit_note' ? 'credit note' : 'invoice' ?>"><?= $e($d['doc_no']) ?><?= $d['issuer'] === 'platform' ? ' (delivery)' : '' ?></a>
+                <?php endforeach; ?>
+                <?php if (!$voDocs): ?>
+                    <span class="text-slate-400">none yet (issued automatically at dispatch)</span>
+                    <?php if (in_array($vo['status'], ['packed', 'ready_to_ship', 'shipped', 'delivered', 'completed'], true)): ?>
+                        <form method="post" action="/admin/store/orders/<?= (int) $order['id'] ?>/packages/<?= (int) $vo['id'] ?>/invoice" class="inline">
+                            <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><button class="text-sky-700 hover:underline">Issue now</button></form>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+            <?php
+            $undeliveredOpen = array_filter($vo['items'], static fn ($it) => (int) $it['qty'] > (int) $it['qty_cancelled'] + (int) $it['qty_returned']);
+            $canUndelivered = $undeliveredOpen && in_array($vo['status'], \App\Services\Store\StoreRefundService::UNDELIVERED_FROM, true)
+                && in_array($order['payment_status'], ['paid', 'partially_refunded'], true);
+            ?>
+            <?php if ($canUndelivered): ?>
+                <details class="mt-3 rounded border border-amber-200 bg-amber-50/40 p-3 text-sm" <?= $vo['status'] === 'rto' ? 'open' : '' ?> x-data="{ cause: '<?= $vo['status'] === 'rto' ? 'rto' : '' ?>' }">
+                    <summary class="cursor-pointer font-medium text-amber-800">Package not delivered? Refund the customer…</summary>
+                    <form method="post" action="/admin/store/orders/<?= (int) $order['id'] ?>/packages/<?= (int) $vo['id'] ?>/undelivered" class="mt-2 space-y-2"
+                          onsubmit="return confirm('Refund every remaining item in this package via Razorpay now? This cannot be undone.')">
+                        <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+                        <p class="text-xs text-slate-600">Refunds all remaining items (<?= array_sum(array_map(static fn ($it) => (int) $it['qty'] - (int) $it['qty_cancelled'] - (int) $it['qty_returned'], $undeliveredOpen)) ?> unit(s)) and issues a credit note against the seller's invoice. Cancel an active courier booking first if the package hasn't left.</p>
+                        <div class="flex flex-wrap gap-4 text-sm">
+                            <label class="flex items-center gap-1"><input type="radio" name="cause" value="rto" x-model="cause" required> Returned to seller (refused / unreachable)</label>
+                            <label class="flex items-center gap-1"><input type="radio" name="cause" value="lost" x-model="cause"> Lost by courier</label>
+                            <label class="flex items-center gap-1"><input type="radio" name="cause" value="damaged" x-model="cause"> Damaged in transit</label>
+                        </div>
+                        <label class="flex items-center gap-2 text-xs"><input type="checkbox" name="refund_shipping" value="1" :checked="cause !== 'rto'"> Refund the delivery charge (<?= $r($vo['shipping_paise']) ?>). Recommended for lost/damaged, not for refused deliveries.</label>
+                        <label class="flex items-center gap-2 text-xs"><input type="checkbox" name="restock" value="1" :checked="cause === 'rto'"> Return units to the seller's stock (only if the goods came back)</label>
+                        <label class="flex items-center gap-2 text-xs" x-show="cause !== 'rto'"><input type="checkbox" name="compensate" value="1" checked> Pay the seller what they would have earned (claim it from the courier)</label>
+                        <input name="note" placeholder="Note (e.g. courier claim number)" class="w-full rounded border px-2 py-1">
+                        <button class="rounded bg-amber-600 px-3 py-1.5 text-white hover:bg-amber-700">Refund package</button>
+                    </form>
+                </details>
+            <?php endif; ?>
             <p class="mt-3 text-xs text-slate-500">
                 Sub-total <?= $r($vo['items_subtotal_paise']) ?> · shipping charged <?= $r($vo['shipping_paise']) ?> ·
                 commission <?= $r($vo['commission_paise']) ?> + GST on commission <?= $r($vo['commission_gst_paise']) ?> ·

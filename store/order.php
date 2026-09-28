@@ -35,6 +35,22 @@ if ($order === null) {
     store_not_found();
 }
 
+// GST invoice / credit note for this order (printable page).
+if (isset($_GET['doc'])) {
+    $doc = \App\Services\Store\TaxDocumentService::load((int) $_GET['doc']);
+    if ($doc === null || (int) $doc['order_id'] !== (int) $order['id']) {
+        store_not_found();
+    }
+    $backUrl = '/store/order/' . rawurlencode($orderNo);
+    header('X-Robots-Tag: noindex');
+    require dirname(__DIR__) . '/app/views/components/store_tax_document.php';
+    exit;
+}
+$taxDocsByVo = [];
+foreach (\App\Services\Store\TaxDocumentService::forOrder((int) $order['id']) as $d) {
+    $taxDocsByVo[(int) $d['vendor_order_id']][] = $d;
+}
+
 // Customer cancels their own unpaid order.
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '') === 'cancel' && store_same_origin()) {
     OrderService::release((int) $order['id'], 'cancelled', 'Cancelled by customer before payment', 'customer', (int) $me['id']);
@@ -84,7 +100,8 @@ $packageStatus = [
     'pending_payment' => 'Awaiting payment', 'new' => 'Confirmed: seller preparing', 'accepted' => 'Seller preparing',
     'packed' => 'Packed', 'ready_to_ship' => 'Ready to ship', 'shipped' => 'Shipped', 'delivered' => 'Delivered',
     'completed' => 'Delivered', 'auto_cancelled' => 'Cancelled', 'cancelled_by_customer' => 'Cancelled',
-    'cancelled_by_vendor' => 'Cancelled by seller', 'cancelled_by_admin' => 'Cancelled', 'rto' => 'Returned to seller',
+    'cancelled_by_vendor' => 'Cancelled by seller', 'cancelled_by_admin' => 'Cancelled', 'rto' => 'Not delivered: returned to seller',
+    'lost_in_transit' => 'Lost or damaged in transit: refunded',
 ];
 $statusText = [
     'pending_payment' => ['Awaiting payment', 'is-warn'],
@@ -212,6 +229,13 @@ require __DIR__ . '/_header.php';
                 </ol>
               <?php endif; ?>
             </div>
+          <?php endif; ?>
+          <?php if (!empty($taxDocsByVo[(int) $vo['id']])): ?>
+            <p class="st-line-meta" style="margin:8px 0 0">
+              <?php foreach ($taxDocsByVo[(int) $vo['id']] as $i => $d): ?>
+                <?= $i > 0 ? ' · ' : '' ?><a class="st-link-btn" href="?doc=<?= (int) $d['id'] ?>" target="_blank" rel="noopener"><?= e($d['doc_type'] === 'credit_note' ? 'Credit note' : ($d['issuer'] === 'platform' ? 'Delivery invoice' : 'Tax invoice')) ?> <?= e($d['doc_no']) ?></a>
+              <?php endforeach; ?>
+            </p>
           <?php endif; ?>
           <?php
           $openLines = array_filter($vo['items'], static fn ($it) => (int) $it['qty'] > (int) $it['qty_cancelled']);

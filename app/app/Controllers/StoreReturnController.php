@@ -24,10 +24,15 @@ final class StoreReturnController
     public function vendorIndex(Request $request): Response
     {
         $tab = (string) ($request->query['tab'] ?? 'open');
+        try {
+            $rows = ReturnService::list($this->vendorId(), $tab === 'all' ? '' : 'open');
+        } catch (\Throwable $e) {
+            error_log('[StoreReturn::vendorIndex] ' . $e->getMessage());
+            \App\Support\SessionFlash::put('store_err', 'Returns are temporarily unavailable. Please try again shortly.');
+            $rows = [];
+        }
 
-        return $this->vendorRender('store_vendor/returns', [
-            'rows' => ReturnService::list($this->vendorId(), $tab === 'all' ? '' : 'open'), 'tab' => $tab,
-        ]);
+        return $this->vendorRender('store_vendor/returns', ['rows' => $rows, 'tab' => $tab]);
     }
 
     public function vendorShow(Request $request, string $id): Response

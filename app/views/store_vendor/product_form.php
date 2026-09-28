@@ -270,8 +270,9 @@ ob_start();
                 <span class="text-xs text-slate-400">Required for food, supplement, AYUSH and device categories.</span>
             </label>
             <label class="block text-sm">
-                <span class="text-slate-600">HSN code</span>
-                <input name="hsn_code" maxlength="8" inputmode="numeric" value="<?= $e($val('hsn_code')) ?>" class="<?= $input ?>">
+                <span class="text-slate-600">HSN code <span class="text-red-600">*</span></span>
+                <input name="hsn_code" maxlength="8" inputmode="numeric" pattern="\d{4,8}" required value="<?= $e($val('hsn_code')) ?>" class="<?= $input ?>">
+                <span class="text-xs text-slate-400">Printed on the customer's GST invoice.</span>
             </label>
             <?php
             $gstCur = (string) $val('gst_bp', '');

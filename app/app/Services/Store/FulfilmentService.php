@@ -92,6 +92,7 @@ final class FulfilmentService
             ]);
         }
         $pdo->prepare("UPDATE store_vendor_orders SET status = 'shipped', shipped_at = :t WHERE id = :id")->execute(['t' => $now, 'id' => $vendorOrderId]);
+        TaxDocumentService::issueForPackage($vendorOrderId);
         OrderService::history((int) $vo['order_id'], $vendorOrderId, 'vendor_order', $vendorOrderId, (string) $vo['status'], 'shipped', 'admin', $adminId,
             'Marked shipped manually' . ($courier !== '' ? " ($courier" . ($awb !== '' ? " $awb" : '') . ')' : ''));
         OrderService::recomputeStatus((int) $vo['order_id']);
@@ -118,6 +119,7 @@ final class FulfilmentService
                 'status' => 'delivered', 'status_rank' => 100, 'delivered_at' => date('Y-m-d H:i:s', $now), 'last_raw_status' => 'MARKED DELIVERED BY ADMIN',
             ]);
         }
+        TaxDocumentService::issueForPackage($vendorOrderId);
         SettlementService::recordDelivered($vendorOrderId);
         OrderService::history((int) $vo['order_id'], $vendorOrderId, 'vendor_order', $vendorOrderId, (string) $vo['status'], 'delivered', 'admin', $adminId, 'Marked delivered manually');
         OrderService::recomputeStatus((int) $vo['order_id']);

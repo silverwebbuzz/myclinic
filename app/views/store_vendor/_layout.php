@@ -21,7 +21,9 @@ $nav = [
     ['/vendor/addresses', 'Addresses'],
     ['/vendor/bank', 'Bank account'],
     ['/vendor/documents', 'Documents'],
+    ['/vendor/terms', 'Rules & terms'],
 ];
+$termsPending = !empty($vendor['id']) && \App\Services\Store\StorePolicyService::needsAcceptance((int) $vendor['id']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -67,6 +69,7 @@ $nav = [
             <a href="/vendor/returns" class="block rounded-lg px-3 py-2 <?= str_starts_with($path, '/vendor/returns') ? 'bg-[#0e4d34] text-white' : 'hover:bg-white' ?>">Returns</a>
             <a href="/vendor/reviews" class="block rounded-lg px-3 py-2 <?= str_starts_with($path, '/vendor/reviews') ? 'bg-[#0e4d34] text-white' : 'hover:bg-white' ?>">Reviews</a>
             <a href="/vendor/payouts" class="block rounded-lg px-3 py-2 <?= str_starts_with($path, '/vendor/payouts') ? 'bg-[#0e4d34] text-white' : 'hover:bg-white' ?>">Payouts</a>
+            <a href="/vendor/gst" class="block rounded-lg px-3 py-2 <?= str_starts_with($path, '/vendor/gst') ? 'bg-[#0e4d34] text-white' : 'hover:bg-white' ?>">GST invoices</a>
         <?php endif; ?>
     </nav>
 
@@ -78,6 +81,12 @@ $nav = [
         <?php elseif ($status === 'suspended'): ?>
             <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                 <strong>Your store is suspended.</strong> <?= $e($vendor['status_reason'] ?? '') ?> Your products are hidden from customers. Contact support to resolve this.
+            </div>
+        <?php endif; ?>
+        <?php if ($termsPending && $path !== '/vendor/terms'): ?>
+            <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <strong>Please review the seller rules &amp; terms.</strong> <?= \App\Services\Store\StorePolicyService::acceptedVersion((int) $vendor['id'], 'seller_terms') > 0 ? 'They have been updated since you last accepted them.' : 'You need to accept them to sell on eClinicPro Store.' ?>
+                <a href="/vendor/terms" class="ml-1 font-semibold underline">Read and accept</a>
             </div>
         <?php endif; ?>
         <?php if (!empty($flashOk)): ?>

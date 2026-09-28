@@ -608,6 +608,14 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/store/orders/{id}/packages/{voId}/ship', [\App\Controllers\StoreOrderAdminController::class, 'shipBook']);
         $admin->post('/store/orders/{id}/packages/{voId}/mark-shipped', [\App\Controllers\StoreOrderAdminController::class, 'markShipped']);
         $admin->post('/store/orders/{id}/packages/{voId}/mark-delivered', [\App\Controllers\StoreOrderAdminController::class, 'markDelivered']);
+        $admin->post('/store/orders/{id}/packages/{voId}/undelivered', [\App\Controllers\StoreOrderAdminController::class, 'refundUndelivered']);
+        $admin->post('/store/orders/{id}/packages/{voId}/invoice', [\App\Controllers\StoreOrderAdminController::class, 'issueInvoice']);
+        // GST documents + seller policies (P11b)
+        $admin->get('/store/gst', [\App\Controllers\StoreTaxController::class, 'adminRegister']);
+        $admin->get('/store/gst/export', [\App\Controllers\StoreTaxController::class, 'adminCsv']);
+        $admin->get('/store/gst/documents/{id}', [\App\Controllers\StoreTaxController::class, 'adminDocument']);
+        $admin->get('/store/policies/{slug}', [\App\Controllers\StorePolicyController::class, 'adminEdit']);
+        $admin->post('/store/policies/{slug}', [\App\Controllers\StorePolicyController::class, 'adminSave']);
 
         // Payouts & reports (P9)
         $admin->get('/store/payouts', [\App\Controllers\StorePayoutAdminController::class, 'index']);
@@ -674,6 +682,12 @@ return static function (RouteRegistrar $router): void {
         $vendor->post('/orders/{id}/packed', [\App\Controllers\VendorOrderController::class, 'packed']);
         $vendor->post('/orders/{id}/cancel', [\App\Controllers\VendorOrderController::class, 'cancelItems']);
         $vendor->post('/orders/{id}/book', [\App\Controllers\VendorOrderController::class, 'book']);
+        $vendor->post('/orders/{id}/invoice', [\App\Controllers\StoreTaxController::class, 'vendorIssueInvoice']);
+        $vendor->get('/gst', [\App\Controllers\StoreTaxController::class, 'vendorRegister']);
+        $vendor->get('/gst/export', [\App\Controllers\StoreTaxController::class, 'vendorCsv']);
+        $vendor->get('/gst/documents/{id}', [\App\Controllers\StoreTaxController::class, 'vendorDocument']);
+        $vendor->get('/terms', [\App\Controllers\StorePolicyController::class, 'vendorShow']);
+        $vendor->post('/terms/accept', [\App\Controllers\StorePolicyController::class, 'vendorAccept']);
 
         // Reviews (P11)
         $vendor->get('/reviews', [VendorPortalController::class, 'reviews']);
