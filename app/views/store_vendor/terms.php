@@ -9,6 +9,7 @@
 $pageTitle = 'Rules & terms';
 $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
 $current = $acceptedVersion >= (int) $page['version'];
+$acceptable = (int) $page['version'] > 0;
 ob_start();
 ?>
 <style>
@@ -24,14 +25,14 @@ ob_start();
         <h1 class="text-2xl font-semibold"><?= $e($page['title']) ?></h1>
         <p class="mt-1 text-sm text-slate-500">Version <?= (int) $page['version'] ?><?= $page['updated_at'] ? ', updated ' . $e(date('j M Y', (int) strtotime((string) $page['updated_at']))) : '' ?></p>
     </div>
-    <?php if ($current): ?>
+    <?php if ($current && $acceptable): ?>
         <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">✓ You have accepted this version</span>
     <?php endif; ?>
 </div>
 
 <article class="policy mt-4 rounded-2xl border border-[#ece8df] bg-white p-6 text-sm leading-6 text-slate-800"><?= $html ?></article>
 
-<?php if (!$current): ?>
+<?php if (!$current && $acceptable): ?>
     <form method="post" action="/vendor/terms/accept" class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm">
         <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
         <input type="hidden" name="version" value="<?= (int) $page['version'] ?>">

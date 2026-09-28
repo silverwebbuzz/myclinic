@@ -25,15 +25,18 @@ final class StorePolicyController
             $page = StorePolicyService::get($slug);
             $stats = StorePolicyService::stats($slug);
             $versions = StorePolicyService::versions($slug);
+            $tokens = StorePolicyService::tokens();
+            $preview = StorePolicyService::render($page['body']);
         } catch (\Throwable $e) {
             error_log('[StorePolicy::adminEdit] ' . $e->getMessage());
 
-            return Response::html('Import 2026_10_01_store_tax_documents.sql first.', 500);
+            return Response::html('<p style="font:15px system-ui;padding:24px">The seller terms tables are missing. Import <code>app/database/patches/2026_10_01_store_tax_documents.sql</code> in phpMyAdmin, then reload.'
+                . '<br><small style="color:#64748b">Error: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . '</small></p>', 500);
         }
 
         return Response::html(View::render('admin/store_policy', [
             'slug' => $slug, 'page' => $page, 'stats' => $stats, 'versions' => $versions,
-            'tokens' => StorePolicyService::tokens(), 'preview' => StorePolicyService::render($page['body']),
+            'tokens' => $tokens, 'preview' => $preview,
             'csrf' => CsrfService::token(), 'flashOk' => SessionFlash::pull('store_ok'), 'flashErr' => SessionFlash::pull('store_err'),
         ]));
     }
@@ -52,11 +55,25 @@ final class StorePolicyController
     public function vendorShow(Request $request): Response
     {
         $vendorId = (int) (RequestContext::vendor()['id'] ?? 0);
-        $page = StorePolicyService::get('seller_terms');
+        try {
+            $page = StorePolicyService::get('seller_terms');
+            $html = StorePolicyService::render($page['body']);
+            $accepted = StorePolicyService::acceptedVersion($vendorId, 'seller_terms');
+        } catch (\Throwable $e) {
+            error_log('[StorePolicy::vendorShow] ' . $e->getMessage());
+            // Tables not imported yet: still show the default rules (read-only, nothing to accept).
+            $page = ['title' => StorePolicyService::PAGES['seller_terms'], 'body' => '', 'version' => 0, 'updated_at' => null];
+            try {
+                $html = StorePolicyService::render(StorePolicyService::defaultBody('seller_terms'));
+            } catch (\Throwable) {
+                $html = '<p>The seller rules are temporarily unavailable. Please try again shortly.</p>';
+            }
+            $accepted = 0;
+        }
 
         return Response::html(View::render('store_vendor/terms', [
-            'page' => $page, 'html' => StorePolicyService::render($page['body']),
-            'acceptedVersion' => StorePolicyService::acceptedVersion($vendorId, 'seller_terms'),
+            'page' => $page, 'html' => $html,
+            'acceptedVersion' => $accepted,
             'vendor' => VendorService::find($vendorId) ?? RequestContext::vendor(),
             'vendorUser' => RequestContext::vendorUser(),
             'csrf' => CsrfService::token(), 'flashOk' => SessionFlash::pull('store_ok'), 'flashErr' => SessionFlash::pull('store_err'),
@@ -70,8 +87,13 @@ final class StorePolicyController
 
             return Response::redirect('/vendor/terms');
         }
-        $res = StorePolicyService::accept((int) (RequestContext::vendor()['id'] ?? 0), (int) (RequestContext::vendorUser()['id'] ?? 0),
-            'seller_terms', (int) ($request->post['version'] ?? 0), $request->ip());
+        try {
+            $res = StorePolicyService::accept((int) (RequestContext::vendor()['id'] ?? 0), (int) (RequestContext::vendorUser()['id'] ?? 0),
+                'seller_terms', (int) ($request->post['version'] ?? 0), $request->ip());
+        } catch (\Throwable $e) {
+            error_log('[StorePolicy::vendorAccept] ' . $e->getMessage());
+            $res = ['ok' => false, 'error' => 'Could not save your acceptance right now. Please try again shortly.'];
+        }
         SessionFlash::put($res['ok'] ? 'store_ok' : 'store_err', $res['ok'] ? 'Thank you, you have accepted the seller rules & terms.' : ($res['error'] ?? 'Could not save.'));
 
         return Response::redirect('/vendor/terms');

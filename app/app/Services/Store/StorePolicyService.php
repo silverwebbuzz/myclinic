@@ -137,7 +137,11 @@ final class StorePolicyService
     /** Live numbers the text can reference as {{token}}. @return array<string, string> */
     public static function tokens(): array
     {
-        [$flat, $freeAbove] = PricingService::shippingRule(0);
+        try {
+            [$flat, $freeAbove] = PricingService::shippingRule(0);
+        } catch (\Throwable) {
+            [$flat, $freeAbove] = [4900, 49900];   // orders patch not imported yet: the seeded defaults
+        }
         $rs = static fn (int $p): string => '₹' . ProductService::rupees($p);
 
         return [
