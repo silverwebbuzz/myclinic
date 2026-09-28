@@ -103,3 +103,33 @@ function store_same_origin(): bool
 
     return true; // neither header sent (rare); SameSite=Lax still protects the session
 }
+
+/**
+ * Tiny per-IP rate limit for storefront endpoints (sliding window, file-backed in the
+ * system temp dir so it needs no table). Returns false when the caller is over the limit.
+ * Fails open if the temp dir isn't writable, so it can never lock real customers out.
+ */
+function store_throttle(string $bucket, int $max, int $windowSec): bool
+{
+    $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+    $file = rtrim(sys_get_temp_dir(), '/') . '/ecp_store_rl_' . hash('sha256', $bucket . '|' . $ip);
+    $fh = @fopen($file, 'c+');
+    if ($fh === false) {
+        return true;
+    }
+    $now = time();
+    flock($fh, LOCK_EX);
+    $hits = json_decode((string) stream_get_contents($fh), true);
+    $hits = array_values(array_filter(is_array($hits) ? $hits : [], static fn ($t) => (int) $t > $now - $windowSec));
+    $ok = count($hits) < $max;
+    if ($ok) {
+        $hits[] = $now;
+    }
+    ftruncate($fh, 0);
+    rewind($fh);
+    fwrite($fh, json_encode($hits));
+    flock($fh, LOCK_UN);
+    fclose($fh);
+
+    return $ok;
+}

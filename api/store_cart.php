@@ -66,6 +66,10 @@ try {
             \App\Core\QueryBuilder::table('store_carts')->where('id', '=', $cartId)->update(['coupon_code' => null]);
             store_cart_out(200, ['ok' => true]);
         }
+        // Stop coupon-code guessing: 10 tries per 10 minutes per IP.
+        if (!store_throttle('coupon', 10, 600)) {
+            store_cart_out(429, ['ok' => false, 'error' => 'Too many coupon attempts. Please wait a few minutes and try again.']);
+        }
         $c = \App\Services\Store\CouponService::findByCode($code);
         $me = ecp_patient_current();
         $why = $c === null ? 'That coupon code isn\'t valid.' : \App\Services\Store\CouponService::unusableReason($c, $me ? (int) $me['id'] : null);

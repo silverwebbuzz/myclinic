@@ -57,6 +57,9 @@ try {
     }
 
     $action = (string) ($in['action'] ?? '');
+    if (!store_throttle('pay', 30, 600)) {   // each start creates a Razorpay order: cap abuse
+        store_pay_out(429, ['ok' => false, 'error' => 'Too many attempts. Please wait a few minutes and try again.']);
+    }
     if ($action === 'start') {
         $res = StorePaymentService::start($order);
         store_pay_out($res['ok'] ? 200 : 422, $res);

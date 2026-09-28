@@ -51,23 +51,6 @@ $navGroups = [
         ['/admin/lab/categories', 'Categories', 'M4 6h16M4 10h16M4 14h10M4 18h10'],
         ['/admin/lab/coupons', 'Discount Coupons', 'M9 5H7a2 2 0 00-2 2v3a2 2 0 010 4v3a2 2 0 002 2h2M9 5h8a2 2 0 012 2v3a2 2 0 000 4v3a2 2 0 01-2 2H9M9 5v14'],
     ],
-    'Store' => [
-        ['/admin/store/dashboard', 'Store dashboard', 'M3 12l9-9 9 9M5 10v10h14V10'],
-        ['/admin/store/orders', 'Orders', 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11'],
-        ['/admin/store/returns', 'Returns', 'M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5'],
-        ['/admin/store/payouts', 'Seller payouts', 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6'],
-        ['/admin/store/reports', 'Store reports', 'M3 3v18h18M7 14l4-4 4 4 5-6'],
-        ['/admin/store/gst', 'GST register', 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M8 13h8M8 17h8'],
-        ['/admin/store/policies/seller_terms', 'Seller terms', 'M9 12l2 2 4-4M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7z'],
-        ['/admin/store/vendors', 'Sellers', 'M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6', \App\Services\Store\VendorService::pendingReviewCount()],
-        ['/admin/store/products', 'Products', 'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16zM3.3 7L12 12l8.7-5M12 22V12', \App\Services\Store\ProductService::pendingReviewCount()],
-        ['/admin/store/categories', 'Categories', 'M4 6h16M4 10h16M4 14h10M4 18h10'],
-        ['/admin/store/coupons', 'Coupons', 'M9 14l6-6M9.5 8.5h.01M14.5 13.5h.01M5 3h14a2 2 0 012 2v14l-3-2-3 2-3-2-3 2-3-2-3 2V5a2 2 0 012-2z'],
-        ['/admin/store/reviews', 'Reviews', 'M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z'],
-        ['/admin/store/banners', 'Banners', 'M3 5h18v14H3zM3 15l5-5 4 4 3-3 6 6'],
-        ['/admin/store/brands', 'Brands', 'M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82zM7 7h.01'],
-        ['/admin/store/settings', 'Store settings', 'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-2.82 1.17V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-2.82-1.17l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15H4.5a2 2 0 110-4h.09a1.65 1.65 0 001.17-2.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 0011.4 4.6V4.5a2 2 0 114 0v.09a1.65 1.65 0 002.82 1.17l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 11h.1a2 2 0 110 4h-.1z'],
-    ],
     'Growth' => [
         ['/admin/partners', 'Partners', 'M17 21v-2a4 4 0 00-3-3.87M9 21v-2a4 4 0 013-3.87M12 7a4 4 0 100 8 4 4 0 000-8z'],
         ['/admin/partner-payouts', 'Payouts', 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6'],
@@ -85,6 +68,48 @@ $navGroups = [
         ['/admin/wordpress-settings', 'WordPress', 'M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z'],
     ],
 ];
+
+// The Store (marketplace) has its own menu: main admin shows ONE "Store" link;
+// inside /admin/store/* the sidebar switches to the store's menu.
+$vendorsPending = $productsPending = 0;
+try {
+    $vendorsPending = \App\Services\Store\VendorService::pendingReviewCount();
+    $productsPending = \App\Services\Store\ProductService::pendingReviewCount();
+} catch (\Throwable) {
+}
+$storePending = $vendorsPending + $productsPending;
+$inStore = $adminPath === '/admin/store' || str_starts_with($adminPath, '/admin/store/');
+if ($inStore) {
+    $navGroups = [
+        'Store' => [
+            ['/admin/store/dashboard', 'Dashboard', 'M3 12l9-9 9 9M5 10v10h14V10'],
+            ['/admin/store/reports', 'Reports', 'M3 3v18h18M7 14l4-4 4 4 5-6'],
+        ],
+        'Orders & money' => [
+            ['/admin/store/orders', 'Orders', 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11'],
+            ['/admin/store/returns', 'Returns', 'M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5'],
+            ['/admin/store/payouts', 'Seller payouts', 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6'],
+            ['/admin/store/gst', 'GST register', 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M8 13h8M8 17h8'],
+        ],
+        'Sellers & catalog' => [
+            ['/admin/store/vendors', 'Sellers', 'M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6', $vendorsPending],
+            ['/admin/store/products', 'Products', 'M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16zM3.3 7L12 12l8.7-5M12 22V12', $productsPending],
+            ['/admin/store/categories', 'Categories', 'M4 6h16M4 10h16M4 14h10M4 18h10'],
+            ['/admin/store/brands', 'Brands', 'M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82zM7 7h.01'],
+        ],
+        'Marketing' => [
+            ['/admin/store/coupons', 'Coupons', 'M9 14l6-6M9.5 8.5h.01M14.5 13.5h.01M5 3h14a2 2 0 012 2v14l-3-2-3 2-3-2-3 2-3-2-3 2V5a2 2 0 012-2z'],
+            ['/admin/store/banners', 'Banners', 'M3 5h18v14H3zM3 15l5-5 4 4 3-3 6 6'],
+            ['/admin/store/reviews', 'Reviews', 'M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z'],
+        ],
+        'Setup' => [
+            ['/admin/store/policies/seller_terms', 'Seller terms', 'M9 12l2 2 4-4M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7z'],
+            ['/admin/store/settings', 'Store settings', 'M12 15a3 3 0 100-6 3 3 0 000 6zM4 12h2M18 12h2M12 4v2M12 18v2'],
+        ],
+    ];
+} else {
+    $navGroups['Overview'][] = ['/admin/store/dashboard', 'Store (marketplace)', 'M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6', $storePending];
+}
 
 $isActive = static fn (string $href): bool => $adminPath === $href || str_starts_with($adminPath, $href . '/');
 ?>
@@ -132,8 +157,15 @@ if (!defined('ECP_ADMIN_ALPINE_LOADED')) {
 <aside class="admin-side fixed inset-y-0 left-0 z-30 flex flex-col bg-slate-900 text-slate-300"
        :class="$store.adminNav.open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'"
        style="transition: transform .2s">
-    <div class="flex items-center gap-2 px-5 py-4 border-b border-white/10">
-        <a href="/admin/dashboard" class="font-semibold text-white">eClinicPro Admin</a>
+    <div class="px-5 py-4 border-b border-white/10">
+        <?php if ($inStore): ?>
+            <a href="/admin/store/dashboard" class="block font-semibold text-white">eClinicPro Store</a>
+            <a href="/admin/dashboard" class="mt-1 inline-flex items-center gap-1 text-xs text-slate-400 hover:text-white">
+                <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                Back to main admin</a>
+        <?php else: ?>
+            <a href="/admin/dashboard" class="font-semibold text-white">eClinicPro Admin</a>
+        <?php endif; ?>
     </div>
 
     <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-5 text-sm" x-data="{ collapsed: {} }">
