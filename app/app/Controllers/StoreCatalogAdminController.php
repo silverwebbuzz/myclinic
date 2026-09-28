@@ -150,6 +150,15 @@ final class StoreCatalogAdminController
             $upd['required_vendor_doc'] = array_key_exists($doc, VendorService::DOC_TYPES) ? $doc : null;
             $upd['review_reason'] = mb_substr(trim((string) ($p['review_reason'] ?? '')), 0, 255) ?: null;
             $upd['no_promotion'] = !empty($p['no_promotion']) ? 1 : 0;
+            // Suggested HSN for new products in this subcategory (must be in the HSN list when one exists).
+            $hsn = preg_replace('/\D/', '', (string) ($p['default_hsn'] ?? '')) ?? '';
+            if ($hsn !== '' && (!preg_match('/^\d{4,8}$/', $hsn)
+                || (\App\Services\Store\HsnService::enforced() && \App\Services\Store\HsnService::match($hsn) === null))) {
+                SessionFlash::put('store_err', "Default HSN $hsn isn't in the HSN list. Add it under Store → HSN codes first.");
+
+                return Response::redirect('/admin/store/categories#cat-' . (int) $id);
+            }
+            $upd['default_hsn'] = $hsn !== '' ? $hsn : null;
         }
         QueryBuilder::table('store_categories')->where('id', '=', (int) $id)->update($upd);
         StoreAudit::log('category.update', 'category', (int) $id, $cat, $upd);
@@ -207,6 +216,44 @@ final class StoreCatalogAdminController
     }
 
     /** @param array<string, mixed> $data */
+    // ---- HSN master (GST rate per HSN) ---------------------------------------------
+
+    public function hsn(Request $request): Response
+    {
+        try {
+            $rows = \App\Services\Store\HsnService::all();
+            $mismatches = \App\Services\Store\HsnService::mismatches(null, 300);
+            $missing = false;
+        } catch (\Throwable $e) {
+            error_log('[StoreCatalogAdmin::hsn] ' . $e->getMessage());
+            [$rows, $mismatches, $missing] = [[], [], true];
+        }
+
+        return $this->render('admin/store_hsn', ['rows' => $rows, 'mismatches' => $mismatches, 'tableMissing' => $missing]);
+    }
+
+    public function saveHsn(Request $request): Response
+    {
+        $id = (int) ($request->post['id'] ?? 0) ?: null;
+        if (($request->post['action'] ?? '') === 'apply') {
+            $n = \App\Services\Store\HsnService::applyRates();
+            SessionFlash::put('store_ok', $n > 0 ? "GST rate corrected on $n product(s) to match the HSN list." : 'All single-rate products already match the HSN list.');
+
+            return Response::redirect('/admin/store/hsn');
+        }
+        try {
+            $res = \App\Services\Store\HsnService::save($id, $request->post, (int) (\App\Core\RequestContext::superAdmin()['id'] ?? 0));
+        } catch (\Throwable $e) {
+            error_log('[StoreCatalogAdmin::saveHsn] ' . $e->getMessage());
+            $res = ['ok' => false, 'error' => 'Could not save. Has 2026_10_02_store_hsn_codes.sql been imported?'];
+        }
+        SessionFlash::put($res['ok'] ? 'store_ok' : 'store_err', $res['ok']
+            ? 'Saved.' . ((int) $res['updated'] > 0 ? ' GST rate updated on ' . (int) $res['updated'] . ' product(s); new orders use the new rate.' : '')
+            : ($res['error'] ?? 'Could not save.'));
+
+        return Response::redirect('/admin/store/hsn');
+    }
+
     private function render(string $view, array $data): Response
     {
         return Response::html(View::render($view, $data + [

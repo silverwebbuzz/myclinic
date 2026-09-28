@@ -159,16 +159,26 @@ final class ProductService
             $brandId = 0;
         }
 
-        // Blank must NOT fall through as (int) 0 = "0%": make the seller choose.
-        $gstRaw = trim((string) ($in['gst_bp'] ?? ''));
-        $gst = (int) $gstRaw;
-        if ($gstRaw === '' || !ctype_digit($gstRaw) || !array_key_exists($gst, CatalogService::GST_RATES_BP)) {
-            return ['ok' => false, 'error' => 'Choose the GST rate for this product (ask your CA if unsure; it depends on the HSN code).'];
-        }
         $hsn = preg_replace('/\D/', '', (string) ($in['hsn_code'] ?? '')) ?? '';
         // Required: every line on the seller's GST invoice must carry its HSN code.
         if (!preg_match('/^\d{4,8}$/', $hsn)) {
             return ['ok' => false, 'error' => 'Enter the product\'s HSN code (4–8 digits; it\'s on your purchase invoice, or ask your CA). It is printed on the GST invoice.'];
+        }
+        // Blank must NOT fall through as (int) 0 = "0%".
+        $gstRaw = trim((string) ($in['gst_bp'] ?? ''));
+        $chosen = $gstRaw !== '' && ctype_digit($gstRaw) ? (int) $gstRaw : null;
+        if (HsnService::enforced()) {
+            // The rate comes from eClinicPro's HSN list, not from the seller.
+            $r = HsnService::resolve($hsn, $chosen);
+            if (!$r['ok']) {
+                return ['ok' => false, 'error' => $r['error']];
+            }
+            $gst = (int) $r['gst_bp'];
+        } else {
+            if ($chosen === null || !array_key_exists($chosen, CatalogService::GST_RATES_BP)) {
+                return ['ok' => false, 'error' => 'Choose the GST rate for this product (ask your CA if unsure; it depends on the HSN code).'];
+            }
+            $gst = $chosen;
         }
         $returnWindow = trim((string) ($in['return_window_days'] ?? ''));
 

@@ -83,7 +83,9 @@ $licenceDocs = array_intersect_key($docTypes, array_flip(['fssai_license', 'ayus
                         <select name="listing_mode" class="mt-1 w-full rounded border px-1 py-1 <?= $modeCls[$s['listing_mode']] ?? '' ?>">
                             <?php foreach (['open', 'review', 'blocked'] as $m): ?><option value="<?= $m ?>" <?= $s['listing_mode'] === $m ? 'selected' : '' ?>><?= $m ?></option><?php endforeach; ?>
                         </select></label>
-                    <label class="md:col-span-2"><span class="text-xs text-slate-500">Reason</span>
+                    <label class="md:col-span-1"><span class="text-xs text-slate-500">Default HSN</span>
+                        <input name="default_hsn" maxlength="8" inputmode="numeric" list="hsn-codes" value="<?= $e($s['default_hsn'] ?? '') ?>" class="mt-1 w-full rounded border px-2 py-1 font-mono"></label>
+                    <label class="md:col-span-1"><span class="text-xs text-slate-500">Reason</span>
                         <input name="review_reason" value="<?= $e($s['review_reason'] ?? '') ?>" class="mt-1 w-full rounded border px-2 py-1"></label>
                     <div class="flex items-center gap-2 md:col-span-2">
                         <label class="flex items-center gap-1 text-xs" title="IMS Act: never discount/promote"><input type="checkbox" name="no_promotion" value="1" <?= !empty($s['no_promotion']) ? 'checked' : '' ?>> No promo</label>
@@ -96,6 +98,9 @@ $licenceDocs = array_intersect_key($docTypes, array_flip(['fssai_license', 'ayus
         </div>
         <?php endif; ?>
     </div>
+<datalist id="hsn-codes">
+    <?php foreach (\App\Services\Store\HsnService::forForm() as $h): ?><option value="<?= $e($h['code']) ?>"><?= $e($h['description']) ?></option><?php endforeach; ?>
+</datalist>
 </main>
 </body>
 </html>

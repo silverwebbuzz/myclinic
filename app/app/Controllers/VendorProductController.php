@@ -34,6 +34,13 @@ final class VendorProductController
             'products' => ProductService::listForVendor((int) $vendor['id'], $status),
             'counts' => ProductService::vendorCounts((int) $vendor['id']),
             'status' => $status,
+            'gstIssues' => (static function (int $vid): array {
+                try {
+                    return \App\Services\Store\HsnService::mismatches($vid, 50);
+                } catch (\Throwable) {
+                    return [];
+                }
+            })((int) $vendor['id']),
         ]);
     }
 
@@ -186,6 +193,7 @@ final class VendorProductController
             'concerns' => CatalogService::concerns(),
             'licences' => $licences,
             'problems' => $product !== null ? ProductService::submitProblems($vendor, $product) : [],
+            'hsnList' => \App\Services\Store\HsnService::forForm(),
         ]);
     }
 

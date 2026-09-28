@@ -128,13 +128,13 @@ ob_start();
             </label>
             <label class="block text-sm sm:col-span-2">
                 <span class="text-slate-600">Category</span>
-                <select name="category_id" required class="<?= $input ?>">
+                <select name="category_id" required class="<?= $input ?>" @change="$dispatch('category-picked', { hsn: $event.target.selectedOptions[0]?.dataset.hsn || '' })">
                     <option value="">Choose the best-fitting subcategory…</option>
                     <?php foreach ($tree as $dept): ?>
                         <optgroup label="<?= $e($dept['name']) ?>">
                             <?php foreach ($dept['subs'] as $sub): ?>
                                 <?php $blocked = $sub['block_reason'] !== null && (int) $sub['id'] !== $selectedCategory; ?>
-                                <option value="<?= (int) $sub['id'] ?>" <?= (int) $sub['id'] === $selectedCategory ? 'selected' : '' ?> <?= $blocked ? 'disabled' : '' ?>>
+                                <option value="<?= (int) $sub['id'] ?>" data-hsn="<?= $e($sub['default_hsn'] ?? '') ?>" <?= (int) $sub['id'] === $selectedCategory ? 'selected' : '' ?> <?= $blocked ? 'disabled' : '' ?>>
                                     <?= $e($sub['name']) ?><?= $blocked ? ' 🔒' : (($sub['listing_mode'] ?? '') === 'review' ? ' (extra review)' : '') ?>
                                 </option>
                             <?php endforeach; ?>
@@ -269,15 +269,48 @@ ob_start();
                 <input name="license_number" maxlength="80" value="<?= $e($val('license_number')) ?>" class="<?= $input ?>" placeholder="FSSAI / device reg. no.">
                 <span class="text-xs text-slate-400">Required for food, supplement, AYUSH and device categories.</span>
             </label>
+            <?php
+            $gstCur = (string) $val('gst_bp', '');
+            $gstKnown = $gstCur !== '' && array_key_exists((int) $gstCur, CatalogService::GST_RATES_BP);
+            ?>
+            <?php if (!empty($hsnList)): ?>
+            <!-- HSN from eClinicPro's list; the GST rate follows from it (admin-controlled). -->
+            <div class="contents" x-data='hsnPicker(<?= $e(json_encode(['list' => $hsnList, 'code' => (string) $val('hsn_code'), 'rate' => $gstCur], JSON_HEX_APOS | JSON_HEX_QUOT)) ?>)'
+                 @category-picked.window="if (!code && $event.detail.hsn) setCode($event.detail.hsn)">
+                <label class="block text-sm">
+                    <span class="text-slate-600">HSN code <span class="text-red-600">*</span></span>
+                    <input name="hsn_code" maxlength="8" inputmode="numeric" pattern="\d{4,8}" required list="hsn-list" x-model="code" @input="sync()" class="<?= $input ?>" placeholder="Start typing, e.g. 3004">
+                    <datalist id="hsn-list">
+                        <?php foreach ($hsnList as $h): ?><option value="<?= $e($h['code']) ?>"><?= $e($h['description']) ?></option><?php endforeach; ?>
+                    </datalist>
+                    <span class="text-xs text-slate-500" x-show="match" x-text="match ? match.description : ''"></span>
+                    <span class="text-xs text-red-600" x-show="code.length >= 4 && !match" x-cloak>Not in eClinicPro's HSN list. Pick a code from the list, or contact support to add it.</span>
+                </label>
+                <label class="block text-sm">
+                    <span class="text-slate-600">GST rate</span>
+                    <template x-if="rates.length === 1">
+                        <div>
+                            <input type="hidden" name="gst_bp" :value="rates[0]">
+                            <p class="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2" x-text="(rates[0] / 100) + '% (set by HSN ' + match.code + ')'"></p>
+                        </div>
+                    </template>
+                    <template x-if="rates.length > 1">
+                        <select name="gst_bp" required x-model="rate" class="<?= $input ?>">
+                            <option value="">Choose the rate for this product…</option>
+                            <template x-for="r in rates" :key="r"><option :value="String(r)" x-text="(r / 100) + '%'" :selected="String(r) === String(rate)"></option></template>
+                        </select>
+                    </template>
+                    <p x-show="rates.length === 0" class="mt-1 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-slate-400">Pick an HSN code first</p>
+                    <span class="text-xs text-slate-400" x-show="rates.length > 1">This HSN has more than one rate; choose the one for this exact product. eClinicPro checks it at review.</span>
+                    <span class="text-xs text-slate-400" x-show="rates.length <= 1">Prices include GST. The rate is fixed by eClinicPro's HSN list.</span>
+                </label>
+            </div>
+            <?php else: ?>
             <label class="block text-sm">
                 <span class="text-slate-600">HSN code <span class="text-red-600">*</span></span>
                 <input name="hsn_code" maxlength="8" inputmode="numeric" pattern="\d{4,8}" required value="<?= $e($val('hsn_code')) ?>" class="<?= $input ?>">
                 <span class="text-xs text-slate-400">Printed on the customer's GST invoice.</span>
             </label>
-            <?php
-            $gstCur = (string) $val('gst_bp', '');
-            $gstKnown = $gstCur !== '' && array_key_exists((int) $gstCur, CatalogService::GST_RATES_BP);
-            ?>
             <label class="block text-sm">
                 <span class="text-slate-600">GST rate</span>
                 <select name="gst_bp" required class="<?= $input ?>">
@@ -286,12 +319,9 @@ ob_start();
                         <option value="<?= $bp ?>" <?= $gstKnown && (int) $gstCur === $bp ? 'selected' : '' ?>><?= $e($label) ?></option>
                     <?php endforeach; ?>
                 </select>
-                <?php if (!$isNew && $gstCur !== '' && !$gstKnown): ?>
-                    <span class="text-xs text-amber-700">Saved earlier at <?= (int) $gstCur / 100 ?>%, which is no longer a GST slab. Please choose the current rate.</span>
-                <?php else: ?>
-                    <span class="text-xs text-slate-400">Prices include GST. Your CA can confirm the rate for this HSN code.</span>
-                <?php endif; ?>
+                <span class="text-xs text-slate-400">Prices include GST. Your CA can confirm the rate for this HSN code.</span>
             </label>
+            <?php endif; ?>
             <label class="block text-sm">
                 <span class="text-slate-600">Manufacturer</span>
                 <input name="manufacturer" maxlength="190" value="<?= $e($val('manufacturer')) ?>" class="<?= $input ?>">
@@ -386,6 +416,26 @@ ob_start();
 <?php endif; ?>
 
 <script>
+function hsnPicker(init) {
+    return {
+        list: init.list || [], code: String(init.code || ''), rate: String(init.rate || ''),
+        get match() {
+            let best = null;
+            for (const r of this.list) {
+                if (this.code.startsWith(r.code) && (!best || r.code.length > best.code.length)) best = r;
+            }
+            return best;
+        },
+        get rates() { return this.match ? this.match.rates : []; },
+        setCode(c) { this.code = String(c); this.sync(); },
+        sync() {
+            this.code = this.code.replace(/\D/g, '').slice(0, 8);
+            const r = this.rates.map(String);
+            if (r.length === 1) this.rate = r[0];
+            else if (!r.includes(String(this.rate))) this.rate = '';
+        },
+    };
+}
 function productForm(init) {
     const blank = () => ({ id: 0, title: '', sku: '', mrp: '', price: '', stock_qty: '0', low_stock_threshold: 5,
         weight_g: '', length_cm: '', breadth_cm: '', height_cm: '', barcode: '', remove: false });

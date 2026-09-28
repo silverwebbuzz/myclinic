@@ -28,6 +28,17 @@ ob_start();
     <?php endif; ?>
 </div>
 
+<?php if (!empty($gstIssues)): ?>
+    <div class="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <strong><?= count($gstIssues) ?> product(s) need their HSN / GST fixed</strong> so customer invoices are correct. Open each one, pick the HSN from the list and save:
+        <ul class="mt-1 list-disc pl-5">
+            <?php foreach (array_slice($gstIssues, 0, 10) as $gi): ?>
+                <li><a class="underline" href="/vendor/products/<?= (int) $gi['id'] ?>"><?= $e($gi['name']) ?></a>: <?= $e($gi['problem']) ?></li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+<?php endif; ?>
+
 <nav class="mt-4 flex flex-wrap gap-2 text-sm">
     <?php foreach ($tabs as $key => $label): ?>
         <?php $n = $key === '' ? array_sum($counts) : ($counts[$key] ?? 0); ?>

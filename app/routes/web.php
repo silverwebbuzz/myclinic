@@ -611,6 +611,8 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/store/orders/{id}/packages/{voId}/undelivered', [\App\Controllers\StoreOrderAdminController::class, 'refundUndelivered']);
         $admin->post('/store/orders/{id}/packages/{voId}/invoice', [\App\Controllers\StoreOrderAdminController::class, 'issueInvoice']);
         // GST documents + seller policies (P11b)
+        $admin->get('/store/hsn', [StoreCatalogAdminController::class, 'hsn']);
+        $admin->post('/store/hsn', [StoreCatalogAdminController::class, 'saveHsn']);
         $admin->get('/store/gst', [\App\Controllers\StoreTaxController::class, 'adminRegister']);
         $admin->get('/store/gst/export', [\App\Controllers\StoreTaxController::class, 'adminCsv']);
         $admin->get('/store/gst/documents/{id}', [\App\Controllers\StoreTaxController::class, 'adminDocument']);
