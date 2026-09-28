@@ -610,6 +610,12 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/store/payouts/{id}/statement', [\App\Controllers\StorePayoutAdminController::class, 'statement']);
         $admin->post('/store/payouts/{id}/{action}', [\App\Controllers\StorePayoutAdminController::class, 'transition']);
         $admin->get('/store/reports', [\App\Controllers\StorePayoutAdminController::class, 'report']);
+
+        // Returns (P10)
+        $admin->get('/store/returns', [\App\Controllers\StoreReturnController::class, 'adminIndex']);
+        $admin->get('/store/returns/{id}', [\App\Controllers\StoreReturnController::class, 'adminShow']);
+        $admin->get('/store/returns/{id}/photo/{n}', [\App\Controllers\StoreReturnController::class, 'adminPhoto']);
+        $admin->post('/store/returns/{id}/{action}', [\App\Controllers\StoreReturnController::class, 'adminAction']);
         $admin->post('/store/orders/{id}/shipments/{shipmentId}/cancel', [\App\Controllers\StoreOrderAdminController::class, 'shipCancel']);
         $admin->post('/store/orders/{id}/shipments/{shipmentId}/refresh', [\App\Controllers\StoreOrderAdminController::class, 'shipRefresh']);
     });
@@ -661,6 +667,12 @@ return static function (RouteRegistrar $router): void {
         $vendor->post('/orders/{id}/packed', [\App\Controllers\VendorOrderController::class, 'packed']);
         $vendor->post('/orders/{id}/cancel', [\App\Controllers\VendorOrderController::class, 'cancelItems']);
         $vendor->post('/orders/{id}/book', [\App\Controllers\VendorOrderController::class, 'book']);
+
+        // Returns (P10)
+        $vendor->get('/returns', [\App\Controllers\StoreReturnController::class, 'vendorIndex']);
+        $vendor->get('/returns/{id}', [\App\Controllers\StoreReturnController::class, 'vendorShow']);
+        $vendor->get('/returns/{id}/photo/{n}', [\App\Controllers\StoreReturnController::class, 'vendorPhoto']);
+        $vendor->post('/returns/{id}/{action}', [\App\Controllers\StoreReturnController::class, 'vendorAction']);
 
         // Earnings & payouts (P9)
         $vendor->get('/payouts', [\App\Controllers\VendorPayoutController::class, 'index']);

@@ -55,6 +55,21 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '')
     header('Location: /store/order/' . rawurlencode($orderNo) . '?' . http_build_query(['r' => $res['ok'] ? 'ok' : 'err', 'm' => $msg]));
     exit;
 }
+// Customer requests a return on a delivered package.
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '') === 'return_request' && store_same_origin()) {
+    $qty = [];
+    foreach ((array) ($_POST['ret'] ?? []) as $itemId => $q) {
+        $qty[(int) $itemId] = (int) $q;
+    }
+    $photos = isset($_FILES['photos']) && is_array($_FILES['photos']) ? $_FILES['photos'] : [];
+    $res = \App\Services\Store\ReturnService::request((int) $me['id'], (int) ($_POST['vendor_order_id'] ?? 0), $qty,
+        (string) ($_POST['reason'] ?? ''), (string) ($_POST['note'] ?? ''), $photos);
+    $msg = $res['ok']
+        ? 'Return ' . $res['return_no'] . ' submitted. The seller will review it within 2 days; we\'ll email you.'
+        : ($res['error'] ?? 'Could not submit the return.');
+    header('Location: /store/order/' . rawurlencode($orderNo) . '?' . http_build_query(['r' => $res['ok'] ? 'ok' : 'err', 'm' => $msg]));
+    exit;
+}
 $flash = isset($_GET['m']) ? ['ok' => ($_GET['r'] ?? '') === 'ok', 'msg' => mb_substr((string) $_GET['m'], 0, 300)] : null;
 
 $packageStatus = [
@@ -177,6 +192,38 @@ require __DIR__ . '/_header.php';
           $customerCanCancel = in_array($vo['status'], \App\Services\Store\StoreRefundService::CANCELLABLE['customer'], true)
               && in_array($order['payment_status'], ['paid', 'partially_refunded'], true) && $openLines;
           ?>
+          <?php foreach ($order['returns'][(int) $vo['id']] ?? [] as $rt): ?>
+            <?php $rtLabel = ['requested' => 'waiting for the seller', 'approved' => 'approved: pickup being arranged', 'pickup_scheduled' => 'pickup scheduled',
+                'picked_up' => 'on its way back', 'received' => 'received by seller', 'qc_passed' => 'checked', 'qc_failed' => 'under review by eClinicPro',
+                'refunded' => 'refunded ' . store_rupees((int) $rt['refund_amount_paise']), 'rejected' => 'not accepted' . (!empty($rt['vendor_note']) ? ': ' . $rt['vendor_note'] : ''),
+                'closed' => 'closed'][$rt['status']] ?? $rt['status']; ?>
+            <div class="st-note" style="margin:8px 0 0;font-size:13px">Return <?= e($rt['return_no']) ?>: <strong><?= e($rtLabel) ?></strong></div>
+          <?php endforeach; ?>
+          <?php $returnable = \App\Services\Store\ReturnService::returnable($vo); ?>
+          <?php if ($returnable): ?>
+            <details style="padding:10px 0 4px">
+              <summary class="st-link-btn" style="list-style:none">Return items (until <?= e(date('j M', (int) strtotime((string) $vo['settle_after']))) ?>)</summary>
+              <form method="post" enctype="multipart/form-data" style="margin-top:10px;display:grid;gap:8px;font-size:14px">
+                <input type="hidden" name="action" value="return_request">
+                <input type="hidden" name="vendor_order_id" value="<?= (int) $vo['id'] ?>">
+                <?php foreach ($vo['items'] as $it): ?>
+                  <?php if (!isset($returnable[(int) $it['id']])) { continue; } ?>
+                  <label style="display:flex;justify-content:space-between;gap:10px;align-items:center"><span><?= e($it['name']) ?></span>
+                    <select name="ret[<?= (int) $it['id'] ?>]" class="st-select" style="height:34px">
+                      <?php for ($q = 0; $q <= $returnable[(int) $it['id']]; $q++): ?><option value="<?= $q ?>"><?= $q === 0 ? 'Keep' : 'Return ' . $q ?></option><?php endfor; ?>
+                    </select></label>
+                <?php endforeach; ?>
+                <select name="reason" class="st-select" required>
+                  <?php foreach (\App\Services\Store\ReturnService::REASONS as $k => $l): ?><option value="<?= e($k) ?>"><?= e($l) ?></option><?php endforeach; ?>
+                </select>
+                <textarea name="note" rows="2" maxlength="1000" class="st-input" style="height:auto;padding:8px 12px" placeholder="What's wrong? (helps the seller decide faster)"></textarea>
+                <label style="font-size:13px;color:var(--st-ink-2)">Photos (up to 3, required for damaged / wrong / expired / defective)
+                  <input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple style="display:block;margin-top:4px"></label>
+                <button class="st-btn st-btn-ghost st-btn-sm">Request return</button>
+                <p class="st-summary-note" style="margin:0">Products that aren't returnable (e.g. opened food or hygiene items) aren't listed. You're refunded after the seller receives and checks the item.</p>
+              </form>
+            </details>
+          <?php endif; ?>
           <?php if ($customerCanCancel): ?>
             <details style="padding:10px 0 4px">
               <summary class="st-link-btn" style="list-style:none">Cancel items from this package</summary>

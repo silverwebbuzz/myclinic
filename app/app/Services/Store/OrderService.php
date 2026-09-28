@@ -225,6 +225,16 @@ final class OrderService
         $st = $pdo->prepare('SELECT * FROM store_refunds WHERE order_id = :o ORDER BY id');
         $st->execute(['o' => $orderId]);
         $o['refunds'] = $st->fetchAll();
+        $o['returns'] = [];
+        try {
+            $st = $pdo->prepare('SELECT * FROM store_returns WHERE order_id = :o ORDER BY id');
+            $st->execute(['o' => $orderId]);
+            foreach ($st->fetchAll() as $rt) {
+                $o['returns'][(int) $rt['vendor_order_id']][] = $rt;
+            }
+        } catch (\PDOException) {
+            // fulfilment patch not imported yet
+        }
 
         return $o;
     }

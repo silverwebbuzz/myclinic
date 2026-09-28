@@ -72,13 +72,18 @@ final class SettlementService
     {
         $pdo = Database::connection();
         try {
+            // A package with an open return stays frozen until the return is settled.
+            $openReturn = "SELECT r.vendor_order_id FROM store_returns r
+                            WHERE r.status IN ('" . implode("','", ReturnService::OPEN) . "')";
             $n = $pdo->exec(
                 "UPDATE store_vendor_ledger SET status = 'available'
-                  WHERE status = 'pending' AND available_at IS NOT NULL AND available_at <= NOW()"
+                  WHERE status = 'pending' AND available_at IS NOT NULL AND available_at <= NOW()
+                    AND (vendor_order_id IS NULL OR vendor_order_id NOT IN ($openReturn))"
             );
             $st = $pdo->query(
                 "SELECT id, order_id FROM store_vendor_orders
-                  WHERE status = 'delivered' AND settle_after IS NOT NULL AND settle_after <= NOW()"
+                  WHERE status = 'delivered' AND settle_after IS NOT NULL AND settle_after <= NOW()
+                    AND id NOT IN ($openReturn)"
             );
             foreach ($st->fetchAll() as $vo) {
                 $pdo->prepare("UPDATE store_vendor_orders SET status = 'completed', settlement_status = 'eligible' WHERE id = :id AND status = 'delivered'")

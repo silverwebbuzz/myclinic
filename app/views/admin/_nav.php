@@ -53,6 +53,7 @@ $navGroups = [
     ],
     'Store' => [
         ['/admin/store/orders', 'Orders', 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11'],
+        ['/admin/store/returns', 'Returns', 'M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5'],
         ['/admin/store/payouts', 'Seller payouts', 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6'],
         ['/admin/store/reports', 'Store reports', 'M3 3v18h18M7 14l4-4 4 4 5-6'],
         ['/admin/store/vendors', 'Sellers', 'M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6', \App\Services\Store\VendorService::pendingReviewCount()],

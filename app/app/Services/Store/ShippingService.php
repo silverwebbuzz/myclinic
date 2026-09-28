@@ -366,6 +366,11 @@ final class ShippingService
             $upd['rto_at'] = date('Y-m-d H:i:s', $ts);
         }
         QueryBuilder::table('store_shipments')->where('id', '=', (int) $s['id'])->update($upd);
+        if (($s['direction'] ?? 'forward') === 'return') {
+            ReturnService::onReturnShipment($s, $internal);   // customer → seller leg of a return
+
+            return;
+        }
         self::syncVendorOrder($s, $internal, $ts);
     }
 

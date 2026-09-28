@@ -178,6 +178,64 @@ final class StoreNotifier
         }
     }
 
+    public static function returnEvent(int $returnId, string $event): void
+    {
+        try {
+            $r = ReturnService::find($returnId, null);
+            if ($r === null) {
+                return;
+            }
+            $o = QueryBuilder::table('store_orders')->where('id', '=', (int) $r['order_id'])->first();
+            $vendor = VendorService::find((int) $r['vendor_id']);
+            $storeBase = rtrim((string) ($_ENV['STORE_BASE_URL'] ?? 'https://eclinicpro.com'), '/');
+            $portalBase = rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/');
+            $admin = (string) ($_ENV['STORE_ADMIN_EMAIL'] ?? $_ENV['HELP_FROM'] ?? 'help@eclinicpro.com');
+            $items = implode("\n", array_map(static fn ($i) => "  - {$i['sku']} | {$i['name']} x {$i['qty']}", $r['items']));
+            $reason = ReturnService::REASONS[$r['reason_code']] ?? $r['reason_code'];
+            $custEmail = (string) ($o['contact_email'] ?? '');
+            $orderLink = "{$storeBase}/store/order/{$r['order_no']}";
+
+            switch ($event) {
+                case 'requested':
+                    if ($vendor !== null) {
+                        self::mail((string) $vendor['email'], "Return requested: {$r['return_no']} ({$r['sub_order_no']})",
+                            "A customer asked to return:\n$items\nReason: $reason\n" . ($r['customer_note'] ? "Note: {$r['customer_note']}\n" : '')
+                            . "\nPlease approve or reject within 2 days: {$portalBase}/vendor/returns/{$returnId}\n\n— eClinicPro Store");
+                    }
+                    self::mail($admin, "Return requested: {$r['return_no']} · {$r['vendor_name']}", "$reason\n$items\n{$portalBase}/admin/store/returns/{$returnId}");
+                    break;
+                case 'approved':
+                case 'pickup_scheduled':
+                    self::mail($custEmail, "Return approved: {$r['return_no']}",
+                        "Hi {$r['contact_name']},\n\nYour return {$r['return_no']} was approved.\n"
+                        . ($event === 'pickup_scheduled' ? "A courier will collect the item from your delivery address. Please keep it packed with all tags and accessories.\n"
+                            : "We'll contact you to arrange the pickup.\n")
+                        . "Your refund is issued once the seller receives and checks the item.\n$orderLink\n\n— eClinicPro Store");
+                    break;
+                case 'rejected':
+                    self::mail($custEmail, "About your return {$r['return_no']}",
+                        "Hi {$r['contact_name']},\n\nWe're sorry, your return {$r['return_no']} couldn't be accepted.\nReason: {$r['vendor_note']}\n\n"
+                        . "If you think this is wrong, reply to this email or write to help@eclinicpro.com.\n\n— eClinicPro Store");
+                    break;
+                case 'qc_failed':
+                    self::mail($admin, "Return QC failed: {$r['return_no']} · {$r['vendor_name']}",
+                        "The seller says the returned item failed the check: {$r['vendor_note']}\nDecide (refund anyway or reject): {$portalBase}/admin/store/returns/{$returnId}");
+                    break;
+                case 'refunded':
+                    self::mail($custEmail, "Refund of Rs. " . ProductService::rupees((int) $r['refund_amount_paise']) . " for return {$r['return_no']}",
+                        "Hi {$r['contact_name']},\n\nWe've refunded Rs. " . ProductService::rupees((int) $r['refund_amount_paise'])
+                        . " to your original payment method. It usually arrives within 5–7 working days.\n$orderLink\n\n— eClinicPro Store");
+                    if ($vendor !== null) {
+                        self::mail((string) $vendor['email'], "Return refunded: {$r['return_no']}",
+                            "The customer was refunded for:\n$items\nThe amount has been adjusted in your earnings (Payouts page).\n\n— eClinicPro Store");
+                    }
+                    break;
+            }
+        } catch (\Throwable $e) {
+            error_log('[StoreNotifier::returnEvent] ' . $e->getMessage());
+        }
+    }
+
     public static function payoutPaid(int $payoutId): void
     {
         try {
