@@ -178,6 +178,29 @@ final class StoreNotifier
         }
     }
 
+    public static function payoutPaid(int $payoutId): void
+    {
+        try {
+            $p = QueryBuilder::table('store_payouts')->where('id', '=', $payoutId)->first();
+            $vendor = $p !== null ? VendorService::find((int) $p['vendor_id']) : null;
+            if ($p === null || $vendor === null) {
+                return;
+            }
+            $portalBase = rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/');
+            self::mail((string) $vendor['email'], 'Payout sent: Rs. ' . ProductService::rupees((int) $p['net_paise']) . ' (' . $p['payout_no'] . ')',
+                "Hi {$vendor['contact_name']},\n\nWe've transferred Rs. " . ProductService::rupees((int) $p['net_paise'])
+                . ' to your bank account ending ' . ($p['bank_last4'] ?? '') . ".\nBank reference (UTR): {$p['reference']}\n\n"
+                . "Download the statement: {$portalBase}/vendor/payouts\n\n— eClinicPro Store");
+            $owner = QueryBuilder::table('store_vendor_users')->where('vendor_id', '=', (int) $vendor['id'])->where('role', '=', 'owner')->first();
+            if ($owner !== null) {
+                self::inApp('vendor_user', (int) $owner['id'], 'payout.paid', 'Payout ' . $p['payout_no'] . ' sent',
+                    'Rs. ' . ProductService::rupees((int) $p['net_paise']) . ' · UTR ' . $p['reference'], '/vendor/payouts');
+            }
+        } catch (\Throwable $e) {
+            error_log('[StoreNotifier::payoutPaid] ' . $e->getMessage());
+        }
+    }
+
     public static function inApp(string $recipientType, int $recipientId, string $event, string $title, string $body, string $link): void
     {
         try {

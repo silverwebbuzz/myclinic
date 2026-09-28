@@ -94,6 +94,24 @@ final class StoreOrderAdminController
         return Response::redirect('/admin/store/orders/' . (int) $id);
     }
 
+    /** Manual shipping (courier arranged outside Shiprocket). */
+    public function markShipped(Request $request, string $id, string $voId): Response
+    {
+        $res = \App\Services\Store\FulfilmentService::adminMarkShipped((int) $voId, trim((string) ($request->post['courier'] ?? '')),
+            trim((string) ($request->post['awb'] ?? '')), (int) (RequestContext::superAdmin()['id'] ?? 0));
+        SessionFlash::put($res['ok'] ? 'store_ok' : 'store_err', $res['ok'] ? 'Marked shipped; the customer has been emailed.' : ($res['error'] ?? 'Failed.'));
+
+        return Response::redirect('/admin/store/orders/' . (int) $id);
+    }
+
+    public function markDelivered(Request $request, string $id, string $voId): Response
+    {
+        $res = \App\Services\Store\FulfilmentService::adminMarkDelivered((int) $voId, (int) (RequestContext::superAdmin()['id'] ?? 0));
+        SessionFlash::put($res['ok'] ? 'store_ok' : 'store_err', $res['ok'] ? 'Marked delivered. The seller\'s earnings are pending until the return window ends.' : ($res['error'] ?? 'Failed.'));
+
+        return Response::redirect('/admin/store/orders/' . (int) $id);
+    }
+
     public function shipCancel(Request $request, string $id, string $shipmentId): Response
     {
         $res = \App\Services\Store\ShippingService::cancel((int) $shipmentId, (int) (RequestContext::superAdmin()['id'] ?? 0));

@@ -599,6 +599,17 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/store/orders/{id}/recheck', [\App\Controllers\StoreOrderAdminController::class, 'recheck']);
         $admin->post('/store/orders/{id}/cancel-items', [\App\Controllers\StoreOrderAdminController::class, 'cancelItems']);
         $admin->post('/store/orders/{id}/packages/{voId}/ship', [\App\Controllers\StoreOrderAdminController::class, 'shipBook']);
+        $admin->post('/store/orders/{id}/packages/{voId}/mark-shipped', [\App\Controllers\StoreOrderAdminController::class, 'markShipped']);
+        $admin->post('/store/orders/{id}/packages/{voId}/mark-delivered', [\App\Controllers\StoreOrderAdminController::class, 'markDelivered']);
+
+        // Payouts & reports (P9)
+        $admin->get('/store/payouts', [\App\Controllers\StorePayoutAdminController::class, 'index']);
+        $admin->post('/store/payouts/batch', [\App\Controllers\StorePayoutAdminController::class, 'createBatch']);
+        $admin->post('/store/payouts/adjust', [\App\Controllers\StorePayoutAdminController::class, 'adjust']);
+        $admin->get('/store/payouts/{id}', [\App\Controllers\StorePayoutAdminController::class, 'show']);
+        $admin->get('/store/payouts/{id}/statement', [\App\Controllers\StorePayoutAdminController::class, 'statement']);
+        $admin->post('/store/payouts/{id}/{action}', [\App\Controllers\StorePayoutAdminController::class, 'transition']);
+        $admin->get('/store/reports', [\App\Controllers\StorePayoutAdminController::class, 'report']);
         $admin->post('/store/orders/{id}/shipments/{shipmentId}/cancel', [\App\Controllers\StoreOrderAdminController::class, 'shipCancel']);
         $admin->post('/store/orders/{id}/shipments/{shipmentId}/refresh', [\App\Controllers\StoreOrderAdminController::class, 'shipRefresh']);
     });
@@ -650,6 +661,10 @@ return static function (RouteRegistrar $router): void {
         $vendor->post('/orders/{id}/packed', [\App\Controllers\VendorOrderController::class, 'packed']);
         $vendor->post('/orders/{id}/cancel', [\App\Controllers\VendorOrderController::class, 'cancelItems']);
         $vendor->post('/orders/{id}/book', [\App\Controllers\VendorOrderController::class, 'book']);
+
+        // Earnings & payouts (P9)
+        $vendor->get('/payouts', [\App\Controllers\VendorPayoutController::class, 'index']);
+        $vendor->get('/payouts/{id}/statement', [\App\Controllers\VendorPayoutController::class, 'statement']);
     });
 
     // Partner program — public auth pages + guarded partner dashboard.

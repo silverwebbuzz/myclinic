@@ -394,6 +394,9 @@ final class ShippingService
                                   WHERE id = :id AND status IN ('packed','ready_to_ship','shipped')");
             $st->execute(['t' => $when, 'sa' => date('Y-m-d H:i:s', $ts + $days * 86400), 'id' => $voId]);
             $changed = $st->rowCount() ? 'delivered' : null;
+            if ($changed !== null) {
+                SettlementService::recordDelivered($voId);   // seller's earnings: pending until the return window ends
+            }
         } elseif ($internal === 'rto_delivered') {
             $st = $pdo->prepare("UPDATE store_vendor_orders SET status = 'rto' WHERE id = :id AND status <> 'rto'");
             $st->execute(['id' => $voId]);

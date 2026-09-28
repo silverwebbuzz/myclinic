@@ -133,6 +133,24 @@ $a = $order['ship_address'];
                 <?php elseif (!$voShip): ?>
                     <p class="mt-1 text-xs text-slate-500">No shipment yet<?= $vo['status'] === 'packed' ? '' : ' (package must be packed first)' ?>.</p>
                 <?php endif; ?>
+                <?php if (in_array($vo['status'], ['accepted', 'packed', 'ready_to_ship'], true)): ?>
+                    <details class="mt-2 text-xs">
+                        <summary class="cursor-pointer text-slate-600">Shipped outside Shiprocket? Mark shipped manually</summary>
+                        <form method="post" action="/admin/store/orders/<?= (int) $order['id'] ?>/packages/<?= (int) $vo['id'] ?>/mark-shipped" class="mt-1 flex flex-wrap gap-2">
+                            <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+                            <input name="courier" placeholder="Courier (e.g. Delhivery)" class="rounded border px-2 py-1">
+                            <input name="awb" placeholder="Tracking no. (optional)" class="rounded border px-2 py-1">
+                            <button class="rounded bg-slate-800 px-2 py-1 text-white">Mark shipped</button>
+                        </form>
+                    </details>
+                <?php endif; ?>
+                <?php if (in_array($vo['status'], ['shipped', 'ready_to_ship'], true)): ?>
+                    <form method="post" action="/admin/store/orders/<?= (int) $order['id'] ?>/packages/<?= (int) $vo['id'] ?>/mark-delivered" class="mt-2"
+                          onsubmit="return confirm('Mark this package delivered? The return window starts now and the seller\'s earnings become payable after it.')">
+                        <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+                        <button class="rounded border border-emerald-600 px-2 py-1 text-xs text-emerald-700 hover:bg-emerald-50">Mark delivered manually</button>
+                    </form>
+                <?php endif; ?>
             </div>
             <?php
             $open = array_filter($vo['items'], static fn ($it) => (int) $it['qty'] > (int) $it['qty_cancelled']);

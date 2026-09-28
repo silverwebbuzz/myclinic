@@ -64,6 +64,7 @@ $nav = [
         <?php endif; ?>
         <?php if (in_array($status, ['approved', 'suspended'], true)): ?>
             <a href="/vendor/orders" class="block rounded-lg px-3 py-2 <?= str_starts_with($path, '/vendor/orders') ? 'bg-[#0e4d34] text-white' : 'hover:bg-white' ?>">Orders</a>
+            <a href="/vendor/payouts" class="block rounded-lg px-3 py-2 <?= str_starts_with($path, '/vendor/payouts') ? 'bg-[#0e4d34] text-white' : 'hover:bg-white' ?>">Payouts</a>
         <?php endif; ?>
     </nav>
 
