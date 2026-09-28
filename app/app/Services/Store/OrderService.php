@@ -126,6 +126,44 @@ final class OrderService
         }
     }
 
+    /**
+     * Derive the parent order's status from its seller packages (after payment).
+     * Unpaid / expired / refunded-late orders are left alone.
+     */
+    public static function recomputeStatus(int $orderId): void
+    {
+        $o = QueryBuilder::table('store_orders')->where('id', '=', $orderId)->first();
+        if ($o === null || in_array($o['status'], ['pending_payment', 'expired', 'payment_failed'], true)) {
+            return;
+        }
+        $st = Database::connection()->prepare('SELECT status FROM store_vendor_orders WHERE order_id = :o');
+        $st->execute(['o' => $orderId]);
+        $statuses = array_column($st->fetchAll(), 'status');
+        $cancelled = ['cancelled_by_customer', 'cancelled_by_vendor', 'cancelled_by_admin', 'auto_cancelled'];
+        $live = array_values(array_diff($statuses, $cancelled));
+        $count = static fn (array $want) => count(array_intersect($live, $want));
+
+        if (!$live) {
+            $to = 'cancelled';
+        } elseif ($count(['delivered', 'completed']) === count($live)) {
+            $to = $count(['completed']) === count($live) ? 'completed' : 'delivered';
+        } elseif ($count(['delivered', 'completed']) > 0) {
+            $to = 'partially_delivered';
+        } elseif ($count(['shipped']) === count($live)) {
+            $to = 'shipped';
+        } elseif ($count(['shipped']) > 0) {
+            $to = 'partially_shipped';
+        } else {
+            $to = 'paid';
+        }
+        if ($to !== $o['status']) {
+            QueryBuilder::table('store_orders')->where('id', '=', $orderId)->update(
+                ['status' => $to] + ($to === 'cancelled' ? ['cancelled_at' => date('Y-m-d H:i:s')] : [])
+            );
+            self::history($orderId, null, 'order', $orderId, (string) $o['status'], $to, 'system', null);
+        }
+    }
+
     public static function history(int $orderId, ?int $vendorOrderId, string $entity, ?int $entityId, ?string $from, string $to,
         string $actorType, ?int $actorId, string $note = ''): void
     {

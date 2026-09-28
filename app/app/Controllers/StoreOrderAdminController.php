@@ -19,6 +19,7 @@ final class StoreOrderAdminController
     {
         $status = (string) ($request->query['status'] ?? '');
         $q = trim((string) ($request->query['q'] ?? ''));
+        \App\Services\Store\FulfilmentService::autoCancelOverdue();
         try {
             $data = OrderService::adminList($status, $q);
             $missing = false;
@@ -44,6 +45,23 @@ final class StoreOrderAdminController
         $ok = OrderService::release((int) $id, 'cancelled', 'Cancelled by admin: ' . trim((string) ($request->post['note'] ?? '')),
             'admin', (int) (RequestContext::superAdmin()['id'] ?? 0));
         SessionFlash::put($ok ? 'store_ok' : 'store_err', $ok ? 'Order cancelled and stock released.' : 'Only unpaid orders can be cancelled here.');
+
+        return Response::redirect('/admin/store/orders/' . (int) $id);
+    }
+
+    /** Admin cancels selected units (any seller) → partial refund. */
+    public function cancelItems(Request $request, string $id): Response
+    {
+        $qty = [];
+        foreach ((array) ($request->post['cancel'] ?? []) as $itemId => $q) {
+            $qty[(int) $itemId] = (int) $q;
+        }
+        $res = \App\Services\Store\StoreRefundService::cancelItems((int) $id, $qty,
+            'Admin: ' . trim((string) ($request->post['reason'] ?? '')), 'admin',
+            (int) (RequestContext::superAdmin()['id'] ?? 0), !empty($request->post['restock']));
+        SessionFlash::put($res['ok'] ? 'store_ok' : 'store_err', $res['ok']
+            ? 'Cancelled and refunded ₹' . \App\Services\Store\ProductService::rupees((int) $res['refunded']) . ' (' . $res['refund_no'] . ').'
+            : ($res['error'] ?? 'Could not cancel.'));
 
         return Response::redirect('/admin/store/orders/' . (int) $id);
     }

@@ -10,10 +10,18 @@ $label = ['new' => ['New: accept & pack', 'bg-amber-100 text-amber-800'], 'accep
 ob_start();
 ?>
 <h1 class="text-2xl font-semibold">Orders</h1>
-<p class="mt-1 text-sm text-slate-500">Paid orders for your products. Pack them within the accept-by time shown. Accept, pack and ship buttons are being added next.</p>
+<p class="mt-1 text-sm text-slate-500">Accept every new order before its deadline. Unaccepted orders are cancelled and refunded automatically.</p>
+<?php if ((int) ($counts['new_n'] ?? 0) > 0): ?>
+    <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900"><strong><?= (int) $counts['new_n'] ?></strong> new order(s) waiting for you to accept.</div>
+<?php endif; ?>
+<nav class="mt-4 flex flex-wrap gap-2 text-sm">
+    <?php foreach (['todo' => 'To do (' . ((int) ($counts['new_n'] ?? 0) + (int) ($counts['wip_n'] ?? 0)) . ')', 'shipped' => 'Shipped', 'cancelled' => 'Cancelled', 'all' => 'All'] as $k => $l): ?>
+        <a href="?tab=<?= $k ?>" class="rounded-full px-3 py-1 <?= $tab === $k ? 'bg-[#0e4d34] text-white' : 'bg-white hover:bg-[#edf5ef]' ?>"><?= $e($l) ?></a>
+    <?php endforeach; ?>
+</nav>
 <div class="mt-4 overflow-hidden rounded-2xl border border-[#ece8df] bg-white">
     <?php if (!$rows): ?>
-        <p class="p-10 text-center text-sm text-slate-500">No orders yet. They'll appear here as soon as a customer pays.</p>
+        <p class="p-10 text-center text-sm text-slate-500">Nothing here. New orders appear as soon as a customer pays.</p>
     <?php else: ?>
         <ul class="divide-y divide-slate-100">
             <?php foreach ($rows as $r): ?>

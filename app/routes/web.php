@@ -595,6 +595,7 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/store/orders/{id}', [\App\Controllers\StoreOrderAdminController::class, 'show']);
         $admin->post('/store/orders/{id}/cancel', [\App\Controllers\StoreOrderAdminController::class, 'cancel']);
         $admin->post('/store/orders/{id}/recheck', [\App\Controllers\StoreOrderAdminController::class, 'recheck']);
+        $admin->post('/store/orders/{id}/cancel-items', [\App\Controllers\StoreOrderAdminController::class, 'cancelItems']);
     });
 
     // Store marketplace — seller portal. Own guard (mc_vendor_token, path /vendor),
@@ -640,6 +641,9 @@ return static function (RouteRegistrar $router): void {
         // Orders (read-only in P6; actions in P7)
         $vendor->get('/orders', [\App\Controllers\VendorOrderController::class, 'index']);
         $vendor->get('/orders/{id}', [\App\Controllers\VendorOrderController::class, 'show']);
+        $vendor->post('/orders/{id}/accept', [\App\Controllers\VendorOrderController::class, 'accept']);
+        $vendor->post('/orders/{id}/packed', [\App\Controllers\VendorOrderController::class, 'packed']);
+        $vendor->post('/orders/{id}/cancel', [\App\Controllers\VendorOrderController::class, 'cancelItems']);
     });
 
     // Partner program — public auth pages + guarded partner dashboard.

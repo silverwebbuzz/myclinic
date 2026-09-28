@@ -77,6 +77,64 @@ final class StoreNotifier
         }
     }
 
+    /** After a cancellation + refund: tell the customer; tell the seller(s) unless they did it themselves. */
+    public static function itemsCancelled(int $orderId, string $refundNo, int $amount, string $actorType, string $reason): void
+    {
+        try {
+            $o = OrderService::load($orderId);
+            if ($o === null) {
+                return;
+            }
+            $amt = 'Rs. ' . ProductService::rupees($amount);
+            $who = match ($actorType) {
+                'customer' => 'as you requested',
+                'vendor_user' => 'by the seller',
+                'admin' => 'by the eClinicPro team',
+                default => 'because the seller did not confirm it in time',
+            };
+            $storeBase = rtrim((string) ($_ENV['STORE_BASE_URL'] ?? 'https://eclinicpro.com'), '/');
+            if (!empty($o['contact_email'])) {
+                self::mail((string) $o['contact_email'], "Refund of $amt for order {$o['order_no']}",
+                    "Hi {$o['contact_name']},\n\nSome items in order {$o['order_no']} were cancelled $who.\nReason: $reason\n\n"
+                    . "We've refunded $amt to your original payment method (refund ref $refundNo). It usually reaches your account in 5–7 working days.\n\n"
+                    . "View your order: {$storeBase}/store/order/{$o['order_no']}\n\n— eClinicPro Store");
+            }
+            if ($actorType !== 'vendor_user') {
+                // Every seller with items in THIS refund, with just their cancelled lines.
+                $st = \App\Core\Database::connection()->prepare(
+                    'SELECT oi.vendor_id, vo.sub_order_no, vo.status AS vo_status, oi.sku, oi.name, ri.qty
+                       FROM store_refunds rf
+                       JOIN store_refund_items ri ON ri.refund_id = rf.id
+                       JOIN store_order_items oi ON oi.id = ri.order_item_id
+                       JOIN store_vendor_orders vo ON vo.id = oi.vendor_order_id
+                      WHERE rf.refund_no = :r'
+                );
+                $st->execute(['r' => $refundNo]);
+                $byVendor = [];
+                foreach ($st->fetchAll() as $row) {
+                    $byVendor[(int) $row['vendor_id']]['sub'] = $row['sub_order_no'];
+                    $byVendor[(int) $row['vendor_id']]['whole'] = !in_array($row['vo_status'], ['new', 'accepted', 'packed', 'ready_to_ship'], true);
+                    $byVendor[(int) $row['vendor_id']]['lines'][] = "  - {$row['sku']} | {$row['name']} x {$row['qty']}";
+                }
+                foreach ($byVendor as $vid => $v) {
+                    $vendor = VendorService::find($vid);
+                    if ($vendor === null) {
+                        continue;
+                    }
+                    self::mail((string) $vendor['email'], ($v['whole'] ? 'Order cancelled: ' : 'Items cancelled: ') . $v['sub'],
+                        "In order {$v['sub']}, these items were cancelled $who:\n" . implode("\n", $v['lines'])
+                        . "\nReason: $reason\n" . ($v['whole'] ? "Please don't ship this order.\n" : "Ship only the remaining items.\n") . "\n— eClinicPro Store");
+                }
+            }
+            if ($actorType === 'system') {
+                $admin = (string) ($_ENV['STORE_ADMIN_EMAIL'] ?? $_ENV['HELP_FROM'] ?? 'help@eclinicpro.com');
+                self::mail($admin, 'Auto-cancelled (seller SLA): ' . $o['order_no'], "Refunded $amt ($refundNo). Reason: $reason");
+            }
+        } catch (\Throwable $e) {
+            error_log('[StoreNotifier::itemsCancelled] ' . $e->getMessage());
+        }
+    }
+
     public static function inApp(string $recipientType, int $recipientId, string $event, string $title, string $body, string $link): void
     {
         try {

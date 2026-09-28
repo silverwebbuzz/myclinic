@@ -71,7 +71,8 @@ $a = $order['ship_address'];
                 <tbody class="divide-y">
                 <?php foreach ($vo['items'] as $it): ?>
                     <tr>
-                        <td class="py-1.5"><?= $e($it['name']) ?><?= !empty($it['variant_title']) ? ' · ' . $e($it['variant_title']) : '' ?> <span class="font-mono text-xs text-slate-400"><?= $e($it['sku']) ?></span></td>
+                        <td class="py-1.5"><?= $e($it['name']) ?><?= !empty($it['variant_title']) ? ' · ' . $e($it['variant_title']) : '' ?> <span class="font-mono text-xs text-slate-400"><?= $e($it['sku']) ?></span>
+                            <?= (int) $it['qty_cancelled'] > 0 ? '<span class="block text-xs text-red-600">' . (int) $it['qty_cancelled'] . ' cancelled &amp; refunded</span>' : '' ?></td>
                         <td class="text-right"><?= (int) $it['qty'] ?></td>
                         <td class="text-right"><?= $r($it['line_total_paise']) ?></td>
                         <td class="text-right text-slate-500"><?= $r($it['tax_included_paise']) ?> (<?= (int) $it['gst_bp'] / 100 ?>%)</td>
@@ -81,6 +82,30 @@ $a = $order['ship_address'];
                 <?php endforeach; ?>
                 </tbody>
             </table>
+            <?php
+            $open = array_filter($vo['items'], static fn ($it) => (int) $it['qty'] > (int) $it['qty_cancelled']);
+            $adminCan = $open && in_array($vo['status'], \App\Services\Store\StoreRefundService::CANCELLABLE['admin'], true)
+                && in_array($order['payment_status'], ['paid', 'partially_refunded'], true);
+            ?>
+            <?php if ($adminCan): ?>
+                <details class="mt-3 rounded border border-red-200 bg-red-50/40 p-3 text-sm">
+                    <summary class="cursor-pointer font-medium text-red-700">Cancel items &amp; refund…</summary>
+                    <form method="post" action="/admin/store/orders/<?= (int) $order['id'] ?>/cancel-items" class="mt-2 space-y-2"
+                          onsubmit="return confirm('Refund the selected items via Razorpay now?')">
+                        <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+                        <?php foreach ($open as $it): ?>
+                            <?php $left = (int) $it['qty'] - (int) $it['qty_cancelled']; ?>
+                            <label class="flex items-center justify-between gap-3"><span><?= $e($it['name']) ?> <span class="font-mono text-xs text-slate-400"><?= $e($it['sku']) ?></span></span>
+                                <select name="cancel[<?= (int) $it['id'] ?>]" class="rounded border px-2 py-1">
+                                    <?php for ($q = 0; $q <= $left; $q++): ?><option value="<?= $q ?>" <?= $q === $left ? '' : '' ?>><?= $q === 0 ? 'Keep' : 'Cancel ' . $q ?></option><?php endfor; ?>
+                                </select></label>
+                        <?php endforeach; ?>
+                        <input name="reason" required placeholder="Reason (customer and seller see this)" class="w-full rounded border px-2 py-1">
+                        <label class="flex items-center gap-2 text-xs"><input type="checkbox" name="restock" value="1" checked> Return units to the seller's stock</label>
+                        <button class="rounded bg-red-600 px-3 py-1.5 text-white hover:bg-red-700">Cancel &amp; refund</button>
+                    </form>
+                </details>
+            <?php endif; ?>
             <p class="mt-3 text-xs text-slate-500">
                 Sub-total <?= $r($vo['items_subtotal_paise']) ?> · shipping charged <?= $r($vo['shipping_paise']) ?> ·
                 commission <?= $r($vo['commission_paise']) ?> + GST on commission <?= $r($vo['commission_gst_paise']) ?> ·

@@ -29,6 +29,7 @@ if (!$me) {
 }
 
 OrderService::expireStale();
+\App\Services\Store\FulfilmentService::autoCancelOverdue();
 $order = preg_match('/^ECS[0-9]{6}-[A-Z0-9]{5,8}$/', $orderNo) ? OrderService::findForIdentity($orderNo, (int) $me['id']) : null;
 if ($order === null) {
     store_not_found();
@@ -40,6 +41,21 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '')
     header('Location: /store/order/' . rawurlencode($orderNo));
     exit;
 }
+// Customer cancels items from a package the seller hasn't packed yet → partial refund.
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '') === 'cancel_items' && store_same_origin()) {
+    $qty = [];
+    foreach ((array) ($_POST['cancel'] ?? []) as $itemId => $q) {
+        $qty[(int) $itemId] = (int) $q;
+    }
+    $res = \App\Services\Store\StoreRefundService::cancelItems((int) $order['id'], $qty,
+        'Customer: ' . mb_substr(trim((string) ($_POST['reason'] ?? 'Changed my mind')), 0, 120), 'customer', (int) $me['id'], true);
+    $msg = $res['ok']
+        ? 'Cancelled. ' . store_rupees((int) $res['refunded']) . ' is being refunded to your original payment method (5–7 working days).'
+        : ($res['error'] ?? 'Could not cancel. Please try again.');
+    header('Location: /store/order/' . rawurlencode($orderNo) . '?' . http_build_query(['r' => $res['ok'] ? 'ok' : 'err', 'm' => $msg]));
+    exit;
+}
+$flash = isset($_GET['m']) ? ['ok' => ($_GET['r'] ?? '') === 'ok', 'msg' => mb_substr((string) $_GET['m'], 0, 300)] : null;
 
 $packageStatus = [
     'pending_payment' => 'Awaiting payment', 'new' => 'Confirmed: seller preparing', 'accepted' => 'Seller preparing',
@@ -51,6 +67,11 @@ $statusText = [
     'pending_payment' => ['Awaiting payment', 'is-warn'],
     'paid' => ['Order confirmed', 'is-ok'],
     'refunded' => ['Refunded', 'is-muted'],
+    'partially_shipped' => ['Partly shipped', 'is-ok'],
+    'shipped' => ['Shipped', 'is-ok'],
+    'partially_delivered' => ['Partly delivered', 'is-ok'],
+    'delivered' => ['Delivered', 'is-ok'],
+    'completed' => ['Completed', 'is-ok'],
     'expired' => ['Payment window expired', 'is-muted'],
     'cancelled' => ['Cancelled', 'is-muted'],
     'payment_failed' => ['Payment failed', 'is-err'],
@@ -71,6 +92,9 @@ require __DIR__ . '/_header.php';
     <span class="st-status <?= $statusText[1] ?>"><?= e($statusText[0]) ?></span>
   </header>
 
+  <?php if ($flash): ?>
+    <div class="st-note <?= $flash['ok'] ? '' : 'st-note-err' ?>" role="status" style="margin-top:20px"><?= e($flash['msg']) ?></div>
+  <?php endif; ?>
   <?php if ($order['status'] === 'pending_payment'): ?>
     <div class="st-pay-box" x-data="storePay('<?= e($order['order_no']) ?>', <?= !empty($_GET['pay']) ? 'true' : 'false' ?>)" x-init="init()">
       <div>
@@ -95,8 +119,10 @@ require __DIR__ . '/_header.php';
     </div>
   <?php elseif ($order['status'] === 'refunded'): ?>
     <div class="st-note st-note-warn" style="margin-top:20px">Your payment arrived after this order had closed and the items were no longer available, so it has been <strong>refunded in full</strong>. Refunds reach your account in 5–7 working days.</div>
-  <?php elseif (in_array($order['status'], ['expired', 'cancelled'], true)): ?>
+  <?php elseif (in_array($order['status'], ['expired', 'cancelled'], true) && $order['payment_status'] === 'pending'): ?>
     <div class="st-note" style="margin-top:20px">This order was not paid, so nothing was charged. <a href="<?= store_url('cart') ?>">Go to your cart</a> to try again.</div>
+  <?php elseif ($order['status'] === 'cancelled'): ?>
+    <div class="st-note st-note-warn" style="margin-top:20px">This order was cancelled and <strong>refunded</strong> to your original payment method (see the summary). Refunds usually arrive in 5–7 working days.</div>
   <?php endif; ?>
 
   <div class="st-checkout-grid" style="margin-top:24px">
@@ -111,10 +137,35 @@ require __DIR__ . '/_header.php';
             <div class="st-line" style="grid-template-columns:56px 1fr auto">
               <span class="st-line-img" style="width:56px;height:56px"><?php if ($img = store_img($it['image_path'])): ?><img src="<?= e($img) ?>" alt=""><?php endif; ?></span>
               <div class="st-line-body"><span class="st-line-name"><?= e($it['name']) ?></span>
-                <div class="st-line-meta"><?= $it['variant_title'] ? e($it['variant_title']) . ' · ' : '' ?>Qty <?= (int) $it['qty'] ?> × <?= e(store_rupees((int) $it['unit_price_paise'])) ?></div></div>
+                <div class="st-line-meta"><?= $it['variant_title'] ? e($it['variant_title']) . ' · ' : '' ?>Qty <?= (int) $it['qty'] ?> × <?= e(store_rupees((int) $it['unit_price_paise'])) ?></div>
+                <?php if ((int) $it['qty_cancelled'] > 0): ?><div class="st-line-problem"><?= (int) $it['qty_cancelled'] ?> cancelled &amp; refunded</div><?php endif; ?></div>
               <div class="st-line-total"><?= e(store_rupees((int) $it['line_total_paise'])) ?></div>
             </div>
           <?php endforeach; ?>
+          <?php
+          $openLines = array_filter($vo['items'], static fn ($it) => (int) $it['qty'] > (int) $it['qty_cancelled']);
+          $customerCanCancel = in_array($vo['status'], \App\Services\Store\StoreRefundService::CANCELLABLE['customer'], true)
+              && in_array($order['payment_status'], ['paid', 'partially_refunded'], true) && $openLines;
+          ?>
+          <?php if ($customerCanCancel): ?>
+            <details style="padding:10px 0 4px">
+              <summary class="st-link-btn" style="list-style:none">Cancel items from this package</summary>
+              <form method="post" style="margin-top:10px;display:grid;gap:8px;font-size:14px" onsubmit="return confirm('Cancel the selected items? You will be refunded.')">
+                <input type="hidden" name="action" value="cancel_items">
+                <?php foreach ($openLines as $it): ?>
+                  <?php $left = (int) $it['qty'] - (int) $it['qty_cancelled']; ?>
+                  <label style="display:flex;justify-content:space-between;gap:10px;align-items:center"><span><?= e($it['name']) ?></span>
+                    <select name="cancel[<?= (int) $it['id'] ?>]" class="st-select" style="height:34px">
+                      <?php for ($q = 0; $q <= $left; $q++): ?><option value="<?= $q ?>"><?= $q === 0 ? 'Keep' : 'Cancel ' . $q ?></option><?php endfor; ?>
+                    </select></label>
+                <?php endforeach; ?>
+                <select name="reason" class="st-select">
+                  <option>Changed my mind</option><option>Ordered by mistake</option><option>Found a better price</option><option>Delivery is too slow</option><option>Other</option>
+                </select>
+                <button class="st-btn st-btn-ghost st-btn-sm">Cancel selected &amp; refund</button>
+              </form>
+            </details>
+          <?php endif; ?>
         </section>
       <?php endforeach; ?>
     </div>
@@ -126,6 +177,9 @@ require __DIR__ . '/_header.php';
         <dt class="st-total">Total</dt><dd class="st-total"><?= e(store_rupees((int) $order['grand_total_paise'])) ?></dd>
       </dl>
       <p class="st-summary-note">Includes <?= e(store_rupees((int) $order['tax_included_paise'])) ?> GST.</p>
+      <?php foreach ($order['refunds'] as $rf): ?>
+        <p class="st-summary-note" style="color:var(--st-green-700)">Refund <?= e(store_rupees((int) $rf['amount_paise'])) ?> · <?= $rf['status'] === 'processed' ? 'processed' : 'in progress' ?> (<?= e($rf['refund_no']) ?>)</p>
+      <?php endforeach; ?>
       <h2 style="margin-top:18px">Delivering to</h2>
       <p class="st-summary-note" style="color:var(--st-navy)"><?= e($a['name'] ?? '') ?> · <?= e($a['phone'] ?? '') ?><br>
         <?= e($a['line1'] ?? '') ?><?= !empty($a['line2']) ? ', ' . e($a['line2']) : '' ?><br><?= e($a['city'] ?? '') ?>, <?= e($a['state'] ?? '') ?> – <?= e($a['pincode'] ?? '') ?></p>

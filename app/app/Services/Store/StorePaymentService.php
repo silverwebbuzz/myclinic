@@ -351,10 +351,7 @@ final class StorePaymentService
             'status' => 'pending',
             'initiated_by_type' => 'system',
         ]);
-        $res = self::api('POST', '/payments/' . rawurlencode($rzpPaymentId) . '/refund', [
-            'amount' => $amount,
-            'notes' => ['purpose' => 'store', 'refund_no' => $refundNo, 'reason' => $reason],
-        ]);
+        $res = self::refund($rzpPaymentId, $amount, ['purpose' => 'store', 'refund_no' => $refundNo, 'reason' => $reason]);
         if (!empty($res['id'])) {
             QueryBuilder::table('store_refunds')->where('id', '=', $refundId)->update([
                 'rzp_refund_id' => (string) $res['id'],
@@ -376,6 +373,25 @@ final class StorePaymentService
             'Automatic refund failed: refund manually from the Razorpay dashboard');
 
         return false;
+    }
+
+    /**
+     * Raw Razorpay refund (full or partial). Returns the refund entity ('id' set) or an 'error'.
+     *
+     * @param array<string, string> $notes
+     * @return array<string, mixed>
+     */
+    public static function refund(string $rzpPaymentId, int $amountPaise, array $notes): array
+    {
+        if (!self::configured() || $rzpPaymentId === '' || $amountPaise <= 0) {
+            return ['error' => ['description' => 'not configured / invalid']];
+        }
+
+        return self::api('POST', '/payments/' . rawurlencode($rzpPaymentId) . '/refund', [
+            'amount' => $amountPaise,
+            'speed' => 'normal',
+            'notes' => $notes,
+        ]);
     }
 
     // ------------------------------------------------------------------
