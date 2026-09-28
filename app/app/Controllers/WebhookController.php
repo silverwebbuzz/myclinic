@@ -68,6 +68,17 @@ final class WebhookController
         $payload = $request->rawBody ?? '';
         $signature = $request->header('X-Razorpay-Signature');
 
+        // Store marketplace payments share this Razorpay account + webhook URL.
+        // Route them BEFORE the subscription handler, which would otherwise
+        // find no clinic, answer 400 and make Razorpay retry (and eventually
+        // disable the webhook).
+        $event = json_decode($payload, true);
+        if (is_array($event) && \App\Services\Store\StorePaymentService::isStoreEvent($event)) {
+            $ok = \App\Services\Store\StorePaymentService::handleWebhook($payload, $signature, $request->header('X-Razorpay-Event-Id'));
+
+            return $ok ? Response::json(['received' => true]) : Response::json(['error' => 'Invalid signature'], 400);
+        }
+
         if (!BillingGatewayService::handleRazorpayWebhook($payload, $signature)) {
             return Response::json(['error' => 'Invalid signature'], 400);
         }

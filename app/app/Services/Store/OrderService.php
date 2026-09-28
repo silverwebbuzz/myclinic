@@ -23,7 +23,19 @@ final class OrderService
             );
             $st->execute();
             $n = 0;
+            $pays = Database::connection()->prepare(
+                "SELECT rzp_order_id FROM store_payments WHERE order_id = :o AND status IN ('created','attempted','failed')"
+            );
             foreach ($st->fetchAll() as $r) {
+                // Never expire an order whose payment actually went through (callback lost, webhook late).
+                if (StorePaymentService::configured()) {
+                    $pays->execute(['o' => (int) $r['id']]);
+                    foreach ($pays->fetchAll() as $p) {
+                        if (StorePaymentService::confirm((string) $p['rzp_order_id']) === 'paid') {
+                            continue 2;
+                        }
+                    }
+                }
                 $n += self::release((int) $r['id'], 'expired', 'Payment window expired') ? 1 : 0;
             }
 
@@ -62,20 +74,7 @@ final class OrderService
 
                 return false;
             }
-            $st = $pdo->prepare('SELECT variant_id, qty FROM store_order_items WHERE order_id = :o ORDER BY variant_id');
-            $st->execute(['o' => $orderId]);
-            // IF() rather than GREATEST(x - q, 0): the subtraction would underflow an UNSIGNED column.
-            $rel = $pdo->prepare('UPDATE store_product_variants SET reserved_qty = IF(reserved_qty > :q, reserved_qty - :q2, 0) WHERE id = :v');
-            $move = $pdo->prepare(
-                "INSERT INTO store_inventory_movements (variant_id, delta, reason, ref_type, ref_id, actor_type)
-                 VALUES (:v, :d, 'release', 'order', :o, 'system')"
-            );
-            $products = [];
-            foreach ($st->fetchAll() as $it) {
-                $rel->execute(['q' => (int) $it['qty'], 'q2' => (int) $it['qty'], 'v' => (int) $it['variant_id']]);
-                $move->execute(['v' => (int) $it['variant_id'], 'd' => (int) $it['qty'], 'o' => $orderId]);
-                $products[] = (int) $it['variant_id'];
-            }
+            self::releaseStock($orderId);
             $pdo->prepare(
                 "UPDATE store_vendor_orders SET status = :s, cancel_reason = :r, cancelled_by_type = :t
                   WHERE order_id = :o AND status = 'pending_payment'"
@@ -86,13 +85,6 @@ final class OrderService
                 'o' => $orderId,
             ]);
             self::history($orderId, null, 'order', $orderId, 'pending_payment', $toStatus, $actorType, $actorId, $note);
-            // Keep listing "in stock" flags right.
-            if ($products) {
-                $in = implode(',', array_map('intval', array_unique($products)));
-                foreach ($pdo->query("SELECT DISTINCT product_id FROM store_product_variants WHERE id IN ($in)")->fetchAll() as $r) {
-                    ProductService::refreshDenormalized((int) $r['product_id']);
-                }
-            }
             if ($ownTx) {
                 $pdo->commit();
             }
@@ -105,6 +97,32 @@ final class OrderService
             error_log('[OrderService::release] ' . $e->getMessage());
 
             return false;
+        }
+    }
+
+    /**
+     * Give back the stock an unpaid order is holding (reserved_qty) and refresh
+     * listing flags. Caller manages the transaction and the order status.
+     */
+    public static function releaseStock(int $orderId): void
+    {
+        $pdo = Database::connection();
+        $st = $pdo->prepare('SELECT variant_id, product_id, qty FROM store_order_items WHERE order_id = :o ORDER BY variant_id');
+        $st->execute(['o' => $orderId]);
+        // IF() rather than GREATEST(x - q, 0): the subtraction would underflow an UNSIGNED column.
+        $rel = $pdo->prepare('UPDATE store_product_variants SET reserved_qty = IF(reserved_qty > :q, reserved_qty - :q2, 0) WHERE id = :v');
+        $move = $pdo->prepare(
+            "INSERT INTO store_inventory_movements (variant_id, delta, reason, ref_type, ref_id, actor_type)
+             VALUES (:v, :d, 'release', 'order', :o, 'system')"
+        );
+        $products = [];
+        foreach ($st->fetchAll() as $it) {
+            $rel->execute(['q' => (int) $it['qty'], 'q2' => (int) $it['qty'], 'v' => (int) $it['variant_id']]);
+            $move->execute(['v' => (int) $it['variant_id'], 'd' => (int) $it['qty'], 'o' => $orderId]);
+            $products[(int) $it['product_id']] = true;
+        }
+        foreach (array_keys($products) as $pid) {
+            ProductService::refreshDenormalized($pid);
         }
     }
 
@@ -163,6 +181,12 @@ final class OrderService
         $st = $pdo->prepare('SELECT * FROM store_order_status_history WHERE order_id = :o ORDER BY id');
         $st->execute(['o' => $orderId]);
         $o['history'] = $st->fetchAll();
+        $st = $pdo->prepare('SELECT * FROM store_payments WHERE order_id = :o ORDER BY id');
+        $st->execute(['o' => $orderId]);
+        $o['payments'] = $st->fetchAll();
+        $st = $pdo->prepare('SELECT * FROM store_refunds WHERE order_id = :o ORDER BY id');
+        $st->execute(['o' => $orderId]);
+        $o['refunds'] = $st->fetchAll();
 
         return $o;
     }

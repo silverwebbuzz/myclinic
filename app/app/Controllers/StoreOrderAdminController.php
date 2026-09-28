@@ -48,6 +48,22 @@ final class StoreOrderAdminController
         return Response::redirect('/admin/store/orders/' . (int) $id);
     }
 
+    /** Ask Razorpay about every payment on this order (missed webhook / lost callback). */
+    public function recheck(Request $request, string $id): Response
+    {
+        $order = OrderService::load((int) $id);
+        if ($order === null) {
+            return Response::html('Order not found', 404);
+        }
+        $states = [];
+        foreach ($order['payments'] as $p) {
+            $states[] = $p['rzp_order_id'] . ': ' . \App\Services\Store\StorePaymentService::confirm((string) $p['rzp_order_id']);
+        }
+        SessionFlash::put('store_ok', $states ? 'Razorpay says: ' . implode(', ', $states) : 'No payment attempts on this order.');
+
+        return Response::redirect('/admin/store/orders/' . (int) $id);
+    }
+
     /** @param array<string, mixed> $data */
     private function render(string $view, array $data): Response
     {

@@ -62,7 +62,9 @@ $nav = [
         <?php else: ?>
             <span class="block cursor-not-allowed rounded-lg px-3 py-2 text-slate-400" title="Opens after your account is approved">Products <span class="text-xs">(after approval)</span></span>
         <?php endif; ?>
-        <span class="block cursor-not-allowed rounded-lg px-3 py-2 text-slate-400">Orders <span class="text-xs">(soon)</span></span>
+        <?php if (in_array($status, ['approved', 'suspended'], true)): ?>
+            <a href="/vendor/orders" class="block rounded-lg px-3 py-2 <?= str_starts_with($path, '/vendor/orders') ? 'bg-[#0e4d34] text-white' : 'hover:bg-white' ?>">Orders</a>
+        <?php endif; ?>
     </nav>
 
     <main class="min-w-0 flex-1">

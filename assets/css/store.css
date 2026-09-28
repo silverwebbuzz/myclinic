@@ -307,5 +307,8 @@ button { font: inherit; }
 .st-status.is-err { background: #fdecec; color: #8a1f1f; }
 .st-status.is-muted { background: #eef0f2; color: #5b6878; }
 
+.st-pay-box { margin-top: 20px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px;
+  padding: 18px 20px; border-radius: 18px; background: #fff7e6; border: 1px solid #f3dfb0; }
+
 /* ---------- Toast ---------- */
 .st-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 900; background: var(--st-navy); color: #fff; padding: 12px 20px; border-radius: 999px; font-size: 14px; box-shadow: 0 12px 30px -10px rgba(19,41,75,.5); }

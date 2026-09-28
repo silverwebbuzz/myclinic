@@ -64,7 +64,7 @@ if ($me) {
                 $clientTotal = isset($_POST['client_total']) && ctype_digit((string) $_POST['client_total']) ? (int) $_POST['client_total'] : null;
                 $res = CheckoutService::place($identityId, (int) $cart['id'], $address, $contact, (string) ($_POST['checkout_key'] ?? ''), $clientTotal);
                 if ($res['ok']) {
-                    header('Location: /store/order/' . rawurlencode((string) $res['order_no']));
+                    header('Location: /store/order/' . rawurlencode((string) $res['order_no']) . '?pay=1');   // opens Razorpay
                     exit;
                 }
                 $error = $res['error'] ?? 'We couldn\'t place your order.';

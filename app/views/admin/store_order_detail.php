@@ -90,6 +90,43 @@ $a = $order['ship_address'];
     <?php endforeach; ?>
 
     <section class="rounded-xl border bg-white p-5 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="font-semibold">Payments (Razorpay<?= \App\Services\Store\StorePaymentService::mode() === 'production' ? '' : ', TEST mode' ?>)</h2>
+            <?php if ($order['payments']): ?>
+                <form method="post" action="/admin/store/orders/<?= (int) $order['id'] ?>/recheck">
+                    <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+                    <button class="rounded border px-3 py-1 text-sm hover:bg-slate-50">Re-check with Razorpay</button>
+                </form>
+            <?php endif; ?>
+        </div>
+        <?php if (!$order['payments']): ?>
+            <p class="mt-2 text-sm text-slate-400">No payment attempt yet.</p>
+        <?php else: ?>
+            <table class="mt-3 w-full text-sm">
+                <thead class="text-left text-xs uppercase text-slate-500"><tr><th class="py-1">Razorpay order</th><th>Payment</th><th>Method</th><th class="text-right">Amount</th><th>Status</th><th>Captured</th></tr></thead>
+                <tbody class="divide-y">
+                <?php foreach ($order['payments'] as $p): ?>
+                    <tr>
+                        <td class="py-1.5 font-mono text-xs"><?= $e($p['rzp_order_id']) ?></td>
+                        <td class="font-mono text-xs"><?= $e($p['rzp_payment_id'] ?? '—') ?></td>
+                        <td><?= $e($p['method'] ?? '—') ?></td>
+                        <td class="text-right"><?= $r($p['amount_paise']) ?></td>
+                        <td><?= $e($p['status']) ?><?= !empty($p['failure_reason']) ? ' <span class="text-xs text-red-600">(' . $e($p['failure_reason']) . ')</span>' : '' ?></td>
+                        <td class="text-slate-500"><?= $e(substr((string) ($p['captured_at'] ?? ''), 0, 16) ?: '—') ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
+        <?php foreach ($order['refunds'] as $rf): ?>
+            <p class="mt-2 text-sm <?= $rf['status'] === 'failed' ? 'text-red-700' : 'text-slate-600' ?>">
+                Refund <?= $e($rf['refund_no']) ?>: <?= $r($rf['amount_paise']) ?> · <?= $e($rf['reason']) ?> · <strong><?= $e($rf['status']) ?></strong>
+                <?= $rf['status'] === 'failed' ? ' (refund manually in the Razorpay dashboard)' : '' ?>
+            </p>
+        <?php endforeach; ?>
+    </section>
+
+    <section class="rounded-xl border bg-white p-5 shadow-sm">
         <h2 class="font-semibold">History</h2>
         <ul class="mt-2 space-y-1 text-xs text-slate-600">
             <?php foreach ($order['history'] as $h): ?>

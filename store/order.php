@@ -41,9 +41,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && ($_POST['action'] ?? '')
     exit;
 }
 
+$packageStatus = [
+    'pending_payment' => 'Awaiting payment', 'new' => 'Confirmed: seller preparing', 'accepted' => 'Seller preparing',
+    'packed' => 'Packed', 'ready_to_ship' => 'Ready to ship', 'shipped' => 'Shipped', 'delivered' => 'Delivered',
+    'completed' => 'Delivered', 'auto_cancelled' => 'Cancelled', 'cancelled_by_customer' => 'Cancelled',
+    'cancelled_by_vendor' => 'Cancelled by seller', 'cancelled_by_admin' => 'Cancelled', 'rto' => 'Returned to seller',
+];
 $statusText = [
     'pending_payment' => ['Awaiting payment', 'is-warn'],
     'paid' => ['Order confirmed', 'is-ok'],
+    'refunded' => ['Refunded', 'is-muted'],
     'expired' => ['Payment window expired', 'is-muted'],
     'cancelled' => ['Cancelled', 'is-muted'],
     'payment_failed' => ['Payment failed', 'is-err'],
@@ -65,14 +72,29 @@ require __DIR__ . '/_header.php';
   </header>
 
   <?php if ($order['status'] === 'pending_payment'): ?>
-    <div class="st-note st-note-warn" style="margin-top:20px">
-      Your items are reserved until <strong><?= e(date('g:i a', (int) strtotime((string) $order['expires_at']))) ?></strong>.
-      This order isn't confirmed until it's paid, and nothing has been charged yet.
-      <form method="post" style="display:inline" onsubmit="return confirm('Cancel this order?')">
-        <input type="hidden" name="action" value="cancel">
-        <button class="st-link-btn" style="margin-left:6px">Cancel order</button>
-      </form>
+    <div class="st-pay-box" x-data="storePay('<?= e($order['order_no']) ?>', <?= !empty($_GET['pay']) ? 'true' : 'false' ?>)" x-init="init()">
+      <div>
+        <strong>Complete your payment of <?= e(store_rupees((int) $order['grand_total_paise'])) ?></strong>
+        <p class="st-summary-note" style="margin:4px 0 0">Items are reserved until <?= e(date('g:i a', (int) strtotime((string) $order['expires_at']))) ?>. UPI, cards, net banking and wallets accepted via Razorpay.</p>
+        <p class="st-line-problem" x-show="msg" x-text="msg" x-cloak></p>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <button type="button" class="st-btn st-btn-primary" :disabled="busy" @click="pay()">
+          <span x-text="busy ? 'Please wait…' : 'Pay <?= e(store_rupees((int) $order['grand_total_paise'])) ?>'">Pay now</span>
+        </button>
+        <form method="post" onsubmit="return confirm('Cancel this order? Nothing has been charged.')">
+          <input type="hidden" name="action" value="cancel">
+          <button class="st-link-btn">Cancel order</button>
+        </form>
+      </div>
     </div>
+  <?php elseif (in_array($order['status'], ['paid', 'partially_shipped', 'shipped', 'partially_delivered', 'delivered', 'completed'], true)): ?>
+    <div class="st-note" style="margin-top:20px;background:var(--st-green-25);border-color:#cfe5d6">
+      <strong>Thank you, payment received.</strong> Each seller now packs their items; you'll see tracking here once packages ship.
+      <?= !empty($order['contact_email']) ? 'A confirmation has been emailed to ' . e($order['contact_email']) . '.' : '' ?>
+    </div>
+  <?php elseif ($order['status'] === 'refunded'): ?>
+    <div class="st-note st-note-warn" style="margin-top:20px">Your payment arrived after this order had closed and the items were no longer available, so it has been <strong>refunded in full</strong>. Refunds reach your account in 5–7 working days.</div>
   <?php elseif (in_array($order['status'], ['expired', 'cancelled'], true)): ?>
     <div class="st-note" style="margin-top:20px">This order was not paid, so nothing was charged. <a href="<?= store_url('cart') ?>">Go to your cart</a> to try again.</div>
   <?php endif; ?>
@@ -83,7 +105,7 @@ require __DIR__ . '/_header.php';
         <section class="st-seller-group">
           <div class="st-seller-group-head">
             <span>Package <?= e(substr((string) $vo['sub_order_no'], -1)) ?> · sold by <a href="<?= e(store_url('seller/' . $vo['vendor_slug'])) ?>"><strong><?= e($vo['vendor_name']) ?></strong></a></span>
-            <span class="st-ship-note"><?= (int) $vo['shipping_paise'] > 0 ? 'Shipping ' . e(store_rupees((int) $vo['shipping_paise'])) : 'Free shipping' ?></span>
+            <span class="st-ship-note"><?= e($packageStatus[$vo['status']] ?? ucfirst(str_replace('_', ' ', (string) $vo['status']))) ?> · <?= (int) $vo['shipping_paise'] > 0 ? 'shipping ' . e(store_rupees((int) $vo['shipping_paise'])) : 'free shipping' ?></span>
           </div>
           <?php foreach ($vo['items'] as $it): ?>
             <div class="st-line" style="grid-template-columns:56px 1fr auto">
@@ -110,4 +132,46 @@ require __DIR__ . '/_header.php';
     </aside>
   </div>
 </main>
+<?php if ($order['status'] === 'pending_payment'): ?>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+function storePay(orderNo, autoOpen) {
+  const post = (body) => fetch('/api/store_pay', {
+    method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify(Object.assign({ order_no: orderNo }, body)),
+  }).then(r => r.json().catch(() => ({})));
+
+  return {
+    busy: false, msg: '',
+    init() { if (autoOpen) { history.replaceState(null, '', location.pathname); this.pay(); } },
+    async pay() {
+      if (this.busy) return;
+      this.busy = true; this.msg = '';
+      const s = await post({ action: 'start' }).catch(() => ({}));
+      if (!s.ok) { this.busy = false; this.msg = s.error || 'Could not start the payment. Please try again.'; return; }
+      if (typeof Razorpay === 'undefined') { this.busy = false; this.msg = 'The payment window could not load. Check your connection and try again.'; return; }
+      const c = s.checkout;
+      const rzp = new Razorpay({
+        key: c.key, order_id: c.order_id, amount: c.amount, currency: c.currency,
+        name: c.name, description: c.description, prefill: c.prefill, notes: c.notes, theme: c.theme,
+        handler: async (resp) => {
+          this.msg = 'Confirming your payment…';
+          const v = await post(Object.assign({ action: 'verify' }, resp)).catch(() => ({}));
+          // Paid, or still processing: reload either way; the webhook finishes the job.
+          if (!v.ok && v.state !== 'pending') this.msg = 'We are confirming your payment. This page will update shortly.';
+          setTimeout(() => location.reload(), v.ok ? 0 : 2500);
+        },
+        modal: { ondismiss: () => { this.busy = false; } },
+      });
+      rzp.on('payment.failed', (r) => {
+        this.busy = false;
+        this.msg = 'Payment failed' + (r && r.error && r.error.description ? ': ' + r.error.description : '') + '. You can try again.';
+      });
+      rzp.open();
+    },
+  };
+}
+</script>
+<?php endif; ?>
 <?php require __DIR__ . '/_footer.php'; ?>
