@@ -112,7 +112,7 @@ function ecp_dispatch_clean_url(string $requestUri): bool
             '#^/store/search/?$#i' => ['listing.php', ['_r_type' => 'search']],
             '#^/store/p/([a-z0-9][a-z0-9\-]*)/?$#i' => ['product.php', ['_r_a' => 1]],
             '#^/store/seller/([a-z0-9][a-z0-9\-]*)/?$#i' => ['seller.php', ['_r_a' => 1]],
-            '#^/store/(categories|wishlist|cart|checkout)/?$#i' => [null, []],
+            '#^/store/(categories|wishlist|cart|checkout|orders)/?$#i' => [null, []],
             '#^/store/order/([A-Za-z0-9\-]+)/?$#' => ['order.php', ['_r_a' => 1]],
         ];
         foreach ($routes as $re => [$file, $params]) {

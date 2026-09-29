@@ -68,6 +68,11 @@ $alpineBust = @filemtime(__DIR__ . '/../assets/js/alpine-3.14.1.min.js') ?: '314
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.2-3.8 4-5.5 7.5-5.5s6.3 1.7 7.5 5.5"/></svg>
         </button>
       <?php endif; ?>
+      <?php if ($me): ?>
+        <a href="<?= store_url('orders') ?>" class="st-icon-btn st-desktop-only" aria-label="My orders" title="My orders">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7.5 12 3.5l8 4v9l-8 4-8-4z"/><path d="M4 7.5l8 4 8-4M12 11.5v9"/></svg>
+        </a>
+      <?php endif; ?>
       <a href="<?= store_url('wishlist') ?>" class="st-icon-btn" aria-label="Wishlist">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20.5s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.3a4.3 4.3 0 0 1 7.5 3.2c0 5.4-7.5 10-7.5 10z"/></svg>
         <span class="st-badge" id="st-wish-count" <?= $wishCount ? '' : 'hidden' ?>><?= $wishCount ?></span>
@@ -102,6 +107,6 @@ $alpineBust = @filemtime(__DIR__ . '/../assets/js/alpine-3.14.1.min.js') ?: '314
       <a href="<?= !empty($n['url']) ? e($n['url']) : store_url('need/' . $n['slug']) ?>"><?= e($n['label']) ?></a>
     <?php endforeach; ?>
     <a href="<?= store_url('categories') ?>">All categories</a>
-    <?php if ($me): ?><a href="/patient">My account</a><?php else: ?><a href="#" @click.prevent="menu = false; window.ecpAuth && window.ecpAuth.open('default')">Sign in</a><?php endif; ?>
+    <?php if ($me): ?><a href="<?= store_url('orders') ?>">My orders</a><a href="/patient">My account</a><?php else: ?><a href="#" @click.prevent="menu = false; window.ecpAuth && window.ecpAuth.open('default')">Sign in</a><?php endif; ?>
   </nav>
 </header>

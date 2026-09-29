@@ -85,7 +85,7 @@ RewriteRule ^store/(need|goal|brand)/([a-z0-9][a-z0-9\-]*)/?$ store/listing.php?
 RewriteRule ^store/search/?$ store/listing.php?_r_type=search [L,QSA,NC]
 RewriteRule ^store/p/([a-z0-9][a-z0-9\-]*)/?$ store/product.php?_r_a=$1 [L,QSA,NC]
 RewriteRule ^store/seller/([a-z0-9][a-z0-9\-]*)/?$ store/seller.php?_r_a=$1 [L,QSA,NC]
-RewriteRule ^store/(categories|wishlist|cart|checkout)/?$ store/$1.php [L,QSA,NC]
+RewriteRule ^store/(categories|wishlist|cart|checkout|orders)/?$ store/$1.php [L,QSA,NC]
 RewriteRule ^store/order/([A-Za-z0-9\-]+)/?$ store/order.php?_r_a=$1 [L,QSA]
 
 # -------- /features renamed to /clinic-management-software (keyword URL) --------

@@ -183,6 +183,37 @@ final class OrderService
     }
 
     /** Customer-scoped lookup by order number. */
+    /**
+     * A customer's orders, newest first, with a small item preview (for /store/orders).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function listForIdentity(int $identityId, int $limit = 50): array
+    {
+        $pdo = Database::connection();
+        $st = $pdo->prepare(
+            "SELECT o.id, o.order_no, o.status, o.payment_status, o.grand_total_paise, o.placed_at, o.expires_at,
+                    (SELECT COUNT(*) FROM store_vendor_orders vo WHERE vo.order_id = o.id) AS packages
+               FROM store_orders o WHERE o.identity_id = :i ORDER BY o.placed_at DESC, o.id DESC LIMIT " . max(1, min(200, $limit))
+        );
+        $st->execute(['i' => $identityId]);
+        $orders = $st->fetchAll();
+        if (!$orders) {
+            return [];
+        }
+        $ids = implode(',', array_map(static fn ($o) => (int) $o['id'], $orders));
+        $items = [];
+        foreach ($pdo->query("SELECT order_id, name, image_path, qty FROM store_order_items WHERE order_id IN ($ids) ORDER BY id")->fetchAll() as $it) {
+            $items[(int) $it['order_id']][] = $it;
+        }
+        foreach ($orders as &$o) {
+            $o['items'] = $items[(int) $o['id']] ?? [];
+        }
+        unset($o);
+
+        return $orders;
+    }
+
     public static function findForIdentity(string $orderNo, int $identityId): ?array
     {
         $o = QueryBuilder::table('store_orders')->where('order_no', '=', $orderNo)->where('identity_id', '=', $identityId)->first();

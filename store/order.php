@@ -136,7 +136,7 @@ $storeTitle = 'Order ' . $order['order_no'] . ' | eClinicPro Store';
 require __DIR__ . '/_header.php';
 ?>
 <main class="st-wrap" style="padding-bottom:64px">
-  <nav class="st-crumbs" aria-label="Breadcrumb"><a href="<?= store_url() ?>">Store</a> / <span>Order <?= e($order['order_no']) ?></span></nav>
+  <nav class="st-crumbs" aria-label="Breadcrumb"><a href="<?= store_url() ?>">Store</a> / <a href="<?= store_url('orders') ?>">My orders</a> / <span>Order <?= e($order['order_no']) ?></span></nav>
   <header class="st-list-head" style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-end">
     <div>
       <span class="st-eyebrow">Order <?= e($order['order_no']) ?></span>
