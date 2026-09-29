@@ -215,6 +215,14 @@ final class DoctorClaimService
 
             $db->commit();
 
+            // The listing is now claimed: drop the saved copies of public profile
+            // pages (repo-root storage/page_cache, see partials/page_cache.php) so
+            // it shows as claimed with the real booking widget straight away.
+            // Claims are rare, so clearing every profile copy is simplest.
+            foreach (glob(dirname(__DIR__, 3) . '/storage/page_cache/prof_*.html') ?: [] as $cached) {
+                @unlink($cached);
+            }
+
             // Portal bootstrap: trial plan, modules, specialty config, skip
             // onboarding wizard — claim approval already collected clinic info.
             self::bootstrapApprovedTenant($tenantId, $req);

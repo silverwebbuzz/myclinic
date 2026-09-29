@@ -3,6 +3,18 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/partials/helpers.php';
 require_once __DIR__ . '/partials/ProfileController.php';
+require_once __DIR__ . '/partials/page_cache.php';
+
+// Logged-out visitors to UNCLAIMED listings get a saved copy of the page (no DB
+// work). Expires at midnight because the booking form lists dates from today,
+// and all profile copies are cleared when a claim is approved. Claimed listings
+// are never stored (they carry a CSRF token and doctors expect edits to show at once).
+ecp_page_cache_start(
+    'prof_' . sha1(strtolower(($_GET['city'] ?? '') . '|' . ($_GET['entity_type'] ?? '') . '|' . ($_GET['slug'] ?? ''))),
+    86400,
+    ['city', 'entity_type', 'slug'],
+    true
+);
 
 $result = ProfileController::show(
     (string) ($_GET['city'] ?? ''),
@@ -42,3 +54,9 @@ if (empty($p['is_claimed']) && empty($p['tenant_slug'])) {
     require __DIR__ . '/partials/doctor-claim-modal.php';
 }
 require __DIR__ . '/partials/footer.php';
+
+ecp_page_cache_end(
+    empty($p['is_claimed']) && empty($p['tenant_slug'])
+    && ($bookingCtx['mode'] ?? '') === 'lead'
+    && empty($bookingCtx['bookingError'])
+);

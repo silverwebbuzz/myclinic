@@ -53,9 +53,12 @@ function ecp_search_doctors(array $filters): array {
     $where  = ["dd.is_active = 1", "dd.status = 'OPERATIONAL'", "dd.country = :country"];
     $params = ['country' => $country];
 
-    if ($state !== '') { $where[] = 'LOWER(dd.state) = LOWER(:state)'; $params['state'] = $state; }
-    if ($city !== '')  { $where[] = 'LOWER(dd.city) = LOWER(:city)';   $params['city']  = $city; }
-    if ($area !== '')  { $where[] = 'LOWER(dd.area) = LOWER(:area)';   $params['area']  = $area; }
+    // Plain `=` (not LOWER(col) = LOWER(:x)): the columns use a case-insensitive
+    // utf8mb4 collation already, and wrapping the column in LOWER() stops MySQL
+    // using idx_country_state_city / idx_browse_city → full-table scan (~3s).
+    if ($state !== '') { $where[] = 'dd.state = :state'; $params['state'] = $state; }
+    if ($city !== '')  { $where[] = 'dd.city = :city';   $params['city']  = $city; }
+    if ($area !== '')  { $where[] = 'dd.area = :area';   $params['area']  = $area; }
     if ($locText !== '' && $city === '' && $state === '' && $area === '') {
         $where[] = '(dd.city LIKE :loclike1 OR dd.area LIKE :loclike2 OR dd.state LIKE :loclike3)';
         $locLike = '%' . $locText . '%';

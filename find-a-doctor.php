@@ -34,6 +34,7 @@ $ecpPageCacheTtl = 600;   // 10 min; a background-ish refresh on the first miss 
 if (
     ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET'
     && empty($_COOKIE['ecp_pid'])
+    && empty($_COOKIE['ecp_store_preview'])   // preview adds a "Health Store" nav link
     && empty(array_diff(array_keys($_GET), ['seo', 'page']))
     && (int) ($_GET['page'] ?? 1) <= 1
 ) {
