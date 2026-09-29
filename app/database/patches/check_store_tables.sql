@@ -65,6 +65,8 @@ FROM (
   UNION ALL SELECT 'store_email_log' AS tbl, '2026_10_03_store_emails.sql' AS patch
   UNION ALL SELECT 'store_vendor_password_resets' AS tbl, '2026_10_03_store_emails.sql' AS patch
   UNION ALL SELECT 'store_payout_requests' AS tbl, '2026_10_03_store_emails.sql' AS patch
+  UNION ALL SELECT 'store_seller_invoices' AS tbl, '2026_10_05_store_seller_invoices.sql' AS patch
+  UNION ALL SELECT 'store_seller_invoice_lines' AS tbl, '2026_10_05_store_seller_invoices.sql' AS patch
 ) e
 LEFT JOIN information_schema.tables t ON t.table_schema = DATABASE() AND t.table_name = e.tbl
 WHERE t.table_name IS NULL

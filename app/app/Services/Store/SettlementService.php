@@ -502,12 +502,28 @@ final class SettlementService
     {
         $rows = self::ledger((int) $payout['vendor_id'], 2000, (int) $payout['id']);
         $f = fopen('php://temp', 'r+');
+        $labels = [
+            'sale_credit' => 'Sale (collected from the customer for you, incl. GST)', 'refund_reversal' => 'Returned item refunded to the customer',
+            'commission_debit' => 'eClinicPro commission', 'commission_gst_debit' => 'GST on commission',
+            'shipping_debit' => 'Courier / logistics charge (incl. GST)', 'rto_charge' => 'Failed delivery charge (incl. GST)',
+            'penalty' => 'Charge under the seller rules', 'adjustment' => 'Adjustment', 'tcs_debit' => 'TCS (GST)', 'tds_debit' => 'TDS (income tax)',
+        ];
+        $byType = [];
         fputcsv($f, ['Payout', $payout['payout_no'], 'Status', $payout['status'], 'UTR', $payout['reference'] ?? '']);
+        fputcsv($f, ['eClinicPro collects payment from customers on your behalf, deducts the items below and pays you the net.']);
         fputcsv($f, ['Date', 'Package', 'Type', 'Description', 'Amount (INR)']);
         foreach (array_reverse($rows) as $r) {
-            fputcsv($f, [substr((string) $r['created_at'], 0, 10), $r['sub_order_no'] ?? '', $r['entry_type'], $r['memo'] ?? '', number_format((int) $r['amount_paise'] / 100, 2, '.', '')]);
+            $label = $labels[$r['entry_type']] ?? (string) $r['entry_type'];
+            $byType[$label] = ($byType[$label] ?? 0) + (int) $r['amount_paise'];
+            fputcsv($f, [substr((string) $r['created_at'], 0, 10), $r['sub_order_no'] ?? '', $label, $r['memo'] ?? '', number_format((int) $r['amount_paise'] / 100, 2, '.', '')]);
         }
-        fputcsv($f, ['', '', '', 'Net payout', number_format((int) $payout['net_paise'] / 100, 2, '.', '')]);
+        fputcsv($f, []);
+        fputcsv($f, ['', '', 'Summary']);
+        foreach ($byType as $label => $amt) {
+            fputcsv($f, ['', '', $label, '', number_format($amt / 100, 2, '.', '')]);
+        }
+        fputcsv($f, ['', '', 'Net payout', '', number_format((int) $payout['net_paise'] / 100, 2, '.', '')]);
+        fputcsv($f, ['', '', 'eClinicPro\'s GST invoice for its commission and charges is issued monthly: Seller portal → GST invoices.']);
         rewind($f);
 
         return (string) stream_get_contents($f);

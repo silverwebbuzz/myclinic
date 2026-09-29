@@ -26,8 +26,34 @@ ob_start();
     </form>
 </div>
 
+<section class="mt-4 <?= $card ?> overflow-hidden">
+    <div class="border-b border-ln px-4 py-3">
+        <h2 class="font-semibold">Invoices from eClinicPro to you</h2>
+        <p class="mt-0.5 text-xs text-tx3">One GST invoice a month for our commission, courier and other charges (already deducted from your payouts). Claim this GST as input tax credit.</p>
+    </div>
+    <div class="overflow-x-auto">
+    <table class="w-full min-w-[560px] text-sm">
+        <thead class="bg-sf2 text-left text-xs text-tx3"><tr><th class="px-4 py-2">Month</th><th class="px-4 py-2">Number</th><th class="px-4 py-2">Type</th><th class="px-4 py-2 text-right">Taxable</th><th class="px-4 py-2 text-right">GST</th><th class="px-4 py-2 text-right">Total</th></tr></thead>
+        <tbody>
+        <?php if (empty($ecpInvoices)): ?><tr><td colspan="6" class="px-4 py-5 text-center text-tx3">None yet. The first one is issued at the start of the month after your first delivery.</td></tr><?php endif; ?>
+        <?php foreach ($ecpInvoices ?? [] as $d): ?>
+            <tr class="border-t border-ln">
+                <td class="px-4 py-2"><?= $e(date('M Y', (int) strtotime($d['period'] . '-01'))) ?></td>
+                <td class="whitespace-nowrap px-4 py-2 font-mono"><a href="/vendor/gst/eclinicpro-invoices/<?= (int) $d['id'] ?>" target="_blank" class="text-act hover:underline"><?= $e($d['doc_no']) ?></a></td>
+                <td class="px-4 py-2"><?= $d['doc_type'] === 'credit_note' ? 'Credit note' : 'Tax invoice' ?></td>
+                <td class="px-4 py-2 text-right"><?= $r($d['taxable_paise']) ?></td>
+                <td class="px-4 py-2 text-right"><?= $r((int) $d['cgst_paise'] + (int) $d['sgst_paise'] + (int) $d['igst_paise']) ?></td>
+                <td class="px-4 py-2 text-right font-medium"><?= $r($d['total_paise']) ?></td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+    </div>
+</section>
+
+<h2 class="mt-6 text-[15px] font-semibold">Your invoices to customers</h2>
 <?php if ($totals): ?>
-<div class="mt-4 grid gap-3 sm:grid-cols-3">
+<div class="mt-3 grid gap-3 sm:grid-cols-3">
     <div class="<?= $card ?> p-4"><p class="text-xs text-tx3">Documents</p><p class="text-lg font-semibold"><?= (int) $totals['invoices'] ?> invoices · <?= (int) $totals['credit_notes'] ?> credit notes</p></div>
     <div class="<?= $card ?> p-4"><p class="text-xs text-tx3">Net taxable value</p><p class="text-lg font-semibold"><?= $r($totals['taxable']) ?></p></div>
     <div class="<?= $card ?> p-4"><p class="text-xs text-tx3">Net GST</p><p class="text-lg font-semibold"><?= $r($totals['cgst'] + $totals['sgst'] + $totals['igst']) ?></p></div>

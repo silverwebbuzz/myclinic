@@ -625,6 +625,12 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/store/gst', [\App\Controllers\StoreTaxController::class, 'adminRegister']);
         $admin->get('/store/gst/export', [\App\Controllers\StoreTaxController::class, 'adminCsv']);
         $admin->get('/store/gst/documents/{id}', [\App\Controllers\StoreTaxController::class, 'adminDocument']);
+        $admin->get('/store/accounts', [\App\Controllers\StoreAccountsController::class, 'index']);
+        $admin->get('/store/accounts/export', [\App\Controllers\StoreAccountsController::class, 'export']);
+        $admin->get('/store/accounts/ledger', [\App\Controllers\StoreAccountsController::class, 'ledgerExport']);
+        $admin->get('/store/accounts/invoices/export', [\App\Controllers\StoreAccountsController::class, 'invoicesExport']);
+        $admin->post('/store/accounts/invoices', [\App\Controllers\StoreAccountsController::class, 'issueInvoices']);
+        $admin->get('/store/seller-invoices/{id}', [\App\Controllers\StoreAccountsController::class, 'adminInvoice']);
         $admin->get('/store/policies/{slug}', [\App\Controllers\StorePolicyController::class, 'adminEdit']);
         $admin->post('/store/policies/{slug}', [\App\Controllers\StorePolicyController::class, 'adminSave']);
 
@@ -702,6 +708,7 @@ return static function (RouteRegistrar $router): void {
         $vendor->get('/gst', [\App\Controllers\StoreTaxController::class, 'vendorRegister']);
         $vendor->get('/gst/export', [\App\Controllers\StoreTaxController::class, 'vendorCsv']);
         $vendor->get('/gst/documents/{id}', [\App\Controllers\StoreTaxController::class, 'vendorDocument']);
+        $vendor->get('/gst/eclinicpro-invoices/{id}', [\App\Controllers\StoreAccountsController::class, 'vendorInvoice']);
         $vendor->get('/terms', [\App\Controllers\StorePolicyController::class, 'vendorShow']);
         $vendor->post('/terms/accept', [\App\Controllers\StorePolicyController::class, 'vendorAccept']);
 

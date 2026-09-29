@@ -83,6 +83,7 @@ final class StoreTaxController
         }
 
         return Response::html(View::render('store_vendor/gst', $reg + [
+            'ecpInvoices' => \App\Services\Store\SellerInvoiceService::listing(null, $this->vendorId(), 24),
             'vendor' => VendorService::find($this->vendorId()) ?? RequestContext::vendor(),
             'vendorUser' => RequestContext::vendorUser(),
             'csrf' => CsrfService::token(), 'flashOk' => SessionFlash::pull('store_ok'), 'flashErr' => SessionFlash::pull('store_err'),

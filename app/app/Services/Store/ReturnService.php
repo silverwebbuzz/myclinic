@@ -318,17 +318,24 @@ final class ReturnService
                 $commissionShare = (int) round((int) $l['commission_paise'] * $q / max(1, (int) $l['qty']));
                 $gstShare = (int) round($commissionShare * CommissionService::COMMISSION_GST_BP / 10000);
                 // Take back what the seller earned on these units (not what the customer paid:
-                // a platform-funded coupon never came out of the seller's pocket).
-                $net = -(int) $l['_seller'] + $commissionShare + $gstShare;
-                if ($vo !== null && $net !== 0) {
-                    $pdo->prepare(
+                // a platform-funded coupon never came out of the seller's pocket). Three separate
+                // lines so the accounts and eClinicPro's monthly invoice see the commission reversal.
+                if ($vo !== null) {
+                    $ins = $pdo->prepare(
                         "INSERT IGNORE INTO store_vendor_ledger
                             (vendor_id, vendor_order_id, order_item_id, entry_type, amount_paise, status, available_at, dedupe_key, memo, created_by_type)
-                         VALUES (:v, :vo, :oi, 'refund_reversal', :a, 'available', NOW(), :k, :m, 'system')"
-                    )->execute([
-                        'v' => (int) $vo['vendor_id'], 'vo' => (int) $vo['id'], 'oi' => (int) $l['id'], 'a' => $net,
-                        'k' => "return:$returnId:item:{$l['id']}", 'm' => 'Return ' . $r['return_no'] . ' (' . $q . ' × ' . $l['sku'] . ')',
-                    ]);
+                         VALUES (:v, :vo, :oi, :t, :a, 'available', NOW(), :k, :m, 'system')"
+                    );
+                    $memo = 'Return ' . $r['return_no'] . ' (' . $q . ' × ' . $l['sku'] . ')';
+                    foreach ([
+                        ['refund_reversal', -(int) $l['_seller'], "return:$returnId:item:{$l['id']}", $memo],
+                        ['commission_debit', $commissionShare, "return:$returnId:item:{$l['id']}:comm", 'Commission refunded: ' . $memo],
+                        ['commission_gst_debit', $gstShare, "return:$returnId:item:{$l['id']}:commgst", 'GST on commission refunded: ' . $memo],
+                    ] as [$type, $amt, $key, $m]) {
+                        if ($amt !== 0) {
+                            $ins->execute(['v' => (int) $vo['vendor_id'], 'vo' => (int) $vo['id'], 'oi' => (int) $l['id'], 't' => $type, 'a' => $amt, 'k' => $key, 'm' => $m]);
+                        }
+                    }
                 }
             }
             // GST: credit note against the seller's invoice for the returned units.

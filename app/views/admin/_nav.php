@@ -90,6 +90,7 @@ if ($inStore) {
             ['/admin/store/returns', 'Returns', 'M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5'],
             ['/admin/store/payouts', 'Seller payouts', 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6'],
             ['/admin/store/gst', 'GST register', 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M8 13h8M8 17h8'],
+            ['/admin/store/accounts', 'Accounts (for CA)', 'M4 4h16v16H4zM4 9h16M9 9v11'],
         ],
         'Sellers & catalog' => [
             ['/admin/store/vendors', 'Sellers', 'M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6', $vendorsPending],

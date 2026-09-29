@@ -69,23 +69,24 @@ $ecoGstin = \App\Services\Store\StoreSettings::get('store_platform_gstin');
     <div class="meta">
       <div><strong>No. <?= $h($doc['doc_no']) ?></strong></div>
       <div>Date: <?= $h(date('d M Y', (int) strtotime((string) $doc['issued_at']))) ?></div>
-      <div>Order: <?= $h($doc['order_no']) ?> · Package <?= $h($doc['sub_order_no']) ?></div>
+      <?php if (!empty($doc['ref_line'])): ?><div><?= $h($doc['ref_line']) ?></div><?php else: ?><div>Order: <?= $h($doc['order_no']) ?> · Package <?= $h($doc['sub_order_no']) ?></div><?php endif; ?>
       <?php if ($isCn && !empty($doc['reason'])): ?><div>Reason: <?= $h($reasons[$doc['reason']] ?? ucfirst((string) $doc['reason'])) ?></div><?php endif; ?>
     </div>
   </div>
 
   <div class="parties">
     <div>
-      <h2><?= $doc['issuer'] === 'platform' ? 'Supplier (delivery service)' : 'Sold by' ?></h2>
+      <h2><?= $h($doc['issuer_label'] ?? ($doc['issuer'] === 'platform' ? 'Supplier (delivery service)' : 'Sold by')) ?></h2>
       <p><strong><?= $h($iss['legal_name'] ?? '') ?></strong><?= !empty($iss['trade_name']) && ($iss['trade_name'] !== ($iss['legal_name'] ?? '')) ? ' (' . $h($iss['trade_name']) . ')' : '' ?></p>
       <p><?= $h($iss['address'] ?? '') ?></p>
       <?php if (!empty($iss['gstin'])): ?><p>GSTIN: <strong><?= $h($iss['gstin']) ?></strong></p><?php endif; ?>
       <p>State: <?= $h(($iss['state'] ?? '') . (!empty($iss['state_code']) ? ' (' . $iss['state_code'] . ')' : '')) ?></p>
     </div>
     <div>
-      <h2>Bill to / ship to</h2>
+      <h2><?= $h($doc['buyer_label'] ?? 'Bill to / ship to') ?></h2>
       <p><strong><?= $h($buy['name'] ?? '') ?></strong></p>
       <p><?= $h($buy['address'] ?? '') ?></p>
+      <?php if (!empty($buy['gstin'])): ?><p>GSTIN: <strong><?= $h($buy['gstin']) ?></strong></p><?php endif; ?>
       <p>Place of supply: <?= $h(\App\Services\Store\GstStates::name($pos) ?: ($buy['state'] ?? '')) ?><?= $pos !== '' ? ' (' . $h($pos) . ')' : '' ?></p>
     </div>
   </div>
@@ -94,7 +95,7 @@ $ecoGstin = \App\Services\Store\StoreSettings::get('store_platform_gstin');
   <table>
     <thead>
       <tr>
-        <th>#</th><th>Description</th><th><?= $doc['issuer'] === 'platform' ? 'SAC' : 'HSN' ?></th><th class="n">Qty</th>
+        <th>#</th><th>Description</th><th><?= $h($doc['code_label'] ?? ($doc['issuer'] === 'platform' ? 'SAC' : 'HSN')) ?></th><th class="n">Qty</th>
         <?php if (!$bos): ?><th class="n">GST %</th><?php endif; ?>
         <th class="n"><?= $bos ? 'Value' : 'Taxable value' ?></th>
         <?php if (!$bos): ?>
@@ -141,7 +142,9 @@ $ecoGstin = \App\Services\Store\StoreSettings::get('store_platform_gstin');
   </div>
 
   <p class="note">
-    <?php if ($bos): ?>Supplier not registered under GST: no tax charged.<?php else: ?>Prices are inclusive of GST. Tax payable on reverse charge: No.<?php endif; ?>
+    <?php if (!empty($doc['note_text'])): ?>
+      <?= $h($doc['note_text']) ?>
+    <?php elseif ($bos): ?>Supplier not registered under GST: no tax charged.<?php else: ?>Prices are inclusive of GST. Tax payable on reverse charge: No.<?php endif; ?>
     <?php if ($doc['issuer'] === 'vendor'): ?>
       Sold through eClinicPro Store (e-commerce operator)<?= $ecoGstin !== '' ? ', GSTIN ' . $h($ecoGstin) : '' ?>.
       <?php if (!$isCn): ?>Any discount funded by eClinicPro is not a discount by the seller and is shown on your order page, not on this invoice.<?php endif; ?>
