@@ -6,15 +6,14 @@
 // seller portal (/vendor/register on app.eclinicpro.com). Always public,
 // even before the store goes live, so sellers can onboard early.
 //
-// Every number (commission, payout minimum, return window, accept time)
-// is read from the same store_* settings as the seller terms, so this
-// page can never promise something the terms don't say.
+// Numbers (payout minimum, return window, accept time) are read from the
+// same store_* settings as the seller terms. Commission and delivery
+// charges are negotiated per seller / per product and set by admin, so
+// this page deliberately quotes no rate for either.
 // =====================================================================
 require_once __DIR__ . '/partials/helpers.php';
 require_once __DIR__ . '/store/_lib.php';
 
-$sellCommissionBp = (int) store_setting('store_default_commission_bp', '1000');
-$sellCommission = rtrim(rtrim(number_format($sellCommissionBp / 100, 2), '0'), '.') . '%';
 $sellMinPayout = store_rupees((int) store_setting('store_min_payout_paise', '10000'));
 $sellReturnDays = (int) store_setting('store_default_return_window_days', '7');
 $sellAcceptHours = (int) store_setting('store_vendor_accept_sla_hours', '48');
@@ -24,8 +23,8 @@ $sellRegisterUrl = ecp_portal_url('/vendor/register');
 $sellLoginUrl = ecp_portal_url('/vendor/login');
 
 $pageTitle = 'Sell on eClinicPro Store: reach health-conscious customers | eClinicPro';
-$metaDesc = 'Sell health, wellness and personal-care products on eClinicPro Store. Free to join, ' . $sellCommission
-    . ' commission, delivery handled for you, automatic GST invoices and regular payouts to your bank.';
+$metaDesc = 'Sell health, wellness and personal-care products on eClinicPro Store. No upfront fees, '
+    . 'commission agreed with you, delivery handled for you, automatic GST invoices and regular payouts to your bank.';
 $activePage = 'sell';
 $canonicalUrl = ecp_site_url('/sell-on-eclinicpro');
 
@@ -33,10 +32,10 @@ $canonicalUrl = ecp_site_url('/sell-on-eclinicpro');
 $sellBenefits = [
     ['🩺', 'Customers who already trust us',
         'Your products are shown to patients who use eClinicPro to find doctors and manage their family’s health: people actively looking after their wellbeing.'],
-    ['🆓', 'Free to join, pay only when you sell',
-        'No sign-up fee and no listing fee. We earn a ' . $sellCommission . ' commission (plus GST on it) only on what you actually sell.'],
+    ['🆓', 'Nothing upfront, pay only when you sell',
+        'No sign-up, listing or monthly fee. Our commission is agreed with you for your products and is deducted only from what you actually sell.'],
     ['🚚', 'Delivery handled for you',
-        'Book the courier in one click from your order page. We arrange pickup from your address and pay the delivery charges. You never pay for forward shipping.'],
+        'Book the courier in one click from your order page. We arrange pickup from your address and delivery to the customer through our courier partners. You pay the actual courier charge for each package, based on its size, weight and destination. It is deducted from your payouts, so there is nothing to pay upfront.'],
     ['💳', 'Prepaid orders only',
         'Every customer pays online before you ship. There is no cash-on-delivery, so no unpaid parcels and no chasing money.'],
     ['🧾', 'GST invoices made automatically',
@@ -62,9 +61,11 @@ if ($sellNeedsGstin) {
 
 $sellFaqs = [
     ['Is there any fee to register or list products?',
-        'No. Registering, listing products and using the seller dashboard are free. We charge a ' . $sellCommission . ' commission on the selling price of items you sell (after any discount you fund), plus 18% GST on that commission. Some categories may have a different rate, which you will always see in your order breakdown.'],
+        'No. Registering, listing products and using the seller dashboard are free, and there is no monthly fee. We earn a commission only on items you actually sell, plus 18% GST on that commission.'],
+    ['How much is the commission?',
+        'It depends on your products. Our team agrees the commission with you, for your whole store or product by product, before your products go live. The agreed rate is applied automatically and shown in the breakdown of every order and payout.'],
     ['Who pays for delivery?',
-        'eClinicPro. The customer pays a small delivery fee to us and we pay the courier, so you never pay for forward shipping. At the moment we also pay for return pickups.'],
+        'You do, at the actual courier charge. We book pickup and delivery through our courier partners, so you never deal with the courier directly. Because products differ in size and weight, the charge is worked out per package from its packed weight, dimensions and delivery pincode. You see it on the order, and it is deducted from your payouts, so you pay nothing upfront.'],
     ['When do I get paid?',
         'Customers pay eClinicPro online at checkout. Your earnings for a package become available after it is delivered and its return window (usually ' . $sellReturnDays . ' days) has passed. Payouts go to your verified bank account in our regular payout runs once your balance is at least ' . $sellMinPayout . '.'],
     ['Do I need a GSTIN?',
@@ -120,6 +121,7 @@ require __DIR__ . '/partials/header.php';
     .sl-stat:first-of-type { border-top: 0; padding-top: 0; }
     .sl-stat span { color: #55655c; font-size: 14.5px; }
     .sl-stat b { font-size: 20px; color: #10603b; white-space: nowrap; }
+    .sl-stats-note { margin: 12px 0 0; padding-top: 12px; border-top: 1px solid #eef3f0; font-size: 13px; line-height: 1.5; color: #6b7d73; }
 
     .sl-section { padding: 66px 0; }
     .sl-section.alt { background: #f7faf8; }
@@ -200,11 +202,13 @@ require __DIR__ . '/partials/header.php';
         </div>
         <aside class="sl-stats reveal" aria-label="Key numbers">
             <h2>Simple, transparent terms</h2>
-            <div class="sl-stat"><span>Sign-up &amp; listing fee</span><b>₹0</b></div>
-            <div class="sl-stat"><span>Commission on what you sell</span><b><?= e($sellCommission) ?></b></div>
-            <div class="sl-stat"><span>Forward delivery charges you pay</span><b>₹0</b></div>
+            <div class="sl-stat"><span>Sign-up, listing &amp; monthly fee</span><b>₹0</b></div>
+            <div class="sl-stat"><span>Paid upfront</span><b>Nothing</b></div>
+            <div class="sl-stat"><span>Commission</span><b>Agreed with you</b></div>
+            <div class="sl-stat"><span>Delivery</span><b>Actual courier cost</b></div>
             <div class="sl-stat"><span>Payment collection</span><b>100% prepaid</b></div>
             <div class="sl-stat"><span>Minimum payout</span><b><?= e($sellMinPayout) ?></b></div>
+            <p class="sl-stats-note">Commission is agreed with you, per product or for your whole store. Delivery is booked by us and charged at actual cost per package. Both are deducted from your payouts.</p>
         </aside>
     </div>
 </section>

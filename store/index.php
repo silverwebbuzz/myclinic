@@ -201,7 +201,7 @@ require __DIR__ . '/_header.php';
         <div>
           <span class="st-eyebrow">For brands &amp; distributors</span>
           <h2 class="st-h2" style="font-size:36px">Sell on <em>eClinicPro Store</em></h2>
-          <p class="st-lede">Reach customers who trust eClinicPro for their health. Simple onboarding, transparent commission.</p>
+          <p class="st-lede">Reach customers who trust eClinicPro for their health. Simple onboarding, nothing to pay upfront.</p>
         </div>
         <div><a href="/sell-on-eclinicpro" class="st-btn st-btn-primary">Become a seller <span>→</span></a></div>
       </div>
