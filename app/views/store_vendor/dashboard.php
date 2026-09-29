@@ -95,7 +95,7 @@ ob_start();
         $d = date('Y-m-d', strtotime("-$i days"));
         $series[$d] = $stats['daily'][$d] ?? ['n' => 0, 's' => 0];
     }
-    $max = max(1, ...array_map(static fn ($p) => $p['s'], $series));
+    $max = max(1, max(array_column($series, 's')));   // (no ...spread: $series has date-string keys)
     $sum14 = array_sum(array_column($series, 's'));
     $cnt14 = array_sum(array_column($series, 'n'));
     $mix = $stats['mix'];

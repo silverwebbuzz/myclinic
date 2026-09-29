@@ -173,6 +173,7 @@ final class StoreAdminController
                 'webhook_key' => StoreSettings::get('store_shiprocket_webhook_key'),
                 'webhook_url' => rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/') . '/webhooks/store-tracking',
             ],
+            'razorpay' => \App\Services\Store\StorePaymentService::settingsStatus(),
             'invoicing' => [
                 'legal_name' => StoreSettings::get('store_platform_legal_name'),
                 'gstin' => StoreSettings::get('store_platform_gstin'),
@@ -221,6 +222,26 @@ final class StoreAdminController
                 StoreSettings::set('store_shiprocket_webhook_key', bin2hex(random_bytes(20)), true);
                 StoreAudit::log('store.shiprocket_webhook_key_rotate', 'setting', null);
                 SessionFlash::put('store_ok', 'New webhook token generated. Paste it into Shiprocket (the old one stops working).');
+            } elseif ($action === 'razorpay_save') {
+                $mode = (string) ($request->post['rzp_mode'] ?? 'site');
+                $mode = in_array($mode, ['site', 'test', 'live'], true) ? $mode : 'site';
+                foreach (['test', 'live'] as $env) {
+                    $res = \App\Services\Store\StorePaymentService::saveKeys($env, (string) ($request->post["rzp_{$env}_key_id"] ?? ''),
+                        (string) ($request->post["rzp_{$env}_key_secret"] ?? ''), (string) ($request->post["rzp_{$env}_webhook_secret"] ?? ''));
+                    if (!$res['ok']) {
+                        throw new \InvalidArgumentException($res['error'] ?? 'Could not save the keys.');
+                    }
+                }
+                StoreSettings::set('store_razorpay_mode', $mode);
+                $st = \App\Services\Store\StorePaymentService::settingsStatus();
+                if (!$st['configured']) {
+                    throw new \InvalidArgumentException('Saved, but the selected mode has no complete keys yet (Key ID + Secret). Store payments will fail until they are added.');
+                }
+                StoreAudit::log('store.razorpay_mode', 'setting', null, null, ['mode' => $mode]);
+                SessionFlash::put('store_ok', 'Store payments now use ' . ['site' => 'the main site\'s Razorpay keys', 'test' => 'TEST keys (sandbox)', 'live' => 'LIVE keys'][$mode] . '. Use "Test connection" to check.');
+            } elseif ($action === 'razorpay_test') {
+                $res = \App\Services\Store\StorePaymentService::testConnection();
+                SessionFlash::put($res['ok'] ? 'store_ok' : 'store_err', $res['ok'] ? 'Razorpay accepted the store keys ✓' : 'Razorpay: ' . ($res['error'] ?? 'failed'));
             } elseif ($action === 'invoicing_save') {
                 $gstin = strtoupper(preg_replace('/\s+/', '', (string) ($request->post['platform_gstin'] ?? '')) ?? '');
                 if ($gstin !== '' && !\App\Services\Store\GstStates::validGstin($gstin)) {

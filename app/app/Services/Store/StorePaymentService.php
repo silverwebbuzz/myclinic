@@ -26,9 +26,85 @@ final class StorePaymentService
         return self::key() !== '' && self::secret() !== '';
     }
 
+    /**
+     * Which Razorpay keys the STORE uses (Store settings → Payments):
+     *   site = the same keys as clinic subscriptions (app/.env RAZORPAY_*), the default
+     *   test = the store's own rzp_test_ keys (store in sandbox while the site is live)
+     *   live = the store's own rzp_live_ keys
+     * Same Razorpay account either way. Switch only when no store payment is in progress:
+     * a payment is always confirmed/refunded with the keys that are active at that time.
+     */
+    public static function source(): string
+    {
+        $m = StoreSettings::get('store_razorpay_mode', 'site');
+
+        return in_array($m, ['test', 'live'], true) ? $m : 'site';
+    }
+
     public static function mode(): string
     {
-        return strtolower((string) ($_ENV['RAZORPAY_ENV'] ?? 'sandbox')) === 'production' ? 'production' : 'sandbox';
+        return match (self::source()) {
+            'test' => 'sandbox',
+            'live' => 'production',
+            default => strtolower((string) ($_ENV['RAZORPAY_ENV'] ?? 'sandbox')) === 'production' ? 'production' : 'sandbox',
+        };
+    }
+
+    /** @return array{source: string, mode: string, configured: bool, key_hint: string, site_mode: string, test_key: string, live_key: string, test_has_secret: bool, live_has_secret: bool} */
+    public static function settingsStatus(): array
+    {
+        $hint = self::key() !== '' ? substr(self::key(), 0, 13) . '…' : '';
+
+        return [
+            'source' => self::source(), 'mode' => self::mode(), 'configured' => self::configured(), 'key_hint' => $hint,
+            'site_mode' => strtolower((string) ($_ENV['RAZORPAY_ENV'] ?? 'sandbox')) === 'production' ? 'production' : 'sandbox',
+            'test_key' => StoreSettings::get('store_rzp_test_key_id'), 'live_key' => StoreSettings::get('store_rzp_live_key_id'),
+            'test_has_secret' => StoreSettings::get('store_rzp_test_key_secret') !== '',
+            'live_has_secret' => StoreSettings::get('store_rzp_live_key_secret') !== '',
+        ];
+    }
+
+    /**
+     * Save the store's own keys for one environment (blank secret = keep the saved one).
+     *
+     * @return array{ok: bool, error?: string}
+     */
+    public static function saveKeys(string $env, string $keyId, string $keySecret, string $webhookSecret): array
+    {
+        if (!in_array($env, ['test', 'live'], true)) {
+            return ['ok' => false, 'error' => 'Unknown environment.'];
+        }
+        $keyId = trim($keyId);
+        if ($keyId !== '' && !str_starts_with($keyId, 'rzp_' . $env . '_')) {
+            return ['ok' => false, 'error' => 'A ' . $env . ' Key ID starts with rzp_' . $env . '_.'];
+        }
+        if (($keySecret !== '' || $webhookSecret !== '') && !StoreCrypto::isConfigured()) {
+            return ['ok' => false, 'error' => 'STORE_DATA_KEY is missing, so secrets can\'t be stored safely.'];
+        }
+        StoreSettings::set("store_rzp_{$env}_key_id", $keyId);
+        if (trim($keySecret) !== '') {
+            StoreSettings::set("store_rzp_{$env}_key_secret", StoreCrypto::encrypt(trim($keySecret)), true);
+        }
+        if (trim($webhookSecret) !== '') {
+            StoreSettings::set("store_rzp_{$env}_webhook_secret", StoreCrypto::encrypt(trim($webhookSecret)), true);
+        }
+        StoreAudit::log('store.razorpay_keys', 'setting', null, null, ['env' => $env, 'key_id' => $keyId, 'secret_changed' => trim($keySecret) !== '']);
+
+        return ['ok' => true];
+    }
+
+    /** @return array{ok: bool, error?: string} checks the active keys with a harmless API call */
+    public static function testConnection(): array
+    {
+        if (!self::configured()) {
+            return ['ok' => false, 'error' => 'No keys configured for the selected mode.'];
+        }
+        $res = self::api('GET', '/orders?count=1');
+        if (isset($res['error'])) {
+            return ['ok' => false, 'error' => (string) ($res['error']['description'] ?? 'Razorpay rejected the keys.')];
+        }
+
+        return ['ok' => true];
     }
 
     // ------------------------------------------------------------------
@@ -105,7 +181,7 @@ final class StorePaymentService
                 'email' => (string) ($order['contact_email'] ?? ''),
             ]),
             'notes' => ['order_no' => (string) $order['order_no']],
-            'theme' => ['color' => '#0e4d34'],
+            'theme' => ['color' => '#059669'],
             'mode' => self::mode(),
         ]];
     }
@@ -424,9 +500,16 @@ final class StorePaymentService
      */
     public static function handleWebhook(string $payload, ?string $signature, ?string $eventId): bool
     {
-        $secret = (string) (($_ENV['RAZORPAY_WEBHOOK_SECRET'] ?? '') !== '' ? $_ENV['RAZORPAY_WEBHOOK_SECRET'] : self::secret());
+        // Test- and live-mode webhooks can carry different secrets: accept any secret that is ours.
+        $valid = false;
+        foreach ($signature !== null ? self::webhookSecrets() : [] as $secret) {
+            if (hash_equals(hash_hmac('sha256', $payload, $secret), $signature)) {
+                $valid = true;
+                break;
+            }
+        }
         // Store money: the signature is REQUIRED (no "missing header" bypass).
-        if ($secret === '' || $signature === null || !hash_equals(hash_hmac('sha256', $payload, $secret), $signature)) {
+        if (!$valid) {
             error_log('[StorePayment] webhook signature invalid/missing');
 
             return false;
@@ -533,11 +616,40 @@ final class StorePaymentService
 
     private static function key(): string
     {
-        return (string) ($_ENV['RAZORPAY_KEY_ID'] ?? '');
+        $src = self::source();
+
+        return $src === 'site' ? (string) ($_ENV['RAZORPAY_KEY_ID'] ?? '') : StoreSettings::get("store_rzp_{$src}_key_id");
     }
 
     private static function secret(): string
     {
-        return (string) ($_ENV['RAZORPAY_KEY_SECRET'] ?? '');
+        $src = self::source();
+
+        return $src === 'site' ? (string) ($_ENV['RAZORPAY_KEY_SECRET'] ?? '') : self::decrypted("store_rzp_{$src}_key_secret");
+    }
+
+    /** @return list<string> every webhook/key secret we own (site + store test + store live) */
+    private static function webhookSecrets(): array
+    {
+        $all = [
+            (string) ($_ENV['RAZORPAY_WEBHOOK_SECRET'] ?? ''), (string) ($_ENV['RAZORPAY_KEY_SECRET'] ?? ''),
+            self::decrypted('store_rzp_test_webhook_secret'), self::decrypted('store_rzp_test_key_secret'),
+            self::decrypted('store_rzp_live_webhook_secret'), self::decrypted('store_rzp_live_key_secret'),
+        ];
+
+        return array_values(array_unique(array_filter($all, static fn ($v) => $v !== '')));
+    }
+
+    private static function decrypted(string $settingKey): string
+    {
+        $raw = StoreSettings::get($settingKey);
+        if ($raw === '') {
+            return '';
+        }
+        try {
+            return (string) (StoreCrypto::decrypt($raw) ?? '');
+        } catch (\Throwable) {
+            return '';
+        }
     }
 }
