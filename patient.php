@@ -18,6 +18,21 @@ $activePage = '';
 $noindex    = true;                  // private — don't index logged-in/empty state
 
 $me = ecp_patient_current();   // null when logged out
+// eClinicPro Store: show "Store orders" only while the store is visible to this browser
+// (live, or preview cookie set), with the patient's order count (store_* tables).
+$storeOrdersCount = null;
+if ($me && ($storeDb = ecp_db())) {
+    try {
+        $storeLive = (string) $storeDb->query("SELECT setting_value FROM platform_settings WHERE setting_key = 'store_enabled'")->fetchColumn() === '1';
+        if ($storeLive || !empty($_COOKIE['ecp_store_preview'])) {
+            $storeSt = $storeDb->prepare("SELECT COUNT(*) FROM store_orders WHERE identity_id = :i AND status NOT IN ('expired','payment_failed')");
+            $storeSt->execute(['i' => (int) $me['id']]);
+            $storeOrdersCount = (int) $storeSt->fetchColumn();
+        }
+    } catch (Throwable $e) {
+        $storeOrdersCount = null;   // store tables not imported yet
+    }
+}
 
 // The logged-in panel runs wider than the rest of the site (it holds a fixed
 // 1480px booking frame); this widens the site header to match. The logged-out
@@ -1351,6 +1366,13 @@ require __DIR__ . '/partials/header.php';
               <span class="pt-tab-count" x-show="bookings.upcoming.length + bookings.pending.length > 0"
                 x-text="bookings.upcoming.length + bookings.pending.length"></span>
             </button>
+<?php if ($storeOrdersCount !== null): ?>
+            <button type="button" onclick="window.location.href='/store/orders'" title="Orders from eClinicPro Store">
+              <span class="pt-nav-ic">🛍️</span>
+              <span class="pt-nav-label">Store orders</span>
+              <?php if ($storeOrdersCount > 0): ?><span class="pt-tab-count"><?= (int) $storeOrdersCount ?></span><?php endif; ?>
+            </button>
+            <?php endif; ?>
             <button type="button" role="tab"
               :class="tab === 'shortlist' ? 'is-active' : ''"
               @click="go('shortlist')">
