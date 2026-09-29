@@ -19,23 +19,23 @@
   --st-radius: 22px;
   --st-wrap: 1320px;
   --st-gutter: clamp(16px, 4vw, 56px);
-
-  /* Variables used by the shared patient login modal (partials/auth-modal.php). */
-  --teal-50: #eaf4ee; --teal-400: #3f9d73; --teal-600: #17774f; --teal-700: #0e4d34; --teal-800: #0b3d29;
-  --ink: #13294b; --ink-2: #4c5a6c; --mute: #6b7686; --line: #ece8df; --bg-2: #faf7f1;
 }
 
+/* The page uses the MAIN SITE header + footer (partials/header.php / footer.php);
+   everything store-specific lives inside .st-page, so these base rules are scoped
+   to it and never restyle the site header, footer or login modal. */
 *, *::before, *::after { box-sizing: border-box; }
-html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-body.st-body {
-  margin: 0; background: #fff; color: var(--st-navy);
+body.st-body { overflow-x: hidden; }
+.st-page {
+  padding-top: 80px;   /* the site's fixed .nav is 80px tall */
+  background: #fff; color: var(--st-navy);
   font: 400 15px/1.55 'DM Sans', system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
-img { display: block; max-width: 100%; }
-a { color: var(--st-green-900); }
-a:hover { color: var(--st-green-700); }
-button { font: inherit; }
+:where(.st-page) img { display: block; max-width: 100%; }
+:where(.st-page) a { color: var(--st-green-900); }
+:where(.st-page) a:hover { color: var(--st-green-700); }
+:where(.st-page) button { font: inherit; }
 [x-cloak] { display: none !important; }
 .st-wrap { max-width: var(--st-wrap); margin: 0 auto; padding: 0 var(--st-gutter); }
 .st-serif { font-family: 'Newsreader', Georgia, serif; }
@@ -46,8 +46,11 @@ button { font: inherit; }
 .st-announce { background: var(--st-green-900); color: #e3f0e8; font-size: 12.5px; text-align: center; padding: 9px 16px; letter-spacing: .01em; }
 
 /* ---------- Header ---------- */
-.st-header { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,.95); backdrop-filter: saturate(1.4) blur(12px); -webkit-backdrop-filter: saturate(1.4) blur(12px); border-bottom: 1px solid var(--st-line); }
-.st-header-row { display: flex; align-items: center; gap: clamp(12px, 3vw, 40px); height: 72px; }
+.st-header { position: sticky; top: 80px; z-index: 50; background: rgba(255,255,255,.95); backdrop-filter: saturate(1.4) blur(12px); -webkit-backdrop-filter: saturate(1.4) blur(12px); border-bottom: 1px solid var(--st-line); }
+.st-header-row { display: flex; align-items: center; gap: clamp(12px, 3vw, 40px); height: 64px; }
+.st-brand { display: inline-flex; align-items: center; gap: 8px; flex: none; height: 38px; padding: 0 14px 0 12px; border-radius: 999px;
+  background: var(--st-green-50); color: var(--st-green-900) !important; font-weight: 600; font-size: 14.5px; text-decoration: none; white-space: nowrap; }
+.st-brand:hover { background: var(--st-green-25); }
 .st-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; flex: none; }
 .st-logo-mark { width: 26px; height: 26px; border-radius: 50% 50% 50% 4px; background: var(--st-green-700); transform: rotate(-8deg); }
 .st-logo-text { font: 500 24px/1 'Newsreader', serif; color: var(--st-navy); letter-spacing: -.01em; }
@@ -76,7 +79,7 @@ button { font: inherit; }
 @media (max-width: 860px) {
   .st-desktop-only { display: none !important; }
   .st-mobile-only { display: flex; }
-  .st-header-row { height: 62px; }
+  .st-header-row { height: 56px; }
   .st-logo-text small { display: none; }
 }
 
@@ -325,3 +328,10 @@ button { font: inherit; }
 
 /* ---------- Toast ---------- */
 .st-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 900; background: var(--st-navy); color: #fff; padding: 12px 20px; border-radius: 999px; font-size: 14px; box-shadow: 0 12px 30px -10px rgba(19,41,75,.5); }
+
+/* ---------- Trust strip above the site footer ---------- */
+.st-trust { background: var(--st-cream); border-top: 1px solid var(--st-line); padding: 22px 0 18px; margin-top: 40px; }
+.st-trust-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 26px; font-size: 14px; font-weight: 500; color: var(--st-green-900); }
+.st-trust-sell { margin-left: auto; font-weight: 600; }
+.st-trust-note { margin-top: 8px; margin-bottom: 0; font-size: 12.5px; color: var(--st-mute); }
+@media (max-width: 640px) { .st-trust-sell { margin-left: 0; } }

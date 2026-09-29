@@ -52,6 +52,18 @@ $ogType  = $ogType  ?? 'website';
 // without waiting for an API roundtrip.
 $ecpPatient = ecp_patient_current();
 
+// "Health Store" nav link: only while the store is live (or this browser holds the
+// admin preview cookie), and always on store pages themselves.
+$ecpStoreNav = ($activePage ?? '') === 'store';
+if (!$ecpStoreNav && ($ecpNavDb = ecp_db())) {
+    try {
+        $ecpStoreNav = (string) $ecpNavDb->query("SELECT setting_value FROM platform_settings WHERE setting_key = 'store_enabled'")->fetchColumn() === '1'
+            || !empty($_COOKIE['ecp_store_preview']);
+    } catch (Throwable $e) {
+        $ecpStoreNav = false;
+    }
+}
+
 // If the visitor is logged in, never let CloudFlare / browser caches serve
 // this HTML to anyone else. Each user gets a per-request render.
 if ($ecpPatient) {
@@ -251,6 +263,9 @@ body.patient-wide .nav-inner{max-width:1572px}
                     <a href="/product-tour" class="nav-drop-item">Product Tour</a>
                 </div>
             </div>
+<?php if ($ecpStoreNav): ?>
+            <a href="/store/" class="nav-link <?= nav_active('store') ?>">Health Store</a>
+            <?php endif; ?>
             <a href="/pricing" class="nav-link <?= nav_active('pricing') ?>">Pricing</a>
             <a href="/#specialties" class="nav-link <?= nav_active('specialties') ?>">Specialties</a>
             <a href="/security" class="nav-link <?= nav_active('security') ?>">Security</a>
