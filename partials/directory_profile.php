@@ -101,6 +101,57 @@ function ecp_directory_has_photo_column(PDO $db): bool
     return $ready;
 }
 
+/**
+ * Smallest word length the search_text FULLTEXT index holds, or null when
+ * the index from 2026_09_29_search_text_fulltext.sql doesn't exist yet. When
+ * null, free-text search keeps using the old LIKE query.
+ */
+function ecp_directory_search_text_min_token(PDO $db): ?int
+{
+    static $ready = false;
+    if ($ready !== false) {
+        return $ready;
+    }
+    try {
+        $hasIndex = (bool) $db->query("SHOW INDEX FROM directory_doctors WHERE Key_name = 'ft_search_text'")->fetch();
+        $ready = $hasIndex
+            ? max(1, (int) $db->query('SELECT @@innodb_ft_min_token_size')->fetchColumn())
+            : null;
+    } catch (Throwable $e) {
+        $ready = null;
+    }
+
+    return $ready;
+}
+
+/**
+ * The precomputed "doctors at this clinic" ids from directory_doctors.sibling_ids
+ * (2026_09_29_clinic_sibling_ids.sql, filled by fetch_doctor/build_clinic_siblings.php).
+ * null = column missing or not built for this row → caller runs the live LIKE query;
+ * [] = built, no siblings.
+ *
+ * @param array<string, mixed> $row
+ * @return list<int>|null
+ */
+function ecp_profile_stored_sibling_ids(array $row): ?array
+{
+    if (!isset($row['sibling_ids'])) {
+        return null;
+    }
+    $decoded = json_decode((string) $row['sibling_ids'], true);
+    if (!is_array($decoded)) {
+        return null;
+    }
+    $ids = [];
+    foreach ($decoded as $id) {
+        if (is_int($id) && $id > 0 && !in_array($id, $ids, true)) {
+            $ids[] = $id;
+        }
+    }
+
+    return array_slice($ids, 0, 20);
+}
+
 function ecp_profile_city_meta(PDO $db, string $citySlug): ?array
 {
     static $cache = [];
@@ -839,17 +890,55 @@ function ecp_profile_build_payload(PDO $db, array $row, string $entityType, stri
     // scraped-directory heuristic — sibling directory_doctors rows in the same
     // city whose name matches this clinic's base name.
     if ($entityType === 'clinic' && $doctors === []) {
-        $base = ecp_directory_clinic_base_name($row);
-        $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $base) . '%';
-        $docStmt = $db->prepare(
-            "SELECT dd.id, dd.name, dd.doctor_name, dd.specialty, dd.rating, dd.reviews, dd.photo_reference, dd.types, dd.city, dd.area
-             FROM directory_doctors dd
-             WHERE dd.is_active = 1 AND dd.status = 'OPERATIONAL'
-               AND dd.city = :city AND dd.id <> :id AND dd.name LIKE :like ESCAPE '\\\\'
-             ORDER BY dd.doctor_name ASC LIMIT 20"
-        );
-        $docStmt->execute(['city' => (string) ($row['city'] ?? ''), 'id' => (int) ($row['id'] ?? 0), 'like' => $like]);
-        foreach ($docStmt->fetchAll(PDO::FETCH_ASSOC) as $doc) {
+        $docCols = 'dd.id, dd.name, dd.doctor_name, dd.specialty, dd.rating, dd.reviews, dd.photo_reference, dd.types, dd.city, dd.area';
+        $siblingIds = ecp_profile_stored_sibling_ids($row);
+        if ($siblingIds === null) {
+            // Not precomputed yet: the leading-wildcard LIKE reads every row in
+            // the city (the 8-18s clinic pages). fetch_doctor/build_clinic_siblings.php
+            // stores this exact result in sibling_ids.
+            $base = ecp_directory_clinic_base_name($row);
+            $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $base) . '%';
+            $docStmt = $db->prepare(
+                "SELECT $docCols
+                 FROM directory_doctors dd
+                 WHERE dd.is_active = 1 AND dd.status = 'OPERATIONAL'
+                   AND dd.city = :city AND dd.id <> :id AND dd.name LIKE :like ESCAPE '\\\\'
+                 ORDER BY dd.doctor_name ASC LIMIT 20"
+            );
+            $docStmt->execute(['city' => (string) ($row['city'] ?? ''), 'id' => (int) ($row['id'] ?? 0), 'like' => $like]);
+            $docRows = $docStmt->fetchAll(PDO::FETCH_ASSOC);
+        } elseif ($siblingIds === []) {
+            $docRows = [];
+        } else {
+            // Primary-key lookup; unique placeholders (:s1, :s2, …) since
+            // prepares aren't emulated. Re-apply the live filters in case a
+            // sibling was deactivated or moved since the rebuild.
+            $in = [];
+            $params = ['city' => (string) ($row['city'] ?? '')];
+            foreach ($siblingIds as $n => $sid) {
+                $in[] = ':s' . ($n + 1);
+                $params['s' . ($n + 1)] = $sid;
+            }
+            $docStmt = $db->prepare(
+                "SELECT $docCols
+                 FROM directory_doctors dd
+                 WHERE dd.id IN (" . implode(', ', $in) . ")
+                   AND dd.is_active = 1 AND dd.status = 'OPERATIONAL' AND dd.city = :city"
+            );
+            $docStmt->execute($params);
+            $byId = [];
+            foreach ($docStmt->fetchAll(PDO::FETCH_ASSOC) as $doc) {
+                $byId[(int) $doc['id']] = $doc;
+            }
+            // Keep the stored order (the LIKE query's ORDER BY doctor_name).
+            $docRows = [];
+            foreach ($siblingIds as $sid) {
+                if (isset($byId[$sid])) {
+                    $docRows[] = $byId[$sid];
+                }
+            }
+        }
+        foreach ($docRows as $doc) {
             if (ecp_directory_entity_type($doc) !== 'doctor' && trim((string) ($doc['doctor_name'] ?? '')) === '') {
                 continue;
             }

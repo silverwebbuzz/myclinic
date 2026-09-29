@@ -71,7 +71,27 @@ function ecp_search_doctors(array $filters): array {
 
     $relevanceExpr = null;
     $needsSpecJoin = false;
-    if ($q !== '') {
+    $stTokens = [];
+    if ($q !== '' && !$noFulltext) {
+        $stTokens = ecp_search_text_tokens($db, $q);
+    }
+    if ($stTokens) {
+        // Indexed path: search_text (2026_09_29_search_text_fulltext.sql) holds
+        // the same fields the LIKE path below scans — name, doctor_name, area,
+        // city, specialty + specialty_master label/plural/url_slug — so one
+        // FULLTEXT lookup replaces 8 leading-wildcard LIKEs over every row
+        // (?q=dental: ~10s). Each word is a prefix term, like the LIKE path's
+        // substring match; relevance ordering is unchanged (name/doctor_name).
+        $where[] = 'MATCH(dd.search_text) AGAINST(:qft IN BOOLEAN MODE)';
+        $params['qft'] = implode(' ', array_map(static fn ($t) => $t . '*', $stTokens));
+
+        $rawTokens = preg_split('/[^\p{L}\p{N}]+/u', $q, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $ftTokens  = array_values(array_filter($rawTokens, static fn ($t) => mb_strlen($t) >= 3));
+        if ($ftTokens) {
+            $relevanceExpr = 'MATCH(dd.name, dd.doctor_name) AGAINST(:qrel IN BOOLEAN MODE)';
+            $params['qrel'] = implode(' ', array_map(static fn ($t) => $t . '*', $ftTokens));
+        }
+    } elseif ($q !== '') {
         $like = '%' . $q . '%';
         $likeParts = [
             'dd.name LIKE :qlike1',
@@ -173,6 +193,11 @@ function ecp_search_doctors(array $filters): array {
             : "dd.is_claimed DESC, $hasPhoto, dd.quality_score DESC, dd.reviews DESC, dd.rating DESC",
         default => "dd.is_claimed DESC, $hasPhoto, dd.quality_score DESC",
     };
+    // :qrel only appears in the relevance ORDER BY. Binding a placeholder the
+    // SQL doesn't contain is HY093 with real prepares (q= with sort=rating etc.).
+    if (!str_contains($order, ':qrel')) {
+        unset($params['qrel']);
+    }
 
     $slugCols = ecp_profile_slug_columns_ready($db) ? 'dd.entity_type, dd.listing_slug,' : '';
     $selectCols = "dd.id, dd.name, dd.doctor_name,
@@ -260,6 +285,39 @@ function ecp_search_doctors(array $filters): array {
     }
 
     return $resp;
+}
+
+/**
+ * Words of $q usable as search_text FULLTEXT prefix terms: at least 3 chars
+ * (and the server's innodb_ft_min_token_size — shorter words aren't in the
+ * index), and not an InnoDB default stopword (never indexed either). [] when
+ * the index isn't there yet or no word qualifies (e.g. "gp", "dr") — the
+ * caller then uses the LIKE path.
+ *
+ * @return list<string>
+ */
+function ecp_search_text_tokens(PDO $db, string $q): array {
+    $minLen = ecp_directory_search_text_min_token($db);
+    if ($minLen === null) {
+        return [];
+    }
+    // INFORMATION_SCHEMA.INNODB_FT_DEFAULT_STOPWORD (same list on MySQL and MariaDB).
+    static $stop = null;
+    $stop ??= array_flip([
+        'a', 'about', 'an', 'are', 'as', 'at', 'be', 'by', 'com', 'de', 'en', 'for', 'from', 'how',
+        'i', 'in', 'is', 'it', 'la', 'of', 'on', 'or', 'that', 'the', 'this', 'to', 'was', 'what',
+        'when', 'where', 'who', 'will', 'with', 'und', 'www',
+    ]);
+
+    $out = [];
+    foreach (preg_split('/[^\p{L}\p{N}]+/u', $q, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $t) {
+        $t = mb_strtolower($t);
+        if (mb_strlen($t) >= max(3, $minLen) && !isset($stop[$t]) && !in_array($t, $out, true)) {
+            $out[] = $t;
+        }
+    }
+
+    return $out;
 }
 
 /** @param array<string, mixed> $r */

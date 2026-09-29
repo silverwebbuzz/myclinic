@@ -149,6 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['files'])) {
     $totalInserted = 0;
     $totalUpdated  = 0;
     $totalFailed   = 0;
+    $importedCities = [];   // city => true, for the sibling/search_text rebuild below
 
     foreach ((array) $_POST['files'] as $fileName) {
         $fileName = basename((string) $fileName); // strip any path attempt
@@ -228,6 +229,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['files'])) {
                     ':fetched_at'      => $d['fetched_at']?? null,
                 ]);
                 $existed ? $upd++ : $ins++;
+                $importedCities[(string) ($d['city'] ?? '')] = true;
             } catch (Throwable $e) {
                 $fail++;
                 echo "  ⚠ row fail [{$pid}]: " . $e->getMessage() . "\n";
@@ -243,6 +245,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['files'])) {
 
     echo str_repeat('=', 60) . "\n";
     echo "TOTAL — inserted: {$totalInserted} · updated: {$totalUpdated}" . ($totalFailed ? " · failed: {$totalFailed}" : '') . "\n";
+
+    // Keep the precomputed columns (build_clinic_siblings.php) correct for the
+    // cities just imported: a new row can be another clinic's sibling. Only
+    // same-city rows can be siblings, so other cities are unaffected. A
+    // failure here never undoes the import — build_clinic_siblings.php can
+    // be re-run later.
+    unset($importedCities['']);
+    if ($importedCities) {
+        echo "\nRebuilding clinic siblings + search text for " . count($importedCities) . " city(s)\n";
+        try {
+            require_once __DIR__ . '/_clinic_siblings.php';
+            $cols = fd_sib_columns($pdo);
+            if (!isset($cols['sibling_ids']) && !isset($cols['search_text'])) {
+                echo "  skipped — run fetch_doctor/2026_09_29_*.sql first\n";
+            } else {
+                foreach (array_keys($importedCities) as $city) {
+                    $s = fd_sib_rebuild_city($pdo, (string) $city);
+                    echo "  {$city} — {$s['clinics']} clinics · {$s['sibling_updates']} sibling updates · {$s['search_updates']} search_text updates\n";
+                }
+                echo "  purged " . fd_sib_purge_profile_cache() . " cached profile pages\n";
+            }
+        } catch (Throwable $e) {
+            echo "  ⚠ rebuild failed: " . $e->getMessage() . "\n";
+            echo "    Re-run fetch_doctor/build_clinic_siblings.php to fix it up.\n";
+        }
+    }
     echo "\nDone. Visit https://eclinicpro.com/find-a-doctor to see them live.\n";
     exit;
 }
