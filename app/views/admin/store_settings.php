@@ -106,39 +106,41 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
         </div>
     </section>
 
-    <section class="rounded-xl border bg-white p-5 shadow-sm" x-data="{ mode: '<?= $e($razorpay['source']) ?>' }">
+    <section class="rounded-xl border bg-white p-5 shadow-sm">
         <div class="flex flex-wrap items-center justify-between gap-2">
             <h2 class="font-semibold">Payments (Razorpay)</h2>
             <span class="rounded-full px-2 py-0.5 text-xs font-medium <?= !$razorpay['configured'] ? 'bg-red-100 text-red-800' : ($razorpay['mode'] === 'production' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800') ?>">
-                <?= !$razorpay['configured'] ? 'Keys missing' : ($razorpay['mode'] === 'production' ? 'LIVE' : 'TEST (sandbox)') ?><?= $razorpay['key_hint'] !== '' ? ' · ' . $e($razorpay['key_hint']) : '' ?>
+                Store: <?= !$razorpay['configured'] ? 'keys missing' : ($razorpay['mode'] === 'production' ? 'LIVE' : 'SANDBOX') ?><?= $razorpay['key_hint'] !== '' ? ' · ' . $e($razorpay['key_hint']) : '' ?>
             </span>
         </div>
-        <p class="mt-1 text-sm text-slate-500">Same Razorpay account as clinic subscriptions. Choose separately whether the <strong>store</strong> takes test or live payments, so you can test the store while the main site is live.
-            The main site is currently <strong><?= $razorpay['site_mode'] === 'production' ? 'live' : 'sandbox' ?></strong> (from <code>app/.env</code>).</p>
-        <form method="post" action="/admin/store/settings" class="mt-3 space-y-3" autocomplete="off"
-              onsubmit="return this.rzp_mode.value !== 'live' || confirm('Switch the store to LIVE payments? Customers will be charged real money.')">
+        <p class="mt-1 text-sm text-slate-500">Same Razorpay account and credentials as the main site (from <code>app/.env</code>); nothing to enter here.
+            Switch the <strong>store</strong> between live and sandbox on its own. The main site stays <strong><?= $razorpay['site_mode'] === 'production' ? 'live' : 'sandbox' ?></strong> either way.</p>
+        <form method="post" action="/admin/store/settings" class="mt-3 flex flex-wrap items-center gap-4"
+              onsubmit="return this.rzp_mode.value !== 'production' || confirm('Switch the store to LIVE payments? Customers will be charged real money.')">
             <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
             <input type="hidden" name="action" value="razorpay_save">
-            <div class="flex flex-wrap gap-4 text-sm">
-                <label class="flex items-center gap-1.5"><input type="radio" name="rzp_mode" value="site" x-model="mode"> Same as main site</label>
-                <label class="flex items-center gap-1.5"><input type="radio" name="rzp_mode" value="test" x-model="mode"> Test (sandbox) keys</label>
-                <label class="flex items-center gap-1.5"><input type="radio" name="rzp_mode" value="live" x-model="mode"> Live keys</label>
-            </div>
-            <?php foreach (['test' => 'Test keys (rzp_test_…)', 'live' => 'Live keys (rzp_live_…)'] as $env => $title): ?>
-                <fieldset class="grid gap-2 rounded-lg border p-3 sm:grid-cols-3" x-show="mode === '<?= $env ?>'" x-cloak>
-                    <legend class="px-1 text-xs font-medium text-slate-600"><?= $e($title) ?>: Razorpay Dashboard (<?= $env === 'test' ? 'Test' : 'Live' ?> mode) → Account &amp; Settings → API Keys</legend>
-                    <label class="text-sm"><span class="text-slate-600">Key ID</span>
-                        <input name="rzp_<?= $env ?>_key_id" value="<?= $e($razorpay[$env . '_key']) ?>" placeholder="rzp_<?= $env ?>_…" class="mt-1 w-full rounded border px-2 py-1.5 font-mono text-xs"></label>
-                    <label class="text-sm"><span class="text-slate-600">Key secret</span>
-                        <input name="rzp_<?= $env ?>_key_secret" type="password" autocomplete="new-password" placeholder="<?= $razorpay[$env . '_has_secret'] ? 'Saved (leave blank to keep)' : '' ?>" class="mt-1 w-full rounded border px-2 py-1.5"></label>
-                    <label class="text-sm"><span class="text-slate-600">Webhook secret <span class="text-slate-400">(optional)</span></span>
-                        <input name="rzp_<?= $env ?>_webhook_secret" type="password" autocomplete="new-password" placeholder="Leave blank to keep" class="mt-1 w-full rounded border px-2 py-1.5"></label>
-                </fieldset>
-            <?php endforeach; ?>
-            <p class="text-xs text-slate-500" x-show="mode !== 'site'" x-cloak>In the Razorpay dashboard for that mode, add the webhook <code>https://app.eclinicpro.com/webhooks/razorpay</code> (events: payment.captured, payment.failed, order.paid, refund.processed, refund.failed) with the webhook secret you enter here.
-                Switch modes only when no store payment is in progress: refunds use the keys active at that time.</p>
-            <button class="rounded bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700">Save payment settings</button>
+            <label class="flex items-center gap-1.5 text-sm <?= $razorpay['live_ready'] ? '' : 'text-slate-400' ?>">
+                <input type="radio" name="rzp_mode" value="production" <?= $razorpay['mode'] === 'production' ? 'checked' : '' ?> <?= $razorpay['live_ready'] ? '' : 'disabled' ?>> Live
+            </label>
+            <label class="flex items-center gap-1.5 text-sm <?= $razorpay['sandbox_ready'] ? '' : 'text-slate-400' ?>">
+                <input type="radio" name="rzp_mode" value="sandbox" <?= $razorpay['mode'] === 'sandbox' ? 'checked' : '' ?> <?= $razorpay['sandbox_ready'] ? '' : 'disabled' ?>> Sandbox (test payments)
+            </label>
+            <button class="rounded bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700">Save</button>
         </form>
+        <?php if (!$razorpay['sandbox_ready'] || !$razorpay['live_ready']): ?>
+            <div class="mt-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
+                <?php if (!$razorpay['sandbox_ready']): ?>
+                    <p><strong>Sandbox is unavailable:</strong> Razorpay test mode uses a separate key pair. Add it <strong>once</strong> to <code>app/.env</code> (Razorpay Dashboard → switch to Test mode → Account &amp; Settings → API keys):</p>
+                    <pre class="mt-1 rounded bg-white p-2 font-mono">RAZORPAY_TEST_KEY_ID=rzp_test_…
+RAZORPAY_TEST_KEY_SECRET=…
+RAZORPAY_TEST_WEBHOOK_SECRET=…   (optional: the secret of the Test-mode webhook)</pre>
+                <?php endif; ?>
+                <?php if (!$razorpay['live_ready']): ?>
+                    <p class="mt-2"><strong>Live is unavailable:</strong> add <code>RAZORPAY_LIVE_KEY_ID</code> / <code>RAZORPAY_LIVE_KEY_SECRET</code> to <code>app/.env</code> (or use rzp_live_ keys for the main site).</p>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+        <p class="mt-2 text-xs text-slate-500">Switch only when no store payment is in progress: refunds use the keys active at that moment. For sandbox, also add the webhook <code>https://app.eclinicpro.com/webhooks/razorpay</code> in Razorpay's Test mode.</p>
         <form method="post" action="/admin/store/settings" class="mt-2">
             <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><input type="hidden" name="action" value="razorpay_test">
             <button class="rounded border px-3 py-1.5 text-sm hover:bg-slate-50">Test connection</button>
