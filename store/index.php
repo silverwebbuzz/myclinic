@@ -233,7 +233,7 @@ require __DIR__ . '/_header.php';
           <h2 class="st-h2" style="font-size:36px">Sell on <em>eClinicPro Store</em></h2>
           <p class="st-lede">Reach customers who trust eClinicPro for their health. Simple onboarding, transparent commission.</p>
         </div>
-        <div><a href="<?= e(ecp_portal_url('/vendor/register')) ?>" class="st-btn st-btn-primary">Become a seller <span>→</span></a></div>
+        <div><a href="/sell-on-eclinicpro" class="st-btn st-btn-primary">Become a seller <span>→</span></a></div>
       </div>
     </div>
   </section>

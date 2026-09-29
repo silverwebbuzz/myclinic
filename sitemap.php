@@ -40,6 +40,7 @@ $marketing = [
     ['',                   1.0, 'weekly'],
     ['/find-a-doctor',     0.9, 'daily'],
     ['/for-patients',      0.8, 'monthly'],
+    ['/sell-on-eclinicpro', 0.7, 'monthly'],
     ['/clinic-management-software', 0.8, 'monthly'],
     ['/pricing', 0.8, 'monthly'],
     ['/product-tour',      0.7, 'monthly'],

@@ -6,7 +6,7 @@
     <span>✓ Verified sellers</span>
     <span>✓ Every listing reviewed by our team</span>
     <span>✓ GST invoice with every order</span>
-    <a href="<?= e(ecp_portal_url('/vendor/register')) ?>" class="st-trust-sell">Sell on eClinicPro Store →</a>
+    <a href="/sell-on-eclinicpro" class="st-trust-sell">Sell on eClinicPro Store →</a>
   </div>
   <p class="st-wrap st-trust-note">Products are sold by independent sellers. Not a substitute for medical advice: consult your doctor before starting any supplement.</p>
 </section>

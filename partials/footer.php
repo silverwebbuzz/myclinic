@@ -162,6 +162,7 @@ $presenceSub = $presenceSub ?? 'Find doctors & clinics across these cities';
                 <h5>Company</h5>
                 <ul>
                     <li><a href="/become-a-partner">Become a partner</a></li>
+                    <li><a href="/sell-on-eclinicpro">Sell on eClinicPro</a></li>
                     <li><a href="#">About</a></li>
                     <li><a href="#">Careers</a></li>
                     <li><a href="#">Press kit</a></li>
