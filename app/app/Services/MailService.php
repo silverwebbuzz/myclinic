@@ -218,18 +218,6 @@ final class MailService
             default => ['clinic_name' => 'Test Clinic'],
         };
 
-        if (!empty($_ENV['MAILGUN_API_KEY']) && !empty($_ENV['MAILGUN_DOMAIN'])) {
-            $composed = self::compose($template, $payload);
-            self::sendViaMailgun($toEmail, $composed['subject'], $composed['body'], $composed['fromEmail'], $composed['fromName']);
-
-            return [
-                'ok' => true,
-                'error' => null,
-                'steps' => ['Sent via Mailgun API'],
-                'provider' => 'mailgun',
-            ];
-        }
-
         if (SmtpMailService::isConfigured()) {
             $composed = self::compose($template, $payload);
             $replyTo = $_ENV['WECARE_FROM'] ?? 'wecare@eclinicpro.com';
@@ -249,7 +237,7 @@ final class MailService
 
         return [
             'ok' => false,
-            'error' => 'No mail provider configured. Set SMTP_* or MAILGUN_* in app/.env — otherwise emails only go to storage/logs/mail.log',
+            'error' => 'No mail provider configured. Set SMTP_* in app/.env — otherwise emails only go to storage/logs/mail.log',
             'steps' => [],
             'provider' => 'log',
         ];
@@ -263,12 +251,6 @@ final class MailService
         string $fromName,
         string $template,
     ): bool {
-        if (!empty($_ENV['MAILGUN_API_KEY']) && !empty($_ENV['MAILGUN_DOMAIN'])) {
-            self::sendViaMailgun($toEmail, $subject, $body, $fromEmail, $fromName);
-
-            return true;
-        }
-
         if (SmtpMailService::isConfigured()) {
             $replyTo = $_ENV['WECARE_FROM'] ?? 'wecare@eclinicpro.com';
             $result = SmtpMailService::send($toEmail, $subject, $body, $fromEmail, $fromName, $replyTo, true);
@@ -632,51 +614,6 @@ final class MailService
                 . (!empty($payload['pdf_url']) ? "Download: " . $payload['pdf_url'] . "\n" : ''),
             default => json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?: '',
         };
-    }
-
-    private static function sendViaMailgun(
-        string $to,
-        string $subject,
-        string $text,
-        ?string $fromEmail = null,
-        ?string $fromName = null,
-    ): void {
-        $domain = $_ENV['MAILGUN_DOMAIN'];
-        $fromEmail ??= ($_ENV['MAILGUN_FROM'] ?? "noreply@{$domain}");
-        $from = $fromName !== null && $fromName !== ''
-            ? sprintf('%s <%s>', $fromName, $fromEmail)
-            : $fromEmail;
-
-        // $text is our branded HTML body. Send it as html, with a plain-text
-        // fallback (tags stripped) for clients that don't render HTML.
-        $isHtml = stripos($text, '<html') !== false || stripos($text, '<table') !== false;
-        $ch = curl_init("https://api.mailgun.net/v3/{$domain}/messages");
-        $fields = [
-            'from' => $from,
-            'to' => $to,
-            'subject' => $subject,
-            'h:Reply-To' => $_ENV['WECARE_FROM'] ?? 'wecare@eclinicpro.com',
-        ];
-        if ($isHtml) {
-            $fields['html'] = $text;
-            $fields['text'] = trim(html_entity_decode(strip_tags(
-                preg_replace('~<br\s*/?>~i', "\n", $text) ?? $text,
-            ), ENT_QUOTES, 'UTF-8'));
-        } else {
-            $fields['text'] = $text;
-        }
-        $archive = self::archiveBcc($to);
-        if ($archive !== null) {
-            $fields['bcc'] = $archive;
-        }
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_USERPWD => 'api:' . $_ENV['MAILGUN_API_KEY'],
-            CURLOPT_POSTFIELDS => $fields,
-        ]);
-        curl_exec($ch);
-        curl_close($ch);
     }
 
     /** @param array<string, mixed> $payload */

@@ -13,7 +13,7 @@
 //
 // All sending happens through ecp_sms_send_otp(). Don't call MSG91
 // directly from page code — keep one place to swap providers later
-// (WhatsApp / Twilio / etc).
+// (WhatsApp / other SMS providers).
 // =====================================================================
 
 declare(strict_types=1);

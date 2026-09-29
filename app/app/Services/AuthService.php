@@ -72,7 +72,7 @@ final class AuthService
         }
 
         // Outside the transaction try/catch: the clinic + user are committed.
-        // A broken SMTP/Mailgun config must not 500 the registration (and the
+        // A broken SMTP config must not 500 the registration (and the
         // old rollBack() after commit threw its own exception on top).
         PlanService::applyPlanToTenant($tenantId, 'standard', true);
 

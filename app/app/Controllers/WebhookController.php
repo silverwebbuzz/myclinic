@@ -49,21 +49,6 @@ final class WebhookController
     }
 
     /**
-     * Stripe webhook — DECOMMISSIONED (Phase 4). eClinicPro is India-only,
-     * Razorpay-only. Returns 410 Gone for one release cycle so any lingering
-     * Stripe webhook config fails loudly, then this method is deleted.
-     */
-    public function stripe(Request $request): Response
-    {
-        return Response::json(['error' => 'Stripe is no longer supported'], 410);
-    }
-
-    /**
-     * Razorpay webhook — subscription payments. Handles payment.captured /
-     * order.paid (activate) and payment.failed (mark invoice failed).
-     * Signature-verified in BillingGatewayService.
-     */
-    /**
      * Shiprocket shipment-status webhook for the store. Authenticated by the
      * x-api-key token configured in Shiprocket (= store_shiprocket_webhook_key).
      * Always 200 for authenticated calls so Shiprocket doesn't disable the hook.
@@ -75,6 +60,11 @@ final class WebhookController
         return $ok ? Response::json(['received' => true]) : Response::json(['error' => 'Unauthorized'], 401);
     }
 
+    /**
+     * Razorpay webhook — clinic subscription payments AND store payments (routed first). Handles payment.captured /
+     * order.paid (activate) and payment.failed (mark invoice failed).
+     * Signature-verified in BillingGatewayService.
+     */
     public function razorpay(Request $request): Response
     {
         $payload = $request->rawBody ?? '';

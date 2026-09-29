@@ -65,7 +65,7 @@ $enabled = ($settings['messaging_enabled']['setting_value'] ?? '0') === '1';
                     'wa_app_secret' => 'App Secret',
                 ];
                 $smsFields = [
-                    'sms_provider' => 'SMS Provider (msg91 / twilio)',
+                    'sms_provider' => 'SMS Provider (msg91)',
                     'sms_auth_key' => 'SMS Auth Key',
                     'sms_sender_id' => 'SMS Sender ID',
                 ];

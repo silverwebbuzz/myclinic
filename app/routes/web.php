@@ -92,7 +92,6 @@ return static function (RouteRegistrar $router): void {
     $router->get('/api/check-slug', [AuthController::class, 'checkSlug']);
     $router->get('/api/check-username', [AuthController::class, 'checkUsername']);
 
-    $router->post('/webhooks/stripe', [WebhookController::class, 'stripe']);
     $router->post('/webhooks/razorpay', [WebhookController::class, 'razorpay']);
     // Shiprocket tracking. The URL avoids the words "shiprocket"/"sr", which Shiprocket rejects in webhook URLs (VERIFY).
     $router->post('/webhooks/store-tracking', [WebhookController::class, 'storeTracking']);

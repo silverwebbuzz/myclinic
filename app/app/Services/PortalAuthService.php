@@ -36,7 +36,7 @@ final class PortalAuthService
         ]);
 
         $body = 'Your ManageClinic login code is ' . $otp . '. Valid for ' . self::OTP_TTL_MINUTES . ' minutes.';
-        TwilioSmsService::send($normalized, $body);
+        SmsService::send($normalized, $body);
 
         return ['ok' => true, 'message' => 'OTP sent', 'dev_otp' => ($_ENV['APP_ENV'] ?? 'local') === 'local' ? $otp : null];
     }

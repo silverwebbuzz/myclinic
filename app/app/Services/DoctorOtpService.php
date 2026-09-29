@@ -198,7 +198,7 @@ final class DoctorOtpService
         ]);
 
         $body = str_replace('{code}', $code, $bodyTemplate);
-        $sent = TwilioSmsService::send($phone, $body);
+        $sent = SmsService::send($phone, $body);
         $devMode = self::isLocalEnv();
 
         return [

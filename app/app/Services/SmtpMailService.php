@@ -22,15 +22,10 @@ final class SmtpMailService
     /** @return array<string, mixed> */
     public static function status(): array
     {
-        $mailgun = trim((string) ($_ENV['MAILGUN_API_KEY'] ?? '')) !== ''
-            && trim((string) ($_ENV['MAILGUN_DOMAIN'] ?? '')) !== '';
         $smtp = self::isConfigured();
 
-        $active = $mailgun ? 'mailgun' : ($smtp ? 'smtp' : 'log');
-
         return [
-            'active' => $active,
-            'mailgun_set' => $mailgun,
+            'active' => $smtp ? 'smtp' : 'log',
             'smtp_set' => $smtp,
             'smtp_host' => trim((string) ($_ENV['SMTP_HOST'] ?? '')),
             'smtp_peer_name' => trim((string) ($_ENV['SMTP_PEER_NAME'] ?? '')),

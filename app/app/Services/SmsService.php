@@ -8,9 +8,9 @@ use App\Support\MessagingSettings;
 
 /**
  * SmsService — single entry point for outbound SMS across the whole system
- * (portal + marketing). Provider chosen by platform_settings.sms_provider:
- *   - 'msg91'  → MSG91 transactional API (India, DLT-registered)
- *   - 'twilio' → delegates to TwilioSmsService
+ * (portal + marketing): MSG91 transactional API (India, DLT-registered),
+ * configured in /admin/messaging. Without MSG91 keys, messages are logged to
+ * storage/logs/sms.log (dev stub).
  *
  * Used as the WhatsApp delivery-failure fallback and for any direct SMS.
  * OTP keeps its own fast path in partials/sms.php (latency-critical) — this
@@ -22,14 +22,6 @@ final class SmsService
 {
     public static function send(string $toNumber, string $body): array
     {
-        $provider = MessagingSettings::smsProvider();
-
-        if ($provider === 'twilio') {
-            $r = TwilioSmsService::send($toNumber, $body);
-            return ['ok' => $r['ok'], 'message' => $r['message'], 'provider_id' => null];
-        }
-
-        // Default: MSG91
         return self::sendViaMsg91($toNumber, $body);
     }
 

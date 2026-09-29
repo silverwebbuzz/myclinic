@@ -1,17 +1,16 @@
 <?php
-/** /admin/email — SMTP / Mailgun delivery status + test sender. */
+/** /admin/email — SMTP delivery status + test sender. */
 $e = $email;
 $dot = static fn (bool $on): string => $on
     ? '<span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Configured</span>'
     : '<span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"><span class="h-1.5 w-1.5 rounded-full bg-slate-400"></span>Not set</span>';
 
 $activeLabel = match ($e['active'] ?? 'log') {
-    'mailgun' => 'Mailgun API',
     'smtp' => 'SMTP',
     default => 'Log file only (no live delivery)',
 };
 $activeClass = match ($e['active'] ?? 'log') {
-    'mailgun', 'smtp' => 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    'smtp' => 'bg-emerald-50 text-emerald-800 border-emerald-200',
     default => 'bg-amber-50 text-amber-900 border-amber-200',
 };
 ?>
@@ -39,7 +38,7 @@ $activeClass = match ($e['active'] ?? 'log') {
             <div class="mt-1 text-lg font-semibold"><?= htmlspecialchars($activeLabel) ?></div>
             <?php if (($e['active'] ?? 'log') === 'log'): ?>
             <p class="mt-2 text-sm">
-                Without <code>MAILGUN_*</code> or <code>SMTP_*</code>, outbound mail is only appended to
+                Without <code>SMTP_*</code>, outbound mail is only appended to
                 <code>storage/logs/mail.log</code> and never reaches inboxes.
             </p>
             <?php endif; ?>
@@ -50,7 +49,7 @@ $activeClass = match ($e['active'] ?? 'log') {
 
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
-                    <div class="font-medium">SMTP <span class="text-xs text-slate-400">(recommended)</span></div>
+                    <div class="font-medium">SMTP</div>
                     <div class="text-xs text-slate-500">SMTP_HOST · SMTP_PORT · SMTP_SECURE · SMTP_USERNAME · SMTP_PASSWORD</div>
                 </div>
                 <?= $dot((bool) ($e['smtp_set'] ?? false)) ?>
@@ -66,14 +65,6 @@ $activeClass = match ($e['active'] ?? 'log') {
             </dl>
             <?php endif; ?>
 
-            <div class="flex items-center justify-between pt-2">
-                <div>
-                    <div class="font-medium">Mailgun <span class="text-xs text-slate-400">(legacy)</span></div>
-                    <div class="text-xs text-slate-500">MAILGUN_DOMAIN · MAILGUN_API_KEY — used when set, overrides SMTP</div>
-                </div>
-                <?= $dot((bool) ($e['mailgun_set'] ?? false)) ?>
-            </div>
-
             <?php if (!empty($e['archive_bcc'])): ?>
             <p class="text-xs text-slate-500 border-t pt-3">Archive BCC: <code><?= htmlspecialchars((string) $e['archive_bcc']) ?></code></p>
             <?php endif; ?>
@@ -81,7 +72,7 @@ $activeClass = match ($e['active'] ?? 'log') {
 
         <section class="rounded-xl border bg-white p-5 shadow-sm">
             <h2 class="text-sm font-semibold">Send test email</h2>
-            <p class="mt-1 text-xs text-slate-500">Uses the same routing as production (Mailgun if configured, else SMTP). Shows the SMTP conversation when applicable.</p>
+            <p class="mt-1 text-xs text-slate-500">Uses the same SMTP settings as production. Shows the SMTP conversation when applicable.</p>
 
             <?php if (!empty($testResult)): ?>
             <div class="mt-4 rounded-lg border px-4 py-3 text-sm <?= !empty($testResult['ok']) ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-rose-200 bg-rose-50 text-rose-900' ?>">
@@ -138,7 +129,6 @@ $activeClass = match ($e['active'] ?? 'log') {
                 <li>If the SMTP banner shows <code>mail.silverwebbuzz.in</code> but you connect to <code>mail.eclinicpro.com</code>, set <code>SMTP_PEER_NAME=mail.silverwebbuzz.in</code> (TLS certificate hostname).</li>
                 <li>Or use port <strong>465</strong> + <code>SMTP_SECURE=ssl</code> — often more reliable on cPanel/Exim hosts.</li>
                 <li><code>SMTP_FROM_EMAIL</code> must usually match the authenticated mailbox.</li>
-                <li>If Mailgun keys are still in <code>.env</code>, they take priority over SMTP — clear them to use SMTP.</li>
                 <li>Check spam folder; verify DNS (SPF/DKIM) on your mail host.</li>
             </ul>
         </section>

@@ -509,7 +509,7 @@ final class SuperAdminController
         return Response::redirect('/admin/feature-flags?message=updated');
     }
 
-    /** GET /admin/email — SMTP / Mailgun status + test sender. */
+    /** GET /admin/email — SMTP status + test sender. */
     public function email(Request $request): Response
     {
         return Response::html(View::render('admin/email', [

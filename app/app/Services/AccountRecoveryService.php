@@ -42,7 +42,7 @@ final class AccountRecoveryService
         }
 
         $body = "Your eClinicPro login username is: {$username}\nUse it with your password at the login page.";
-        $sent = TwilioSmsService::send($phone, $body);
+        $sent = SmsService::send($phone, $body);
         $devMode = self::isLocalEnv();
 
         return [
@@ -178,7 +178,7 @@ final class AccountRecoveryService
         ]);
 
         $body = str_replace('{code}', $code, $bodyTemplate);
-        $sent = TwilioSmsService::send($phone, $body);
+        $sent = SmsService::send($phone, $body);
         $devMode = self::isLocalEnv();
 
         return [
