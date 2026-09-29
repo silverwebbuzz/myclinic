@@ -42,7 +42,7 @@ final class StoreNotifier
             foreach ($o['vendor_orders'] as $vo) {
                 $packages[] = [
                     'heading' => 'Sold by ' . $vo['vendor_name'],
-                    'sub' => (int) $vo['shipping_paise'] > 0 ? 'Shipping ' . self::rs((int) $vo['shipping_paise']) : 'Free shipping',
+                    'sub' => count($o['vendor_orders']) > 1 ? 'Ships separately' : '',
                     'lines' => array_map(static fn ($it) => [
                         'name' => (string) $it['name'],
                         'meta' => trim(($it['variant_title'] ? $it['variant_title'] . ' · ' : '') . 'Qty ' . (int) $it['qty']),
@@ -55,7 +55,7 @@ final class StoreNotifier
             if ((int) $o['discount_paise'] > 0) {
                 $totals[] = ['Coupon ' . $o['coupon_code'], '−' . self::rs((int) $o['discount_paise'])];
             }
-            $totals[] = ['Shipping', (int) $o['shipping_paise'] > 0 ? self::rs((int) $o['shipping_paise']) : 'Free'];
+            $totals[] = ['Delivery', (int) $o['shipping_paise'] > 0 ? self::rs((int) $o['shipping_paise']) : 'Free'];
             $totals[] = ['Total paid', $total, true];
             self::send('customer_order_confirmed', (string) $o['contact_email'],
                 ['name' => self::first((string) $o['contact_name']), 'order_no' => (string) $o['order_no'], 'amount' => $total], [

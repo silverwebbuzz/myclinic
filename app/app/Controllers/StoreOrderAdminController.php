@@ -146,6 +146,59 @@ final class StoreOrderAdminController
         return Response::redirect('/admin/store/orders/' . (int) $id);
     }
 
+    // ---- Seller charges (courier, weight disputes, RTO, return pickups) ---------------
+
+    public function parcelPhoto(Request $request, string $id, string $voId): Response
+    {
+        $vo = $this->package((int) $id, (int) $voId);
+
+        return $vo === null ? Response::html('Not found', 404) : \App\Services\Store\ShippingService::parcelPhotoResponse($vo);
+    }
+
+    /** Charge the seller (weight dispute, seller-caused RTO, return pickup, other). */
+    public function charge(Request $request, string $id, string $voId): Response
+    {
+        $vo = $this->package((int) $id, (int) $voId);
+        $amount = \App\Services\Store\ProductService::toPaise((string) ($request->post['amount'] ?? ''));
+        $res = $vo === null ? ['ok' => false, 'error' => 'Package not found.']
+            : \App\Services\Store\SettlementService::charge((int) $voId, (string) ($request->post['kind'] ?? ''), (int) $amount,
+                (string) ($request->post['note'] ?? ''), (int) (RequestContext::superAdmin()['id'] ?? 0));
+        SessionFlash::put($res['ok'] ? 'store_ok' : 'store_err', $res['ok'] ? 'Charge added. It will be deducted from the seller\'s next payout.' : ($res['error'] ?? 'Failed.'));
+
+        return Response::redirect('/admin/store/orders/' . (int) $id);
+    }
+
+    public function reverseCharge(Request $request, string $id, string $voId, string $ledgerId): Response
+    {
+        $res = $this->package((int) $id, (int) $voId) === null ? ['ok' => false, 'error' => 'Package not found.']
+            : \App\Services\Store\SettlementService::reverseCharge((int) $ledgerId, (int) $voId, (int) (RequestContext::superAdmin()['id'] ?? 0));
+        SessionFlash::put($res['ok'] ? 'store_ok' : 'store_err', $res['ok'] ? 'Charge reversed (credited back to the seller).' : ($res['error'] ?? 'Failed.'));
+
+        return Response::redirect('/admin/store/orders/' . (int) $id);
+    }
+
+    /** Enter the real forward courier charge (e.g. from Shiprocket's invoice). */
+    public function courierCharge(Request $request, string $id, string $voId): Response
+    {
+        $amount = \App\Services\Store\ProductService::toPaise((string) ($request->post['courier'] ?? ''));
+        try {
+            $res = $this->package((int) $id, (int) $voId) === null || $amount === null ? ['ok' => false, 'error' => 'Enter the courier charge in rupees.']
+                : \App\Services\Store\SettlementService::setCourierCharge((int) $voId, (int) $amount, (int) (RequestContext::superAdmin()['id'] ?? 0));
+        } catch (\Throwable $e) {
+            error_log('[StoreOrderAdmin::courierCharge] ' . $e->getMessage());
+            $res = ['ok' => false, 'error' => 'Could not save. Import 2026_10_04_store_seller_shipping.sql first.'];
+        }
+        SessionFlash::put($res['ok'] ? 'store_ok' : 'store_err', $res['ok'] ? 'Courier charge saved.' : ($res['error'] ?? 'Failed.'));
+
+        return Response::redirect('/admin/store/orders/' . (int) $id);
+    }
+
+    /** A package of this order (guards against mismatched ids in the URL). */
+    private function package(int $orderId, int $voId): ?array
+    {
+        return \App\Core\QueryBuilder::table('store_vendor_orders')->where('id', '=', $voId)->where('order_id', '=', $orderId)->first();
+    }
+
     public function shipCancel(Request $request, string $id, string $shipmentId): Response
     {
         $res = \App\Services\Store\ShippingService::cancel((int) $shipmentId, (int) (RequestContext::superAdmin()['id'] ?? 0));

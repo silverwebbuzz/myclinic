@@ -70,8 +70,8 @@ ob_start();
         <?php elseif (!$courierOn): ?>
             <p class="text-sm"><strong>Packed. Waiting for courier pickup.</strong> Booking the courier from this page will be switched on shortly.</p>
         <?php else: ?>
-            <p class="text-sm"><strong>Book courier pickup.</strong> Weigh the packed box and measure it. Couriers charge by the larger of actual and volumetric weight.</p>
-            <form method="post" action="/vendor/orders/<?= (int) $vo['id'] ?>/book" class="mt-3 grid gap-3 text-sm sm:grid-cols-5 sm:items-end">
+            <p class="text-sm"><strong>Book courier pickup.</strong> Weigh the packed box and measure it. Couriers bill the larger of the actual weight and the volumetric weight (L × B × H ÷ 5000). You pay the courier charge, less the customer's delivery fee for this package.</p>
+            <form method="post" action="/vendor/orders/<?= (int) $vo['id'] ?>/book" enctype="multipart/form-data" class="mt-3 grid gap-3 text-sm sm:grid-cols-5 sm:items-end">
                 <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
                 <label class="block"><span class="text-tx2">Weight (g)</span>
                     <input name="weight_g" type="number" min="10" max="50000" required value="<?= (int) $suggest['weight_g'] ?>" class="mt-1 w-full rounded-[7px] border border-ln bg-sf px-3 py-2"></label>
@@ -81,6 +81,9 @@ ob_start();
                     <input name="breadth_cm" type="number" step="0.5" min="1" max="300" required value="<?= $e($suggest['breadth_cm']) ?>" class="mt-1 w-full rounded-[7px] border border-ln bg-sf px-3 py-2"></label>
                 <label class="block"><span class="text-tx2">Height (cm)</span>
                     <input name="height_cm" type="number" step="0.5" min="1" max="300" required value="<?= $e($suggest['height_cm']) ?>" class="mt-1 w-full rounded-[7px] border border-ln bg-sf px-3 py-2"></label>
+                <label class="block sm:col-span-4"><span class="text-tx2">Photo of the packed parcel on a weighing scale <?= empty($vo['parcel_photo_path']) ? '<span class="text-red-600">*</span>' : '<span class="text-tx3">(already added; attach again to replace)</span>' ?></span>
+                    <input name="parcel_photo" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" <?= empty($vo['parcel_photo_path']) ? 'required' : '' ?> class="mt-1 block w-full text-xs file:mr-3 file:rounded-[7px] file:border-0 file:bg-sf2 file:px-3 file:py-2 file:text-tx">
+                    <span class="mt-1 block text-xs text-tx3">The scale reading must be clearly visible. It is your proof if the courier bills a higher weight.</span></label>
                 <button class="rounded-[7px] bg-ac px-4 py-1.5 text-[13px] font-medium text-white hover:opacity-90">Book pickup</button>
             </form>
         <?php endif; ?>
@@ -166,11 +169,34 @@ ob_start();
     </section>
     <section class="rounded-[10px] border border-ln bg-sf p-6 text-sm">
         <h2 class="font-semibold">Your earnings on this order</h2>
+        <?php
+        $charged = isset($vo['seller_shipping_paise']) && $vo['seller_shipping_paise'] !== null;
+        $courierCost = $charged ? (int) $vo['seller_shipping_paise'] : (int) $fee['charge'];
+        $extra = 0;   // weight disputes, return pickups, corrections (negative = charge)
+        foreach ($charges ?? [] as $c) {
+            if (!str_starts_with((string) $c['memo'], 'Courier ')) {   // forward courier + its corrections are in $courierCost
+                $extra += (int) $c['amount_paise'];
+            }
+        }
+        ?>
         <dl class="mt-2 grid grid-cols-2 gap-y-1">
-            <dt class="text-tx3">Commission (current)</dt><dd class="text-right">−<?= $r($vo['commission_paise']) ?></dd>
-            <dt class="font-semibold">You get</dt><dd class="text-right font-semibold"><?= $r(max(0, (int) $vo['vendor_payable_paise'])) ?></dd>
+            <dt class="text-tx3">Items sold</dt><dd class="text-right"><?= $r((int) $vo['items_subtotal_paise'] - (int) $vo['vendor_discount_paise']) ?></dd>
+            <dt class="text-tx3">Commission + GST on it</dt><dd class="text-right">−<?= $r((int) $vo['commission_paise'] + (int) $vo['commission_gst_paise']) ?></dd>
+            <dt class="text-tx3">Courier<?= $charged ? '' : ($fee['estimated'] ? ' (estimate)' : '') ?>
+                <span class="block text-[11px]"><?= $r($fee['courier']) ?> − <?= $r($fee['credit']) ?> paid by the customer</span></dt>
+            <dd class="text-right">−<?= $r($courierCost) ?></dd>
+            <?php if ($extra !== 0): ?><dt class="text-tx3">Other charges &amp; credits</dt><dd class="text-right"><?= $extra < 0 ? '−' : '+' ?><?= $r(abs($extra)) ?></dd><?php endif; ?>
+            <dt class="font-semibold">You get<?= $charged ? '' : ' (about)' ?></dt><dd class="text-right font-semibold"><?= $r((int) $vo['vendor_payable_paise'] - $courierCost + $extra) ?></dd>
         </dl>
-        <p class="mt-2 text-xs text-tx3">Adjusted for cancelled items. Paid out after delivery and the return window.</p>
+        <?php if ($charges ?? []): ?>
+            <ul class="mt-3 space-y-0.5 border-t border-ln pt-2 text-xs text-tx2">
+                <?php foreach ($charges as $c): ?>
+                    <li class="flex justify-between gap-2"><span><?= $e($c['memo']) ?></span><span class="<?= (int) $c['amount_paise'] < 0 ? 'text-red-700' : 'text-emerald-700' ?>"><?= (int) $c['amount_paise'] < 0 ? '−' : '+' ?><?= $r(abs((int) $c['amount_paise'])) ?></span></li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+        <p class="mt-2 text-xs text-tx3">Adjusted for cancelled items. Paid out after delivery and the return window.
+            <?php if (!empty($vo['parcel_photo_path'])): ?><a href="/vendor/orders/<?= (int) $vo['id'] ?>/parcel-photo" target="_blank" class="text-act underline">Your parcel photo</a><?php endif; ?></p>
     </section>
 </div>
 <?php

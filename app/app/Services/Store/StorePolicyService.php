@@ -140,11 +140,7 @@ final class StorePolicyService
     /** Live numbers the text can reference as {{token}}. @return array<string, string> */
     public static function tokens(): array
     {
-        try {
-            [$flat, $freeAbove] = PricingService::shippingRule(0);
-        } catch (\Throwable) {
-            [$flat, $freeAbove] = [4900, 49900];   // orders patch not imported yet: the seeded defaults
-        }
+        $fees = SellerFeeService::config();
         $rs = static fn (int $p): string => '₹' . ProductService::rupees($p);
 
         return [
@@ -152,8 +148,10 @@ final class StorePolicyService
             'accept_hours' => (string) StoreSettings::int('store_vendor_accept_sla_hours', 48),
             'return_days' => (string) StoreSettings::int('store_default_return_window_days', 7),
             'min_payout' => $rs(StoreSettings::int('store_min_payout_paise', 10000)),
-            'shipping_fee' => $rs($flat),
-            'free_shipping_above' => $freeAbove !== null ? $rs($freeAbove) : 'never',
+            'shipping_fee' => $rs($fees['delivery_fee']),
+            'free_shipping_above' => $fees['free_above'] !== null ? $rs($fees['free_above']) : 'never',
+            'courier_first_500g' => $rs($fees['courier_base']),
+            'courier_extra_500g' => $rs($fees['courier_addl']),
             'payment_window' => (string) StoreSettings::int('store_payment_window_minutes', 30),
         ];
     }
@@ -244,43 +242,55 @@ These rules apply to every seller on eClinicPro Store. By accepting them in the 
 ## 4. Orders and dispatch
 1. **Accept** every new order within **{{accept_hours}} hours**. Orders not accepted in time are cancelled automatically and the customer is refunded.
 2. **Pack** the items securely, with the tax invoice, and mark the order packed.
-3. **Book the courier** from the order page, print the label, and hand the package over at pickup from your registered pickup address.
+3. **Book the courier** from the order page: enter the packed weight and box size, and **attach a photo of the packed parcel on a weighing scale** with the reading visible. Print the label and hand the package over at pickup from your registered pickup address.
 - If you cannot fulfil an item (for example it is out of stock), cancel that item from the order page **before dispatch** with the reason. The customer is refunded automatically.
 - Repeated cancellations or late dispatch may lead to your store being suspended.
 
 ## 5. Delivery charges
-- eClinicPro charges the customer the delivery fee ({{shipping_fee}} per package, free when your items in the order total {{free_shipping_above}} or more), invoices it in eClinicPro's own name, and pays the courier.
-- You do not pay forward-delivery courier charges. eClinicPro currently also pays for return pickups. We may start charging return shipping on returns caused by the seller (wrong, damaged, expired or defective items), with at least 30 days' notice.
+- **The customer** pays one delivery fee per order: **{{shipping_fee}}**, free when the order's items total **{{free_shipping_above}}** or more. eClinicPro invoices this fee in its own name.
+- **You pay the courier charge for your package.** eClinicPro books the courier on its Shiprocket account, pays the courier, and deducts the charge from your earnings when the package is delivered.
+- **The customer's delivery fee reduces your courier charge.** When a customer pays a delivery fee, the share for your package is taken off your courier charge. You are never charged less than zero; any remainder stays with eClinicPro.
+- The courier charge depends on the **billed weight**: the larger of the actual weight and the volumetric weight (length × breadth × height in cm ÷ 5000, in kg), rounded up to the next 500 g. As a guide, it is about **{{courier_first_500g}} for the first 500 g and {{courier_extra_500g}} for each extra 500 g**, GST included; the actual courier charge applies. The earnings estimate on the product page uses these numbers.
+- Keep the packed weight and box size of each product accurate. Small, light, well-packed parcels cost less to ship.
 
-## 6. Returns and refunds
+## 6. Weight disputes
+- Couriers re-weigh parcels. If the courier bills a higher weight than you entered, the **extra charge is yours**, deducted from your payouts.
+- The photo of the packed parcel on a scale is your evidence. eClinicPro will dispute wrong weights with the courier using your photo; if the dispute is won, the charge is reversed. Without a clear photo, we can't dispute the charge.
+
+## 7. Returns and refunds
 - Customers can request a return of eligible products within the product's return window (**{{return_days}} days from delivery** unless the product says otherwise). Photos are required when an item is reported damaged, wrong, expired or defective.
 - Review each return request **within 2 days** from the Returns page: approve it (a reverse pickup is arranged, or the customer is refunded without pickup) or reject it with a clear reason.
 - When a returned package reaches you, inspect it and record the result. If you report a problem with the returned item, eClinicPro reviews the evidence and makes the final decision.
+- **Return pickup for wrong, expired, defective or badly packed items** (your responsibility): you pay it. The forward courier charge you already paid is not refunded.
+- **Return pickup when the customer changed their mind:** eClinicPro pays it.
+- **Items damaged in transit by the courier:** eClinicPro pays the return pickup and claims from the courier.
 - **Replacements are not offered at present:** an approved return is refunded to the customer, who can place a new order.
 - When an item is refunded after dispatch, a **credit note** is issued automatically against your invoice for exactly those units, and your earnings, our commission and the GST on it are reversed for those units.
 
-## 7. Packages that don't reach the customer
-- **Returned to you by the courier** (customer refused or couldn't be reached): the customer is refunded for the items, stock comes back to you, and there are no earnings on that package.
+## 8. Packages that don't reach the customer
+- **Customer refused or couldn't be reached (returned to you by the courier):** the customer is refunded for the items, stock comes back to you, and there are no earnings on that package. **eClinicPro pays** the forward and return courier charges.
+- **Caused by you** (for example late dispatch, wrong address label, wrong item packed, or marking a package ready when it wasn't): **you pay** the forward and return courier charges.
 - **Lost or damaged by the courier:** the customer is refunded in full. As long as the package was packed properly, eClinicPro normally pays you what you would have earned and claims from the courier itself.
 
-## 8. Commission and payouts
-- Commission is **{{commission_pct}}** of your selling price (after any discount you fund), plus 18% GST on the commission. Some categories may have a different rate, shown in your order breakdown.
+## 9. Commission and payouts
+- Commission is the rate **agreed with you** (for your whole store, a category or a product; **{{commission_pct}}** where nothing else was agreed), charged on your selling price after any discount you fund, plus 18% GST on the commission. The rate for each product is shown in its earnings estimate and in every order breakdown.
 - Customers pay eClinicPro. Your earnings for a package become **available after delivery plus the return window**, so refunds can still be handled. A package with an open return is held until the return is closed.
 - Payouts go to your **verified bank account** in eClinicPro's regular payout runs, once your available balance is at least {{min_payout}}. Each payout comes with a statement.
-- Payouts are reduced by commission, GST on commission, refunds and credit notes, any TCS/TDS the law requires, and agreed adjustments. If your balance goes negative (for example after a refund), it is recovered from your next payouts.
+- Payouts are reduced by commission and GST on it, courier charges (section 5), weight-dispute and other charges under these rules, refunds and credit notes, any TCS/TDS the law requires, and agreed adjustments. Every deduction is listed in your payout statement. If your balance goes negative (for example after a refund), it is recovered from your next payouts.
+- **Low-priced items:** on a small item, the courier charge can be a large part of the price. Check the earnings estimate on the product page before you set a price. Selling small items as packs of 2 or more usually works better.
 
-## 9. Coupons and offers
+## 10. Coupons and offers
 - Coupons funded by eClinicPro **do not reduce** your earnings; we pay you the difference.
 - Coupons funded by you reduce your selling price, and your invoice and commission follow the reduced price. eClinicPro sets up seller-funded coupons on your products only after agreeing them with you.
 
-## 10. Reviews
+## 11. Reviews
 - Only verified buyers can review, and reviews are checked before they appear.
 - You may reply publicly and politely. Never offer anything in exchange for reviews, post reviews of your own products, or share customer details in a reply.
 
-## 11. Customer data
+## 12. Customer data
 - Use customer names, addresses and phone numbers **only to fulfil the order**. Never contact customers for marketing or share their data with anyone.
 
-## 12. Suspension and changes
+## 13. Suspension and changes
 - eClinicPro may hide listings or suspend a store that breaks these rules, sells unsafe or fake products, or receives repeated serious complaints. Earnings needed to cover refunds may be held until they are settled.
 - These rules may be updated. You will see the new version in the seller portal and must accept it to keep selling.
 - These rules are governed by the laws of India.

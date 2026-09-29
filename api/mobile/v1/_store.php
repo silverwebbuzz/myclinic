@@ -156,15 +156,13 @@ function ecp_ms_cart_payload(?array $cart, ?string $newToken = null): array
         $vid = (int) $it['vendor_id'];
         if (!isset($groups[$vid])) {
             $g = $groupQuote[$vid] ?? null;
-            $freeAbove = $g !== null && $g['free_above'] !== null ? (int) $g['free_above'] : null;
             $groups[$vid] = [
                 'seller' => ['id' => $vid, 'name' => (string) $it['vendor_name'], 'slug' => (string) $it['vendor_slug']],
                 'subtotal_paise' => $g !== null ? (int) $g['subtotal'] : 0,
-                'shipping_paise' => $g !== null ? (int) $g['shipping'] : 0,
-                'free_shipping_above_paise' => $freeAbove,
-                // "Add ₹X more from this seller for free shipping" (null when n/a).
-                'add_for_free_shipping_paise' => $g !== null && (int) $g['shipping'] > 0 && $freeAbove !== null
-                    ? max(0, $freeAbove - (int) $g['subtotal']) : null,
+                // Delivery is now one fee per ORDER (see summary). Kept for older app builds.
+                'shipping_paise' => 0,
+                'free_shipping_above_paise' => null,
+                'add_for_free_shipping_paise' => null,
                 'lines' => [],
             ];
         }
@@ -208,7 +206,9 @@ function ecp_ms_cart_payload(?array $cart, ?string $newToken = null): array
             'subtotal_paise' => (int) $quote['subtotal'],
             'savings_paise' => (int) $quote['savings'],        // vs MRP
             'discount_paise' => (int) $quote['discount'],      // coupon
-            'shipping_paise' => (int) $quote['shipping'],
+            'shipping_paise' => (int) $quote['shipping'],        // one delivery fee per order
+            'free_shipping_above_paise' => $quote['free_above'] !== null ? (int) $quote['free_above'] : null,
+            'add_for_free_shipping_paise' => $quote['add_for_free_shipping'],   // "Add ₹X more for free delivery" (null = n/a)
             'tax_included_paise' => (int) $quote['tax_included'],
             'grand_total_paise' => (int) $quote['grand_total'],
         ],

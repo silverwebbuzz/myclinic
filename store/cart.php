@@ -62,16 +62,7 @@ require __DIR__ . '/_header.php';
           <section class="st-seller-group">
             <div class="st-seller-group-head">
               <span>Sold by <a href="<?= e(store_url('seller/' . $s['slug'])) ?>"><strong><?= e($s['name']) ?></strong></a></span>
-              <?php if ($g !== null): ?>
-                <span class="st-ship-note">
-                  <?php if ($g['shipping'] === 0): ?>
-                    Free shipping
-                  <?php else: ?>
-                    Shipping <?= e(store_rupees((int) $g['shipping'])) ?>
-                    <?php if ($g['free_above'] !== null): ?> · add <?= e(store_rupees((int) $g['free_above'] - (int) $g['subtotal'])) ?> more from this seller for free shipping<?php endif; ?>
-                  <?php endif; ?>
-                </span>
-              <?php endif; ?>
+              <?php if (count($bySeller) > 1): ?><span class="st-ship-note">Ships separately</span><?php endif; ?>
             </div>
             <?php foreach ($s['lines'] as $l): ?>
               <?php $img = store_img($l['cover']); $off = store_off_pct((int) $l['mrp_paise'], (int) $l['price_paise']); ?>
@@ -112,9 +103,14 @@ require __DIR__ . '/_header.php';
           <dt>Items (<?= (int) $quote['item_count'] ?>)</dt><dd><?= e(store_rupees((int) $quote['subtotal'])) ?></dd>
           <?php if ($quote['savings'] > 0): ?><dt>You save</dt><dd class="st-save">−<?= e(store_rupees((int) $quote['savings'])) ?> <small>vs MRP</small></dd><?php endif; ?>
           <?php if ($quote['discount'] > 0): ?><dt>Coupon <?= e($quote['coupon']['code']) ?></dt><dd class="st-save">−<?= e(store_rupees((int) $quote['discount'])) ?></dd><?php endif; ?>
-          <dt>Shipping<?= count($quote['groups']) > 1 ? ' (' . count($quote['groups']) . ' sellers)' : '' ?></dt><dd><?= $quote['shipping'] > 0 ? e(store_rupees((int) $quote['shipping'])) : 'Free' ?></dd>
+          <dt>Delivery</dt><dd><?= $quote['shipping'] > 0 ? e(store_rupees((int) $quote['shipping'])) : 'Free' ?></dd>
           <dt class="st-total">Total</dt><dd class="st-total"><?= e(store_rupees((int) $quote['grand_total'])) ?></dd>
         </dl>
+        <?php if ($quote['add_for_free_shipping'] !== null && $quote['add_for_free_shipping'] > 0): ?>
+          <p class="st-summary-note">Add <strong><?= e(store_rupees((int) $quote['add_for_free_shipping'])) ?></strong> more for free delivery.</p>
+        <?php elseif ($quote['groups'] && $quote['shipping'] === 0 && $quote['free_above'] !== null): ?>
+          <p class="st-summary-note">🎉 Your order gets free delivery.</p>
+        <?php endif; ?>
         <div class="st-coupon" x-data="{ code: '', busy: false, err: '' }">
           <?php if ($quote['coupon'] !== null): ?>
             <div class="st-coupon-applied">

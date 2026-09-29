@@ -197,13 +197,23 @@ RAZORPAY_TEST_WEBHOOK_SECRET=…   (optional: the secret of the Test-mode webhoo
         <h2 class="pt-2 font-semibold">Orders &amp; money</h2>
         <div class="grid gap-4 sm:grid-cols-2">
             <label class="block text-sm">
-                <span class="text-slate-600">Shipping fee per seller (₹)</span>
+                <span class="text-slate-600">Customer delivery fee per order (₹)</span>
                 <input name="ship_flat" inputmode="decimal" value="<?= $e($shipping !== null ? \App\Services\Store\ProductService::rupees((int) $shipping['flat_fee_paise']) : '49') ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
-                <span class="text-xs text-slate-400">Charged once per seller in an order (each seller ships separately).</span>
+                <span class="text-xs text-slate-400">Charged once per order, however many sellers. It is split across the packages and reduces each seller's courier charge.</span>
             </label>
             <label class="block text-sm">
-                <span class="text-slate-600">Free shipping when that seller's items total at least (₹)</span>
+                <span class="text-slate-600">Free delivery when the order's items total at least (₹)</span>
                 <input name="ship_free_above" inputmode="decimal" value="<?= $e($shipping !== null && $shipping['free_above_paise'] !== null ? \App\Services\Store\ProductService::rupees((int) $shipping['free_above_paise']) : '') ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm" placeholder="Blank = never free">
+            </label>
+            <label class="block text-sm">
+                <span class="text-slate-600">Courier estimate: first 500 g (₹, GST incl.)</span>
+                <input name="courier_base" inputmode="decimal" value="<?= $e(\App\Services\Store\ProductService::rupees((int) ($settings['store_courier_est_base_paise'] ?? 6500))) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
+                <span class="text-xs text-slate-400">Used for the sellers' earnings calculator, and at delivery when the real Shiprocket charge isn't known. Sellers pay the courier minus the customer's delivery fee share.</span>
+            </label>
+            <label class="block text-sm">
+                <span class="text-slate-600">Courier estimate: each extra 500 g (₹, GST incl.)</span>
+                <input name="courier_addl" inputmode="decimal" value="<?= $e(\App\Services\Store\ProductService::rupees((int) ($settings['store_courier_est_addl_paise'] ?? 4000))) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
+                <span class="text-xs text-slate-400">Set these to your average Shiprocket rates across zones.</span>
             </label>
             <label class="block text-sm">
                 <span class="text-slate-600">Default commission (%)</span>

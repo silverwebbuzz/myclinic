@@ -164,6 +164,8 @@ final class StoreAdminController
                 'store_default_return_window_days' => StoreSettings::get('store_default_return_window_days', '7'),
                 'store_payment_window_minutes' => StoreSettings::get('store_payment_window_minutes', '30'),
                 'store_default_commission_bp' => StoreSettings::get('store_default_commission_bp', '1000'),
+                'store_courier_est_base_paise' => StoreSettings::get('store_courier_est_base_paise', '6500'),
+                'store_courier_est_addl_paise' => StoreSettings::get('store_courier_est_addl_paise', '4000'),
             ],
             'shipping' => $this->defaultShippingRule(),
             'shiprocket' => [
@@ -266,6 +268,12 @@ final class StoreAdminController
                 \App\Core\Database::connection()->prepare(
                     "UPDATE store_commission_rules SET rate_bp = :bp, type = 'percent' WHERE scope = 'default'"
                 )->execute(['bp' => $commissionBp]);
+                foreach (['courier_base' => 'store_courier_est_base_paise', 'courier_addl' => 'store_courier_est_addl_paise'] as $field => $key) {
+                    $p = \App\Services\Store\ProductService::toPaise((string) ($request->post[$field] ?? ''));
+                    if ($p !== null && $p <= 100000) {
+                        StoreSettings::set($key, (string) $p);
+                    }
+                }
                 $flat = \App\Services\Store\ProductService::toPaise((string) ($request->post['ship_flat'] ?? ''));
                 $freeRaw = trim((string) ($request->post['ship_free_above'] ?? ''));
                 $free = $freeRaw === '' ? null : \App\Services\Store\ProductService::toPaise($freeRaw);

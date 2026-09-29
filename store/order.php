@@ -185,7 +185,7 @@ require __DIR__ . '/_header.php';
         <section class="st-seller-group">
           <div class="st-seller-group-head">
             <span>Package <?= e(substr((string) $vo['sub_order_no'], -1)) ?> · sold by <a href="<?= e(store_url('seller/' . $vo['vendor_slug'])) ?>"><strong><?= e($vo['vendor_name']) ?></strong></a></span>
-            <span class="st-ship-note"><?= e($packageStatus[$vo['status']] ?? ucfirst(str_replace('_', ' ', (string) $vo['status']))) ?> · <?= (int) $vo['shipping_paise'] > 0 ? 'shipping ' . e(store_rupees((int) $vo['shipping_paise'])) : 'free shipping' ?></span>
+            <span class="st-ship-note"><?= e($packageStatus[$vo['status']] ?? ucfirst(str_replace('_', ' ', (string) $vo['status']))) ?></span>
           </div>
           <?php foreach ($vo['items'] as $it): ?>
             <div class="st-line" style="grid-template-columns:56px 1fr auto">
@@ -301,7 +301,7 @@ require __DIR__ . '/_header.php';
       <dl>
         <dt>Items</dt><dd><?= e(store_rupees((int) $order['items_subtotal_paise'])) ?></dd>
         <?php if ((int) $order['discount_paise'] > 0): ?><dt>Coupon <?= e((string) $order['coupon_code']) ?></dt><dd class="st-save">−<?= e(store_rupees((int) $order['discount_paise'])) ?></dd><?php endif; ?>
-        <dt>Shipping</dt><dd><?= (int) $order['shipping_paise'] > 0 ? e(store_rupees((int) $order['shipping_paise'])) : 'Free' ?></dd>
+        <dt>Delivery</dt><dd><?= (int) $order['shipping_paise'] > 0 ? e(store_rupees((int) $order['shipping_paise'])) : 'Free' ?></dd>
         <dt class="st-total">Total</dt><dd class="st-total"><?= e(store_rupees((int) $order['grand_total_paise'])) ?></dd>
       </dl>
       <p class="st-summary-note">Includes <?= e(store_rupees((int) $order['tax_included_paise'])) ?> GST.</p>

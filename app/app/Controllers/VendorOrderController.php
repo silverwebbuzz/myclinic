@@ -72,9 +72,13 @@ final class VendorOrderController
             return Response::html('Order not found', 404);
         }
 
+        $shipment = \App\Services\Store\ShippingService::activeShipment((int) $vo['id']);
+
         return $this->render('store_vendor/order_detail', [
             'vo' => $vo,
-            'shipment' => \App\Services\Store\ShippingService::activeShipment((int) $vo['id']),
+            'shipment' => $shipment,
+            'fee' => \App\Services\Store\SellerFeeService::packageCharge($vo, $shipment),
+            'charges' => \App\Services\Store\SellerFeeService::chargesFor((int) $vo['id']),
             'suggest' => \App\Services\Store\ShippingService::suggestPackage((int) $vo['id']),
             'courierOn' => \App\Services\Store\ShiprocketClient::configured(),
             'taxDocs' => array_values(array_filter(
@@ -87,7 +91,22 @@ final class VendorOrderController
     /** Book (or retry booking) courier pickup via Shiprocket. */
     public function book(Request $request, string $id): Response
     {
-        $res = \App\Services\Store\ShippingService::book((int) $id, (int) $this->vendor()['id'], [
+        $vendorId = (int) $this->vendor()['id'];
+        // First booking needs the parcel-on-scale photo (weight-dispute evidence); retries don't.
+        $vo = $this->load((int) $id);
+        if ($vo !== null && \App\Services\Store\ShippingService::activeShipment((int) $vo['id']) === null) {
+            $file = $_FILES['parcel_photo'] ?? [];
+            $hasUpload = is_array($file) && (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE;
+            if ($hasUpload || empty($vo['parcel_photo_path'])) {
+                $saved = \App\Services\Store\ShippingService::saveParcelPhoto((int) $vo['id'], $vendorId, is_array($file) ? $file : []);
+                if (!$saved['ok']) {
+                    $this->flash($saved, '');
+
+                    return Response::redirect('/vendor/orders/' . (int) $id);
+                }
+            }
+        }
+        $res = \App\Services\Store\ShippingService::book((int) $id, $vendorId, [
             'weight_g' => (int) ($request->post['weight_g'] ?? 0),
             'length_cm' => (float) ($request->post['length_cm'] ?? 0),
             'breadth_cm' => (float) ($request->post['breadth_cm'] ?? 0),
@@ -96,6 +115,14 @@ final class VendorOrderController
         $this->flash($res, 'Courier booked. Print the label, stick it on the package, and hand it over at pickup.');
 
         return Response::redirect('/vendor/orders/' . (int) $id);
+    }
+
+    /** The seller's own parcel photo for a package. */
+    public function parcelPhoto(Request $request, string $id): Response
+    {
+        $vo = $this->load((int) $id);
+
+        return $vo === null ? Response::html('Not found', 404) : \App\Services\Store\ShippingService::parcelPhotoResponse($vo);
     }
 
     public function accept(Request $request, string $id): Response

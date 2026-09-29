@@ -615,6 +615,10 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/store/orders/{id}/packages/{voId}/mark-delivered', [\App\Controllers\StoreOrderAdminController::class, 'markDelivered']);
         $admin->post('/store/orders/{id}/packages/{voId}/undelivered', [\App\Controllers\StoreOrderAdminController::class, 'refundUndelivered']);
         $admin->post('/store/orders/{id}/packages/{voId}/invoice', [\App\Controllers\StoreOrderAdminController::class, 'issueInvoice']);
+        $admin->get('/store/orders/{id}/packages/{voId}/parcel-photo', [\App\Controllers\StoreOrderAdminController::class, 'parcelPhoto']);
+        $admin->post('/store/orders/{id}/packages/{voId}/charge', [\App\Controllers\StoreOrderAdminController::class, 'charge']);
+        $admin->post('/store/orders/{id}/packages/{voId}/charges/{ledgerId}/reverse', [\App\Controllers\StoreOrderAdminController::class, 'reverseCharge']);
+        $admin->post('/store/orders/{id}/packages/{voId}/courier-charge', [\App\Controllers\StoreOrderAdminController::class, 'courierCharge']);
         // GST documents + seller policies (P11b)
         $admin->get('/store/hsn', [StoreCatalogAdminController::class, 'hsn']);
         $admin->post('/store/hsn', [StoreCatalogAdminController::class, 'saveHsn']);
@@ -693,6 +697,7 @@ return static function (RouteRegistrar $router): void {
         $vendor->post('/orders/{id}/packed', [\App\Controllers\VendorOrderController::class, 'packed']);
         $vendor->post('/orders/{id}/cancel', [\App\Controllers\VendorOrderController::class, 'cancelItems']);
         $vendor->post('/orders/{id}/book', [\App\Controllers\VendorOrderController::class, 'book']);
+        $vendor->get('/orders/{id}/parcel-photo', [\App\Controllers\VendorOrderController::class, 'parcelPhoto']);
         $vendor->post('/orders/{id}/invoice', [\App\Controllers\StoreTaxController::class, 'vendorIssueInvoice']);
         $vendor->get('/gst', [\App\Controllers\StoreTaxController::class, 'vendorRegister']);
         $vendor->get('/gst/export', [\App\Controllers\StoreTaxController::class, 'vendorCsv']);

@@ -12,7 +12,8 @@ use App\Core\Database;
  *
  *  - Prices are GST-inclusive; GST is extracted per line from the seller's selling price
  *    (price − seller-funded discount), which is what the seller's tax invoice shows.
- *  - Shipping is charged per SELLER sub-order: flat fee, free above a threshold.
+ *  - Delivery is charged once per ORDER (flat fee, free above a threshold) and split
+ *    across seller packages by value; sellers pay the courier minus their share (SellerFeeService).
  *  - Coupons (optional) are spread across eligible lines in proportion to value:
  *        customer pays   = subtotal − vendor-funded − platform-funded discount
  *        seller revenue  = subtotal − vendor-funded discount   (platform coupons never cost the seller)
@@ -123,24 +124,30 @@ final class PricingService
             $groups[$vid]['weight_g'] += (int) $it['weight_g'] * $qty;
         }
 
-        $subtotal = $shipping = $tax = $mrp = $discount = 0;
-        $shippingWaived = 0;
-        foreach ($groups as $vid => &$g) {
-            [$flat, $freeAbove] = self::shippingRule($vid);
-            $g['free_above'] = $freeAbove;
-            // Free-shipping threshold is on what the customer pays this seller.
-            $fee = ($freeAbove !== null && ($g['subtotal'] - $g['discount']) >= $freeAbove) ? 0 : $flat;
-            if ($fee > 0 && isset($freeShipVendors[$vid])) {
-                $shippingWaived += $fee;
-                $fee = 0;
-            }
-            $g['shipping'] = $fee;
-            $g['total'] = $g['subtotal'] - $g['discount'] + $g['shipping'];
+        $subtotal = $tax = $mrp = $discount = 0;
+        foreach ($groups as $g) {
             $subtotal += $g['subtotal'];
             $discount += $g['discount'];
-            $shipping += $g['shipping'];
             $tax += $g['tax'];
             $mrp += $g['mrp_total'];
+        }
+
+        // ONE delivery fee per order, free from a threshold on what the customer pays for items.
+        [$flat, $freeAbove] = self::shippingRule();
+        $itemsPaid = $subtotal - $discount;
+        $shipping = ($groups && !($freeAbove !== null && $itemsPaid >= $freeAbove)) ? $flat : 0;
+        $shippingWaived = 0;
+        if ($shipping > 0 && $freeShipVendors) {   // free-shipping coupon applied to this cart
+            $shippingWaived = $shipping;
+            $shipping = 0;
+        }
+        // Split the fee across packages by value. Each share offsets that seller's
+        // courier charge (SellerFeeService) and is invoiced per package as eClinicPro's delivery supply.
+        $shares = self::split($shipping, array_map(static fn ($g) => $g['subtotal'] - $g['discount'], $groups));
+        foreach ($groups as $vid => &$g) {
+            $g['shipping'] = $shares[$vid] ?? 0;
+            $g['free_above'] = $freeAbove;
+            $g['total'] = $g['subtotal'] - $g['discount'] + $g['shipping'];
         }
         unset($g);
 
@@ -152,6 +159,9 @@ final class PricingService
             'discount' => $discount,
             'shipping' => $shipping,
             'shipping_waived' => $shippingWaived,
+            'free_above' => $freeAbove,
+            // "Add ₹X more for free delivery" (null when delivery is already free or never free).
+            'add_for_free_shipping' => $shipping > 0 && $freeAbove !== null ? max(0, $freeAbove - $itemsPaid) : null,
             'tax_included' => $tax,
             'grand_total' => $subtotal - $discount + $shipping,
             'item_count' => array_sum(array_map(static fn ($g) => array_sum(array_column($g['lines'], 'qty')), $groups)),
@@ -180,24 +190,67 @@ final class PricingService
         return (int) $orderItem['line_subtotal_paise'] - (int) ($orderItem['vendor_discount_paise'] ?? 0);
     }
 
-    /** @return array{0: int, 1: ?int} [flat fee paise, free-above paise or null] */
-    public static function shippingRule(int $vendorId): array
+    /**
+     * The customer delivery fee: once per ORDER (the platform default row, vendor_id NULL).
+     *
+     * @return array{0: int, 1: ?int} [flat fee paise, free-above paise or null]
+     */
+    public static function shippingRule(): array
     {
-        static $cache = [];
-        if (isset($cache[$vendorId])) {
-            return $cache[$vendorId];
+        static $cache = null;
+        if ($cache !== null) {
+            return $cache;
         }
-        $st = Database::connection()->prepare(
+        $r = Database::connection()->query(
             'SELECT flat_fee_paise, free_above_paise FROM store_shipping_rules
-              WHERE is_active = 1 AND (vendor_id = :v OR vendor_id IS NULL)
-              ORDER BY vendor_id IS NULL, id DESC LIMIT 1'
-        );
-        $st->execute(['v' => $vendorId]);
-        $r = $st->fetch();
+              WHERE is_active = 1 AND vendor_id IS NULL ORDER BY id DESC LIMIT 1'
+        )->fetch();
 
-        return $cache[$vendorId] = $r
+        return $cache = $r
             ? [(int) $r['flat_fee_paise'], $r['free_above_paise'] !== null ? (int) $r['free_above_paise'] : null]
             : [0, null];
+    }
+
+    /**
+     * Split $amount across keys in proportion to $weights (largest remainder, sums exactly).
+     * All weights zero → everything on the first key.
+     *
+     * @param array<int, int> $weights
+     * @return array<int, int>
+     */
+    public static function split(int $amount, array $weights): array
+    {
+        if (!$weights) {
+            return [];
+        }
+        $out = array_fill_keys(array_keys($weights), 0);
+        $total = array_sum(array_map(static fn ($w) => max(0, $w), $weights));
+        if ($amount <= 0) {
+            return $out;
+        }
+        if ($total <= 0) {
+            $out[array_key_first($weights)] = $amount;
+
+            return $out;
+        }
+        $given = 0;
+        $rem = [];
+        foreach ($weights as $k => $w) {
+            $exact = $amount * max(0, $w) / $total;
+            $out[$k] = (int) floor($exact);
+            $given += $out[$k];
+            $rem[$k] = $exact - $out[$k];
+        }
+        arsort($rem);
+        foreach (array_keys($rem) as $k) {
+            if ($given >= $amount) {
+                break;
+            }
+            $out[$k]++;
+            $given++;
+        }
+
+        return $out;
     }
 
     /**

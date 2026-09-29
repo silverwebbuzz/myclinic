@@ -176,9 +176,12 @@ final class VendorProductController
         $licences = CatalogService::vendorLicences((int) $vendor['id']);
         $tree = CatalogService::tree();
         // Pre-compute which subcategories this seller may pick, and why not.
+        $productId = (int) ($product['id'] ?? 0);
         foreach ($tree as &$dept) {
             foreach ($dept['subs'] as &$sub) {
                 $sub['block_reason'] = CatalogService::listingBlockReason($sub, $licences);
+                // Commission this seller would pay in this category (for the earnings estimate).
+                $sub['commission'] = \App\Services\Store\CommissionService::resolve((int) $vendor['id'], (int) $sub['id'], (int) $dept['id'], $productId);
             }
             unset($sub);
         }
@@ -194,6 +197,8 @@ final class VendorProductController
             'licences' => $licences,
             'problems' => $product !== null ? ProductService::submitProblems($vendor, $product) : [],
             'hsnList' => \App\Services\Store\HsnService::forForm(),
+            'feeConfig' => \App\Services\Store\SellerFeeService::config(),
+            'defaultCommission' => \App\Services\Store\CommissionService::resolve((int) $vendor['id'], 0, 0, $productId),
         ]);
     }
 

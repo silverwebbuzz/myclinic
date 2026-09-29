@@ -217,10 +217,72 @@ $a = $order['ship_address'];
                 </details>
             <?php endif; ?>
             <p class="mt-3 text-xs text-slate-500">
-                Sub-total <?= $r($vo['items_subtotal_paise']) ?> · shipping charged <?= $r($vo['shipping_paise']) ?> ·
+                Sub-total <?= $r($vo['items_subtotal_paise']) ?> · customer delivery fee share <?= $r($vo['shipping_paise']) ?> ·
                 commission <?= $r($vo['commission_paise']) ?> + GST on commission <?= $r($vo['commission_gst_paise']) ?> ·
-                <strong>seller payable <?= $r($vo['vendor_payable_paise']) ?></strong> (released only after delivery + return window)
+                <strong>seller payable <?= $r($vo['vendor_payable_paise']) ?></strong> before courier charges (released only after delivery + return window)
             </p>
+            <?php
+            $activeShip = null;
+            foreach ($voShip as $s) {
+                if ($s['direction'] === 'forward' && $s['status'] !== 'cancelled') {
+                    $activeShip = $s;
+                }
+            }
+            $fee = \App\Services\Store\SellerFeeService::packageCharge($vo, $activeShip);
+            $charges = \App\Services\Store\SellerFeeService::chargesFor((int) $vo['id']);
+            $charged = isset($vo['seller_shipping_paise']) && $vo['seller_shipping_paise'] !== null;   // booked at delivery
+            ?>
+            <details class="mt-3 rounded border bg-slate-50 p-3 text-sm">
+                <summary class="cursor-pointer font-medium text-slate-700">
+                    Courier &amp; seller charges · seller <?= $charged ? 'paid' : 'pays' ?> <?= $r($charged ? $vo['seller_shipping_paise'] : $fee['charge']) ?> courier<?= !$charged && $fee['estimated'] ? ' (estimate)' : '' ?>
+                    <?= $charges ? ' · ' . count($charges) . ' ledger entr' . (count($charges) === 1 ? 'y' : 'ies') : '' ?>
+                </summary>
+                <p class="mt-2 text-xs text-slate-600">
+                    Courier <?= $r($fee['courier']) ?><?= $fee['estimated'] ? ' (rate-card estimate)' : '' ?> − customer fee share <?= $r($fee['credit']) ?> = <strong><?= $r($fee['charge']) ?></strong> charged to the seller at delivery.
+                    <?php if (!empty($vo['parcel_photo_path'])): ?>
+                        · <a href="/admin/store/orders/<?= (int) $order['id'] ?>/packages/<?= (int) $vo['id'] ?>/parcel-photo" target="_blank" class="text-sky-700 hover:underline">Parcel photo (on scale)</a>
+                    <?php else: ?>
+                        · <span class="text-amber-700">no parcel photo</span>
+                    <?php endif; ?>
+                </p>
+                <form method="post" action="/admin/store/orders/<?= (int) $order['id'] ?>/packages/<?= (int) $vo['id'] ?>/courier-charge" class="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                    <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+                    <label>Actual courier charge ₹ <input name="courier" inputmode="decimal" value="<?= $e(isset($vo['courier_charge_paise']) && $vo['courier_charge_paise'] !== null ? \App\Services\Store\ProductService::rupees((int) $vo['courier_charge_paise']) : '') ?>" placeholder="from Shiprocket invoice" class="ml-1 w-32 rounded border px-2 py-1"></label>
+                    <button class="rounded border px-2 py-1 hover:bg-white">Save</button>
+                    <span class="text-slate-400">If already delivered, the difference is booked automatically.</span>
+                </form>
+                <?php if ($charges): ?>
+                    <table class="mt-3 w-full text-xs">
+                        <?php foreach ($charges as $c): ?>
+                            <tr class="border-t">
+                                <td class="py-1 text-slate-400"><?= $e(substr((string) $c['created_at'], 0, 10)) ?></td>
+                                <td class="py-1"><?= $e($c['memo']) ?></td>
+                                <td class="py-1 text-right <?= (int) $c['amount_paise'] < 0 ? 'text-red-700' : 'text-emerald-700' ?>"><?= (int) $c['amount_paise'] < 0 ? '−' : '+' ?><?= $r(abs((int) $c['amount_paise'])) ?></td>
+                                <td class="py-1 text-right text-slate-400"><?= $e($c['status']) ?></td>
+                                <td class="py-1 text-right">
+                                    <?php if ((int) $c['amount_paise'] < 0 && $c['created_by_type'] === 'admin'): ?>
+                                        <form method="post" action="/admin/store/orders/<?= (int) $order['id'] ?>/packages/<?= (int) $vo['id'] ?>/charges/<?= (int) $c['id'] ?>/reverse" onsubmit="return confirm('Reverse this charge? The seller is credited the same amount.')">
+                                            <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><button class="text-sky-700 hover:underline">Reverse</button></form>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </table>
+                <?php endif; ?>
+                <form method="post" action="/admin/store/orders/<?= (int) $order['id'] ?>/packages/<?= (int) $vo['id'] ?>/charge" class="mt-3 flex flex-wrap items-end gap-2 text-xs"
+                      onsubmit="return confirm('Charge the seller this amount? It is deducted from their next payout and shown in their statement.')">
+                    <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+                    <label class="block">Charge the seller for
+                        <select name="kind" required class="mt-1 block rounded border px-2 py-1">
+                            <?php foreach (\App\Services\Store\SettlementService::CHARGES as $k => [, $label]): ?>
+                                <option value="<?= $e($k) ?>"><?= $e($label) ?></option>
+                            <?php endforeach; ?>
+                        </select></label>
+                    <label class="block">Amount ₹<input name="amount" required inputmode="decimal" class="mt-1 block w-24 rounded border px-2 py-1"></label>
+                    <label class="block grow">Note (seller sees it)<input name="note" maxlength="150" placeholder="e.g. Delhivery billed 1.5 kg, entered 0.5 kg" class="mt-1 block w-full rounded border px-2 py-1"></label>
+                    <button class="rounded bg-slate-800 px-3 py-1.5 text-white hover:bg-slate-700">Add charge</button>
+                </form>
+            </details>
         </section>
     <?php endforeach; ?>
 

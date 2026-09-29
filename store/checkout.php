@@ -146,7 +146,7 @@ $sel = (string) ($old['address_id'] ?? ($addresses[0]['id'] ?? 'new'));
             <div class="st-seller-group" style="margin:0 0 14px">
               <div class="st-seller-group-head">
                 <span>Package from <strong><?= e($g['vendor_name']) ?></strong></span>
-                <span class="st-ship-note"><?= $g['shipping'] > 0 ? 'Shipping ' . e(store_rupees((int) $g['shipping'])) : 'Free shipping' ?></span>
+                <?php if (count($quote['groups']) > 1): ?><span class="st-ship-note">Ships separately</span><?php endif; ?>
               </div>
               <?php foreach ($g['lines'] as $l): ?>
                 <div class="st-line" style="grid-template-columns:56px 1fr auto">
@@ -166,7 +166,7 @@ $sel = (string) ($old['address_id'] ?? ($addresses[0]['id'] ?? 'new'));
         <dl>
           <dt>Items (<?= (int) $quote['item_count'] ?>)</dt><dd><?= e(store_rupees((int) $quote['subtotal'])) ?></dd>
           <?php if ($quote['discount'] > 0): ?><dt>Coupon <?= e($quote['coupon']['code']) ?></dt><dd class="st-save">−<?= e(store_rupees((int) $quote['discount'])) ?></dd><?php endif; ?>
-          <dt>Shipping</dt><dd><?= $quote['shipping'] > 0 ? e(store_rupees((int) $quote['shipping'])) : 'Free' ?></dd>
+          <dt>Delivery</dt><dd><?= $quote['shipping'] > 0 ? e(store_rupees((int) $quote['shipping'])) : 'Free' ?></dd>
           <dt class="st-total">To pay</dt><dd class="st-total"><?= e(store_rupees((int) $quote['grand_total'])) ?></dd>
         </dl>
         <p class="st-summary-note">Includes <?= e(store_rupees((int) $quote['tax_included'])) ?> GST. Items are reserved for you for <?= (int) store_setting('store_payment_window_minutes', '30') ?> minutes while you pay.</p>

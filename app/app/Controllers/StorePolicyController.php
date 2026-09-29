@@ -36,7 +36,7 @@ final class StorePolicyController
 
         return Response::html(View::render('admin/store_policy', [
             'slug' => $slug, 'page' => $page, 'stats' => $stats, 'versions' => $versions,
-            'tokens' => $tokens, 'preview' => $preview,
+            'tokens' => $tokens, 'preview' => $preview, 'defaultBody' => StorePolicyService::defaultBody($slug),
             'csrf' => CsrfService::token(), 'flashOk' => SessionFlash::pull('store_ok'), 'flashErr' => SessionFlash::pull('store_err'),
         ]));
     }

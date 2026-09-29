@@ -151,6 +151,7 @@ final class ShippingService
                 return $fail('assign AWB', $res);
             }
             self::saveAwb($sid, $awb, (string) ($res['response']['data']['courier_name'] ?? ''), (int) ($res['response']['data']['courier_company_id'] ?? 0));
+            self::saveCharge($sid, (array) ($res['response']['data'] ?? []));
             $s['awb_code'] = $awb;
         }
         // AWB in hand (from step 2 or 3): the package is ready to hand over. Guarded, so it runs once.
@@ -520,6 +521,100 @@ final class ShippingService
             'awb_code' => $awb, 'courier_name' => $courier !== '' ? mb_substr($courier, 0, 120) : null,
             'courier_id' => $courierId > 0 ? $courierId : null,
             'status' => 'awb_assigned', 'status_rank' => 20, 'last_error' => null,
+        ]);
+    }
+
+    /**
+     * Freight Shiprocket billed for the shipment, when the AWB response carries it.
+     * VERIFY WITH PROVIDER: field name. Otherwise admin enters it on the order page,
+     * or the rate-card estimate is used at delivery (SellerFeeService).
+     */
+    private static function saveCharge(int $sid, array $data): void
+    {
+        foreach (['freight_charges', 'freight_charge', 'shipping_charges', 'rate'] as $k) {
+            if (isset($data[$k]) && is_numeric($data[$k]) && (float) $data[$k] > 0) {
+                QueryBuilder::table('store_shipments')->where('id', '=', $sid)->update(['actual_charge_paise' => (int) round((float) $data[$k] * 100)]);
+
+                return;
+            }
+        }
+        error_log('[Shipping] no freight charge in AWB response for shipment ' . $sid . ': keys ' . implode(',', array_keys($data)));
+    }
+
+    // ------------------------------------------------------------------
+    // Parcel photo (packed parcel on a scale — evidence for weight disputes)
+    // ------------------------------------------------------------------
+
+    private const PHOTO_EXT = ['jpg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'];
+
+    /** Private, outside web access: <repo>/storage/store_parcel_photos. */
+    public static function parcelPhotoRoot(): string
+    {
+        return dirname(__DIR__, 4) . '/storage/store_parcel_photos';
+    }
+
+    /**
+     * Save the seller's parcel photo for a package (replaces an earlier one).
+     *
+     * @param array<string, mixed> $file one $_FILES entry
+     * @return array{ok: bool, error?: string}
+     */
+    public static function saveParcelPhoto(int $vendorOrderId, int $vendorId, array $file): array
+    {
+        $err = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+        if ($err === UPLOAD_ERR_INI_SIZE || $err === UPLOAD_ERR_FORM_SIZE) {
+            return ['ok' => false, 'error' => 'The photo is too large for the server. Take it at a lower resolution (or send a screenshot of it) and try again.'];
+        }
+        if ($err !== UPLOAD_ERR_OK || !is_uploaded_file((string) ($file['tmp_name'] ?? ''))) {
+            return ['ok' => false, 'error' => 'Attach a photo of the packed parcel on the scale.'];
+        }
+        if ((int) ($file['size'] ?? 0) > 6 * 1024 * 1024) {
+            return ['ok' => false, 'error' => 'The photo is too large (max 6 MB).'];
+        }
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = $finfo ? (string) finfo_file($finfo, (string) $file['tmp_name']) : '';
+        $ext = array_search($mime, self::PHOTO_EXT, true);
+        if ($ext === false) {
+            return ['ok' => false, 'error' => 'The parcel photo must be a JPG, PNG or WebP image.'];
+        }
+        $root = self::parcelPhotoRoot();
+        $dir = $root . '/' . $vendorId;
+        if (!is_dir($dir) && !mkdir($dir, 0770, true) && !is_dir($dir)) {
+            return ['ok' => false, 'error' => 'Could not save the photo. Please try again.'];
+        }
+        if (!is_file($root . '/.htaccess')) {
+            @file_put_contents($root . '/.htaccess', "Require all denied\n");
+        }
+        $name = 'vo' . $vendorOrderId . '-' . bin2hex(random_bytes(8)) . '.' . $ext;
+        if (!move_uploaded_file((string) $file['tmp_name'], $dir . '/' . $name)) {
+            return ['ok' => false, 'error' => 'Could not save the photo. Please try again.'];
+        }
+        try {
+            QueryBuilder::table('store_vendor_orders')->where('id', '=', $vendorOrderId)->where('vendor_id', '=', $vendorId)
+                ->update(['parcel_photo_path' => $vendorId . '/' . $name]);
+        } catch (\Throwable $e) {
+            error_log('[Shipping::saveParcelPhoto] ' . $e->getMessage());
+
+            return ['ok' => false, 'error' => 'Parcel photos are not switched on yet (database update pending). Please contact eClinicPro.'];
+        }
+
+        return ['ok' => true];
+    }
+
+    /** Streams a package's parcel photo (caller authorises). */
+    public static function parcelPhotoResponse(array $vendorOrder): \App\Http\Response
+    {
+        $rel = (string) ($vendorOrder['parcel_photo_path'] ?? '');
+        $root = realpath(self::parcelPhotoRoot());
+        $abs = ($root !== false && $rel !== '') ? realpath($root . '/' . $rel) : false;
+        if ($abs === false || !str_starts_with($abs, $root . DIRECTORY_SEPARATOR)) {
+            return \App\Http\Response::html('Not found', 404);
+        }
+        $ext = strtolower(pathinfo($abs, PATHINFO_EXTENSION));
+
+        return new \App\Http\Response((string) file_get_contents($abs), 200, [
+            'Content-Type' => self::PHOTO_EXT[$ext] ?? 'application/octet-stream',
+            'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 

@@ -50,6 +50,17 @@ final class SettlementService
         self::entry($vid, $vendorOrderId, 'sale_credit', $sale, "sale:$vendorOrderId", 'Sale ' . $vo['sub_order_no'], $availableAt);
         self::entry($vid, $vendorOrderId, 'commission_debit', -$commission, "commission:$vendorOrderId", 'Commission ' . $vo['sub_order_no'], $availableAt);
         self::entry($vid, $vendorOrderId, 'commission_gst_debit', -$commissionGst, "commission_gst:$vendorOrderId", 'GST on commission ' . $vo['sub_order_no'], $availableAt);
+        // Seller pays the forward courier, less the customer's delivery fee share for this package.
+        $ship = SellerFeeService::packageCharge($vo, ShippingService::activeShipment($vendorOrderId));
+        self::entry($vid, $vendorOrderId, 'shipping_debit', -$ship['charge'], "ship:$vendorOrderId",
+            'Courier ' . $vo['sub_order_no'] . ': ₹' . ProductService::rupees($ship['courier']) . ($ship['estimated'] ? ' (estimated)' : '')
+            . ($ship['credit'] > 0 ? ' − ₹' . ProductService::rupees($ship['credit']) . ' paid by customer' : ''), $availableAt);
+        try {
+            Database::connection()->prepare('UPDATE store_vendor_orders SET courier_charge_paise = :c, seller_shipping_paise = :s WHERE id = :id')
+                ->execute(['c' => $ship['courier'], 's' => $ship['charge'], 'id' => $vendorOrderId]);
+        } catch (\Throwable $e) {
+            error_log('[Settlement::recordDelivered] ' . $e->getMessage());   // patch 2026_10_04 not imported: ledger entry still written
+        }
         // TCS / TDS: columns exist; entries start once the CA confirms rates (plan D2).
         Database::connection()->prepare("UPDATE store_vendor_orders SET settlement_status = 'on_hold' WHERE id = :id AND settlement_status = 'unsettled'")
             ->execute(['id' => $vendorOrderId]);
@@ -64,6 +75,97 @@ final class SettlementService
         self::entry($vendorId, null, $amountPaise < 0 ? 'penalty' : 'adjustment', $amountPaise,
             'adj:' . $vendorId . ':' . bin2hex(random_bytes(6)), mb_substr(trim($memo), 0, 255), date('Y-m-d H:i:s'), 'available', 'admin', $adminId);
         StoreAudit::log('ledger.adjust', 'vendor', $vendorId, null, ['amount' => $amountPaise, 'memo' => $memo]);
+
+        return ['ok' => true];
+    }
+
+    /** Seller charges admin can raise on a package: [ledger type, statement label]. */
+    public const CHARGES = [
+        'weight' => ['shipping_debit', 'Weight dispute (courier re-weighed the parcel)'],
+        'return_pickup' => ['shipping_debit', 'Return pickup (seller\'s fault)'],
+        'rto' => ['rto_charge', 'Failed delivery caused by the seller'],
+        'other' => ['penalty', 'Other charge'],
+    ];
+
+    /**
+     * Charge a seller for one of the CHARGES on a package (deducted from their next payout).
+     *
+     * @return array{ok: bool, error?: string}
+     */
+    public static function charge(int $vendorOrderId, string $kind, int $amountPaise, string $note, int $adminId): array
+    {
+        $vo = QueryBuilder::table('store_vendor_orders')->where('id', '=', $vendorOrderId)->first();
+        if ($vo === null || !isset(self::CHARGES[$kind])) {
+            return ['ok' => false, 'error' => 'Choose a charge type.'];
+        }
+        if ($amountPaise <= 0 || $amountPaise > 5000000) {
+            return ['ok' => false, 'error' => 'Enter the amount in rupees.'];
+        }
+        [$type, $label] = self::CHARGES[$kind];
+        $memo = mb_substr($label . ' ' . $vo['sub_order_no'] . (trim($note) !== '' ? ': ' . trim($note) : ''), 0, 255);
+        self::entry((int) $vo['vendor_id'], $vendorOrderId, $type, -$amountPaise, 'chg:' . $vendorOrderId . ':' . bin2hex(random_bytes(6)),
+            $memo, date('Y-m-d H:i:s'), 'available', 'admin', $adminId);
+        StoreAudit::log('ledger.charge', 'vendor_order', $vendorOrderId, null, ['kind' => $kind, 'amount' => $amountPaise, 'note' => $note]);
+
+        return ['ok' => true];
+    }
+
+    /**
+     * Admin enters the real forward courier charge (e.g. from Shiprocket's invoice).
+     * Before delivery it is simply used at delivery; after delivery the difference
+     * is booked as a correction so the seller is charged the right amount.
+     *
+     * @return array{ok: bool, error?: string}
+     */
+    public static function setCourierCharge(int $vendorOrderId, int $courierPaise, int $adminId): array
+    {
+        $vo = QueryBuilder::table('store_vendor_orders')->where('id', '=', $vendorOrderId)->first();
+        if ($vo === null || $courierPaise < 0 || $courierPaise > 5000000) {
+            return ['ok' => false, 'error' => 'Enter the courier charge in rupees.'];
+        }
+        $before = $vo['seller_shipping_paise'] ?? null;
+        $oldCourier = $vo['courier_charge_paise'] ?? null;
+        QueryBuilder::table('store_vendor_orders')->where('id', '=', $vendorOrderId)->update(['courier_charge_paise' => $courierPaise]);
+        if ($before !== null) {   // already charged at delivery → book the difference
+            $vo['courier_charge_paise'] = $courierPaise;
+            $ship = SellerFeeService::packageCharge($vo, null);
+            $diff = $ship['charge'] - (int) $before;
+            if ($diff !== 0) {
+                self::entry((int) $vo['vendor_id'], $vendorOrderId, $diff > 0 ? 'shipping_debit' : 'adjustment', -$diff,
+                    'shipfix:' . $vendorOrderId . ':' . bin2hex(random_bytes(6)),
+                    'Courier charge corrected ' . $vo['sub_order_no'] . ' to ₹' . ProductService::rupees($courierPaise), date('Y-m-d H:i:s'), 'available', 'admin', $adminId);
+            }
+            QueryBuilder::table('store_vendor_orders')->where('id', '=', $vendorOrderId)->update(['seller_shipping_paise' => $ship['charge']]);
+        }
+        StoreAudit::log('ledger.courier_charge', 'vendor_order', $vendorOrderId, ['courier' => $oldCourier], ['courier' => $courierPaise]);
+
+        return ['ok' => true];
+    }
+
+    /**
+     * Reverse an admin charge (e.g. weight dispute won). Adds an equal credit; the original stays (append-only).
+     *
+     * @return array{ok: bool, error?: string}
+     */
+    public static function reverseCharge(int $ledgerId, int $vendorOrderId, int $adminId): array
+    {
+        $row = QueryBuilder::table('store_vendor_ledger')->where('id', '=', $ledgerId)->where('vendor_order_id', '=', $vendorOrderId)->first();
+        if ($row === null || (int) $row['amount_paise'] >= 0 || !in_array($row['entry_type'], ['shipping_debit', 'rto_charge', 'penalty'], true)) {
+            return ['ok' => false, 'error' => 'That charge can\'t be reversed.'];
+        }
+        $st = Database::connection()->prepare(
+            'INSERT IGNORE INTO store_vendor_ledger
+                (vendor_id, vendor_order_id, entry_type, amount_paise, status, available_at, dedupe_key, memo, created_by_type, created_by_id)
+             VALUES (:v, :vo, \'adjustment\', :a, \'available\', NOW(), :k, :m, \'admin\', :bi)'
+        );
+        $st->execute([
+            'v' => (int) $row['vendor_id'], 'vo' => $vendorOrderId, 'a' => -(int) $row['amount_paise'], 'k' => 'rev:' . $ledgerId,
+            'm' => mb_substr('Reversed: ' . (string) $row['memo'], 0, 255), 'bi' => $adminId,
+        ]);
+        if ($st->rowCount() === 0) {
+            return ['ok' => false, 'error' => 'This charge was already reversed.'];
+        }
+        StoreAudit::log('ledger.reverse', 'vendor_order', $vendorOrderId, null, ['ledger_id' => $ledgerId]);
 
         return ['ok' => true];
     }

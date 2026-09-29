@@ -65,6 +65,18 @@ if (!$specRows) {
 }
 
 $selectedCategory = (int) $val('category_id', 0);
+$initialCommission = $defaultCommission ?? ['type' => 'percent', 'rate_bp' => 1000, 'fixed_paise' => 0];
+foreach ($tree as $dept) {
+    foreach ($dept['subs'] as $sub) {
+        if ((int) $sub['id'] === $selectedCategory && isset($sub['commission'])) {
+            $initialCommission = $sub['commission'];
+        }
+    }
+}
+$calcInit = [
+    'fees' => $feeConfig ?? null,
+    'comm' => ['type' => $initialCommission['type'], 'bp' => (int) $initialCommission['rate_bp'], 'fixed' => (int) $initialCommission['fixed_paise']],
+];
 $secondaryIds = array_map('intval', $hasOld ? (array) ($old['secondary_ids'] ?? []) : ($product['secondary_ids'] ?? []));
 $concernIds = array_map('intval', $hasOld ? (array) ($old['concern_ids'] ?? []) : ($product['concern_ids'] ?? []));
 $returnable = $hasOld ? !empty($old['is_returnable']) : (bool) ($product['is_returnable'] ?? true);
@@ -114,7 +126,8 @@ ob_start();
 <?php endif; ?>
 
 <form method="post" action="<?= $isNew ? '/vendor/products' : '/vendor/products/' . (int) $product['id'] ?>" class="mt-5 space-y-6"
-      x-data='productForm(<?= $e(json_encode(['variants' => $variantRows, 'specs' => $specRows], JSON_HEX_APOS | JSON_HEX_QUOT)) ?>)'>
+      x-data='productForm(<?= $e(json_encode(['variants' => $variantRows, 'specs' => $specRows, 'calc' => $calcInit], JSON_HEX_APOS | JSON_HEX_QUOT)) ?>)'
+      @category-picked.window="setCommission($event.detail)">
     <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
     <fieldset <?= $locked ? 'disabled' : '' ?> class="space-y-6">
 
@@ -128,13 +141,13 @@ ob_start();
             </label>
             <label class="block text-sm sm:col-span-2">
                 <span class="text-tx2">Category</span>
-                <select name="category_id" required class="<?= $input ?>" @change="$dispatch('category-picked', { hsn: $event.target.selectedOptions[0]?.dataset.hsn || '' })">
+                <select name="category_id" required class="<?= $input ?>" @change="const o = $event.target.selectedOptions[0]; $dispatch('category-picked', { hsn: o?.dataset.hsn || '', commType: o?.dataset.commType || '', commBp: +(o?.dataset.commBp || 0), commFixed: +(o?.dataset.commFixed || 0) })">
                     <option value="">Choose the best-fitting subcategory…</option>
                     <?php foreach ($tree as $dept): ?>
                         <optgroup label="<?= $e($dept['name']) ?>">
                             <?php foreach ($dept['subs'] as $sub): ?>
                                 <?php $blocked = $sub['block_reason'] !== null && (int) $sub['id'] !== $selectedCategory; ?>
-                                <option value="<?= (int) $sub['id'] ?>" data-hsn="<?= $e($sub['default_hsn'] ?? '') ?>" <?= (int) $sub['id'] === $selectedCategory ? 'selected' : '' ?> <?= $blocked ? 'disabled' : '' ?>>
+                                <option value="<?= (int) $sub['id'] ?>" data-hsn="<?= $e($sub['default_hsn'] ?? '') ?>" data-comm-type="<?= $e($sub['commission']['type'] ?? 'percent') ?>" data-comm-bp="<?= (int) ($sub['commission']['rate_bp'] ?? 0) ?>" data-comm-fixed="<?= (int) ($sub['commission']['fixed_paise'] ?? 0) ?>" <?= (int) $sub['id'] === $selectedCategory ? 'selected' : '' ?> <?= $blocked ? 'disabled' : '' ?>>
                                     <?= $e($sub['name']) ?><?= $blocked ? ' 🔒' : (($sub['listing_mode'] ?? '') === 'review' ? ' (extra review)' : '') ?>
                                 </option>
                             <?php endforeach; ?>
@@ -205,6 +218,36 @@ ob_start();
                         </span></label>
                     <label class="block text-xs sm:col-span-2"><span class="text-tx2">Barcode / EAN <span class="text-tx3">(optional)</span></span>
                         <input :name="`variants[${i}][barcode]`" x-model="v.barcode" maxlength="40" class="<?= $input ?>"></label>
+                </div>
+                <div class="mt-3 rounded-[8px] border border-ln bg-sf2 p-3 text-xs" x-show="!v.remove && calc.fees">
+                    <template x-if="!est(v)">
+                        <p class="text-tx3"><strong class="text-tx2">What you'll earn:</strong> enter the selling price to see an estimate.</p>
+                    </template>
+                    <template x-if="est(v)">
+                        <div>
+                            <p class="font-semibold text-tx">What you'll earn per unit (estimate)</p>
+                            <div class="mt-2 grid gap-3 sm:grid-cols-2">
+                                <template x-for="sc in est(v).cases" :key="sc.label">
+                                    <dl class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-0.5">
+                                        <dt class="col-span-2 mb-1 font-medium text-tx2" x-text="sc.label"></dt>
+                                        <dt class="text-tx3">Selling price</dt><dd class="text-right" x-text="rs(sc.price)"></dd>
+                                        <dt class="text-tx3" x-text="'Commission (' + est(v).commLabel + ')'"></dt><dd class="text-right" x-text="'−' + rs(sc.commission)"></dd>
+                                        <dt class="text-tx3">GST on commission (18%)</dt><dd class="text-right" x-text="'−' + rs(sc.commissionGst)"></dd>
+                                        <dt class="text-tx3" x-text="'Courier (' + est(v).billedLabel + ' billed)'"></dt><dd class="text-right" x-text="'−' + rs(sc.courier)"></dd>
+                                        <template x-if="sc.credit > 0"><dt class="text-tx3">Customer's delivery fee</dt></template>
+                                        <template x-if="sc.credit > 0"><dd class="text-right text-emerald-700" x-text="'+' + rs(sc.credit)"></dd></template>
+                                        <dt class="border-t border-ln pt-1 font-semibold">You get about</dt>
+                                        <dd class="border-t border-ln pt-1 text-right font-semibold" :class="sc.net <= 0 ? 'text-red-700' : (sc.net < sc.price / 2 ? 'text-amber-700' : 'text-emerald-700')"
+                                            x-text="rs(sc.net) + ' (' + Math.round(sc.net / sc.price * 100) + '%)'"></dd>
+                                    </dl>
+                                </template>
+                            </div>
+                            <p class="mt-2 text-amber-800" x-show="est(v).worst < est(v).price / 2">
+                                Courier is a big part of this price. Consider selling it as a pack of 2 or more, or checking the price.</p>
+                            <p class="mt-2 text-tx3" x-show="!(+v.weight_g > 0)">No packed weight yet, so 500 g is assumed. Add the weight and box size for a better estimate.</p>
+                            <p class="mt-1 text-tx3">Courier estimate: <span x-text="rs(calc.fees.courier_base)"></span> for the first 500 g + <span x-text="rs(calc.fees.courier_addl)"></span> per extra 500 g; the actual Shiprocket charge applies. When several items ship together, one courier charge covers the whole parcel.</p>
+                        </div>
+                    </template>
                 </div>
                 <button type="button" x-show="activeCount() > 1 || v.remove" @click="v.remove = !v.remove"
                         class="mt-2 text-xs text-tx3 hover:text-red-600 hover:underline" x-text="v.remove ? 'Undo remove' : 'Remove this variant'"></button>
@@ -447,6 +490,41 @@ function productForm(init) {
         discount(v) {
             const m = parseFloat(v.mrp), p = parseFloat(v.price);
             return m > 0 && p > 0 && p < m ? Math.round((1 - p / m) * 100) : 0;
+        },
+        // ---- Earnings estimate (mirrors SellerFeeService::estimate) ----
+        calc: init.calc || { fees: null, comm: { type: 'percent', bp: 1000, fixed: 0 } },
+        setCommission(d) {
+            if (d && d.commType) this.calc.comm = { type: d.commType, bp: d.commBp || 0, fixed: d.commFixed || 0 };
+        },
+        rs(p) {
+            const r = Math.round(p) / 100;
+            return '₹' + (Number.isInteger(r) ? r.toLocaleString('en-IN') : r.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+        },
+        est(v) {
+            const f = this.calc.fees, price = Math.round(parseFloat(v.price) * 100);
+            if (!f || !(price > 0)) return null;
+            const c = this.calc.comm;
+            const commission = c.type === 'fixed' ? Math.min(c.fixed, price) : Math.min(Math.round(price * c.bp / 10000), price);
+            const commissionGst = Math.round(commission * f.commission_gst_bp / 10000);
+            const w = parseInt(v.weight_g, 10) || 0;
+            const vol = Math.ceil((parseFloat(v.length_cm) || 0) * (parseFloat(v.breadth_cm) || 0) * (parseFloat(v.height_cm) || 0) / f.vol_divisor * 1000);
+            const billed = Math.max(w, vol, 1);
+            const slabs = Math.max(1, Math.ceil(billed / f.slab_g));
+            const courier = f.courier_base + (slabs - 1) * f.courier_addl;
+            const mk = (label, credit) => ({ label, price, commission, commissionGst, courier, credit,
+                net: price - commission - commissionGst - (courier - credit) });
+            const cases = [];
+            if (f.free_above === null || price < f.free_above) {
+                cases.push(mk('Bought on its own (customer pays ' + this.rs(f.delivery_fee) + ' delivery)', Math.min(f.delivery_fee, courier)));
+            }
+            if (f.free_above !== null) {
+                cases.push(mk('In an order of ' + this.rs(f.free_above) + '+ (free delivery for the customer)', 0));
+            }
+            return {
+                price, cases, worst: Math.min(...cases.map(x => x.net)),
+                commLabel: c.type === 'fixed' ? this.rs(c.fixed) + ' per unit' : (c.bp / 100) + '%',
+                billedLabel: (slabs * f.slab_g / 1000) + ' kg',
+            };
         },
     };
 }
