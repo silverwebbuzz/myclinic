@@ -213,11 +213,37 @@ function ecp_slug_for_city(string $cityName): string {
 }
 
 /**
+ * Temp-file cache for the directory-wide aggregates below, same idea as
+ * ecp_footer_top_cities(): each one reads every active row (~77k) because no
+ * index covers it, and SEO pages render them on every page-cache miss. The
+ * results only change when doctors are imported. $build returns null on a DB
+ * error, which is never cached.
+ *
+ * @param callable(): ?array $build
+ */
+function _ecp_seo_file_cache(string $name, int $ttl, callable $build): array {
+    $file = sys_get_temp_dir() . '/ecp_seo_' . $name . '.json';
+    if (is_file($file) && (time() - (int) @filemtime($file)) < $ttl) {
+        $data = json_decode((string) @file_get_contents($file), true);
+        if (is_array($data)) return $data;
+    }
+    $data = $build();
+    if ($data === null) return [];
+    @file_put_contents($file, json_encode($data), LOCK_EX);
+    return $data;
+}
+
+/**
  * Build the slug→city index in one query.
+ * Cached 1h: a newly imported city's pages appear within the hour.
  */
 function _ecp_city_slug_index(): array {
+    return _ecp_seo_file_cache('city_index', 3600, '_ecp_city_slug_index_build');
+}
+
+function _ecp_city_slug_index_build(): ?array {
     $db = ecp_db();
-    if (!$db) return [];
+    if (!$db) return null;
 
     try {
         $stmt = $db->query(
@@ -238,7 +264,7 @@ function _ecp_city_slug_index(): array {
         return $out;
     } catch (Throwable $e) {
         error_log('[seo city index] ' . $e->getMessage());
-        return [];
+        return null;
     }
 }
 
@@ -398,8 +424,13 @@ function ecp_seo_top_cities(int $limit = 12): array {
     static $cache = null;
     if ($cache !== null) return array_slice($cache, 0, $limit);
 
+    $cache = _ecp_seo_file_cache('top_cities', 6 * 3600, '_ecp_seo_top_cities_build');
+    return array_slice($cache, 0, $limit);
+}
+
+function _ecp_seo_top_cities_build(): ?array {
     $db = ecp_db();
-    if (!$db) return [];
+    if (!$db) return null;
     try {
         $stmt = $db->query(
             "SELECT city, state, COUNT(*) AS n
@@ -422,10 +453,9 @@ function ecp_seo_top_cities(int $limit = 12): array {
                 'count' => (int) $r['n'],
             ];
         }
-        $cache = $out;
-        return array_slice($cache, 0, $limit);
+        return $out;
     } catch (Throwable $e) {
-        return $cache = [];
+        return null;
     }
 }
 
@@ -441,33 +471,43 @@ function ecp_seo_also_cities(array $seoMeta): array {
     $specSlug    = $specDb ? ecp_slug_for_db_specialty($specDb) : null;
 
     // If we're on a city+specialty page, pick top cities for THAT specialty.
-    // Else top cities overall.
-    $sql = "SELECT city, COUNT(*) AS n FROM directory_doctors
-            WHERE is_active = 1 AND status = 'OPERATIONAL'
-              AND city IS NOT NULL AND city <> '' AND city <> :exclude";
-    $params = ['exclude' => $currentCity];
-    if ($specDb) {
-        $sql .= " AND specialty = :s";
-        $params['s'] = $specDb;
-    }
-    $sql .= " GROUP BY city HAVING n >= 5 ORDER BY n DESC LIMIT 8";
-
-    try {
-        $stmt = $db->prepare($sql);
-        $stmt->execute($params);
-        $out = [];
-        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
-            $cSlug = ecp_slug((string) $r['city']);
-            if ($cSlug === '') continue;
-            $url = $specSlug
-                ? "/find-a-doctor/{$specSlug}-in-{$cSlug}"
-                : "/find-a-doctor/{$cSlug}";
-            $out[] = ['city' => $r['city'], 'url' => $url];
+    // Else top cities overall. The ranking (without the current city) is the
+    // same for every page of a specialty, so it is cached per specialty and
+    // the current city is dropped afterwards: top 9 minus the current city
+    // is exactly the old "city <> :exclude ... LIMIT 8".
+    $key = 'also_cities_' . ($specDb ? preg_replace('/[^a-z0-9_]/', '', strtolower($specDb)) : 'all');
+    $ranked = _ecp_seo_file_cache($key, 6 * 3600, static function () use ($db, $specDb): ?array {
+        $sql = "SELECT city, COUNT(*) AS n FROM directory_doctors
+                WHERE is_active = 1 AND status = 'OPERATIONAL'
+                  AND city IS NOT NULL AND city <> ''";
+        $params = [];
+        if ($specDb) {
+            $sql .= " AND specialty = :s";
+            $params['s'] = $specDb;
         }
-        return $out;
-    } catch (Throwable $e) {
-        return [];
+        $sql .= " GROUP BY city HAVING n >= 5 ORDER BY n DESC LIMIT 9";
+        try {
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Throwable $e) {
+            return null;
+        }
+    });
+
+    $out = [];
+    foreach ($ranked as $r) {
+        // Same comparison MySQL did (case-insensitive collation).
+        if (mb_strtolower((string) $r['city']) === mb_strtolower($currentCity)) continue;
+        $cSlug = ecp_slug((string) $r['city']);
+        if ($cSlug === '') continue;
+        $url = $specSlug
+            ? "/find-a-doctor/{$specSlug}-in-{$cSlug}"
+            : "/find-a-doctor/{$cSlug}";
+        $out[] = ['city' => $r['city'], 'url' => $url];
+        if (count($out) >= 8) break;
     }
+    return $out;
 }
 
 /**
