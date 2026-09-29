@@ -64,9 +64,11 @@ if (!is_file($cacheFile) && is_file($missFile) && (time() - filemtime($missFile)
     exit;
 }
 
-$key = ecp_google_maps_api_key();
+$key = ecp_google_photos_enabled() ? ecp_google_maps_api_key() : '';
 if ($key === '') {
-    // No key, but a stale cached copy is better than nothing — serve it.
+    // Google photos switched off (GOOGLE_PHOTOS_ENABLED, see partials/db.php)
+    // or no key: never call Google. Old URLs (cached pages, the mobile app,
+    // search engines) still get a stale cached copy if we have one.
     if (is_file($cacheFile)) {
         $ct = is_file($cacheMeta) ? trim((string) file_get_contents($cacheMeta)) : 'image/jpeg';
         header('Content-Type: ' . ($ct !== '' ? $ct : 'image/jpeg'));
@@ -75,7 +77,9 @@ if ($key === '') {
         readfile($cacheFile);
         exit;
     }
-    http_response_code(503);
+    header('Cache-Control: public, max-age=' . ECP_PHOTO_MISS_TTL);
+    header('X-Photo-Cache: disabled');
+    http_response_code(404);
     exit;
 }
 

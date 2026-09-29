@@ -516,7 +516,7 @@ function ecp_directory_doctors(?string $countryCode = null): ?array
  */
 function ecp_doctor_photo_url(?string $photoRef, int $maxWidth = 400): ?string
 {
-    if ($photoRef === null || trim($photoRef) === '' || ecp_google_maps_api_key() === '') {
+    if ($photoRef === null || trim($photoRef) === '' || !ecp_google_photos_enabled()) {
         return null;
     }
 
@@ -524,6 +524,19 @@ function ecp_doctor_photo_url(?string $photoRef, int $maxWidth = 400): ?string
         'ref' => $photoRef,
         'w'   => max(80, min(1600, $maxWidth)),
     ]);
+}
+
+/**
+ * Google Places photos are OFF unless app/.env sets GOOGLE_PHOTOS_ENABLED=1
+ * (and a GOOGLE_MAPS_API_KEY). With them off no page emits /api/photo.php
+ * URLs, so listings and profiles show the uploaded logo/photo or the default
+ * avatar immediately. Off by default because the Google Cloud project has
+ * billing disabled: every photo request was a ~0.5-1.3s round trip ending in
+ * a 403.
+ */
+function ecp_google_photos_enabled(): bool
+{
+    return ecp_env('GOOGLE_PHOTOS_ENABLED') === '1' && ecp_google_maps_api_key() !== '';
 }
 
 /** @return array{url: ?string, initials: string, gradient: int} */
