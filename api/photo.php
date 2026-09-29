@@ -51,6 +51,19 @@ if (is_file($cacheFile) && (time() - filemtime($cacheFile)) < ECP_PHOTO_CACHE_TT
     exit;
 }
 
+// Negative cache: Google refused this photo recently (expired/invalid ref,
+// denied key…). Answer 404 at once instead of asking Google again on every
+// view — each retry cost ~1.3s and an API call. The page falls back to the
+// default avatar on error.
+const ECP_PHOTO_MISS_TTL = 86400; // 1 day
+$missFile = $cacheFile . '.miss';
+if (!is_file($cacheFile) && is_file($missFile) && (time() - filemtime($missFile)) < ECP_PHOTO_MISS_TTL) {
+    header('Cache-Control: public, max-age=' . ECP_PHOTO_MISS_TTL);
+    header('X-Photo-Cache: miss-cached');
+    http_response_code(404);
+    exit;
+}
+
 $key = ecp_google_maps_api_key();
 if ($key === '') {
     // No key, but a stale cached copy is better than nothing — serve it.
@@ -82,6 +95,7 @@ if ($isNewRef) {
 
 $body = false;
 $contentType = 'image/jpeg';
+$googleStatus = 0;   // HTTP status Google answered with (0 = no answer)
 if (function_exists('curl_init')) {
     $ch = curl_init($url);
     if ($ch !== false) {
@@ -93,6 +107,7 @@ if (function_exists('curl_init')) {
         $raw = curl_exec($ch);
         if ($raw !== false) {
             $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $googleStatus = $status;
             $headerSize = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
             if ($status >= 200 && $status < 300) {
                 $headers = substr($raw, 0, $headerSize);
@@ -106,8 +121,13 @@ if (function_exists('curl_init')) {
     }
 }
 if ($body === false) {
-    $ctx = stream_context_create(['http' => ['timeout' => 15, 'follow_location' => 1]]);
-    $body = @file_get_contents($url, false, $ctx);
+    // Second attempt only when curl couldn't talk to Google at all (missing
+    // extension / network error). If Google answered with an error status,
+    // asking again the same way just doubles the wait.
+    if ($googleStatus === 0) {
+        $ctx = stream_context_create(['http' => ['timeout' => 15, 'follow_location' => 1]]);
+        $body = @file_get_contents($url, false, $ctx);
+    }
     if ($body === false) {
         // Google fetch failed — serve a stale cached copy if we have one.
         if (is_file($cacheFile)) {
@@ -117,6 +137,15 @@ if ($body === false) {
             header('X-Photo-Cache: stale-fetch-failed');
             readfile($cacheFile);
             exit;
+        }
+        // Only a definite refusal from Google is remembered; a network blip
+        // (no status) is retried on the next view.
+        if ($googleStatus >= 400) {
+            error_log('[photo] Google answered ' . $googleStatus . ' for ' . ($isNewRef ? 'new' : 'legacy') . ' ref ' . substr($ref, 0, 40) . '…');
+            if (is_dir($cacheDir) || @mkdir($cacheDir, 0755, true)) {
+                @touch($missFile);
+            }
+            header('Cache-Control: public, max-age=' . ECP_PHOTO_MISS_TTL);
         }
         http_response_code(404);
         exit;
@@ -153,6 +182,7 @@ if (is_dir($cacheDir) && is_writable($cacheDir)) {
     if (@file_put_contents($tmp, $body) !== false) {
         @rename($tmp, $cacheFile);
         @file_put_contents($cacheMeta, $contentType);
+        @unlink($missFile);
     }
 }
 
