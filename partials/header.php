@@ -219,14 +219,10 @@ body.patient-wide .nav-inner{max-width:1572px}
          ?v=filemtime busts it when the file is replaced. -->
     <?php $alpineBust = @filemtime(__DIR__ . '/../assets/js/alpine-3.14.1.min.js') ?: '3141'; ?>
     <script defer src="/assets/js/alpine-3.14.1.min.js?v=<?= $alpineBust ?>"></script>
+    <!-- Ahrefs Web Analytics: load it ONCE. A second, JS-injected copy of the
+         same tag used to follow this one ("AhrefsAnalytics script is already
+         initialized… Did you install it twice?" + a wasted download). -->
     <script src="https://analytics.ahrefs.com/analytics.js" data-key="4woSp6JOsZmShXEwnBQwUQ" async></script>
-    <script>
-        var ahrefs_analytics_script = document.createElement('script');
-        ahrefs_analytics_script.async = true;
-        ahrefs_analytics_script.src = 'https://analytics.ahrefs.com/analytics.js';
-        ahrefs_analytics_script.setAttribute('data-key', '4woSp6JOsZmShXEwnBQwUQ');
-        document.getElementsByTagName('head')[0].appendChild(ahrefs_analytics_script);
-    </script>
 
 </head>
 <!-- Hand the initial session blob to JS via a separate JSON script tag
