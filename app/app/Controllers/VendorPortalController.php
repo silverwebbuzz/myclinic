@@ -68,8 +68,55 @@ final class VendorPortalController
         } catch (\Throwable) {
         }
         $vendor = VendorService::find($vendorId) ?? [];
+        $rows = static function (string $sql) use ($pdo, $vendorId): array {
+            try {
+                $st = $pdo->prepare($sql);
+                $st->execute(['v' => $vendorId]);
+
+                return $st->fetchAll();
+            } catch (\Throwable) {
+                return [];
+            }
+        };
+        // Last 8 paid packages, newest first.
+        $recent = $rows(
+            "SELECT vo.id, vo.sub_order_no, vo.status, o.paid_at, o.ship_address_json,
+                    vo.items_subtotal_paise - vo.vendor_discount_paise AS value_paise,
+                    (SELECT COALESCE(SUM(oi.qty - oi.qty_cancelled), 0) FROM store_order_items oi WHERE oi.vendor_order_id = vo.id) AS units
+               FROM store_vendor_orders vo $paid WHERE vo.vendor_id = :v ORDER BY o.paid_at DESC LIMIT 8"
+        );
+        // Sales per day, last 14 days (gaps filled in the view).
+        $daily = [];
+        foreach ($rows(
+            "SELECT DATE(o.paid_at) AS d, COUNT(*) AS n, SUM(vo.items_subtotal_paise - vo.vendor_discount_paise) AS s
+               FROM store_vendor_orders vo $paid WHERE vo.vendor_id = :v AND o.paid_at >= DATE_SUB(CURDATE(), INTERVAL 13 DAY)
+              GROUP BY DATE(o.paid_at)"
+        ) as $r) {
+            $daily[(string) $r['d']] = ['n' => (int) $r['n'], 's' => (int) $r['s']];
+        }
+        // What happened to packages paid in the last 30 days.
+        $mix = ['delivered' => 0, 'in_progress' => 0, 'not_delivered' => 0];
+        foreach ($rows(
+            "SELECT vo.status, COUNT(*) AS n FROM store_vendor_orders vo $paid
+              WHERE vo.vendor_id = :v AND o.paid_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) GROUP BY vo.status"
+        ) as $r) {
+            $k = in_array($r['status'], ['delivered', 'completed'], true) ? 'delivered'
+                : (in_array($r['status'], ['new', 'accepted', 'packed', 'ready_to_ship', 'shipped'], true) ? 'in_progress' : 'not_delivered');
+            $mix[$k] += (int) $r['n'];
+        }
+        $gstIssues = 0;
+        try {
+            $gstIssues = count(\App\Services\Store\HsnService::mismatches($vendorId, 100));
+        } catch (\Throwable) {
+        }
 
         return [
+            'recent' => $recent,
+            'daily' => $daily,
+            'mix' => $mix,
+            'gst_issues' => $gstIssues,
+            'month_orders' => $q("SELECT COUNT(*) FROM store_vendor_orders vo $paid WHERE vo.vendor_id = :v AND o.paid_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')"),
+            'packed_unbooked' => $q("SELECT COUNT(*) FROM store_vendor_orders vo $paid WHERE vo.vendor_id = :v AND vo.status = 'packed'"),
             'to_accept' => $q("SELECT COUNT(*) FROM store_vendor_orders vo $paid WHERE vo.vendor_id = :v AND vo.status = 'new'"),
             'in_progress' => $q("SELECT COUNT(*) FROM store_vendor_orders vo $paid WHERE vo.vendor_id = :v AND vo.status IN ('accepted','packed','ready_to_ship')"),
             'month_sales' => $q("SELECT COALESCE(SUM(vo.items_subtotal_paise - vo.vendor_discount_paise),0) FROM store_vendor_orders vo $paid

@@ -22,18 +22,18 @@ ob_start();
 </style>
 <div class="flex flex-wrap items-end justify-between gap-3">
     <div>
-        <h1 class="text-2xl font-semibold"><?= $e($page['title']) ?></h1>
-        <p class="mt-1 text-sm text-slate-500">Version <?= (int) $page['version'] ?><?= $page['updated_at'] ? ', updated ' . $e(date('j M Y', (int) strtotime((string) $page['updated_at']))) : '' ?></p>
+        <h1 class="text-[22px] font-semibold tracking-[-.015em]"><?= $e($page['title']) ?></h1>
+        <p class="mt-1 text-sm text-tx3">Version <?= (int) $page['version'] ?><?= $page['updated_at'] ? ', updated ' . $e(date('j M Y', (int) strtotime((string) $page['updated_at']))) : '' ?></p>
     </div>
     <?php if ($current && $acceptable): ?>
-        <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">✓ You have accepted this version</span>
+        <span class="inline-flex h-[22px] items-center rounded-md bg-okb px-2 text-xs font-medium text-ok">✓ You have accepted this version</span>
     <?php endif; ?>
 </div>
 
-<article class="policy mt-4 rounded-2xl border border-[#ece8df] bg-white p-6 text-sm leading-6 text-slate-800"><?= $html ?></article>
+<article class="policy mt-4 rounded-[10px] border border-ln bg-sf p-6 text-sm leading-6 text-slate-800"><?= $html ?></article>
 
 <?php if (!$current && $acceptable): ?>
-    <form method="post" action="/vendor/terms/accept" class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm">
+    <form method="post" action="/vendor/terms/accept" class="mt-4 rounded-[10px] border border-amber-200 bg-amber-50 p-5 text-sm">
         <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
         <input type="hidden" name="version" value="<?= (int) $page['version'] ?>">
         <p class="font-semibold text-amber-900"><?= $acceptedVersion > 0 ? 'These rules have been updated. Please read and accept the new version.' : 'Please read and accept these rules to sell on eClinicPro Store.' ?></p>
@@ -41,7 +41,7 @@ ob_start();
             <input type="checkbox" name="agree" value="1" required class="mt-1">
             <span>I have read the seller rules &amp; terms (version <?= (int) $page['version'] ?>) and agree to follow them on behalf of <strong><?= $e($vendor['legal_name'] ?: $vendor['display_name']) ?></strong>.</span>
         </label>
-        <button class="mt-3 rounded-full bg-[#0e4d34] px-5 py-2 font-medium text-white hover:bg-[#17774f]">Accept</button>
+        <button class="mt-3 rounded-[7px] bg-ac px-5 py-2 font-medium text-white hover:opacity-90">Accept</button>
     </form>
 <?php endif; ?>
 <?php

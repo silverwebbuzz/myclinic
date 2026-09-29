@@ -3,7 +3,7 @@
 $pageTitle = 'Return ' . $r['return_no'];
 ob_start();
 ?>
-<a href="/vendor/returns" class="text-sm text-[#17774f] hover:underline">← Returns</a>
+<a href="/vendor/returns" class="text-sm text-act hover:underline">← Returns</a>
 <div class="mt-2">
 <?php
 $base = '/vendor/returns';

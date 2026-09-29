@@ -17,7 +17,7 @@ use App\Services\Store\ProductService;
 $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
 $isNew = $product === null;
 $pageTitle = $isNew ? 'Add product' : 'Edit product';
-$input = 'mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#17774f] focus:outline-none';
+$input = 'mt-1 w-full rounded-[7px] border border-ln bg-sf px-3 py-2 text-sm focus:border-ac focus:ring-2 focus:ring-ac/15 focus:outline-none';
 $hasOld = $old !== [];
 // Value precedence: posted (after an error) > saved product > default.
 $val = static function (string $key, $default = '') use ($old, $hasOld, $product) {
@@ -71,42 +71,42 @@ $returnable = $hasOld ? !empty($old['is_returnable']) : (bool) ($product['is_ret
 $hasExpiry = $hasOld ? !empty($old['has_expiry']) : (bool) ($product['has_expiry'] ?? false);
 $status = (string) ($product['status'] ?? 'draft');
 $badge = [
-    'draft' => ['Draft: not visible to customers', 'bg-slate-100 text-slate-700'],
-    'pending_review' => ['In review: hidden until approved', 'bg-amber-100 text-amber-800'],
-    'live' => ['Live on the store', 'bg-emerald-100 text-emerald-800'],
-    'rejected' => ['Needs changes', 'bg-red-100 text-red-700'],
-    'disabled' => ['Disabled by eClinicPro', 'bg-red-100 text-red-700'],
-    'archived' => ['Archived: hidden', 'bg-slate-200 text-slate-600'],
-][$status] ?? [$status, 'bg-slate-100'];
+    'draft' => ['Draft: not visible to customers', 'bg-ntb text-nt'],
+    'pending_review' => ['In review: hidden until approved', 'bg-wnb text-wn'],
+    'live' => ['Live on the store', 'bg-okb text-ok'],
+    'rejected' => ['Needs changes', 'bg-erb text-er'],
+    'disabled' => ['Disabled by eClinicPro', 'bg-erb text-er'],
+    'archived' => ['Archived: hidden', 'bg-slate-200 text-tx2'],
+][$status] ?? [$status, 'bg-sf2'];
 $locked = $status === 'disabled';
 ob_start();
 ?>
-<a href="/vendor/products" class="text-sm text-[#17774f] hover:underline">← Products</a>
+<a href="/vendor/products" class="text-sm text-act hover:underline">← Products</a>
 <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
-    <h1 class="text-2xl font-semibold"><?= $isNew ? 'Add a product' : $e($product['name']) ?></h1>
-    <?php if (!$isNew): ?><span class="rounded-full px-3 py-1 text-xs font-semibold <?= $badge[1] ?>"><?= $e($badge[0]) ?></span><?php endif; ?>
+    <h1 class="text-[22px] font-semibold tracking-[-.015em]"><?= $isNew ? 'Add a product' : $e($product['name']) ?></h1>
+    <?php if (!$isNew): ?><span class="inline-flex h-[22px] items-center whitespace-nowrap rounded-md px-2 text-xs font-medium <?= $badge[1] ?>"><?= $e($badge[0]) ?></span><?php endif; ?>
 </div>
 
 <?php if (!$isNew && in_array($status, ['rejected', 'disabled'], true) && !empty($product['review_note'])): ?>
-    <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"><strong>From the eClinicPro team:</strong> <?= $e($product['review_note']) ?></div>
+    <div class="mt-4 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"><strong>From the eClinicPro team:</strong> <?= $e($product['review_note']) ?></div>
 <?php endif; ?>
 <?php if ($formError): ?>
-    <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><?= $e($formError) ?></div>
+    <div class="mt-4 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><?= $e($formError) ?></div>
 <?php endif; ?>
 
 <?php if (!$isNew && in_array($status, ['draft', 'rejected'], true)): ?>
-    <section class="mt-4 rounded-2xl border border-[#d5e6da] bg-[#edf5ef] p-5">
+    <section class="mt-4 rounded-[10px] border border-ac/20 bg-acs p-5">
         <?php if ($problems): ?>
-            <h2 class="font-semibold text-[#0e4d34]">Before you can submit</h2>
-            <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
+            <h2 class="font-semibold text-act">Before you can submit</h2>
+            <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-tx2">
                 <?php foreach ($problems as $pr): ?><li><?= $e($pr) ?></li><?php endforeach; ?>
             </ul>
         <?php else: ?>
             <div class="flex flex-wrap items-center justify-between gap-3">
-                <p class="text-sm text-slate-700"><strong>Ready.</strong> Submit to send this product for review.</p>
+                <p class="text-sm text-tx2"><strong>Ready.</strong> Submit to send this product for review.</p>
                 <form method="post" action="/vendor/products/<?= (int) $product['id'] ?>/submit">
                     <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
-                    <button class="rounded-full bg-[#0e4d34] px-6 py-2 text-sm font-medium text-white hover:bg-[#17774f]">Submit for review</button>
+                    <button class="rounded-[7px] bg-ac px-4 py-1.5 text-[13px] font-medium text-white hover:opacity-90">Submit for review</button>
                 </form>
             </div>
         <?php endif; ?>
@@ -119,15 +119,15 @@ ob_start();
     <fieldset <?= $locked ? 'disabled' : '' ?> class="space-y-6">
 
     <!-- Basics -->
-    <section class="rounded-2xl border border-[#ece8df] bg-white p-6">
+    <section class="rounded-[10px] border border-ln bg-sf p-6">
         <h2 class="font-semibold">Basics</h2>
         <div class="mt-4 grid gap-4 sm:grid-cols-2">
             <label class="block text-sm sm:col-span-2">
-                <span class="text-slate-600">Product name</span>
+                <span class="text-tx2">Product name</span>
                 <input name="name" required maxlength="255" value="<?= $e($val('name')) ?>" class="<?= $input ?>" placeholder="e.g. Omron HEM-7120 Automatic BP Monitor">
             </label>
             <label class="block text-sm sm:col-span-2">
-                <span class="text-slate-600">Category</span>
+                <span class="text-tx2">Category</span>
                 <select name="category_id" required class="<?= $input ?>" @change="$dispatch('category-picked', { hsn: $event.target.selectedOptions[0]?.dataset.hsn || '' })">
                     <option value="">Choose the best-fitting subcategory…</option>
                     <?php foreach ($tree as $dept): ?>
@@ -141,12 +141,12 @@ ob_start();
                         </optgroup>
                     <?php endforeach; ?>
                 </select>
-                <span class="text-xs text-slate-500">🔒 = needs a licence you haven't uploaded yet, or not sold on the store. Your approved licences:
+                <span class="text-xs text-tx3">🔒 = needs a licence you haven't uploaded yet, or not sold on the store. Your approved licences:
                     <?= $licences ? $e(implode(', ', array_map(static fn ($k) => \App\Services\Store\VendorService::DOC_TYPES[$k] ?? $k, array_keys($licences)))) : 'none yet' ?>.
-                    <a href="/vendor/documents" class="text-[#17774f] underline">Upload licences</a></span>
+                    <a href="/vendor/documents" class="text-act underline">Upload licences</a></span>
             </label>
             <label class="block text-sm">
-                <span class="text-slate-600">Brand</span>
+                <span class="text-tx2">Brand</span>
                 <select name="brand_id" class="<?= $input ?>">
                     <option value="">No brand / own brand</option>
                     <?php foreach ($brands as $b): ?>
@@ -155,69 +155,69 @@ ob_start();
                 </select>
             </label>
             <label class="block text-sm">
-                <span class="text-slate-600">…or a brand not in the list</span>
+                <span class="text-tx2">…or a brand not in the list</span>
                 <input name="brand_new" maxlength="160" value="<?= $e($hasOld ? ($old['brand_new'] ?? '') : '') ?>" class="<?= $input ?>" placeholder="Type the brand name">
             </label>
             <label class="block text-sm sm:col-span-2">
-                <span class="text-slate-600">Short description <span class="text-slate-400">(shown under the name, max 500)</span></span>
+                <span class="text-tx2">Short description <span class="text-tx3">(shown under the name, max 500)</span></span>
                 <textarea name="short_desc" rows="2" maxlength="500" class="<?= $input ?>"><?= $e($val('short_desc')) ?></textarea>
             </label>
             <label class="block text-sm sm:col-span-2">
-                <span class="text-slate-600">Full description</span>
+                <span class="text-tx2">Full description</span>
                 <textarea name="description" rows="7" class="<?= $input ?>" placeholder="What it is, key benefits, how to use, ingredients / what's in the box, warnings"><?= $e($val('description')) ?></textarea>
-                <span class="text-xs text-slate-400">Plain text; line breaks are kept. Don't claim to diagnose, treat or cure any condition.</span>
+                <span class="text-xs text-tx3">Plain text; line breaks are kept. Don't claim to diagnose, treat or cure any condition.</span>
             </label>
         </div>
     </section>
 
     <!-- Variants -->
-    <section class="rounded-2xl border border-[#ece8df] bg-white p-6">
+    <section class="rounded-[10px] border border-ln bg-sf p-6">
         <div class="flex flex-wrap items-center justify-between gap-2">
             <h2 class="font-semibold">Variants, price &amp; stock</h2>
-            <button type="button" @click="addVariant()" class="rounded-full border border-[#0e4d34] px-3 py-1 text-xs font-medium text-[#0e4d34] hover:bg-[#edf5ef]">+ Add variant</button>
+            <button type="button" @click="addVariant()" class="rounded-[7px] border border-ac px-3 py-1 text-xs font-medium text-act hover:bg-acs">+ Add variant</button>
         </div>
-        <p class="mt-1 text-xs text-slate-500">One row per pack size / flavour / size. Prices include GST. Weight and box size are the <em>packed</em> parcel, used for courier charges.</p>
+        <p class="mt-1 text-xs text-tx3">One row per pack size / flavour / size. Prices include GST. Weight and box size are the <em>packed</em> parcel, used for courier charges.</p>
         <template x-for="(v, i) in variants" :key="i">
-            <div class="mt-4 rounded-xl border border-slate-200 p-4" :class="v.remove ? 'opacity-50' : ''">
+            <div class="mt-4 rounded-[10px] border border-ln p-4" :class="v.remove ? 'opacity-50' : ''">
                 <input type="hidden" :name="`variants[${i}][id]`" :value="v.id">
                 <input type="hidden" :name="`variants[${i}][remove]`" :value="v.remove ? 1 : ''">
                 <div class="grid gap-3 sm:grid-cols-4">
-                    <label class="block text-xs sm:col-span-2"><span class="text-slate-600">Variant name</span>
+                    <label class="block text-xs sm:col-span-2"><span class="text-tx2">Variant name</span>
                         <input :name="`variants[${i}][title]`" x-model="v.title" maxlength="190" class="<?= $input ?>" placeholder="e.g. 60 tablets / Large / Chocolate"></label>
-                    <label class="block text-xs sm:col-span-2"><span class="text-slate-600">SKU (your code)</span>
+                    <label class="block text-xs sm:col-span-2"><span class="text-tx2">SKU (your code)</span>
                         <input :name="`variants[${i}][sku]`" x-model="v.sku" required maxlength="80" class="<?= $input ?> uppercase"></label>
-                    <label class="block text-xs"><span class="text-slate-600">MRP ₹</span>
+                    <label class="block text-xs"><span class="text-tx2">MRP ₹</span>
                         <input :name="`variants[${i}][mrp]`" x-model="v.mrp" required inputmode="decimal" class="<?= $input ?>"></label>
-                    <label class="block text-xs"><span class="text-slate-600">Selling price ₹</span>
+                    <label class="block text-xs"><span class="text-tx2">Selling price ₹</span>
                         <input :name="`variants[${i}][price]`" x-model="v.price" required inputmode="decimal" class="<?= $input ?>">
                         <span class="text-[11px] text-emerald-700" x-show="discount(v) > 0" x-text="discount(v) + '% off MRP'"></span></label>
-                    <label class="block text-xs"><span class="text-slate-600">Stock</span>
+                    <label class="block text-xs"><span class="text-tx2">Stock</span>
                         <input :name="`variants[${i}][stock_qty]`" x-model="v.stock_qty" inputmode="numeric" class="<?= $input ?>"></label>
-                    <label class="block text-xs"><span class="text-slate-600">Low-stock alert at</span>
+                    <label class="block text-xs"><span class="text-tx2">Low-stock alert at</span>
                         <input :name="`variants[${i}][low_stock_threshold]`" x-model="v.low_stock_threshold" inputmode="numeric" class="<?= $input ?>"></label>
-                    <label class="block text-xs"><span class="text-slate-600">Packed weight (g)</span>
+                    <label class="block text-xs"><span class="text-tx2">Packed weight (g)</span>
                         <input :name="`variants[${i}][weight_g]`" x-model="v.weight_g" inputmode="numeric" class="<?= $input ?>"></label>
-                    <label class="block text-xs"><span class="text-slate-600">Box L × B × H (cm)</span>
+                    <label class="block text-xs"><span class="text-tx2">Box L × B × H (cm)</span>
                         <span class="mt-1 flex gap-1">
-                            <input :name="`variants[${i}][length_cm]`" x-model="v.length_cm" inputmode="decimal" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm" placeholder="L">
-                            <input :name="`variants[${i}][breadth_cm]`" x-model="v.breadth_cm" inputmode="decimal" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm" placeholder="B">
-                            <input :name="`variants[${i}][height_cm]`" x-model="v.height_cm" inputmode="decimal" class="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm" placeholder="H">
+                            <input :name="`variants[${i}][length_cm]`" x-model="v.length_cm" inputmode="decimal" class="w-full rounded-[7px] border border-ln bg-sf px-2 py-2 text-sm" placeholder="L">
+                            <input :name="`variants[${i}][breadth_cm]`" x-model="v.breadth_cm" inputmode="decimal" class="w-full rounded-[7px] border border-ln bg-sf px-2 py-2 text-sm" placeholder="B">
+                            <input :name="`variants[${i}][height_cm]`" x-model="v.height_cm" inputmode="decimal" class="w-full rounded-[7px] border border-ln bg-sf px-2 py-2 text-sm" placeholder="H">
                         </span></label>
-                    <label class="block text-xs sm:col-span-2"><span class="text-slate-600">Barcode / EAN <span class="text-slate-400">(optional)</span></span>
+                    <label class="block text-xs sm:col-span-2"><span class="text-tx2">Barcode / EAN <span class="text-tx3">(optional)</span></span>
                         <input :name="`variants[${i}][barcode]`" x-model="v.barcode" maxlength="40" class="<?= $input ?>"></label>
                 </div>
                 <button type="button" x-show="activeCount() > 1 || v.remove" @click="v.remove = !v.remove"
-                        class="mt-2 text-xs text-slate-500 hover:text-red-600 hover:underline" x-text="v.remove ? 'Undo remove' : 'Remove this variant'"></button>
+                        class="mt-2 text-xs text-tx3 hover:text-red-600 hover:underline" x-text="v.remove ? 'Undo remove' : 'Remove this variant'"></button>
             </div>
         </template>
     </section>
 
     <!-- Placement -->
-    <section class="rounded-2xl border border-[#ece8df] bg-white p-6">
+    <section class="rounded-[10px] border border-ln bg-sf p-6">
         <h2 class="font-semibold">Where customers find it</h2>
         <div class="mt-4 grid gap-4 sm:grid-cols-2">
             <label class="block text-sm">
-                <span class="text-slate-600">Also show under <span class="text-slate-400">(up to 3, optional)</span></span>
+                <span class="text-tx2">Also show under <span class="text-tx3">(up to 3, optional)</span></span>
                 <select name="secondary_ids[]" multiple size="7" class="<?= $input ?>">
                     <?php foreach ($tree as $dept): ?>
                         <optgroup label="<?= $e($dept['name']) ?>">
@@ -229,10 +229,10 @@ ob_start();
                         </optgroup>
                     <?php endforeach; ?>
                 </select>
-                <span class="text-xs text-slate-400">Hold Ctrl / ⌘ to pick several. E.g. a probiotic under both Gut Health and Senior Wellness.</span>
+                <span class="text-xs text-tx3">Hold Ctrl / ⌘ to pick several. E.g. a probiotic under both Gut Health and Senior Wellness.</span>
             </label>
             <div class="text-sm">
-                <span class="text-slate-600">Health goals it supports</span>
+                <span class="text-tx2">Health goals it supports</span>
                 <div class="mt-2 grid grid-cols-2 gap-1.5">
                     <?php foreach ($concerns as $c): ?>
                         <label class="flex items-center gap-2 text-sm">
@@ -246,28 +246,28 @@ ob_start();
     </section>
 
     <!-- Specs -->
-    <section class="rounded-2xl border border-[#ece8df] bg-white p-6">
+    <section class="rounded-[10px] border border-ln bg-sf p-6">
         <div class="flex items-center justify-between">
-            <h2 class="font-semibold">Specifications <span class="text-sm font-normal text-slate-500">(optional)</span></h2>
-            <button type="button" @click="specs.push({label:'', value:''})" class="rounded-full border border-[#0e4d34] px-3 py-1 text-xs font-medium text-[#0e4d34] hover:bg-[#edf5ef]">+ Add row</button>
+            <h2 class="font-semibold">Specifications <span class="text-sm font-normal text-tx3">(optional)</span></h2>
+            <button type="button" @click="specs.push({label:'', value:''})" class="rounded-[7px] border border-ac px-3 py-1 text-xs font-medium text-act hover:bg-acs">+ Add row</button>
         </div>
         <template x-for="(s, i) in specs" :key="i">
             <div class="mt-3 flex gap-2">
-                <input :name="`specs[${i}][label]`" x-model="s.label" maxlength="80" class="w-1/3 rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="e.g. Pack size">
-                <input :name="`specs[${i}][value]`" x-model="s.value" maxlength="300" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="e.g. 60 tablets">
-                <button type="button" @click="specs.splice(i, 1)" class="px-2 text-slate-400 hover:text-red-600" aria-label="Remove">✕</button>
+                <input :name="`specs[${i}][label]`" x-model="s.label" maxlength="80" class="w-1/3 rounded-[7px] border border-ln bg-sf px-3 py-2 text-sm" placeholder="e.g. Pack size">
+                <input :name="`specs[${i}][value]`" x-model="s.value" maxlength="300" class="flex-1 rounded-[7px] border border-ln bg-sf px-3 py-2 text-sm" placeholder="e.g. 60 tablets">
+                <button type="button" @click="specs.splice(i, 1)" class="px-2 text-tx3 hover:text-red-600" aria-label="Remove">✕</button>
             </div>
         </template>
     </section>
 
     <!-- Compliance, tax, returns -->
-    <section class="rounded-2xl border border-[#ece8df] bg-white p-6">
+    <section class="rounded-[10px] border border-ln bg-sf p-6">
         <h2 class="font-semibold">Compliance, tax &amp; returns</h2>
         <div class="mt-4 grid gap-4 sm:grid-cols-3">
             <label class="block text-sm">
-                <span class="text-slate-600">Licence no. on label</span>
+                <span class="text-tx2">Licence no. on label</span>
                 <input name="license_number" maxlength="80" value="<?= $e($val('license_number')) ?>" class="<?= $input ?>" placeholder="FSSAI / device reg. no.">
-                <span class="text-xs text-slate-400">Required for food, supplement, AYUSH and device categories.</span>
+                <span class="text-xs text-tx3">Required for food, supplement, AYUSH and device categories.</span>
             </label>
             <?php
             $gstCur = (string) $val('gst_bp', '');
@@ -278,20 +278,20 @@ ob_start();
             <div class="contents" x-data='hsnPicker(<?= $e(json_encode(['list' => $hsnList, 'code' => (string) $val('hsn_code'), 'rate' => $gstCur], JSON_HEX_APOS | JSON_HEX_QUOT)) ?>)'
                  @category-picked.window="if (!code && $event.detail.hsn) setCode($event.detail.hsn)">
                 <label class="block text-sm">
-                    <span class="text-slate-600">HSN code <span class="text-red-600">*</span></span>
+                    <span class="text-tx2">HSN code <span class="text-red-600">*</span></span>
                     <input name="hsn_code" maxlength="8" inputmode="numeric" pattern="\d{4,8}" required list="hsn-list" x-model="code" @input="sync()" class="<?= $input ?>" placeholder="Start typing, e.g. 3004">
                     <datalist id="hsn-list">
                         <?php foreach ($hsnList as $h): ?><option value="<?= $e($h['code']) ?>"><?= $e($h['description']) ?></option><?php endforeach; ?>
                     </datalist>
-                    <span class="text-xs text-slate-500" x-show="match" x-text="match ? match.description : ''"></span>
+                    <span class="text-xs text-tx3" x-show="match" x-text="match ? match.description : ''"></span>
                     <span class="text-xs text-red-600" x-show="code.length >= 4 && !match" x-cloak>Not in eClinicPro's HSN list. Pick a code from the list, or contact support to add it.</span>
                 </label>
                 <label class="block text-sm">
-                    <span class="text-slate-600">GST rate</span>
+                    <span class="text-tx2">GST rate</span>
                     <template x-if="rates.length === 1">
                         <div>
                             <input type="hidden" name="gst_bp" :value="rates[0]">
-                            <p class="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2" x-text="(rates[0] / 100) + '% (set by HSN ' + match.code + ')'"></p>
+                            <p class="mt-1 rounded-lg border border-ln bg-sf2 px-3 py-2" x-text="(rates[0] / 100) + '% (set by HSN ' + match.code + ')'"></p>
                         </div>
                     </template>
                     <template x-if="rates.length > 1">
@@ -300,38 +300,38 @@ ob_start();
                             <template x-for="r in rates" :key="r"><option :value="String(r)" x-text="(r / 100) + '%'" :selected="String(r) === String(rate)"></option></template>
                         </select>
                     </template>
-                    <p x-show="rates.length === 0" class="mt-1 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-slate-400">Pick an HSN code first</p>
-                    <span class="text-xs text-slate-400" x-show="rates.length > 1">This HSN has more than one rate; choose the one for this exact product. eClinicPro checks it at review.</span>
-                    <span class="text-xs text-slate-400" x-show="rates.length <= 1">Prices include GST. The rate is fixed by eClinicPro's HSN list.</span>
+                    <p x-show="rates.length === 0" class="mt-1 rounded-lg border border-dashed border-ln px-3 py-2 text-tx3">Pick an HSN code first</p>
+                    <span class="text-xs text-tx3" x-show="rates.length > 1">This HSN has more than one rate; choose the one for this exact product. eClinicPro checks it at review.</span>
+                    <span class="text-xs text-tx3" x-show="rates.length <= 1">Prices include GST. The rate is fixed by eClinicPro's HSN list.</span>
                 </label>
             </div>
             <?php else: ?>
             <label class="block text-sm">
-                <span class="text-slate-600">HSN code <span class="text-red-600">*</span></span>
+                <span class="text-tx2">HSN code <span class="text-red-600">*</span></span>
                 <input name="hsn_code" maxlength="8" inputmode="numeric" pattern="\d{4,8}" required value="<?= $e($val('hsn_code')) ?>" class="<?= $input ?>">
-                <span class="text-xs text-slate-400">Printed on the customer's GST invoice.</span>
+                <span class="text-xs text-tx3">Printed on the customer's GST invoice.</span>
             </label>
             <label class="block text-sm">
-                <span class="text-slate-600">GST rate</span>
+                <span class="text-tx2">GST rate</span>
                 <select name="gst_bp" required class="<?= $input ?>">
                     <option value="" <?= $gstKnown ? '' : 'selected' ?>>Choose GST rate…</option>
                     <?php foreach (CatalogService::GST_RATES_BP as $bp => $label): ?>
                         <option value="<?= $bp ?>" <?= $gstKnown && (int) $gstCur === $bp ? 'selected' : '' ?>><?= $e($label) ?></option>
                     <?php endforeach; ?>
                 </select>
-                <span class="text-xs text-slate-400">Prices include GST. Your CA can confirm the rate for this HSN code.</span>
+                <span class="text-xs text-tx3">Prices include GST. Your CA can confirm the rate for this HSN code.</span>
             </label>
             <?php endif; ?>
             <label class="block text-sm">
-                <span class="text-slate-600">Manufacturer</span>
+                <span class="text-tx2">Manufacturer</span>
                 <input name="manufacturer" maxlength="190" value="<?= $e($val('manufacturer')) ?>" class="<?= $input ?>">
             </label>
             <label class="block text-sm">
-                <span class="text-slate-600">Country of origin</span>
+                <span class="text-tx2">Country of origin</span>
                 <input name="country_of_origin" maxlength="60" value="<?= $e($val('country_of_origin', 'India')) ?>" class="<?= $input ?>">
             </label>
             <label class="block text-sm">
-                <span class="text-slate-600">Return window (days)</span>
+                <span class="text-tx2">Return window (days)</span>
                 <input name="return_window_days" type="number" min="0" max="30" value="<?= $e($val('return_window_days')) ?>" class="<?= $input ?>" placeholder="Default: <?= (int) ($vendor['default_return_window_days'] ?? 7) ?>">
             </label>
             <label class="flex items-center gap-2 text-sm">
@@ -344,20 +344,20 @@ ob_start();
     </section>
 
     <!-- SEO -->
-    <details class="rounded-2xl border border-[#ece8df] bg-white p-6">
-        <summary class="cursor-pointer font-semibold">Search engine listing <span class="text-sm font-normal text-slate-500">(optional)</span></summary>
+    <details class="rounded-[10px] border border-ln bg-sf p-6">
+        <summary class="cursor-pointer font-semibold">Search engine listing <span class="text-sm font-normal text-tx3">(optional)</span></summary>
         <div class="mt-4 grid gap-4">
-            <label class="block text-sm"><span class="text-slate-600">SEO title</span>
+            <label class="block text-sm"><span class="text-tx2">SEO title</span>
                 <input name="seo_title" maxlength="190" value="<?= $e($val('seo_title')) ?>" class="<?= $input ?>"></label>
-            <label class="block text-sm"><span class="text-slate-600">SEO description</span>
+            <label class="block text-sm"><span class="text-tx2">SEO description</span>
                 <textarea name="seo_description" rows="2" maxlength="300" class="<?= $input ?>"><?= $e($val('seo_description')) ?></textarea></label>
         </div>
     </details>
 
     <div class="flex flex-wrap items-center gap-3">
-        <button class="rounded-full bg-[#0e4d34] px-6 py-2.5 text-sm font-medium text-white hover:bg-[#17774f]"><?= $isNew ? 'Save draft & add photos' : 'Save changes' ?></button>
+        <button class="rounded-[7px] bg-ac px-6 py-2.5 text-sm font-medium text-white hover:opacity-90"><?= $isNew ? 'Save draft & add photos' : 'Save changes' ?></button>
         <?php if (!$isNew && $status === 'live'): ?>
-            <span class="text-xs text-slate-500">Price and stock changes go live immediately. Changing the name, category, brand or description sends the product back for review.</span>
+            <span class="text-xs text-tx3">Price and stock changes go live immediately. Changing the name, category, brand or description sends the product back for review.</span>
         <?php endif; ?>
     </div>
     </fieldset>
@@ -365,23 +365,23 @@ ob_start();
 
 <?php if (!$isNew): ?>
 <!-- Photos (separate forms: file uploads can't nest in the main form) -->
-<section id="photos" class="mt-6 scroll-mt-6 rounded-2xl border border-[#ece8df] bg-white p-6">
-    <h2 class="font-semibold">Photos <span class="text-sm font-normal text-slate-500">(<?= count($product['images']) ?>/<?= ProductService::MAX_IMAGES ?>)</span></h2>
-    <p class="mt-1 text-xs text-slate-500">Square photos on a plain background work best. The first photo is the cover. JPG/PNG/WEBP, max 3 MB each.</p>
+<section id="photos" class="mt-6 scroll-mt-6 rounded-[10px] border border-ln bg-sf p-6">
+    <h2 class="font-semibold">Photos <span class="text-sm font-normal text-tx3">(<?= count($product['images']) ?>/<?= ProductService::MAX_IMAGES ?>)</span></h2>
+    <p class="mt-1 text-xs text-tx3">Square photos on a plain background work best. The first photo is the cover. JPG/PNG/WEBP, max 3 MB each.</p>
     <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <?php foreach ($product['images'] as $idx => $img): ?>
-            <div class="relative overflow-hidden rounded-xl border border-slate-200">
+            <div class="relative overflow-hidden rounded-[10px] border border-ln">
                 <img src="<?= $e($img['path']) ?>" alt="" class="aspect-square w-full object-cover">
-                <?php if ($idx === 0): ?><span class="absolute left-2 top-2 rounded-full bg-[#0e4d34] px-2 py-0.5 text-[10px] font-semibold text-white">Cover</span><?php endif; ?>
+                <?php if ($idx === 0): ?><span class="absolute left-2 top-2 rounded-[7px] bg-ac px-2 py-0.5 text-[10px] font-semibold text-white">Cover</span><?php endif; ?>
                 <div class="flex justify-between gap-1 border-t bg-white px-2 py-1.5 text-xs">
                     <?php if ($idx !== 0 && !$locked): ?>
                         <form method="post" action="/vendor/products/<?= (int) $product['id'] ?>/images/<?= (int) $img['id'] ?>/cover">
-                            <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><button class="text-[#17774f] hover:underline">Make cover</button>
+                            <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><button class="text-act hover:underline">Make cover</button>
                         </form>
                     <?php else: ?><span></span><?php endif; ?>
                     <?php if (!$locked): ?>
                         <form method="post" action="/vendor/products/<?= (int) $product['id'] ?>/images/<?= (int) $img['id'] ?>/delete" onsubmit="return confirm('Remove this photo?')">
-                            <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><button class="text-slate-500 hover:text-red-600 hover:underline">Remove</button>
+                            <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><button class="text-tx3 hover:text-red-600 hover:underline">Remove</button>
                         </form>
                     <?php endif; ?>
                 </div>
@@ -392,24 +392,24 @@ ob_start();
         <form method="post" action="/vendor/products/<?= (int) $product['id'] ?>/images" enctype="multipart/form-data" class="mt-4 flex flex-wrap items-center gap-3">
             <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
             <input type="file" name="images[]" multiple required accept="image/jpeg,image/png,image/webp" class="text-sm">
-            <button class="rounded-full border border-[#0e4d34] px-4 py-1.5 text-sm font-medium text-[#0e4d34] hover:bg-[#edf5ef]">Upload photos</button>
+            <button class="rounded-[7px] border border-ac px-4 py-1.5 text-sm font-medium text-act hover:bg-acs">Upload photos</button>
         </form>
     <?php endif; ?>
 </section>
 
 <section class="mt-6 flex flex-wrap items-center gap-4 text-sm">
     <?php if ($status === 'live'): ?>
-        <a href="https://eclinicpro.com/store/p/<?= $e($product['slug']) ?>" target="_blank" rel="noopener" class="text-[#17774f] hover:underline">View on store ↗</a>
+        <a href="https://eclinicpro.com/store/p/<?= $e($product['slug']) ?>" target="_blank" rel="noopener" class="text-act hover:underline">View on store ↗</a>
     <?php endif; ?>
     <?php if (!in_array($status, ['archived', 'disabled'], true)): ?>
         <form method="post" action="/vendor/products/<?= (int) $product['id'] ?>/archive" onsubmit="return confirm('Archive this product? It will be hidden from customers.')">
             <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><input type="hidden" name="do" value="archive">
-            <button class="text-slate-500 hover:text-red-600 hover:underline">Archive product</button>
+            <button class="text-tx3 hover:text-red-600 hover:underline">Archive product</button>
         </form>
     <?php elseif ($status === 'archived'): ?>
         <form method="post" action="/vendor/products/<?= (int) $product['id'] ?>/archive">
             <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><input type="hidden" name="do" value="restore">
-            <button class="text-[#17774f] hover:underline">Restore as draft</button>
+            <button class="text-act hover:underline">Restore as draft</button>
         </form>
     <?php endif; ?>
 </section>
