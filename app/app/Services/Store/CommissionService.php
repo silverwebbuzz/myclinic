@@ -63,7 +63,7 @@ final class CommissionService
         ];
     }
 
-    /** Commission on one line (GST-inclusive line total the customer pays). */
+    /** Commission on one line. $lineTotalPaise = the seller's price for the line EXCLUDING GST (taxable value). */
     public static function amount(array $rule, int $lineTotalPaise, int $qty): int
     {
         $c = $rule['type'] === 'fixed'

@@ -73,8 +73,10 @@ foreach ($tree as $dept) {
         }
     }
 }
+$gstInit = (string) $val('gst_bp', '');
 $calcInit = [
     'fees' => $feeConfig ?? null,
+    'gstBp' => $gstInit !== '' ? (int) $gstInit : null,
     'comm' => ['type' => $initialCommission['type'], 'bp' => (int) $initialCommission['rate_bp'], 'fixed' => (int) $initialCommission['fixed_paise']],
 ];
 $secondaryIds = array_map('intval', $hasOld ? (array) ($old['secondary_ids'] ?? []) : ($product['secondary_ids'] ?? []));
@@ -127,7 +129,7 @@ ob_start();
 
 <form method="post" action="<?= $isNew ? '/vendor/products' : '/vendor/products/' . (int) $product['id'] ?>" class="mt-5 space-y-6"
       x-data='productForm(<?= $e(json_encode(['variants' => $variantRows, 'specs' => $specRows, 'calc' => $calcInit], JSON_HEX_APOS | JSON_HEX_QUOT)) ?>)'
-      @category-picked.window="setCommission($event.detail)">
+      @category-picked.window="setCommission($event.detail)" @gst-picked.window="calc.gstBp = $event.detail.bp">
     <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
     <fieldset <?= $locked ? 'disabled' : '' ?> class="space-y-6">
 
@@ -228,23 +230,27 @@ ob_start();
                             <p class="font-semibold text-tx">What you'll earn per unit (estimate)</p>
                             <div class="mt-2 grid gap-3 sm:grid-cols-2">
                                 <template x-for="sc in est(v).cases" :key="sc.label">
-                                    <dl class="grid grid-cols-[1fr_auto] gap-x-3 gap-y-0.5">
+                                    <dl class="grid grid-cols-[1fr_auto] content-start gap-x-3 gap-y-0.5">
                                         <dt class="col-span-2 mb-1 font-medium text-tx2" x-text="sc.label"></dt>
-                                        <dt class="text-tx3">Selling price</dt><dd class="text-right" x-text="rs(sc.price)"></dd>
+                                        <dt class="text-tx3">Customer pays (incl. GST)</dt><dd class="text-right" x-text="rs(sc.price)"></dd>
                                         <dt class="text-tx3" x-text="'Commission (' + est(v).commLabel + ')'"></dt><dd class="text-right" x-text="'−' + rs(sc.commission)"></dd>
                                         <dt class="text-tx3">GST on commission (18%)</dt><dd class="text-right" x-text="'−' + rs(sc.commissionGst)"></dd>
                                         <dt class="text-tx3" x-text="'Courier (' + est(v).billedLabel + ' billed)'"></dt><dd class="text-right" x-text="'−' + rs(sc.courier)"></dd>
-                                        <template x-if="sc.credit > 0"><dt class="text-tx3">Customer's delivery fee</dt></template>
-                                        <template x-if="sc.credit > 0"><dd class="text-right text-emerald-700" x-text="'+' + rs(sc.credit)"></dd></template>
-                                        <dt class="border-t border-ln pt-1 font-semibold">You get about</dt>
-                                        <dd class="border-t border-ln pt-1 text-right font-semibold" :class="sc.net <= 0 ? 'text-red-700' : (sc.net < sc.price / 2 ? 'text-amber-700' : 'text-emerald-700')"
-                                            x-text="rs(sc.net) + ' (' + Math.round(sc.net / sc.price * 100) + '%)'"></dd>
+                                        <dt class="text-tx3" x-show="sc.credit > 0">Customer's delivery fee</dt><dd class="text-right text-emerald-700" x-show="sc.credit > 0" x-text="'+' + rs(sc.credit)"></dd>
+                                        <dt class="border-t border-ln pt-1 font-medium">Paid to your bank</dt><dd class="border-t border-ln pt-1 text-right font-medium" x-text="rs(sc.paid)"></dd>
+                                        <dt class="text-tx3" x-text="'GST on the sale (' + est(v).gstLabel + '), you pay the government'"></dt><dd class="text-right" x-text="'−' + rs(sc.gstOut)"></dd>
+                                        <dt class="text-tx3">GST you claim back (commission + courier)</dt><dd class="text-right text-emerald-700" x-text="'+' + rs(sc.itc)"></dd>
+                                        <dt class="border-t border-ln pt-1 font-semibold">You keep about</dt>
+                                        <dd class="border-t border-ln pt-1 text-right font-semibold" :class="sc.keep <= 0 ? 'text-red-700' : (sc.keep < sc.taxable / 2 ? 'text-amber-700' : 'text-emerald-700')"
+                                            x-text="rs(sc.keep) + ' (' + Math.round(sc.keep / sc.taxable * 100) + '% of ' + rs(sc.taxable) + ')'"></dd>
                                     </dl>
                                 </template>
                             </div>
-                            <p class="mt-2 text-amber-800" x-show="est(v).worst < est(v).price / 2">
+                            <p class="mt-2 text-amber-800" x-show="est(v).worst < est(v).taxable / 2">
                                 Courier is a big part of this price. Consider selling it as a pack of 2 or more, or checking the price.</p>
                             <p class="mt-2 text-tx3" x-show="!(+v.weight_g > 0)">No packed weight yet, so 500 g is assumed. Add the weight and box size for a better estimate.</p>
+                            <p class="mt-1 text-tx3" x-show="calc.gstBp === null">Choose the HSN code / GST rate below for exact numbers (0% GST assumed until then).</p>
+                            <p class="mt-1 text-tx3">Commission is on your price before GST. "You keep" is your earning before income tax, after you pay the GST on the sale and claim back the GST on our charges in your GST return.</p>
                             <p class="mt-1 text-tx3">Courier estimate: <span x-text="rs(calc.fees.courier_base)"></span> for the first 500 g + <span x-text="rs(calc.fees.courier_addl)"></span> per extra 500 g; the actual Shiprocket charge applies. When several items ship together, one courier charge covers the whole parcel.</p>
                         </div>
                     </template>
@@ -319,7 +325,8 @@ ob_start();
             <?php if (!empty($hsnList)): ?>
             <!-- HSN from eClinicPro's list; the GST rate follows from it (admin-controlled). -->
             <div class="contents" x-data='hsnPicker(<?= $e(json_encode(['list' => $hsnList, 'code' => (string) $val('hsn_code'), 'rate' => $gstCur], JSON_HEX_APOS | JSON_HEX_QUOT)) ?>)'
-                 @category-picked.window="if (!code && $event.detail.hsn) setCode($event.detail.hsn)">
+                 @category-picked.window="if (!code && $event.detail.hsn) setCode($event.detail.hsn)"
+                 x-effect="$dispatch('gst-picked', { bp: rates.length === 1 ? +rates[0] : (rate !== '' ? +rate : null) })">
                 <label class="block text-sm">
                     <span class="text-tx2">HSN code <span class="text-red-600">*</span></span>
                     <input name="hsn_code" maxlength="8" inputmode="numeric" pattern="\d{4,8}" required list="hsn-list" x-model="code" @input="sync()" class="<?= $input ?>" placeholder="Start typing, e.g. 3004">
@@ -356,7 +363,7 @@ ob_start();
             </label>
             <label class="block text-sm">
                 <span class="text-tx2">GST rate</span>
-                <select name="gst_bp" required class="<?= $input ?>">
+                <select name="gst_bp" required class="<?= $input ?>" @change="$dispatch('gst-picked', { bp: $event.target.value !== '' ? +$event.target.value : null })">
                     <option value="" <?= $gstKnown ? '' : 'selected' ?>>Choose GST rate…</option>
                     <?php foreach (CatalogService::GST_RATES_BP as $bp => $label): ?>
                         <option value="<?= $bp ?>" <?= $gstKnown && (int) $gstCur === $bp ? 'selected' : '' ?>><?= $e($label) ?></option>
@@ -491,8 +498,8 @@ function productForm(init) {
             const m = parseFloat(v.mrp), p = parseFloat(v.price);
             return m > 0 && p > 0 && p < m ? Math.round((1 - p / m) * 100) : 0;
         },
-        // ---- Earnings estimate (mirrors SellerFeeService::estimate) ----
-        calc: init.calc || { fees: null, comm: { type: 'percent', bp: 1000, fixed: 0 } },
+        // ---- Earnings estimate (same rules as PricingService + SellerFeeService) ----
+        calc: init.calc || { fees: null, gstBp: null, comm: { type: 'percent', bp: 1000, fixed: 0 } },
         setCommission(d) {
             if (d && d.commType) this.calc.comm = { type: d.commType, bp: d.commBp || 0, fixed: d.commFixed || 0 };
         },
@@ -503,16 +510,23 @@ function productForm(init) {
         est(v) {
             const f = this.calc.fees, price = Math.round(parseFloat(v.price) * 100);
             if (!f || !(price > 0)) return null;
-            const c = this.calc.comm;
-            const commission = c.type === 'fixed' ? Math.min(c.fixed, price) : Math.min(Math.round(price * c.bp / 10000), price);
+            const c = this.calc.comm, gstBp = this.calc.gstBp || 0;
+            // Same maths as PricingService: GST is inside the price; commission is on the price before GST.
+            const gstOut = Math.round(price * gstBp / (10000 + gstBp));
+            const taxable = price - gstOut;
+            const commission = c.type === 'fixed' ? Math.min(c.fixed, taxable) : Math.min(Math.round(taxable * c.bp / 10000), taxable);
             const commissionGst = Math.round(commission * f.commission_gst_bp / 10000);
             const w = parseInt(v.weight_g, 10) || 0;
             const vol = Math.ceil((parseFloat(v.length_cm) || 0) * (parseFloat(v.breadth_cm) || 0) * (parseFloat(v.height_cm) || 0) / f.vol_divisor * 1000);
             const billed = Math.max(w, vol, 1);
             const slabs = Math.max(1, Math.ceil(billed / f.slab_g));
             const courier = f.courier_base + (slabs - 1) * f.courier_addl;
-            const mk = (label, credit) => ({ label, price, commission, commissionGst, courier, credit,
-                net: price - commission - commissionGst - (courier - credit) });
+            const mk = (label, credit) => {
+                const ship = courier - credit;                                   // charged to you, 18% GST inside
+                const paid = price - commission - commissionGst - ship;
+                const itc = commissionGst + Math.round(ship * 1800 / 11800);
+                return { label, price, taxable, commission, commissionGst, courier, credit, paid, gstOut, itc, keep: paid - gstOut + itc };
+            };
             const cases = [];
             if (f.free_above === null || price < f.free_above) {
                 cases.push(mk('Bought on its own (customer pays ' + this.rs(f.delivery_fee) + ' delivery)', Math.min(f.delivery_fee, courier)));
@@ -521,8 +535,9 @@ function productForm(init) {
                 cases.push(mk('In an order of ' + this.rs(f.free_above) + '+ (free delivery for the customer)', 0));
             }
             return {
-                price, cases, worst: Math.min(...cases.map(x => x.net)),
-                commLabel: c.type === 'fixed' ? this.rs(c.fixed) + ' per unit' : (c.bp / 100) + '%',
+                price, taxable, cases, worst: Math.min(...cases.map(x => x.keep)),
+                commLabel: c.type === 'fixed' ? this.rs(c.fixed) + ' per unit' : (c.bp / 100) + '% of ' + this.rs(taxable),
+                gstLabel: (gstBp / 100) + '%',
                 billedLabel: (slabs * f.slab_g / 1000) + ' kg',
             };
         },

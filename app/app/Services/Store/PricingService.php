@@ -17,7 +17,7 @@ use App\Core\Database;
  *  - Coupons (optional) are spread across eligible lines in proportion to value:
  *        customer pays   = subtotal − vendor-funded − platform-funded discount
  *        seller revenue  = subtotal − vendor-funded discount   (platform coupons never cost the seller)
- *        commission      = on seller revenue
+ *        commission      = on seller revenue excluding GST (taxable value)
  *  - Commission (+ GST on commission) is resolved per line and snapshotted.
  */
 final class PricingService
@@ -94,7 +94,8 @@ final class PricingService
             // seller's invoice (we pay the seller the difference). VERIFY WITH CA.
             $tax = (int) round($sellerRevenue * $gstBp / (10000 + $gstBp));
             $rule = CommissionService::resolve($vid, (int) $it['category_id'], (int) ($it['dept_id'] ?? 0), (int) $it['product_id']);
-            $commission = CommissionService::amount($rule, $sellerRevenue, $qty);
+            // Commission is on the seller's price EXCLUDING GST (the GST belongs to the government).
+            $commission = CommissionService::amount($rule, $sellerRevenue - $tax, $qty);
             $commissionGst = (int) round($commission * CommissionService::COMMISSION_GST_BP / 10000);
             $payable = max(0, $sellerRevenue - $commission - $commissionGst);
 

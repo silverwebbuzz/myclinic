@@ -218,7 +218,7 @@ RAZORPAY_TEST_WEBHOOK_SECRET=…   (optional: the secret of the Test-mode webhoo
             <label class="block text-sm">
                 <span class="text-slate-600">Default commission (%)</span>
                 <input name="store_default_commission_pct" type="number" step="0.01" min="0" max="50" value="<?= $e((int) $settings['store_default_commission_bp'] / 100) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
-                <span class="text-xs text-slate-400">On the seller's selling price (after any discount the seller funds). 18% GST on commission is added on top (verify with your CA).</span>
+                <span class="text-xs text-slate-400">On the seller's price before GST (after any discount the seller funds): ₹118 incl. 18% GST → 10% of ₹100. 18% GST on commission is added on top (verify with your CA).</span>
             </label>
             <label class="block text-sm">
                 <span class="text-slate-600">Payment window (minutes)</span>

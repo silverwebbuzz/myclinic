@@ -87,36 +87,6 @@ final class SellerFeeService
         return ['courier' => $courier, 'credit' => $credit, 'charge' => $courier - $credit, 'estimated' => $estimated];
     }
 
-    /**
-     * Estimated earnings for ONE unit sold on its own, for the seller's calculator.
-     * Two cases: a small order (customer pays the delivery fee, which offsets the
-     * courier) and an order above the free-delivery threshold (seller pays it all).
-     *
-     * @param array{type: string, rate_bp: int, fixed_paise: int} $rule commission rule
-     * @return array<string, int|bool|null>
-     */
-    public static function estimate(int $pricePaise, int $weightG, float $lengthCm, float $breadthCm, float $heightCm, array $rule): array
-    {
-        $c = self::config();
-        $commission = CommissionService::amount($rule + ['rule_id' => null], $pricePaise, 1);
-        $commissionGst = (int) round($commission * $c['commission_gst_bp'] / 10000);
-        $courier = self::courierEstimate($weightG, $lengthCm, $breadthCm, $heightCm);
-        $smallOrder = $c['free_above'] === null || $pricePaise < $c['free_above'];
-        $credit = $smallOrder ? min($c['delivery_fee'], $courier) : 0;
-        $shipping = $courier - $credit;
-
-        return [
-            'price' => $pricePaise,
-            'commission' => $commission,
-            'commission_gst' => $commissionGst,
-            'courier' => $courier,
-            'customer_fee_credit' => $credit,
-            'shipping' => $shipping,
-            'net' => $pricePaise - $commission - $commissionGst - $shipping,
-            'small_order' => $smallOrder,
-        ];
-    }
-
     private static function packageWeight(int $vendorOrderId): int
     {
         $st = Database::connection()->prepare(
