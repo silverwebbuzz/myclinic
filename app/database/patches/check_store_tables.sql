@@ -61,6 +61,10 @@ FROM (
   UNION ALL SELECT 'store_policy_versions' AS tbl, '2026_10_01_store_tax_documents.sql' AS patch
   UNION ALL SELECT 'store_policy_acceptances' AS tbl, '2026_10_01_store_tax_documents.sql' AS patch
   UNION ALL SELECT 'store_hsn_codes' AS tbl, '2026_10_02_store_hsn_codes.sql' AS patch
+  UNION ALL SELECT 'store_email_templates' AS tbl, '2026_10_03_store_emails.sql' AS patch
+  UNION ALL SELECT 'store_email_log' AS tbl, '2026_10_03_store_emails.sql' AS patch
+  UNION ALL SELECT 'store_vendor_password_resets' AS tbl, '2026_10_03_store_emails.sql' AS patch
+  UNION ALL SELECT 'store_payout_requests' AS tbl, '2026_10_03_store_emails.sql' AS patch
 ) e
 LEFT JOIN information_schema.tables t ON t.table_schema = DATABASE() AND t.table_name = e.tbl
 WHERE t.table_name IS NULL

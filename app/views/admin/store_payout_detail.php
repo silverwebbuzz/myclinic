@@ -35,6 +35,14 @@ $bankChanged = $bank !== null && ($bank['account_last4'] !== $payout['bank_last4
     </div>
     <?php require __DIR__ . '/_store_flash.php'; ?>
 
+    <?php if (!empty($request)): ?>
+        <div class="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+            <strong>Requested by the seller</strong> on <?= $e(substr((string) $request['requested_at'], 0, 16)) ?>.
+            <?php if (!empty($request['note'])): ?><br>Seller's note: “<?= $e($request['note']) ?>”<?php endif; ?>
+            <?php if (!empty($request['decline_reason'])): ?><br>Declined: <?= $e($request['decline_reason']) ?><?php endif; ?>
+        </div>
+    <?php endif; ?>
+
     <section class="grid gap-5 rounded-xl border bg-white p-5 shadow-sm sm:grid-cols-2">
         <dl class="grid grid-cols-2 gap-y-1 text-sm">
             <dt class="text-slate-400">Earnings</dt><dd class="text-right"><?= $r($payout['gross_paise']) ?></dd>
@@ -55,9 +63,17 @@ $bankChanged = $bank !== null && ($bank['account_last4'] !== $payout['bank_last4
         <h2 class="font-semibold">Next step</h2>
         <?php if ($st === 'draft'): ?>
             <p class="mt-1 text-sm text-slate-600">Check the entries below, then approve.</p>
-            <div class="mt-3 flex gap-2">
+            <div class="mt-3 flex flex-wrap items-start gap-2">
                 <form method="post" action="/admin/store/payouts/<?= $pid ?>/approve"><input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><button class="rounded bg-emerald-600 px-4 py-2 text-sm text-white">Approve</button></form>
-                <form method="post" action="/admin/store/payouts/<?= $pid ?>/cancel" onsubmit="return confirm('Cancel this payout? Entries go back to available.')"><input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><button class="rounded border px-4 py-2 text-sm">Cancel</button></form>
+                <?php if (!empty($request)): ?>
+                    <form method="post" action="/admin/store/payouts/<?= $pid ?>/cancel" class="flex flex-wrap gap-2" onsubmit="return confirm('Decline this request? The amount goes back to the seller\'s available balance and they are emailed the reason.')">
+                        <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+                        <input name="note" required placeholder="Reason (the seller sees this)" class="w-72 rounded border px-3 py-1.5 text-sm">
+                        <button class="rounded border border-red-300 px-4 py-2 text-sm text-red-700">Decline request</button>
+                    </form>
+                <?php else: ?>
+                    <form method="post" action="/admin/store/payouts/<?= $pid ?>/cancel" onsubmit="return confirm('Cancel this payout? Entries go back to available.')"><input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><button class="rounded border px-4 py-2 text-sm">Cancel</button></form>
+                <?php endif; ?>
             </div>
         <?php elseif ($st === 'approved' || $st === 'processing'): ?>
             <p class="mt-1 text-sm text-slate-600">Transfer <strong><?= $r($payout['net_paise']) ?></strong> from your bank (NEFT/IMPS/UPI), then record the UTR.</p>
@@ -68,7 +84,7 @@ $bankChanged = $bank !== null && ($bank['account_last4'] !== $payout['bank_last4
             </form>
             <form method="post" action="/admin/store/payouts/<?= $pid ?>/failed" class="mt-2 flex flex-wrap gap-2">
                 <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
-                <input name="note" placeholder="Why it failed" class="rounded border px-3 py-1.5 text-sm">
+                <input name="note" placeholder="Why it failed (the seller sees this)" class="w-72 rounded border px-3 py-1.5 text-sm">
                 <button class="rounded border border-red-300 px-3 py-1.5 text-sm text-red-700">Mark failed</button>
             </form>
         <?php elseif ($st === 'paid'): ?>

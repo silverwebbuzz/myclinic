@@ -201,6 +201,64 @@ final class SettlementService
         return ['created' => $created, 'skipped' => $skipped];
     }
 
+    /**
+     * Seller clicked "Request payout": same checks as the admin batch, then a draft
+     * payout for the whole available balance. Admin approves, pays from the bank and
+     * marks it paid (UTR), or declines it (cancel), which returns the money to available.
+     *
+     * @return array{ok: bool, error?: string, payout_id?: int}
+     */
+    public static function requestPayout(int $vendorId, int $vendorUserId, string $note): array
+    {
+        self::releaseMatured();
+        $vendor = VendorService::find($vendorId);
+        if ($vendor === null || $vendor['status'] !== 'approved') {
+            return ['ok' => false, 'error' => 'Your seller account must be active to request a payout.'];
+        }
+        $bank = VendorService::primaryBank($vendorId);
+        if ($bank === null || ($bank['status'] ?? '') !== 'verified') {
+            return ['ok' => false, 'error' => 'Your bank account must be verified before you can request a payout.'];
+        }
+        $open = Database::connection()->prepare("SELECT COUNT(*) FROM store_payouts WHERE vendor_id = :v AND status IN ('draft','approved','processing')");
+        $open->execute(['v' => $vendorId]);
+        if ((int) $open->fetchColumn() > 0) {
+            return ['ok' => false, 'error' => 'You already have a payout in progress. You can request again once it is paid.'];
+        }
+        $available = (int) self::balances($vendorId)['available'];
+        $min = StoreSettings::int('store_min_payout_paise', 10000);
+        if ($available < $min) {
+            return ['ok' => false, 'error' => 'The minimum payout is ₹' . ProductService::rupees($min) . '. Your available balance is ₹' . ProductService::rupees(max(0, $available)) . '.'];
+        }
+        $res = self::createForVendor($vendorId, 0);
+        if (!$res['ok']) {
+            return $res;
+        }
+        try {
+            QueryBuilder::table('store_payout_requests')->insert([
+                'payout_id' => (int) $res['payout_id'],
+                'vendor_id' => $vendorId,
+                'vendor_user_id' => $vendorUserId,
+                'note' => mb_substr(trim($note), 0, 500) ?: null,
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[Settlement::requestPayout] ' . $e->getMessage());   // patch 2026_10_03 missing: payout still created
+        }
+        StoreAudit::log('payout.request', 'payout', (int) $res['payout_id'], null, ['vendor_id' => $vendorId, 'by' => $vendorUserId]);
+        StoreNotifier::payoutRequested((int) $res['payout_id']);
+
+        return $res;
+    }
+
+    /** @return array{vendor_user_id: ?int, note: ?string, decline_reason: ?string, requested_at: string}|null */
+    public static function requestFor(int $payoutId): ?array
+    {
+        try {
+            return QueryBuilder::table('store_payout_requests')->where('payout_id', '=', $payoutId)->first();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     /** @return array{ok: bool, error?: string, payout_id?: int} */
     public static function createForVendor(int $vendorId, int $adminId): array
     {
@@ -322,6 +380,16 @@ final class SettlementService
         StoreAudit::log('payout.' . $action, 'payout', $payoutId, ['status' => $from], $upd);
         if ($to === 'paid') {
             StoreNotifier::payoutPaid($payoutId);
+        } elseif ($to === 'failed') {
+            StoreNotifier::payoutNotPaid($payoutId, 'failed', trim($note) ?: 'Transfer failed');
+        } elseif ($to === 'cancelled' && self::requestFor($payoutId) !== null) {
+            // Cancelling a seller's REQUEST = declining it; the seller needs to know why.
+            $reason = trim($note) ?: 'Please contact us for details.';
+            try {
+                QueryBuilder::table('store_payout_requests')->where('payout_id', '=', $payoutId)->update(['decline_reason' => mb_substr($reason, 0, 500)]);
+            } catch (\Throwable) {
+            }
+            StoreNotifier::payoutNotPaid($payoutId, 'declined', $reason);
         }
 
         return ['ok' => true];

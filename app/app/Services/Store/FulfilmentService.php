@@ -154,6 +154,7 @@ final class FulfilmentService
         $vo = \App\Core\QueryBuilder::table('store_vendor_orders')->where('id', '=', $vendorOrderId)->first();
         OrderService::history((int) $vo['order_id'], $vendorOrderId, 'vendor_order', $vendorOrderId, $from, $to, 'vendor_user', $userId, $note);
         OrderService::recomputeStatus((int) $vo['order_id']);
+        StoreNotifier::packageAdvanced($vendorOrderId, $to);
 
         return ['ok' => true];
     }

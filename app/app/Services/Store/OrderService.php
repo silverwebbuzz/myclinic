@@ -36,7 +36,10 @@ final class OrderService
                         }
                     }
                 }
-                $n += self::release((int) $r['id'], 'expired', 'Payment window expired') ? 1 : 0;
+                if (self::release((int) $r['id'], 'expired', 'Payment window expired')) {
+                    $n++;
+                    StoreNotifier::orderExpired((int) $r['id']);
+                }
             }
 
             return $n;

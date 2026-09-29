@@ -95,7 +95,7 @@ $totalAvailable = array_sum(array_map(static fn ($b) => max(0, (int) $b['availab
             <?php if (!$payouts): ?><tr><td class="px-4 py-6 text-center text-slate-400">No payouts yet.</td></tr><?php endif; ?>
             <?php foreach ($payouts as $p): ?>
                 <tr class="hover:bg-slate-50">
-                    <td class="px-4 py-2"><a href="/admin/store/payouts/<?= (int) $p['id'] ?>" class="font-mono text-sky-700 hover:underline"><?= $e($p['payout_no']) ?></a></td>
+                    <td class="px-4 py-2"><a href="/admin/store/payouts/<?= (int) $p['id'] ?>" class="font-mono text-sky-700 hover:underline"><?= $e($p['payout_no']) ?></a><?php if (!empty($p['is_requested'])): ?> <span class="ml-1 rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-800">Requested</span><?php endif; ?></td>
                     <td class="px-4 py-2"><?= $e($p['display_name']) ?></td>
                     <td class="px-4 py-2 text-slate-500"><?= $e($p['period_from']) ?> → <?= $e($p['period_to']) ?></td>
                     <td class="px-4 py-2 text-right font-semibold"><?= $r($p['net_paise']) ?></td>

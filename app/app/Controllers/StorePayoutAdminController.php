@@ -31,6 +31,15 @@ final class StorePayoutAdminController
             $st->execute($status !== '' ? ['s' => $status] : []);
             $payouts = $st->fetchAll();
             $missing = false;
+            try {
+                // Seller-requested payouts get a "Requested" tag (table from patch 2026_10_03).
+                $requested = array_flip(array_map('intval', Database::connection()->query('SELECT payout_id FROM store_payout_requests')->fetchAll(\PDO::FETCH_COLUMN)));
+                foreach ($payouts as &$po) {
+                    $po['is_requested'] = isset($requested[(int) $po['id']]);
+                }
+                unset($po);
+            } catch (\Throwable) {
+            }
         } catch (\Throwable $e) {
             error_log('[StorePayoutAdmin::index] ' . $e->getMessage());
             $balances = $payouts = [];
@@ -79,6 +88,7 @@ final class StorePayoutAdminController
             'vendor' => VendorService::find((int) $p['vendor_id']),
             'bank' => VendorService::primaryBank((int) $p['vendor_id']),
             'entries' => SettlementService::ledger((int) $p['vendor_id'], 2000, (int) $p['id']),
+            'request' => SettlementService::requestFor((int) $p['id']),
         ]);
     }
 

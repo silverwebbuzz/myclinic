@@ -293,6 +293,9 @@ final class ProductService
         }
 
         StoreAudit::log($existing === null ? 'product.create' : 'product.update', 'product', $productId, $existing, $data);
+        if ($sentToReview) {
+            StoreNotifier::productSubmitted($productId);
+        }
 
         return ['ok' => true, 'id' => $productId, 'sent_to_review' => $sentToReview];
     }
@@ -608,6 +611,9 @@ final class ProductService
             : ['status' => 'pending_review', 'review_note' => null];
         QueryBuilder::table('store_products')->where('id', '=', (int) $product['id'])->update($upd);
         StoreAudit::log('product.submit', 'product', (int) $product['id'], ['status' => $product['status']], $upd);
+        if (!$goLive) {
+            StoreNotifier::productSubmitted((int) $product['id']);
+        }
 
         return ['ok' => true, 'live' => $goLive];
     }
@@ -721,6 +727,7 @@ final class ProductService
         }
         QueryBuilder::table('store_products')->where('id', '=', $productId)->update($upd);
         StoreAudit::log('product.' . $action, 'product', $productId, ['status' => $from], $upd);
+        StoreNotifier::productDecision($productId, $action, $note);
 
         return ['ok' => true];
     }

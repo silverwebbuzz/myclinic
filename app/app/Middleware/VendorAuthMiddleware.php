@@ -18,7 +18,7 @@ use App\Services\Store\VendorService;
 final class VendorAuthMiddleware implements MiddlewareInterface
 {
     /** @var list<string> exact matches */
-    private array $publicPaths = ['/vendor/login', '/vendor/register'];
+    private array $publicPaths = ['/vendor/login', '/vendor/register', '/vendor/forgot-password', '/vendor/reset-password'];
 
     public function handle(Request $request, callable $next): Response
     {

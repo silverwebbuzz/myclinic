@@ -59,7 +59,7 @@ final class ReviewService
             return ['ok' => false, 'error' => 'You have already reviewed this item.'];
         }
         $auto = StoreSettings::get('store_reviews_auto_publish', '0') === '1';
-        QueryBuilder::table('store_reviews')->insert([
+        $reviewId = QueryBuilder::table('store_reviews')->insert([
             'product_id' => (int) $it['product_id'], 'vendor_id' => (int) $it['vendor_id'], 'identity_id' => $identityId,
             'order_item_id' => $orderItemId, 'rating' => $rating,
             'title' => mb_substr(trim($title), 0, 190) ?: null,
@@ -69,6 +69,7 @@ final class ReviewService
         if ($auto) {
             self::recompute((int) $it['product_id'], (int) $it['vendor_id']);
         }
+        StoreNotifier::reviewCreated((int) $reviewId);
 
         return ['ok' => true];
     }
@@ -86,6 +87,9 @@ final class ReviewService
         QueryBuilder::table('store_reviews')->where('id', '=', $reviewId)->update(['status' => $decision]);
         self::recompute((int) $r['product_id'], (int) $r['vendor_id']);
         StoreAudit::log('review.' . $decision, 'review', $reviewId);
+        if ($decision === 'published' && $r['status'] !== 'published') {
+            StoreNotifier::reviewPublished($reviewId);
+        }
 
         return ['ok' => true];
     }
@@ -93,10 +97,16 @@ final class ReviewService
     /** @return array{ok: bool, error?: string} */
     public static function reply(int $vendorId, int $reviewId, string $reply): array
     {
+        $before = QueryBuilder::table('store_reviews')->where('id', '=', $reviewId)->where('vendor_id', '=', $vendorId)->first();
+        $new = mb_substr(trim($reply), 0, 1000);
         $n = QueryBuilder::table('store_reviews')->where('id', '=', $reviewId)->where('vendor_id', '=', $vendorId)->update([
-            'vendor_reply' => mb_substr(trim($reply), 0, 1000) ?: null,
-            'replied_at' => trim($reply) !== '' ? date('Y-m-d H:i:s') : null,
+            'vendor_reply' => $new ?: null,
+            'replied_at' => $new !== '' ? date('Y-m-d H:i:s') : null,
         ]);
+        // Tell the customer only about a new or changed reply (not when it's cleared).
+        if ($n > 0 && $new !== '' && $new !== trim((string) ($before['vendor_reply'] ?? ''))) {
+            StoreNotifier::reviewReplied($reviewId);
+        }
 
         return $n > 0 ? ['ok' => true] : ['ok' => false, 'error' => 'Review not found.'];
     }

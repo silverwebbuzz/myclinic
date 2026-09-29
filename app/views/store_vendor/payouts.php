@@ -17,10 +17,10 @@ $statusLabel = ['pending' => 'In return window', 'available' => 'Next payout', '
 ob_start();
 ?>
 <h1 class="text-[22px] font-semibold tracking-[-.015em]">Payouts</h1>
-<p class="mt-1 text-sm text-tx3">You earn on every <strong>delivered</strong> package. Earnings unlock after the return window and are paid to your bank in the next payout run.</p>
+<p class="mt-1 text-sm text-tx3">You earn on every <strong>delivered</strong> package. Earnings unlock after the return window. Once they're ready, request a payout and we'll transfer it to your bank.</p>
 
 <div class="mt-5 grid gap-3 sm:grid-cols-4">
-    <?php foreach ([['pending', 'In return window', 'Unlocks after the return window'], ['available', 'Ready for next payout', 'Included in the next payout run'],
+    <?php foreach ([['pending', 'In return window', 'Unlocks after the return window'], ['available', 'Ready to request', 'Request a payout below'],
                      ['in_payout', 'Being paid', 'Transfer in progress'], ['paid', 'Paid to you', 'Lifetime']] as [$k, $label, $hint]): ?>
         <div class="rounded-[10px] border border-ln bg-sf p-4">
             <div class="text-xs uppercase tracking-wide text-tx3"><?= $e($label) ?></div>
@@ -35,6 +35,36 @@ ob_start();
     </div>
 <?php endif; ?>
 
+<?php
+$hasOpenPayout = (bool) array_filter($payouts, static fn ($p) => in_array($p['status'], ['draft', 'approved', 'processing'], true));
+$bankOk = $bank !== null && $bank['status'] === 'verified';
+$canRequest = $bankOk && !$hasOpenPayout && $balances['available'] >= $minPayout;
+?>
+<section class="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-[10px] border border-ln bg-sf p-5">
+    <div class="text-sm">
+        <div class="font-semibold">Request a payout</div>
+        <div class="mt-0.5 text-tx3">
+            <?php if ($hasOpenPayout): ?>
+                A payout is already being processed. You can request again once it's paid.
+            <?php elseif (!$bankOk): ?>
+                Available once your bank account is verified.
+            <?php elseif ($balances['available'] < $minPayout): ?>
+                Minimum payout is <?= $r($minPayout) ?>. You have <?= $r(max(0, $balances['available'])) ?> ready.
+            <?php else: ?>
+                <?= $r($balances['available']) ?> is ready. We usually transfer within 2 working days and email you the bank reference (UTR).
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php if ($canRequest): ?>
+        <form method="post" action="/vendor/payouts/request" class="flex flex-wrap items-center gap-2"
+              onsubmit="return confirm('Request a payout of <?= $e($r($balances['available'])) ?> to your bank account ending <?= $e($bank['account_last4'] ?? '') ?>?')">
+            <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+            <input name="note" maxlength="500" placeholder="Note for our team (optional)" class="w-64 rounded-[7px] border border-ln bg-sf px-3 py-2 text-sm">
+            <button class="rounded-[7px] bg-ac px-4 py-2 text-sm font-medium text-white hover:opacity-90">Request payout of <?= $r($balances['available']) ?></button>
+        </form>
+    <?php endif; ?>
+</section>
+
 <section class="mt-6 rounded-[10px] border border-ln bg-sf p-6">
     <h2 class="font-semibold">Payouts</h2>
     <?php if (!$payouts): ?>
@@ -47,7 +77,10 @@ ob_start();
                 <tr><td class="py-2 font-mono"><?= $e($p['payout_no']) ?></td>
                     <td class="text-tx3"><?= $e($p['period_from']) ?> → <?= $e($p['period_to']) ?></td>
                     <td class="text-right font-semibold"><?= $r($p['net_paise']) ?></td>
-                    <td><?= $e($p['status'] === 'draft' || $p['status'] === 'approved' ? 'Processing' : ucfirst((string) $p['status'])) ?></td>
+                    <td><?= $e($p['status'] === 'draft' || $p['status'] === 'approved' ? 'Processing' : ($p['status'] === 'cancelled' ? 'Declined' : ucfirst((string) $p['status']))) ?>
+                        <?php if (in_array($p['status'], ['cancelled', 'failed'], true) && !empty($p['failure_reason'] ?? $p['decline_reason'] ?? '')): ?>
+                            <div class="text-xs text-tx3"><?= $e($p['decline_reason'] ?? $p['failure_reason']) ?></div>
+                        <?php endif; ?></td>
                     <td class="font-mono text-xs"><?= $e($p['reference'] ?? '') ?></td>
                     <td class="text-right"><a href="/vendor/payouts/<?= (int) $p['id'] ?>/statement" class="text-act hover:underline">Statement</a></td></tr>
             <?php endforeach; ?>

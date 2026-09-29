@@ -105,6 +105,8 @@ if ($inStore) {
         ],
         'Setup' => [
             ['/admin/store/policies/seller_terms', 'Seller terms', 'M9 12l2 2 4-4M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7z'],
+            ['/admin/store/email', 'Store email', 'M4 4h16v16H4zM4 6l8 7 8-7'],
+            ['/admin/store/email-templates', 'Email templates', 'M4 4h16v16H4zM8 9h8M8 13h8M8 17h5'],
             ['/admin/store/settings', 'Store settings', 'M12 15a3 3 0 100-6 3 3 0 000 6zM4 12h2M18 12h2M12 4v2M12 18v2'],
         ],
     ];

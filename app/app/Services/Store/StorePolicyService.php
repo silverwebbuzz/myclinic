@@ -72,6 +72,9 @@ final class StorePolicyService
             return ['ok' => false, 'error' => 'Could not save.'];
         }
         StoreAudit::log('policy.save', 'policy', null, ['slug' => $slug, 'version' => $cur['version']], ['slug' => $slug, 'version' => $v]);
+        if ($slug === 'seller_terms') {
+            StoreNotifier::termsUpdated($v);   // sellers must re-accept the new version
+        }
 
         return ['ok' => true, 'version' => $v];
     }

@@ -576,6 +576,12 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/store/reviews/{id}', [\App\Controllers\StoreMerchAdminController::class, 'moderateReview']);
         $admin->get('/store/banners', [\App\Controllers\StoreMerchAdminController::class, 'banners']);
         $admin->post('/store/banners', [\App\Controllers\StoreMerchAdminController::class, 'saveBanner']);
+        $admin->get('/store/email', [\App\Controllers\StoreEmailAdminController::class, 'settings']);
+        $admin->post('/store/email', [\App\Controllers\StoreEmailAdminController::class, 'saveSettings']);
+        $admin->get('/store/email-templates', [\App\Controllers\StoreEmailAdminController::class, 'templates']);
+        $admin->get('/store/email-templates/{key}/preview', [\App\Controllers\StoreEmailAdminController::class, 'preview']);
+        $admin->post('/store/email-templates/{key}/reset', [\App\Controllers\StoreEmailAdminController::class, 'resetTemplate']);
+        $admin->post('/store/email-templates/{key}', [\App\Controllers\StoreEmailAdminController::class, 'saveTemplate']);
         $admin->get('/store/settings', [StoreAdminController::class, 'settings']);
         $admin->post('/store/settings', [StoreAdminController::class, 'saveSettings']);
         $admin->get('/store/vendors', [StoreAdminController::class, 'vendors']);
@@ -648,6 +654,10 @@ return static function (RouteRegistrar $router): void {
         $vendor->post('/login', [VendorAuthController::class, 'login']);
         $vendor->get('/register', [VendorAuthController::class, 'showRegister']);
         $vendor->post('/register', [VendorAuthController::class, 'register']);
+        $vendor->get('/forgot-password', [VendorAuthController::class, 'showForgot']);
+        $vendor->post('/forgot-password', [VendorAuthController::class, 'forgot']);
+        $vendor->get('/reset-password', [VendorAuthController::class, 'showReset']);
+        $vendor->post('/reset-password', [VendorAuthController::class, 'reset']);
         $vendor->post('/logout', [VendorAuthController::class, 'logout']);
 
         // Authenticated onboarding
@@ -702,6 +712,7 @@ return static function (RouteRegistrar $router): void {
 
         // Earnings & payouts (P9)
         $vendor->get('/payouts', [\App\Controllers\VendorPayoutController::class, 'index']);
+        $vendor->post('/payouts/request', [\App\Controllers\VendorPayoutController::class, 'request']);
         $vendor->get('/payouts/{id}/statement', [\App\Controllers\VendorPayoutController::class, 'statement']);
     });
 

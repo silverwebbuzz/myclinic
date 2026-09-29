@@ -86,6 +86,57 @@ final class VendorAuthController
         return Response::redirect('/vendor/dashboard?welcome=1');
     }
 
+    public function showForgot(Request $request): Response
+    {
+        return Response::html(View::render('store_vendor/forgot_password', [
+            'csrf' => CsrfService::token(),
+            'sent' => false,
+            'email' => '',
+        ]));
+    }
+
+    /** Same response whether or not the email has an account (no account discovery). */
+    public function forgot(Request $request): Response
+    {
+        $email = strtolower(trim((string) ($request->post['email'] ?? '')));
+        if (filter_var($email, FILTER_VALIDATE_EMAIL) && Database::ping()) {
+            VendorService::startPasswordReset($email, (string) ($_SERVER['REMOTE_ADDR'] ?? ''));
+        }
+
+        return Response::html(View::render('store_vendor/forgot_password', [
+            'csrf' => CsrfService::token(),
+            'sent' => true,
+            'email' => $email,
+        ]));
+    }
+
+    public function showReset(Request $request): Response
+    {
+        $token = (string) ($request->query['token'] ?? '');
+
+        return Response::html(View::render('store_vendor/reset_password', [
+            'csrf' => CsrfService::token(),
+            'token' => $token,
+            'valid' => VendorService::findResetToken($token) !== null,
+            'error' => null,
+            'done' => false,
+        ]));
+    }
+
+    public function reset(Request $request): Response
+    {
+        $token = (string) ($request->post['token'] ?? '');
+        $res = VendorService::completePasswordReset($token, (string) ($request->post['password'] ?? ''), (string) ($request->post['password_confirm'] ?? ''));
+
+        return Response::html(View::render('store_vendor/reset_password', [
+            'csrf' => CsrfService::token(),
+            'token' => $token,
+            'valid' => $res['ok'] || VendorService::findResetToken($token) !== null,
+            'error' => $res['ok'] ? null : ($res['error'] ?? 'Could not reset the password.'),
+            'done' => $res['ok'],
+        ]), $res['ok'] ? 200 : 422);
+    }
+
     public function logout(Request $request): Response
     {
         VendorJwtService::clearCookie();

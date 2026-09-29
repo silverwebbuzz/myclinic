@@ -93,6 +93,7 @@ final class VendorService
         }
 
         StoreAudit::log('vendor.register', 'vendor', $vendorId, null, ['email' => $email]);
+        StoreNotifier::vendorRegistered($vendorId);
 
         return ['ok' => true, 'vendor_id' => $vendorId, 'user_id' => $userId];
     }
@@ -140,6 +141,114 @@ final class VendorService
         ]);
 
         return ['ok' => true, 'user' => $user, 'vendor' => $vendor];
+    }
+
+    // ------------------------------------------------------------------
+    // Forgot password (store_vendor_password_resets)
+    // ------------------------------------------------------------------
+
+    public const RESET_MINUTES = 60;
+
+    /**
+     * Email a one-time reset link if the address belongs to an active seller login.
+     * Always "succeeds" from the caller's view so the form never reveals which
+     * emails have accounts. At most 3 links per login per hour.
+     */
+    public static function startPasswordReset(string $email, string $ip): void
+    {
+        $user = self::findUserByEmail(strtolower(trim($email)));
+        if ($user === null || ($user['status'] ?? '') !== 'active') {
+            return;
+        }
+        $vendor = self::find((int) $user['vendor_id']);
+        if ($vendor === null || $vendor['status'] === 'closed') {
+            return;
+        }
+        try {
+            $recent = Database::connection()->prepare(
+                'SELECT COUNT(*) FROM store_vendor_password_resets WHERE vendor_user_id = :u AND created_at >= NOW() - INTERVAL 1 HOUR'
+            );
+            $recent->execute(['u' => (int) $user['id']]);
+            if ((int) $recent->fetchColumn() >= 3) {
+                return;
+            }
+            $token = bin2hex(random_bytes(32));
+            QueryBuilder::table('store_vendor_password_resets')->insert([
+                'vendor_user_id' => (int) $user['id'],
+                'token_hash' => hash('sha256', $token),
+                'expires_at' => date('Y-m-d H:i:s', time() + self::RESET_MINUTES * 60),
+                'created_ip' => mb_substr($ip, 0, 45) ?: null,
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[VendorService::startPasswordReset] ' . $e->getMessage());
+
+            return;
+        }
+        $url = rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/') . '/vendor/reset-password?token=' . $token;
+        StoreNotifier::passwordReset($user, $url);
+        StoreAudit::log('vendor_user.reset_requested', 'vendor_user', (int) $user['id']);
+    }
+
+    /** The reset row for a still-valid token, or null (unknown, used or expired). */
+    public static function findResetToken(string $token): ?array
+    {
+        if (!preg_match('/^[a-f0-9]{64}$/', $token)) {
+            return null;
+        }
+        try {
+            $st = Database::connection()->prepare(
+                'SELECT * FROM store_vendor_password_resets WHERE token_hash = :h AND used_at IS NULL AND expires_at > NOW() LIMIT 1'
+            );
+            $st->execute(['h' => hash('sha256', $token)]);
+
+            return $st->fetch() ?: null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /** @return array{ok: bool, error?: string} */
+    public static function completePasswordReset(string $token, string $password, string $confirm): array
+    {
+        $row = self::findResetToken($token);
+        if ($row === null) {
+            return ['ok' => false, 'error' => 'This reset link has expired or was already used. Please request a new one.'];
+        }
+        if (strlen($password) < 8) {
+            return ['ok' => false, 'error' => 'Password must be at least 8 characters.'];
+        }
+        if ($password !== $confirm) {
+            return ['ok' => false, 'error' => 'Passwords do not match.'];
+        }
+        $pdo = Database::connection();
+        $pdo->beginTransaction();
+        try {
+            // Claim the token first (guarded) so two tabs can't both use it.
+            $claim = $pdo->prepare('UPDATE store_vendor_password_resets SET used_at = NOW() WHERE id = :id AND used_at IS NULL');
+            $claim->execute(['id' => (int) $row['id']]);
+            if ($claim->rowCount() !== 1) {
+                $pdo->rollBack();
+
+                return ['ok' => false, 'error' => 'This reset link was already used. Please request a new one.'];
+            }
+            QueryBuilder::table('store_vendor_users')->where('id', '=', (int) $row['vendor_user_id'])->update([
+                'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+                'failed_logins' => 0,
+                'locked_until' => null,
+            ]);
+            // Any other outstanding links for this login stop working too.
+            $pdo->prepare('UPDATE store_vendor_password_resets SET used_at = NOW() WHERE vendor_user_id = :u AND used_at IS NULL')
+                ->execute(['u' => (int) $row['vendor_user_id']]);
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            error_log('[VendorService::completePasswordReset] ' . $e->getMessage());
+
+            return ['ok' => false, 'error' => 'Could not update your password. Please try again.'];
+        }
+        StoreAudit::log('vendor_user.password_reset', 'vendor_user', (int) $row['vendor_user_id']);
+
+        return ['ok' => true];
     }
 
     public static function findUserByEmail(string $email): ?array
@@ -550,6 +659,7 @@ final class VendorService
             'submitted_at' => date('Y-m-d H:i:s'),
         ]);
         StoreAudit::log('vendor.submit', 'vendor', (int) $vendor['id'], ['status' => $vendor['status']], ['status' => 'pending_review']);
+        StoreNotifier::vendorSubmitted((int) $vendor['id']);
 
         return ['ok' => true];
     }
@@ -637,6 +747,7 @@ final class VendorService
         }
         QueryBuilder::table('store_vendors')->where('id', '=', $vendorId)->update($upd);
         StoreAudit::log('vendor.' . $action, 'vendor', $vendorId, ['status' => $from], $upd);
+        StoreNotifier::vendorStatusChanged($vendorId, $action, $reason);
 
         return ['ok' => true];
     }
@@ -662,6 +773,9 @@ final class VendorService
         ];
         QueryBuilder::table('store_vendor_documents')->where('id', '=', $docId)->update($upd);
         StoreAudit::log('vendor_document.' . $decision, 'vendor_document', $docId, ['status' => $doc['status']], $upd);
+        if ($decision === 'rejected') {
+            StoreNotifier::documentRejected($docId);
+        }
 
         return ['ok' => true];
     }
