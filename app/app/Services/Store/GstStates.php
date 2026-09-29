@@ -40,7 +40,9 @@ final class GstStates
         static $byName = null;
         $byName ??= array_flip(array_map('strtolower', self::STATES));
         if (isset($byName[$n])) {
-            return $byName[$n];
+            // PHP stores numeric-string keys '10'…'38' as ints, so array_flip hands
+            // them back as int 24 etc. (only '01'…'09' stay strings). Re-pad to text.
+            return str_pad((string) $byName[$n], 2, '0', STR_PAD_LEFT);
         }
         $compact = str_replace(' and ', ' ', $n);
 
