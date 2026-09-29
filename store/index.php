@@ -19,39 +19,9 @@ if (!$featured) {
     $newest = [];
 }
 
-$sellers = [];
-$brands = [];
-$banners = [];
-$db = ecp_db();
-if ($db) {
-    try {
-        $banners = $db->query(
-            "SELECT title, image_path, link FROM store_banners
-              WHERE is_active = 1 AND placement = 'home_strip'
-                AND (starts_at IS NULL OR starts_at <= NOW()) AND (ends_at IS NULL OR ends_at >= NOW())
-              ORDER BY sort_order, id DESC LIMIT 3"
-        )->fetchAll();
-    } catch (Throwable) {
-        $banners = [];
-    }
-    try {
-        $sellers = $db->query(
-            "SELECT v.slug, v.display_name, v.logo_path,
-                    (SELECT COUNT(*) FROM store_products p WHERE p.vendor_id = v.id AND p.status = 'live' AND p.deleted_at IS NULL) AS n
-               FROM store_vendors v
-              WHERE v.status = 'approved'
-              ORDER BY v.is_featured DESC, n DESC LIMIT 6"
-        )->fetchAll();
-        $sellers = array_values(array_filter($sellers, static fn ($s) => (int) $s['n'] > 0));
-        $brands = $db->query(
-            "SELECT b.slug, b.name FROM store_brands b
-              WHERE b.is_active = 1 AND EXISTS (SELECT 1 FROM store_products p WHERE p.brand_id = b.id AND p.status = 'live' AND p.deleted_at IS NULL)
-              ORDER BY b.is_featured DESC, b.name LIMIT 16"
-        )->fetchAll();
-    } catch (Throwable $e) {
-        error_log('[store home] ' . $e->getMessage());
-    }
-}
+$banners = store_home_banners();
+$sellers = store_home_sellers();
+$brands = store_home_brands();
 
 $storeTitle = 'eClinicPro Store: Health, Wellness & Everyday Care';
 $storeDesc = 'Trusted health, wellness and everyday essentials from verified sellers: supplements, health devices, mother & baby, personal care and more.';

@@ -16,7 +16,7 @@ ini_set('display_errors', '0');
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
-require_once __DIR__ . '/../partials/patient_auth.php';
+require_once __DIR__ . '/../store/_lib.php';
 
 function store_wl_out(int $status, array $payload): never
 {
@@ -36,42 +36,16 @@ $me = ecp_patient_current();
 if (!$me) {
     store_wl_out(401, ['ok' => false, 'error' => 'login_required']);
 }
-$db = ecp_db();
-if (!$db) {
-    store_wl_out(503, ['ok' => false, 'error' => 'db_unavailable']);
-}
-
 $in = json_decode((string) file_get_contents('php://input'), true);
 $productId = (int) (is_array($in) ? ($in['product_id'] ?? 0) : 0);
-if ($productId <= 0) {
-    store_wl_out(422, ['ok' => false, 'error' => 'product_required']);
-}
-$identityId = (int) $me['id'];
 
 try {
-    $st = $db->prepare("SELECT id FROM store_products WHERE id = :p AND status = 'live' AND deleted_at IS NULL");
-    $st->execute(['p' => $productId]);
-    $exists = $st->fetchColumn() !== false;
-
-    $st = $db->prepare('SELECT 1 FROM store_wishlist WHERE identity_id = :i AND product_id = :p');
-    $st->execute(['i' => $identityId, 'p' => $productId]);
-    $saved = $st->fetchColumn() !== false;
-
-    if ($saved) {
-        $db->prepare('DELETE FROM store_wishlist WHERE identity_id = :i AND product_id = :p')
-           ->execute(['i' => $identityId, 'p' => $productId]);
-        $saved = false;
-    } elseif ($exists) {
-        $db->prepare('INSERT IGNORE INTO store_wishlist (identity_id, product_id) VALUES (:i, :p)')
-           ->execute(['i' => $identityId, 'p' => $productId]);
-        $saved = true;
-    } else {
-        store_wl_out(404, ['ok' => false, 'error' => 'product_not_found']);
+    $res = store_wishlist_toggle((int) $me['id'], $productId);
+    if (!$res['ok']) {
+        $status = ['db_unavailable' => 503, 'product_required' => 422, 'product_not_found' => 404][$res['error']] ?? 400;
+        store_wl_out($status, $res);
     }
-
-    $st = $db->prepare('SELECT COUNT(*) FROM store_wishlist WHERE identity_id = :i');
-    $st->execute(['i' => $identityId]);
-    store_wl_out(200, ['ok' => true, 'saved' => $saved, 'count' => (int) $st->fetchColumn()]);
+    store_wl_out(200, $res);
 } catch (Throwable $e) {
     error_log('[api/store_wishlist] ' . $e->getMessage());
     store_wl_out(500, ['ok' => false, 'error' => 'server_error']);

@@ -568,6 +568,113 @@ function store_wishlist_ids(): array
 }
 
 /**
+ * Add/remove a product from a customer's wishlist (web api/store_wishlist.php + mobile).
+ *
+ * @return array{ok: bool, error?: string, saved?: bool, count?: int}
+ */
+function store_wishlist_toggle(int $identityId, int $productId): array
+{
+    $db = ecp_db();
+    if (!$db) {
+        return ['ok' => false, 'error' => 'db_unavailable'];
+    }
+    if ($productId <= 0) {
+        return ['ok' => false, 'error' => 'product_required'];
+    }
+    $st = $db->prepare("SELECT id FROM store_products WHERE id = :p AND status = 'live' AND deleted_at IS NULL");
+    $st->execute(['p' => $productId]);
+    $exists = $st->fetchColumn() !== false;
+
+    $st = $db->prepare('SELECT 1 FROM store_wishlist WHERE identity_id = :i AND product_id = :p');
+    $st->execute(['i' => $identityId, 'p' => $productId]);
+    $saved = $st->fetchColumn() !== false;
+
+    if ($saved) {
+        $db->prepare('DELETE FROM store_wishlist WHERE identity_id = :i AND product_id = :p')
+           ->execute(['i' => $identityId, 'p' => $productId]);
+        $saved = false;
+    } elseif ($exists) {
+        $db->prepare('INSERT IGNORE INTO store_wishlist (identity_id, product_id) VALUES (:i, :p)')
+           ->execute(['i' => $identityId, 'p' => $productId]);
+        $saved = true;
+    } else {
+        return ['ok' => false, 'error' => 'product_not_found'];
+    }
+
+    $st = $db->prepare('SELECT COUNT(*) FROM store_wishlist WHERE identity_id = :i');
+    $st->execute(['i' => $identityId]);
+
+    return ['ok' => true, 'saved' => $saved, 'count' => (int) $st->fetchColumn()];
+}
+
+// ---------------------------------------------------------------------
+// Homepage blocks (web store/index.php + mobile home)
+// ---------------------------------------------------------------------
+
+/** @return list<array<string,mixed>> active "home_strip" banners (≤3) */
+function store_home_banners(): array
+{
+    $db = ecp_db();
+    if (!$db) {
+        return [];
+    }
+    try {
+        return $db->query(
+            "SELECT title, image_path, link FROM store_banners
+              WHERE is_active = 1 AND placement = 'home_strip'
+                AND (starts_at IS NULL OR starts_at <= NOW()) AND (ends_at IS NULL OR ends_at >= NOW())
+              ORDER BY sort_order, id DESC LIMIT 3"
+        )->fetchAll();
+    } catch (Throwable) {
+        return [];
+    }
+}
+
+/** @return list<array<string,mixed>> approved sellers with live products, featured first */
+function store_home_sellers(): array
+{
+    $db = ecp_db();
+    if (!$db) {
+        return [];
+    }
+    try {
+        $sellers = $db->query(
+            "SELECT v.slug, v.display_name, v.logo_path,
+                    (SELECT COUNT(*) FROM store_products p WHERE p.vendor_id = v.id AND p.status = 'live' AND p.deleted_at IS NULL) AS n
+               FROM store_vendors v
+              WHERE v.status = 'approved'
+              ORDER BY v.is_featured DESC, n DESC LIMIT 6"
+        )->fetchAll();
+
+        return array_values(array_filter($sellers, static fn ($s) => (int) $s['n'] > 0));
+    } catch (Throwable $e) {
+        error_log('[store_home_sellers] ' . $e->getMessage());
+
+        return [];
+    }
+}
+
+/** @return list<array<string,mixed>> active brands with live products, featured first */
+function store_home_brands(): array
+{
+    $db = ecp_db();
+    if (!$db) {
+        return [];
+    }
+    try {
+        return $db->query(
+            "SELECT b.slug, b.name FROM store_brands b
+              WHERE b.is_active = 1 AND EXISTS (SELECT 1 FROM store_products p WHERE p.brand_id = b.id AND p.status = 'live' AND p.deleted_at IS NULL)
+              ORDER BY b.is_featured DESC, b.name LIMIT 16"
+        )->fetchAll();
+    } catch (Throwable $e) {
+        error_log('[store_home_brands] ' . $e->getMessage());
+
+        return [];
+    }
+}
+
+/**
  * Items in the visitor's cart, for the header badge. One cheap query; doesn't
  * boot the portal classes (full cart logic lives in App\Services\Store\CartService).
  */

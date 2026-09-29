@@ -26,9 +26,10 @@ final class CheckoutService
     /**
      * @param array<string, mixed> $address store_addresses row (already identity-scoped)
      * @param array{name: string, phone: string, email: ?string} $contact
+     * @param string $source web | mobile (store_orders.source)
      * @return array{ok: bool, error?: string, order_no?: string}
      */
-    public static function place(int $identityId, int $cartId, array $address, array $contact, string $checkoutKey, ?int $clientTotal): array
+    public static function place(int $identityId, int $cartId, array $address, array $contact, string $checkoutKey, ?int $clientTotal, string $source = 'web'): array
     {
         if (!preg_match('/^[a-f0-9-]{36}$/', $checkoutKey)) {
             return ['ok' => false, 'error' => 'Your checkout session expired. Please reload the page.'];
@@ -135,7 +136,7 @@ final class CheckoutService
                 'client_total_paise' => $clientTotal,
                 'checkout_key' => $checkoutKey,
                 'expires_at' => date('Y-m-d H:i:s', time() + $window * 60),
-                'source' => 'web',
+                'source' => $source === 'mobile' ? 'mobile' : 'web',
                 'created_ip' => ($ip = @inet_pton((string) ($_SERVER['REMOTE_ADDR'] ?? ''))) !== false ? $ip : null,
                 'user_agent' => mb_substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255) ?: null,
             ]);
