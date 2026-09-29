@@ -589,6 +589,7 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/store/vendors/{id}/status', [StoreAdminController::class, 'vendorStatus']);
         $admin->post('/store/vendors/{id}/reset-password', [StoreAdminController::class, 'resetPassword']);
         $admin->post('/store/vendors/{id}/feature', [StoreAdminController::class, 'toggleFeatured']);
+        $admin->post('/store/vendors/{id}/commission', [StoreAdminController::class, 'vendorCommission']);
         $admin->get('/store/documents/{id}/file', [StoreAdminController::class, 'documentFile']);
         $admin->post('/store/documents/{id}/review', [StoreAdminController::class, 'reviewDocument']);
         $admin->post('/store/bank/{id}/verify', [StoreAdminController::class, 'verifyBank']);

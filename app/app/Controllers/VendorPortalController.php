@@ -168,6 +168,7 @@ final class VendorPortalController
             'locked' => VendorService::legalFieldsLocked($vendor),
             'cryptoReady' => StoreCrypto::isConfigured(),
             'businessTypes' => VendorService::BUSINESS_TYPES,
+            'commissionBp' => \App\Services\Store\CommissionService::effectiveVendorRateBp((int) $vendor['id']),
         ]);
     }
 

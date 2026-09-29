@@ -11,6 +11,18 @@ $input = 'mt-1 w-full rounded-[7px] border border-ln bg-sf px-3 py-2 text-sm foc
 ob_start();
 ?>
 <h1 class="text-[22px] font-semibold tracking-[-.015em]">Business profile</h1>
+<?php if (isset($commissionBp)): ?>
+    <?php $cBp = (int) $commissionBp; $ex = (int) round(10000 * $cBp / 10000); ?>
+    <section class="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-[10px] border border-ac/20 bg-acs p-5">
+        <div>
+            <h2 class="font-semibold">Your commission</h2>
+            <p class="mt-1 text-sm text-tx2">Charged on your selling price <strong>before GST</strong>, plus 18% GST on the commission, only on items you sell.
+                Example: on a ₹118 item (₹100 + ₹18 GST) the commission is ₹<?= $e(\App\Services\Store\ProductService::rupees($ex)) ?> + ₹<?= $e(\App\Services\Store\ProductService::rupees((int) round($ex * 0.18))) ?> GST.</p>
+            <p class="mt-1 text-xs text-tx3">Agreed with eClinicPro. To discuss it, contact the eClinicPro seller team. Changes apply to new orders only.</p>
+        </div>
+        <p class="text-3xl font-semibold text-act"><?= $e(\App\Services\Store\CommissionService::pct($cBp)) ?></p>
+    </section>
+<?php endif; ?>
 <form method="post" action="/vendor/profile" enctype="multipart/form-data" class="mt-5 space-y-6">
     <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
 

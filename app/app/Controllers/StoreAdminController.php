@@ -69,7 +69,39 @@ final class StoreAdminController
             'audit' => VendorService::adminAuditTrail($vendorId),
             'businessTypes' => VendorService::BUSINESS_TYPES,
             'tempPassword' => SessionFlash::pull('store_temp_password'),
+            'commissionBp' => \App\Services\Store\CommissionService::vendorRateBp($vendorId),
+            'defaultCommissionBp' => StoreSettings::int('store_default_commission_bp', 1000),
         ]);
+    }
+
+    /** The seller's agreed commission %: blank / "default" = platform default. */
+    public function vendorCommission(Request $request, string $id): Response
+    {
+        $vendor = VendorService::find((int) $id);
+        if ($vendor === null) {
+            return Response::html('Seller not found', 404);
+        }
+        $raw = trim((string) ($request->post['custom_pct'] ?? '')) !== '' ? (string) $request->post['custom_pct'] : (string) ($request->post['rate'] ?? '');
+        $raw = str_replace('%', '', trim($raw));
+        if ($raw === '' || $raw === 'default') {
+            $bp = null;
+        } elseif (!preg_match('/^\d{1,2}(\.\d{1,2})?$/', $raw) || (float) $raw > 50) {
+            $this->flash(['ok' => false, 'error' => 'Enter a commission between 0 and 50%.'], '');
+
+            return Response::redirect('/admin/store/vendors/' . (int) $id);
+        } else {
+            $bp = (int) round((float) $raw * 100);
+        }
+        try {
+            \App\Services\Store\CommissionService::setVendorRate((int) $vendor['id'], $bp, $this->adminId());
+            $this->flash(['ok' => true], 'Commission for this seller is now ' . \App\Services\Store\CommissionService::pct(
+                $bp ?? StoreSettings::int('store_default_commission_bp', 1000)) . ($bp === null ? ' (platform default)' : '') . '. It applies to new orders.');
+        } catch (\Throwable $e) {
+            error_log('[StoreAdmin::vendorCommission] ' . $e->getMessage());
+            $this->flash(['ok' => false, 'error' => 'Could not save the commission.'], '');
+        }
+
+        return Response::redirect('/admin/store/vendors/' . (int) $id);
     }
 
     public function vendorStatus(Request $request, string $id): Response

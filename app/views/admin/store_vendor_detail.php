@@ -93,6 +93,40 @@ $actions = [
         </form>
     </section>
 
+    <!-- Commission agreed with this seller -->
+    <?php
+    $defBp = (int) ($defaultCommissionBp ?? 1000);
+    $curBp = $commissionBp ?? null;
+    $presets = [500, 800, 1000, 1200, 1500, 1800, 2000, 2500];
+    $isPreset = $curBp === null || in_array($curBp, $presets, true);
+    $pct = static fn (int $bp): string => \App\Services\Store\CommissionService::pct($bp);
+    ?>
+    <section class="rounded-xl border bg-white p-5 shadow-sm">
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 class="font-semibold">Commission</h2>
+            <p class="text-sm">This seller pays <strong class="text-lg"><?= $e($pct($curBp ?? $defBp)) ?></strong>
+                <span class="text-slate-500"><?= $curBp === null ? '(platform default)' : '(agreed with this seller)' ?></span></p>
+        </div>
+        <form method="post" action="/admin/store/vendors/<?= $vid ?>/commission" class="mt-3 flex flex-wrap items-end gap-3 text-sm"
+              onsubmit="return confirm('Change this seller\'s commission? It applies to new orders only.')">
+            <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+            <label class="block"><span class="text-slate-600">Commission %</span>
+                <select name="rate" class="mt-1 block rounded border px-3 py-1.5" onchange="this.form.custom_pct.value = ''">
+                    <option value="default" <?= $curBp === null ? 'selected' : '' ?>>Platform default (<?= $e($pct($defBp)) ?>)</option>
+                    <?php foreach ($presets as $bp): ?>
+                        <option value="<?= $e($bp / 100) ?>" <?= $curBp === $bp ? 'selected' : '' ?>><?= $e($pct($bp)) ?></option>
+                    <?php endforeach; ?>
+                </select></label>
+            <label class="block"><span class="text-slate-600">…or exact %</span>
+                <input name="custom_pct" inputmode="decimal" maxlength="5" value="<?= !$isPreset ? $e($curBp / 100) : '' ?>" placeholder="e.g. 16.5" class="mt-1 block w-28 rounded border px-3 py-1.5"></label>
+            <button class="rounded bg-slate-800 px-4 py-2 font-medium text-white hover:bg-slate-700">Save commission</button>
+        </form>
+        <p class="mt-2 text-xs text-slate-500">
+            Charged on the seller's price before GST, plus 18% GST on the commission. Applies to <strong>new orders</strong>; orders already placed keep their rate.
+            The seller sees it on their Business profile and in every product's earnings estimate. A rule set for one specific product still overrides this.
+        </p>
+    </section>
+
     <div class="grid gap-5 lg:grid-cols-2">
         <!-- Business -->
         <section class="rounded-xl border bg-white p-5 shadow-sm">

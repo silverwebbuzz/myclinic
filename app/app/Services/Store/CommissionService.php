@@ -73,6 +73,61 @@ final class CommissionService
         return max(0, min($c, $lineTotalPaise));
     }
 
+    /** The seller's own agreed rate in basis points (1500 = 15%), or null = platform default. */
+    public static function vendorRateBp(int $vendorId): ?int
+    {
+        try {
+            $st = Database::connection()->prepare(
+                "SELECT rate_bp FROM store_commission_rules WHERE scope = 'vendor' AND vendor_id = :v AND is_active = 1 AND type = 'percent'
+                  ORDER BY id DESC LIMIT 1"
+            );
+            $st->execute(['v' => $vendorId]);
+            $bp = $st->fetchColumn();
+
+            return $bp === false ? null : (int) $bp;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /** Rate this seller pays by default (their agreed rate, else the platform default), in basis points. */
+    public static function effectiveVendorRateBp(int $vendorId): int
+    {
+        return self::vendorRateBp($vendorId) ?? StoreSettings::int('store_default_commission_bp', 1000);
+    }
+
+    /**
+     * Set (or clear with null) a seller's agreed commission %. The old rule is kept inactive
+     * for history; orders already placed keep the rate they were placed with.
+     */
+    public static function setVendorRate(int $vendorId, ?int $rateBp, int $adminId): void
+    {
+        $pdo = Database::connection();
+        $before = self::vendorRateBp($vendorId);
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare("UPDATE store_commission_rules SET is_active = 0 WHERE scope = 'vendor' AND vendor_id = :v AND is_active = 1")
+                ->execute(['v' => $vendorId]);
+            if ($rateBp !== null) {
+                $pdo->prepare(
+                    "INSERT INTO store_commission_rules (scope, vendor_id, type, rate_bp, is_active, created_by) VALUES ('vendor', :v, 'percent', :bp, 1, :u)"
+                )->execute(['v' => $vendorId, 'bp' => $rateBp, 'u' => $adminId]);
+            }
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+        self::$rules = null;
+        StoreAudit::log('commission.vendor_rate', 'vendor', $vendorId, ['rate_bp' => $before], ['rate_bp' => $rateBp]);
+    }
+
+    /** "15%" / "12.5%" */
+    public static function pct(int $bp): string
+    {
+        return rtrim(rtrim(number_format($bp / 100, 2), '0'), '.') . '%';
+    }
+
     /** @return list<array<string, mixed>> */
     private static function rules(): array
     {
