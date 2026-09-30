@@ -63,6 +63,9 @@ final class SellerInvoiceService
         $issued = 0;
         $errors = [];
         foreach ($st->fetchAll(\PDO::FETCH_COLUMN) as $vid) {
+            if (StoreTestData::isTestVendor((int) $vid)) {
+                continue;   // test seller: never in eClinicPro's legal series (see StoreTestData)
+            }
             try {
                 $r = self::issueFor((int) $vid, $period);
                 $issued += ($r['invoice'] !== null ? 1 : 0) + ($r['credit'] !== null ? 1 : 0);

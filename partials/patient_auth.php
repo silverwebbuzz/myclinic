@@ -25,6 +25,26 @@ const ECP_PAT_OTP_TTL_SECONDS = 600;   // 10 minutes
 const ECP_PAT_OTP_MAX_ATTEMPTS = 5;
 const ECP_PAT_OTP_RESEND_SECONDS = 30; // throttle re-issue
 
+// Store test data (app/database/seeds/store_test_seed.php) uses +91 90000 00000–00099.
+// With STORE_TEST_OTP=1 in app/.env, a number in that range that has NO account yet
+// or a seeded TEST account (email test.patientNN@example.com) signs in with the fixed
+// code below and never gets a real WhatsApp. A REAL account in that range, or any
+// number while the flag is off, goes through the normal WhatsApp OTP.
+const ECP_TEST_PHONE_PREFIX = '+9190000000';
+const ECP_TEST_OTP_CODE     = '123456';
+
+function ecp_test_otp_applies(PDO $db, string $normalizedPhone): bool {
+    if (ecp_env('STORE_TEST_OTP') !== '1'
+        || strlen($normalizedPhone) !== 13 || !str_starts_with($normalizedPhone, ECP_TEST_PHONE_PREFIX)) {
+        return false;
+    }
+    $st = $db->prepare('SELECT email FROM patient_identities WHERE phone = :p LIMIT 1');
+    $st->execute(['p' => $normalizedPhone]);
+    $email = $st->fetchColumn();
+
+    return $email === false || preg_match('/^test\.patient\d+@example\.com$/', (string) $email) === 1;
+}
+
 /**
  * Platform reCAPTCHA config (same keys as /admin/recaptcha).
  *
@@ -102,6 +122,7 @@ function ecp_patient_send_otp(string $rawPhone, string $intent = 'signin'): arra
         return ['ok' => false, 'phone' => $phone, 'mode' => 'n/a',
                 'dev_code' => null, 'error' => 'db_unavailable'];
     }
+    $testPhone = ecp_test_otp_applies($db, $phone);
 
     $lock = ecp_patient_otp_lock_check($db, $phone, $intent);
     if (!$lock['ok']) {
@@ -128,7 +149,7 @@ function ecp_patient_send_otp(string $rawPhone, string $intent = 'signin'): arra
     }
 
     // Generate, hash, store.
-    $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+    $code = $testPhone ? ECP_TEST_OTP_CODE : str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
     $hash = hash('sha256', $code);
 
     $ins = $db->prepare(
@@ -141,8 +162,10 @@ function ecp_patient_send_otp(string $rawPhone, string $intent = 'signin'): arra
         'ttl'  => ECP_PAT_OTP_TTL_SECONDS,
     ]);
 
-    // Send WhatsApp OTP only.
-    $sent = ecp_whatsapp_send_otp($phone, $code);
+    // Send WhatsApp OTP only (not for store test accounts, see ecp_test_otp_applies()).
+    $sent = $testPhone
+        ? ['ok' => true, 'mode' => 'test', 'message_id' => null, 'dev_code' => null, 'error' => null]
+        : ecp_whatsapp_send_otp($phone, $code);
     if (!empty($sent['ok'])) {
         ecp_patient_otp_lock_record($db, $phone, $intent);
     }

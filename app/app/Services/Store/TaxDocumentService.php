@@ -134,7 +134,9 @@ final class TaxDocumentService
 
             // eClinicPro's delivery-charge invoice for this package.
             $ship = (int) $vo['shipping_paise'];
-            if ($ship > 0 && self::platformReady()) {
+            if ($ship > 0 && StoreTestData::isTestVendor((int) $vo['vendor_id'])) {
+                // Test seller: no document in eClinicPro's legal series (see StoreTestData).
+            } elseif ($ship > 0 && self::platformReady()) {
                 $platform = self::platformParty();
                 $pIntra = $platform['state_code'] === $pos;
                 $bp = StoreSettings::int('store_delivery_gst_bp', 1800);
