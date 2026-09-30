@@ -48,15 +48,15 @@ ob_start();
         </label>
         <label class="block text-sm">
             <span class="text-tx2">Account number</span>
-            <input name="account_no" required inputmode="numeric" maxlength="20" class="<?= $input ?>">
+            <input name="account_no" required inputmode="numeric" maxlength="20" data-validate="account" class="<?= $input ?>">
         </label>
         <label class="block text-sm">
             <span class="text-tx2">Confirm account number</span>
-            <input name="account_no_confirm" required inputmode="numeric" maxlength="20" class="<?= $input ?>" onpaste="return false">
+            <input name="account_no_confirm" required inputmode="numeric" maxlength="20" data-match="account_no" class="<?= $input ?>" onpaste="return false">
         </label>
         <label class="block text-sm">
             <span class="text-tx2">IFSC</span>
-            <input name="ifsc" required maxlength="11" class="<?= $input ?> uppercase" placeholder="HDFC0001234">
+            <input name="ifsc" required maxlength="11" data-validate="ifsc" class="<?= $input ?> uppercase" placeholder="HDFC0001234">
         </label>
         <label class="block text-sm">
             <span class="text-tx2">Bank name <span class="text-tx3">(optional)</span></span>
@@ -64,7 +64,7 @@ ob_start();
         </label>
         <label class="block text-sm sm:col-span-2">
             <span class="text-tx2">UPI ID <span class="text-tx3">(optional)</span></span>
-            <input name="upi_id" maxlength="100" class="<?= $input ?>" placeholder="business@bank">
+            <input name="upi_id" maxlength="100" data-validate="upi" class="<?= $input ?>" placeholder="business@bank">
         </label>
     </div>
     <p class="mt-3 text-xs text-tx3">Stored encrypted. We only ever show the last 4 digits.</p>

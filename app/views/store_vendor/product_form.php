@@ -139,7 +139,7 @@ ob_start();
         <div class="mt-4 grid gap-4 sm:grid-cols-2">
             <label class="block text-sm sm:col-span-2">
                 <span class="text-tx2">Product name</span>
-                <input name="name" required maxlength="255" value="<?= $e($val('name')) ?>" class="<?= $input ?>" placeholder="e.g. Omron HEM-7120 Automatic BP Monitor">
+                <input name="name" required minlength="3" maxlength="255" value="<?= $e($val('name')) ?>" class="<?= $input ?>" placeholder="e.g. Omron HEM-7120 Automatic BP Monitor">
             </label>
             <label class="block text-sm sm:col-span-2">
                 <span class="text-tx2">Category</span>
@@ -196,18 +196,18 @@ ob_start();
             <div class="mt-4 rounded-[10px] border border-ln p-4" :class="v.remove ? 'opacity-50' : ''">
                 <input type="hidden" :name="`variants[${i}][id]`" :value="v.id">
                 <input type="hidden" :name="`variants[${i}][remove]`" :value="v.remove ? 1 : ''">
-                <div class="grid gap-3 sm:grid-cols-4">
+                <div class="grid gap-3 sm:grid-cols-4" data-fv-row>
                     <label class="block text-xs sm:col-span-2"><span class="text-tx2">Variant name</span>
                         <input :name="`variants[${i}][title]`" x-model="v.title" maxlength="190" class="<?= $input ?>" placeholder="e.g. 60 tablets / Large / Chocolate"></label>
                     <label class="block text-xs sm:col-span-2"><span class="text-tx2">SKU (your code)</span>
-                        <input :name="`variants[${i}][sku]`" x-model="v.sku" required maxlength="80" class="<?= $input ?> uppercase"></label>
+                        <input :name="`variants[${i}][sku]`" x-model="v.sku" required maxlength="80" pattern="[A-Za-z0-9][A-Za-z0-9._\-\/]{0,79}" data-msg="Letters, numbers and - _ . / only." class="<?= $input ?> uppercase"></label>
                     <label class="block text-xs"><span class="text-tx2">MRP ₹</span>
-                        <input :name="`variants[${i}][mrp]`" x-model="v.mrp" required inputmode="decimal" class="<?= $input ?>"></label>
+                        <input :name="`variants[${i}][mrp]`" x-model="v.mrp" required inputmode="decimal" data-validate="money" class="<?= $input ?>"></label>
                     <label class="block text-xs"><span class="text-tx2">Selling price ₹</span>
-                        <input :name="`variants[${i}][price]`" x-model="v.price" required inputmode="decimal" class="<?= $input ?>">
+                        <input :name="`variants[${i}][price]`" x-model="v.price" required inputmode="decimal" data-validate="money" data-lte="mrp" class="<?= $input ?>">
                         <span class="text-[11px] text-emerald-700" x-show="discount(v) > 0" x-text="discount(v) + '% off MRP'"></span></label>
                     <label class="block text-xs"><span class="text-tx2">Stock</span>
-                        <input :name="`variants[${i}][stock_qty]`" x-model="v.stock_qty" inputmode="numeric" class="<?= $input ?>"></label>
+                        <input :name="`variants[${i}][stock_qty]`" x-model="v.stock_qty" required inputmode="numeric" pattern="\d{1,7}" data-msg="Stock must be a whole number." class="<?= $input ?>"></label>
                     <label class="block text-xs"><span class="text-tx2">Low-stock alert at</span>
                         <input :name="`variants[${i}][low_stock_threshold]`" x-model="v.low_stock_threshold" inputmode="numeric" class="<?= $input ?>"></label>
                     <label class="block text-xs"><span class="text-tx2">Packed weight (g)</span>
@@ -328,8 +328,8 @@ ob_start();
                  @category-picked.window="if (!code && $event.detail.hsn) setCode($event.detail.hsn)"
                  x-effect="$dispatch('gst-picked', { bp: rates.length === 1 ? +rates[0] : (rate !== '' ? +rate : null) })">
                 <label class="block text-sm">
-                    <span class="text-tx2">HSN code <span class="text-red-600">*</span></span>
-                    <input name="hsn_code" maxlength="8" inputmode="numeric" pattern="\d{4,8}" required list="hsn-list" x-model="code" @input="sync()" class="<?= $input ?>" placeholder="Start typing, e.g. 3004">
+                    <span class="text-tx2">HSN code</span>
+                    <input name="hsn_code" maxlength="8" inputmode="numeric" pattern="\d{4,8}" data-msg="Enter a 4–8 digit HSN code." required list="hsn-list" x-model="code" @input="sync()" class="<?= $input ?>" placeholder="Start typing, e.g. 3004">
                     <datalist id="hsn-list">
                         <?php foreach ($hsnList as $h): ?><option value="<?= $e($h['code']) ?>"><?= $e($h['description']) ?></option><?php endforeach; ?>
                     </datalist>
@@ -357,8 +357,8 @@ ob_start();
             </div>
             <?php else: ?>
             <label class="block text-sm">
-                <span class="text-tx2">HSN code <span class="text-red-600">*</span></span>
-                <input name="hsn_code" maxlength="8" inputmode="numeric" pattern="\d{4,8}" required value="<?= $e($val('hsn_code')) ?>" class="<?= $input ?>">
+                <span class="text-tx2">HSN code</span>
+                <input name="hsn_code" maxlength="8" inputmode="numeric" pattern="\d{4,8}" data-msg="Enter a 4–8 digit HSN code." required value="<?= $e($val('hsn_code')) ?>" class="<?= $input ?>">
                 <span class="text-xs text-tx3">Printed on the customer's GST invoice.</span>
             </label>
             <label class="block text-sm">

@@ -52,7 +52,7 @@ ob_start();
         </label>
         <label class="block text-sm">
             <span class="text-tx2">Mobile</span>
-            <input name="phone" required inputmode="numeric" class="<?= $input ?>" placeholder="10-digit mobile">
+            <input name="phone" required inputmode="numeric" data-validate="mobile" class="<?= $input ?>" placeholder="10-digit mobile">
         </label>
         <label class="block text-sm sm:col-span-2">
             <span class="text-tx2">Address line 1</span>
@@ -72,7 +72,7 @@ ob_start();
         </label>
         <label class="block text-sm">
             <span class="text-tx2">Pincode</span>
-            <input name="pincode" required inputmode="numeric" maxlength="6" class="<?= $input ?>">
+            <input name="pincode" required inputmode="numeric" maxlength="6" data-validate="pincode" class="<?= $input ?>">
         </label>
         <label class="block text-sm">
             <span class="text-tx2">Email <span class="text-tx3">(optional)</span></span>

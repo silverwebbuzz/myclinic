@@ -34,3 +34,4 @@
     body { font-size: 13px; font-feature-settings: 'tnum' 1, 'cv11' 1; -webkit-font-smoothing: antialiased; }
     [x-cloak] { display: none !important; }
 </style>
+<?php require __DIR__ . '/_form_validate.php'; ?>

@@ -7,6 +7,9 @@
  */
 $pageTitle = 'Business profile';
 $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+// Required to submit for review (VendorService::checklist); a PAN already on file needn't be retyped.
+$gstinRequired = \App\Services\Store\StoreSettings::get('store_require_gstin', '1') === '1';
+$panRequired = empty($vendor['pan_last4']) && $cryptoReady;
 $input = 'mt-1 w-full rounded-[7px] border border-ln bg-sf px-3 py-2 text-sm focus:border-ac focus:ring-2 focus:ring-ac/15 focus:outline-none disabled:bg-sf2 disabled:text-tx3';
 ob_start();
 ?>
@@ -31,7 +34,7 @@ ob_start();
         <div class="mt-4 grid gap-4 sm:grid-cols-2">
             <label class="block text-sm sm:col-span-2">
                 <span class="text-tx2">Store name</span>
-                <input name="display_name" required maxlength="160" value="<?= $e($vendor['display_name']) ?>" class="<?= $input ?>">
+                <input name="display_name" required minlength="2" maxlength="160" value="<?= $e($vendor['display_name']) ?>" class="<?= $input ?>">
             </label>
             <label class="block text-sm sm:col-span-2">
                 <span class="text-tx2">About your store</span>
@@ -69,7 +72,7 @@ ob_start();
             </label>
             <label class="block text-sm">
                 <span class="text-tx2">Mobile</span>
-                <input name="phone" required value="<?= $e(preg_replace('/^\+91/', '', (string) $vendor['phone'])) ?>" class="<?= $input ?>">
+                <input name="phone" required inputmode="numeric" data-validate="mobile" value="<?= $e(preg_replace('/^\+91/', '', (string) $vendor['phone'])) ?>" class="<?= $input ?>">
             </label>
             <label class="block text-sm sm:col-span-2">
                 <span class="text-tx2">Email</span>
@@ -90,11 +93,11 @@ ob_start();
         <div class="mt-4 grid gap-4 sm:grid-cols-2">
             <label class="block text-sm sm:col-span-2">
                 <span class="text-tx2">Legal business name <span class="text-tx3">(as on PAN / GST)</span></span>
-                <input name="legal_name" maxlength="190" value="<?= $e($vendor['legal_name'] ?? '') ?>" <?= $locked ? 'disabled' : '' ?> class="<?= $input ?>">
+                <input name="legal_name" maxlength="190" value="<?= $e($vendor['legal_name'] ?? '') ?>" <?= $locked ? 'disabled' : 'required' ?> class="<?= $input ?>">
             </label>
             <label class="block text-sm">
                 <span class="text-tx2">Business type</span>
-                <select name="business_type" <?= $locked ? 'disabled' : '' ?> class="<?= $input ?>">
+                <select name="business_type" <?= $locked ? 'disabled' : 'required' ?> class="<?= $input ?>">
                     <option value="">Select…</option>
                     <?php foreach ($businessTypes as $k => $label): ?>
                         <option value="<?= $e($k) ?>" <?= ($vendor['business_type'] ?? '') === $k ? 'selected' : '' ?>><?= $e($label) ?></option>
@@ -102,12 +105,12 @@ ob_start();
                 </select>
             </label>
             <label class="block text-sm">
-                <span class="text-tx2">GSTIN <span class="text-tx3">(if registered)</span></span>
-                <input name="gstin" maxlength="15" value="<?= $e($vendor['gstin'] ?? '') ?>" <?= $locked ? 'disabled' : '' ?> class="<?= $input ?> uppercase" placeholder="24ABCDE1234F1Z5">
+                <span class="text-tx2">GSTIN<?= $gstinRequired ? '' : ' <span class="text-tx3">(if registered)</span>' ?></span>
+                <input name="gstin" maxlength="15" data-validate="gstin" value="<?= $e($vendor['gstin'] ?? '') ?>" <?= $locked ? 'disabled' : ($gstinRequired ? 'required' : '') ?> class="<?= $input ?> uppercase" placeholder="24ABCDE1234F1Z5">
             </label>
             <label class="block text-sm">
                 <span class="text-tx2">PAN</span>
-                <input name="pan" maxlength="10" <?= $locked ? 'disabled' : '' ?> class="<?= $input ?> uppercase"
+                <input name="pan" maxlength="10" data-validate="pan" <?= $locked ? 'disabled' : ($panRequired ? 'required' : '') ?> class="<?= $input ?> uppercase"
                        placeholder="<?= !empty($vendor['pan_last4']) ? 'On file: ••••••' . $e($vendor['pan_last4']) . ' (type to replace)' : 'ABCDE1234F' ?>">
                 <span class="text-xs text-tx3">Stored encrypted. Only the last 4 characters are shown.</span>
             </label>

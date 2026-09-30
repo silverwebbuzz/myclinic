@@ -15,11 +15,11 @@ ob_start();
         <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
         <label class="block text-sm">
             <span class="text-tx2">Store / business name</span>
-            <input name="business_name" required maxlength="160" value="<?= $e($old['business_name'] ?? '') ?>" class="<?= $input ?>" placeholder="As customers will see it">
+            <input name="business_name" required minlength="2" maxlength="160" value="<?= $e($old['business_name'] ?? '') ?>" class="<?= $input ?>" placeholder="As customers will see it">
         </label>
         <label class="block text-sm">
             <span class="text-tx2">Contact person</span>
-            <input name="contact_name" required maxlength="160" value="<?= $e($old['contact_name'] ?? '') ?>" class="<?= $input ?>">
+            <input name="contact_name" required minlength="2" maxlength="160" value="<?= $e($old['contact_name'] ?? '') ?>" class="<?= $input ?>">
         </label>
         <div class="grid gap-4 sm:grid-cols-2">
             <label class="block text-sm">
@@ -28,9 +28,9 @@ ob_start();
             </label>
             <label class="block text-sm">
                 <span class="text-tx2">Mobile</span>
-                <div class="mt-1 flex rounded-[7px] border border-ln bg-sf focus-within:border-ac">
+                <div data-fv-box class="mt-1 flex rounded-[7px] border border-ln bg-sf focus-within:border-ac">
                     <span class="flex items-center border-r border-ln px-3 text-tx3">+91</span>
-                    <input name="phone" type="tel" inputmode="numeric" required maxlength="14" value="<?= $e(preg_replace('/^\+91/', '', (string) ($old['phone'] ?? ''))) ?>" class="w-full rounded-r-lg px-3 py-2 focus:outline-none">
+                    <input name="phone" type="tel" inputmode="numeric" required data-validate="mobile" maxlength="14" value="<?= $e(preg_replace('/^\+91/', '', (string) ($old['phone'] ?? ''))) ?>" class="w-full rounded-r-lg px-3 py-2 focus:outline-none">
                 </div>
             </label>
         </div>
@@ -42,7 +42,7 @@ ob_start();
             </label>
             <label class="block text-sm">
                 <span class="text-tx2">Confirm password</span>
-                <input name="password_confirm" type="password" required minlength="8" autocomplete="new-password" class="<?= $input ?>">
+                <input name="password_confirm" type="password" required minlength="8" data-match="password" autocomplete="new-password" class="<?= $input ?>">
             </label>
         </div>
         <label class="flex items-start gap-2 text-sm text-tx2">

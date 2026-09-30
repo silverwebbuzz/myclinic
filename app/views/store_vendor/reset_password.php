@@ -28,7 +28,7 @@ ob_start();
             </label>
             <label class="block text-sm">
                 <span class="text-tx2">Confirm new password</span>
-                <input name="password_confirm" type="password" required minlength="8" autocomplete="new-password" class="<?= $input ?>">
+                <input name="password_confirm" type="password" required minlength="8" data-match="password" autocomplete="new-password" class="<?= $input ?>">
             </label>
             <button class="w-full rounded-[7px] bg-ac py-2.5 text-sm font-medium text-white hover:opacity-90">Save new password</button>
         </form>
