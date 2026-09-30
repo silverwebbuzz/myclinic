@@ -8,7 +8,8 @@ live database.** Remove it all with `php database/seeds/store_test_seed.php --wi
 ```bash
 cd /home/silverwebbuzz_in/public_html/eclinicpro/app
 # 1. once: let test customers sign in with OTP 123456
-echo "STORE_TEST_OTP=1" >> .env
+printf '\nSTORE_TEST_OTP=1\n' >> .env   # leading \n: .env may not end with a newline
+tail -2 .env                               # check it is on its own line
 # 2. seed (removes any previous test data first; ~10 s)
 sudo -u silverwebbuzz_in php database/seeds/store_test_seed.php
 # 3. when testing is finished: remove ALL test data, then switch the OTP shortcut off
