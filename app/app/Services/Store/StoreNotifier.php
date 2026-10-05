@@ -300,18 +300,26 @@ final class StoreNotifier
                             : self::orderUrl((string) $o['order_no']),
                     ]);
             }
-            if (in_array($event, ['shipped', 'out_for_delivery', 'delivered'], true)) {
-                $wa = ['name' => self::first((string) $o['contact_name']), 'seller' => $from, 'order_no' => (string) $o['order_no']];
-                $track = [
-                    'courier' => (string) ($s['courier_name'] ?? '') !== '' ? (string) $s['courier_name'] : 'our courier partner',
-                    'awb' => $awb !== '' ? $awb : 'will be shared soon',
-                    'tracking_url' => $awb !== '' ? 'https://shiprocket.co/tracking/' . rawurlencode($awb) : self::orderUrl((string) $o['order_no']),
-                ];
-                match ($event) {
-                    'shipped' => self::whatsapp('store_order_shipped', $o, $wa + $track),
-                    'out_for_delivery' => self::whatsapp('store_order_out_for_delivery', $o, $wa + $track),
-                    default => self::whatsapp('store_order_delivered', $o, $wa + ['order_url' => self::orderUrl((string) $o['order_no'])]),
-                };
+            // WhatsApp is kept short for multi-seller orders (email still goes per package):
+            //   shipped / out for delivery → at most one of each per order per day;
+            //   delivered → once, when the LAST package arrives (order status delivered/completed,
+            //   recomputed by the caller before this runs).
+            $first = self::first((string) $o['contact_name']);
+            $orderNo = (string) $o['order_no'];
+            if ($event === 'shipped' || $event === 'out_for_delivery') {
+                $key = $event === 'shipped' ? 'store_order_shipped' : 'store_order_out_for_delivery';
+                if (self::waSentToday($key, (string) $o['contact_phone'], $orderNo)) {
+                    self::waLog($key, (string) $o['contact_phone'], ['order_no' => $orderNo], 'skipped',
+                        'already sent this update for order ' . $orderNo . ' today (one per order per day)');
+                } else {
+                    self::whatsapp($key, $o, ['name' => $first, 'seller' => $from, 'order_no' => $orderNo,
+                        'courier' => (string) ($s['courier_name'] ?? '') !== '' ? (string) $s['courier_name'] : 'our courier partner',
+                        'awb' => $awb !== '' ? $awb : 'will be shared soon',
+                        'tracking_url' => $awb !== '' ? 'https://shiprocket.co/tracking/' . rawurlencode($awb) : self::orderUrl($orderNo),
+                    ]);
+                }
+            } elseif ($event === 'delivered' && in_array($o['status'], ['delivered', 'completed'], true)) {
+                self::whatsapp('store_order_delivered', $o, ['name' => $first, 'order_no' => $orderNo, 'order_url' => self::orderUrl($orderNo)]);
             }
             if (in_array($event, ['ndr', 'pickup_failed', 'lost', 'damaged', 'rto_initiated', 'rto'], true)) {
                 $label = ucfirst(str_replace('_', ' ', $event));
@@ -999,6 +1007,26 @@ final class StoreNotifier
         } catch (\Throwable $e) {
             error_log('[StoreNotifier::whatsapp] ' . $key . ': ' . $e->getMessage());
             self::waLog($key, (string) ($order['contact_phone'] ?? ''), $vars, 'failed', $e->getMessage());
+        }
+    }
+
+    /** Was this update already queued for this order (to this phone) today? */
+    private static function waSentToday(string $key, string $phone, string $orderNo): bool
+    {
+        $to = self::waPhone($phone);
+        if ($to === '') {
+            return false;
+        }
+        try {
+            $st = Database::connection()->prepare(
+                "SELECT 1 FROM notifications WHERE template = :k AND to_number = :p AND clinic_id = 0
+                    AND created_at >= CURDATE() AND payload LIKE :o LIMIT 1"
+            );
+            $st->execute(['k' => $key, 'p' => $to, 'o' => '%"order_no":"' . $orderNo . '"%']);
+
+            return $st->fetchColumn() !== false;
+        } catch (\Throwable) {
+            return false;
         }
     }
 

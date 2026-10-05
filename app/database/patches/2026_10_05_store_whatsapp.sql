@@ -41,8 +41,8 @@ FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `wa_templates` WHERE `template_key` = 
 
 INSERT INTO `wa_templates` (`template_key`, `meta_name`, `language`, `category`, `body_text`, `variables`, `sms_fallback_text`, `status`, `is_active`)
 SELECT 'store_order_delivered', 'store_order_delivered', 'en', 'utility',
-    'Hi {{1}}, your package from {{2}} for order {{3}} has been delivered.\n\nIf an item is damaged, wrong or expired, you can request a return from your order page within the return window: {{4}}\n\nTeam eClinicPro Store',
-    '["name","seller","order_no","order_url"]', NULL, 'draft', 1
+    'Hi {{1}}, everything in your eClinicPro Store order {{2}} has now been delivered.\n\nIf an item is damaged, wrong or expired, you can request a return from your order page within the return window: {{3}}\n\nTeam eClinicPro Store',
+    '["name","order_no","order_url"]', NULL, 'draft', 1
 FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM `wa_templates` WHERE `template_key` = 'store_order_delivered');
 
 INSERT INTO `wa_templates` (`template_key`, `meta_name`, `language`, `category`, `body_text`, `variables`, `sms_fallback_text`, `status`, `is_active`)
