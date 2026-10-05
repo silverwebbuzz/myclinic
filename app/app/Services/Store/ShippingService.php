@@ -416,7 +416,11 @@ final class ShippingService
             OrderService::history($orderId, $voId, 'vendor_order', $voId, null, $changed, 'webhook', null, 'Courier: ' . $internal);
             OrderService::recomputeStatus($orderId);
             StoreNotifier::shipmentUpdate((int) $s['id'], $changed);
-        } elseif (in_array($internal, ['ndr', 'pickup_failed', 'lost', 'damaged', 'rto_initiated'], true)) {
+        }
+        if ($internal === 'out_for_delivery') {
+            // Reaches here once per shipment: applyStatus() drops statuses that don't raise status_rank.
+            StoreNotifier::shipmentUpdate((int) $s['id'], 'out_for_delivery');
+        } elseif ($changed === null && in_array($internal, ['ndr', 'pickup_failed', 'lost', 'damaged', 'rto_initiated'], true)) {
             OrderService::history($orderId, $voId, 'shipment', (int) $s['id'], null, $internal, 'webhook', null, 'Courier exception');
             StoreNotifier::shipmentUpdate((int) $s['id'], $internal);
         }

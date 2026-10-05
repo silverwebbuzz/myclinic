@@ -9,7 +9,11 @@ use App\Core\QueryBuilder;
 
 final class NotificationService
 {
-    /** @param array<string, mixed> $payload */
+    /**
+     * @param array<string, mixed> $payload
+     * @param int|null $identityId patient_identities.id (the global person), for platform sends
+     * @return int|null the queued notifications.id, or null when nothing was queued
+     */
     public static function queueWhatsApp(
         int $clinicId,
         ?int $patientId,
@@ -17,20 +21,21 @@ final class NotificationService
         string $template,
         array $payload,
         string $scheduledAt,
-    ): void {
+        ?int $identityId = null,
+    ): ?int {
         // Phone is optional (some patients have no number) — a blank or
         // too-short number is a silent no-op, mirroring queueEmail(). This
         // keeps phoneless patients from queuing un-sendable WhatsApp rows.
         $digits = preg_replace('/[^0-9]/', '', $phone) ?? '';
         if (strlen($digits) < 7) {
-            return;
+            return null;
         }
 
         if (!Database::ping()) {
-            return;
+            return null;
         }
 
-        QueryBuilder::table('notifications')->insert([
+        $row = [
             'clinic_id' => $clinicId,
             'patient_id' => $patientId,
             'channel' => 'whatsapp',
@@ -39,7 +44,12 @@ final class NotificationService
             'payload' => json_encode($payload),
             'status' => 'queued',
             'scheduled_at' => $scheduledAt,
-        ]);
+        ];
+        if ($identityId !== null) {
+            $row['patient_identity_id'] = $identityId;
+        }
+
+        return (int) QueryBuilder::table('notifications')->insert($row) ?: null;
     }
 
     /**

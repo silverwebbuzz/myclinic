@@ -21,6 +21,13 @@
 // PARTIAL SAVE: only keys actually present in the body are written, so the
 // app can PATCH a single field without resending the whole form.
 //
+// WHATSAPP SWITCH: `wa_opt_in` (bool) is in the profile and is a save key like
+// the others, but it lives in the messaging opt-out ledger, not on
+// patient_identities: it is per PHONE NUMBER (the account's primary phone).
+// Off stops every WhatsApp to that number: clinic appointment/follow-up
+// reminders, booking messages and store order updates. Those are skipped, not
+// re-sent by SMS (NotificationProcessor's opt-out gate). Email is unaffected.
+//
 //   GET  ?action=get                       (Bearer) → { profile, options }
 //   POST ?action=save                      (Bearer) JSON or form → { profile }
 //   POST ?action=photo                     (Bearer) multipart: file → { has_photo }
@@ -32,6 +39,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/../../../partials/patient_profile.php';
+require_once __DIR__ . '/../../../partials/notify.php';
 
 $action = $_GET['action'] ?? 'get';
 
@@ -74,6 +82,18 @@ switch ($action) {
         // The primary phone is not writable here; drop it before mapping so
         // a client that echoes the whole profile back cannot try to set it.
         unset($in['phone']);
+
+        // WhatsApp switch → messaging opt-out ledger (not a profile column).
+        if (array_key_exists('wa_opt_in', $in)) {
+            $on = filter_var($in['wa_opt_in'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($on === null) {
+                ecp_m_err('invalid_wa_opt_in', 400);
+            }
+            if (!ecp_wa_set_opt_in((string) ($me['phone'] ?? ''), $on, (int) $me['id'])) {
+                ecp_m_err('save_failed', 503);
+            }
+            unset($in['wa_opt_in']);
+        }
 
         $res = ecp_profile_save((int) $me['id'], $in);
         if (!$res['ok']) {
@@ -162,6 +182,8 @@ function ecp_m_shape_profile(array $p): array {
     $out['photo_url']      = $hasPhoto ? 'api/mobile/v1/profile.php?action=photo' : null;
     // Signals to the app that the field is display-only (OTP flow owns it).
     $out['phone_editable'] = false;
+    // "WhatsApp reminders" switch (messaging opt-out ledger, keyed by phone).
+    $out['wa_opt_in']      = ecp_wa_opt_in((string) ($p['phone'] ?? ''));
 
     return $out;
 }

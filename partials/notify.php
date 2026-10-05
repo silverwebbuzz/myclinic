@@ -93,6 +93,69 @@ function ecp_record_optin(string $phone, string $source, ?int $identityId = null
 }
 
 /**
+ * Does this number still accept WhatsApp from us? False when messaging_optout
+ * has a 'whatsapp' or 'all' row for it (in-app "WhatsApp: Off", or an inbound
+ * STOP). NotificationProcessor checks the same ledger before EVERY WhatsApp
+ * send (clinic reminders, lead messages, store order updates), so this one
+ * switch covers them all. Fails open (true) if the table is unmigrated.
+ */
+function ecp_wa_opt_in(string $phone): bool {
+    $db = ecp_db();
+    $digits = preg_replace('/\D/', '', $phone) ?? '';
+    if (!$db || strlen($digits) < 10) return true;
+    try {
+        $stmt = $db->prepare(
+            "SELECT 1 FROM messaging_optout WHERE phone_tail = :t AND channel IN ('all', 'whatsapp') LIMIT 1"
+        );
+        $stmt->execute(['t' => substr($digits, -10)]);
+        return $stmt->fetchColumn() === false;
+    } catch (\Throwable $e) {
+        return true;
+    }
+}
+
+/**
+ * The patient's own WhatsApp switch (app profile "WhatsApp reminders").
+ *   Off → a 'whatsapp' opt-out row. WhatsApp-first messages are then skipped
+ *         (no SMS fallback); SMS-only messages and email still go.
+ *   On  → removes the WhatsApp opt-out. An earlier STOP ('all') is narrowed to
+ *         'sms' so SMS stays blocked; the in-app choice is a fresh opt-in for
+ *         WhatsApp only, recorded in messaging_consent.
+ * Returns false if the ledger could not be written.
+ */
+function ecp_wa_set_opt_in(string $phone, bool $on, ?int $identityId = null): bool {
+    $db = ecp_db();
+    $digits = preg_replace('/\D/', '', $phone) ?? '';
+    if (!$db || strlen($digits) < 10) return false;
+    $tail = substr($digits, -10);
+    try {
+        if (!$on) {
+            return $db->prepare(
+                "INSERT INTO messaging_optout (phone_tail, channel, source, keyword, raw_from)
+                 VALUES (:t, 'whatsapp', 'patient_app', NULL, :r)
+                 ON DUPLICATE KEY UPDATE created_at = created_at"
+            )->execute(['t' => $tail, 'r' => substr($phone, 0, 32)]);
+        }
+        $all = $db->prepare("SELECT 1 FROM messaging_optout WHERE phone_tail = :t AND channel = 'all' LIMIT 1");
+        $all->execute(['t' => $tail]);
+        if ($all->fetchColumn() !== false) {
+            $db->prepare(
+                "INSERT INTO messaging_optout (phone_tail, channel, source, keyword, raw_from)
+                 VALUES (:t, 'sms', 'patient_app', NULL, :r)
+                 ON DUPLICATE KEY UPDATE created_at = created_at"
+            )->execute(['t' => $tail, 'r' => substr($phone, 0, 32)]);
+        }
+        $db->prepare("DELETE FROM messaging_optout WHERE phone_tail = :t AND channel IN ('all', 'whatsapp')")
+           ->execute(['t' => $tail]);
+        ecp_record_optin($phone, 'patient_app', $identityId);
+        return true;
+    } catch (\Throwable $e) {
+        error_log('[ecp_wa_set_opt_in] ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
  * Doctor confirmed a directory lead from the L/{token} page.
  * Marks the lead book_confirmed (idempotent) + queues the patient confirmation.
  * Returns true if newly confirmed.

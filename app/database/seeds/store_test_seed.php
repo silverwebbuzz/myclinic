@@ -243,7 +243,9 @@ function wipe(string $base): void
              OR (actor_type = 'customer' AND actor_id IN (" . idList($identities) . '))');
     if (tableExists('store_email_log')) {
         $del("DELETE FROM store_email_log WHERE recipient LIKE '%@" . T::EMAIL_DOMAIN . "' AND (recipient LIKE 'test.%')");
+        $del("DELETE FROM store_email_log WHERE recipient IN ($phoneList)");   // WhatsApp rows (patch 2026_10_05)
     }
+    $del("DELETE FROM notifications WHERE clinic_id = 0 AND template LIKE 'store\\_%' AND to_number IN ($phoneList)");
     $del('DELETE FROM store_vendor_users WHERE id IN (' . idList($vendorUsers) . ')');
     $del('DELETE FROM store_vendors WHERE id IN (' . idList($vendors) . ')');
     // Customers: sessions / consents / wishlists cascade from patient_identities.

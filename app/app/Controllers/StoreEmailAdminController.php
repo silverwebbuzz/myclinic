@@ -13,12 +13,16 @@ use App\Services\Store\StoreAudit;
 use App\Services\Store\StoreEmailTemplates;
 use App\Services\Store\StoreNotifier;
 use App\Services\Store\StoreSettings;
+use App\Services\Store\StoreWhatsAppTemplates;
+use App\Services\WaTemplateService;
+use App\Support\MessagingSettings;
 use App\Support\SessionFlash;
 use App\Support\View;
 
 /**
  * Store emails in admin (super-admin only, /admin/store/*):
- *   /admin/store/email            sender, reply-to, team addresses, test send, mail log
+ *   /admin/store/email            sender, reply-to, team addresses, test send, mail log,
+ *                                 customer WhatsApp updates (on/off per template + test send)
  *   /admin/store/email-templates  wording of every store email + on/off + preview
  * SMTP login itself is shared with clinic mail (app/.env, /admin/email).
  */
@@ -27,6 +31,15 @@ final class StoreEmailAdminController
     public function settings(Request $request): Response
     {
         $status = (string) ($request->query['status'] ?? '');
+        $wa = [];
+        foreach (StoreWhatsAppTemplates::registry() as $key => $meta) {
+            $tpl = WaTemplateService::find($key);
+            $wa[$key] = $meta + [
+                'meta_status' => StoreWhatsAppTemplates::metaStatus($key),
+                'body' => (string) ($tpl['body_text'] ?? ''),
+                'on' => !in_array($key, StoreWhatsAppTemplates::disabledKeys(), true),
+            ];
+        }
 
         return $this->render('admin/store_email', [
             'smtpOk' => SmtpMailService::isConfigured(),
@@ -36,7 +49,11 @@ final class StoreEmailAdminController
             'team' => implode(', ', StoreEmailTemplates::teamEmails()),
             'registry' => StoreEmailTemplates::registry(),
             'stats' => StoreEmailTemplates::stats(),
-            'log' => StoreEmailTemplates::recentLog(100, in_array($status, ['sent', 'failed', 'disabled'], true) ? $status : ''),
+            'log' => StoreEmailTemplates::recentLog(100, in_array($status, ['sent', 'failed', 'disabled', 'queued', 'skipped'], true) ? $status : ''),
+            'wa' => $wa,
+            'waEnabled' => StoreWhatsAppTemplates::enabled(),
+            'messagingOn' => MessagingSettings::enabled(),
+            'whatsappConfigured' => MessagingSettings::whatsappConfigured(),
             'status' => $status,
             'adminEmail' => (string) (RequestContext::superAdmin()['email'] ?? ''),
         ]);
@@ -52,6 +69,22 @@ final class StoreEmailAdminController
             SessionFlash::put($res['ok'] ? 'store_ok' : 'store_err', $res['ok'] ? "Test email sent to $to." : 'Test failed: ' . ($res['error'] ?? ''));
 
             return Response::redirect('/admin/store/email');
+        }
+        if ($action === 'wa_save') {
+            $on = array_values(array_filter((array) ($request->post['wa_on'] ?? []), [StoreWhatsAppTemplates::class, 'isKnown']));
+            StoreWhatsAppTemplates::saveSwitches(!empty($request->post['wa_enabled']), $on);
+            StoreAudit::log('store.whatsapp_settings', 'setting', null, null, ['enabled' => !empty($request->post['wa_enabled']), 'on' => $on]);
+            SessionFlash::put('store_ok', 'WhatsApp settings saved.');
+
+            return Response::redirect('/admin/store/email#whatsapp');
+        }
+        if ($action === 'wa_test') {
+            $to = trim((string) ($request->post['to'] ?? ''));
+            $res = StoreNotifier::sendWhatsAppTest((string) ($request->post['template'] ?? ''), $to);
+            SessionFlash::put($res['ok'] ? 'store_ok' : 'store_err',
+                $res['ok'] ? "Test WhatsApp sent to $to." . ($res['note'] ?? '') : 'Test failed: ' . ($res['error'] ?? ''));
+
+            return Response::redirect('/admin/store/email#whatsapp');
         }
 
         $fromName = trim((string) ($request->post['from_name'] ?? ''));

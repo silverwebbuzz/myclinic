@@ -387,39 +387,60 @@ final class StoreEmailTemplates
     // Log
     // ------------------------------------------------------------------
 
-    public static function log(string $key, string $to, string $subject, string $status, ?string $error = null): void
+    /**
+     * One log for both channels. WhatsApp rows (patch 2026_10_05) carry the queued
+     * notifications.id; the worker's final result is read from there.
+     * Status: email sent / failed / disabled; WhatsApp queued / skipped / disabled / failed (+ sent for tests).
+     */
+    public static function log(string $key, string $to, string $subject, string $status, ?string $error = null,
+        string $channel = 'email', ?int $notificationId = null): void
     {
+        $row = [
+            'template_key' => $key,
+            'recipient' => mb_substr($to, 0, 190),
+            'subject' => mb_substr($subject, 0, 255),
+            'status' => $status,
+            'error' => $error !== null ? mb_substr($error, 0, 500) : null,
+        ];
+        if ($channel !== 'email') {
+            $row += ['channel' => $channel, 'notification_id' => $notificationId];   // columns added by 2026_10_05
+        }
         try {
-            QueryBuilder::table('store_email_log')->insert([
-                'template_key' => $key,
-                'recipient' => mb_substr($to, 0, 190),
-                'subject' => mb_substr($subject, 0, 255),
-                'status' => $status,
-                'error' => $error !== null ? mb_substr($error, 0, 500) : null,
-            ]);
+            QueryBuilder::table('store_email_log')->insert($row);
         } catch (\Throwable) {
             // log table missing (patch not imported) — never block sending
         }
     }
 
-    /** @return list<array<string, mixed>> */
+    /** @return list<array<string, mixed>> newest first; WhatsApp rows include the queue's result (wa_*) */
     public static function recentLog(int $limit = 100, string $status = ''): array
     {
+        $where = $status !== '' ? ' WHERE l.status = :s' : '';
+        $limit = ' ORDER BY l.id DESC LIMIT ' . max(1, min(500, $limit));
         try {
-            $sql = 'SELECT * FROM store_email_log' . ($status !== '' ? ' WHERE status = :s' : '') . ' ORDER BY id DESC LIMIT ' . max(1, min(500, $limit));
-            $st = Database::connection()->prepare($sql);
+            $st = Database::connection()->prepare(
+                'SELECT l.*, n.status AS wa_status, n.delivery_status AS wa_delivery, n.error_log AS wa_error
+                   FROM store_email_log l LEFT JOIN notifications n ON n.id = l.notification_id' . $where . $limit
+            );
             $st->execute($status !== '' ? ['s' => $status] : []);
 
             return $st->fetchAll();
         } catch (\Throwable) {
-            return [];
+            try {   // 2026_10_05 not imported yet: no notification_id column
+                $st = Database::connection()->prepare('SELECT l.* FROM store_email_log l' . $where . $limit);
+                $st->execute($status !== '' ? ['s' => $status] : []);
+
+                return $st->fetchAll();
+            } catch (\Throwable) {
+                return [];
+            }
         }
     }
 
-    /** @return array{sent: int, failed: int, disabled: int} last 7 days */
+    /** @return array{sent: int, failed: int, disabled: int, queued: int, skipped: int} last 7 days */
     public static function stats(): array
     {
-        $out = ['sent' => 0, 'failed' => 0, 'disabled' => 0];
+        $out = ['sent' => 0, 'failed' => 0, 'disabled' => 0, 'queued' => 0, 'skipped' => 0];
         try {
             foreach (Database::connection()->query(
                 'SELECT status, COUNT(*) n FROM store_email_log WHERE created_at >= NOW() - INTERVAL 7 DAY GROUP BY status'

@@ -1,7 +1,8 @@
 <?php
 // =====================================================================
 // api/mobile/v1/store_checkout.php — addresses, place order, Razorpay.
-// All actions require Bearer (customers = patient identities).
+// All actions require Bearer (customers = patient identities), except the
+// pincode lookup, which the address form calls before/without login.
 //
 // Thin adapter over the SAME services as store/checkout.php and
 // api/store_pay.php: AddressService, CheckoutService::place (one DB
@@ -18,8 +19,11 @@
 //   and the Razorpay webhook marks it paid even if step 4 never arrives.
 //
 //   GET  ?action=addresses
-//   POST ?action=address_add     { name, phone, line1, line2?, landmark?, pincode, city, state, label? }
-//   POST ?action=address_remove  { address_id }
+//   POST ?action=address_add          { name, phone, line1, line2?, landmark?, pincode, city, state, label? }
+//   POST ?action=address_update       { address_id, …any address_add fields… }
+//   POST ?action=address_set_default  { address_id }
+//   POST ?action=address_remove       { address_id }
+//   GET  ?action=pincode&pin=380001   (public) → city, GST state, serviceable, eta_days
 // =====================================================================
 
 declare(strict_types=1);
@@ -29,16 +33,36 @@ use App\Services\Store\AddressService;
 use App\Services\Store\CartService;
 use App\Services\Store\CheckoutService;
 use App\Services\Store\GstStates;
+use App\Services\Store\PincodeService;
 use App\Services\Store\StorePaymentService;
 use App\Services\Store\VendorService;
 
 require_once __DIR__ . '/_store.php';
 
 ecp_ms_boot(true);
+$action = (string) ($_GET['action'] ?? 'summary');
+
+// ----- pincode → city/state + courier serviceability (public) -------------
+// Advisory only: `place` does not check it. serviceable:true + eta_days:null
+// means "couldn't check" (Shiprocket off or erroring): let the customer go on.
+if ($action === 'pincode') {
+    ecp_m_require_method('GET');
+    $pin = trim((string) ($_GET['pin'] ?? ''));
+    if (!preg_match('/^[1-9]\d{5}$/', $pin)) {
+        ecp_m_err('invalid_pin', 400, ['message' => 'Enter a valid 6-digit pincode.']);
+    }
+    if (!store_throttle('pincode', 60, 600)) {   // each new pin may call Shiprocket
+        ecp_m_err('too_many_attempts', 429, ['message' => 'Too many lookups. Please wait a few minutes and try again.']);
+    }
+    $found = PincodeService::lookup($pin);
+    if ($found === null) {
+        ecp_m_err('pin_not_found', 404, ['message' => 'We couldn\'t find this pincode. Please check it, or enter your city and state yourself.']);
+    }
+    ecp_m_ok($found);
+}
+
 $me = ecp_m_require_patient();
 $identityId = (int) $me['id'];
-
-$action = (string) ($_GET['action'] ?? 'summary');
 
 switch ($action) {
 
@@ -91,6 +115,33 @@ switch ($action) {
         }
         $a = AddressService::find($identityId, (int) $res['id']);
         ecp_m_ok(['address' => $a ? ecp_ms_address($a) : null]);
+        break;
+    }
+
+    // Edit a saved address. Fields not sent keep their value. Orders already
+    // placed keep their own copy of the address, so they don't change.
+    case 'address_update': {
+        ecp_m_require_method('POST');
+        $in = ecp_m_input();
+        $res = AddressService::update($identityId, (int) ($in['address_id'] ?? 0), $in);
+        if (!$res['ok']) {
+            if (($res['error'] ?? '') === 'not_found') {
+                ecp_m_err('not_found', 404);
+            }
+            ecp_m_err('invalid_address', 422, ['message' => $res['error'] ?? 'Please check the address.']);
+        }
+        $a = AddressService::find($identityId, (int) $in['address_id']);
+        ecp_m_ok(['address' => $a ? ecp_ms_address($a) : null]);
+        break;
+    }
+
+    case 'address_set_default': {
+        ecp_m_require_method('POST');
+        $in = ecp_m_input();
+        if (!AddressService::setDefault($identityId, (int) ($in['address_id'] ?? 0))) {
+            ecp_m_err('not_found', 404);
+        }
+        ecp_m_ok(['addresses' => array_map('ecp_ms_address', AddressService::list($identityId))]);
         break;
     }
 

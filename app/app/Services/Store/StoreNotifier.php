@@ -6,7 +6,12 @@ namespace App\Services\Store;
 
 use App\Core\Database;
 use App\Core\QueryBuilder;
+use App\Services\MessagingConsent;
+use App\Services\NotificationService;
 use App\Services\SmtpMailService;
+use App\Services\WaTemplateService;
+use App\Services\WhatsAppService;
+use App\Support\MessagingSettings;
 
 /**
  * Store notifications: branded HTML email (SMTP) + in-app rows (store_notifications).
@@ -20,6 +25,11 @@ use App\Services\SmtpMailService;
  *     item lines, totals, address, warnings and the button's link.
  *   - render() draws every email with one layout.
  * Every attempt is logged to store_email_log (sent / failed / disabled).
+ *
+ * Customers also get WhatsApp order updates on the order's contact phone (email
+ * is optional at checkout, the phone is not): see whatsapp(). Those are queued
+ * into the platform notifications table and sent by NotificationProcessor with
+ * approved templates from wa_templates (StoreWhatsAppTemplates lists them).
  */
 final class StoreNotifier
 {
@@ -68,6 +78,10 @@ final class StoreNotifier
                     'address' => self::addressLines($a),
                     'cta_url' => self::orderUrl((string) $o['order_no']),
                 ]);
+            self::whatsapp('store_order_confirmed', $o, [
+                'name' => self::first((string) $o['contact_name']), 'order_no' => (string) $o['order_no'], 'amount' => $total,
+                'packages' => (string) count($o['vendor_orders']), 'order_url' => self::orderUrl((string) $o['order_no']),
+            ]);
 
             // Each seller: ONLY their own package (no other sellers' items or the customer's contact details).
             foreach ($o['vendor_orders'] as $vo) {
@@ -146,6 +160,10 @@ final class StoreNotifier
                     'facts' => [['Order number', (string) $o['order_no']], ['Amount', self::rs((int) $o['grand_total_paise'])], ['Charged', 'Nothing']],
                     'cta_url' => self::storeUrl('/store/cart'),
                 ]);
+            self::whatsapp('store_order_expired', $o, [
+                'name' => self::first((string) $o['contact_name']), 'order_no' => (string) $o['order_no'],
+                'amount' => self::rs((int) $o['grand_total_paise']), 'cart_url' => self::storeUrl('/store/cart'),
+            ]);
         } catch (\Throwable $e) {
             error_log('[StoreNotifier::orderExpired] ' . $e->getMessage());
         }
@@ -194,6 +212,10 @@ final class StoreNotifier
                 ]] : [],
                 'cta_url' => self::orderUrl((string) $o['order_no']),
             ]);
+            self::whatsapp('store_order_cancelled', $o, [
+                'name' => self::first((string) $o['contact_name']), 'order_no' => (string) $o['order_no'],
+                'who' => $who, 'amount' => $amt, 'refund_no' => $refundNo,
+            ]);
 
             if ($actorType !== 'vendor_user') {
                 $sellerWho = match ($actorType) {
@@ -239,7 +261,10 @@ final class StoreNotifier
         }
     }
 
-    /** Shipment milestones: customer hears "shipped"/"delivered"; the team hears about problems. */
+    /**
+     * Shipment milestones: customer hears "shipped"/"delivered" (email + WhatsApp) and
+     * "out_for_delivery" (WhatsApp only); the team hears about problems.
+     */
     public static function shipmentUpdate(int $shipmentId, string $event): void
     {
         try {
@@ -274,6 +299,19 @@ final class StoreNotifier
                             ? 'https://shiprocket.co/tracking/' . rawurlencode($awb)
                             : self::orderUrl((string) $o['order_no']),
                     ]);
+            }
+            if (in_array($event, ['shipped', 'out_for_delivery', 'delivered'], true)) {
+                $wa = ['name' => self::first((string) $o['contact_name']), 'seller' => $from, 'order_no' => (string) $o['order_no']];
+                $track = [
+                    'courier' => (string) ($s['courier_name'] ?? '') !== '' ? (string) $s['courier_name'] : 'our courier partner',
+                    'awb' => $awb !== '' ? $awb : 'will be shared soon',
+                    'tracking_url' => $awb !== '' ? 'https://shiprocket.co/tracking/' . rawurlencode($awb) : self::orderUrl((string) $o['order_no']),
+                ];
+                match ($event) {
+                    'shipped' => self::whatsapp('store_order_shipped', $o, $wa + $track),
+                    'out_for_delivery' => self::whatsapp('store_order_out_for_delivery', $o, $wa + $track),
+                    default => self::whatsapp('store_order_delivered', $o, $wa + ['order_url' => self::orderUrl((string) $o['order_no'])]),
+                };
             }
             if (in_array($event, ['ndr', 'pickup_failed', 'lost', 'damaged', 'rto_initiated', 'rto'], true)) {
                 $label = ucfirst(str_replace('_', ' ', $event));
@@ -352,11 +390,23 @@ final class StoreNotifier
                         'packages' => [['heading' => 'Items being returned', 'lines' => $lines]],
                         'cta_url' => $orderUrl,
                     ]);
+                    self::whatsapp('store_return_update', $o ?? [], $custVars + [
+                        'update' => 'The seller approved your return. ' . ($event === 'pickup_scheduled'
+                            ? 'A courier will collect the item from your delivery address. Please keep it packed with all tags and accessories.'
+                            : 'We will contact you to arrange the pickup.'),
+                        'order_url' => $orderUrl,
+                    ]);
                     break;
                 case 'rejected':
                     self::send('customer_return_rejected', $custEmail, $custVars + ['reason' => (string) ($r['vendor_note'] ?? '')], [
                         'facts' => [['Return number', (string) $r['return_no']], ['Seller\'s reason', (string) ($r['vendor_note'] ?? '')]],
                         'cta_url' => $orderUrl,
+                    ]);
+                    self::whatsapp('store_return_update', $o ?? [], $custVars + [
+                        'update' => 'The seller could not accept this return.'
+                            . (trim((string) ($r['vendor_note'] ?? '')) !== '' ? ' Reason: ' . trim((string) $r['vendor_note']) . '.' : '')
+                            . ' If you think this is wrong, write to ' . StoreEmailTemplates::replyTo() . ' with your order number.',
+                        'order_url' => $orderUrl,
                     ]);
                     break;
                 case 'qc_failed':
@@ -370,6 +420,7 @@ final class StoreNotifier
                         'facts' => [['Return number', (string) $r['return_no']], ['Order number', (string) $r['order_no']], ['Refund amount', $refund]],
                         'cta_url' => $orderUrl,
                     ]);
+                    self::whatsapp('store_refund_processed', $o ?? [], $custVars + ['amount' => $refund]);
                     if ($vendor !== null) {
                         self::send('seller_return_refunded', (string) $vendor['email'],
                             self::sellerVars($vendor) + ['return_no' => (string) $r['return_no'], 'order_no' => (string) $r['sub_order_no'], 'amount' => $refund], [
@@ -824,6 +875,26 @@ final class StoreNotifier
         return $res['ok'] ? ['ok' => true] : ['ok' => false, 'error' => (string) ($res['error'] ?? 'Send failed')];
     }
 
+    /**
+     * Admin test of one customer WhatsApp template, sent straight away (not queued)
+     * with sample data, like /admin/messaging's test send.
+     *
+     * @return array{ok: bool, error?: string, note?: string}
+     */
+    public static function sendWhatsAppTest(string $key, string $phone): array
+    {
+        $to = self::waPhone($phone);
+        if (!StoreWhatsAppTemplates::isKnown($key) || !preg_match('/^\+\d{11,15}$/', $to)) {
+            return ['ok' => false, 'error' => 'Choose a template and enter a valid mobile number.'];
+        }
+        $payload = array_map(static fn ($v): string => self::waParam($v), StoreWhatsAppTemplates::sampleVars($key));
+        $res = WhatsAppService::send($to, $key, $payload);
+        $note = !empty($res['configured']) ? '' : ' (WhatsApp not configured: logged to storage/logs/whatsapp.log only)';
+        self::waLog($key, $to, $payload, $res['ok'] ? 'sent' : 'failed', $res['ok'] ? null : (string) $res['message'], null, '[Test] ');
+
+        return $res['ok'] ? ['ok' => true, 'note' => $note] : ['ok' => false, 'error' => (string) $res['message']];
+    }
+
     /** Generic automatic parts so previews/tests look like the real thing. */
     private static function sampleExtras(string $key): array
     {
@@ -886,6 +957,96 @@ final class StoreNotifier
         foreach (StoreEmailTemplates::teamEmails() as $to) {
             self::send($key, $to, $vars, $extra);
         }
+    }
+
+    /**
+     * Queue one customer WhatsApp update to the order's contact phone. Never throws:
+     * a message that can't go out is logged as skipped/failed and the caller carries on.
+     *
+     * @param array<string, mixed> $order store_orders row (contact_phone, identity_id)
+     * @param array<string, string> $vars the template's variables (see StoreWhatsAppTemplates)
+     */
+    private static function whatsapp(string $key, array $order, array $vars): void
+    {
+        try {
+            $to = self::waPhone((string) ($order['contact_phone'] ?? ''));
+            if ($to === '') {
+                return;
+            }
+            $payload = array_map(static fn ($v): string => self::waParam($v), $vars);
+            if (!StoreWhatsAppTemplates::isOn($key)) {
+                self::waLog($key, $to, $payload, 'disabled');
+
+                return;
+            }
+            $why = StoreWhatsAppTemplates::blocker($key);
+            if ($why === null && MessagingConsent::isOptedOut($to, 'whatsapp')) {
+                $why = 'customer has opted out of WhatsApp';
+            }
+            // Platform-origin WhatsApp (clinic 0) needs a recorded opt-in (OTP login records it);
+            // the queue would skip it anyway, this just makes the log say why.
+            if ($why === null && !MessagingConsent::hasOptedIn($to)) {
+                $why = 'no WhatsApp opt-in recorded for this number (not the customer\'s verified login number)';
+            }
+            if ($why !== null) {
+                self::waLog($key, $to, $payload, 'skipped', $why);
+
+                return;
+            }
+            $identityId = (int) ($order['identity_id'] ?? 0);
+            $id = NotificationService::queueWhatsApp(0, null, $to, $key, $payload, self::waSendAt(), $identityId > 0 ? $identityId : null);
+            self::waLog($key, $to, $payload, $id !== null ? 'queued' : 'failed', $id !== null ? null : 'could not queue (database unavailable?)', $id);
+        } catch (\Throwable $e) {
+            error_log('[StoreNotifier::whatsapp] ' . $key . ': ' . $e->getMessage());
+            self::waLog($key, (string) ($order['contact_phone'] ?? ''), $vars, 'failed', $e->getMessage());
+        }
+    }
+
+    /** @param array<string, string> $payload */
+    private static function waLog(string $key, string $to, array $payload, string $status, ?string $error = null, ?int $notificationId = null, string $prefix = ''): void
+    {
+        $text = WaTemplateService::find($key) !== null
+            ? (string) preg_replace('/\s+/u', ' ', WaTemplateService::renderPlain($key, $payload))
+            : (StoreWhatsAppTemplates::registry()[$key]['label'] ?? $key);
+        StoreEmailTemplates::log($key, $to, $prefix . $text, $status, $error, 'whatsapp', $notificationId);
+    }
+
+    /** +91XXXXXXXXXX (or '' when unusable), with the web's ecp_normalize_phone() when it is loaded. */
+    private static function waPhone(string $raw): string
+    {
+        if (trim($raw) === '') {
+            return '';
+        }
+        $p = function_exists('ecp_normalize_phone') ? ecp_normalize_phone($raw) : VendorService::normalizePhone($raw);
+
+        return preg_match('/^\+\d{11,15}$/', $p) ? $p : '';
+    }
+
+    /** Meta rejects empty parameters and ones with newlines, tabs or 4+ spaces in a row. */
+    private static function waParam(mixed $v): string
+    {
+        $v = trim((string) preg_replace('/\s+/u', ' ', (string) $v));
+
+        return $v === '' ? '-' : mb_substr($v, 0, 500);
+    }
+
+    /**
+     * Now, or the end of quiet hours. The queue skips (not delays) WhatsApp during
+     * quiet hours, so an order update raised at night is scheduled for the morning.
+     */
+    private static function waSendAt(): string
+    {
+        $start = (int) MessagingSettings::get('messaging_quiet_start', '21');
+        $end = (int) MessagingSettings::get('messaging_quiet_end', '7');
+        $h = (int) date('G');
+        $quiet = MessagingSettings::doctorLimitsEnabled() && $start !== $end
+            && ($start > $end ? ($h >= $start || $h < $end) : ($h >= $start && $h < $end));
+        if (!$quiet) {
+            return date('Y-m-d H:i:s');
+        }
+        $t = (int) strtotime(date('Y-m-d') . sprintf(' %02d:00:00', $end));
+
+        return date('Y-m-d H:i:s', $t > time() ? $t : $t + 86400);
     }
 
     /**

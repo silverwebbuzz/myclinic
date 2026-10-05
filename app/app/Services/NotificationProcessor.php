@@ -90,16 +90,28 @@ final class NotificationProcessor
 
                 if ($channel === 'sms') {
                     // Policy downgraded WhatsApp→SMS (quota/cache). Send as SMS.
+                    if (!self::smsFallbackAllowed($template)) {
+                        self::markSkipped($id, 'policy chose SMS; no SMS version for ' . $template);
+                        return false;
+                    }
                     return self::sendSmsFallback($id, $row, $to, $template, $payload, $decision['reason'], $audience);
                 }
 
                 // 3-state cache: known NOT on WhatsApp → straight to SMS.
                 if (self::knownNoWhatsApp($to)) {
+                    if (!self::smsFallbackAllowed($template)) {
+                        self::markSkipped($id, 'cached: not on WhatsApp (no SMS version)');
+                        return false;
+                    }
                     return self::sendSmsFallback($id, $row, $to, $template, $payload, 'cached: not on WhatsApp', $audience);
                 }
 
                 $result = WhatsAppService::send($to, $template, $payload);
                 if (!$result['ok']) {
+                    if (!self::smsFallbackAllowed($template)) {
+                        self::markFailed($id, $result['message']);
+                        return false;
+                    }
                     return self::sendSmsFallback($id, $row, $to, $template, $payload, $result['message'], $audience);
                 }
 
@@ -216,6 +228,15 @@ final class NotificationProcessor
                 : ['status' => 'failed', 'error_log' => $result['message'], 'attempts' => 1]);
 
         return $result['ok'];
+    }
+
+    /**
+     * Store order updates (store_*) are WhatsApp-only: they have no DLT-registered
+     * SMS text, and the customer still gets the email when they gave an address.
+     */
+    private static function smsFallbackAllowed(string $template): bool
+    {
+        return !str_starts_with($template, 'store_');
     }
 
     /** Policy decided not to send (rule off / cap / quota / quiet hours). */

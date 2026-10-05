@@ -38,8 +38,72 @@ final class AddressService
      */
     public static function create(int $identityId, array $in): array
     {
+        $v = self::clean($in);
+        if (!$v['ok']) {
+            return $v;
+        }
+        if (count(self::list($identityId)) >= self::MAX_ADDRESSES) {
+            return ['ok' => false, 'error' => 'You have saved the maximum number of addresses. Remove one first.'];
+        }
+        Database::connection()->prepare('UPDATE store_addresses SET is_default = 0 WHERE identity_id = :i')
+            ->execute(['i' => $identityId]);
+
+        return ['ok' => true, 'id' => QueryBuilder::table('store_addresses')->insert(
+            ['identity_id' => $identityId, 'country' => 'IN', 'is_default' => 1] + $v['row']
+        )];
+    }
+
+    /**
+     * Edit one of the customer's addresses. Keys missing from $in keep their saved
+     * value; the result is validated exactly like create(). Placed orders keep
+     * their own snapshot (ship_address_json), so they are not affected.
+     *
+     * @param array<string, mixed> $in
+     * @return array{ok: bool, error?: string}  error 'not_found' = no such address for this customer
+     */
+    public static function update(int $identityId, int $id, array $in): array
+    {
+        $current = self::find($identityId, $id);
+        if ($current === null) {
+            return ['ok' => false, 'error' => 'not_found'];
+        }
+        $merged = [];
+        foreach (self::FIELDS as $k) {
+            $merged[$k] = array_key_exists($k, $in) ? $in[$k] : $current[$k];
+        }
+        $v = self::clean($merged);
+        if (!$v['ok']) {
+            return $v;
+        }
+        QueryBuilder::table('store_addresses')->where('id', '=', $id)->where('identity_id', '=', $identityId)->update($v['row']);
+
+        return ['ok' => true];
+    }
+
+    /** Make one address the default (the others lose it). False = no such address for this customer. */
+    public static function setDefault(int $identityId, int $id): bool
+    {
+        if (self::find($identityId, $id) === null) {
+            return false;
+        }
+        Database::connection()->prepare(
+            'UPDATE store_addresses SET is_default = (id = :id) WHERE identity_id = :i AND deleted_at IS NULL'
+        )->execute(['id' => $id, 'i' => $identityId]);
+
+        return true;
+    }
+
+    private const FIELDS = ['label', 'name', 'phone', 'line1', 'line2', 'landmark', 'city', 'state', 'pincode'];
+
+    /**
+     * Trim + validate the editable fields.
+     *
+     * @param array<string, mixed> $in
+     * @return array{ok: bool, error?: string, row?: array<string, mixed>}
+     */
+    private static function clean(array $in): array
+    {
         $row = [
-            'identity_id' => $identityId,
             'label' => mb_substr(trim((string) ($in['label'] ?? '')), 0, 40) ?: null,
             'name' => mb_substr(trim((string) ($in['name'] ?? '')), 0, 160),
             'phone' => VendorService::normalizePhone((string) ($in['phone'] ?? '')),
@@ -49,8 +113,6 @@ final class AddressService
             'city' => mb_substr(trim((string) ($in['city'] ?? '')), 0, 120),
             'state' => mb_substr(trim((string) ($in['state'] ?? '')), 0, 120),
             'pincode' => preg_replace('/\D/', '', (string) ($in['pincode'] ?? '')) ?? '',
-            'country' => 'IN',
-            'is_default' => 1,
         ];
         foreach (['name' => 'Full name', 'line1' => 'House / building and street', 'city' => 'City', 'state' => 'State'] as $k => $label) {
             if ($row[$k] === '') {
@@ -69,13 +131,8 @@ final class AddressService
         if (!preg_match('/^[1-9]\d{5}$/', $row['pincode'])) {
             return ['ok' => false, 'error' => 'Enter a valid 6-digit pincode.'];
         }
-        if (count(self::list($identityId)) >= self::MAX_ADDRESSES) {
-            return ['ok' => false, 'error' => 'You have saved the maximum number of addresses. Remove one first.'];
-        }
-        Database::connection()->prepare('UPDATE store_addresses SET is_default = 0 WHERE identity_id = :i')
-            ->execute(['i' => $identityId]);
 
-        return ['ok' => true, 'id' => QueryBuilder::table('store_addresses')->insert($row)];
+        return ['ok' => true, 'row' => $row];
     }
 
     public static function remove(int $identityId, int $id): bool
