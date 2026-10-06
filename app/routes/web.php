@@ -453,6 +453,10 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/misc', [MiscAdminController::class, 'index']);
         $admin->post('/misc', [MiscAdminController::class, 'save']);
 
+        // Patient mobile app update check (api/mobile/v1/app_version.php)
+        $admin->get('/app-versions', [\App\Controllers\AppVersionAdminController::class, 'index']);
+        $admin->post('/app-versions', [\App\Controllers\AppVersionAdminController::class, 'save']);
+
         // WhatsApp/SMS messaging control centre
         $admin->get('/messaging', [MessagingAdminController::class, 'index']);
         $admin->post('/messaging/connection', [MessagingAdminController::class, 'saveConnection']);
