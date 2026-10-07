@@ -87,7 +87,7 @@
                             <?php endif; ?>
                         </div>
                         <div class="text-right text-xs text-slate-400 flex-shrink-0">
-                            <?= htmlspecialchars(date('M j, H:i', strtotime((string) $c['created_at']))) ?>
+                            <?= htmlspecialchars(date('d M, h:i A', strtotime((string) $c['created_at']))) ?>
                             <?php if (!empty($c['document_path'])): ?>
                                 <div class="mt-1 text-emerald-600">📄 doc attached</div>
                             <?php endif; ?>

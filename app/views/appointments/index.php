@@ -193,7 +193,7 @@ $walkinUrl = static function () use ($date, $doctorId): string {
                     <?php else: ?>
                     <div class="<?= $rowClass ?> opacity-90" title="<?= $rowTitle ?>">
                     <?php endif; ?>
-                        <span class="font-mono"><?= date('H:i', strtotime((string) $a['scheduled_at'])) ?></span>
+                        <span class="font-mono"><?= date('h:i A', strtotime((string) $a['scheduled_at'])) ?></span>
                         <span class="font-medium"><?= htmlspecialchars((string) ($a['patient_name'] ?? '')) ?></span>
                         <?php if ($doctorId === null): ?>
                         <span class="block truncate text-[10px] opacity-70"><?= htmlspecialchars((string) ($a['doctor_name'] ?? '')) ?></span>

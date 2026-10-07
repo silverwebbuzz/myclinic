@@ -223,7 +223,7 @@ ob_start();
         </h3>
         <p class="mt-2 text-sm text-slate-600">
             We received your application on
-            <strong><?= htmlspecialchars(date('M j, Y', strtotime((string) $latest['created_at']))) ?></strong>.
+            <strong><?= htmlspecialchars(date('d M Y', strtotime((string) $latest['created_at']))) ?></strong>.
             Our team is reviewing — most decisions land within 1–2 business days.
         </p>
         <p class="mt-2 text-xs text-slate-500">

@@ -491,7 +491,7 @@ function clinicCalendar(cfg) {
                 patientId: e.patient_id || 0, phone: e.phone || '',
                 doctor: e.doctor || '', status: e.status, statusLabel: meta.label,
                 type: e.type || '', subline,
-                time: this.fmtTime(s), dateLabel: s.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'}),
+                time: this.fmtTime(s), dateLabel: s.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'}),
                 _end: this.parse(e.end||e.start),
             };
         },
@@ -524,7 +524,7 @@ function clinicCalendar(cfg) {
             const groups={};
             for (const m of inMonth) { (groups[m.iso] ||= []).push(m); }
             this.listGroups=Object.keys(groups).sort().map(iso=>({
-                iso, label: this.parse(iso+'T00:00').toLocaleDateString(undefined,{weekday:'long', day:'numeric', month:'long'}),
+                iso, label: this.parse(iso+'T00:00').toLocaleDateString('en-IN',{weekday:'long', day:'numeric', month:'long'}),
                 events: groups[iso],
             }));
         },
@@ -548,8 +548,8 @@ function clinicCalendar(cfg) {
                     return {...m, top:Math.max(0,sMin/60*this.hourPx), height:Math.max(this.slotPx-2,dur/60*this.hourPx-2), _s:sMin, _e:sMin+dur};
                 }).sort((a,b)=>a._s-b._s);
                 this.lanes(evs);
-                return { iso, dow:d.toLocaleDateString(undefined,{weekday:'short'}),
-                    dnum:d.toLocaleDateString(undefined,{day:'numeric',month:'short'}),
+                return { iso, dow:d.toLocaleDateString('en-IN',{weekday:'short'}),
+                    dnum:d.toLocaleDateString('en-IN',{day:'numeric',month:'short'}),
                     isToday:iso===this.cfg.today, slots, events:evs };
             });
         },
@@ -657,9 +657,9 @@ function clinicCalendar(cfg) {
         fmtTime(d){ let h=d.getHours(); const mm=String(d.getMinutes()).padStart(2,'0'); const ap=h<12?'AM':'PM'; h=h%12===0?12:h%12; return h+':'+mm+' '+ap; },
         buildLabel(){
             const a=this.parse(this.anchor+'T00:00');
-            if (this.view==='day') return a.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'});
-            if (this.view==='week') { const m=this.monday(a), s=this.sunday(a); return m.toLocaleDateString(undefined,{day:'numeric',month:'short'})+' – '+s.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}); }
-            return a.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+            if (this.view==='day') return a.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+            if (this.view==='week') { const m=this.monday(a), s=this.sunday(a); return m.toLocaleDateString('en-IN',{day:'numeric',month:'short'})+' – '+s.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); }
+            return a.toLocaleDateString('en-IN',{month:'long',year:'numeric'});
         },
     };
 }

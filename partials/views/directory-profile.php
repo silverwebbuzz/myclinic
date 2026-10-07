@@ -133,7 +133,7 @@ $ratingVal = (float) ($p['rating'] ?? 0);
                                 <?php foreach ($p['blog_posts'] as $blog): ?>
                                 <?php
                                     $blogLink = (string) ($blog['link'] ?? '#');
-                                    $blogDate = !empty($blog['date']) ? date('M j, Y', strtotime((string) $blog['date'])) : '';
+                                    $blogDate = !empty($blog['date']) ? date('d M Y', strtotime((string) $blog['date'])) : '';
                                     $catSlug = preg_replace('/[^a-z0-9-]+/', '-', strtolower((string) ($blog['category_slug'] ?? ''))) ?? '';
                                     $catSlug = trim($catSlug, '-');
                                 ?>

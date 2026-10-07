@@ -346,7 +346,7 @@ function ecp_ms_order_notice(array $order): ?array
     $s = (string) $order['status'];
     if ($s === 'pending_payment') {
         return ['tone' => 'warn', 'text' => 'Complete your payment of ' . store_rupees((int) $order['grand_total_paise'])
-            . '. Items are reserved until ' . date('g:i a', (int) strtotime((string) $order['expires_at'])) . '.'];
+            . '. Items are reserved until ' . date('h:i A', (int) strtotime((string) $order['expires_at'])) . '.'];
     }
     if (in_array($s, ['paid', 'partially_shipped', 'shipped', 'partially_delivered', 'delivered', 'completed'], true)) {
         return ['tone' => 'ok', 'text' => 'Thank you, payment received. Each seller now packs their items; you\'ll see tracking here once packages ship.'

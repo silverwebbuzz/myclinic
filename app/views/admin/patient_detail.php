@@ -92,7 +92,7 @@
                     ?>
                     <?php foreach ($appointments as $a): ?>
                     <tr class="border-b">
-                        <td class="px-4 py-3 whitespace-nowrap"><?= htmlspecialchars(date('d M Y, H:i', strtotime((string) ($a['scheduled_at'] ?? 'now')))) ?></td>
+                        <td class="px-4 py-3 whitespace-nowrap"><?= htmlspecialchars(date('d M Y, h:i A', strtotime((string) ($a['scheduled_at'] ?? 'now')))) ?></td>
                         <td class="px-4 py-3"><?= htmlspecialchars($a['doctor_name'] ?? '—') ?></td>
                         <td class="px-4 py-3"><?= htmlspecialchars(ucfirst((string) ($a['type'] ?? '—'))) ?></td>
                         <td class="px-4 py-3"><?= htmlspecialchars(ucfirst((string) ($a['source'] ?? '—'))) ?></td>
@@ -125,7 +125,7 @@
                     <?php endif; ?>
                     <?php foreach ($activity as $act): ?>
                     <tr class="border-b">
-                        <td class="px-4 py-3 whitespace-nowrap text-slate-500"><?= htmlspecialchars(date('d M Y, H:i', strtotime((string) ($act['created_at'] ?? 'now')))) ?></td>
+                        <td class="px-4 py-3 whitespace-nowrap text-slate-500"><?= htmlspecialchars(date('d M Y, h:i A', strtotime((string) ($act['created_at'] ?? 'now')))) ?></td>
                         <td class="px-4 py-3"><?= htmlspecialchars((string) ($act['action'] ?? '')) ?></td>
                         <td class="px-4 py-3"><?= htmlspecialchars($act['user_name'] ?? 'System') ?></td>
                         <td class="px-4 py-3 text-slate-400"><?= htmlspecialchars($act['ip_address'] ?? '—') ?></td>

@@ -67,7 +67,7 @@ require __DIR__ . '/_header.php';
         ?>
         <a href="<?= e(store_url('order/' . $o['order_no'])) ?>" class="st-seller-group" style="display:block;text-decoration:none;color:inherit">
           <div class="st-seller-group-head">
-            <span><strong>Order <?= e($o['order_no']) ?></strong> · <?= e(date('j M Y', (int) strtotime((string) $o['placed_at']))) ?> · <?= (int) $o['packages'] ?> package<?= (int) $o['packages'] === 1 ? '' : 's' ?></span>
+            <span><strong>Order <?= e($o['order_no']) ?></strong> · <?= e(date('d M Y', (int) strtotime((string) $o['placed_at']))) ?> · <?= (int) $o['packages'] ?> package<?= (int) $o['packages'] === 1 ? '' : 's' ?></span>
             <span class="st-status <?= $cls ?>" style="padding:3px 10px;font-size:12px"><?= e($label) ?></span>
           </div>
           <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;flex-wrap:wrap">

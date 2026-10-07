@@ -35,7 +35,7 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
             <p class="text-sm text-slate-500">Shown to every seller at <code>/vendor/terms</code>. Saving creates a <strong>new version</strong>; sellers see a banner until they accept it.</p>
         </div>
         <div class="text-right text-sm">
-            <p>Version <strong><?= (int) $page['version'] ?></strong><?= $page['updated_at'] ? ' · ' . $e(date('d M Y, g:i a', (int) strtotime((string) $page['updated_at']))) : '' ?></p>
+            <p>Version <strong><?= (int) $page['version'] ?></strong><?= $page['updated_at'] ? ' · ' . $e(date('d M Y, h:i A', (int) strtotime((string) $page['updated_at']))) : '' ?></p>
             <p class="text-slate-500">Accepted by <strong><?= (int) $stats['accepted'] ?></strong> of <?= (int) $stats['sellers'] ?> active sellers</p>
         </div>
     </div>
@@ -78,7 +78,7 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
                 <h2 class="text-sm font-semibold">Version history</h2>
                 <ul class="mt-2 space-y-1 text-sm">
                     <?php foreach ($versions as $v): ?>
-                        <li>v<?= (int) $v['version'] ?> · <?= $e(date('d M Y, g:i a', (int) strtotime((string) $v['created_at']))) ?><?= $v['created_by'] ? '' : ' <span class="text-slate-400">(default text)</span>' ?></li>
+                        <li>v<?= (int) $v['version'] ?> · <?= $e(date('d M Y, h:i A', (int) strtotime((string) $v['created_at']))) ?><?= $v['created_by'] ? '' : ' <span class="text-slate-400">(default text)</span>' ?></li>
                     <?php endforeach; ?>
                 </ul>
             </section>

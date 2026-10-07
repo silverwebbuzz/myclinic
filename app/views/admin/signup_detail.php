@@ -91,7 +91,7 @@
                     ?>
                     <?php foreach ($appointments as $a): ?>
                     <tr class="border-b">
-                        <td class="px-4 py-3 whitespace-nowrap"><?= htmlspecialchars(date('d M Y, H:i', strtotime((string) ($a['scheduled_at'] ?? 'now')))) ?></td>
+                        <td class="px-4 py-3 whitespace-nowrap"><?= htmlspecialchars(date('d M Y, h:i A', strtotime((string) ($a['scheduled_at'] ?? 'now')))) ?></td>
                         <td class="px-4 py-3"><?= htmlspecialchars($a['clinic_name'] ?? '—') ?></td>
                         <td class="px-4 py-3"><?= htmlspecialchars($a['doctor_name'] ?? '—') ?></td>
                         <td class="px-4 py-3"><?= htmlspecialchars(ucfirst((string) ($a['source'] ?? '—'))) ?></td>
@@ -124,8 +124,8 @@
                     <?php endif; ?>
                     <?php foreach ($sessions as $s): ?>
                     <tr class="border-b">
-                        <td class="px-4 py-3 whitespace-nowrap text-slate-500"><?= !empty($s['last_seen_at']) ? htmlspecialchars(date('d M Y, H:i', strtotime((string) $s['last_seen_at']))) : '—' ?></td>
-                        <td class="px-4 py-3 whitespace-nowrap text-slate-500"><?= !empty($s['created_at']) ? htmlspecialchars(date('d M Y, H:i', strtotime((string) $s['created_at']))) : '—' ?></td>
+                        <td class="px-4 py-3 whitespace-nowrap text-slate-500"><?= !empty($s['last_seen_at']) ? htmlspecialchars(date('d M Y, h:i A', strtotime((string) $s['last_seen_at']))) : '—' ?></td>
+                        <td class="px-4 py-3 whitespace-nowrap text-slate-500"><?= !empty($s['created_at']) ? htmlspecialchars(date('d M Y, h:i A', strtotime((string) $s['created_at']))) : '—' ?></td>
                         <td class="px-4 py-3 text-slate-400"><?= htmlspecialchars($s['ip'] ?? '—') ?></td>
                         <td class="px-4 py-3 text-slate-400 max-w-xs truncate" title="<?= htmlspecialchars($s['user_agent'] ?? '') ?>"><?= htmlspecialchars($s['user_agent'] ?? '—') ?></td>
                     </tr>

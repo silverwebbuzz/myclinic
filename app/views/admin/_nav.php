@@ -127,6 +127,8 @@ $isActive = static fn (string $href): bool => $adminPath === $href || str_starts
 if (!defined('ECP_ADMIN_ALPINE_LOADED')) {
     define('ECP_ADMIN_ALPINE_LOADED', true);
     echo '<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>';
+    // Date boxes show 06-10-2026 on desktop; phones keep their own date wheel (file lives on the main site).
+    echo '<script defer src="https://eclinicpro.com/assets/js/ecp-datepicker.js?v=20261007"></script>';
 }
 ?>
 <script>

@@ -153,7 +153,7 @@ require __DIR__ . '/_header.php';
     <div class="st-pay-box" x-data="storePay('<?= e($order['order_no']) ?>', <?= !empty($_GET['pay']) ? 'true' : 'false' ?>)" x-init="init()">
       <div>
         <strong>Complete your payment of <?= e(store_rupees((int) $order['grand_total_paise'])) ?></strong>
-        <p class="st-summary-note" style="margin:4px 0 0">Items are reserved until <?= e(date('g:i a', (int) strtotime((string) $order['expires_at']))) ?>. UPI, cards, net banking and wallets accepted via Razorpay.</p>
+        <p class="st-summary-note" style="margin:4px 0 0">Items are reserved until <?= e(date('h:i A', (int) strtotime((string) $order['expires_at']))) ?>. UPI, cards, net banking and wallets accepted via Razorpay.</p>
         <p class="st-line-problem" x-show="msg" x-text="msg" x-cloak></p>
       </div>
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
@@ -224,7 +224,7 @@ require __DIR__ . '/_header.php';
               <?php if ($sh['events']): ?>
                 <ol class="st-track-events">
                   <?php foreach (array_slice($sh['events'], 0, 4) as $ev): ?>
-                    <li><span><?= e(date('j M, g:i a', (int) strtotime((string) $ev['event_at']))) ?></span> <?= e(ucwords(strtolower((string) $ev['raw_status']))) ?><?= !empty($ev['location']) ? ' · ' . e($ev['location']) : '' ?></li>
+                    <li><span><?= e(date('d M, h:i A', (int) strtotime((string) $ev['event_at']))) ?></span> <?= e(ucwords(strtolower((string) $ev['raw_status']))) ?><?= !empty($ev['location']) ? ' · ' . e($ev['location']) : '' ?></li>
                   <?php endforeach; ?>
                 </ol>
               <?php endif; ?>

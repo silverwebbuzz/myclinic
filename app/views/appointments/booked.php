@@ -4,7 +4,7 @@
     <p class="text-sm text-slate-600">
         <?= htmlspecialchars($appointment['patient_name'] ?? '') ?> with
         <?= htmlspecialchars($appointment['doctor_name'] ?? '') ?>
-        on <?= htmlspecialchars(date('d M Y, H:i', strtotime($appointment['scheduled_at']))) ?>
+        on <?= htmlspecialchars(date('d M Y, h:i A', strtotime($appointment['scheduled_at']))) ?>
     </p>
     <?php if (!empty($appointment['token_number'])): ?>
     <p class="text-2xl font-bold text-emerald-700">Token #<?= (int) $appointment['token_number'] ?></p>

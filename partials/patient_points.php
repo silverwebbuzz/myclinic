@@ -12,7 +12,7 @@ $pp = $pointsPanel;
 $ppBal = $pp['balance'];
 $ppRules = $pp['rules'];
 $ppRef = $pp['referral'];
-$ppDate = static fn (?string $d): string => $d ? date('j M Y', strtotime($d)) : '';
+$ppDate = static fn (?string $d): string => $d ? date('d M Y', strtotime($d)) : '';
 $ppKind = static fn (string $k): string => ['welcome' => 'Welcome', 'referral' => 'Referral', 'loyalty' => 'Loyalty', 'admin' => 'Bonus'][$k] ?? 'Points';
 $ppTxn = static fn (string $t): string => [
     'earn' => 'Earned', 'available' => 'Ready to use', 'spend' => 'Used on order', 'refund' => 'Returned',

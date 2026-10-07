@@ -42,7 +42,7 @@
             try { data = await r.json(); } catch (e) { /* non-json */ }
             if (r.ok && data.ok) {
                 dirty = false;
-                var when = data.saved_at ? new Date(data.saved_at).toLocaleTimeString() : '';
+                var when = data.saved_at ? new Date(data.saved_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
                 setStatus(when ? 'Draft saved · ' + when : 'Draft saved', 'ok');
             } else {
                 setStatus(data.error || 'Could not save draft', 'err');

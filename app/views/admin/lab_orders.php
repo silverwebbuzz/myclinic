@@ -187,7 +187,7 @@ $urlWith = static function (array $overrides) use ($q, $status, $payment, $dateF
                             <a href="/admin/lab/orders/<?= (int) $o['id'] ?>" class="font-mono font-medium text-sky-700 hover:underline">
                                 <?= htmlspecialchars($o['order_ref']) ?>
                             </a>
-                            <div class="text-xs text-slate-400"><?= htmlspecialchars(date('d M Y, H:i', strtotime((string) $o['created_at']) ?: time())) ?></div>
+                            <div class="text-xs text-slate-400"><?= htmlspecialchars(date('d M Y, h:i A', strtotime((string) $o['created_at']) ?: time())) ?></div>
                         </td>
                         <td class="px-4 py-2 align-top">
                             <div class="font-medium"><?= htmlspecialchars($o['contact_name']) ?></div>

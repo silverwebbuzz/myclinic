@@ -24,7 +24,7 @@
         <ul class="mt-2 divide-y text-sm">
             <?php foreach ($appointments as $a): ?>
             <li class="py-2">
-                <p class="font-medium"><?= htmlspecialchars(date('d M Y H:i', strtotime($a['scheduled_at']))) ?></p>
+                <p class="font-medium"><?= htmlspecialchars(date('d M Y, h:i A', strtotime($a['scheduled_at']))) ?></p>
                 <p class="text-xs text-slate-500"><?= htmlspecialchars($a['doctor_name'] ?? '') ?>
                     <?php if (!empty($a['meet_link'])): ?> · <a href="<?= htmlspecialchars($a['meet_link']) ?>" class="text-emerald-600" target="_blank">Join Meet</a><?php endif; ?>
                 </p>

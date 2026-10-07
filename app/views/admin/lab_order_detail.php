@@ -255,12 +255,12 @@ $isDeduction = static fn (string $kind): bool => $kind === 'discount';
                     <?php if (!empty($order['cancelled_at'])): ?>
                     <div class="flex justify-between">
                         <span class="text-slate-500">Cancelled</span>
-                        <span><?= htmlspecialchars(date('d M Y, H:i', strtotime((string) $order['cancelled_at']) ?: time())) ?></span>
+                        <span><?= htmlspecialchars(date('d M Y, h:i A', strtotime((string) $order['cancelled_at']) ?: time())) ?></span>
                     </div>
                     <?php endif; ?>
                     <div class="flex justify-between">
                         <span class="text-slate-500">Last updated</span>
-                        <span><?= htmlspecialchars(date('d M Y, H:i', strtotime((string) $order['updated_at']) ?: time())) ?></span>
+                        <span><?= htmlspecialchars(date('d M Y, h:i A', strtotime((string) $order['updated_at']) ?: time())) ?></span>
                     </div>
                     <?php if (!empty($order['product_slug'])): ?>
                     <div class="pt-2 border-t">

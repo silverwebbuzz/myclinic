@@ -214,7 +214,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                         <template x-if="!editDate">
                             <button type="button" :disabled="!editable" @click="editDate = true"
                                     class="text-slate-500 hover:text-brand disabled:cursor-default disabled:hover:text-slate-500"
-                                    x-text="visited_at ? new Date(visited_at).toLocaleString() : 'Set date'"></button>
+                                    x-text="visited_at ? new Date(visited_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : 'Set date'"></button>
                         </template>
                         <template x-if="editDate">
                             <input type="datetime-local" x-model="visited_at" :disabled="!editable"
@@ -1587,7 +1587,7 @@ function visitScreenV2(cfg) {
 
         formatPeekDate(d) {
             if (!d) return '';
-            try { return new Date(d.replace(' ', 'T')).toLocaleString(); } catch (e) { return d; }
+            try { return new Date(d.replace(' ', 'T')).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }); } catch (e) { return d; }
         },
 
         _saveDebounce: null,
@@ -1838,7 +1838,7 @@ function visitScreenV2(cfg) {
                         }
                     }
                     this.saveStatus = 'saved';
-                    this.saveLabel = '✓ Saved ' + new Date().toLocaleTimeString();
+                    this.saveLabel = '✓ Saved ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
                     this.dirty = false;
                     this.prescriptionsCleared = false;   // consumed; reset for next edits
                     this.vitalsWarnings = data.warnings || [];

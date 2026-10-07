@@ -41,7 +41,7 @@ $canBookAppointments = \App\Services\RoleAccessService::canBookAppointments(\App
         <?php endif; ?>
     </div>
     <div class="flex flex-wrap items-center gap-2">
-        <span class="font-mono text-xs"><?= date('H:i', strtotime($row['scheduled_at'])) ?></span>
+        <span class="font-mono text-xs"><?= date('h:i A', strtotime($row['scheduled_at'])) ?></span>
         <span class="rounded-full px-2 py-0.5 text-xs capitalize <?= $statusStyles[$row['status'] ?? ''] ?? 'bg-slate-100 text-slate-700' ?>">
             <?= htmlspecialchars(str_replace('_', ' ', $row['status'] ?? '')) ?>
         </span>

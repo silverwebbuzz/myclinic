@@ -14,7 +14,7 @@ final class NotificationTemplateService
                 "Hi %s, reminder: appointment at %s on %s.",
                 $payload['patient_name'] ?? 'Patient',
                 $payload['clinic_name'] ?? 'clinic',
-                date('d M Y H:i', strtotime((string) ($payload['scheduled_at'] ?? 'now'))),
+                date('d M Y, h:i A', strtotime((string) ($payload['scheduled_at'] ?? 'now'))),
             ),
             'rx_delivery' => sprintf(
                 "Hi %s, your prescription from %s is ready.%s",

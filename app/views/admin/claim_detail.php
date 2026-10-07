@@ -24,7 +24,7 @@
                 <?= htmlspecialchars((string) $claim['status']) ?>
             </span>
             <span class="text-xs text-slate-400">
-                #<?= (int) $claim['id'] ?> · submitted <?= htmlspecialchars(date('M j Y, H:i', strtotime((string) $claim['created_at']))) ?>
+                #<?= (int) $claim['id'] ?> · submitted <?= htmlspecialchars(date('d M Y, h:i A', strtotime((string) $claim['created_at']))) ?>
             </span>
         </div>
 
@@ -177,7 +177,7 @@
                 <p class="text-sm">
                     Status: <span class="font-semibold"><?= htmlspecialchars((string) $claim['status']) ?></span>
                     <?php if (!empty($claim['reviewed_at'])): ?>
-                        on <?= htmlspecialchars(date('M j Y, H:i', strtotime((string) $claim['reviewed_at']))) ?>
+                        on <?= htmlspecialchars(date('d M Y, h:i A', strtotime((string) $claim['reviewed_at']))) ?>
                     <?php endif; ?>
                 </p>
                 <?php if (!empty($claim['reviewer_notes'])): ?>

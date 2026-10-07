@@ -273,6 +273,8 @@ $chatMsg   = 'Hi eClinicPro, I have a question.';
         els.forEach(el => io.observe(el));
     });
 </script>
+<!-- Date boxes show 06-10-2026 on desktop; phones keep their own date wheel. -->
+<script defer src="/assets/js/ecp-datepicker.js?v=20261007"></script>
 
 </body>
 

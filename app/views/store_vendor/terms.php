@@ -23,7 +23,7 @@ ob_start();
 <div class="flex flex-wrap items-end justify-between gap-3">
     <div>
         <h1 class="text-[22px] font-semibold tracking-[-.015em]"><?= $e($page['title']) ?></h1>
-        <p class="mt-1 text-sm text-tx3">Version <?= (int) $page['version'] ?><?= $page['updated_at'] ? ', updated ' . $e(date('j M Y', (int) strtotime((string) $page['updated_at']))) : '' ?></p>
+        <p class="mt-1 text-sm text-tx3">Version <?= (int) $page['version'] ?><?= $page['updated_at'] ? ', updated ' . $e(date('d M Y', (int) strtotime((string) $page['updated_at']))) : '' ?></p>
     </div>
     <?php if ($current && $acceptable): ?>
         <span class="inline-flex h-[22px] items-center rounded-md bg-okb px-2 text-xs font-medium text-ok">✓ You have accepted this version</span>

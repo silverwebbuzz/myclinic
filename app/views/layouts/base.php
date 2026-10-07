@@ -41,6 +41,8 @@
     <!-- Collapse plugin must load before Alpine core so x-collapse registers. -->
     <script defer src="/assets/alpine-collapse.min.js?v=<?= $assetVer ?>"></script>
     <script defer src="/assets/alpine.min.js?v=<?= $assetVer ?>"></script>
+    <!-- Date boxes show 06-10-2026 on desktop; phones keep their own date wheel (file lives on the main site). -->
+    <script defer src="https://eclinicpro.com/assets/js/ecp-datepicker.js?v=20261007"></script>
     <?php
         // Design-system primary: Teal 600. Clinics that never picked a custom
         // brand carry the legacy green default in the DB — migrate it here so

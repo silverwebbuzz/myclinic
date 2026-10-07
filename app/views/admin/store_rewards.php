@@ -13,7 +13,7 @@
 $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
 $in = 'mt-1 w-full rounded border px-2 py-1.5 text-sm';
 $n = static fn ($v): string => number_format((int) $v);
-$d = static fn ($v): string => $v ? date('j M Y', strtotime((string) $v)) : '—';
+$d = static fn ($v): string => $v ? date('d M Y', strtotime((string) $v)) : '—';
 $refStatus = ['signed_up' => 'Waiting for first delivered order', 'qualified' => 'Delivered · in return window', 'rewarded' => 'Points given', 'rejected' => 'Rejected'];
 $tabs = ['overview' => 'Overview & settings', 'referrals' => 'Referrals', 'customer' => 'Customer lookup'];
 ?>

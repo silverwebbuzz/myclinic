@@ -290,7 +290,7 @@ function dashboardPage() {
                         visited.innerHTML = data.visited_html;
                     }
                 }
-                this.lastRefresh = new Date().toLocaleTimeString();
+                this.lastRefresh = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
             } catch (e) {}
         }
     };

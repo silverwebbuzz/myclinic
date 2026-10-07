@@ -89,7 +89,7 @@ function queueBoard(doctorId) {
                 const data = await r.json();
                 const el = document.getElementById('queue-rows');
                 if (el && data.html) el.innerHTML = data.html;
-                this.lastRefresh = new Date().toLocaleTimeString();
+                this.lastRefresh = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
             } catch (e) { /* offline — keep showing the last good queue */ }
         },
     };

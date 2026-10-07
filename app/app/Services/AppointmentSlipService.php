@@ -36,7 +36,7 @@ final class AppointmentSlipService
                 . '<p><strong>Patient:</strong> ' . htmlspecialchars((string) ($appointment['patient_name'] ?? '')) . '</p>'
                 . '<p><strong>UHID:</strong> ' . htmlspecialchars((string) ($appointment['uhid'] ?? '')) . '</p>'
                 . '<p><strong>Doctor:</strong> ' . htmlspecialchars((string) ($appointment['doctor_name'] ?? '')) . '</p>'
-                . '<p><strong>Date:</strong> ' . htmlspecialchars(date('d M Y H:i', strtotime($appointment['scheduled_at']))) . '</p>';
+                . '<p><strong>Date:</strong> ' . htmlspecialchars(date('d M Y, h:i A', strtotime($appointment['scheduled_at']))) . '</p>';
             if (!empty($appointment['token_number'])) {
                 $html .= '<p style="font-size:24pt;font-weight:bold;">Token #' . (int) $appointment['token_number'] . '</p>';
             }

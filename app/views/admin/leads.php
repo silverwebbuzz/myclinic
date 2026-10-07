@@ -73,7 +73,7 @@
                         <div class="mt-0.5 text-xs text-slate-500">
                             <?= htmlspecialchars((string) ($l['clinic_city'] ?? '')) ?>
                             <?php if ($l['preferred_date']): ?>
-                                · <?= htmlspecialchars(date('M j', strtotime((string) $l['preferred_date']))) ?>
+                                · <?= htmlspecialchars(date('d M', strtotime((string) $l['preferred_date']))) ?>
                                 <?= htmlspecialchars($l['preferred_time'] ? '@ ' . date('g:i A', strtotime('2000-01-01 ' . $l['preferred_time'])) : '') ?>
                             <?php endif; ?>
                             <?php if (!empty($l['reason'])): ?>
@@ -83,7 +83,7 @@
                     </div>
                     <div class="text-right text-xs">
                         <span class="rounded-full bg-rose-100 px-2 py-0.5 font-semibold text-rose-800">Doctor alert capped</span>
-                        <div class="mt-1 text-slate-400"><?= htmlspecialchars(date('M j H:i', strtotime((string) $l['created_at']))) ?></div>
+                        <div class="mt-1 text-slate-400"><?= htmlspecialchars(date('d M, h:i A', strtotime((string) $l['created_at']))) ?></div>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -216,7 +216,7 @@
                                     <span class="text-slate-400">0</span>
                                 <?php endif; ?>
                             </td>
-                            <td class="px-4 py-3 text-xs text-slate-500"><?= !empty($d['last_lead_at']) ? htmlspecialchars(date('M j', strtotime((string) $d['last_lead_at']))) : '—' ?></td>
+                            <td class="px-4 py-3 text-xs text-slate-500"><?= !empty($d['last_lead_at']) ? htmlspecialchars(date('d M', strtotime((string) $d['last_lead_at']))) : '—' ?></td>
                             <td class="px-4 py-3">
                                 <?php if (!empty($d['phone'])): ?>
                                 <a href="tel:<?= htmlspecialchars((string) $d['phone']) ?>" class="text-emerald-700 hover:underline"><?= htmlspecialchars((string) $d['phone']) ?></a>
@@ -282,12 +282,12 @@
                     <div class="group relative flex-1">
                         <div class="rounded-t bg-emerald-400 transition group-hover:bg-emerald-600"
                              style="height: <?= max(2, $h) ?>%;"
-                             title="<?= htmlspecialchars(date('M j', strtotime($day))) ?>: <?= $n ?> booking<?= $n === 1 ? '' : 's' ?>"></div>
+                             title="<?= htmlspecialchars(date('d M', strtotime($day))) ?>: <?= $n ?> booking<?= $n === 1 ? '' : 's' ?>"></div>
                     </div>
                     <?php endfor; ?>
                 </div>
                 <div class="mt-2 flex justify-between text-[10px] text-slate-400">
-                    <span><?= date('M j', strtotime('-29 days')) ?></span>
+                    <span><?= date('d M', strtotime('-29 days')) ?></span>
                     <span>Today</span>
                 </div>
             </div>
@@ -317,7 +317,7 @@
                         <div class="mt-0.5 text-xs text-slate-500">
                             <?= htmlspecialchars((string) ($l['clinic_city'] ?? '')) ?>
                             <?php if ($l['preferred_date']): ?>
-                                · <?= htmlspecialchars(date('M j', strtotime((string) $l['preferred_date']))) ?>
+                                · <?= htmlspecialchars(date('d M', strtotime((string) $l['preferred_date']))) ?>
                                 <?= htmlspecialchars($l['preferred_time'] ? '@ ' . date('g:i A', strtotime('2000-01-01 ' . $l['preferred_time'])) : '') ?>
                             <?php endif; ?>
                             <?php if (!empty($l['reason'])): ?>
@@ -333,7 +333,7 @@
                         <?php if (!empty($l['doctor_viewed_at'])): ?>
                         <div class="mt-1 text-emerald-600">Doctor opened</div>
                         <?php endif; ?>
-                        <div class="mt-1 text-slate-400"><?= htmlspecialchars(date('M j H:i', strtotime((string) $l['created_at']))) ?></div>
+                        <div class="mt-1 text-slate-400"><?= htmlspecialchars(date('d M, h:i A', strtotime((string) $l['created_at']))) ?></div>
                     </div>
                 </div>
                 <?php endforeach; ?>

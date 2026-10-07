@@ -219,7 +219,7 @@ ob_start();
                             <?php $ship = json_decode((string) $o['ship_address_json'], true) ?: []; $ps = $pkgStatus[$o['status']] ?? [ucfirst(str_replace('_', ' ', (string) $o['status'])), 'nt', '·']; ?>
                             <tr class="border-t border-ln2 hover:bg-sf2">
                                 <td class="px-4 py-2"><a href="/vendor/orders/<?= (int) $o['id'] ?>" class="font-mono text-[12.5px] font-medium text-tx hover:text-act"><?= $e($o['sub_order_no']) ?></a></td>
-                                <td class="whitespace-nowrap px-3 py-2 text-tx2"><?= $e(date('j M, g:i a', (int) strtotime((string) $o['paid_at']))) ?></td>
+                                <td class="whitespace-nowrap px-3 py-2 text-tx2"><?= $e(date('d M, h:i A', (int) strtotime((string) $o['paid_at']))) ?></td>
                                 <td class="px-3 py-2 text-tx2"><?= $e(trim(($ship['city'] ?? '') . ' ' . ($ship['pincode'] ?? ''))) ?></td>
                                 <td class="px-3 py-2 text-right"><?= (int) $o['units'] ?></td>
                                 <td class="px-3 py-2 text-right font-medium"><?= $e($money((int) $o['value_paise'])) ?></td>

@@ -163,7 +163,7 @@
                                 <?php endif; ?>
                             </td>
                             <td class="px-4 py-3 text-xs text-slate-500"><?= htmlspecialchars((string) ($o['pause_reason'] ?? '—')) ?></td>
-                            <td class="px-4 py-3 text-xs text-slate-500"><?= htmlspecialchars(date('M j, H:i', strtotime((string) $o['updated_at']))) ?></td>
+                            <td class="px-4 py-3 text-xs text-slate-500"><?= htmlspecialchars(date('d M, h:i A', strtotime((string) $o['updated_at']))) ?></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>

@@ -20,7 +20,7 @@
                 <?php else: ?>
                 <?php foreach ($visits as $v): ?>
                 <tr class="hover:bg-slate-50">
-                    <td class="px-4 py-3"><?= htmlspecialchars(date('d M Y H:i', strtotime($v['visited_at']))) ?></td>
+                    <td class="px-4 py-3"><?= htmlspecialchars(date('d M Y, h:i A', strtotime($v['visited_at']))) ?></td>
                     <td class="px-4 py-3 font-medium"><?= htmlspecialchars($v['patient_name'] ?? '') ?></td>
                     <td class="px-4 py-3"><?= htmlspecialchars($v['doctor_name'] ?? '') ?></td>
                     <td class="px-4 py-3 capitalize"><?= htmlspecialchars(str_replace('_', ' ', $v['status'] ?? 'in_progress')) ?></td>

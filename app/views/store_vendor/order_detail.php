@@ -23,7 +23,7 @@ ob_start();
     <?php endif; ?>
 </div>
 <p class="mt-1 text-sm text-tx3">Paid <?= $e(substr((string) $vo['paid_at'], 0, 16)) ?>
-    <?= $status === 'new' && $vo['accept_by'] ? ' · <strong class="text-amber-700">accept by ' . $e(date('j M, g:i a', (int) strtotime((string) $vo['accept_by']))) . '</strong>' : '' ?></p>
+    <?= $status === 'new' && $vo['accept_by'] ? ' · <strong class="text-amber-700">accept by ' . $e(date('d M, h:i A', (int) strtotime((string) $vo['accept_by']))) . '</strong>' : '' ?></p>
 <?php if ($cancelled && !empty($vo['cancel_reason'])): ?><p class="mt-1 text-sm text-red-700">Reason: <?= $e($vo['cancel_reason']) ?></p><?php endif; ?>
 
 <?php if (!$cancelled): ?>
