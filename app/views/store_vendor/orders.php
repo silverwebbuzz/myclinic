@@ -31,7 +31,7 @@ ob_start();
                     <a href="/vendor/orders/<?= (int) $r['id'] ?>" class="flex flex-wrap items-center gap-4 px-4 py-3 hover:bg-sf2">
                         <span class="min-w-0 flex-1">
                             <span class="block font-mono font-medium"><?= $e($r['sub_order_no']) ?></span>
-                            <span class="block text-xs text-tx3">Paid <?= $e(substr((string) $r['paid_at'], 0, 16)) ?> · <?= (int) $r['item_count'] ?> item(s) · to <?= $e(($ship['city'] ?? '') . ' ' . ($ship['pincode'] ?? '')) ?></span>
+                            <span class="block text-xs text-tx3">Paid <?= $e(\App\Support\IndianDate::dateTime($r['paid_at'])) ?> · <?= (int) $r['item_count'] ?> item(s) · to <?= $e(($ship['city'] ?? '') . ' ' . ($ship['pincode'] ?? '')) ?></span>
                             <?php if ($r['status'] === 'new' && !empty($r['accept_by'])): ?>
                                 <span class="block text-xs text-amber-700">Accept by <?= $e(date('d M, h:i A', (int) strtotime((string) $r['accept_by']))) ?></span>
                             <?php endif; ?>

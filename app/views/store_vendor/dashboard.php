@@ -261,7 +261,7 @@ ob_start();
         <div class="flex items-start gap-3 rounded-[10px] border border-wn/20 bg-wnb px-4 py-3 text-wn">
             <span class="grid h-7 w-7 flex-none place-items-center rounded-md bg-sf text-xs">◷</span>
             <div><div class="font-semibold">Your account is under review</div>
-                <div class="text-[13px]">Submitted <?= $e(substr((string) ($vendor['submitted_at'] ?? ''), 0, 10)) ?>. We usually respond within 2 working days. Business and tax details are locked during review; addresses, bank and documents can still be updated.</div></div>
+                <div class="text-[13px]">Submitted <?= $e(\App\Support\IndianDate::date($vendor['submitted_at'] ?? null)) ?>. We usually respond within 2 working days. Business and tax details are locked during review; addresses, bank and documents can still be updated.</div></div>
         </div>
     <?php endif; ?>
 

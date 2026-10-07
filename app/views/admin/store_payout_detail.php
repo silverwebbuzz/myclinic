@@ -29,7 +29,7 @@ $bankChanged = $bank !== null && ($bank['account_last4'] !== $payout['bank_last4
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
             <h1 class="font-mono text-xl font-semibold"><?= $e($payout['payout_no']) ?></h1>
-            <p class="text-sm text-slate-500"><?= $e($vendor['display_name'] ?? '') ?> · <?= $e($st) ?> · <?= $e($payout['period_from']) ?> → <?= $e($payout['period_to']) ?></p>
+            <p class="text-sm text-slate-500"><?= $e($vendor['display_name'] ?? '') ?> · <?= $e($st) ?> · <?= $e(\App\Support\IndianDate::date($payout['period_from'])) ?> → <?= $e(\App\Support\IndianDate::date($payout['period_to'])) ?></p>
         </div>
         <a href="/admin/store/payouts/<?= $pid ?>/statement" class="rounded border bg-white px-3 py-1.5 text-sm hover:bg-slate-50">Download statement (CSV)</a>
     </div>
@@ -37,7 +37,7 @@ $bankChanged = $bank !== null && ($bank['account_last4'] !== $payout['bank_last4
 
     <?php if (!empty($request)): ?>
         <div class="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
-            <strong>Requested by the seller</strong> on <?= $e(substr((string) $request['requested_at'], 0, 16)) ?>.
+            <strong>Requested by the seller</strong> on <?= $e(\App\Support\IndianDate::dateTime($request['requested_at'])) ?>.
             <?php if (!empty($request['note'])): ?><br>Seller's note: “<?= $e($request['note']) ?>”<?php endif; ?>
             <?php if (!empty($request['decline_reason'])): ?><br>Declined: <?= $e($request['decline_reason']) ?><?php endif; ?>
         </div>
@@ -88,7 +88,7 @@ $bankChanged = $bank !== null && ($bank['account_last4'] !== $payout['bank_last4
                 <button class="rounded border border-red-300 px-3 py-1.5 text-sm text-red-700">Mark failed</button>
             </form>
         <?php elseif ($st === 'paid'): ?>
-            <p class="mt-1 text-sm text-emerald-700">Paid <?= $e(substr((string) $payout['paid_at'], 0, 16)) ?> · UTR <span class="font-mono"><?= $e($payout['reference']) ?></span>. The seller has been emailed.</p>
+            <p class="mt-1 text-sm text-emerald-700">Paid <?= $e(\App\Support\IndianDate::dateTime($payout['paid_at'])) ?> · UTR <span class="font-mono"><?= $e($payout['reference']) ?></span>. The seller has been emailed.</p>
         <?php else: ?>
             <p class="mt-1 text-sm text-slate-600"><?= $e(ucfirst($st)) ?><?= !empty($payout['failure_reason']) ? ': ' . $e($payout['failure_reason']) : '' ?>. Entries are back in the seller's available balance.</p>
         <?php endif; ?>
@@ -100,7 +100,7 @@ $bankChanged = $bank !== null && ($bank['account_last4'] !== $payout['bank_last4
             <thead class="text-left text-xs uppercase text-slate-500"><tr><th class="py-1">Date</th><th>Package</th><th>Type</th><th>Note</th><th class="text-right">Amount</th></tr></thead>
             <tbody class="divide-y">
             <?php foreach ($entries as $en): ?>
-                <tr><td class="py-1.5 text-slate-500"><?= $e(substr((string) $en['created_at'], 0, 10)) ?></td>
+                <tr><td class="py-1.5 text-slate-500"><?= $e(\App\Support\IndianDate::date($en['created_at'])) ?></td>
                     <td class="font-mono text-xs"><?= $e($en['sub_order_no'] ?? '') ?></td>
                     <td><?= $e(str_replace('_', ' ', (string) $en['entry_type'])) ?></td>
                     <td class="text-slate-500"><?= $e($en['memo'] ?? '') ?></td>

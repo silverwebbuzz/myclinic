@@ -75,7 +75,7 @@ $canRequest = $bankOk && !$hasOpenPayout && $balances['available'] >= $minPayout
             <tbody class="divide-y">
             <?php foreach ($payouts as $p): ?>
                 <tr><td class="py-2 font-mono"><?= $e($p['payout_no']) ?></td>
-                    <td class="text-tx3"><?= $e($p['period_from']) ?> → <?= $e($p['period_to']) ?></td>
+                    <td class="text-tx3"><?= $e(\App\Support\IndianDate::date($p['period_from'])) ?> → <?= $e(\App\Support\IndianDate::date($p['period_to'])) ?></td>
                     <td class="text-right font-semibold"><?= $r($p['net_paise']) ?></td>
                     <td><?= $e($p['status'] === 'draft' || $p['status'] === 'approved' ? 'Processing' : ($p['status'] === 'cancelled' ? 'Declined' : ucfirst((string) $p['status']))) ?>
                         <?php if (in_array($p['status'], ['cancelled', 'failed'], true) && !empty($p['failure_reason'] ?? $p['decline_reason'] ?? '')): ?>
@@ -98,10 +98,10 @@ $canRequest = $bankOk && !$hasOpenPayout && $balances['available'] >= $minPayout
             <thead class="text-left text-xs uppercase text-tx3"><tr><th class="py-1">Date</th><th>Order</th><th>Type</th><th>Status</th><th class="text-right">Amount</th></tr></thead>
             <tbody class="divide-y">
             <?php foreach ($ledger as $l): ?>
-                <tr><td class="py-1.5 text-tx3"><?= $e(substr((string) $l['created_at'], 0, 10)) ?></td>
+                <tr><td class="py-1.5 text-tx3"><?= $e(\App\Support\IndianDate::date($l['created_at'])) ?></td>
                     <td class="font-mono text-xs"><?= $e($l['sub_order_no'] ?? '—') ?></td>
                     <td><?= $e($typeLabel[$l['entry_type']] ?? $l['entry_type']) ?><?= in_array($l['entry_type'], ['penalty', 'adjustment'], true) && !empty($l['memo']) ? ' <span class="text-xs text-tx3">(' . $e($l['memo']) . ')</span>' : '' ?></td>
-                    <td class="text-xs text-tx3"><?= $e($statusLabel[$l['status']] ?? $l['status']) ?><?= $l['status'] === 'pending' && $l['available_at'] ? ' until ' . $e(substr((string) $l['available_at'], 0, 10)) : '' ?></td>
+                    <td class="text-xs text-tx3"><?= $e($statusLabel[$l['status']] ?? $l['status']) ?><?= $l['status'] === 'pending' && $l['available_at'] ? ' until ' . $e(\App\Support\IndianDate::date($l['available_at'])) : '' ?></td>
                     <td class="text-right <?= (int) $l['amount_paise'] < 0 ? 'text-red-600' : '' ?>"><?= $r($l['amount_paise']) ?></td></tr>
             <?php endforeach; ?>
             </tbody>

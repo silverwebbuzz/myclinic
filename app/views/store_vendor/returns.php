@@ -19,7 +19,7 @@ ob_start();
             <?php foreach ($rows as $r): ?>
                 <li><a href="/vendor/returns/<?= (int) $r['id'] ?>" class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 hover:bg-sf2">
                     <span><span class="font-mono font-medium"><?= $e($r['return_no']) ?></span>
-                        <span class="block text-xs text-tx3">Package <?= $e($r['sub_order_no']) ?> · <?= $e(\App\Services\Store\ReturnService::REASONS[$r['reason_code']] ?? $r['reason_code']) ?> · <?= $e(substr((string) $r['created_at'], 0, 10)) ?></span></span>
+                        <span class="block text-xs text-tx3">Package <?= $e($r['sub_order_no']) ?> · <?= $e(\App\Services\Store\ReturnService::REASONS[$r['reason_code']] ?? $r['reason_code']) ?> · <?= $e(\App\Support\IndianDate::date($r['created_at'])) ?></span></span>
                     <span class="inline-flex h-[22px] items-center whitespace-nowrap rounded-md px-2 text-xs font-medium <?= $r['status'] === 'requested' ? 'bg-wnb text-wn' : 'bg-ntb text-nt' ?>"><?= $e(str_replace('_', ' ', (string) $r['status'])) ?></span>
                 </a></li>
             <?php endforeach; ?>

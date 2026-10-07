@@ -18,7 +18,7 @@ ob_start();
             <li class="flex justify-between"><span class="text-slate-500">Seats</span><span class="font-medium"><?= (int) ($clinic['seat_limit'] ?? 2) ?> included</span></li>
             <li class="flex justify-between"><span class="text-slate-500">Patient ID</span><span class="font-medium"><?= htmlspecialchars($config['uhid_prefix'] ?? 'MC') ?>-00001</span></li>
             <?php if (!empty($clinic['trial_ends_at'])): ?>
-            <li class="flex justify-between"><span class="text-slate-500">Trial ends</span><span class="font-medium"><?= htmlspecialchars($clinic['trial_ends_at']) ?></span></li>
+            <li class="flex justify-between"><span class="text-slate-500">Trial ends</span><span class="font-medium"><?= htmlspecialchars(\App\Support\IndianDate::date($clinic['trial_ends_at'])) ?></span></li>
             <?php endif; ?>
         </ul>
     </div>

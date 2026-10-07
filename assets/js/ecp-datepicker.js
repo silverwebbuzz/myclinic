@@ -59,9 +59,18 @@
     return loading;
   }
 
+  // A DB value ("2026-10-06 00:00:00") given to a date box: keep what the box can hold.
+  function normalize(v, withTime) {
+    var m = /^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}))?/.exec(String(v || ''));
+    if (!m) return v;
+    return withTime ? m[1] + 'T' + (m[2] || '00:00') : m[1];
+  }
+
   function enhance(input) {
     if (input._ecpDp || input.closest('.flatpickr-calendar')) return;
     var withTime = input.type === 'datetime-local';
+    var attrVal = input.getAttribute('value');
+    if (attrVal) valueProp.set.call(input, normalize(attrVal, withTime));
     var altFormat = withTime ? TIME_ALT : DATE_ALT;
     var syncing = false;
 
@@ -109,6 +118,7 @@
       configurable: true,
       get: function () { return valueProp.get.call(this); },
       set: function (v) {
+        v = normalize(v, withTime);
         valueProp.set.call(this, v);
         if (syncing) return;
         var cur = fp.selectedDates.length ? fp.formatDate(fp.selectedDates[0], fp.config.dateFormat) : '';

@@ -134,7 +134,7 @@ foreach ($parameters as $p) {
                 <tbody class="divide-y">
                     <?php foreach ($priceHistory as $h): ?>
                     <tr>
-                        <td class="py-1"><?= htmlspecialchars($h['effective_from']) ?></td>
+                        <td class="py-1"><?= htmlspecialchars(\App\Support\IndianDate::date($h['effective_from'])) ?></td>
                         <td class="py-1 text-right">₹<?= number_format((float) $h['mrp']) ?></td>
                         <td class="py-1 text-right">₹<?= number_format((float) $h['offer_rate']) ?></td>
                         <td class="py-1 text-right"><?= (int) $h['max_discount_pct'] ?>%</td>

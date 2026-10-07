@@ -59,7 +59,7 @@ ob_start();
                     <div>
                         <div class="font-medium"><?= $e($docTypes[$d['doc_type']] ?? $d['doc_type']) ?><?= !empty($d['doc_number']) ? ' · ' . $e($d['doc_number']) : '' ?></div>
                         <div class="text-xs text-tx3">
-                            <?= $e($d['original_name'] ?? '') ?> · uploaded <?= $e(substr((string) $d['created_at'], 0, 10)) ?>
+                            <?= $e($d['original_name'] ?? '') ?> · uploaded <?= $e(\App\Support\IndianDate::date($d['created_at'])) ?>
                             <?= !empty($d['valid_until']) ? ' · valid until ' . $e($d['valid_until']) : '' ?>
                         </div>
                         <?php if ($d['status'] === 'rejected' && !empty($d['reject_reason'])): ?>

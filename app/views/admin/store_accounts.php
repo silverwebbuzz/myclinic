@@ -120,7 +120,7 @@ $q = rawurlencode($period);
                             <td class="px-4 py-2 text-right"><?= $r($d['taxable_paise']) ?></td>
                             <td class="px-4 py-2 text-right"><?= $r((int) $d['cgst_paise'] + (int) $d['sgst_paise'] + (int) $d['igst_paise']) ?></td>
                             <td class="px-4 py-2 text-right font-medium"><?= $r($d['total_paise']) ?></td>
-                            <td class="px-4 py-2 text-slate-500"><?= $e(substr((string) $d['issued_at'], 0, 10)) ?></td>
+                            <td class="px-4 py-2 text-slate-500"><?= $e(\App\Support\IndianDate::date($d['issued_at'])) ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

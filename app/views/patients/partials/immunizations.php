@@ -31,7 +31,7 @@ $editable = !empty($editable);
                     <tr class="hover:bg-slate-50">
                         <td class="px-3 py-2 font-medium text-slate-800" x-text="row.vaccine_name"></td>
                         <td class="px-3 py-2 text-slate-600" x-text="row.age_label"></td>
-                        <td class="px-3 py-2 text-slate-600" x-text="row.due_date"></td>
+                        <td class="px-3 py-2 text-slate-600" x-text="row.due_date ? new Date(row.due_date + 'T00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'"></td>
                         <td class="px-3 py-2">
                             <template x-if="editable">
                                 <select class="ui-input text-xs" x-model="row.status" @change="onStatusChange(row)">

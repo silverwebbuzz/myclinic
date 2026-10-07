@@ -54,7 +54,7 @@
             <div class="flex items-center justify-between py-2">
                 <div>
                     <div class="font-medium capitalize text-slate-800"><?= htmlspecialchars(str_replace('_', ' ', (string) $d['doc_type'])) ?></div>
-                    <div class="text-xs text-slate-400"><?= htmlspecialchars((string) ($d['original_name'] ?? '')) ?> · <?= htmlspecialchars(substr((string) $d['uploaded_at'], 0, 10)) ?></div>
+                    <div class="text-xs text-slate-400"><?= htmlspecialchars((string) ($d['original_name'] ?? '')) ?> · <?= htmlspecialchars(\App\Support\IndianDate::date($d['uploaded_at'])) ?></div>
                 </div>
                 <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase <?= $d['status'] === 'verified' ? 'bg-emerald-100 text-emerald-700' : ($d['status'] === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700') ?>">
                     <?= htmlspecialchars($d['status']) ?>

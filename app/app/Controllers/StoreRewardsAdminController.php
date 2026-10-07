@@ -104,7 +104,7 @@ final class StoreRewardsAdminController
         if ($launch !== '') {
             $ts = strtotime($launch);
             if ($ts === false) {
-                $errors[] = 'Launch date: use a date and time like 2026-10-10 00:00.';
+                $errors[] = 'Launch date: pick a date and time, e.g. 10-10-2026 12:00 AM.';
             } else {
                 $launch = date('Y-m-d H:i:s', $ts);
             }

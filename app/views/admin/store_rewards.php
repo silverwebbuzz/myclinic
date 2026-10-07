@@ -66,7 +66,7 @@ $tabs = ['overview' => 'Overview & settings', 'referrals' => 'Referrals', 'custo
                 Points switched on (cart, checkout, patient panel, sign-up referral codes)
             </label>
             <label class="text-sm">Launch date &amp; time <span class="text-slate-400">(only sign-ups after this get welcome points)</span>
-                <input name="store_points_launch_at" placeholder="2026-10-10 00:00" value="<?= $e($settings['store_points_launch_at'] ?? '') ?>" class="<?= $in ?>">
+                <input type="datetime-local" name="store_points_launch_at" value="<?= $e(($settings['store_points_launch_at'] ?? '') !== '' && strtotime($settings['store_points_launch_at']) ? date('Y-m-d\\TH:i', strtotime($settings['store_points_launch_at'])) : '') ?>" class="<?= $in ?>">
             </label>
             <?php foreach ($intSettings as $k => [$label]):
                 $raw = (int) ($settings[$k] ?? 0);

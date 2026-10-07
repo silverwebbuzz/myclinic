@@ -85,7 +85,7 @@
                                 <?= htmlspecialchars($c['referral_status']) ?>
                             </span>
                         </td>
-                        <td class="text-slate-500"><?= htmlspecialchars(substr((string) $c['registered_at'], 0, 10)) ?></td>
+                        <td class="text-slate-500"><?= htmlspecialchars(\App\Support\IndianDate::date($c['registered_at'])) ?></td>
                         <td class="text-right font-medium text-slate-800">₹<?= number_format((float) $c['earned'], 2) ?></td>
                     </tr>
                     <?php endforeach; ?>

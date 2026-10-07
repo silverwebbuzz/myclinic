@@ -43,7 +43,7 @@
                     $fever = !empty($row['temperature']) && (float) $row['temperature'] >= 38;
                 ?>
                 <tr class="hover:bg-slate-50">
-                    <td class="px-3 py-3 text-xs text-slate-500"><?= htmlspecialchars(substr((string) ($row['recorded_at'] ?? ''), 0, 16)) ?></td>
+                    <td class="px-3 py-3 text-xs text-slate-500"><?= htmlspecialchars(\App\Support\IndianDate::dateTime($row['recorded_at'] ?? null)) ?></td>
                     <td class="px-3 py-3">
                         <div class="font-medium"><?= htmlspecialchars($row['patient_name'] ?? '') ?></div>
                         <div class="font-mono text-xs text-slate-500"><?= htmlspecialchars($row['uhid'] ?? '') ?></div>

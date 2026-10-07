@@ -34,7 +34,7 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
                     <td class="px-4 py-2"><?= $e($r['vendor_name']) ?></td>
                     <td class="px-4 py-2"><?= $e(ReturnService::REASONS[$r['reason_code']] ?? $r['reason_code']) ?></td>
                     <td class="px-4 py-2"><?= $e(str_replace('_', ' ', (string) $r['status'])) ?><?= $late ? ' <span class="text-xs font-semibold text-red-600">seller late: decide</span>' : '' ?></td>
-                    <td class="px-4 py-2 text-slate-500"><?= $e(substr((string) $r['created_at'], 0, 16)) ?></td>
+                    <td class="px-4 py-2 text-slate-500"><?= $e(\App\Support\IndianDate::dateTime($r['created_at'])) ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>

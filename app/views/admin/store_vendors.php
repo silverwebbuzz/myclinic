@@ -88,7 +88,7 @@ $badge = [
                     <td class="px-4 py-2 text-slate-600"><?= $e($v['contact_name']) ?><div class="text-xs text-slate-400"><?= $e($v['email']) ?> · <?= $e($v['phone']) ?></div></td>
                     <td class="px-4 py-2 font-mono text-xs"><?= $e($v['gstin'] ?? '—') ?></td>
                     <td class="px-4 py-2"><span class="rounded-full px-2 py-0.5 text-xs font-medium <?= $badge[$v['status']] ?? '' ?>"><?= $e(str_replace('_', ' ', (string) $v['status'])) ?></span></td>
-                    <td class="px-4 py-2 text-slate-500"><?= $e(substr((string) ($v['submitted_at'] ?? ''), 0, 10) ?: '—') ?></td>
+                    <td class="px-4 py-2 text-slate-500"><?= $e(\App\Support\IndianDate::date($v['submitted_at'] ?? null, '—')) ?></td>
                     <td class="px-4 py-2 text-center"><?= (int) $v['pending_docs'] > 0 ? '<span class="rounded-full bg-amber-500 px-2 text-xs font-semibold text-white">' . (int) $v['pending_docs'] . '</span>' : '<span class="text-slate-300">0</span>' ?></td>
                 </tr>
             <?php endforeach; ?>

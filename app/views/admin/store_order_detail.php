@@ -24,8 +24,8 @@ $a = $order['ship_address'];
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
             <h1 class="font-mono text-xl font-semibold"><?= $e($order['order_no']) ?></h1>
-            <p class="text-sm text-slate-500"><?= $e(str_replace('_', ' ', (string) $order['status'])) ?> · payment <?= $e($order['payment_status']) ?> · placed <?= $e(substr((string) $order['placed_at'], 0, 16)) ?>
-                <?= $order['status'] === 'pending_payment' && !empty($order['expires_at']) ? ' · expires ' . $e(substr((string) $order['expires_at'], 11, 5)) : '' ?></p>
+            <p class="text-sm text-slate-500"><?= $e(str_replace('_', ' ', (string) $order['status'])) ?> · payment <?= $e($order['payment_status']) ?> · placed <?= $e(\App\Support\IndianDate::dateTime($order['placed_at'])) ?>
+                <?= $order['status'] === 'pending_payment' && !empty($order['expires_at']) ? ' · expires ' . $e(\App\Support\IndianDate::time($order['expires_at'])) : '' ?></p>
         </div>
         <?php if ($order['status'] === 'pending_payment'): ?>
             <form method="post" action="/admin/store/orders/<?= (int) $order['id'] ?>/cancel" class="flex gap-2" onsubmit="return confirm('Cancel this unpaid order and release its stock?')">
@@ -113,7 +113,7 @@ $a = $order['ship_address'];
                         <?php if ($s['events']): ?>
                             <ul class="mt-2 space-y-0.5 text-xs text-slate-600">
                                 <?php foreach ($s['events'] as $ev): ?>
-                                    <li><span class="text-slate-400"><?= $e(substr((string) $ev['event_at'], 0, 16)) ?></span> · <?= $e($ev['raw_status']) ?><?= $ev['internal_status'] === null ? ' <span class="text-amber-600">(unmapped)</span>' : '' ?><?= !empty($ev['location']) ? ' · ' . $e($ev['location']) : '' ?></li>
+                                    <li><span class="text-slate-400"><?= $e(\App\Support\IndianDate::dateTime($ev['event_at'])) ?></span> · <?= $e($ev['raw_status']) ?><?= $ev['internal_status'] === null ? ' <span class="text-amber-600">(unmapped)</span>' : '' ?><?= !empty($ev['location']) ? ' · ' . $e($ev['location']) : '' ?></li>
                                 <?php endforeach; ?>
                             </ul>
                         <?php endif; ?>
@@ -255,7 +255,7 @@ $a = $order['ship_address'];
                     <table class="mt-3 w-full text-xs">
                         <?php foreach ($charges as $c): ?>
                             <tr class="border-t">
-                                <td class="py-1 text-slate-400"><?= $e(substr((string) $c['created_at'], 0, 10)) ?></td>
+                                <td class="py-1 text-slate-400"><?= $e(\App\Support\IndianDate::date($c['created_at'])) ?></td>
                                 <td class="py-1"><?= $e($c['memo']) ?></td>
                                 <td class="py-1 text-right <?= (int) $c['amount_paise'] < 0 ? 'text-red-700' : 'text-emerald-700' ?>"><?= (int) $c['amount_paise'] < 0 ? '−' : '+' ?><?= $r(abs((int) $c['amount_paise'])) ?></td>
                                 <td class="py-1 text-right text-slate-400"><?= $e($c['status']) ?></td>
@@ -309,7 +309,7 @@ $a = $order['ship_address'];
                         <td><?= $e($p['method'] ?? '—') ?></td>
                         <td class="text-right"><?= $r($p['amount_paise']) ?></td>
                         <td><?= $e($p['status']) ?><?= !empty($p['failure_reason']) ? ' <span class="text-xs text-red-600">(' . $e($p['failure_reason']) . ')</span>' : '' ?></td>
-                        <td class="text-slate-500"><?= $e(substr((string) ($p['captured_at'] ?? ''), 0, 16) ?: '—') ?></td>
+                        <td class="text-slate-500"><?= $e(\App\Support\IndianDate::dateTime($p['captured_at'] ?? null, '—')) ?></td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>
@@ -327,7 +327,7 @@ $a = $order['ship_address'];
         <h2 class="font-semibold">History</h2>
         <ul class="mt-2 space-y-1 text-xs text-slate-600">
             <?php foreach ($order['history'] as $h): ?>
-                <li><span class="text-slate-400"><?= $e(substr((string) $h['created_at'], 0, 16)) ?></span> · <?= $e($h['actor_type']) ?> · <?= $e($h['from_status'] ?? '—') ?> → <strong><?= $e($h['to_status']) ?></strong><?= !empty($h['note']) ? ' · ' . $e($h['note']) : '' ?></li>
+                <li><span class="text-slate-400"><?= $e(\App\Support\IndianDate::dateTime($h['created_at'])) ?></span> · <?= $e($h['actor_type']) ?> · <?= $e($h['from_status'] ?? '—') ?> → <strong><?= $e($h['to_status']) ?></strong><?= !empty($h['note']) ? ' · ' . $e($h['note']) : '' ?></li>
             <?php endforeach; ?>
         </ul>
     </section>

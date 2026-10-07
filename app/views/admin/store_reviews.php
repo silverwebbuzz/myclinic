@@ -27,7 +27,7 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <span><span class="text-amber-500"><?= str_repeat('★', (int) $rv['rating']) ?></span><span class="text-slate-300"><?= str_repeat('★', 5 - (int) $rv['rating']) ?></span>
                         <strong class="ml-1"><?= $e($rv['title'] ?? '') ?></strong></span>
-                    <span class="text-xs text-slate-500"><?= $e($rv['product_name']) ?> · <?= $e($rv['vendor_name']) ?> · <?= $e(substr((string) $rv['created_at'], 0, 10)) ?> · <?= $e($rv['status']) ?></span>
+                    <span class="text-xs text-slate-500"><?= $e($rv['product_name']) ?> · <?= $e($rv['vendor_name']) ?> · <?= $e(\App\Support\IndianDate::date($rv['created_at'])) ?> · <?= $e($rv['status']) ?></span>
                 </div>
                 <?php if (!empty($rv['body'])): ?><p class="mt-2 whitespace-pre-line text-slate-700"><?= $e($rv['body']) ?></p><?php endif; ?>
                 <?php if (!empty($rv['vendor_reply'])): ?><p class="mt-2 rounded bg-slate-50 px-3 py-2 text-slate-600"><strong>Seller:</strong> <?= $e($rv['vendor_reply']) ?></p><?php endif; ?>

@@ -81,7 +81,7 @@
                     <div class="flex items-center justify-between py-2">
                         <div>
                             <div class="font-medium text-slate-800">₹<?= number_format((float) $p['amount'], 2) ?></div>
-                            <div class="text-xs text-slate-400"><?= htmlspecialchars(substr((string) $p['requested_at'], 0, 16)) ?></div>
+                            <div class="text-xs text-slate-400"><?= htmlspecialchars(\App\Support\IndianDate::dateTime($p['requested_at'])) ?></div>
                         </div>
                         <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase <?= $p['status'] === 'paid' ? 'bg-emerald-100 text-emerald-700' : ($p['status'] === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700') ?>">
                             <?= htmlspecialchars($p['status']) ?>
@@ -106,7 +106,7 @@
                 <tbody class="divide-y divide-slate-100">
                     <?php foreach ($ledger as $c): ?>
                     <tr>
-                        <td class="py-2 text-slate-500"><?= htmlspecialchars(substr((string) $c['earned_at'], 0, 10)) ?></td>
+                        <td class="py-2 text-slate-500"><?= htmlspecialchars(\App\Support\IndianDate::date($c['earned_at'])) ?></td>
                         <td class="font-medium text-slate-800"><?= htmlspecialchars($c['clinic_name']) ?></td>
                         <td class="capitalize text-slate-600"><?= htmlspecialchars($c['type']) ?></td>
                         <td class="text-slate-600">₹<?= number_format((float) $c['base_amount'], 2) ?></td>

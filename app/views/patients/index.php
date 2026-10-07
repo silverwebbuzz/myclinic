@@ -108,7 +108,7 @@ $hasActiveFilters = !empty($filters['q']) || !empty($filters['gender'])
                     <td class="px-4 py-3 text-slate-600"><?= htmlspecialchars((string) ($p['phone'] ?? '')) ?></td>
                     <td class="px-4 py-3 text-slate-600"><?= htmlspecialchars((string) ($p['gender'] ?? '—')) ?></td>
                     <td class="px-4 py-3 text-xs text-slate-500">
-                        <?= !empty($p['last_visit']) ? htmlspecialchars(substr((string) $p['last_visit'], 0, 10)) : '—' ?>
+                        <?= !empty($p['last_visit']) ? htmlspecialchars(\App\Support\IndianDate::date($p['last_visit'])) : '—' ?>
                     </td>
                     <td class="px-4 py-3 text-right">
                         <div class="flex justify-end gap-3">

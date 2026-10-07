@@ -34,7 +34,7 @@
                     </div>
                     <div class="mt-1 text-sm text-slate-600"><?= htmlspecialchars($r['partner_name']) ?> · <?= htmlspecialchars($r['partner_email']) ?></div>
                     <div class="mt-1 text-xs text-slate-400">
-                        Requested <?= htmlspecialchars(substr((string) $r['requested_at'], 0, 16)) ?> ·
+                        Requested <?= htmlspecialchars(\App\Support\IndianDate::dateTime($r['requested_at'])) ?> ·
                         Method: <?= htmlspecialchars((string) ($r['payout_method'] ?? '—')) ?> ·
                         UPI: <?= htmlspecialchars((string) ($r['upi_id'] ?? '—')) ?> ·
                         Bank: <?= htmlspecialchars((string) ($r['bank_account_no'] ?? '—')) ?> / <?= htmlspecialchars((string) ($r['bank_ifsc'] ?? '—')) ?>

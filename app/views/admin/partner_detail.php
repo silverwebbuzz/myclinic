@@ -119,7 +119,7 @@
                         <td class="py-2 font-medium text-slate-800"><?= htmlspecialchars($c['clinic_name']) ?></td>
                         <td class="capitalize text-slate-600"><?= htmlspecialchars($c['plan']) ?></td>
                         <td class="text-slate-600"><?= htmlspecialchars($c['referral_status']) ?></td>
-                        <td class="text-slate-500"><?= htmlspecialchars(substr((string) $c['registered_at'], 0, 10)) ?></td>
+                        <td class="text-slate-500"><?= htmlspecialchars(\App\Support\IndianDate::date($c['registered_at'])) ?></td>
                         <td class="text-right font-medium">₹<?= number_format((float) $c['earned'], 2) ?></td>
                     </tr>
                     <?php endforeach; ?>

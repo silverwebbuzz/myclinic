@@ -143,7 +143,7 @@ function fb_spec_anchor(string $spec): string {
         <td>
           <?php if (($r['source'] ?? '') === 'calendar'): ?>
             <span class="badge b-cal">Day <?= (int) $r['day'] ?></span><br>
-            <span class="kw"><?= fb_e((string) $r['date']) ?> · <?= fb_e((string) $r['city']) ?></span>
+            <span class="kw"><?= fb_e(($ts = strtotime((string) $r['date'])) ? date('d M Y', $ts) : (string) $r['date']) ?> · <?= fb_e((string) $r['city']) ?></span>
           <?php else: ?>
             <?php if (($r['blog_type'] ?? '') !== ''): ?><span class="badge b-type"><?= fb_e((string) $r['blog_type']) ?></span><br><?php endif; ?>
             <span class="kw"><?= fb_e((string) ($r['tier'] ?? '')) ?></span>

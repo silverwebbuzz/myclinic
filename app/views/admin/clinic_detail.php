@@ -67,7 +67,7 @@
                     <div class="font-medium">
                         Step <?= (int) ($tenant['onboarding_step'] ?? 1) ?>
                         <?php if (!empty($tenant['onboarding_completed_at'])): ?>
-                            · completed <?= htmlspecialchars((string) $tenant['onboarding_completed_at']) ?>
+                            · completed <?= htmlspecialchars(\App\Support\IndianDate::dateTime($tenant['onboarding_completed_at'])) ?>
                         <?php endif; ?>
                     </div>
                 </div>

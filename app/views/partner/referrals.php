@@ -30,7 +30,7 @@
                     <?php foreach ($clinics as $c): ?>
                     <?php
                         $expiry = $c['plan_expires_at'] ?? null;
-                        $sub = $expiry ? ('Active till ' . substr((string) $expiry, 0, 10)) : ($c['trial_ends_at'] ? 'Trial' : '—');
+                        $sub = $expiry ? ('Active till ' . \App\Support\IndianDate::date($expiry)) : ($c['trial_ends_at'] ? 'Trial' : '—');
                     ?>
                     <tr>
                         <td class="py-2 font-medium text-slate-800"><?= htmlspecialchars($c['clinic_name']) ?></td>
@@ -42,7 +42,7 @@
                                 <?= htmlspecialchars($c['referral_status']) ?>
                             </span>
                         </td>
-                        <td class="text-slate-500"><?= htmlspecialchars(substr((string) $c['registered_at'], 0, 10)) ?></td>
+                        <td class="text-slate-500"><?= htmlspecialchars(\App\Support\IndianDate::date($c['registered_at'])) ?></td>
                         <td class="text-right font-medium text-slate-800">₹<?= number_format((float) $c['earned'], 2) ?></td>
                     </tr>
                     <?php endforeach; ?>

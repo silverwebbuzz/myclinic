@@ -49,7 +49,7 @@
                             <td class="px-4 py-3"><?= (int) $c['doctors'] ?></td>
                             <td class="px-4 py-3"><?= (int) $c['total_uses'] ?></td>
                             <td class="px-4 py-3 text-xs text-slate-500">
-                                <?= htmlspecialchars(substr((string) $c['last_used'], 0, 10)) ?>
+                                <?= htmlspecialchars(\App\Support\IndianDate::date($c['last_used'])) ?>
                             </td>
                             <td class="px-4 py-3 text-right">
                                 <details class="inline-block text-left">

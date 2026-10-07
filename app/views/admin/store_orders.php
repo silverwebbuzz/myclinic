@@ -57,7 +57,7 @@ $badge = ['pending_payment' => 'bg-amber-100 text-amber-800', 'paid' => 'bg-sky-
                     <td class="px-4 py-2 text-center"><?= (int) $o['seller_count'] ?> / <?= (int) $o['item_count'] ?></td>
                     <td class="px-4 py-2 text-right">₹<?= $e(ProductService::rupees((int) $o['grand_total_paise'])) ?></td>
                     <td class="px-4 py-2"><span class="rounded-full px-2 py-0.5 text-xs font-medium <?= $badge[$o['status']] ?? 'bg-slate-100' ?>"><?= $e(str_replace('_', ' ', (string) $o['status'])) ?></span></td>
-                    <td class="px-4 py-2 text-slate-500"><?= $e(substr((string) $o['placed_at'], 0, 16)) ?></td>
+                    <td class="px-4 py-2 text-slate-500"><?= $e(\App\Support\IndianDate::dateTime($o['placed_at'])) ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>

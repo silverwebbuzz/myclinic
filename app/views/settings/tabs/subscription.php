@@ -218,7 +218,7 @@ $fmtDate = static fn (?string $d): string => $d ? date('d M Y', strtotime((strin
             ?>
             <tr>
                 <td class="py-2 font-mono text-xs text-slate-700"><?= htmlspecialchars($inv['invoice_no'] ?? ('#' . (int) $inv['id'])) ?>
-                    <div class="text-[11px] text-slate-400"><?= htmlspecialchars(substr((string) ($inv['created_at'] ?? ''), 0, 10)) ?></div>
+                    <div class="text-[11px] text-slate-400"><?= htmlspecialchars(\App\Support\IndianDate::date($inv['created_at'] ?? null)) ?></div>
                 </td>
                 <td class="text-slate-700"><?= htmlspecialchars(ucfirst((string) ($inv['plan_id'] ?? '—'))) ?></td>
                 <td class="text-xs text-slate-600">

@@ -69,7 +69,7 @@ $in = 'mt-1 w-full rounded border px-2 py-1.5 text-sm';
                     <td class="px-4 py-2"><?= $e(CouponService::describe($c)) ?></td>
                     <td class="px-4 py-2 text-slate-600"><?= $e($c['vendor_name'] ?? 'All sellers') ?> · <?= $e($c['category_name'] ?? 'all categories') ?></td>
                     <td class="px-4 py-2"><?= $c['funded_by'] === 'vendor' ? 'Seller' : 'Platform' ?></td>
-                    <td class="px-4 py-2 text-xs text-slate-500"><?= $e(substr((string) ($c['starts_at'] ?? ''), 0, 10) ?: 'now') ?> → <?= $e(substr((string) ($c['ends_at'] ?? ''), 0, 10) ?: 'no end') ?></td>
+                    <td class="px-4 py-2 text-xs text-slate-500"><?= $e(\App\Support\IndianDate::date($c['starts_at'] ?? null, 'now')) ?> → <?= $e(\App\Support\IndianDate::date($c['ends_at'] ?? null, 'no end')) ?></td>
                     <td class="px-4 py-2 text-right"><?= (int) $c['used_count'] ?><?= $c['limit_total'] !== null ? ' / ' . (int) $c['limit_total'] : '' ?></td>
                     <td class="px-4 py-2 text-right"><button type="button" class="text-sky-700 hover:underline" @click='edit = <?= $e(json_encode($c, JSON_HEX_APOS | JSON_HEX_QUOT)) ?>; window.scrollTo({top:0,behavior:"smooth"})'>Edit</button></td>
                 </tr>

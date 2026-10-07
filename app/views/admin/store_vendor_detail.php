@@ -48,8 +48,8 @@ $actions = [
             <div>
                 <h1 class="text-xl font-semibold"><?= $e($vendor['display_name']) ?> <?= !empty($vendor['is_featured']) ? '<span class="text-amber-500">★</span>' : '' ?></h1>
                 <div class="text-sm text-slate-500">
-                    <?= $e(str_replace('_', ' ', $status)) ?> · joined <?= $e(substr((string) $vendor['created_at'], 0, 10)) ?>
-                    <?= !empty($vendor['submitted_at']) ? ' · submitted ' . $e(substr((string) $vendor['submitted_at'], 0, 10)) : '' ?>
+                    <?= $e(str_replace('_', ' ', $status)) ?> · joined <?= $e(\App\Support\IndianDate::date($vendor['created_at'])) ?>
+                    <?= !empty($vendor['submitted_at']) ? ' · submitted ' . $e(\App\Support\IndianDate::date($vendor['submitted_at'])) : '' ?>
                     · /store/seller/<?= $e($vendor['slug']) ?>
                 </div>
                 <?php if (!empty($vendor['status_reason'])): ?>
@@ -189,7 +189,7 @@ $actions = [
                     <div class="flex flex-wrap items-center justify-between gap-3 py-3">
                         <div>
                             <div class="font-medium"><?= $e($docTypes[$d['doc_type']] ?? $d['doc_type']) ?><?= !empty($d['doc_number']) ? ' · <span class="font-mono">' . $e($d['doc_number']) . '</span>' : '' ?></div>
-                            <div class="text-xs text-slate-500"><?= $e($d['original_name'] ?? '') ?> · <?= $e(substr((string) $d['created_at'], 0, 10)) ?><?= !empty($d['valid_until']) ? ' · valid until ' . $e($d['valid_until']) : '' ?></div>
+                            <div class="text-xs text-slate-500"><?= $e($d['original_name'] ?? '') ?> · <?= $e(\App\Support\IndianDate::date($d['created_at'])) ?><?= !empty($d['valid_until']) ? ' · valid until ' . $e($d['valid_until']) : '' ?></div>
                             <?php if (!empty($d['reject_reason'])): ?><div class="text-xs text-red-700">Rejected: <?= $e($d['reject_reason']) ?></div><?php endif; ?>
                         </div>
                         <div class="flex flex-wrap items-center gap-2">
@@ -230,7 +230,7 @@ $actions = [
             <h2 class="font-semibold">Activity</h2>
             <ul class="mt-3 max-h-80 space-y-1.5 overflow-y-auto text-xs text-slate-600">
                 <?php foreach ($audit as $a): ?>
-                    <li><span class="text-slate-400"><?= $e(substr((string) $a['created_at'], 0, 16)) ?></span> · <?= $e($a['actor_type']) ?> · <span class="font-mono"><?= $e($a['action']) ?></span></li>
+                    <li><span class="text-slate-400"><?= $e(\App\Support\IndianDate::dateTime($a['created_at'])) ?></span> · <?= $e($a['actor_type']) ?> · <span class="font-mono"><?= $e($a['action']) ?></span></li>
                 <?php endforeach; ?>
                 <?php if (!$audit): ?><li class="text-slate-400">No activity yet.</li><?php endif; ?>
             </ul>

@@ -72,7 +72,7 @@ $badge = ['draft' => 'bg-slate-100 text-slate-700', 'pending_review' => 'bg-ambe
                     <td class="px-4 py-2 text-slate-600"><?= $e($p['category_name'] ?? '') ?><?= ($p['listing_mode'] ?? '') === 'review' ? ' <span class="rounded bg-amber-100 px-1 text-[10px] text-amber-800">extra review</span>' : '' ?></td>
                     <td class="px-4 py-2 text-right">₹<?= $e(ProductService::rupees((int) $p['min_price_paise'])) ?></td>
                     <td class="px-4 py-2"><span class="rounded-full px-2 py-0.5 text-xs font-medium <?= $badge[$p['status']] ?? '' ?>"><?= $e(str_replace('_', ' ', (string) $p['status'])) ?></span></td>
-                    <td class="px-4 py-2 text-slate-500"><?= $e(substr((string) $p['updated_at'], 0, 10)) ?></td>
+                    <td class="px-4 py-2 text-slate-500"><?= $e(\App\Support\IndianDate::date($p['updated_at'])) ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>

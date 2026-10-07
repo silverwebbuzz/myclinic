@@ -13,7 +13,7 @@ ob_start();
             <div class="flex flex-wrap justify-between gap-2">
                 <span><span class="text-amber-500"><?= str_repeat('★', (int) $rv['rating']) ?></span><span class="text-slate-300"><?= str_repeat('★', 5 - (int) $rv['rating']) ?></span>
                     <strong class="ml-1"><?= $e($rv['title'] ?? '') ?></strong></span>
-                <span class="text-xs text-tx3"><?= $e($rv['product_name']) ?> · <?= $e(substr((string) $rv['created_at'], 0, 10)) ?></span>
+                <span class="text-xs text-tx3"><?= $e($rv['product_name']) ?> · <?= $e(\App\Support\IndianDate::date($rv['created_at'])) ?></span>
             </div>
             <?php if (!empty($rv['body'])): ?><p class="mt-2 whitespace-pre-line text-tx2"><?= $e($rv['body']) ?></p><?php endif; ?>
             <form method="post" action="/vendor/reviews/<?= (int) $rv['id'] ?>/reply" class="mt-3 flex gap-2">
