@@ -55,6 +55,26 @@ function store_app_required(): void
     exit;
 }
 
+/**
+ * A NEW account was just created: attach the Refer & Earn code the person typed, or the one
+ * remembered from a /r/{code} link (cookie ecp_ref). Best-effort: never breaks sign-up.
+ */
+function store_referral_capture(int $identityId, ?string $typedCode = null): void
+{
+    $code = trim((string) $typedCode) !== '' ? (string) $typedCode : (string) ($_COOKIE['ecp_ref'] ?? '');
+    if ($identityId <= 0 || $code === '' || !store_app()) {
+        return;
+    }
+    try {
+        \App\Services\Store\ReferralService::capture($identityId, $code);
+    } catch (\Throwable $e) {
+        error_log('[store_referral_capture] ' . $e->getMessage());
+    }
+    if (isset($_COOKIE['ecp_ref']) && !headers_sent()) {
+        setcookie('ecp_ref', '', ['expires' => time() - 3600, 'path' => '/', 'secure' => true, 'httponly' => true, 'samesite' => 'Lax']);
+    }
+}
+
 function store_uuid4(): string
 {
     $b = random_bytes(16);

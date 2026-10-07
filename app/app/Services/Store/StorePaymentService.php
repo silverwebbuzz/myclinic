@@ -286,8 +286,9 @@ final class StorePaymentService
 
             if ($refundNeeded) {
                 if ($order['status'] === 'pending_payment') {
-                    // Stock is still held for this order — give it back before refunding.
+                    // Stock and points are still held for this order — give them back before refunding.
                     OrderService::releaseStock($orderId);
+                    PointsService::release($orderId, 'Payment refunded');
                 }
                 QueryBuilder::table('store_orders')->where('id', '=', $orderId)->update([
                     'payment_status' => 'paid', 'paid_at' => date('Y-m-d H:i:s'),
@@ -350,6 +351,7 @@ final class StorePaymentService
                 // A coupon counts as used only once the order is paid.
                 CouponService::redeem((int) $order['coupon_id'], $orderId, (int) $order['identity_id'], (int) $order['discount_paise']);
             }
+            PointsService::confirmPaid($orderId);   // held points are now spent
             $pdo->commit();
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) {

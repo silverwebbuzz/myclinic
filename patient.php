@@ -18,6 +18,8 @@ $activePage = '';
 $noindex    = true;                  // private — don't index logged-in/empty state
 
 $me = ecp_patient_current();   // null when logged out
+// Refer & Earn: code remembered from a /r/{code} link (r.php), prefilled on sign-up. Format-checked, so safe to echo.
+$ptRefCode = preg_match('/^ECP-[A-Z]{1,6}[2-9A-Z]{3}$/', (string) ($_COOKIE['ecp_ref'] ?? '')) ? (string) $_COOKIE['ecp_ref'] : '';
 // eClinicPro Store: show "Store orders" only while the store is visible to this browser
 // (live, or preview cookie set), with the patient's order count (store_* tables).
 $storeOrdersCount = null;
@@ -31,6 +33,19 @@ if ($me && ($storeDb = ecp_db())) {
         }
     } catch (Throwable $e) {
         $storeOrdersCount = null;   // store tables not imported yet
+    }
+}
+// eClinicPro Points & Refer tab: only while the store is visible AND points are switched on.
+$pointsPanel = null;
+if ($me && $storeOrdersCount !== null) {
+    require_once __DIR__ . '/store/_app.php';
+    try {
+        if (store_app() && \App\Services\Store\PointsService::enabled()) {
+            $pointsPanel = \App\Services\Store\PointsService::summary((int) $me['id']);
+        }
+    } catch (Throwable $e) {
+        error_log('[patient] points: ' . $e->getMessage());
+        $pointsPanel = null;   // points patch not run yet
     }
 }
 
@@ -261,6 +276,13 @@ require __DIR__ . '/partials/header.php';
                 <label>
                   <span class="pt-auth-lbl">Your full name</span>
                   <input type="text" x-model="name" :disabled="busy" placeholder="e.g. Riya Mehta" maxlength="120" required>
+                </label>
+              </template>
+              <template x-if="!phoneExists">
+                <label>
+                  <span class="pt-auth-lbl">Referral code <span style="font-weight:400;color:var(--mute)">(optional)</span></span>
+                  <input type="text" x-model="referral" :disabled="busy" placeholder="e.g. ECP-RAHUL7K" maxlength="20"
+                    autocapitalize="characters" @input="referral = referral.toUpperCase().replace(/\s/g, '')">
                 </label>
               </template>
               <p class="pt-auth-err" x-show="errorMsg" x-html="errorMsg"></p>
@@ -1128,6 +1150,8 @@ require __DIR__ . '/partials/header.php';
           </div>
 
           <!-- ============ MY PROFILE TAB ============ -->
+<?php if ($pointsPanel !== null) { require __DIR__ . '/partials/patient_points.php'; } ?>
+
           <div x-show="tab === 'profile'" class="pt-tab-pane">
             <div class="pt-section-head">
               <h3>My profile</h3>
@@ -1373,6 +1397,15 @@ require __DIR__ . '/partials/header.php';
               <?php if ($storeOrdersCount > 0): ?><span class="pt-tab-count"><?= (int) $storeOrdersCount ?></span><?php endif; ?>
             </button>
             <?php endif; ?>
+<?php if ($pointsPanel !== null): ?>
+            <button type="button" role="tab"
+              :class="tab === 'points' ? 'is-active' : ''"
+              @click="go('points')">
+              <span class="pt-nav-ic">⭐</span>
+              <span class="pt-nav-label">Points &amp; Refer</span>
+              <?php if ((int) $pointsPanel['balance']['available'] > 0): ?><span class="pt-tab-count"><?= (int) $pointsPanel['balance']['available'] ?></span><?php endif; ?>
+            </button>
+<?php endif; ?>
             <button type="button" role="tab"
               :class="tab === 'shortlist' ? 'is-active' : ''"
               @click="go('shortlist')">
@@ -4019,6 +4052,7 @@ require __DIR__ . '/partials/header.php';
       phoneDigits: '',
       code: '',
       name: '',
+      referral: '<?= $ptRefCode ?>',   // Refer & Earn: prefilled from a /r/{code} link (A-Z, 0-9, '-' only)
       phoneExists: false,
       nameHint: null,
       devCode: null,
@@ -4178,6 +4212,7 @@ require __DIR__ . '/partials/header.php';
               phone: '+91' + this.phoneDigits,
               code: this.code,
               name: this.name || undefined,
+              referral_code: (!this.phoneExists && this.referral) ? this.referral : undefined,
               'g-recaptcha-response': captcha || undefined
             }),
           });
@@ -5100,7 +5135,7 @@ require __DIR__ . '/partials/header.php';
         }
         // Deep links: /patient?tab=labs, or #labs from an email/banner CTA.
         // Anything unrecognised falls through to the default tab.
-        const known = ['labbook', 'laborders', 'labs', 'bookings', 'shortlist', 'family', 'rx', 'profile'];
+        const known = ['labbook', 'laborders', 'labs', 'bookings', 'points', 'shortlist', 'family', 'rx', 'profile'];
         let want = '';
         try {
           want = new URLSearchParams(window.location.search).get('tab') || '';

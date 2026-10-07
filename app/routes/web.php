@@ -576,6 +576,10 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/store/dashboard', [\App\Controllers\StoreMerchAdminController::class, 'dashboard']);
         $admin->get('/store/coupons', [\App\Controllers\StoreMerchAdminController::class, 'coupons']);
         $admin->post('/store/coupons', [\App\Controllers\StoreMerchAdminController::class, 'saveCoupon']);
+        $admin->get('/store/rewards', [\App\Controllers\StoreRewardsAdminController::class, 'index']);
+        $admin->post('/store/rewards/settings', [\App\Controllers\StoreRewardsAdminController::class, 'saveSettings']);
+        $admin->post('/store/rewards/adjust', [\App\Controllers\StoreRewardsAdminController::class, 'adjust']);
+        $admin->post('/store/rewards/referral/{id}', [\App\Controllers\StoreRewardsAdminController::class, 'rejectReferral']);
         $admin->get('/store/reviews', [\App\Controllers\StoreMerchAdminController::class, 'reviews']);
         $admin->post('/store/reviews/{id}', [\App\Controllers\StoreMerchAdminController::class, 'moderateReview']);
         $admin->get('/store/banners', [\App\Controllers\StoreMerchAdminController::class, 'banners']);

@@ -123,6 +123,14 @@ $ecpCaptchaSiteKey = (string) ($ecpCaptcha['site_key'] ?? '');
                  placeholder="e.g. Riya Mehta" maxlength="120" required>
         </label>
       </template>
+      <!-- Refer & Earn: optional, new accounts only -->
+      <template x-if="!phoneExists">
+        <label>
+          <span class="lbl">Referral code (optional)</span>
+          <input type="text" x-model="referral" :disabled="busy" placeholder="e.g. ECP-RAHUL7K" maxlength="20"
+                 autocapitalize="characters" @input="referral = referral.toUpperCase().replace(/\s/g, '')">
+        </label>
+      </template>
 
       <p class="auth-error" x-show="errorMsg" x-html="errorMsg"></p>
 
@@ -454,6 +462,8 @@ function ecpAuthModal() {
     phoneDigits: '',
     code: '',
     name: '',
+    // Refer & Earn: prefilled from a /r/{code} link (format-checked: A-Z, 0-9, '-' only)
+    referral: '<?= preg_match('/^ECP-[A-Z]{1,6}[2-9A-Z]{3}$/', (string) ($_COOKIE['ecp_ref'] ?? '')) ? (string) $_COOKIE['ecp_ref'] : '' ?>',
     phoneExists: false,      // set by server response after sendOtp
     nameHint: null,          // first name of returning user (for greeting)
     devCode: null,
@@ -673,6 +683,7 @@ function ecpAuthModal() {
             phone: '+91' + this.phoneDigits,
             code:  this.code,
             name:  this.name || undefined,
+            referral_code: (!this.phoneExists && this.referral) ? this.referral : undefined,
             'g-recaptcha-response': captcha || undefined,
           }),
         });

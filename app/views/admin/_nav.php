@@ -102,6 +102,7 @@ if ($inStore) {
         ],
         'Marketing' => [
             ['/admin/store/coupons', 'Coupons', 'M9 14l6-6M9.5 8.5h.01M14.5 13.5h.01M5 3h14a2 2 0 012 2v14l-3-2-3 2-3-2-3 2-3-2-3 2V5a2 2 0 012-2z'],
+            ['/admin/store/rewards', 'Points & referrals', 'M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7zM12 8v5'],
             ['/admin/store/banners', 'Banners', 'M3 5h18v14H3zM3 15l5-5 4 4 3-3 6 6'],
             ['/admin/store/reviews', 'Reviews', 'M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z'],
         ],

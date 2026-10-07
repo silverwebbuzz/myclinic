@@ -12,7 +12,8 @@ use App\Core\QueryBuilder;
  *   1. lock the variants, re-read the cart, re-price server-side,
  *   2. reserve stock (conditional UPDATE, so two buyers can't take the last unit),
  *   3. write store_orders + one store_vendor_orders per seller + store_order_items
- *      (commission snapshot per line), all status `pending_payment`.
+ *      (commission snapshot per line), all status `pending_payment`,
+ *   4. hold the eClinicPro Points the quote used (PointsService::reserve).
  *
  * The split per seller happens HERE, before payment, so "payment succeeded but
  * order creation failed" cannot happen. Payment (P6) only flips the status.
@@ -90,7 +91,8 @@ final class CheckoutService
 
                 return ['ok' => false, 'error' => $cc['error'] . ' It has been removed; please review your total.'];
             }
-            $quote = PricingService::quote($items, $cc['coupon']);
+            $quote = PricingService::quote($items, $cc['coupon'], $identityId);
+            $pts = $quote['points'] !== null && $quote['points']['used'] > 0 ? $quote['points'] : null;
             $couponApplied = $quote['coupon'] !== null && $quote['coupon']['applied'];
 
             // Reserve stock; the WHERE guard makes this safe against concurrent checkouts.
@@ -129,6 +131,10 @@ final class CheckoutService
                 'discount_paise' => $quote['discount'],
                 'coupon_id' => $couponApplied ? (int) $quote['coupon']['id'] : null,
                 'coupon_code' => $couponApplied ? (string) $quote['coupon']['code'] : null,
+                'points_used' => $pts !== null ? (int) $pts['used'] : 0,
+                'points_discount_paise' => $quote['points_discount'],
+                'points_kind' => $pts !== null ? $pts['kind'] : null,
+                'points_state' => $pts !== null ? 'reserved' : 'none',
                 'shipping_paise' => $quote['shipping'],
                 'tax_included_paise' => $quote['tax_included'],
                 'platform_fee_paise' => 0,
@@ -188,6 +194,11 @@ final class CheckoutService
                         'vendor_payable_paise' => $l['vendor_payable_paise'],
                     ]);
                 }
+            }
+            if ($pts !== null && !PointsService::reserve($identityId, $orderId, (string) $pts['kind'], (int) $pts['used'])) {
+                $pdo->rollBack();
+
+                return ['ok' => false, 'error' => 'Your points balance just changed. Please review your total and try again.'];
             }
             OrderService::history($orderId, null, 'order', $orderId, null, 'pending_payment', 'customer', $identityId, 'Order placed');
 

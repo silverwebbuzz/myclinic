@@ -8,6 +8,7 @@ use App\Http\Request;
 use App\Http\Response;
 use App\Services\PatientIdentityAuthService;
 use App\Services\RecaptchaService;
+use App\Services\Store\ReferralService;
 
 /** Public patient identity OTP — same flow as eclinicpro.com/api/patient_auth.php */
 final class PatientAuthController
@@ -87,6 +88,17 @@ final class PatientAuthController
             };
 
             return Response::json(['ok' => false, 'error' => $res['error']], $status);
+        }
+        if (!empty($res['is_new']) && !empty($res['identity']['id'])) {
+            // Refer & Earn: typed code, else the /r/{code} cookie. Never breaks sign-up.
+            $refCode = trim((string) ($payload['referral_code'] ?? '')) ?: (string) ($_COOKIE[ReferralService::COOKIE] ?? '');
+            if ($refCode !== '') {
+                try {
+                    ReferralService::capture((int) $res['identity']['id'], $refCode);
+                } catch (\Throwable $e) {
+                    error_log('[PatientAuthController] referral: ' . $e->getMessage());
+                }
+            }
         }
 
         return Response::json([

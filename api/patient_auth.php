@@ -168,6 +168,11 @@ switch ($action) {
 
         // Shape the identity for the client (don't leak everything).
         $i = $res['identity'];
+        if ($res['is_new']) {
+            // Refer & Earn: typed code, else the /r/{code} cookie.
+            require_once __DIR__ . '/../store/_app.php';
+            store_referral_capture((int) $i['id'], isset($in['referral_code']) ? (string) $in['referral_code'] : null);
+        }
         ecp_api_out(200, [
             'ok'      => true,
             'is_new'  => $res['is_new'],

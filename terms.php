@@ -115,6 +115,33 @@ require __DIR__ . '/partials/header.php';
             cancellation rules for a consultation are set by the clinic.
         </p>
 
+        <h2 id="points">9A. eClinicPro Points &amp; Refer and Earn</h2>
+        <p>
+            eClinicPro Points ("Points") are a promotional discount on orders placed on the eClinicPro
+            Store. One Point gives ₹1 off an eligible order. Points are not money, a wallet balance or a
+            prepaid instrument: they have no cash value and cannot be withdrawn, refunded as cash, bought,
+            sold or transferred to another account.
+        </p>
+        <ul>
+            <li><strong>Welcome Points</strong> are given once to a new account created by OTP sign-up
+                after the programme's launch, and can be used together on an order of the minimum value
+                shown at checkout or more.</li>
+            <li><strong>Referral Points</strong> are given to both the referrer and the new member after the
+                new member's first Store order is delivered and its return window has ended. A referral code
+                works only after its owner's own first Store order is delivered, and only for a new account
+                created with that code.</li>
+            <li><strong>Loyalty Points</strong> are earned on a delivered order that used no Points, after its
+                return window ends, and are recalculated for any item returned or refunded.</li>
+            <li>Referral and Loyalty Points can cover up to the percentage of an order shown at checkout.
+                Points are applied automatically, are not applied to delivery charges, and expire on the
+                date shown in your account.</li>
+            <li>If an order is cancelled before it is paid or before any item ships, the Points used on it
+                are returned. Points used on an order that is later returned are not returned.</li>
+            <li>We may withhold, cancel or remove Points obtained through misuse, including duplicate or
+                fake accounts, and may change, suspend or end the programme at any time. Changes apply to
+                Points given after the change.</li>
+        </ul>
+
         <h2>10. Medical disclaimer</h2>
         <div class="legal-callout">
             <p>

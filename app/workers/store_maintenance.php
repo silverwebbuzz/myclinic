@@ -29,4 +29,7 @@ $released = \App\Services\Store\SettlementService::releaseMatured();
 $invoiced = \App\Services\Store\TaxDocumentService::issueMissing(50);
 // 7. on the 1st: eClinicPro's GST invoices to sellers for last month (commission + courier + charges)
 $sellerInvoices = \App\Services\Store\SellerInvoiceService::issueDue();
-echo date('Y-m-d H:i:s') . " store: seller invoices {$sellerInvoices}, expired {$expired} unpaid order(s), auto-cancelled {$autoCancelled} late package(s), polled {$polled} shipment(s), released {$released} ledger entr(ies), invoiced {$invoiced} package(s)\n";
+// 8. eClinicPro Points: return window over → pending points spendable; 180-day expiry
+$pointsMatured = \App\Services\Store\PointsService::matureDue();
+$pointsExpired = \App\Services\Store\PointsService::expireDue();
+echo date('Y-m-d H:i:s') . " store: points lots matured {$pointsMatured}, expired {$pointsExpired}, seller invoices {$sellerInvoices}, expired {$expired} unpaid order(s), auto-cancelled {$autoCancelled} late package(s), polled {$polled} shipment(s), released {$released} ledger entr(ies), invoiced {$invoiced} package(s)\n";

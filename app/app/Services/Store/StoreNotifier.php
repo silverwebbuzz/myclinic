@@ -65,6 +65,9 @@ final class StoreNotifier
             if ((int) $o['discount_paise'] > 0) {
                 $totals[] = ['Coupon ' . $o['coupon_code'], '−' . self::rs((int) $o['discount_paise'])];
             }
+            if ((int) ($o['points_discount_paise'] ?? 0) > 0) {
+                $totals[] = [($o['points_kind'] ?? '') === 'welcome' ? 'Welcome points' : 'eClinicPro Points', '−' . self::rs((int) $o['points_discount_paise'])];
+            }
             $totals[] = ['Delivery', (int) $o['shipping_paise'] > 0 ? self::rs((int) $o['shipping_paise']) : 'Free'];
             $totals[] = ['Total paid', $total, true];
             self::send('customer_order_confirmed', (string) $o['contact_email'],
@@ -166,6 +169,23 @@ final class StoreNotifier
             ]);
         } catch (\Throwable $e) {
             error_log('[StoreNotifier::orderExpired] ' . $e->getMessage());
+        }
+    }
+
+    /** Pending referral / loyalty points just became usable (PointsService::matureDue, once per customer per run). */
+    public static function pointsReady(int $identityId, int $points, int $balance): void
+    {
+        try {
+            $p = QueryBuilder::table('patient_identities')->where('id', '=', $identityId)->first();
+            if ($p === null || (string) ($p['phone'] ?? '') === '') {
+                return;
+            }
+            self::whatsapp('store_points_ready', ['contact_phone' => (string) $p['phone'], 'identity_id' => $identityId], [
+                'name' => self::first((string) (($p['first_name'] ?? '') ?: $p['name'])), 'points' => (string) $points,
+                'balance' => (string) $balance, 'points_url' => self::storeUrl('/patient?tab=points'),
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[StoreNotifier::pointsReady] ' . $e->getMessage());
         }
     }
 

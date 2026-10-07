@@ -45,6 +45,8 @@ final class StoreWhatsAppTemplates
                 'order_url' => 'https://eclinicpro.com/store/order/ECS260929-7K3MQ']],
         'store_order_expired' => ['Order not paid (expired)', 'Unpaid order expired and stock was released',
             ['name' => 'Priya', 'order_no' => 'ECS260929-7K3MQ', 'amount' => '₹1,249', 'cart_url' => 'https://eclinicpro.com/store/cart']],
+        'store_points_ready' => ['Points ready to use', 'Referral / loyalty points became usable after the return window (max one per customer per run)',
+            ['name' => 'Priya', 'points' => '100', 'balance' => '150', 'points_url' => 'https://eclinicpro.com/patient?tab=points']],
     ];
 
     /** @return array<string, array{label: string, when: string}> */

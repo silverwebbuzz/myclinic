@@ -74,7 +74,7 @@ if ($me) {
     }
 
     $cc = PricingService::cartCoupon(store_cart(false) ?? [], $identityId);
-    $quote = PricingService::quote($items, $cc['coupon']);
+    $quote = PricingService::quote($items, $cc['coupon'], $identityId);
     $addresses = AddressService::list($identityId);
 }
 
@@ -166,9 +166,16 @@ $sel = (string) ($old['address_id'] ?? ($addresses[0]['id'] ?? 'new'));
         <dl>
           <dt>Items (<?= (int) $quote['item_count'] ?>)</dt><dd><?= e(store_rupees((int) $quote['subtotal'])) ?></dd>
           <?php if ($quote['discount'] > 0): ?><dt>Coupon <?= e($quote['coupon']['code']) ?></dt><dd class="st-save">−<?= e(store_rupees((int) $quote['discount'])) ?></dd><?php endif; ?>
+          <?php if ($quote['points_discount'] > 0): ?><dt><?= $quote['points']['kind'] === 'welcome' ? 'Welcome points' : 'eClinicPro Points' ?> (<?= (int) $quote['points']['used'] ?> pts)</dt><dd class="st-save">−<?= e(store_rupees((int) $quote['points_discount'])) ?></dd><?php endif; ?>
           <dt>Delivery</dt><dd><?= $quote['shipping'] > 0 ? e(store_rupees((int) $quote['shipping'])) : 'Free' ?></dd>
           <dt class="st-total">To pay</dt><dd class="st-total"><?= e(store_rupees((int) $quote['grand_total'])) ?></dd>
         </dl>
+        <?php if (($quote['points']['welcome_add_paise'] ?? null) !== null): ?>
+          <p class="st-summary-note">Add <strong><?= e(store_rupees((int) $quote['points']['welcome_add_paise'])) ?></strong> more to use your <?= (int) $quote['points']['welcome'] ?> welcome points (₹<?= (int) $quote['points']['welcome'] ?> off).</p>
+        <?php endif; ?>
+        <?php if (($quote['points']['earns'] ?? 0) > 0): ?>
+          <p class="st-summary-note">⭐ This order earns <strong><?= (int) $quote['points']['earns'] ?> points</strong> after delivery.</p>
+        <?php endif; ?>
         <p class="st-summary-note">Includes <?= e(store_rupees((int) $quote['tax_included'])) ?> GST. Items are reserved for you for <?= (int) store_setting('store_payment_window_minutes', '30') ?> minutes while you pay.</p>
         <button class="st-btn st-btn-primary" style="width:100%" :disabled="placing">
           <span x-text="placing ? 'Placing order…' : 'Place order & pay'">Place order &amp; pay</span>

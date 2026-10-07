@@ -99,6 +99,11 @@ switch ($action) {
         // one for this identity rather than change the shared function's
         // return signature (keeps the web path byte-for-byte unchanged).
         $identityId = (int) $res['identity']['id'];
+        if ($res['is_new']) {
+            // Refer & Earn: the app sends the code the person typed / opened the app with.
+            require_once __DIR__ . '/../../../store/_app.php';
+            store_referral_capture($identityId, isset($in['referral_code']) ? (string) $in['referral_code'] : null);
+        }
         $token = ecp_m_latest_session_token($identityId);
         if ($token === '') ecp_m_err('session_start_failed', 500);
 

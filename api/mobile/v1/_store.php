@@ -143,7 +143,7 @@ function ecp_ms_cart_payload(?array $cart, ?string $newToken = null): array
     $cc = $cart !== null
         ? \App\Services\Store\PricingService::cartCoupon($cart, $me ? (int) $me['id'] : null)
         : ['coupon' => null, 'error' => null];
-    $quote = \App\Services\Store\PricingService::quote($items, $cc['coupon']);
+    $quote = \App\Services\Store\PricingService::quote($items, $cc['coupon'], $me ? (int) $me['id'] : null);
 
     $groupQuote = [];
     foreach ($quote['groups'] as $g) {
@@ -206,6 +206,7 @@ function ecp_ms_cart_payload(?array $cart, ?string $newToken = null): array
             'subtotal_paise' => (int) $quote['subtotal'],
             'savings_paise' => (int) $quote['savings'],        // vs MRP
             'discount_paise' => (int) $quote['discount'],      // coupon
+            'points_discount_paise' => (int) $quote['points_discount'],   // eClinicPro Points (1 pt = ₹1)
             'shipping_paise' => (int) $quote['shipping'],        // one delivery fee per order
             'free_shipping_above_paise' => $quote['free_above'] !== null ? (int) $quote['free_above'] : null,
             'add_for_free_shipping_paise' => $quote['add_for_free_shipping'],   // "Add ₹X more for free delivery" (null = n/a)
@@ -218,6 +219,8 @@ function ecp_ms_cart_payload(?array $cart, ?string $newToken = null): array
             'applied' => (bool) $quote['coupon']['applied'],
             'note' => $quote['coupon']['note'],
         ] : null,
+        // null = guest / points off. kind: welcome | standard | null. welcome_add_paise: "Add ₹X more to use your welcome points".
+        'points' => $quote['points'],
         'coupon_error' => $cc['error'],   // set when a saved coupon stopped being usable
         'has_problems' => $hasProblems,
         'prices_changed' => $priceChanged,

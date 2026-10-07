@@ -301,6 +301,7 @@ require __DIR__ . '/_header.php';
       <dl>
         <dt>Items</dt><dd><?= e(store_rupees((int) $order['items_subtotal_paise'])) ?></dd>
         <?php if ((int) $order['discount_paise'] > 0): ?><dt>Coupon <?= e((string) $order['coupon_code']) ?></dt><dd class="st-save">−<?= e(store_rupees((int) $order['discount_paise'])) ?></dd><?php endif; ?>
+        <?php if ((int) ($order['points_discount_paise'] ?? 0) > 0): ?><dt><?= ($order['points_kind'] ?? '') === 'welcome' ? 'Welcome points' : 'eClinicPro Points' ?> (<?= (int) $order['points_used'] ?> pts)</dt><dd class="st-save">−<?= e(store_rupees((int) $order['points_discount_paise'])) ?></dd><?php endif; ?>
         <dt>Delivery</dt><dd><?= (int) $order['shipping_paise'] > 0 ? e(store_rupees((int) $order['shipping_paise'])) : 'Free' ?></dd>
         <dt class="st-total">Total</dt><dd class="st-total"><?= e(store_rupees((int) $order['grand_total_paise'])) ?></dd>
       </dl>

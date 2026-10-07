@@ -315,6 +315,8 @@ function ecp_ms_order_detail(array $order, int $identityId): array
             'items_paise' => (int) $order['items_subtotal_paise'],
             'discount_paise' => (int) $order['discount_paise'],
             'coupon_code' => $order['coupon_code'] ?: null,
+            'points_used' => (int) ($order['points_used'] ?? 0),
+            'points_discount_paise' => (int) ($order['points_discount_paise'] ?? 0),
             'shipping_paise' => (int) $order['shipping_paise'],
             'tax_included_paise' => (int) $order['tax_included_paise'],
             'grand_total_paise' => (int) $order['grand_total_paise'],

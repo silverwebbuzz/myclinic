@@ -13,7 +13,7 @@ $cart = store_cart(false);
 $items = $cart !== null ? \App\Services\Store\CartService::items((int) $cart['id']) : [];
 $meForCoupon = ecp_patient_current();
 $cc = $cart !== null ? \App\Services\Store\PricingService::cartCoupon($cart, $meForCoupon ? (int) $meForCoupon['id'] : null) : ['coupon' => null, 'error' => null];
-$quote = \App\Services\Store\PricingService::quote($items, $cc['coupon']);
+$quote = \App\Services\Store\PricingService::quote($items, $cc['coupon'], $meForCoupon ? (int) $meForCoupon['id'] : null);
 $problems = array_filter($items, static fn ($i) => $i['problem'] !== null);
 $priceChanged = array_filter($items, static fn ($i) => $i['problem'] === null && $i['price_changed']);
 if ($cart !== null && $priceChanged) {
@@ -103,6 +103,7 @@ require __DIR__ . '/_header.php';
           <dt>Items (<?= (int) $quote['item_count'] ?>)</dt><dd><?= e(store_rupees((int) $quote['subtotal'])) ?></dd>
           <?php if ($quote['savings'] > 0): ?><dt>You save</dt><dd class="st-save">−<?= e(store_rupees((int) $quote['savings'])) ?> <small>vs MRP</small></dd><?php endif; ?>
           <?php if ($quote['discount'] > 0): ?><dt>Coupon <?= e($quote['coupon']['code']) ?></dt><dd class="st-save">−<?= e(store_rupees((int) $quote['discount'])) ?></dd><?php endif; ?>
+          <?php if ($quote['points_discount'] > 0): ?><dt><?= $quote['points']['kind'] === 'welcome' ? 'Welcome points' : 'eClinicPro Points' ?> (<?= (int) $quote['points']['used'] ?> pts)</dt><dd class="st-save">−<?= e(store_rupees((int) $quote['points_discount'])) ?></dd><?php endif; ?>
           <dt>Delivery</dt><dd><?= $quote['shipping'] > 0 ? e(store_rupees((int) $quote['shipping'])) : 'Free' ?></dd>
           <dt class="st-total">Total</dt><dd class="st-total"><?= e(store_rupees((int) $quote['grand_total'])) ?></dd>
         </dl>
@@ -110,6 +111,12 @@ require __DIR__ . '/_header.php';
           <p class="st-summary-note">Add <strong><?= e(store_rupees((int) $quote['add_for_free_shipping'])) ?></strong> more for free delivery.</p>
         <?php elseif ($quote['groups'] && $quote['shipping'] === 0 && $quote['free_above'] !== null): ?>
           <p class="st-summary-note">🎉 Your order gets free delivery.</p>
+        <?php endif; ?>
+        <?php if (($quote['points']['welcome_add_paise'] ?? null) !== null): ?>
+          <p class="st-summary-note">Add <strong><?= e(store_rupees((int) $quote['points']['welcome_add_paise'])) ?></strong> more to use your <?= (int) $quote['points']['welcome'] ?> welcome points (₹<?= (int) $quote['points']['welcome'] ?> off).</p>
+        <?php endif; ?>
+        <?php if (($quote['points']['earns'] ?? 0) > 0): ?>
+          <p class="st-summary-note">⭐ This order earns <strong><?= (int) $quote['points']['earns'] ?> points</strong> after delivery.</p>
         <?php endif; ?>
         <div class="st-coupon" x-data="{ code: '', busy: false, err: '' }">
           <?php if ($quote['coupon'] !== null): ?>

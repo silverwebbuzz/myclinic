@@ -19,15 +19,19 @@ use App\Core\Database;
  *        seller revenue  = subtotal − vendor-funded discount   (platform coupons never cost the seller)
  *        commission      = on seller revenue excluding GST (taxable value)
  *  - Commission (+ GST on commission) is resolved per line and snapshotted.
+ *  - eClinicPro Points (PointsService) come off after coupons, spread across lines like a
+ *    platform coupon (platform_discount_paise). Free delivery is judged on what the customer
+ *    pays for items AFTER coupons and points.
  */
 final class PricingService
 {
     /**
      * @param list<array<string, mixed>> $items CartService::items() rows; lines with a problem are excluded
      * @param array<string, mixed>|null $coupon store_coupons row, already checked with CouponService::unusableReason()
+     * @param int|null $identityId signed-in customer: their eClinicPro Points are applied (null = guest / no points)
      * @return array<string, mixed>
      */
-    public static function quote(array $items, ?array $coupon = null): array
+    public static function quote(array $items, ?array $coupon = null, ?int $identityId = null): array
     {
         $lines = array_values(array_filter($items, static fn ($it) => $it['problem'] === null));
         $excluded = count($items) - count($lines);
@@ -72,12 +76,26 @@ final class PricingService
         }
         $vendorFunded = $coupon !== null && $coupon['funded_by'] === 'vendor';
 
+        // ---- eClinicPro Points: on what's left after the coupon, never on delivery ----
+        $afterCoupon = [];
+        foreach ($lines as $i => $it) {
+            $afterCoupon[$i] = (int) $it['price_paise'] * (int) $it['qty'] - $lineDisc[$i];
+        }
+        $points = null;
+        $linePts = array_fill(0, count($lines), 0);
+        if ($identityId !== null && $identityId > 0 && $lines && PointsService::enabled()) {
+            $points = PointsService::plan($identityId, array_sum($afterCoupon));
+            if ($points['points'] > 0) {
+                $linePts = self::split($points['points'] * 100, $afterCoupon) + $linePts;
+            }
+        }
+
         $groups = [];
         foreach ($lines as $i => $it) {
             $vid = (int) $it['vendor_id'];
             $groups[$vid] ??= [
                 'vendor_id' => $vid, 'vendor_name' => $it['vendor_name'], 'vendor_slug' => $it['vendor_slug'],
-                'lines' => [], 'subtotal' => 0, 'discount' => 0, 'vendor_discount' => 0, 'platform_discount' => 0,
+                'lines' => [], 'subtotal' => 0, 'discount' => 0, 'points_discount' => 0, 'vendor_discount' => 0, 'platform_discount' => 0,
                 'mrp_total' => 0, 'tax' => 0, 'shipping' => 0, 'free_above' => null,
                 'commission' => 0, 'commission_gst' => 0, 'vendor_payable' => 0, 'weight_g' => 0,
             ];
@@ -85,9 +103,10 @@ final class PricingService
             $unit = (int) $it['price_paise'];
             $subtotal = $unit * $qty;
             $disc = $lineDisc[$i];
+            $ptsDisc = $linePts[$i];
             $vDisc = $vendorFunded ? $disc : 0;
-            $pDisc = $vendorFunded ? 0 : $disc;
-            $paid = $subtotal - $disc;                    // what the customer pays for this line
+            $pDisc = ($vendorFunded ? 0 : $disc) + $ptsDisc;   // points are always platform-funded
+            $paid = $subtotal - $disc - $ptsDisc;         // what the customer pays for this line
             $sellerRevenue = $subtotal - $vDisc;          // what the seller is selling it for
             $gstBp = (int) $it['gst_bp'];
             // GST is on the seller's selling price: a platform-funded coupon doesn't lower the
@@ -104,6 +123,7 @@ final class PricingService
                 'line_subtotal_paise' => $subtotal,
                 'vendor_discount_paise' => $vDisc,
                 'platform_discount_paise' => $pDisc,
+                'points_discount_paise' => $ptsDisc,
                 'line_total_paise' => $paid,
                 'tax_included_paise' => $tax,
                 'commission_type' => $rule['type'],
@@ -115,6 +135,7 @@ final class PricingService
             ];
             $groups[$vid]['subtotal'] += $subtotal;
             $groups[$vid]['discount'] += $disc;
+            $groups[$vid]['points_discount'] += $ptsDisc;
             $groups[$vid]['vendor_discount'] += $vDisc;
             $groups[$vid]['platform_discount'] += $pDisc;
             $groups[$vid]['mrp_total'] += (int) $it['mrp_paise'] * $qty;
@@ -125,17 +146,19 @@ final class PricingService
             $groups[$vid]['weight_g'] += (int) $it['weight_g'] * $qty;
         }
 
-        $subtotal = $tax = $mrp = $discount = 0;
+        $subtotal = $tax = $mrp = $discount = $pointsDiscount = 0;
         foreach ($groups as $g) {
             $subtotal += $g['subtotal'];
             $discount += $g['discount'];
+            $pointsDiscount += $g['points_discount'];
             $tax += $g['tax'];
             $mrp += $g['mrp_total'];
         }
 
-        // ONE delivery fee per order, free from a threshold on what the customer pays for items.
+        // ONE delivery fee per order, free from a threshold on what the customer pays for items
+        // after every discount (coupon + points): ₹500 of items paid ₹400 with points pays delivery.
         [$flat, $freeAbove] = self::shippingRule();
-        $itemsPaid = $subtotal - $discount;
+        $itemsPaid = $subtotal - $discount - $pointsDiscount;
         $shipping = ($groups && !($freeAbove !== null && $itemsPaid >= $freeAbove)) ? $flat : 0;
         $shippingWaived = 0;
         if ($shipping > 0 && $freeShipVendors) {   // free-shipping coupon applied to this cart
@@ -144,11 +167,11 @@ final class PricingService
         }
         // Split the fee across packages by value. Each share offsets that seller's
         // courier charge (SellerFeeService) and is invoiced per package as eClinicPro's delivery supply.
-        $shares = self::split($shipping, array_map(static fn ($g) => $g['subtotal'] - $g['discount'], $groups));
+        $shares = self::split($shipping, array_map(static fn ($g) => $g['subtotal'] - $g['discount'] - $g['points_discount'], $groups));
         foreach ($groups as $vid => &$g) {
             $g['shipping'] = $shares[$vid] ?? 0;
             $g['free_above'] = $freeAbove;
-            $g['total'] = $g['subtotal'] - $g['discount'] + $g['shipping'];
+            $g['total'] = $g['subtotal'] - $g['discount'] - $g['points_discount'] + $g['shipping'];
         }
         unset($g);
 
@@ -156,19 +179,31 @@ final class PricingService
             'groups' => array_values($groups),
             'subtotal' => $subtotal,
             'mrp_total' => $mrp,
-            'savings' => max(0, $mrp - $subtotal + $discount + $shippingWaived),
-            'discount' => $discount,
+            'savings' => max(0, $mrp - $subtotal + $discount + $pointsDiscount + $shippingWaived),
+            'discount' => $discount,                    // coupon only
+            'points_discount' => $pointsDiscount,
             'shipping' => $shipping,
             'shipping_waived' => $shippingWaived,
             'free_above' => $freeAbove,
             // "Add ₹X more for free delivery" (null when delivery is already free or never free).
             'add_for_free_shipping' => $shipping > 0 && $freeAbove !== null ? max(0, $freeAbove - $itemsPaid) : null,
             'tax_included' => $tax,
-            'grand_total' => $subtotal - $discount + $shipping,
+            'grand_total' => $subtotal - $discount - $pointsDiscount + $shipping,
             'item_count' => array_sum(array_map(static fn ($g) => array_sum(array_column($g['lines'], 'qty')), $groups)),
             'excluded_lines' => $excluded,
             'coupon' => $coupon !== null ? ['id' => (int) $coupon['id'], 'code' => $coupon['code'], 'label' => CouponService::describe($coupon),
                 'applied' => $couponNote === null && ($discount > 0 || $shippingWaived > 0), 'note' => $couponNote] : null,
+            // null = guest / points switched off. kind: welcome | standard | null (none used this order).
+            'points' => $points !== null ? [
+                'kind' => $points['kind'],
+                'used' => $points['points'],
+                'available' => $points['balance']['available'],
+                'pending' => $points['balance']['pending'],
+                'welcome' => $points['balance']['welcome'],
+                'welcome_add_paise' => $points['welcome_add_paise'],   // "Add ₹X more to use your welcome points"
+                // Loyalty this order earns after delivery (only when it uses no points).
+                'earns' => $points['points'] > 0 ? 0 : PointsService::loyaltyPoints($subtotal - $discount),
+            ] : null,
         ];
     }
 

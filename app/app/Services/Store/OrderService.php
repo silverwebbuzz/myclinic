@@ -78,6 +78,7 @@ final class OrderService
                 return false;
             }
             self::releaseStock($orderId);
+            PointsService::release($orderId, $note);
             $pdo->prepare(
                 "UPDATE store_vendor_orders SET status = :s, cancel_reason = :r, cancelled_by_type = :t
                   WHERE order_id = :o AND status = 'pending_payment'"
@@ -165,6 +166,13 @@ final class OrderService
                 ['status' => $to] + ($to === 'cancelled' ? ['cancelled_at' => date('Y-m-d H:i:s')] : [])
             );
             self::history($orderId, null, 'order', $orderId, (string) $o['status'], $to, 'system', null);
+
+            $done = ['delivered', 'completed'];
+            if (in_array($to, $done, true) && !in_array($o['status'], $done, true)) {
+                PointsService::onOrderDelivered($orderId);   // Refer & Earn unlock, referral + loyalty clock
+            } elseif ($to === 'cancelled') {
+                PointsService::onOrderCancelled($orderId);
+            }
         }
     }
 

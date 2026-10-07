@@ -32,6 +32,8 @@ RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
 # -------- Lead landing URLs (/L/{token}) --------
 # Short URL goes into outbound SMS — keep it as short and clean as possible.
 RewriteRule ^L/([a-f0-9]{16})/?$ L.php?t=$1 [L,QSA]
+# Refer & Earn link /r/ECP-RAHUL7K → r.php (sets the ecp_ref cookie, sends to sign-up)
+RewriteRule ^r/([A-Za-z0-9\-]{5,20})/?$ r.php?code=$1 [L,QSA]
 
 # -------- Public clinic booking (joined doctors — same domain as patient auth) --------
 RewriteRule ^book/([a-z0-9-]+)/slots/?$ api/book.php?slug=$1 [L,QSA]
