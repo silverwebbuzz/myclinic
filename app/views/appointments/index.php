@@ -49,7 +49,7 @@ $walkinUrl = static function () use ($date, $doctorId): string {
             </h2>
             <p class="text-xs text-slate-500">
                 <?= $view === 'week'
-                    ? htmlspecialchars(date('d M', strtotime($weekStart)) . ' – ' . date('d M Y', strtotime($weekStart . ' +6 days')))
+                    ? htmlspecialchars(date('d M Y', strtotime($weekStart)) . ' – ' . date('d M Y', strtotime($weekStart . ' +6 days')))
                     : htmlspecialchars($displayDate) ?>
             </p>
         </div>
@@ -176,7 +176,7 @@ $walkinUrl = static function () use ($date, $doctorId): string {
             <div class="min-h-[220px]">
                 <a href="?<?= htmlspecialchars($qs(['date' => $colDate, 'view' => null])) ?>"
                    class="block border-b px-2 py-2 text-center text-xs font-semibold <?= $colIsToday ? 'bg-brand-light text-brand' : 'bg-slate-50 text-slate-600 hover:bg-slate-100' ?>">
-                    <?= date('D', strtotime($colDate)) ?> <span class="font-normal"><?= date('d M', strtotime($colDate)) ?></span>
+                    <?= date('D', strtotime($colDate)) ?> <span class="font-normal"><?= date('d M Y', strtotime($colDate)) ?></span>
                     <span class="block font-normal text-slate-400"><?= count($dayAppts) ?> appt<?= count($dayAppts) === 1 ? '' : 's' ?></span>
                 </a>
                 <div class="space-y-1 p-1.5">

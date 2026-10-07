@@ -33,7 +33,7 @@ ob_start();
                             <span class="block font-mono font-medium"><?= $e($r['sub_order_no']) ?></span>
                             <span class="block text-xs text-tx3">Paid <?= $e(\App\Support\IndianDate::dateTime($r['paid_at'])) ?> · <?= (int) $r['item_count'] ?> item(s) · to <?= $e(($ship['city'] ?? '') . ' ' . ($ship['pincode'] ?? '')) ?></span>
                             <?php if ($r['status'] === 'new' && !empty($r['accept_by'])): ?>
-                                <span class="block text-xs text-amber-700">Accept by <?= $e(date('d M, h:i A', (int) strtotime((string) $r['accept_by']))) ?></span>
+                                <span class="block text-xs text-amber-700">Accept by <?= $e(date('d M Y, h:i A', (int) strtotime((string) $r['accept_by']))) ?></span>
                             <?php endif; ?>
                         </span>
                         <span class="text-sm">You get ₹<?= $e(ProductService::rupees((int) $r['vendor_payable_paise'])) ?></span>

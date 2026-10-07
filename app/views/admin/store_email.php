@@ -189,7 +189,7 @@ $input = 'mt-1 block w-full rounded border px-3 py-1.5 text-sm';
                     <tbody class="divide-y">
                     <?php foreach ($log as $row): ?>
                         <tr class="align-top">
-                            <td class="whitespace-nowrap py-2 pr-3 text-slate-500"><?= $e(date('d M, h:i A', (int) strtotime((string) $row['created_at']))) ?></td>
+                            <td class="whitespace-nowrap py-2 pr-3 text-slate-500"><?= $e(date('d M Y, h:i A', (int) strtotime((string) $row['created_at']))) ?></td>
                             <?php $isWa = ($row['channel'] ?? 'email') === 'whatsapp'; ?>
                             <td class="pr-3">
                                 <?php if ($isWa): ?><span class="mr-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-emerald-700">WhatsApp</span><?php endif; ?>

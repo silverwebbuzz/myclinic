@@ -23,7 +23,7 @@ ob_start();
     <?php endif; ?>
 </div>
 <p class="mt-1 text-sm text-tx3">Paid <?= $e(\App\Support\IndianDate::dateTime($vo['paid_at'])) ?>
-    <?= $status === 'new' && $vo['accept_by'] ? ' · <strong class="text-amber-700">accept by ' . $e(date('d M, h:i A', (int) strtotime((string) $vo['accept_by']))) . '</strong>' : '' ?></p>
+    <?= $status === 'new' && $vo['accept_by'] ? ' · <strong class="text-amber-700">accept by ' . $e(date('d M Y, h:i A', (int) strtotime((string) $vo['accept_by']))) . '</strong>' : '' ?></p>
 <?php if ($cancelled && !empty($vo['cancel_reason'])): ?><p class="mt-1 text-sm text-red-700">Reason: <?= $e($vo['cancel_reason']) ?></p><?php endif; ?>
 
 <?php if (!$cancelled): ?>
@@ -52,7 +52,7 @@ ob_start();
     <?php elseif (in_array($status, ['packed', 'ready_to_ship'], true)): ?>
         <?php if (!empty($shipment['awb_code'])): ?>
             <p class="text-sm"><strong>Courier booked.</strong> <?= !empty($shipment['courier_name']) ? $e($shipment['courier_name']) . ' · ' : '' ?>AWB <span class="font-mono"><?= $e($shipment['awb_code']) ?></span>
-                <?= !empty($shipment['pickup_scheduled_for']) ? ' · pickup on ' . $e(date('D j M', (int) strtotime((string) $shipment['pickup_scheduled_for']))) : '' ?></p>
+                <?= !empty($shipment['pickup_scheduled_for']) ? ' · pickup on ' . $e(date('D, d M Y', (int) strtotime((string) $shipment['pickup_scheduled_for']))) : '' ?></p>
             <p class="mt-1 text-sm">Print the label, stick it on the box, and hand it to the courier at pickup.</p>
             <div class="mt-3 flex flex-wrap gap-3">
                 <?php if (!empty($shipment['label_url'])): ?>

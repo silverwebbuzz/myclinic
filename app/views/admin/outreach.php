@@ -133,7 +133,7 @@ $statusBadge = [
                                 <span class="text-slate-400">No phone</span>
                                 <?php endif; ?>
                                 <?php if (!empty($r['last_contacted_at'])): ?>
-                                <div class="mt-1 text-[10px] text-slate-400">Contacted <?= (int) $r['contacted_count'] ?>× · last <?= htmlspecialchars(date('d M', strtotime((string) $r['last_contacted_at']))) ?></div>
+                                <div class="mt-1 text-[10px] text-slate-400">Contacted <?= (int) $r['contacted_count'] ?>× · last <?= htmlspecialchars(date('d M Y', strtotime((string) $r['last_contacted_at']))) ?></div>
                                 <?php endif; ?>
                             </td>
                             <td class="px-4 py-3">

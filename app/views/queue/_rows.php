@@ -35,7 +35,7 @@ $canBookAppointments = \App\Services\RoleAccessService::canBookAppointments(\App
         if ($fu): ?>
         <p class="mt-0.5 text-xs <?= !empty($fu['overdue']) ? 'text-rose-700' : 'text-amber-700' ?>">
             ⏰ Follow-up
-            <?= !empty($fu['overdue']) ? 'overdue' : 'due ' . htmlspecialchars(date('d M', strtotime($fu['due_date']))) ?>
+            <?= !empty($fu['overdue']) ? 'overdue' : 'due ' . htmlspecialchars(date('d M Y', strtotime($fu['due_date']))) ?>
             <?php if (!empty($fu['reason'])): ?>· <?= htmlspecialchars(str_replace('_', ' ', $fu['reason'])) ?><?php endif; ?>
         </p>
         <?php endif; ?>

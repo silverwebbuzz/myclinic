@@ -85,7 +85,7 @@ ob_start();
         <?php if (!$docs): ?><tr><td colspan="7" class="px-4 py-6 text-center text-tx3">No documents this month.</td></tr><?php endif; ?>
         <?php foreach ($docs as $d): $cn = $d['doc_type'] === 'credit_note'; ?>
             <tr class="border-t border-ln">
-                <td class="px-4 py-2 whitespace-nowrap"><?= $e(date('d M', (int) strtotime((string) $d['issued_at']))) ?></td>
+                <td class="px-4 py-2 whitespace-nowrap"><?= $e(date('d M Y', (int) strtotime((string) $d['issued_at']))) ?></td>
                 <td class="px-4 py-2"><a class="font-mono text-xs text-act underline" href="/vendor/gst/documents/<?= (int) $d['id'] ?>"><?= $e($d['doc_no']) ?></a></td>
                 <td class="px-4 py-2"><?= $cn ? 'Credit note <span class="text-xs text-tx3">(' . $e(($reasons[$d['reason']] ?? $d['reason']) . ', against ' . ($d['refers_to_no'] ?? '')) . ')</span>' : ((int) $d['is_bill_of_supply'] ? 'Bill of supply' : 'Invoice') ?></td>
                 <td class="px-4 py-2"><a class="underline" href="/vendor/orders/<?= (int) $d['vendor_order_id'] ?>"><?= $e($d['order_no']) ?></a></td>

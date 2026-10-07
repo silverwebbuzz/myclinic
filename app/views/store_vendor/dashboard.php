@@ -119,7 +119,7 @@ ob_start();
             </div>
             <div class="flex h-40 items-end gap-1 border-b border-ln2 pt-2" role="img" aria-label="Daily sales for the last 14 days">
                 <?php foreach ($series as $d => $p): $h = $p['s'] > 0 ? max(4, (int) round($p['s'] / $max * 100)) : 0; ?>
-                    <div class="group relative flex h-full flex-1 items-end" title="<?= $e(date('j M', strtotime($d)) . ': ' . $money($p['s']) . ' · ' . $p['n'] . ' order(s)') ?>">
+                    <div class="group relative flex h-full flex-1 items-end" title="<?= $e(date('d M Y', strtotime($d)) . ': ' . $money($p['s']) . ' · ' . $p['n'] . ' order(s)') ?>">
                         <div class="w-full rounded-t-[3px] <?= $p['s'] > 0 ? 'bg-ac/80 group-hover:bg-ac' : 'bg-ln2' ?>" style="height: <?= $p['s'] > 0 ? $h : 2 ?>%"></div>
                     </div>
                 <?php endforeach; ?>
@@ -219,7 +219,7 @@ ob_start();
                             <?php $ship = json_decode((string) $o['ship_address_json'], true) ?: []; $ps = $pkgStatus[$o['status']] ?? [ucfirst(str_replace('_', ' ', (string) $o['status'])), 'nt', '·']; ?>
                             <tr class="border-t border-ln2 hover:bg-sf2">
                                 <td class="px-4 py-2"><a href="/vendor/orders/<?= (int) $o['id'] ?>" class="font-mono text-[12.5px] font-medium text-tx hover:text-act"><?= $e($o['sub_order_no']) ?></a></td>
-                                <td class="whitespace-nowrap px-3 py-2 text-tx2"><?= $e(date('d M, h:i A', (int) strtotime((string) $o['paid_at']))) ?></td>
+                                <td class="whitespace-nowrap px-3 py-2 text-tx2"><?= $e(date('d M Y, h:i A', (int) strtotime((string) $o['paid_at']))) ?></td>
                                 <td class="px-3 py-2 text-tx2"><?= $e(trim(($ship['city'] ?? '') . ' ' . ($ship['pincode'] ?? ''))) ?></td>
                                 <td class="px-3 py-2 text-right"><?= (int) $o['units'] ?></td>
                                 <td class="px-3 py-2 text-right font-medium"><?= $e($money((int) $o['value_paise'])) ?></td>

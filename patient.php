@@ -5209,7 +5209,8 @@ require __DIR__ . '/partials/header.php';
       formatMon(iso) {
         try {
           return new Date(iso).toLocaleDateString('en-IN', {
-            month: 'short'
+            month: 'short',
+            year: 'numeric'
           });
         } catch (e) {
           return '';

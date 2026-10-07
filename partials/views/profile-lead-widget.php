@@ -261,7 +261,7 @@ function ecpProfileLeadBook(doctor, initialDays) {
     formatDate(iso) {
       if (!iso) return '';
       const d = new Date(iso + 'T00:00');
-      return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+      return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
     },
     formatTime(hhmm) {
       if (!hhmm) return '';

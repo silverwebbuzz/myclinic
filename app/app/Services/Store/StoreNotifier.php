@@ -1281,7 +1281,7 @@ final class StoreNotifier
     {
         $t = strtotime($datetime);
 
-        return $t ? date('d M, h:i A', $t) : '';
+        return $t ? date('d M Y, h:i A', $t) : '';
     }
 
     private static function first(string $name): string

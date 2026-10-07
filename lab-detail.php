@@ -826,8 +826,8 @@ require __DIR__ . '/partials/header.php';
                                   // for "today" isn't left guessing. Rewritten by JS if the
                                   // cut-off passes while the page is open. ?>
                             <p class="ldp-bf-datehint" id="ldpBfDateHint">
-                                Collection starts <?= e(date('D, d M', strtotime($bookMinDate) ?: time())) ?>.
-                                Book up to <?= e(date('D, d M', strtotime($bookMaxDate) ?: time())) ?>.
+                                Collection starts <?= e(date('D, d M Y', strtotime($bookMinDate) ?: time())) ?>.
+                                Book up to <?= e(date('D, d M Y', strtotime($bookMaxDate) ?: time())) ?>.
                                 Orders placed after <?= (int) ECP_LAB_CUTOFF_HOUR_IST ?>:00 IST start from the following day.
                             </p>
 
@@ -1106,7 +1106,7 @@ require __DIR__ . '/partials/header.php';
                 var parts = iso.split('-');
                 var d = new Date(Date.UTC(+parts[0], +parts[1] - 1, +parts[2]));
                 return d.toLocaleDateString('en-IN', {
-                    weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC'
+                    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC'
                 });
             };
             hint.textContent = 'Collection starts ' + fmt(bookMinDate)

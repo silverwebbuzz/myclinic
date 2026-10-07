@@ -276,7 +276,7 @@ function bookingWizard() {
         formatDate(dStr) {
             try {
                 const d = new Date(dStr + 'T00:00');
-                return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+                return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
             } catch (e) { return dStr; }
         },
     };

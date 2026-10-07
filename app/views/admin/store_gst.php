@@ -92,7 +92,7 @@ $qs = '?' . http_build_query(array_filter(['month' => $month, 'vendor' => $vendo
             <?php if (!$docs): ?><tr><td colspan="9" class="px-4 py-6 text-center text-slate-400">No documents this month.</td></tr><?php endif; ?>
             <?php foreach ($docs as $d): $cn = $d['doc_type'] === 'credit_note'; ?>
                 <tr class="border-t">
-                    <td class="px-4 py-2 whitespace-nowrap"><?= $e(date('d M', (int) strtotime((string) $d['issued_at']))) ?></td>
+                    <td class="px-4 py-2 whitespace-nowrap"><?= $e(date('d M Y', (int) strtotime((string) $d['issued_at']))) ?></td>
                     <td class="px-4 py-2"><a class="font-mono text-xs text-blue-700 hover:underline" href="/admin/store/gst/documents/<?= (int) $d['id'] ?>"><?= $e($d['doc_no']) ?></a></td>
                     <td class="px-4 py-2"><?= $cn ? '<span class="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">Credit note</span> <span class="text-xs text-slate-500">' . $e(($reasons[$d['reason']] ?? $d['reason']) . ' · vs ' . ($d['refers_to_no'] ?? '')) . '</span>' : ((int) $d['is_bill_of_supply'] ? 'Bill of supply' : 'Invoice') ?></td>
                     <td class="px-4 py-2"><?= $e($d['vendor_name'] ?? '') ?></td>

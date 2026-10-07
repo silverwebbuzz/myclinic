@@ -10,7 +10,7 @@
 use App\Services\Store\ProductService;
 
 $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
-$r = static fn ($p): string => '₹' . ProductService::rupees((int) $p);
+$r = static fn ($p): string => ((int) $p < 0 ? '−' : '') . '₹' . ProductService::rupees(abs((int) $p));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -27,7 +27,8 @@ $r = static fn ($p): string => '₹' . ProductService::rupees((int) $p);
         <?php foreach ([
             ['Today', $r($kpi['today_gmv']), $kpi['today_orders'] . ' paid order(s)'],
             ['This month', $r($kpi['month_gmv']), $kpi['month_orders'] . ' paid order(s)'],
-            ['Commission (month)', $r($kpi['month_commission']), 'booked on delivery'],
+            ['Commission (month, net)', $r($kpi['month_commission_earned'] - $kpi['month_commission_reversed']),
+                $r($kpi['month_commission_earned']) . ' earned on deliveries · ' . $r($kpi['month_commission_reversed']) . ' reversed on returns'],
             ['Refunds (month)', $r($kpi['month_refunds']), 'cancellations + returns'],
         ] as [$label, $value, $sub]): ?>
             <div class="rounded-xl border bg-white p-4 shadow-sm"><div class="text-xs uppercase tracking-wide text-slate-500"><?= $e($label) ?></div>
@@ -53,7 +54,7 @@ $r = static fn ($p): string => '₹' . ProductService::rupees((int) $p);
                 <tbody class="divide-y">
                 <?php if (!$days): ?><tr><td colspan="3" class="py-4 text-center text-slate-400">No paid orders yet.</td></tr><?php endif; ?>
                 <?php foreach ($days as $d): ?>
-                    <tr><td class="py-1"><?= $e(date('D j M', (int) strtotime((string) $d['d']))) ?></td><td class="text-right"><?= (int) $d['n'] ?></td><td class="text-right"><?= $r($d['s']) ?></td></tr>
+                    <tr><td class="py-1"><?= $e(date('D, d M Y', (int) strtotime((string) $d['d']))) ?></td><td class="text-right"><?= (int) $d['n'] ?></td><td class="text-right"><?= $r($d['s']) ?></td></tr>
                 <?php endforeach; ?>
                 </tbody>
             </table>

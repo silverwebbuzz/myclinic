@@ -375,7 +375,7 @@ function ecp_lead_dispatch_sms(int $leadId): array {
 
     $patientFirst = $lead['p_first'] ?: explode(' ', (string) ($lead['p_name'] ?? 'A patient'))[0];
     $datePretty = $lead['preferred_date']
-        ? date('D, j M', strtotime((string) $lead['preferred_date']))
+        ? date('D, d M Y', strtotime((string) $lead['preferred_date']))
         : 'soon';
     $timePretty = $lead['preferred_time']
         ? _lead_pretty_time((string) $lead['preferred_time'])

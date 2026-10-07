@@ -45,7 +45,11 @@ final class StoreMerchAdminController
             'today_orders' => $one("SELECT COUNT(*) FROM store_orders WHERE paid_at >= CURDATE()"),
             'month_gmv' => $one("SELECT COALESCE(SUM(grand_total_paise),0) FROM store_orders WHERE paid_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')"),
             'month_orders' => $one("SELECT COUNT(*) FROM store_orders WHERE paid_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')"),
-            'month_commission' => $one("SELECT COALESCE(-SUM(amount_paise),0) FROM store_vendor_ledger WHERE entry_type = 'commission_debit' AND created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')"),
+            // Commission is booked when a package is delivered (negative ledger entry) and given back
+            // when an item is returned (positive entry), in the month each happens. Shown separately so
+            // a month with returns of last month's orders doesn't look like a bare negative number.
+            'month_commission_earned' => $one("SELECT COALESCE(-SUM(amount_paise),0) FROM store_vendor_ledger WHERE entry_type = 'commission_debit' AND amount_paise < 0 AND created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')"),
+            'month_commission_reversed' => $one("SELECT COALESCE(SUM(amount_paise),0) FROM store_vendor_ledger WHERE entry_type = 'commission_debit' AND amount_paise > 0 AND created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')"),
             'month_refunds' => $one("SELECT COALESCE(SUM(amount_paise),0) FROM store_refunds WHERE status <> 'failed' AND created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')"),
             'customers' => $one("SELECT COUNT(DISTINCT identity_id) FROM store_orders WHERE paid_at IS NOT NULL"),
             'live_products' => $one("SELECT COUNT(*) FROM store_products WHERE status = 'live' AND deleted_at IS NULL"),

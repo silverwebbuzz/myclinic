@@ -90,7 +90,7 @@ $dateNice = $lead['preferred_date']
 $timeNice = $lead['preferred_time']
     ? date('g:i A', strtotime('2000-01-01 ' . $lead['preferred_time']))
     : '';
-$createdNice = date('d M, h:i A', strtotime((string) $lead['created_at']));
+$createdNice = date('d M Y, h:i A', strtotime((string) $lead['created_at']));
 ?>
 
 <main class="L-page">

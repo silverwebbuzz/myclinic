@@ -524,7 +524,7 @@ function clinicCalendar(cfg) {
             const groups={};
             for (const m of inMonth) { (groups[m.iso] ||= []).push(m); }
             this.listGroups=Object.keys(groups).sort().map(iso=>({
-                iso, label: this.parse(iso+'T00:00').toLocaleDateString('en-IN',{weekday:'long', day:'numeric', month:'long'}),
+                iso, label: this.parse(iso+'T00:00').toLocaleDateString('en-IN',{weekday:'long', day:'numeric', month:'long', year:'numeric'}),
                 events: groups[iso],
             }));
         },
@@ -549,7 +549,7 @@ function clinicCalendar(cfg) {
                 }).sort((a,b)=>a._s-b._s);
                 this.lanes(evs);
                 return { iso, dow:d.toLocaleDateString('en-IN',{weekday:'short'}),
-                    dnum:d.toLocaleDateString('en-IN',{day:'numeric',month:'short'}),
+                    dnum:d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}),
                     isToday:iso===this.cfg.today, slots, events:evs };
             });
         },

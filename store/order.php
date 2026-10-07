@@ -224,7 +224,7 @@ require __DIR__ . '/_header.php';
               <?php if ($sh['events']): ?>
                 <ol class="st-track-events">
                   <?php foreach (array_slice($sh['events'], 0, 4) as $ev): ?>
-                    <li><span><?= e(date('d M, h:i A', (int) strtotime((string) $ev['event_at']))) ?></span> <?= e(ucwords(strtolower((string) $ev['raw_status']))) ?><?= !empty($ev['location']) ? ' · ' . e($ev['location']) : '' ?></li>
+                    <li><span><?= e(date('d M Y, h:i A', (int) strtotime((string) $ev['event_at']))) ?></span> <?= e(ucwords(strtolower((string) $ev['raw_status']))) ?><?= !empty($ev['location']) ? ' · ' . e($ev['location']) : '' ?></li>
                   <?php endforeach; ?>
                 </ol>
               <?php endif; ?>
@@ -252,7 +252,7 @@ require __DIR__ . '/_header.php';
           <?php $returnable = \App\Services\Store\ReturnService::returnable($vo); ?>
           <?php if ($returnable): ?>
             <details style="padding:10px 0 4px">
-              <summary class="st-link-btn" style="list-style:none">Return items (until <?= e(date('j M', (int) strtotime((string) $vo['settle_after']))) ?>)</summary>
+              <summary class="st-link-btn" style="list-style:none">Return items (until <?= e(date('d M Y', (int) strtotime((string) $vo['settle_after']))) ?>)</summary>
               <form method="post" enctype="multipart/form-data" style="margin-top:10px;display:grid;gap:8px;font-size:14px">
                 <input type="hidden" name="action" value="return_request">
                 <input type="hidden" name="vendor_order_id" value="<?= (int) $vo['id'] ?>">

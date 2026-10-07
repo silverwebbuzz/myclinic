@@ -351,7 +351,7 @@ final class VitalsService
             'blood_sugar' => [],
         ];
         foreach ($rows as $r) {
-            $series['labels'][] = date('d M', strtotime($r['recorded_at']));
+            $series['labels'][] = date('d M Y', strtotime($r['recorded_at']));
             $series['bp_systolic'][] = $r['bp_systolic'] ?? null;
             $series['weight_kg'][] = $r['weight_kg'] ?? null;
             $series['blood_sugar'][] = $r['blood_sugar'] ?? null;

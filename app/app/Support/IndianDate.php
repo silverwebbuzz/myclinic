@@ -10,10 +10,9 @@ namespace App\Support;
  *
  *   IndianDate::date($v)       06 Oct 2026
  *   IndianDate::dateTime($v)   06 Oct 2026, 03:45 PM
- *   IndianDate::short($v)      06 Oct
- *   IndianDate::shortTime($v)  06 Oct, 03:45 PM
  *   IndianDate::time($v)       03:45 PM
  *
+ * Always with the year (no "06 Oct" on its own).
  * Empty / unparseable → $empty ('—' by default). Store and submit dates as
  * Y-m-d / Y-m-d H:i:s; only DISPLAY goes through here. In JS use 'en-IN'.
  */
@@ -21,8 +20,6 @@ final class IndianDate
 {
     public const DATE = 'd M Y';
     public const DATE_TIME = 'd M Y, h:i A';
-    public const SHORT = 'd M';
-    public const SHORT_TIME = 'd M, h:i A';
     public const TIME = 'h:i A';
 
     public static function date(string|int|null $v, string $empty = '—'): string
@@ -33,16 +30,6 @@ final class IndianDate
     public static function dateTime(string|int|null $v, string $empty = '—'): string
     {
         return self::fmt($v, self::DATE_TIME, $empty);
-    }
-
-    public static function short(string|int|null $v, string $empty = '—'): string
-    {
-        return self::fmt($v, self::SHORT, $empty);
-    }
-
-    public static function shortTime(string|int|null $v, string $empty = '—'): string
-    {
-        return self::fmt($v, self::SHORT_TIME, $empty);
     }
 
     public static function time(string|int|null $v, string $empty = '—'): string
