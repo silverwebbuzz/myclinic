@@ -20,7 +20,7 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
             <a href="?status=<?= $k ?>" class="rounded-full px-3 py-1 <?= $status === $k ? 'bg-slate-800 text-white' : 'bg-white' ?>"><?= $l ?></a>
         <?php endforeach; ?>
     </nav>
-    <div class="space-y-3">
+    <div class="space-y-3" data-filter="">
         <?php if (!$rows): ?><p class="rounded-xl border bg-white p-8 text-center text-sm text-slate-400">Nothing here.</p><?php endif; ?>
         <?php foreach ($rows as $rv): ?>
             <article class="rounded-xl border bg-white p-4 text-sm shadow-sm">

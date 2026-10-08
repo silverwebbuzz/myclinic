@@ -118,7 +118,7 @@ $categories = [
 
         <!-- ===== List ===== -->
         <div class="overflow-x-auto ui-card shadow-sm">
-            <table class="w-full text-sm">
+            <table data-filter="Category,Mode,Status" class="w-full text-sm">
                 <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr>
                         <th class="px-4 py-2">Specialty</th>

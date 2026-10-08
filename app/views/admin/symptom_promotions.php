@@ -30,7 +30,7 @@
             </div>
         <?php else: ?>
             <div class="overflow-x-auto ui-card">
-                <table class="w-full text-left text-sm">
+                <table data-filter="" class="w-full text-left text-sm">
                     <thead class="border-b bg-slate-50 text-xs uppercase text-slate-500">
                         <tr>
                             <th class="px-4 py-3">Label</th>

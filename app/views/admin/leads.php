@@ -99,7 +99,7 @@
                 <p class="mt-0.5 text-xs text-slate-500">Non-joined doctors are capped at the platform default (10/month) unless a per-doctor override is set in SMS settings. Set <code>per_month</code> in <code>directory_sms_quotas</code> to raise/lower a specific doctor.</p>
             </div>
             <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
+                <table data-filter="City,Status" class="min-w-full text-sm">
                     <thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
                         <tr>
                             <th class="px-4 py-3 text-left">Doctor / Clinic</th>
@@ -182,7 +182,7 @@
             <p class="p-6 text-sm text-slate-500">No lead activity yet.</p>
             <?php else: ?>
             <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
+                <table data-filter="City,Specialty,Status" class="min-w-full text-sm">
                     <thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
                         <tr>
                             <th class="px-4 py-3 text-left">Clinic / Doctor</th>

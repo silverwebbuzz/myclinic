@@ -26,10 +26,10 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
         <button class="rounded bg-slate-800 px-4 py-1.5 text-sm text-white">Add</button>
     </form>
 
-    <div class="overflow-hidden rounded-xl border bg-white shadow-sm">
+    <div class="overflow-hidden rounded-xl border bg-white shadow-sm" data-filter="status:Status,featured:Featured">
         <?php if (!$rows): ?><p class="p-6 text-center text-sm text-slate-400">No brands yet.</p><?php endif; ?>
         <?php foreach ($rows as $b): ?>
-            <form method="post" action="/admin/store/brands" class="flex flex-wrap items-center gap-3 border-b px-4 py-2 text-sm last:border-0 <?= empty($b['is_active']) ? 'opacity-50' : '' ?>">
+            <form method="post" action="/admin/store/brands" data-filter-row data-f-status="<?= empty($b['is_active']) ? 'Inactive' : 'Active' ?>" data-f-featured="<?= empty($b['is_featured']) ? 'Not featured' : 'Featured' ?>" class="flex flex-wrap items-center gap-3 border-b px-4 py-2 text-sm last:border-0 <?= empty($b['is_active']) ? 'opacity-50' : '' ?>">
                 <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
                 <input type="hidden" name="id" value="<?= (int) $b['id'] ?>">
                 <input name="name" value="<?= $e($b['name']) ?>" class="flex-1 rounded border px-2 py-1">

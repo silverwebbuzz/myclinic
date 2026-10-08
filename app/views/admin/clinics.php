@@ -17,7 +17,7 @@
         <?php endif; ?>
         <p class="mt-1 text-xs text-slate-500">MRR shows monthly revenue from <strong>paid</strong> subscriptions only (₹/mo). Trials and free plans count as ₹0.</p>
         <div class="mt-4 overflow-x-auto ui-card">
-            <table class="w-full text-left text-sm">
+            <table data-filter="Plan,Status,Churn" class="w-full text-left text-sm">
                 <thead class="border-b bg-slate-50 text-xs uppercase text-slate-500">
                     <tr>
                         <th class="px-4 py-3">Clinic</th>

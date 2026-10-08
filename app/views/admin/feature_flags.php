@@ -29,7 +29,7 @@
                 The <code>feature_flags</code> table doesn't exist yet. Run Phase 1 migrations first.
             </div>
         <?php else: ?>
-            <div class="space-y-3">
+            <div class="space-y-3" data-filter="">
             <?php foreach ($flags as $f):
                 $betaIds = $f['beta_tenant_ids'] ? json_decode((string) $f['beta_tenant_ids'], true) : [];
                 $betaStr = is_array($betaIds) ? implode(', ', $betaIds) : '';

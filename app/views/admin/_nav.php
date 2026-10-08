@@ -279,7 +279,174 @@ if (!defined('ECP_ADMIN_ALPINE_LOADED')) {
     }
     a.rounded-full:not(.bg-slate-800):not(.bg-slate-900).bg-white { border: 1px solid #e4e7ec; border-radius: 6px; color: #475569; }
     a.rounded-full:not(.bg-slate-800):not(.bg-slate-900).bg-white:hover { background: #f8fafc; }
+
+    /* List filter bar (see the script below) */
+    .adm-fbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; }
+    .adm-fbar.in-card { margin: 0; padding: 10px 16px; border-bottom: 1px solid #eef0f3; }
+    .adm-fbar .adm-fsearch { position: relative; flex: 1 1 220px; max-width: 320px; }
+    .adm-fbar .adm-fsearch svg { position: absolute; left: 9px; top: 50%; width: 14px; height: 14px; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
+    .adm-fbar input.adm-fq { width: 100%; height: 32px; padding: 0 10px 0 30px !important; font-size: 13px !important; border: 1px solid #e4e7ec; border-radius: 7px; background: #fff; }
+    .adm-fbar select { height: 32px; padding: 0 28px 0 10px; font-size: 13px !important; border: 1px solid #e4e7ec; border-radius: 7px; background-color: #fff; color: #0f172a; max-width: 200px; }
+    .adm-fbar select.on { border-color: #059669; background-color: #ecfdf5; color: #065f46; font-weight: 500; }
+    .adm-fbar .adm-fclear { height: 32px; padding: 0 10px; font-size: 12.5px; font-weight: 500; color: #475569; border-radius: 7px; }
+    .adm-fbar .adm-fclear:hover { background: #f1f5f9; }
+    .adm-fbar .adm-fcount { margin-left: auto; font-size: 12px; color: #64748b; white-space: nowrap; }
+    .adm-fnone td, li.adm-fnone, div.adm-fnone { padding: 28px 16px !important; text-align: center; color: #64748b; }
+    .adm-f-hide { display: none !important; }
 </style>
+<script>
+/*
+ * Admin list filter bar — search + dropdown filters for any listing.
+ *   <table data-filter="Status,Plan">          dropdown per named column (matched on header text)
+ *   <div data-filter="status:Status">          card list: rows are [data-filter-row] (or direct children),
+ *     <div data-filter-row data-f-status="Active">  each facet value read from data-f-<key>
+ *   data-filter=""                             search only
+ * A cell can override its filter value with data-f="…" (default: first line of its text).
+ * Filters only what is already on the page — for paginated lists use the server search.
+ */
+(function () {
+    const norm = (s) => (s || '').replace(/\s+/g, ' ').trim();
+    const firstLine = (el) => norm(((el.dataset && el.dataset.f) ?? (el.innerText || el.textContent) ?? '').split('\n').map(norm).find(Boolean) || '');
+    // Row text for search: visible text plus what editable rows hold in their fields.
+    const textOf = (r) => norm((r.innerText || r.textContent) + ' ' + [...r.querySelectorAll('input:not([type=hidden]):not([type=checkbox]):not([type=radio]), textarea, select')]
+        .map((f) => (f.tagName === 'SELECT' ? (f.selectedOptions[0] || {}).text || '' : f.value)).join(' ')).toLowerCase();
+    const ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>';
+
+    function rowsOf(box) {
+        if (box.tagName === 'TABLE') {
+            return [...box.tBodies].flatMap((tb) => [...tb.rows]);
+        }
+        const marked = box.querySelectorAll('[data-filter-row]');
+        return marked.length ? [...marked] : [...box.children].filter((c) => c.tagName !== 'TEMPLATE' && !c.classList.contains('adm-fnone'));
+    }
+    // A single colspan cell row (edit form, details, empty state) belongs to the row above it.
+    const isAttached = (r) => r.tagName === 'TR' && r.cells.length === 1 && r.cells[0].colSpan > 1;
+
+    function init(box, idx) {
+        if (box.dataset.filterReady) {
+            return;
+        }
+        const isTable = box.tagName === 'TABLE';
+        const main = () => rowsOf(box).filter((r) => !isAttached(r));
+        if (main().length < 2) {
+            return; // nothing worth filtering (yet)
+        }
+        box.dataset.filterReady = '1';
+
+        const heads = isTable && box.tHead ? [...box.tHead.rows[box.tHead.rows.length - 1].cells].map((th) => norm(th.textContent).toLowerCase()) : [];
+        const facets = (box.dataset.filter || '').split(',').map(norm).filter(Boolean).map((spec) => {
+            const [a, b] = spec.includes(':') ? spec.split(':') : [null, spec];
+            const label = norm(b);
+            const col = a ? -1 : heads.indexOf(label.toLowerCase());
+            const val = a
+                ? (r) => norm(r.getAttribute('data-f-' + norm(a)))
+                : (r) => (col >= 0 && r.cells[col] ? firstLine(r.cells[col]) : '');
+            return { label, val, ok: !!a || col >= 0 };
+        }).filter((f) => f.ok);
+
+        const bar = document.createElement('div');
+        bar.className = 'adm-fbar';
+        bar.innerHTML = '<label class="adm-fsearch">' + ICON + '<input type="search" class="adm-fq" placeholder="Search this list…" aria-label="Search this list"></label>';
+        const q = bar.querySelector('input');
+        const selects = facets.map((f) => {
+            const values = [...new Set(main().map(f.val).filter(Boolean))].sort((x, y) => x.localeCompare(y, 'en', { numeric: true }));
+            const s = document.createElement('select');
+            s.setAttribute('aria-label', 'Filter by ' + f.label);
+            s.innerHTML = '<option value="">All · ' + f.label + '</option>' + values.map((v) => '<option></option>').join('');
+            values.forEach((v, i) => { s.options[i + 1].value = v; s.options[i + 1].textContent = v; });
+            bar.appendChild(s);
+            return s;
+        });
+        const clear = document.createElement('button');
+        clear.type = 'button';
+        clear.className = 'adm-fclear';
+        clear.textContent = 'Clear';
+        clear.hidden = true;
+        bar.appendChild(clear);
+        const count = document.createElement('span');
+        count.className = 'adm-fcount';
+        bar.appendChild(count);
+
+        // Place the bar above the table's own scroll wrapper; inside a card it becomes the card's toolbar strip.
+        let anchor = box;
+        if (isTable && box.parentElement && /overflow-x-auto|overflow-auto/.test(box.parentElement.className) && box.parentElement.children.length === 1) {
+            anchor = box.parentElement;
+        }
+        const card = anchor.parentElement && anchor.parentElement.closest('.ui-card, .bg-white');
+        const anchorIsCard = anchor.matches('.ui-card, .bg-white');
+        if (card && !anchorIsCard && card.closest('main')) {
+            bar.classList.add('in-card');
+        }
+        anchor.parentElement.insertBefore(bar, anchor);
+
+        // "No matches" row/item
+        let none;
+        if (isTable) {
+            none = document.createElement('tr');
+            none.className = 'adm-fnone adm-f-hide';
+            none.innerHTML = '<td colspan="99">No rows match these filters.</td>';
+            (box.tBodies[box.tBodies.length - 1] || box).appendChild(none);
+        } else {
+            none = document.createElement('div');
+            none.className = 'adm-fnone adm-f-hide';
+            none.textContent = 'Nothing matches these filters.';
+            box.appendChild(none);
+        }
+
+        const key = 'admf:' + location.pathname + ':' + idx;
+        function apply(save) {
+            const term = norm(q.value).toLowerCase();
+            const picks = selects.map((s) => s.value);
+            let shown = 0, total = 0, lastVisible = true;
+            rowsOf(box).forEach((r) => {
+                if (r === none) {
+                    return;
+                }
+                if (isAttached(r)) {
+                    r.classList.toggle('adm-f-hide', !lastVisible);
+                    return;
+                }
+                total++;
+                const ok = (!term || textOf(r).includes(term))
+                    && facets.every((f, i) => !picks[i] || f.val(r) === picks[i]);
+                r.classList.toggle('adm-f-hide', !ok);
+                lastVisible = ok;
+                if (ok) {
+                    shown++;
+                }
+            });
+            none.classList.toggle('adm-f-hide', shown > 0);
+            const active = !!term || picks.some(Boolean);
+            selects.forEach((s) => s.classList.toggle('on', !!s.value));
+            clear.hidden = !active;
+            count.textContent = active ? shown + ' of ' + total : total + ' total';
+            if (save) {
+                try { sessionStorage.setItem(key, JSON.stringify({ q: q.value, p: picks })); } catch (e) {}
+            }
+        }
+        q.addEventListener('input', () => apply(true));
+        selects.forEach((s) => s.addEventListener('change', () => apply(true)));
+        clear.addEventListener('click', () => { q.value = ''; selects.forEach((s) => { s.value = ''; }); apply(true); q.focus(); });
+
+        // Keep the filters when coming back from a detail page (same tab only).
+        try {
+            const saved = JSON.parse(sessionStorage.getItem(key) || 'null');
+            if (saved) {
+                q.value = saved.q || '';
+                selects.forEach((s, i) => { if ([...s.options].some((o) => o.value === (saved.p || [])[i])) { s.value = saved.p[i]; } });
+            }
+        } catch (e) {}
+        apply(false);
+    }
+
+    function boot() {
+        document.querySelectorAll('main [data-filter]').forEach(init);
+    }
+    document.addEventListener('DOMContentLoaded', boot);
+    // Lists rendered by Alpine (x-for) only exist after it starts.
+    document.addEventListener('alpine:initialized', () => setTimeout(boot, 0));
+})();
+</script>
 <?php endif; ?>
 
 <aside class="fixed inset-y-0 left-0 z-40 flex w-[244px] -translate-x-full flex-col bg-[#0b1220] text-[#C8D1DF] transition-transform duration-200 md:translate-x-0"

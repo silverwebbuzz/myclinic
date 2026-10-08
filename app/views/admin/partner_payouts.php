@@ -22,7 +22,7 @@
         </div>
     </div>
 
-    <div class="mt-4 space-y-3">
+    <div class="mt-4 space-y-3" data-filter="">
         <?php if (empty($requests)): ?>
             <div class="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-400">No payout requests.</div>
         <?php else: foreach ($requests as $r): ?>

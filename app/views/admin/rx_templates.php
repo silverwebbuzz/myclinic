@@ -39,7 +39,7 @@
         </form>
 
         <div class="overflow-hidden rounded-xl border border-slate-200 bg-white">
-            <table class="w-full text-sm">
+            <table data-filter="Mode,Status" class="w-full text-sm">
                 <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr>
                         <th class="px-4 py-3">Specialty</th>

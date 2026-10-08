@@ -46,7 +46,7 @@ $totalAvailable = array_sum(array_map(static fn ($b) => max(0, (int) $b['availab
     <?php endif; ?>
 
     <section class="overflow-x-auto rounded-xl border bg-white shadow-sm">
-        <table class="w-full text-sm">
+        <table data-filter="" class="w-full text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
             <tr><th class="px-4 py-2">Seller</th><th class="px-4 py-2 text-right">Pending (return window)</th><th class="px-4 py-2 text-right">Available</th><th class="px-4 py-2 text-right">In payout</th><th class="px-4 py-2 text-right">Paid (lifetime)</th><th class="px-4 py-2">Bank</th></tr>
             </thead>
@@ -90,7 +90,7 @@ $totalAvailable = array_sum(array_map(static fn ($b) => max(0, (int) $b['availab
                 <?php endforeach; ?>
             </nav>
         </div>
-        <table class="w-full text-sm">
+        <table data-filter="" class="w-full text-sm">
             <tbody class="divide-y">
             <?php if (!$payouts): ?><tr><td class="px-4 py-6 text-center text-slate-400">No payouts yet.</td></tr><?php endif; ?>
             <?php foreach ($payouts as $p): ?>

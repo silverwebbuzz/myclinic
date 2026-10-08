@@ -162,7 +162,7 @@ $modulesSummary = static function ($raw): string {
 
         <!-- ===== Existing plans ===== -->
         <div class="overflow-hidden rounded-xl border bg-white shadow-sm">
-            <table class="w-full text-sm">
+            <table data-filter="Status" class="w-full text-sm">
                 <thead class="bg-slate-50 text-left text-slate-500">
                     <tr>
                         <th class="px-4 py-2">Plan</th>

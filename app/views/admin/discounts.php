@@ -124,7 +124,7 @@ $planPrice = \App\Services\BillingGatewayService::monthlyPriceInr();
 
         <!-- ===== Existing codes ===== -->
         <div class="overflow-x-auto rounded-xl border bg-white shadow-sm">
-            <table class="w-full text-sm">
+            <table data-filter="Status" class="w-full text-sm">
                 <thead class="bg-slate-50 text-left text-slate-500">
                     <tr>
                         <th class="px-4 py-2">Code</th>

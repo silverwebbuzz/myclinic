@@ -30,9 +30,9 @@ $in = 'mt-1 w-full rounded border px-2 py-1.5 text-sm';
         <div class="sm:col-span-2 sm:text-right"><button class="rounded bg-slate-800 px-4 py-1.5 text-sm text-white">Add banner</button></div>
     </form>
 
-    <div class="space-y-3">
+    <div class="space-y-3" data-filter="status:Status">
         <?php foreach ($rows as $b): ?>
-            <form method="post" action="/admin/store/banners" enctype="multipart/form-data" class="flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4 text-sm shadow-sm <?= (int) $b['is_active'] === 1 ? '' : 'opacity-60' ?>">
+            <form method="post" action="/admin/store/banners" enctype="multipart/form-data" data-filter-row data-f-status="<?= (int) $b['is_active'] === 1 ? 'Active' : 'Inactive' ?>" class="flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4 text-sm shadow-sm <?= (int) $b['is_active'] === 1 ? '' : 'opacity-60' ?>">
                 <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
                 <input type="hidden" name="id" value="<?= (int) $b['id'] ?>">
                 <img src="<?= $e($b['image_path']) ?>" alt="" class="h-16 w-48 rounded object-cover">

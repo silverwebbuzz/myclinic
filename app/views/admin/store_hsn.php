@@ -66,7 +66,7 @@ $form = static function (?array $r) use ($e, $rates, $in, $csrf): string {
     <section class="rounded-xl border border-red-200 bg-white shadow-sm">
         <h2 class="border-b px-4 py-3 font-semibold text-red-700"><?= count($mismatches) ?> product(s) need fixing</h2>
         <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+        <table data-filter="Seller,Problem" class="w-full text-sm">
             <thead class="bg-slate-50 text-left text-xs text-slate-500"><tr><th class="px-4 py-2">Product</th><th class="px-4 py-2">Seller</th><th class="px-4 py-2">HSN</th><th class="px-4 py-2">Problem</th></tr></thead>
             <tbody>
             <?php foreach ($mismatches as $m): ?>

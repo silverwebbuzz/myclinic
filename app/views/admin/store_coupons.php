@@ -59,7 +59,7 @@ $in = 'mt-1 w-full rounded border px-2 py-1.5 text-sm';
     </form>
 
     <div class="overflow-x-auto rounded-xl border bg-white shadow-sm">
-        <table class="w-full text-sm">
+        <table data-filter="Scope,Funded" class="w-full text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500"><tr><th class="px-4 py-2">Code</th><th class="px-4 py-2">Offer</th><th class="px-4 py-2">Scope</th><th class="px-4 py-2">Funded</th><th class="px-4 py-2">Valid</th><th class="px-4 py-2 text-right">Used</th><th class="px-4 py-2"></th></tr></thead>
             <tbody class="divide-y">
             <?php if (!$rows): ?><tr><td colspan="7" class="px-4 py-8 text-center text-slate-400">No coupons yet.</td></tr><?php endif; ?>

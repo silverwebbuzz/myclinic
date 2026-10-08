@@ -52,10 +52,13 @@
             </div>
         <?php endif; ?>
 
-        <div class="mt-6 space-y-3">
+        <div class="mt-6 space-y-3" data-filter="type:Type,city:City,specialty:Specialty">
             <?php foreach ($claims as $c): ?>
                 <?php $isClaim = $c['type'] === 'claim'; $listing = $c['_listing'] ?? null; ?>
-                <a href="/admin/claims/<?= (int) $c['id'] ?>"
+                <a href="/admin/claims/<?= (int) $c['id'] ?>" data-filter-row
+                   data-f-type="<?= $isClaim ? 'Claim' : 'New listing' ?>"
+                   data-f-city="<?= htmlspecialchars((string) ($c['city'] ?? '')) ?>"
+                   data-f-specialty="<?= htmlspecialchars((string) ($c['specialty'] ?? '')) ?>"
                    class="block ui-card p-4 hover:border-emerald-400 hover:shadow-sm transition">
                     <div class="flex items-start justify-between gap-4">
                         <div class="min-w-0 flex-1">

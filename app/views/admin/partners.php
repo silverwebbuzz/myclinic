@@ -65,7 +65,7 @@
             <p class="text-sm text-slate-400">No partners found.</p>
         <?php else: ?>
         <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+            <table data-filter="Status" class="w-full text-sm">
                 <thead class="text-left text-xs text-slate-400">
                     <tr><th class="py-2">Name</th><th>Email</th><th>Location</th><th>Code</th><th>Override</th><th>Status</th><th></th></tr>
                 </thead>

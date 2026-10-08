@@ -23,7 +23,7 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
         <?php endforeach; ?>
     </nav>
     <div class="overflow-x-auto rounded-xl border bg-white shadow-sm">
-        <table class="w-full text-sm">
+        <table data-filter="Seller,Status" class="w-full text-sm">
             <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500"><tr><th class="px-4 py-2">Return</th><th class="px-4 py-2">Seller</th><th class="px-4 py-2">Reason</th><th class="px-4 py-2">Status</th><th class="px-4 py-2">Requested</th></tr></thead>
             <tbody class="divide-y">
             <?php if (!$rows): ?><tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">No returns.</td></tr><?php endif; ?>
@@ -33,7 +33,7 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
                     <td class="px-4 py-2"><a href="/admin/store/returns/<?= (int) $r['id'] ?>" class="font-mono text-sky-700 hover:underline"><?= $e($r['return_no']) ?></a><div class="text-xs text-slate-500"><?= $e($r['order_no']) ?></div></td>
                     <td class="px-4 py-2"><?= $e($r['vendor_name']) ?></td>
                     <td class="px-4 py-2"><?= $e(ReturnService::REASONS[$r['reason_code']] ?? $r['reason_code']) ?></td>
-                    <td class="px-4 py-2"><?= $e(str_replace('_', ' ', (string) $r['status'])) ?><?= $late ? ' <span class="text-xs font-semibold text-red-600">seller late: decide</span>' : '' ?></td>
+                    <td class="px-4 py-2" data-f="<?= $e(str_replace('_', ' ', (string) $r['status'])) ?>"><?= $e(str_replace('_', ' ', (string) $r['status'])) ?><?= $late ? ' <span class="text-xs font-semibold text-red-600">seller late: decide</span>' : '' ?></td>
                     <td class="px-4 py-2 text-slate-500"><?= $e(\App\Support\IndianDate::dateTime($r['created_at'])) ?></td>
                 </tr>
             <?php endforeach; ?>

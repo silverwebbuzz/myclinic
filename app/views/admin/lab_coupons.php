@@ -83,7 +83,7 @@
 
         <!-- List -->
         <div class="overflow-x-auto rounded-xl border bg-white shadow-sm">
-            <table class="w-full text-sm">
+            <table data-filter="Status" class="w-full text-sm">
                 <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr><th class="px-4 py-2">Code</th><th class="px-4 py-2 text-center">%</th><th class="px-4 py-2">Description</th><th class="px-4 py-2">Login</th><th class="px-4 py-2">Window</th><th class="px-4 py-2">Status</th><th class="px-4 py-2"></th></tr>
                 </thead>
