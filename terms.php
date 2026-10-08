@@ -90,7 +90,7 @@ require __DIR__ . '/partials/header.php';
 
         <h2>7. Subscription, fees &amp; taxes</h2>
         <p>
-            eClinicPro is offered as a single annual plan (currently ₹16,000/year), plus optional
+            eClinicPro is offered as a single monthly plan (currently <?= e(ecp_plan_price_label()) ?>), plus optional
             add-ons, as described on the <a href="/clinic-management-software#pricing">pricing section</a>. New clinics
             start with a 30-day free trial; no card is required to begin the trial. Fees are exclusive
             of taxes — GST (currently 18%) is added at checkout. Payments are processed by our payment

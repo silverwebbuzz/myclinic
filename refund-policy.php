@@ -2,12 +2,12 @@
 // =====================================================================
 // refund-policy.php — eClinicPro Refund & Cancellation Policy
 // Brand of Silver Webbuzz Pvt Ltd. Covers the 30-day free trial,
-// annual subscription billing, GST, add-ons, and cancellation.
+// monthly subscription billing, GST, add-ons, and cancellation.
 // =====================================================================
 require_once __DIR__ . '/partials/helpers.php';
 
 $pageTitle  = 'Refund & Cancellation Policy — eClinicPro';
-$metaDesc   = 'eClinicPro refund and cancellation terms — 30-day free trial, annual subscription, add-ons, GST and how to cancel.';
+$metaDesc   = 'eClinicPro refund and cancellation terms — 30-day free trial, monthly subscription, add-ons, GST and how to cancel.';
 $activePage = 'legal';
 $lastUpdated = 'June 8, 2026';
 
@@ -47,7 +47,7 @@ require __DIR__ . '/partials/header.php';
 
         <h2>2. Subscription &amp; billing</h2>
         <ul>
-            <li>eClinicPro is billed as a single <strong>annual plan</strong> (currently ₹16,000/year).</li>
+            <li>eClinicPro is billed as a single <strong>monthly plan</strong> (currently <?= e(ecp_plan_price_label()) ?>).</li>
             <li>Prices are exclusive of taxes; <strong>GST (currently 18%) is added at checkout</strong>.</li>
             <li>Payments are processed in INR through our payment gateway (Razorpay).</li>
             <li>Optional add-ons (e.g., Patient Connect, Clinic Network) are billed monthly and can be cancelled at any time.</li>

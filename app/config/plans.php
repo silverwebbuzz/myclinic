@@ -12,9 +12,9 @@ return [
         'name' => 'Clinic',
         'tagline' => 'Everything to run your clinic',
         // NOTE: fields are named *_usd for legacy reasons but hold INR amounts.
-        // Single annual plan: ₹16,000/year (10% off ₹17,988; GST added at checkout).
+        // Single monthly plan: ₹999/month + GST (fallback only — /admin/plans sets the real price).
         'monthly_usd' => 999,    // fallback when the plans table is unavailable (admin sets the real price)
-        'yearly_usd' => 16000,
+        'yearly_usd' => 11988,   // 12 × monthly
         'seat_limit' => 999,        // unlimited in practice
         'patient_limit' => null,
         'featured' => true,

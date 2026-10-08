@@ -268,6 +268,12 @@ function ecp_standard_plan(): array
     ];
 }
 
+/** "₹999/month" — the live Standard price for marketing copy (follows /admin/plans). */
+function ecp_plan_price_label(): string
+{
+    return '₹' . number_format(ecp_standard_plan()['monthly']) . '/month';
+}
+
 /**
  * Logs a demo request. Creates the table on first use so we don't need a migration.
  */

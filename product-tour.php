@@ -93,7 +93,7 @@ $chapters = [
         'blurb' => 'Pick your specialty and the right tools appear automatically. One simple plan — no module juggling, no surprise bills.',
         'screens' => [
             ['7.1', 'Specialty setup', 'Choose your specialty once. The visit screen, vitals, and case forms adapt to how you actually work — homeopathy case-taking, dental charting, pediatric growth, and more. Change it any time from Settings.', '🛠️',
-                [['✓', 'Smart defaults', 'The right sections show for your specialty.'], ['🧾', 'One plan', '₹16,000/year — everything included.'], ['🛡️', 'Your control', 'Toggle optional sections on or off per clinic.']]],
+                [['✓', 'Smart defaults', 'The right sections show for your specialty.'], ['🧾', 'One plan', ecp_plan_price_label() . ' — everything included.'], ['🛡️', 'Your control', 'Toggle optional sections on or off per clinic.']]],
         ],
     ],
 ];
@@ -189,7 +189,7 @@ $screenCount = array_sum(array_map(fn($c) => count($c['screens']), $chapters));
 <section class="pt-end">
     <div class="wrap pt-end-inner reveal">
         <h2 class="h-section pt-end-h">That’s the whole tour. Try it on your own clinic.</h2>
-        <p class="lede pt-end-sub">One plan, everything included — ₹16,000/year. 30-day free trial, no card required.</p>
+        <p class="lede pt-end-sub">One plan, everything included — <?= e(ecp_plan_price_label()) ?> + GST. 30-day free trial, no card required.</p>
         <div class="pt-hero-cta">
             <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg">Start 30-day free trial</a>
             <a href="/#pricing" class="btn btn-ghost-dark btn-lg">See pricing</a>

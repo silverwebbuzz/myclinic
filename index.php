@@ -22,7 +22,7 @@ require_once __DIR__ . '/partials/helpers.php';
 require_once __DIR__ . '/partials/seo_slugs.php';
 
 $pageTitle = 'eClinicPro — Book a doctor, or run your clinic';
-$metaDesc  = 'Find and book verified doctors across India in 60 seconds — or run your whole practice on one simple, beautiful clinic system. One plan, ₹11,988/year.';
+$metaDesc  = 'Find and book verified doctors across India in 60 seconds — or run your whole practice on one simple, beautiful clinic system. One plan, ' . ecp_plan_price_label() . ' + GST.';
 $activePage = '';
 
 // ---- Real numbers from the DB (helpers fall back to safe floors) ----
@@ -984,11 +984,9 @@ require __DIR__ . '/partials/header.php';
                 </div>
                 <div class="pricing-body">
                     <div class="price-main">
-                        <span class="price-sym">₹</span><span class="price-num">11,988</span><span class="price-yr">/year</span>
+                        <span class="price-sym">₹</span><span class="price-num"><?= number_format(ecp_standard_plan()['monthly']) ?></span><span class="price-yr">/month</span>
                     </div>
                     <div class="price-meta">
-                        <span class="price-original">₹17,988</span>
-                        <span class="save-tag">SAVE 33%</span>
                         <span class="gst-txt">+ 18% GST at checkout</span>
                     </div>
 
@@ -1076,7 +1074,7 @@ $faqPatients = [
     ['Which cities and specialties are covered?', 'We\'re live across India with 50+ specialties — from general physicians and dentists to homeopaths, dermatologists, physiotherapists and more.'],
 ];
 $faqDoctors = [
-    ['What does it cost?', 'One annual plan: ₹11,988/year (33% off ₹17,988; GST added at checkout). Everything to run a clinic is included, with a 30-day free trial and no card required.'],
+    ['What does it cost?', 'One monthly plan: ' . ecp_plan_price_label() . ' (GST added at checkout). Everything to run a clinic is included, with a 30-day free trial and no card required.'],
     ['Is WhatsApp/SMS an extra add-on?', 'No. WhatsApp-first messaging with SMS fallback — confirmations, reminders, prescription delivery and follow-up nudges — is built into every plan at no extra cost.'],
     ['Will patients actually find me?', 'Yes. Your public profile on eclinicpro.com\'s directory is included, so patients searching your city and specialty can discover and book you directly.'],
     ['Is my clinic and patient data secure?', 'Records are encrypted at rest and in transit, with per-clinic isolation and audit logging. You can export everything as PDF or JSON anytime.'],

@@ -171,7 +171,7 @@ $has = static fn (string $m) => in_array($m, $visibleModules ?? [], true);
             <section id="plan" class="scroll-mt-4 ui-card p-6">
                 <h2 class="ui-section-title text-[17px]">Plan &amp; add-ons</h2>
                 <p class="mt-2 text-sm text-slate-600">
-                    One plan, ₹1,499/month, includes everything to run your clinic. Two optional
+                    One plan, ₹<?= number_format(\App\Services\BillingGatewayService::monthlyPriceInr()) ?>/month + GST, includes everything to run your clinic. Two optional
                     add-ons: <strong>Patient Connect</strong> (WhatsApp automation) and
                     <strong>Clinic Network</strong> (extra branches). Manage these under
                     <a href="/settings?tab=subscription" class="font-medium text-brand hover:underline">Settings → Subscription</a>.
