@@ -48,6 +48,25 @@ function store_setting(string $key, string $default = ''): string
     return $cache[$key] ?? $default;
 }
 
+/** Platform return window in hours (mirror of App\Services\Store\ReturnService::windowHours). */
+function store_return_window_hours(): int
+{
+    $h = store_setting('store_return_window_hours');
+    if ($h === '') {
+        return max(0, (int) store_setting('store_default_return_window_days', '7')) * 24;
+    }
+
+    return max(0, min(720, (int) $h));
+}
+
+/** "24 hours", "48 hours", "7 days". */
+function store_return_window_label(): string
+{
+    $h = store_return_window_hours();
+
+    return $h > 48 && $h % 24 === 0 ? ($h / 24) . ' days' : $h . ($h === 1 ? ' hour' : ' hours');
+}
+
 function store_is_live(): bool
 {
     return store_setting('store_enabled', '0') === '1';

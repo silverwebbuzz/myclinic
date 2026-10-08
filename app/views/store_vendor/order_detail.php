@@ -2,6 +2,8 @@
 /** @var array<string,mixed> $vo */
 use App\Services\Store\ProductService;
 
+$disputes ??= [];   // ChargeDisputeService::forPackage (ledger_id => dispute)
+
 $pageTitle = 'Order ' . $vo['sub_order_no'];
 $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
 $r = static fn ($p): string => '₹' . ProductService::rupees((int) $p);
@@ -191,7 +193,29 @@ ob_start();
         <?php if ($charges ?? []): ?>
             <ul class="mt-3 space-y-0.5 border-t border-ln pt-2 text-xs text-tx2">
                 <?php foreach ($charges as $c): ?>
-                    <li class="flex justify-between gap-2"><span><?= $e($c['memo']) ?></span><span class="<?= (int) $c['amount_paise'] < 0 ? 'text-red-700' : 'text-emerald-700' ?>"><?= (int) $c['amount_paise'] < 0 ? '−' : '+' ?><?= $r(abs((int) $c['amount_paise'])) ?></span></li>
+                    <?php $dsp = $disputes[(int) $c['id']] ?? null; ?>
+                    <li class="py-0.5">
+                        <div class="flex justify-between gap-2"><span><?= $e($c['memo']) ?></span><span class="<?= (int) $c['amount_paise'] < 0 ? 'text-red-700' : 'text-emerald-700' ?>"><?= (int) $c['amount_paise'] < 0 ? '−' : '+' ?><?= $r(abs((int) $c['amount_paise'])) ?></span></div>
+                        <?php if ($dsp !== null): ?>
+                            <div class="mt-0.5 text-[11px] <?= $dsp['status'] === 'open' ? 'text-amber-700' : ($dsp['status'] === 'accepted' ? 'text-emerald-700' : 'text-tx3') ?>">
+                                <?php if ($dsp['status'] === 'open'): ?>
+                                    Disputed: held out of your payouts. We'll reply by <?= $e(\App\Support\IndianDate::date($dsp['respond_by'])) ?>.
+                                <?php else: ?>
+                                    Dispute <?= $dsp['status'] === 'accepted' ? 'accepted, charge reversed' : 'rejected' ?>: <?= $e($dsp['resolution_note']) ?>
+                                <?php endif; ?>
+                            </div>
+                        <?php elseif (\App\Services\Store\ChargeDisputeService::canDispute($c, $disputes ?? [])): ?>
+                            <details class="mt-0.5">
+                                <summary class="cursor-pointer text-[11px] font-medium text-act">Dispute this charge</summary>
+                                <form method="post" action="/vendor/orders/<?= (int) $vo['id'] ?>/charges/<?= (int) $c['id'] ?>/dispute" class="mt-1 space-y-1.5">
+                                    <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+                                    <textarea name="reason" required minlength="10" maxlength="1000" rows="2" placeholder="Why is this charge wrong? e.g. the parcel photo shows 480 g, the courier billed 1.5 kg" class="w-full rounded-[7px] border border-ln px-2 py-1.5 text-xs"></textarea>
+                                    <button class="rounded-[7px] border border-ln px-3 py-1 text-xs font-medium hover:bg-sf2">Send dispute</button>
+                                    <span class="text-[11px] text-tx3">Within <?= (int) \App\Services\Store\ChargeDisputeService::windowDays() ?> days of the charge. It's held out of your payouts until we reply.</span>
+                                </form>
+                            </details>
+                        <?php endif; ?>
+                    </li>
                 <?php endforeach; ?>
             </ul>
         <?php endif; ?>

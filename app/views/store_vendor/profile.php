@@ -55,11 +55,11 @@ ob_start();
                 <input type="number" name="handling_days" min="1" max="10" value="<?= (int) ($vendor['handling_days'] ?? 2) ?>" class="<?= $input ?>">
                 <span class="text-xs text-tx3">Days from order to handing over to the courier.</span>
             </label>
-            <label class="block text-sm">
-                <span class="text-tx2">Default return window (days)</span>
-                <input type="number" name="default_return_window_days" min="0" max="30" value="<?= (int) ($vendor['default_return_window_days'] ?? 7) ?>" class="<?= $input ?>">
-                <span class="text-xs text-tx3">0 = no returns. Can be overridden per product.</span>
-            </label>
+            <div class="block text-sm">
+                <span class="text-tx2">Return window</span>
+                <div class="mt-1 rounded-[7px] border border-ln bg-sf2 px-3 py-2 text-tx2"><?= htmlspecialchars(\App\Services\Store\ReturnService::windowLabel(), ENT_QUOTES, 'UTF-8') ?> from delivery</div>
+                <span class="text-xs text-tx3">Same for every seller, set by eClinicPro. Only damaged, wrong, defective or expired items can be returned. Your earnings are payable once it ends.</span>
+            </div>
         </div>
     </section>
 

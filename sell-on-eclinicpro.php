@@ -15,7 +15,9 @@ require_once __DIR__ . '/partials/helpers.php';
 require_once __DIR__ . '/store/_lib.php';
 
 $sellMinPayout = store_rupees((int) store_setting('store_min_payout_paise', '10000'));
-$sellReturnDays = (int) store_setting('store_default_return_window_days', '7');
+$sellReturnWindow = store_return_window_label();
+$sellPayoutDay = [1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday', 7 => 'Sunday'][max(1, min(7, (int) store_setting('store_payout_weekday', '2')))];
+$sellDisputeDays = (int) store_setting('store_charge_dispute_days', '7');
 $sellAcceptHours = (int) store_setting('store_vendor_accept_sla_hours', '48');
 $sellNeedsGstin = store_setting('store_require_gstin', '1') === '1';
 $sellStoreLive = store_is_live();
@@ -40,8 +42,8 @@ $sellBenefits = [
         'Every customer pays online before you ship. There is no cash-on-delivery, so no unpaid parcels and no chasing money.'],
     ['🧾', 'GST invoices made automatically',
         'A tax invoice in your name and GSTIN is created for every package, and credit notes for refunds. Download your GST register as a CSV for your CA.'],
-    ['🏦', 'Regular payouts to your bank',
-        'Earnings are paid to your verified bank account once they clear the return window. Each payout comes with a clear statement.'],
+    ['🏦', 'Paid every ' . $sellPayoutDay,
+        'Every ' . $sellPayoutDay . ' we pay all earnings that have cleared the ' . $sellReturnWindow . ' return window to your verified bank account, with a statement listing every order and deduction. Disagree with a charge? Dispute it within ' . $sellDisputeDays . ' days and it is held out of your payout until we reply.'],
     ['🎁', 'Our offers don’t cost you',
         'When eClinicPro runs a coupon, we fund the discount. Your earnings stay exactly the same.'],
     ['📊', 'A simple seller dashboard',
@@ -67,7 +69,7 @@ $sellFaqs = [
     ['Who pays for delivery?',
         'You do, at the actual courier charge. We book pickup and delivery through our courier partners, so you never deal with the courier directly. Because products differ in size and weight, the charge is worked out per package from its packed weight, dimensions and delivery pincode. When the customer pays a delivery fee (on small orders), that fee is taken off your courier charge. You see the charge on the order, and it is deducted from your payouts, so you pay nothing upfront. When you add a product, the seller portal shows an estimate of what you will earn per unit after commission and courier.'],
     ['When do I get paid?',
-        'Customers pay eClinicPro online at checkout. Your earnings for a package become available after it is delivered and its return window (usually ' . $sellReturnDays . ' days) has passed. Payouts go to your verified bank account in our regular payout runs once your balance is at least ' . $sellMinPayout . '.'],
+        'Customers pay eClinicPro online at checkout. Your earnings for a package become available ' . $sellReturnWindow . ' after it is delivered (the return window). Every ' . $sellPayoutDay . ' we pay everything that is available to your verified bank account, once your balance is at least ' . $sellMinPayout . '.'],
     ['Do I need a GSTIN?',
         $sellNeedsGstin
             ? 'Yes. You are the seller of record, so every tax invoice is issued in your name and GSTIN. You will also need to report these sales in your GST returns.'
@@ -77,7 +79,7 @@ $sellFaqs = [
     ['How do I handle an order?',
         'Accept it within ' . $sellAcceptHours . ' hours, pack it with the invoice, and book the courier from the order page. Print the label and hand the package to the courier at pickup. Tracking updates automatically for you and the customer.'],
     ['What happens with returns?',
-        'Customers can request a return within the product’s return window, with photos when an item is damaged, wrong or expired. You review each request from your Returns page. When a refund is made, a credit note is created automatically and your earnings are adjusted for those units only.'],
+        'There are no change-of-mind returns. A customer can ask for a return only within ' . $sellReturnWindow . ' of delivery, with photos, when an item is damaged, defective, wrong or expired. You review each request from your Returns page. When a refund is made, a credit note is created automatically and your earnings are adjusted for those units only.'],
     ['What if a courier loses or damages a package?',
         'The customer is refunded in full. As long as the package was packed properly, eClinicPro normally pays you what you would have earned and claims from the courier itself.'],
     ['How long does approval take?',
@@ -245,7 +247,7 @@ require __DIR__ . '/partials/header.php';
             <div class="sl-step reveal"><h3>Complete your profile</h3><p>Add business details, addresses and bank account, and upload your documents.</p></div>
             <div class="sl-step reveal"><h3>Get approved</h3><p>Our team checks your documents. You can prepare your product listings meanwhile.</p></div>
             <div class="sl-step reveal"><h3>List your products</h3><p>Add photos, price, stock, HSN and GST rate. Products go live after a quick review.</p></div>
-            <div class="sl-step reveal"><h3>Ship &amp; get paid</h3><p>Accept orders, pack them, book the courier in one click, and receive regular payouts.</p></div>
+            <div class="sl-step reveal"><h3>Ship &amp; get paid</h3><p>Accept orders, pack them, book the courier in one click, and get paid every <?= htmlspecialchars($sellPayoutDay, ENT_QUOTES, 'UTF-8') ?>.</p></div>
         </div>
     </div>
 </section>

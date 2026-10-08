@@ -123,7 +123,7 @@ $requiredDoc = (string) ($category['required_vendor_doc'] ?? '');
                 <div><dt class="text-slate-400">Brand</dt><dd><?= $e($brand['name'] ?? '—') ?></dd></div>
                 <div><dt class="text-slate-400">Manufacturer / origin</dt><dd><?= $e($product['manufacturer'] ?? '—') ?> · <?= $e($product['country_of_origin'] ?? '') ?></dd></div>
                 <div><dt class="text-slate-400">Tax</dt><dd>HSN <?= $e($product['hsn_code'] ?? '—') ?> · GST <?= (int) $product['gst_bp'] / 100 ?>%</dd></div>
-                <div><dt class="text-slate-400">Returns</dt><dd><?= !empty($product['is_returnable']) ? 'Returnable, ' . ($product['return_window_days'] !== null ? (int) $product['return_window_days'] : (int) ($vendor['default_return_window_days'] ?? 7)) . ' days' : 'Not returnable' ?><?= !empty($product['has_expiry']) ? ' · has expiry' : '' ?></dd></div>
+                <div><dt class="text-slate-400">Returns</dt><dd><?= !empty($product['is_returnable']) ? 'Returnable, ' . \App\Services\Store\ReturnService::windowLabel() . ' (platform rule)' : 'Not returnable' ?><?= !empty($product['has_expiry']) ? ' · has expiry' : '' ?></dd></div>
             </dl>
         </section>
     </div>

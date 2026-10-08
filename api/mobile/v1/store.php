@@ -263,7 +263,8 @@ switch ($action) {
             ecp_m_err('not_found', 404);
         }
         $noPromo = !empty($p['no_promotion']);
-        $returnDays = !empty($p['is_returnable']) ? (int) ($p['return_window_days'] ?? $p['default_return_window_days'] ?? 7) : 0;
+        $returnHours = !empty($p['is_returnable']) ? store_return_window_hours() : 0;
+        $returnDays = (int) ceil($returnHours / 24);   // kept for older app builds
         $related = store_products_simple(
             'AND p.category_id = :cat AND p.id <> :pid',
             ['cat' => (int) $p['category_id'], 'pid' => (int) $p['id']],
@@ -326,9 +327,10 @@ switch ($action) {
             'specs' => $specs,
             'returnable' => $returnDays > 0,
             'return_window_days' => $returnDays,
+            'return_window_hours' => $returnHours,
             'facts' => [
                 'Usually dispatched within ' . $handling . ' day' . ($handling > 1 ? 's' : '') . '. Delivery across India.',
-                $returnDays > 0 ? $returnDays . '-day returns if the product is damaged, wrong or defective.' : 'This product is not returnable.',
+                $returnHours > 0 ? 'Report a damaged, wrong or defective item within ' . store_return_window_label() . ' of delivery for a return.' : 'This product is not returnable.',
                 'Genuine product from a verified seller' . (!empty($p['license_number']) ? '. Licence no. ' . $p['license_number'] : '') . '.',
             ],
             'tax_note' => 'Inclusive of all taxes',

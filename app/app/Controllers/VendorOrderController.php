@@ -79,6 +79,7 @@ final class VendorOrderController
             'shipment' => $shipment,
             'fee' => \App\Services\Store\SellerFeeService::packageCharge($vo, $shipment),
             'charges' => \App\Services\Store\SellerFeeService::chargesFor((int) $vo['id']),
+            'disputes' => \App\Services\Store\ChargeDisputeService::forPackage((int) $vo['id']),
             'suggest' => \App\Services\Store\ShippingService::suggestPackage((int) $vo['id']),
             'courierOn' => \App\Services\Store\ShiprocketClient::configured(),
             'taxDocs' => array_values(array_filter(
@@ -123,6 +124,22 @@ final class VendorOrderController
         $vo = $this->load((int) $id);
 
         return $vo === null ? Response::html('Not found', 404) : \App\Services\Store\ShippingService::parcelPhotoResponse($vo);
+    }
+
+    /** Dispute one deduction on this package (held out of payouts until we answer). */
+    public function dispute(Request $request, string $id, string $ledgerId): Response
+    {
+        try {
+            $res = $this->load((int) $id) === null ? ['ok' => false, 'error' => 'Order not found.']
+                : \App\Services\Store\ChargeDisputeService::open((int) $this->vendor()['id'], $this->userId(), (int) $id, (int) $ledgerId,
+                    (string) ($request->post['reason'] ?? ''));
+        } catch (\Throwable $e) {
+            error_log('[VendorOrder::dispute] ' . $e->getMessage());
+            $res = ['ok' => false, 'error' => 'Could not send the dispute right now. Please try again shortly.'];
+        }
+        $this->flash($res, 'Dispute sent. The charge is held out of your payouts until we reply.');
+
+        return Response::redirect('/vendor/orders/' . (int) $id);
     }
 
     public function accept(Request $request, string $id): Response

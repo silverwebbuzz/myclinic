@@ -32,4 +32,9 @@ $sellerInvoices = \App\Services\Store\SellerInvoiceService::issueDue();
 // 8. eClinicPro Points: return window over → pending points spendable; 180-day expiry
 $pointsMatured = \App\Services\Store\PointsService::matureDue();
 $pointsExpired = \App\Services\Store\PointsService::expireDue();
+// 9. weekly payout day (default Tuesday, from 9 AM): create the payout batch once + email the team
+$payoutBatch = \App\Services\Store\SettlementService::autoWeeklyBatch();
+if ($payoutBatch >= 0) {
+    echo date('Y-m-d H:i:s') . " store: weekly payout batch created {$payoutBatch} payout(s)\n";
+}
 echo date('Y-m-d H:i:s') . " store: points lots matured {$pointsMatured}, expired {$pointsExpired}, seller invoices {$sellerInvoices}, expired {$expired} unpaid order(s), auto-cancelled {$autoCancelled} late package(s), polled {$polled} shipment(s), released {$released} ledger entr(ies), invoiced {$invoiced} package(s)\n";

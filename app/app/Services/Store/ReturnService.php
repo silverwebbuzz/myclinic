@@ -37,6 +37,31 @@ final class ReturnService
     public const OPEN = ['requested', 'approved', 'pickup_scheduled', 'picked_up', 'received', 'qc_failed'];
     private const PHOTO_EXT = ['jpg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'];
 
+    /**
+     * The return window, in hours, from delivery. One platform rule for every product
+     * (admin: Store settings → Seller terms & payouts). Earnings are payable when it ends.
+     */
+    public static function windowHours(): int
+    {
+        $h = StoreSettings::get('store_return_window_hours');
+        if ($h === '') {   // patch not imported yet: old day-based setting
+            return max(0, StoreSettings::int('store_default_return_window_days', 7)) * 24;
+        }
+
+        return max(0, min(720, (int) $h));
+    }
+
+    /** "24 hours", "48 hours", "7 days". */
+    public static function windowLabel(?int $hours = null): string
+    {
+        $hours ??= self::windowHours();
+        if ($hours > 48 && $hours % 24 === 0) {
+            return ($hours / 24) . ' days';
+        }
+
+        return $hours . ($hours === 1 ? ' hour' : ' hours');
+    }
+
     // ------------------------------------------------------------------
     // Eligibility + request (customer)
     // ------------------------------------------------------------------

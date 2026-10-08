@@ -392,14 +392,11 @@ final class ShippingService
             $changed = $st->rowCount() ? 'shipped' : null;
         } elseif ($internal === 'delivered') {
             // Return window starts at delivery; money becomes payable after it (P9).
-            $days = max(0, StoreSettings::int('store_default_return_window_days', 7));
-            $vendor = QueryBuilder::table('store_vendors')->where('id', '=', (int) $s['vendor_id'])->first();
-            if ($vendor !== null) {
-                $days = (int) $vendor['default_return_window_days'];
-            }
+            // One platform-wide window (hours), set by admin; sellers can't change it.
+            $hours = ReturnService::windowHours();
             $st = $pdo->prepare("UPDATE store_vendor_orders SET status = 'delivered', delivered_at = :t, settle_after = :sa
                                   WHERE id = :id AND status IN ('packed','ready_to_ship','shipped')");
-            $st->execute(['t' => $when, 'sa' => date('Y-m-d H:i:s', $ts + $days * 86400), 'id' => $voId]);
+            $st->execute(['t' => $when, 'sa' => date('Y-m-d H:i:s', $ts + $hours * 3600), 'id' => $voId]);
             $changed = $st->rowCount() ? 'delivered' : null;
             if ($changed !== null) {
                 SettlementService::recordDelivered($voId);   // seller's earnings: pending until the return window ends

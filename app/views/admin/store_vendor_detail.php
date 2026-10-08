@@ -138,8 +138,10 @@ $actions = [
                 <dt class="text-slate-400">PAN</dt><dd class="col-span-2 font-mono"><?= !empty($vendor['pan_last4']) ? '••••••' . $e($vendor['pan_last4']) : '—' ?></dd>
                 <dt class="text-slate-400">Contact</dt><dd class="col-span-2"><?= $e($vendor['contact_name']) ?> · <?= $e($vendor['phone']) ?></dd>
                 <dt class="text-slate-400">Login email</dt><dd class="col-span-2"><?= $e($vendor['email']) ?></dd>
-                <dt class="text-slate-400">Dispatch</dt><dd class="col-span-2"><?= (int) $vendor['handling_days'] ?> days · returns <?= (int) $vendor['default_return_window_days'] ?> days</dd>
+                <dt class="text-slate-400">Dispatch</dt><dd class="col-span-2"><?= (int) $vendor['handling_days'] ?> days · returns <?= htmlspecialchars(\App\Services\Store\ReturnService::windowLabel(), ENT_QUOTES, 'UTF-8') ?> (platform rule)</dd>
                 <dt class="text-slate-400">About</dt><dd class="col-span-2 whitespace-pre-line text-slate-600"><?= $e($vendor['description'] ?? '—') ?></dd>
+                <?php $termsV = (static function (int $id): int { try { return \App\Services\Store\StorePolicyService::acceptedVersion($id, 'seller_terms'); } catch (\Throwable) { return 0; } })($vid); ?>
+                <dt class="text-slate-400">Seller terms</dt><dd class="col-span-2"><?php if ($termsV > 0): ?>Accepted v<?= $termsV ?> · <a href="/admin/store/vendors/<?= $vid ?>/terms-certificate" target="_blank" class="text-sky-700 hover:underline">Signed copy ↗</a><?php else: ?><span class="text-amber-700">Not accepted yet</span><?php endif; ?></dd>
             </dl>
             <form method="post" action="/admin/store/vendors/<?= $vid ?>/reset-password" class="mt-4 border-t pt-3"
                   onsubmit="return confirm('Generate a new temporary password? The seller\'s current password stops working.')">

@@ -21,7 +21,29 @@ final class StorePolicyService
         'seller_terms' => 'Seller rules & terms',
     ];
 
-    /** @return array{title: string, body: string, version: int, updated_at: ?string} */
+    /**
+     * Numbers the seller terms promise, editable in Store settings → "Seller terms & payouts".
+     * setting key => [label, min, max, default, help]. Each is also a {{token}} (key minus "store_").
+     */
+    public const TERMS_SETTINGS = [
+        'store_return_window_hours' => ['Return window (hours from delivery)', 0, 720, 24,
+            'Same for every product and seller. 24 = 1 day. Seller earnings become payable when it ends.'],
+        'store_vendor_accept_sla_hours' => ['Seller must accept a new order within (hours)', 6, 168, 48,
+            'Orders not accepted in time are cancelled and refunded automatically.'],
+        'store_charge_dispute_days' => ['Seller can dispute a deduction within (days)', 1, 60, 7, ''],
+        'store_charge_dispute_response_days' => ['eClinicPro answers a dispute within (days)', 1, 30, 7, ''],
+        'store_terms_notice_days' => ['Notice before new seller terms apply (days)', 0, 90, 15,
+            'A new version takes effect this many days after you publish it (you can mark a legal change as urgent).'],
+        'store_suspension_notice_days' => ['Days a seller gets to respond before suspension', 0, 30, 7,
+            'Not for fake or unsafe products or fraud: those are suspended at once.'],
+        'store_final_settlement_days' => ['Final payout after a seller closes (days)', 1, 90, 30, 'Counted from the end of the last return window.'],
+        'store_grievance_ack_hours' => ['Acknowledge a seller grievance within (hours)', 1, 168, 48, ''],
+        'store_grievance_resolve_days' => ['Resolve a seller grievance within (days)', 1, 90, 30, ''],
+    ];
+
+    public const WEEKDAYS = [1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday', 7 => 'Sunday'];
+
+    /** @return array{title: string, body: string, version: int, updated_at: ?string, effective_at: ?string} */
     public static function get(string $slug): array
     {
         $row = QueryBuilder::table('store_policy_pages')->where('slug', '=', $slug)->first();
@@ -38,11 +60,17 @@ final class StorePolicyService
                 ?? ['title' => $title, 'body' => $body, 'version' => 1, 'updated_at' => null];
         }
 
-        return ['title' => (string) $row['title'], 'body' => (string) $row['body'], 'version' => (int) $row['version'], 'updated_at' => $row['updated_at'] ?? null];
+        return ['title' => (string) $row['title'], 'body' => (string) $row['body'], 'version' => (int) $row['version'],
+            'updated_at' => $row['updated_at'] ?? null, 'effective_at' => $row['effective_at'] ?? null];
     }
 
-    /** @return array{ok: bool, error?: string, version?: int} */
-    public static function save(string $slug, string $title, string $body, int $adminId): array
+    /**
+     * Save a new version. It takes effect after store_terms_notice_days (15) so sellers get
+     * notice, unless $urgent (a change the law requires), which applies at once.
+     *
+     * @return array{ok: bool, error?: string, version?: int, effective_at?: string}
+     */
+    public static function save(string $slug, string $title, string $body, int $adminId, bool $urgent = false): array
     {
         if (!isset(self::PAGES[$slug])) {
             return ['ok' => false, 'error' => 'Unknown page.'];
@@ -57,32 +85,36 @@ final class StorePolicyService
             return ['ok' => false, 'error' => 'Nothing changed.'];
         }
         $v = $cur['version'] + 1;
+        $notice = $urgent ? 0 : max(0, StoreSettings::int('store_terms_notice_days', 15));
+        $effective = date('Y-m-d H:i:s', time() + $notice * 86400);
         $pdo = Database::connection();
         $pdo->beginTransaction();
         try {
-            $pdo->prepare('UPDATE store_policy_pages SET title = :t, body = :b, version = :v, updated_by = :u WHERE slug = :s')
-                ->execute(['t' => $title, 'b' => $body, 'v' => $v, 'u' => $adminId, 's' => $slug]);
-            $pdo->prepare('INSERT INTO store_policy_versions (slug, version, title, body, created_by) VALUES (:s, :v, :t, :b, :u)')
-                ->execute(['s' => $slug, 'v' => $v, 't' => $title, 'b' => $body, 'u' => $adminId]);
+            $pdo->prepare('UPDATE store_policy_pages SET title = :t, body = :b, version = :v, effective_at = :ef, updated_by = :u WHERE slug = :s')
+                ->execute(['t' => $title, 'b' => $body, 'v' => $v, 'ef' => $effective, 'u' => $adminId, 's' => $slug]);
+            $pdo->prepare('INSERT INTO store_policy_versions (slug, version, title, body, effective_at, created_by) VALUES (:s, :v, :t, :b, :ef, :u)')
+                ->execute(['s' => $slug, 'v' => $v, 't' => $title, 'b' => $body, 'ef' => $effective, 'u' => $adminId]);
             $pdo->commit();
         } catch (\Throwable $e) {
             $pdo->rollBack();
             error_log('[StorePolicy::save] ' . $e->getMessage());
 
-            return ['ok' => false, 'error' => 'Could not save.'];
+            return ['ok' => false, 'error' => str_contains($e->getMessage(), 'effective_at')
+                ? 'Import app/database/patches/2026_10_08_store_seller_trust.sql first.' : 'Could not save.'];
         }
-        StoreAudit::log('policy.save', 'policy', null, ['slug' => $slug, 'version' => $cur['version']], ['slug' => $slug, 'version' => $v]);
+        StoreAudit::log('policy.save', 'policy', null, ['slug' => $slug, 'version' => $cur['version']],
+            ['slug' => $slug, 'version' => $v, 'effective_at' => $effective, 'urgent' => $urgent]);
         if ($slug === 'seller_terms') {
-            StoreNotifier::termsUpdated($v);   // sellers must re-accept the new version
+            StoreNotifier::termsUpdated($v, $effective);   // sellers must re-accept the new version
         }
 
-        return ['ok' => true, 'version' => $v];
+        return ['ok' => true, 'version' => $v, 'effective_at' => $effective];
     }
 
     /** @return list<array<string, mixed>> */
     public static function versions(string $slug): array
     {
-        $st = Database::connection()->prepare('SELECT version, title, created_by, created_at FROM store_policy_versions WHERE slug = :s ORDER BY version DESC LIMIT 50');
+        $st = Database::connection()->prepare('SELECT * FROM store_policy_versions WHERE slug = :s ORDER BY version DESC LIMIT 50');
         $st->execute(['s' => $slug]);
 
         return $st->fetchAll();
@@ -122,6 +154,37 @@ final class StorePolicyService
         return ['ok' => true];
     }
 
+    /**
+     * The seller's copy of the terms they last accepted, with the acceptance record
+     * (who, when, IP), for the printable certificate. Null if they never accepted.
+     *
+     * @return array{acceptance: array<string, mixed>, version: array<string, mixed>, html: string}|null
+     */
+    public static function certificate(int $vendorId, string $slug = 'seller_terms'): ?array
+    {
+        $pdo = Database::connection();
+        $st = $pdo->prepare(
+            'SELECT a.*, u.name AS user_name, u.email AS user_email
+               FROM store_policy_acceptances a LEFT JOIN store_vendor_users u ON u.id = a.vendor_user_id
+              WHERE a.vendor_id = :v AND a.slug = :s ORDER BY a.version DESC LIMIT 1'
+        );
+        $st->execute(['v' => $vendorId, 's' => $slug]);
+        $acc = $st->fetch();
+        if (!$acc) {
+            return null;
+        }
+        $st = $pdo->prepare('SELECT * FROM store_policy_versions WHERE slug = :s AND version = :n');
+        $st->execute(['s' => $slug, 'n' => (int) $acc['version']]);
+        $ver = $st->fetch();
+        if (!$ver) {
+            return null;
+        }
+        $ip = !empty($acc['ip']) ? @inet_ntop((string) $acc['ip']) : false;
+        $acc['ip_text'] = $ip !== false ? $ip : '';
+
+        return ['acceptance' => $acc, 'version' => $ver, 'html' => self::render((string) $ver['body'])];
+    }
+
     /** @return array{current: int, accepted: int, sellers: int} how many approved sellers accepted the current version */
     public static function stats(string $slug): array
     {
@@ -143,10 +206,17 @@ final class StorePolicyService
         $fees = SellerFeeService::config();
         $rs = static fn (int $p): string => '₹' . ProductService::rupees($p);
 
-        return [
+        $numbers = [];
+        foreach (self::TERMS_SETTINGS as $key => [, $min, $max, $default]) {
+            $numbers[substr($key, 6)] = (string) max($min, min($max, StoreSettings::int($key, $default)));
+        }
+
+        return $numbers + [
+            'return_window' => ReturnService::windowLabel(),
+            'payout_day' => self::WEEKDAYS[max(1, min(7, StoreSettings::int('store_payout_weekday', 2)))],
             'commission_pct' => rtrim(rtrim(number_format(StoreSettings::int('store_default_commission_bp', 1000) / 100, 2), '0'), '.') . '%',
             'accept_hours' => (string) StoreSettings::int('store_vendor_accept_sla_hours', 48),
-            'return_days' => (string) StoreSettings::int('store_default_return_window_days', 7),
+            'return_days' => (string) (int) ceil(ReturnService::windowHours() / 24),   // older versions of the text
             'min_payout' => $rs(StoreSettings::int('store_min_payout_paise', 10000)),
             'shipping_fee' => $rs($fees['delivery_fee']),
             'free_shipping_above' => $fees['free_above'] !== null ? $rs($fees['free_above']) : 'never',
@@ -263,7 +333,7 @@ These rules are an agreement between you (the "seller", including everyone who u
 - The photo of the packed parcel on a scale is your evidence. eClinicPro will dispute wrong weights with the courier using your photo; if the dispute is won, the charge is reversed. Without a clear photo, we can't dispute the charge.
 
 ## 7. Returns and refunds
-- **No "change of mind" returns.** A customer can return an item only when it arrived **damaged, defective, wrong, expired (or near expiry), not as described, or with parts missing**, within the product's return window (**{{return_days}} days from delivery** unless the product says otherwise). Photos are required as evidence.
+- **No "change of mind" returns.** A customer can return an item only when it arrived **damaged, defective, wrong, expired (or near expiry), not as described, or with parts missing**, within **{{return_window}} of delivery** (the same for every product and seller). Photos are required as evidence. After that, the sale is final.
 - Review each return request **within 2 days** from the Returns page: approve it (a reverse pickup is arranged, or the customer is refunded without pickup) or reject it with a clear reason.
 - When a returned package reaches you, inspect it and record the result. If you report a problem with the returned item, eClinicPro reviews the evidence and makes the final decision.
 - **You pay the return pickup** for every approved return, and the forward courier charge you already paid is not refunded. Both are deducted from your payouts.
@@ -280,8 +350,8 @@ These rules are an agreement between you (the "seller", including everyone who u
 - Commission is the rate **agreed with you** (for your whole store, a category or a product; **{{commission_pct}}** where nothing else was agreed), charged on your selling price **before GST** (after any discount you fund), plus 18% GST on the commission. Example: a ₹118 item with 18% GST is ₹100 + ₹18 GST, so a 10% commission is ₹10 + ₹1.80 GST. The rate for each product is shown in its earnings estimate and in every order breakdown.
 - **Customers pay eClinicPro on your behalf.** The sale is yours: your invoice, your GST. eClinicPro collects the money, keeps its commission and charges, and pays you the rest. Your payout statement lists the full amount collected and every deduction.
 - Your earnings for a package become **available after delivery plus the return window**, so refunds can still be handled. A package with an open return is held until the return is closed.
-- Payouts go to your **verified bank account** in eClinicPro's regular payout runs, once your available balance is at least {{min_payout}}. Each payout comes with a statement.
-- Payouts are reduced by commission and GST on it, courier charges (section 5), weight-dispute and other charges under these rules, refunds and credit notes, any TCS/TDS the law requires, and agreed adjustments. Every deduction is listed in your payout statement. If your balance goes negative (for example after a refund), it is recovered from your next payouts.
+- **Payouts every {{payout_day}}.** Every {{payout_day}}, eClinicPro pays all your earnings whose return window has ended to your **verified bank account**, when your available balance is at least {{min_payout}} (a smaller balance carries over to the next week). If {{payout_day}} is a bank holiday, payment is made on the next working day. Each payout comes with a statement listing every order and every deduction.
+- Payouts are reduced by commission and GST on it, courier charges (section 5), weight-dispute and other charges under these rules, refunds and credit notes, any TCS/TDS the law requires, and agreed adjustments. Every deduction is listed in your payout statement and on the order page, and can be disputed (section 13). If your balance goes negative (for example after a refund), it is recovered from your next payouts.
 - **Low-priced items:** on a small item, the courier charge can be a large part of the price. Check the earnings estimate on the product page before you set a price. Selling small items as packs of 2 or more usually works better.
 
 ## 10. Coupons and offers
@@ -295,49 +365,60 @@ These rules are an agreement between you (the "seller", including everyone who u
 ## 12. Customer data
 - Use customer names, addresses and phone numbers **only to fulfil the order**. Never contact customers for marketing or share their data with anyone.
 
-## 13. Your promises to us
+## 13. eClinicPro's commitments to you
+- **Customers pay before you dispatch.** Every order is paid online through a regulated payment gateway; there is no cash on delivery, so you never chase payment.
+- **We look after customers first.** eClinicPro is the customer's first point of contact for payments, order tracking, delivery, cancellations and refunds. We pass to you only questions about your product (for example ingredients, usage or specifications) and return requests, which you answer from the seller portal.
+- **Paid on time, with a statement.** Payouts are made every {{payout_day}} as described in section 9. If a payout is late, write to **{{grievance_email}}** and we will pay it or explain the delay in writing within 2 working days.
+- **Only the deductions in these rules.** Every deduction is shown on the order page with its reason and amount. You can **dispute any deduction within {{charge_dispute_days}} days** using "Dispute this charge" on the order page. While a dispute is open, that amount is **left out of your payouts**. We reply within **{{charge_dispute_response_days}} days** with the evidence (for example the courier's invoice or weight report); if we accept, the amount is credited in your next payout.
+- **Decisions based on evidence.** Return and dispute decisions are based on the customer's photos, your parcel photo, courier records and the order history, and we tell you the reason for every decision.
+- **No surprise changes.** Your agreed commission is never changed without your written agreement (email is enough). A new version of these rules takes effect **{{terms_notice_days}} days** after we publish it, and until then the version you accepted applies. Only a change required by law or a regulator can apply sooner.
+- **Fair warning before suspension.** Except in the cases listed in section 21, we tell you the reason in writing and give you **{{suspension_notice_days}} days** to respond or fix the problem before your store is suspended.
+- **Your data stays private.** Your sales, prices and business details are kept confidential and are never shared with other sellers.
+
+## 14. Your promises to us
 - The business, tax, bank and licence details and documents you give us are true, complete and yours, and you will keep them up to date.
 - You hold every registration and licence the law requires for your business and products, and you follow all laws that apply to them, including the Consumer Protection Act, 2019 and E-Commerce Rules, the Legal Metrology (Packaged Commodities) Rules, the Drugs and Cosmetics Act, the Food Safety and Standards Act, BIS rules, GST law, and advertising and labelling rules.
 - You have the right to sell every product you list, and your products, listings, photos and brand names do not infringe anyone's trademark, copyright or other rights.
 
-## 14. Product responsibility and recalls
+## 15. Product responsibility and recalls
 - **You are fully responsible for your products**: their quality, safety, authenticity, shelf life, packaging, labelling, warranties, and any harm, injury, loss or claim they cause. Any manufacturer's warranty is between you (or the manufacturer) and the customer.
 - If a product is recalled, banned, or found unsafe or counterfeit, you must tell eClinicPro at once, stop selling it, and pay for the refunds, return pickups and any other costs that follow.
 - You will answer customer complaints about your products promptly and co-operate with any authority, court or regulator that asks about them.
 
-## 15. Indemnity
+## 16. Indemnity
 You will **indemnify and hold harmless** eClinicPro, its directors, employees and partners against every claim, demand, penalty, tax, loss, damage, cost and legal fee arising from: your products or listings; any breach of these rules or of any law by you; wrong tax or licence details; infringement of anyone's rights; your misuse of customer data; or anything done by people using your seller account. This continues after your account is closed.
 
-## 16. Limits on eClinicPro's liability
+## 17. Limits on eClinicPro's liability
 - The marketplace is provided "as is". eClinicPro does not promise any level of sales or that the store will always be available or error-free.
 - eClinicPro is not liable for indirect or consequential losses, including lost profit, sales or goodwill. Its total liability to you for any claim is limited to the commission it earned from your sales in the 3 months before the claim arose.
 - eClinicPro is not responsible for delays or failures caused by couriers, banks, payment gateways, or events outside its reasonable control (for example natural disasters, strikes, government orders, pandemics, or internet and power outages).
 
-## 17. Holds and set-off
+## 18. Holds and set-off
 - eClinicPro may **deduct any amount you owe** under these rules (courier charges, return and failed-delivery charges, refunds, penalties, taxes, indemnity amounts) from any payout, and recover any shortfall from your later payouts or ask you to pay it directly.
 - eClinicPro may **hold payouts** while a customer complaint, return, chargeback, legal notice, investigation or tax query about your sales is open, or when your account is suspended or closed, until the matter is settled.
 
-## 18. Content you upload
+## 19. Content you upload
 - You give eClinicPro a free, non-exclusive licence to use, copy, resize, translate and display your product names, descriptions, photos, logos and brand names on the store, its apps, and its marketing, while your products are listed and for a reasonable time after.
 - You must not use eClinicPro's name or logo except as eClinicPro allows in writing.
 
-## 19. Your account
+## 20. Your account
 - Keep your login details secret. Everything done through your seller account is treated as done by you.
 - Do not try to move customers off the store to sell to them directly, avoid commission, or manipulate prices, reviews or search results.
 
-## 20. Suspension and closing your account
-- eClinicPro may hide listings or suspend or close a store that breaks these rules, sells unsafe or fake products, gives false information, or receives repeated serious complaints.
+## 21. Suspension and closing your account
+- eClinicPro may hide listings or suspend or close a store that breaks these rules, gives false information, or receives repeated serious complaints, after the notice in section 13.
+- eClinicPro may act **immediately**, without that notice, when a product is fake, unsafe, banned or recalled, in a case of fraud, when a court, regulator or the law requires it, or when customers' health is at risk. We still tell you the reason in writing.
 - You may close your store at any time by writing to eClinicPro, after you have fulfilled or cancelled every open order.
-- After closing, your remaining earnings are paid once every return window and open matter has ended, less any amounts you owe. Sections on product responsibility, indemnity, liability, set-off, customer data, and disputes continue to apply.
+- After closing, your remaining earnings, less any amounts you owe, are paid within **{{final_settlement_days}} days** after the last return window ends (or after any open matter is settled). Sections on product responsibility, indemnity, liability, set-off, customer data, and disputes continue to apply.
 
-## 21. Relationship
+## 22. Relationship
 You and eClinicPro are independent businesses. Nothing in these rules creates a partnership, joint venture, agency or employment.
 
-## 22. Changes to these rules
-These rules may be updated. You will see the new version in the seller portal and must accept it to keep selling. Every acceptance is recorded with its version, date, time and IP address as an electronic record under the Information Technology Act, 2000.
+## 23. Changes to these rules
+These rules may be updated. You will be emailed and see the new version in the seller portal, with the date it takes effect ({{terms_notice_days}} days after publishing, unless the law requires sooner). Accept it before then to keep selling; if you don't agree, you may close your store under section 21 before it takes effect. Every acceptance is recorded with its version, date, time and IP address as an electronic record under the Information Technology Act, 2000.
 
-## 23. Grievances and disputes
-- Questions or complaints about these rules can be sent to **{{grievance_email}}**. We will acknowledge them within 48 hours and try to resolve them within 30 days.
+## 24. Grievances and disputes
+- Questions or complaints about these rules can be sent to **{{grievance_email}}**. We will acknowledge them within {{grievance_ack_hours}} hours and try to resolve them within {{grievance_resolve_days}} days.
 - These rules are governed by the laws of India. Any dispute that cannot be resolved by discussion is subject to the exclusive jurisdiction of the courts at **{{legal_city}}**.
 - If any part of these rules is found invalid, the rest still applies. These rules, with any commission or charges agreed with you in writing, are the whole agreement between you and eClinicPro about selling on eClinicPro Store.
 MD;

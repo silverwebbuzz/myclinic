@@ -177,6 +177,35 @@ final class StoreOrderAdminController
         return Response::redirect('/admin/store/orders/' . (int) $id);
     }
 
+    // ---- Seller charge disputes ------------------------------------------------------
+
+    public function disputes(Request $request): Response
+    {
+        $status = (string) ($request->query['status'] ?? 'open');
+
+        return $this->render('admin/store_disputes', [
+            'status' => $status,
+            'rows' => \App\Services\Store\ChargeDisputeService::adminList($status),
+            'ready' => \App\Services\Store\ChargeDisputeService::ready(),
+        ]);
+    }
+
+    public function resolveDispute(Request $request, string $id, string $action): Response
+    {
+        try {
+            $res = \App\Services\Store\ChargeDisputeService::resolve((int) $id, $action, (string) ($request->post['note'] ?? ''),
+                (int) (RequestContext::superAdmin()['id'] ?? 0));
+        } catch (\Throwable $e) {
+            error_log('[StoreOrderAdmin::resolveDispute] ' . $e->getMessage());
+            $res = ['ok' => false, 'error' => 'Could not save.'];
+        }
+        SessionFlash::put($res['ok'] ? 'store_ok' : 'store_err', $res['ok']
+            ? ($action === 'accept' ? 'Dispute accepted: the charge was reversed and the seller emailed.' : 'Dispute rejected: the seller was emailed your reply.')
+            : ($res['error'] ?? 'Failed.'));
+
+        return Response::redirect('/admin/store/disputes');
+    }
+
     /** Enter the real forward courier charge (e.g. from Shiprocket's invoice). */
     public function courierCharge(Request $request, string $id, string $voId): Response
     {

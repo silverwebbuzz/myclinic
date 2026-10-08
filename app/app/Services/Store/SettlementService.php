@@ -304,6 +304,35 @@ final class SettlementService
     }
 
     /**
+     * Weekly payout day (Store settings → Seller terms & payouts, default Tuesday): from 9 AM,
+     * create the batch once and email the team, who transfer the money and mark each paid.
+     * Called every 10 minutes by the maintenance worker. Returns payouts created (-1 = not due).
+     */
+    public static function autoWeeklyBatch(): int
+    {
+        try {
+            $now = new \DateTimeImmutable('now', new \DateTimeZone('Asia/Kolkata'));   // worker may run in UTC
+            $today = $now->format('Y-m-d');
+            if (StoreSettings::get('store_payout_auto_batch', '1') !== '1'
+                || (int) $now->format('N') !== max(1, min(7, StoreSettings::int('store_payout_weekday', 2)))
+                || (int) $now->format('G') < 9
+                || StoreSettings::get('store_payout_last_auto_batch') === $today) {
+                return -1;
+            }
+            StoreSettings::set('store_payout_last_auto_batch', $today);   // before the work: never twice a day
+            $res = self::createBatch(0);
+            StoreAudit::log('payout.auto_batch', 'payout', null, null, ['created' => $res['created'], 'skipped' => count($res['skipped'])]);
+            StoreNotifier::payoutBatchReady($res['created'], $res['skipped']);
+
+            return $res['created'];
+        } catch (\Throwable $e) {
+            error_log('[Settlement::autoWeeklyBatch] ' . $e->getMessage());
+
+            return 0;
+        }
+    }
+
+    /**
      * Seller clicked "Request payout": same checks as the admin batch, then a draft
      * payout for the whole available balance. Admin approves, pays from the bank and
      * marks it paid (UTR), or declines it (cancel), which returns the money to available.
@@ -367,7 +396,9 @@ final class SettlementService
         $pdo = Database::connection();
         $pdo->beginTransaction();
         try {
-            $st = $pdo->prepare("SELECT id, amount_paise, created_at FROM store_vendor_ledger WHERE vendor_id = :v AND status = 'available' FOR UPDATE");
+            // Charges the seller has disputed stay out until the dispute is decided.
+            $st = $pdo->prepare("SELECT id, amount_paise, created_at FROM store_vendor_ledger WHERE vendor_id = :v AND status = 'available'"
+                . ChargeDisputeService::heldLedgerSql() . ' FOR UPDATE');
             $st->execute(['v' => $vendorId]);
             $rows = $st->fetchAll();
             $gross = $deductions = 0;

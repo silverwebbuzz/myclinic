@@ -16,9 +16,7 @@ if ($p === null) {
 $variants = $p['variants'];
 $images = array_map(static fn ($i) => store_img($i['path']), $p['images']);
 $images = array_values(array_filter($images));
-$returnDays = !empty($p['is_returnable'])
-    ? (int) ($p['return_window_days'] ?? $p['default_return_window_days'] ?? 7)
-    : 0;
+$returnHours = !empty($p['is_returnable']) ? store_return_window_hours() : 0;
 $wishOn = isset(store_wishlist_ids()[(int) $p['id']]);
 $noPromo = !empty($p['no_promotion']);
 
@@ -157,7 +155,7 @@ require __DIR__ . '/_header.php';
         <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>
           <span>Usually dispatched within <?= max(1, (int) $p['handling_days']) ?> day<?= (int) $p['handling_days'] > 1 ? 's' : '' ?>. Delivery across India.</span></li>
         <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/></svg>
-          <span><?= $returnDays > 0 ? $returnDays . '-day returns if the product is damaged, wrong or defective.' : 'This product is not returnable.' ?></span></li>
+          <span><?= $returnHours > 0 ? 'Report a damaged, wrong or defective item within ' . store_return_window_label() . ' of delivery for a return.' : 'This product is not returnable.' ?></span></li>
         <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
           <span>Genuine product from a verified seller<?= !empty($p['license_number']) ? '. Licence no. ' . e($p['license_number']) : '' ?>.</span></li>
       </ul>

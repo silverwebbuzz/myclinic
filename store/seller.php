@@ -45,7 +45,7 @@ require __DIR__ . '/_header.php';
           <?php if ((int) $seller['rating_count'] > 0): ?><span>★ <?= e(number_format((float) $seller['rating_avg'], 1)) ?> (<?= (int) $seller['rating_count'] ?> ratings)</span><?php endif; ?>
           <?php if (!empty($seller['location'])): ?><span>Ships from <?= e($seller['location']) ?></span><?php endif; ?>
           <span>Dispatch in <?= max(1, (int) $seller['handling_days']) ?> day<?= (int) $seller['handling_days'] > 1 ? 's' : '' ?></span>
-          <span><?= (int) $seller['default_return_window_days'] > 0 ? (int) $seller['default_return_window_days'] . '-day returns on damaged, wrong or defective items' : 'No returns' ?></span>
+          <span><?= store_return_window_hours() > 0 ? store_return_window_label() . ' returns on damaged, wrong or defective items' : 'No returns' ?></span>
           <?php if (!empty($seller['approved_at'])): ?><span>Selling since <?= e(date('M Y', (int) strtotime((string) $seller['approved_at']))) ?></span><?php endif; ?>
         </div>
       </div>

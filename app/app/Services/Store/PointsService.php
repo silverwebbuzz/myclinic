@@ -157,7 +157,9 @@ final class PointsService
                 'redeem_cap_pct' => StoreSettings::int('store_points_redeem_cap_bp', 1000) / 100,
                 'loyalty_pct' => StoreSettings::int('store_points_loyalty_earn_bp', 1000) / 100,
                 'expiry_days' => StoreSettings::int('store_points_expiry_days', 180),
-                'return_window_days' => StoreSettings::int('store_default_return_window_days', 7),
+                'return_window_days' => (int) ceil(ReturnService::windowHours() / 24),
+                'return_window_hours' => ReturnService::windowHours(),
+                'return_window_label' => ReturnService::windowLabel(),
             ],
             'referral' => ReferralService::summary($identityId),
         ];
@@ -263,7 +265,7 @@ final class PointsService
         $st->execute(['o' => $orderId]);
         $availableAt = (string) ($st->fetchColumn() ?: '');
         if ($availableAt === '') {
-            $availableAt = date('Y-m-d H:i:s', time() + max(0, StoreSettings::int('store_default_return_window_days', 7)) * 86400);
+            $availableAt = date('Y-m-d H:i:s', time() + ReturnService::windowHours() * 3600);
         }
         ReferralService::onDelivered($orderId, $identityId, $availableAt);
         $pdo->prepare(

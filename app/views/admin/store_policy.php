@@ -36,6 +36,8 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
         </div>
         <div class="text-right text-sm">
             <p>Version <strong><?= (int) $page['version'] ?></strong><?= $page['updated_at'] ? ' · ' . $e(date('d M Y, h:i A', (int) strtotime((string) $page['updated_at']))) : '' ?></p>
+            <?php if (!empty($page['effective_at'])): ?><p class="<?= strtotime((string) $page['effective_at']) > time() ? 'font-medium text-amber-700' : 'text-slate-500' ?>">
+                <?= strtotime((string) $page['effective_at']) > time() ? 'Takes effect' : 'In effect since' ?> <?= $e(\App\Support\IndianDate::date($page['effective_at'])) ?></p><?php endif; ?>
             <p class="text-slate-500">Accepted by <strong><?= (int) $stats['accepted'] ?></strong> of <?= (int) $stats['sellers'] ?> active sellers</p>
         </div>
     </div>
@@ -43,13 +45,13 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
 
     <div class="grid gap-5 lg:grid-cols-2">
         <form method="post" action="/admin/store/policies/<?= $e(rawurlencode($slug)) ?>" class="space-y-3 rounded-xl border bg-white p-5 shadow-sm"
-              onsubmit="return confirm('Save as a new version? Every seller will be asked to accept it again.')">
+              onsubmit="return confirm(this.urgent.checked ? 'Save as a new version that applies IMMEDIATELY? Every seller will be emailed to accept it.' : 'Save as a new version? It takes effect after the notice period and every seller will be emailed to accept it.')">
             <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
             <label class="block text-sm"><span class="text-slate-600">Title</span>
                 <input name="title" value="<?= $e($page['title']) ?>" maxlength="190" class="mt-1 w-full rounded border px-2 py-1.5"></label>
             <?php if (($defaultBody ?? '') !== '' && trim(str_replace("\r\n", "\n", $page['body'])) !== trim($defaultBody)): ?>
                 <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                    <strong>The standard text has been updated</strong> (for example: no change-of-mind returns, sellers pay return pickups and failed deliveries, indemnity and other legal clauses).
+                    <strong>The standard text has been updated</strong> (for example: eClinicPro's commitments to sellers (weekly payouts, charge disputes, notice periods), 24-hour returns, no change-of-mind returns, indemnity and other legal clauses).
                     Load it into the editor, check it and add back any changes of your own, then save as a new version.
                     <button type="button" class="ml-1 font-semibold text-amber-800 underline"
                             onclick="if (confirm('Replace the text in the editor with the latest standard text? Nothing is saved until you press Save.')) { document.getElementById('policy-body').value = document.getElementById('policy-default').value; }">Load the latest standard text</button>
@@ -66,6 +68,9 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
                     <?php foreach ($tokens as $k => $v): ?><li><code>{{<?= $e($k) ?>}}</code> → <?= $e($v) ?></li><?php endforeach; ?>
                 </ul>
             </div>
+            <p class="text-xs text-slate-500">A new version takes effect <strong><?= (int) \App\Services\Store\StoreSettings::int('store_terms_notice_days', 15) ?> days</strong> after you save it (change in Store settings → Seller terms &amp; payouts). Until then the version each seller accepted still applies.</p>
+            <label class="flex items-start gap-2 text-sm"><input type="checkbox" name="urgent" value="1" class="mt-1">
+                <span>Urgent: the law or a regulator requires this change, so it applies <strong>immediately</strong> <span class="text-slate-400">(use only for legal changes, not commercial ones)</span></span></label>
             <button class="rounded bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">Save new version</button>
         </form>
 
@@ -78,7 +83,7 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
                 <h2 class="text-sm font-semibold">Version history</h2>
                 <ul class="mt-2 space-y-1 text-sm">
                     <?php foreach ($versions as $v): ?>
-                        <li>v<?= (int) $v['version'] ?> · <?= $e(date('d M Y, h:i A', (int) strtotime((string) $v['created_at']))) ?><?= $v['created_by'] ? '' : ' <span class="text-slate-400">(default text)</span>' ?></li>
+                        <li>v<?= (int) $v['version'] ?> · saved <?= $e(date('d M Y, h:i A', (int) strtotime((string) $v['created_at']))) ?><?= !empty($v['effective_at']) ? ' · effective ' . $e(\App\Support\IndianDate::date($v['effective_at'])) : '' ?><?= $v['created_by'] ? '' : ' <span class="text-slate-400">(default text)</span>' ?></li>
                     <?php endforeach; ?>
                 </ul>
             </section>

@@ -312,7 +312,8 @@ final class StoreNotifier
                 $lines = self::packageLines((int) $vo['id']);
                 $shipped = $event === 'shipped';
                 self::send($shipped ? 'customer_shipped' : 'customer_delivered', (string) $o['contact_email'],
-                    ['name' => self::first((string) $o['contact_name']), 'order_no' => (string) $o['order_no'], 'seller' => $from, 'awb' => $awb], [
+                    ['name' => self::first((string) $o['contact_name']), 'order_no' => (string) $o['order_no'], 'seller' => $from, 'awb' => $awb,
+                        'return_window' => ReturnService::windowLabel()], [
                         'facts' => $facts,
                         'packages' => $lines ? [['heading' => 'In this package', 'lines' => $lines]] : [],
                         'cta_url' => $shipped && $awb !== ''
@@ -692,19 +693,95 @@ final class StoreNotifier
     }
 
     /** New seller-terms version → every seller who still sells or is onboarding. */
-    public static function termsUpdated(int $version): void
+    public static function termsUpdated(int $version, string $effectiveAt = ''): void
     {
         try {
+            $effective = $effectiveAt !== '' ? \App\Support\IndianDate::date($effectiveAt) : 'today';
             $rows = Database::connection()->query(
                 "SELECT * FROM store_vendors WHERE status IN ('approved','pending_review','suspended')"
             )->fetchAll();
             foreach ($rows as $v) {
-                self::send('seller_terms_updated', (string) $v['email'], self::sellerVars($v) + ['version' => (string) $version], [
+                self::send('seller_terms_updated', (string) $v['email'], self::sellerVars($v) + ['version' => (string) $version, 'effective' => $effective], [
+                    'facts' => [['Version', (string) $version], ['Takes effect', $effective]],
                     'cta_url' => self::portalUrl('/vendor/terms'),
                 ]);
             }
         } catch (\Throwable $e) {
             error_log('[StoreNotifier::termsUpdated] ' . $e->getMessage());
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Charge disputes + weekly payouts
+    // ------------------------------------------------------------------
+
+    /** Seller disputed a deduction → confirmation to the seller + alert to the team. */
+    public static function chargeDisputed(int $disputeId): void
+    {
+        try {
+            $d = ChargeDisputeService::find($disputeId);
+            $v = $d !== null ? VendorService::find((int) $d['vendor_id']) : null;
+            if ($d === null || $v === null) {
+                return;
+            }
+            $vars = ['order_no' => (string) $d['sub_order_no'], 'amount' => self::rs((int) $d['amount_paise']),
+                'respond_by' => \App\Support\IndianDate::date($d['respond_by'])];
+            $facts = [['Order', $vars['order_no']], ['Charge', (string) $d['memo']], ['Amount', $vars['amount']], ['Reason', (string) $d['reason']],
+                ['Reply by', $vars['respond_by']]];
+            self::send('seller_dispute_received', (string) $v['email'], self::sellerVars($v) + $vars, [
+                'facts' => $facts, 'cta_url' => self::portalUrl('/vendor/orders/' . (int) $d['vendor_order_id']),
+            ]);
+            self::sendTeam('team_charge_disputed', $vars + ['seller' => (string) $v['display_name']], [
+                'facts' => array_merge([['Seller', (string) $v['display_name']]], $facts),
+                'cta_url' => self::portalUrl('/admin/store/disputes'),
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[StoreNotifier::chargeDisputed] ' . $e->getMessage());
+        }
+    }
+
+    public static function disputeResolved(int $disputeId): void
+    {
+        try {
+            $d = ChargeDisputeService::find($disputeId);
+            $v = $d !== null ? VendorService::find((int) $d['vendor_id']) : null;
+            if ($d === null || $v === null) {
+                return;
+            }
+            $outcome = $d['status'] === 'accepted' ? 'charge reversed' : 'charge stays';
+            $vars = ['order_no' => (string) $d['sub_order_no'], 'amount' => self::rs((int) $d['amount_paise']), 'outcome' => $outcome,
+                'reason' => (string) ($d['resolution_note'] ?? '')];
+            self::send('seller_dispute_resolved', (string) $v['email'], self::sellerVars($v) + $vars, [
+                'facts' => [['Order', $vars['order_no']], ['Charge', (string) $d['memo']], ['Amount', $vars['amount']], ['Outcome', ucfirst($outcome)],
+                    ['Our reply', $vars['reason']]],
+                'cta_url' => self::portalUrl('/vendor/orders/' . (int) $d['vendor_order_id']),
+            ]);
+            $owner = self::owner((int) $v['id']);
+            if ($owner !== null) {
+                self::inApp('vendor_user', (int) $owner['id'], 'dispute.resolved', 'Dispute on ' . $vars['order_no'] . ': ' . $outcome,
+                    $vars['reason'], '/vendor/orders/' . (int) $d['vendor_order_id']);
+            }
+        } catch (\Throwable $e) {
+            error_log('[StoreNotifier::disputeResolved] ' . $e->getMessage());
+        }
+    }
+
+    /** @param list<string> $skipped */
+    public static function payoutBatchReady(int $created, array $skipped): void
+    {
+        try {
+            if ($created === 0 && !$skipped) {
+                return;
+            }
+            $facts = [['Payouts created', (string) $created]];
+            foreach (array_slice($skipped, 0, 15) as $s) {
+                $facts[] = ['Not paid this week', $s];
+            }
+            self::sendTeam('team_payout_batch', ['count' => (string) $created], [
+                'facts' => $facts, 'cta_url' => self::portalUrl('/admin/store/payouts'),
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[StoreNotifier::payoutBatchReady] ' . $e->getMessage());
         }
     }
 

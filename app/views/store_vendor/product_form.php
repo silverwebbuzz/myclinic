@@ -380,10 +380,10 @@ ob_start();
                 <span class="text-tx2">Country of origin</span>
                 <input name="country_of_origin" maxlength="60" value="<?= $e($val('country_of_origin', 'India')) ?>" class="<?= $input ?>">
             </label>
-            <label class="block text-sm">
-                <span class="text-tx2">Return window (days)</span>
-                <input name="return_window_days" type="number" min="0" max="30" value="<?= $e($val('return_window_days')) ?>" class="<?= $input ?>" placeholder="Default: <?= (int) ($vendor['default_return_window_days'] ?? 7) ?>">
-            </label>
+            <div class="block text-sm">
+                <span class="text-tx2">Return window</span>
+                <div class="mt-1 rounded-[7px] border border-ln bg-sf2 px-3 py-2 text-tx2"><?= $e(\App\Services\Store\ReturnService::windowLabel()) ?> from delivery <span class="text-xs text-tx3">(set by eClinicPro)</span></div>
+            </div>
             <label class="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="is_returnable" value="1" <?= $returnable ? 'checked' : '' ?>> Returnable
             </label>

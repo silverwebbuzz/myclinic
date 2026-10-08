@@ -2,7 +2,7 @@
 /**
  * /vendor/terms — seller rules & terms (admin-editable) + accept the current version.
  *
- * @var array{title:string, body:string, version:int, updated_at:?string} $page
+ * @var array{title:string, body:string, version:int, updated_at:?string, effective_at?:?string} $page
  * @var string $html
  * @var int $acceptedVersion
  */
@@ -23,11 +23,17 @@ ob_start();
 <div class="flex flex-wrap items-end justify-between gap-3">
     <div>
         <h1 class="text-[22px] font-semibold tracking-[-.015em]"><?= $e($page['title']) ?></h1>
-        <p class="mt-1 text-sm text-tx3">Version <?= (int) $page['version'] ?><?= $page['updated_at'] ? ', updated ' . $e(date('d M Y', (int) strtotime((string) $page['updated_at']))) : '' ?></p>
+        <p class="mt-1 text-sm text-tx3">Version <?= (int) $page['version'] ?><?= $page['updated_at'] ? ', updated ' . $e(date('d M Y', (int) strtotime((string) $page['updated_at']))) : '' ?><?php
+            if (!empty($page['effective_at'])): ?> · <?= strtotime((string) $page['effective_at']) > time() ? '<strong class="text-amber-700">takes effect ' . $e(\App\Support\IndianDate::date($page['effective_at'])) . '</strong>' : 'in effect since ' . $e(\App\Support\IndianDate::date($page['effective_at'])) ?><?php endif; ?></p>
     </div>
-    <?php if ($current && $acceptable): ?>
-        <span class="inline-flex h-[22px] items-center rounded-md bg-okb px-2 text-xs font-medium text-ok">✓ You have accepted this version</span>
-    <?php endif; ?>
+    <div class="flex flex-wrap items-center gap-2">
+        <?php if ($current && $acceptable): ?>
+            <span class="inline-flex h-[22px] items-center rounded-md bg-okb px-2 text-xs font-medium text-ok">✓ You have accepted this version</span>
+        <?php endif; ?>
+        <?php if ($acceptedVersion > 0): ?>
+            <a href="/vendor/terms/certificate" target="_blank" class="text-xs font-medium text-act hover:underline">Download your signed copy (v<?= (int) $acceptedVersion ?>) ↗</a>
+        <?php endif; ?>
+    </div>
 </div>
 
 <article class="policy mt-4 rounded-[10px] border border-ln bg-sf p-6 text-sm leading-6 text-slate-800"><?= $html ?></article>

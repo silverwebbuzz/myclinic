@@ -108,11 +108,9 @@ final class FulfilmentService
         if ($vo === null || !in_array($vo['status'], ['shipped', 'ready_to_ship'], true)) {
             return ['ok' => false, 'error' => 'Only shipped packages can be marked delivered.'];
         }
-        $vendor = VendorService::find((int) $vo['vendor_id']);
-        $days = (int) ($vendor['default_return_window_days'] ?? StoreSettings::int('store_default_return_window_days', 7));
         $now = time();
         Database::connection()->prepare("UPDATE store_vendor_orders SET status = 'delivered', delivered_at = :t, settle_after = :sa WHERE id = :id")
-            ->execute(['t' => date('Y-m-d H:i:s', $now), 'sa' => date('Y-m-d H:i:s', $now + $days * 86400), 'id' => $vendorOrderId]);
+            ->execute(['t' => date('Y-m-d H:i:s', $now), 'sa' => date('Y-m-d H:i:s', $now + ReturnService::windowHours() * 3600), 'id' => $vendorOrderId]);
         $s = ShippingService::activeShipment($vendorOrderId);
         if ($s !== null) {
             \App\Core\QueryBuilder::table('store_shipments')->where('id', '=', (int) $s['id'])->update([

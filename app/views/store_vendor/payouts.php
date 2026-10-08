@@ -17,10 +17,11 @@ $statusLabel = ['pending' => 'In return window', 'available' => 'Next payout', '
 ob_start();
 ?>
 <h1 class="text-[22px] font-semibold tracking-[-.015em]">Payouts</h1>
-<p class="mt-1 text-sm text-tx3">You earn on every <strong>delivered</strong> package. Earnings unlock after the return window. Once they're ready, request a payout and we'll transfer it to your bank.</p>
+<?php $payDay = \App\Services\Store\StorePolicyService::WEEKDAYS[max(1, min(7, \App\Services\Store\StoreSettings::int('store_payout_weekday', 2)))]; ?>
+<p class="mt-1 text-sm text-tx3">You earn on every <strong>delivered</strong> package. Earnings unlock <?= $e(\App\Services\Store\ReturnService::windowLabel()) ?> after delivery (the return window) and are <strong>paid automatically every <?= $e($payDay) ?></strong> to your bank. You can also request a payout before then.</p>
 
 <div class="mt-5 grid gap-3 sm:grid-cols-4">
-    <?php foreach ([['pending', 'In return window', 'Unlocks after the return window'], ['available', 'Ready to request', 'Request a payout below'],
+    <?php foreach ([['pending', 'In return window', 'Unlocks after the return window'], ['available', 'Ready', 'Paid on ' . $payDay . ', or request below'],
                      ['in_payout', 'Being paid', 'Transfer in progress'], ['paid', 'Paid to you', 'Lifetime']] as [$k, $label, $hint]): ?>
         <div class="rounded-[10px] border border-ln bg-sf p-4">
             <div class="text-xs uppercase tracking-wide text-tx3"><?= $e($label) ?></div>

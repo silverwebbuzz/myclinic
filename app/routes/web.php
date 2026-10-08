@@ -594,6 +594,7 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/store/settings', [StoreAdminController::class, 'saveSettings']);
         $admin->get('/store/vendors', [StoreAdminController::class, 'vendors']);
         $admin->get('/store/vendors/{id}', [StoreAdminController::class, 'vendorDetail']);
+        $admin->get('/store/vendors/{id}/terms-certificate', [\App\Controllers\StorePolicyController::class, 'adminCertificate']);
         $admin->post('/store/vendors/{id}/status', [StoreAdminController::class, 'vendorStatus']);
         $admin->post('/store/vendors/{id}/reset-password', [StoreAdminController::class, 'resetPassword']);
         $admin->post('/store/vendors/{id}/feature', [StoreAdminController::class, 'toggleFeatured']);
@@ -627,6 +628,8 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/store/orders/{id}/packages/{voId}/parcel-photo', [\App\Controllers\StoreOrderAdminController::class, 'parcelPhoto']);
         $admin->post('/store/orders/{id}/packages/{voId}/charge', [\App\Controllers\StoreOrderAdminController::class, 'charge']);
         $admin->post('/store/orders/{id}/packages/{voId}/charges/{ledgerId}/reverse', [\App\Controllers\StoreOrderAdminController::class, 'reverseCharge']);
+        $admin->get('/store/disputes', [\App\Controllers\StoreOrderAdminController::class, 'disputes']);
+        $admin->post('/store/disputes/{id}/{action}', [\App\Controllers\StoreOrderAdminController::class, 'resolveDispute']);
         $admin->post('/store/orders/{id}/packages/{voId}/courier-charge', [\App\Controllers\StoreOrderAdminController::class, 'courierCharge']);
         // GST documents + seller policies (P11b)
         $admin->get('/store/hsn', [StoreCatalogAdminController::class, 'hsn']);
@@ -713,6 +716,7 @@ return static function (RouteRegistrar $router): void {
         $vendor->post('/orders/{id}/cancel', [\App\Controllers\VendorOrderController::class, 'cancelItems']);
         $vendor->post('/orders/{id}/book', [\App\Controllers\VendorOrderController::class, 'book']);
         $vendor->get('/orders/{id}/parcel-photo', [\App\Controllers\VendorOrderController::class, 'parcelPhoto']);
+        $vendor->post('/orders/{id}/charges/{ledgerId}/dispute', [\App\Controllers\VendorOrderController::class, 'dispute']);
         $vendor->post('/orders/{id}/invoice', [\App\Controllers\StoreTaxController::class, 'vendorIssueInvoice']);
         $vendor->get('/gst', [\App\Controllers\StoreTaxController::class, 'vendorRegister']);
         $vendor->get('/gst/export', [\App\Controllers\StoreTaxController::class, 'vendorCsv']);
@@ -720,6 +724,7 @@ return static function (RouteRegistrar $router): void {
         $vendor->get('/gst/eclinicpro-invoices/{id}', [\App\Controllers\StoreAccountsController::class, 'vendorInvoice']);
         $vendor->get('/terms', [\App\Controllers\StorePolicyController::class, 'vendorShow']);
         $vendor->post('/terms/accept', [\App\Controllers\StorePolicyController::class, 'vendorAccept']);
+        $vendor->get('/terms/certificate', [\App\Controllers\StorePolicyController::class, 'vendorCertificate']);
 
         // Reviews (P11)
         $vendor->get('/reviews', [VendorPortalController::class, 'reviews']);

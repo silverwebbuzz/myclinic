@@ -181,6 +181,37 @@ RAZORPAY_TEST_WEBHOOK_SECRET=…   (optional: the secret of the Test-mode webhoo
         </form>
     </section>
 
+    <section class="rounded-xl border bg-white p-5 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="font-semibold">Seller terms &amp; payouts</h2>
+            <a href="/admin/store/policies/seller_terms" class="text-sm text-sky-700 hover:underline">Edit the seller terms text →</a>
+        </div>
+        <p class="mt-1 text-sm text-slate-500">These numbers appear in the seller terms (as <code>{{tokens}}</code>) and drive the system, so the terms always match what actually happens.
+            <strong>A change here changes the terms sellers already accepted.</strong> If it makes things worse for sellers (for example a shorter dispute period), also publish a new version of the terms so they get notice.</p>
+        <form method="post" action="/admin/store/settings" class="mt-3 grid gap-3 sm:grid-cols-2">
+            <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+            <input type="hidden" name="action" value="seller_terms_save">
+            <label class="text-sm"><span class="text-slate-600">Weekly payout day</span>
+                <select name="store_payout_weekday" class="mt-1 w-full rounded border px-2 py-1.5">
+                    <?php foreach (\App\Services\Store\StorePolicyService::WEEKDAYS as $n => $day): ?>
+                        <option value="<?= (int) $n ?>" <?= (int) $n === (int) ($sellerTerms['store_payout_weekday'] ?? 2) ? 'selected' : '' ?>><?= $e($day) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <span class="text-xs text-slate-400">Everything whose return window has ended is paid on this day.</span></label>
+            <label class="text-sm"><span class="text-slate-600">Minimum payout (₹)</span>
+                <input name="min_payout" inputmode="decimal" value="<?= $e(\App\Services\Store\ProductService::rupees((int) ($sellerTerms['store_min_payout_paise'] ?? 10000))) ?>" class="mt-1 w-full rounded border px-2 py-1.5">
+                <span class="text-xs text-slate-400">Smaller balances roll over to the next week.</span></label>
+            <label class="flex items-start gap-2 text-sm sm:col-span-2"><input type="checkbox" name="store_payout_auto_batch" value="1" class="mt-1" <?= ($sellerTerms['store_payout_auto_batch'] ?? '1') === '1' ? 'checked' : '' ?>>
+                <span>Create the payout batch automatically on the payout day <span class="text-slate-400">(the store team gets an email; you still transfer the money and mark each payout paid with the UTR on <a class="underline" href="/admin/store/payouts">Payouts</a>)</span></span></label>
+            <?php foreach (\App\Services\Store\StorePolicyService::TERMS_SETTINGS as $key => [$label, $min, $max, $default, $help]): ?>
+                <label class="text-sm"><span class="text-slate-600"><?= $e($label) ?></span>
+                    <input type="number" name="<?= $e($key) ?>" min="<?= (int) $min ?>" max="<?= (int) $max ?>" value="<?= $e($sellerTerms[$key] ?? $default) ?>" class="mt-1 w-full rounded border px-2 py-1.5">
+                    <span class="text-xs text-slate-400"><code>{{<?= $e(substr($key, 6)) ?>}}</code><?= $help !== '' ? ' · ' . $e($help) : '' ?></span></label>
+            <?php endforeach; ?>
+            <div class="sm:col-span-2"><button class="rounded bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700">Save seller terms &amp; payouts</button></div>
+        </form>
+    </section>
+
     <form method="post" action="/admin/store/settings" class="rounded-xl border bg-white p-5 shadow-sm space-y-4">
         <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
         <input type="hidden" name="action" value="save">
@@ -192,10 +223,6 @@ RAZORPAY_TEST_WEBHOOK_SECRET=…   (optional: the secret of the Test-mode webhoo
         <label class="flex items-center gap-2 text-sm">
             <input type="checkbox" name="store_reviews_auto_publish" value="1" <?= ($settings['store_reviews_auto_publish'] ?? '0') === '1' ? 'checked' : '' ?>>
             Publish customer reviews without moderation <span class="text-slate-400">(not recommended for health products)</span>
-        </label>
-        <label class="block text-sm">
-            <span class="text-slate-600">Default return window (days)</span>
-            <input type="number" min="0" max="30" name="store_default_return_window_days" value="<?= $e($settings['store_default_return_window_days']) ?>" class="mt-1 w-32 rounded border px-2 py-1.5 text-sm">
         </label>
 
         <h2 class="pt-2 font-semibold">Orders &amp; money</h2>

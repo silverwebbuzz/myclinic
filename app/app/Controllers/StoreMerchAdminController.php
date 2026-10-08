@@ -64,6 +64,8 @@ final class StoreMerchAdminController
             ['Returns awaiting decision', $one("SELECT COUNT(*) FROM store_returns WHERE status IN ('requested','qc_failed')"), '/admin/store/returns'],
             ['Reviews to moderate', $one("SELECT COUNT(*) FROM store_reviews WHERE status = 'pending'"), '/admin/store/reviews'],
             ['Failed refunds', $one("SELECT COUNT(*) FROM store_refunds WHERE status = 'failed'"), '/admin/store/orders'],
+            ['Seller charge disputes awaiting a reply', \App\Services\Store\ChargeDisputeService::openCount(), '/admin/store/disputes'],
+            ['Payout drafts to pay', $one("SELECT COUNT(*) FROM store_payouts WHERE status = 'draft'"), '/admin/store/payouts?status=draft'],
             ['Payouts approved, not yet paid', $one("SELECT COUNT(*) FROM store_payouts WHERE status IN ('approved','processing')"), '/admin/store/payouts?status=approved'],
             ['Returned to seller, customer not yet refunded', $one("SELECT COUNT(*) FROM store_vendor_orders vo WHERE vo.status = 'rto'
                 AND EXISTS (SELECT 1 FROM store_order_items oi WHERE oi.vendor_order_id = vo.id AND oi.qty > oi.qty_cancelled + oi.qty_returned)"), '/admin/store/orders'],

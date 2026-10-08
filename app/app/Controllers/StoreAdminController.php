@@ -208,6 +208,7 @@ final class StoreAdminController
                 'webhook_url' => rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/') . '/webhooks/store-tracking',
             ],
             'razorpay' => \App\Services\Store\StorePaymentService::settingsStatus(),
+            'sellerTerms' => $this->sellerTermsSettings(),
             'invoicing' => [
                 'legal_name' => StoreSettings::get('store_platform_legal_name'),
                 'gstin' => StoreSettings::get('store_platform_gstin'),
@@ -220,6 +221,21 @@ final class StoreAdminController
                 'ready' => \App\Services\Store\TaxDocumentService::platformReady(),
             ],
         ]);
+    }
+
+    /** Current values for the "Seller terms & payouts" form. @return array<string, string> */
+    private function sellerTermsSettings(): array
+    {
+        $out = [
+            'store_payout_weekday' => StoreSettings::get('store_payout_weekday', '2'),
+            'store_payout_auto_batch' => StoreSettings::get('store_payout_auto_batch', '1'),
+            'store_min_payout_paise' => StoreSettings::get('store_min_payout_paise', '10000'),
+        ];
+        foreach (\App\Services\Store\StorePolicyService::TERMS_SETTINGS as $key => [, , , $default]) {
+            $out[$key] = StoreSettings::get($key, (string) $default);
+        }
+
+        return $out;
     }
 
     /** Platform default shipping rule (vendor_id NULL), or null if the orders patch isn't imported yet. */
@@ -292,6 +308,19 @@ final class StoreAdminController
                 StoreSettings::set('store_require_gstin', !empty($request->post['require_gstin']) ? '1' : '0');
                 StoreAudit::log('store.invoicing_save', 'setting', null, null, ['gstin' => $gstin, 'sac' => $sac, 'gst_bp' => $bp]);
                 SessionFlash::put('store_ok', 'Invoicing details saved.');
+            } elseif ($action === 'seller_terms_save') {
+                foreach (\App\Services\Store\StorePolicyService::TERMS_SETTINGS as $key => [, $min, $max, $default]) {
+                    $raw = trim((string) ($request->post[$key] ?? ''));
+                    StoreSettings::set($key, (string) max($min, min($max, $raw === '' ? $default : (int) $raw)));
+                }
+                StoreSettings::set('store_payout_weekday', (string) max(1, min(7, (int) ($request->post['store_payout_weekday'] ?? 2))));
+                StoreSettings::set('store_payout_auto_batch', !empty($request->post['store_payout_auto_batch']) ? '1' : '0');
+                $min = \App\Services\Store\ProductService::toPaise((string) ($request->post['min_payout'] ?? ''));
+                if ($min !== null && $min >= 0 && $min <= 10000000) {
+                    StoreSettings::set('store_min_payout_paise', (string) $min);
+                }
+                StoreAudit::log('store.seller_terms_settings', 'setting', null);
+                SessionFlash::put('store_ok', 'Saved. The seller terms show the new numbers straight away.');
             } elseif ($action === 'new_preview_key') {
                 StoreSettings::set('store_preview_key', bin2hex(random_bytes(16)), true);
                 StoreAudit::log('store.preview_key_rotate', 'setting', null);
@@ -299,7 +328,6 @@ final class StoreAdminController
             } elseif ($action === 'save') {
                 StoreSettings::set('store_require_product_approval', !empty($request->post['store_require_product_approval']) ? '1' : '0');
                 StoreSettings::set('store_reviews_auto_publish', !empty($request->post['store_reviews_auto_publish']) ? '1' : '0');
-                StoreSettings::set('store_default_return_window_days', (string) max(0, min(30, (int) ($request->post['store_default_return_window_days'] ?? 7))));
                 StoreSettings::set('store_payment_window_minutes', (string) max(10, min(120, (int) ($request->post['store_payment_window_minutes'] ?? 30))));
                 $commissionPct = (float) ($request->post['store_default_commission_pct'] ?? 10);
                 $commissionBp = (int) round(max(0, min(50, $commissionPct)) * 100);
