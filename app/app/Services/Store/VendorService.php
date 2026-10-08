@@ -635,8 +635,11 @@ final class VendorService
             $items[] = ['key' => 'gstin', 'label' => 'GSTIN (needed to sell on the marketplace; printed on your invoices)',
                 'done' => !empty($vendor['gstin']), 'href' => '/vendor/profile'];
         }
-        $items[] = ['key' => 'terms', 'label' => 'Read and accept the seller rules & terms',
-            'done' => !StorePolicyService::needsAcceptance($vendorId), 'href' => '/vendor/terms'];
+        // Before approval the terms are accepted with the tick box on the submit form itself.
+        if (!in_array($vendor['status'], ['draft', 'rejected'], true)) {
+            $items[] = ['key' => 'terms', 'label' => 'Read and accept the seller rules & terms',
+                'done' => !StorePolicyService::needsAcceptance($vendorId), 'href' => '/vendor/terms'];
+        }
         if (!empty($vendor['gstin'])) {
             $items[] = ['key' => 'doc_gst', 'label' => 'Upload GST certificate', 'done' => in_array('gst_cert', $docTypes, true), 'href' => '/vendor/documents'];
         }
@@ -644,14 +647,26 @@ final class VendorService
         return ['items' => $items, 'complete' => !in_array(false, array_column($items, 'done'), true)];
     }
 
-    /** @return array{ok: bool, error?: string} */
-    public static function submitForReview(array $vendor): array
+    /**
+     * Submit for review. The seller must tick the box accepting the current seller terms
+     * (shown on the submit form); the acceptance is recorded before the status changes.
+     *
+     * @return array{ok: bool, error?: string}
+     */
+    public static function submitForReview(array $vendor, int $vendorUserId, bool $agreed, int $termsVersion, string $ip): array
     {
         if (!in_array($vendor['status'], ['draft', 'rejected'], true)) {
             return ['ok' => false, 'error' => 'Your account is already ' . str_replace('_', ' ', (string) $vendor['status']) . '.'];
         }
         if (!self::checklist($vendor)['complete']) {
             return ['ok' => false, 'error' => 'Please complete every step in the checklist first.'];
+        }
+        if (!$agreed) {
+            return ['ok' => false, 'error' => 'Please tick the box to accept the seller rules & terms.'];
+        }
+        $accepted = StorePolicyService::accept((int) $vendor['id'], $vendorUserId, 'seller_terms', $termsVersion, $ip);
+        if (!$accepted['ok']) {
+            return $accepted;
         }
         QueryBuilder::table('store_vendors')->where('id', '=', (int) $vendor['id'])->update([
             'status' => 'pending_review',

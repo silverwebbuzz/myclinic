@@ -26,8 +26,18 @@ final class VendorPortalController
     public function dashboard(Request $request): Response
     {
         $vendor = $this->vendor();
+        $terms = null;   // shown inside the submit form, accepted with its tick box
+        if (in_array($vendor['status'], ['draft', 'rejected'], true)) {
+            try {
+                $page = \App\Services\Store\StorePolicyService::get('seller_terms');
+                $terms = ['title' => $page['title'], 'version' => $page['version'], 'html' => \App\Services\Store\StorePolicyService::render($page['body'])];
+            } catch (\Throwable $e) {
+                error_log('[VendorPortal::dashboard terms] ' . $e->getMessage());
+            }
+        }
 
         return $this->render('store_vendor/dashboard', [
+            'terms' => $terms,
             'checklist' => VendorService::checklist($vendor),
             'welcome' => !empty($request->query['welcome']),
             'stats' => $vendor['status'] === 'approved' ? self::stats((int) $vendor['id']) : null,
@@ -152,7 +162,13 @@ final class VendorPortalController
 
     public function submit(Request $request): Response
     {
-        $result = VendorService::submitForReview($this->vendor());
+        try {
+            $result = VendorService::submitForReview($this->vendor(), (int) (RequestContext::vendorUser()['id'] ?? 0),
+                !empty($request->post['agree_terms']), (int) ($request->post['terms_version'] ?? 0), $request->ip());
+        } catch (\Throwable $e) {
+            error_log('[VendorPortal::submit] ' . $e->getMessage());
+            $result = ['ok' => false, 'error' => 'Could not submit right now. Please try again shortly.'];
+        }
         $this->flash($result, 'Submitted! Our team will review your account, usually within 2 working days.');
 
         return Response::redirect('/vendor/dashboard');

@@ -153,6 +153,10 @@ final class StorePolicyService
             'courier_first_500g' => $rs($fees['courier_base']),
             'courier_extra_500g' => $rs($fees['courier_addl']),
             'payment_window' => (string) StoreSettings::int('store_payment_window_minutes', 30),
+            'platform_legal_name' => StoreSettings::get('store_platform_legal_name') ?: 'eClinicPro',
+            'platform_address' => StoreSettings::get('store_platform_address') ?: 'its registered office',
+            'legal_city' => StoreSettings::get('store_legal_jurisdiction_city') ?: 'the city of eClinicPro\'s registered office',
+            'grievance_email' => StoreSettings::get('store_grievance_email') ?: 'hello@eclinicpro.com',
         ];
     }
 
@@ -218,10 +222,11 @@ final class StorePolicyService
         }
 
         return <<<'MD'
-These rules apply to every seller on eClinicPro Store. By accepting them in the seller portal you agree to follow them. Numbers shown here (commission, time limits, fees) are the current settings and update automatically.
+These rules are an agreement between you (the "seller", including everyone who uses your seller account) and **{{platform_legal_name}}**, {{platform_address}} ("eClinicPro", "we"), which runs eClinicPro Store. By ticking the box and accepting them in the seller portal you agree to be bound by them. Numbers shown here (commission, time limits, fees) are the current settings and update automatically.
 
 ## 1. Who sells to the customer
-- **You are the seller.** The customer buys from you; eClinicPro runs the marketplace (the "e-commerce operator"), takes the payment and arranges delivery.
+- **You are the seller.** The contract of sale is between you and the customer. eClinicPro only provides the online marketplace (as an "intermediary" under the Information Technology Act, 2000 and an "e-commerce entity" under the Consumer Protection (E-Commerce) Rules, 2020), collects payment on your behalf and arranges delivery.
+- eClinicPro does **not** make, own, stock, inspect or sell your products and gives **no warranty** about them. You alone are responsible for each product, its quality, safety, labelling, legal compliance, and every claim made about it.
 - A GST tax invoice is generated **in your name and GSTIN** for every package when it is dispatched. You are responsible for reporting these sales, and any credit notes, in your GST returns.
 - Keep your **HSN code and GST rate correct** for every product. If you are unsure, ask your CA before listing. Wrong tax details are your responsibility.
 - Where the law requires eClinicPro to collect TCS (GST) or deduct TDS (income tax) on your sales, it will be deducted from your payouts and shown in your statement.
@@ -258,18 +263,17 @@ These rules apply to every seller on eClinicPro Store. By accepting them in the 
 - The photo of the packed parcel on a scale is your evidence. eClinicPro will dispute wrong weights with the courier using your photo; if the dispute is won, the charge is reversed. Without a clear photo, we can't dispute the charge.
 
 ## 7. Returns and refunds
-- Customers can request a return of eligible products within the product's return window (**{{return_days}} days from delivery** unless the product says otherwise). Photos are required when an item is reported damaged, wrong, expired or defective.
+- **No "change of mind" returns.** A customer can return an item only when it arrived **damaged, defective, wrong, expired (or near expiry), not as described, or with parts missing**, within the product's return window (**{{return_days}} days from delivery** unless the product says otherwise). Photos are required as evidence.
 - Review each return request **within 2 days** from the Returns page: approve it (a reverse pickup is arranged, or the customer is refunded without pickup) or reject it with a clear reason.
 - When a returned package reaches you, inspect it and record the result. If you report a problem with the returned item, eClinicPro reviews the evidence and makes the final decision.
-- **Return pickup for wrong, expired, defective or badly packed items** (your responsibility): you pay it. The forward courier charge you already paid is not refunded.
-- **Return pickup when the customer changed their mind:** eClinicPro pays it.
-- **Items damaged in transit by the courier:** eClinicPro pays the return pickup and claims from the courier.
+- **You pay the return pickup** for every approved return, and the forward courier charge you already paid is not refunded. Both are deducted from your payouts.
+- **Items damaged in transit by the courier** (where the package was packed properly): eClinicPro pays the return pickup and claims from the courier.
 - **Replacements are not offered at present:** an approved return is refunded to the customer, who can place a new order.
 - When an item is refunded after dispatch, a **credit note** is issued automatically against your invoice for exactly those units, and your earnings, our commission and the GST on it are reversed for those units.
+- Any payment-gateway or bank charge that is not given back to eClinicPro when a customer is refunded for a reason that is your responsibility may also be deducted from your payouts.
 
 ## 8. Packages that don't reach the customer
-- **Customer refused or couldn't be reached (returned to you by the courier):** the customer is refunded for the items, stock comes back to you, and there are no earnings on that package. **eClinicPro pays** the forward and return courier charges.
-- **Caused by you** (for example late dispatch, wrong address label, wrong item packed, or marking a package ready when it wasn't): **you pay** the forward and return courier charges.
+- **Returned to you by the courier** (the customer refused it or couldn't be reached, or for a reason caused by you such as late dispatch, a wrong label or a wrong item): the customer is refunded for the items, stock comes back to you, and there are no earnings on that package. **You pay the forward and return courier charges**, deducted from your payouts.
 - **Lost or damaged by the courier:** the customer is refunded in full. As long as the package was packed properly, eClinicPro normally pays you what you would have earned and claims from the courier itself.
 
 ## 9. Commission and payouts
@@ -291,10 +295,51 @@ These rules apply to every seller on eClinicPro Store. By accepting them in the 
 ## 12. Customer data
 - Use customer names, addresses and phone numbers **only to fulfil the order**. Never contact customers for marketing or share their data with anyone.
 
-## 13. Suspension and changes
-- eClinicPro may hide listings or suspend a store that breaks these rules, sells unsafe or fake products, or receives repeated serious complaints. Earnings needed to cover refunds may be held until they are settled.
-- These rules may be updated. You will see the new version in the seller portal and must accept it to keep selling.
-- These rules are governed by the laws of India.
+## 13. Your promises to us
+- The business, tax, bank and licence details and documents you give us are true, complete and yours, and you will keep them up to date.
+- You hold every registration and licence the law requires for your business and products, and you follow all laws that apply to them, including the Consumer Protection Act, 2019 and E-Commerce Rules, the Legal Metrology (Packaged Commodities) Rules, the Drugs and Cosmetics Act, the Food Safety and Standards Act, BIS rules, GST law, and advertising and labelling rules.
+- You have the right to sell every product you list, and your products, listings, photos and brand names do not infringe anyone's trademark, copyright or other rights.
+
+## 14. Product responsibility and recalls
+- **You are fully responsible for your products**: their quality, safety, authenticity, shelf life, packaging, labelling, warranties, and any harm, injury, loss or claim they cause. Any manufacturer's warranty is between you (or the manufacturer) and the customer.
+- If a product is recalled, banned, or found unsafe or counterfeit, you must tell eClinicPro at once, stop selling it, and pay for the refunds, return pickups and any other costs that follow.
+- You will answer customer complaints about your products promptly and co-operate with any authority, court or regulator that asks about them.
+
+## 15. Indemnity
+You will **indemnify and hold harmless** eClinicPro, its directors, employees and partners against every claim, demand, penalty, tax, loss, damage, cost and legal fee arising from: your products or listings; any breach of these rules or of any law by you; wrong tax or licence details; infringement of anyone's rights; your misuse of customer data; or anything done by people using your seller account. This continues after your account is closed.
+
+## 16. Limits on eClinicPro's liability
+- The marketplace is provided "as is". eClinicPro does not promise any level of sales or that the store will always be available or error-free.
+- eClinicPro is not liable for indirect or consequential losses, including lost profit, sales or goodwill. Its total liability to you for any claim is limited to the commission it earned from your sales in the 3 months before the claim arose.
+- eClinicPro is not responsible for delays or failures caused by couriers, banks, payment gateways, or events outside its reasonable control (for example natural disasters, strikes, government orders, pandemics, or internet and power outages).
+
+## 17. Holds and set-off
+- eClinicPro may **deduct any amount you owe** under these rules (courier charges, return and failed-delivery charges, refunds, penalties, taxes, indemnity amounts) from any payout, and recover any shortfall from your later payouts or ask you to pay it directly.
+- eClinicPro may **hold payouts** while a customer complaint, return, chargeback, legal notice, investigation or tax query about your sales is open, or when your account is suspended or closed, until the matter is settled.
+
+## 18. Content you upload
+- You give eClinicPro a free, non-exclusive licence to use, copy, resize, translate and display your product names, descriptions, photos, logos and brand names on the store, its apps, and its marketing, while your products are listed and for a reasonable time after.
+- You must not use eClinicPro's name or logo except as eClinicPro allows in writing.
+
+## 19. Your account
+- Keep your login details secret. Everything done through your seller account is treated as done by you.
+- Do not try to move customers off the store to sell to them directly, avoid commission, or manipulate prices, reviews or search results.
+
+## 20. Suspension and closing your account
+- eClinicPro may hide listings or suspend or close a store that breaks these rules, sells unsafe or fake products, gives false information, or receives repeated serious complaints.
+- You may close your store at any time by writing to eClinicPro, after you have fulfilled or cancelled every open order.
+- After closing, your remaining earnings are paid once every return window and open matter has ended, less any amounts you owe. Sections on product responsibility, indemnity, liability, set-off, customer data, and disputes continue to apply.
+
+## 21. Relationship
+You and eClinicPro are independent businesses. Nothing in these rules creates a partnership, joint venture, agency or employment.
+
+## 22. Changes to these rules
+These rules may be updated. You will see the new version in the seller portal and must accept it to keep selling. Every acceptance is recorded with its version, date, time and IP address as an electronic record under the Information Technology Act, 2000.
+
+## 23. Grievances and disputes
+- Questions or complaints about these rules can be sent to **{{grievance_email}}**. We will acknowledge them within 48 hours and try to resolve them within 30 days.
+- These rules are governed by the laws of India. Any dispute that cannot be resolved by discussion is subject to the exclusive jurisdiction of the courts at **{{legal_city}}**.
+- If any part of these rules is found invalid, the rest still applies. These rules, with any commission or charges agreed with you in writing, are the whole agreement between you and eClinicPro about selling on eClinicPro Store.
 MD;
     }
 }

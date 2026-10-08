@@ -6,7 +6,9 @@
  * @var array<string,mixed> $vendor
  * @var array{items: list<array{key:string,label:string,done:bool,href:string}>, complete: bool} $checklist
  * @var array<string,mixed>|null $stats
+ * @var array{title:string,version:int,html:string}|null $terms  seller terms shown on the submit form (draft/rejected only)
  */
+$terms ??= null;
 $pageTitle = 'Dashboard';
 $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
 $status = (string) $vendor['status'];
@@ -287,6 +289,28 @@ ob_start();
             <?php if (in_array($status, ['draft', 'rejected'], true)): ?>
                 <form method="post" action="/vendor/submit" class="flex flex-wrap items-center gap-3 border-t border-ln2 px-4 py-3">
                     <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+                    <?php if ($terms !== null): ?>
+                        <input type="hidden" name="terms_version" value="<?= (int) $terms['version'] ?>">
+                        <div class="w-full">
+                            <div class="mb-1.5 flex items-center justify-between gap-2 text-[13px]">
+                                <span class="font-semibold"><?= $e($terms['title']) ?> <span class="font-normal text-tx3">(version <?= (int) $terms['version'] ?>)</span></span>
+                                <a href="/vendor/terms" target="_blank" rel="noopener" class="text-xs font-medium text-act hover:underline">Open full page ↗</a>
+                            </div>
+                            <style>
+                                .policy h2 { font-size: 1rem; font-weight: 600; margin: 1.1rem 0 .4rem; color: #0e4d34; }
+                                .policy h3 { font-weight: 600; margin: .8rem 0 .3rem; }
+                                .policy p { margin: .4rem 0; }
+                                .policy ul { list-style: disc; padding-left: 1.25rem; margin: .4rem 0; }
+                                .policy ol { list-style: decimal; padding-left: 1.25rem; margin: .4rem 0; }
+                                .policy li { margin: .25rem 0; }
+                            </style>
+                            <div class="policy max-h-72 overflow-y-auto rounded-[8px] border border-ln bg-sf px-4 py-2 text-[13px] leading-6 text-slate-800"><?= $terms['html'] ?></div>
+                            <label class="mt-3 flex items-start gap-2 text-[13px]">
+                                <input type="checkbox" name="agree_terms" value="1" required class="mt-1">
+                                <span>I have read and agree to the seller rules &amp; terms (version <?= (int) $terms['version'] ?>) on behalf of <strong><?= $e($vendor['legal_name'] ?: $vendor['display_name']) ?></strong>, and I confirm that all business, tax, bank and licence details and documents I have given are true and correct.</span>
+                            </label>
+                        </div>
+                    <?php endif; ?>
                     <button <?= $checklist['complete'] ? '' : 'disabled' ?> class="<?= $btn ?> border-transparent bg-ac text-white hover:opacity-90 disabled:pointer-events-none disabled:opacity-50">
                         <?= $status === 'rejected' ? 'Resubmit for review' : 'Submit for review' ?>
                     </button>

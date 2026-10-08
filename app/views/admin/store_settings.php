@@ -162,6 +162,10 @@ RAZORPAY_TEST_WEBHOOK_SECRET=…   (optional: the secret of the Test-mode webhoo
                 <input name="platform_gstin" maxlength="15" value="<?= $e($invoicing['gstin']) ?>" class="mt-1 w-full rounded border px-2 py-1.5 font-mono uppercase"></label>
             <label class="text-sm sm:col-span-2"><span class="text-slate-600">Registered address (printed on invoices)</span>
                 <textarea name="platform_address" rows="2" class="mt-1 w-full rounded border px-2 py-1.5"><?= $e($invoicing['address']) ?></textarea></label>
+            <label class="text-sm"><span class="text-slate-600">Courts city for disputes (seller terms)</span>
+                <input name="legal_city" maxlength="80" value="<?= $e($invoicing['legal_city']) ?>" placeholder="e.g. Ahmedabad, Gujarat" class="mt-1 w-full rounded border px-2 py-1.5"></label>
+            <label class="text-sm"><span class="text-slate-600">Grievance email (seller terms)</span>
+                <input name="grievance_email" type="email" maxlength="190" value="<?= $e($invoicing['grievance_email']) ?>" placeholder="hello@eclinicpro.com" class="mt-1 w-full rounded border px-2 py-1.5"></label>
             <label class="text-sm"><span class="text-slate-600">SAC code for delivery charges</span>
                 <input name="delivery_sac" maxlength="8" value="<?= $e($invoicing['sac']) ?>" class="mt-1 w-full rounded border px-2 py-1.5">
                 <span class="text-xs text-slate-400">996812 = courier services. Confirm with your CA.</span></label>

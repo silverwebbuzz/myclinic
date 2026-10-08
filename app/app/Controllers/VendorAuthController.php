@@ -68,7 +68,7 @@ final class VendorAuthController
             'phone' => trim((string) ($request->post['phone'] ?? '')),
             'password' => (string) ($request->post['password'] ?? ''),
         ];
-        $error = $this->validate($in, (string) ($request->post['password_confirm'] ?? ''), !empty($request->post['accept_terms']));
+        $error = $this->validate($in, (string) ($request->post['password_confirm'] ?? ''));
         $result = $error === null ? VendorService::register($in) : ['ok' => false, 'error' => $error];
 
         if (!$result['ok']) {
@@ -145,7 +145,7 @@ final class VendorAuthController
     }
 
     /** @param array<string, string> $in */
-    private function validate(array $in, string $confirm, bool $acceptedTerms): ?string
+    private function validate(array $in, string $confirm): ?string
     {
         if (mb_strlen($in['business_name']) < 2) {
             return 'Please enter your store / business name.';
@@ -165,10 +165,6 @@ final class VendorAuthController
         if ($in['password'] !== $confirm) {
             return 'Passwords do not match.';
         }
-        if (!$acceptedTerms) {
-            return 'Please accept the seller terms to continue.';
-        }
-
         return null;
     }
 }

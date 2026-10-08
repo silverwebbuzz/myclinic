@@ -49,7 +49,7 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
                 <input name="title" value="<?= $e($page['title']) ?>" maxlength="190" class="mt-1 w-full rounded border px-2 py-1.5"></label>
             <?php if (($defaultBody ?? '') !== '' && trim(str_replace("\r\n", "\n", $page['body'])) !== trim($defaultBody)): ?>
                 <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                    <strong>The standard text has been updated</strong> (for example: one delivery fee per order, sellers pay the courier, weight disputes).
+                    <strong>The standard text has been updated</strong> (for example: no change-of-mind returns, sellers pay return pickups and failed deliveries, indemnity and other legal clauses).
                     Load it into the editor, check it and add back any changes of your own, then save as a new version.
                     <button type="button" class="ml-1 font-semibold text-amber-800 underline"
                             onclick="if (confirm('Replace the text in the editor with the latest standard text? Nothing is saved until you press Save.')) { document.getElementById('policy-body').value = document.getElementById('policy-default').value; }">Load the latest standard text</button>

@@ -45,10 +45,7 @@ ob_start();
                 <input name="password_confirm" type="password" required minlength="8" data-match="password" autocomplete="new-password" class="<?= $input ?>">
             </label>
         </div>
-        <label class="flex items-start gap-2 text-sm text-tx2">
-            <input type="checkbox" name="accept_terms" value="1" class="mt-1" required>
-            <span>I agree to list only genuine, legally saleable products, keep valid licences for regulated items, and follow the eClinicPro Store seller terms.</span>
-        </label>
+        <p class="text-xs text-tx3">You'll read and accept the eClinicPro Store seller rules &amp; terms before you submit your account for review.</p>
         <button class="w-full rounded-[7px] bg-ac py-2.5 text-sm font-medium text-white hover:opacity-90">Create seller account</button>
     </form>
 </div>

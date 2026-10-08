@@ -212,6 +212,8 @@ final class StoreAdminController
                 'legal_name' => StoreSettings::get('store_platform_legal_name'),
                 'gstin' => StoreSettings::get('store_platform_gstin'),
                 'address' => StoreSettings::get('store_platform_address'),
+                'legal_city' => StoreSettings::get('store_legal_jurisdiction_city'),
+                'grievance_email' => StoreSettings::get('store_grievance_email'),
                 'sac' => StoreSettings::get('store_delivery_sac', '996812'),
                 'gst_bp' => StoreSettings::int('store_delivery_gst_bp', 1800),
                 'require_gstin' => StoreSettings::get('store_require_gstin', '1') === '1',
@@ -279,6 +281,12 @@ final class StoreAdminController
                 StoreSettings::set('store_platform_legal_name', mb_substr(trim((string) ($request->post['platform_legal_name'] ?? '')), 0, 190));
                 StoreSettings::set('store_platform_gstin', $gstin);
                 StoreSettings::set('store_platform_address', mb_substr(trim((string) ($request->post['platform_address'] ?? '')), 0, 400));
+                $grievance = trim((string) ($request->post['grievance_email'] ?? ''));
+                if ($grievance !== '' && !filter_var($grievance, FILTER_VALIDATE_EMAIL)) {
+                    throw new \InvalidArgumentException('Enter a valid grievance email address.');
+                }
+                StoreSettings::set('store_legal_jurisdiction_city', mb_substr(trim((string) ($request->post['legal_city'] ?? '')), 0, 80));
+                StoreSettings::set('store_grievance_email', mb_substr($grievance, 0, 190));
                 StoreSettings::set('store_delivery_sac', $sac !== '' ? mb_substr($sac, 0, 8) : '996812');
                 StoreSettings::set('store_delivery_gst_bp', (string) $bp);
                 StoreSettings::set('store_require_gstin', !empty($request->post['require_gstin']) ? '1' : '0');

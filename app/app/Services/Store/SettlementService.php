@@ -82,8 +82,8 @@ final class SettlementService
     /** Seller charges admin can raise on a package: [ledger type, statement label]. */
     public const CHARGES = [
         'weight' => ['shipping_debit', 'Weight dispute (courier re-weighed the parcel)'],
-        'return_pickup' => ['shipping_debit', 'Return pickup (seller\'s fault)'],
-        'rto' => ['rto_charge', 'Failed delivery caused by the seller'],
+        'return_pickup' => ['shipping_debit', 'Return pickup'],
+        'rto' => ['rto_charge', 'Failed delivery (forward + return courier)'],
         'other' => ['penalty', 'Other charge'],
     ];
 
