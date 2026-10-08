@@ -118,7 +118,23 @@ if ($inStore) {
     $navGroups['Overview'][] = ['/admin/store/dashboard', 'Store (marketplace)', 'M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6', $storePending];
 }
 
-$isActive = static fn (string $href): bool => $adminPath === $href || str_starts_with($adminPath, $href . '/');
+// Current item: exact match, else the longest parent path (/admin/store/orders/12 → Orders).
+$activeHref = null;
+$crumbs = [];
+foreach ($navGroups as $group => $items) {
+    foreach ($items as $item) {
+        $href = $item[0];
+        if (($adminPath === $href || str_starts_with($adminPath, $href . '/')) && ($activeHref === null || strlen($href) > strlen($activeHref))) {
+            $activeHref = $href;
+            $crumbs = [$group, $item[1]];
+        }
+    }
+}
+$crumbs = array_merge([$inStore ? 'Store admin' : 'Admin'], $crumbs);
+$sa = \App\Core\RequestContext::superAdmin() ?? [];
+$adminName = trim((string) ($sa['name'] ?? '')) ?: 'Super admin';
+$adminEmail = (string) ($sa['email'] ?? '');
+$adminInitials = strtoupper(implode('', array_map(static fn ($w) => mb_substr($w, 0, 1), array_slice(preg_split('/\s+/', $adminName) ?: [], 0, 2)))) ?: 'A';
 ?>
 <?php require dirname(__DIR__) . '/components/ui_tokens.php'; ?>
 <?php
@@ -133,94 +149,151 @@ if (!defined('ECP_ADMIN_ALPINE_LOADED')) {
 }
 ?>
 <script>
-    // Sidebar open state in a global Alpine store so the mobile toggle button
-    // (outside the sidebar) can flip it without relying on Alpine internals.
+    // Sidebar open state (phones only) in a global Alpine store so the top-bar
+    // toggle can flip it without relying on Alpine internals.
     document.addEventListener('alpine:init', () => {
-        Alpine.store('adminNav', { open: window.matchMedia('(min-width:768px)').matches });
+        Alpine.store('adminNav', { open: false });
     });
 </script>
+<?php if (!defined('ECP_ADMIN_SKIN_EMITTED')): define('ECP_ADMIN_SKIN_EMITTED', true); ?>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-    :root { --brand: #334155; --brand-light: rgba(51,65,85,0.1); --brand-dark: #1e293b; }
-    /* Reserve the fixed sidebar's width on <body> instead of on <main>: pages
-       render <main class="mx-auto max-w-6xl">, and a bare `body > main` rule
-       (specificity 0,0,2) loses to Tailwind's .mx-auto / .max-w-6xl (0,1,0),
-       so a margin set here would be silently dropped and the content would
-       slide under the sidebar. Padding the body needs no specificity fight,
-       and the fixed sidebar is unaffected by it. */
-    body { padding-left: 16rem; }
-    /* Each admin page picks its own max-w-* (3xl for forms, 7xl for tables);
-       leave that alone — it just centres inside the padded area now. */
-    @media (max-width: 768px) {
-        body { padding-left: 0; }
-        /* Clear the floating hamburger button. */
-        body > main[class] { padding-top: 3.5rem; }
+    /* ============================================================
+       Admin skin — same console look as the seller portal
+       (store_vendor/_layout.php): Inter 13px, slate neutrals, 10px
+       cards, emerald accent, dark 244px sidebar + 56px top bar.
+       Pages keep their own markup; this only re-skins it.
+       ============================================================ */
+    :root {
+        --brand: #059669; --brand-dark: #047857; --brand-light: #ecfdf5; --brand-soft: #f8fafc;
+        --ui-border: #e4e7ec; --ui-shadow-card: none;
     }
-    /* Admin pages don't load a global x-cloak rule; the backdrop below needs it
-       so it can't flash before Alpine boots. */
+    body {
+        background: #f5f6f8 !important; color: #0f172a;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 13px;
+        font-feature-settings: 'tnum' 1, 'cv11' 1; -webkit-font-smoothing: antialiased;
+        /* Reserve the fixed sidebar's width on <body>, not <main>: pages render
+           <main class="mx-auto max-w-6xl">, and Tailwind's .mx-auto would beat a
+           bare `body > main` margin rule. */
+        padding-left: 244px;
+    }
+    @media (max-width: 767px) { body { padding-left: 0; } }
     [x-cloak] { display: none !important; }
-    .admin-side { width: 16rem; }
-    .admin-link.active { background: rgba(255,255,255,0.12); color: #fff; }
-    .admin-link.active .admin-ico { color: #fff; }
-</style>
+    .font-mono, code { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
 
-<aside class="admin-side fixed inset-y-0 left-0 z-30 flex flex-col bg-slate-900 text-slate-300"
-       :class="$store.adminNav.open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'"
-       style="transition: transform .2s">
-    <div class="px-5 py-4 border-b border-white/10">
-        <?php if ($inStore): ?>
-            <a href="/admin/store/dashboard" class="block font-semibold text-white">eClinicPro Store</a>
-            <a href="/admin/dashboard" class="mt-1 inline-flex items-center gap-1 text-xs text-slate-400 hover:text-white">
-                <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                Back to main admin</a>
-        <?php else: ?>
-            <a href="/admin/dashboard" class="font-semibold text-white">eClinicPro Admin</a>
-        <?php endif; ?>
+    /* Page title */
+    body > main h1 { font-size: 22px; line-height: 1.3; font-weight: 600; letter-spacing: -.015em; }
+
+    /* Cards / panels: flat, hairline border, 10px radius */
+    .ui-card { border-radius: 10px; border-color: #e4e7ec; box-shadow: none; }
+    body > main .rounded-xl, body > main .rounded-2xl { border-radius: 10px; }
+    body > main .shadow-sm, body > main .shadow { box-shadow: none; }
+    body > main .border-slate-200, body > main .border-slate-100, body > main .border-gray-200 { border-color: #e4e7ec; }
+    body > main .border:not([class*="border-"]) { border-color: #e4e7ec; }
+    body > main .divide-y > :not([hidden]) ~ :not([hidden]) { border-color: #eef0f3; }
+
+    /* Tables */
+    thead { background: #f8fafc; }
+    thead th { color: #64748b; font-weight: 600; }
+    tbody tr { transition: background .15s ease; }
+    tbody tr:hover { background: #f8fafc; }
+
+    /* Form controls: 7px radius, hairline border, emerald focus ring */
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="button"]),
+    select, textarea {
+        border-color: #e4e7ec; border-radius: 7px; background-color: #fff;
+    }
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):focus,
+    select:focus, textarea:focus {
+        outline: none; border-color: #059669; box-shadow: 0 0 0 3px rgb(5 150 105 / .15);
+    }
+    input[type="checkbox"], input[type="radio"] { accent-color: #059669; }
+
+    /* Primary actions: the old dark-slate buttons become the emerald accent */
+    .bg-slate-700, .bg-slate-800, .bg-slate-900 { background-color: #059669; }
+    .hover\:bg-slate-700:hover, .hover\:bg-slate-800:hover, .hover\:bg-slate-900:hover { background-color: #047857; }
+    .bg-slate-700, .bg-slate-800, .bg-slate-900, .ui-btn { border-radius: 7px; }
+    /* …except selected filter pills/tabs, which use the soft accent like the seller portal */
+    a.rounded-full.bg-slate-800, a.rounded-full.bg-slate-900, button.rounded-full.bg-slate-800, button.rounded-full.bg-slate-900,
+    a.rounded-lg.bg-slate-800, a.rounded-lg.bg-slate-900 {
+        background-color: #ecfdf5; color: #065f46; font-weight: 600; border-radius: 6px;
+    }
+    a.rounded-full:not(.bg-slate-800):not(.bg-slate-900).bg-white { border: 1px solid #e4e7ec; border-radius: 6px; color: #475569; }
+    a.rounded-full:not(.bg-slate-800):not(.bg-slate-900).bg-white:hover { background: #f8fafc; }
+</style>
+<?php endif; ?>
+
+<aside class="fixed inset-y-0 left-0 z-40 flex w-[244px] -translate-x-full flex-col bg-[#0b1220] text-[#C8D1DF] transition-transform duration-200 md:translate-x-0"
+       x-data :class="$store.adminNav && $store.adminNav.open ? '!translate-x-0' : ''">
+    <div class="flex h-14 flex-none items-center gap-2.5 border-b border-white/5 px-[18px]">
+        <a href="<?= $inStore ? '/admin/store/dashboard' : '/admin/dashboard' ?>" class="grid h-7 w-7 flex-none place-items-center rounded-lg bg-[#059669] text-sm font-bold text-white">e</a>
+        <div class="flex min-w-0 flex-col leading-tight">
+            <span class="text-sm font-semibold tracking-tight text-white"><?= $inStore ? 'eClinicPro Store' : 'eClinicPro' ?></span>
+            <span class="whitespace-nowrap text-[11px] text-[#8391A8]"><?= $inStore ? 'Marketplace admin' : 'Super admin console' ?></span>
+        </div>
     </div>
 
-    <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-5 text-sm" x-data="{ collapsed: {} }">
+    <nav class="flex-1 overflow-y-auto px-2.5 pb-4 pt-2">
+        <?php if ($inStore): ?>
+            <a href="/admin/dashboard" class="mt-2 flex h-8 items-center gap-2 rounded-[7px] px-2.5 text-[12.5px] font-medium text-[#8391A8] hover:bg-white/5 hover:text-white">
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                Back to main admin
+            </a>
+        <?php endif; ?>
         <?php foreach ($navGroups as $group => $items): ?>
-        <div>
-            <button type="button"
-                    @click="collapsed['<?= $group ?>'] = !collapsed['<?= $group ?>']"
-                    class="flex w-full items-center justify-between px-2 mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-300">
-                <span><?= htmlspecialchars($group) ?></span>
-                <svg class="h-3 w-3 transition-transform" :class="collapsed['<?= $group ?>'] ? '-rotate-90' : ''"
-                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-            </button>
-            <div x-show="!collapsed['<?= $group ?>']" class="space-y-0.5">
+            <div class="mt-3">
+                <div class="px-2.5 pb-1.5 text-[10.5px] font-semibold uppercase tracking-[.06em] text-[#6B778C]"><?= htmlspecialchars($group) ?></div>
                 <?php foreach ($items as $item): ?>
-                <?php [$href, $label, $iconD] = $item; $badge = $item[3] ?? 0; ?>
-                <a href="<?= htmlspecialchars($href) ?>"
-                   class="admin-link flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-white/5 hover:text-white <?= $isActive($href) ? 'active' : '' ?>">
-                    <svg class="admin-ico h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="<?= $iconD ?>"/></svg>
-                    <span class="flex-1"><?= htmlspecialchars($label) ?></span>
-                    <?php if ($badge > 0): ?>
-                    <span class="inline-flex items-center rounded-full bg-amber-500 px-2 text-[10px] font-semibold text-white"><?= (int) $badge ?></span>
-                    <?php endif; ?>
-                </a>
+                    <?php [$href, $label] = $item; $badge = (int) ($item[3] ?? 0); $active = $href === $activeHref; ?>
+                    <a href="<?= htmlspecialchars($href) ?>" class="flex h-8 w-full items-center gap-2.5 rounded-[7px] px-2.5 text-[13px] <?= $active ? 'bg-white/[.08] font-semibold text-white' : 'font-medium text-[#C8D1DF] hover:bg-white/5' ?>">
+                        <span class="h-1.5 w-1.5 flex-none rounded-[2px] <?= $active ? 'bg-[#059669]' : 'bg-white/30' ?>"></span>
+                        <span class="flex-1 truncate"><?= htmlspecialchars($label) ?></span>
+                        <?php if ($badge > 0): ?>
+                            <span class="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#059669] px-1.5 text-[10.5px] font-semibold text-white"><?= $badge ?></span>
+                        <?php endif; ?>
+                    </a>
                 <?php endforeach; ?>
             </div>
-        </div>
         <?php endforeach; ?>
     </nav>
 
-    <form method="post" action="/admin/logout" class="border-t border-white/10 px-3 py-3">
-        <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf ?? \App\Services\CsrfService::token()) ?>">
-        <button type="submit" class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-white/5 hover:text-white">
-            <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-            Log out
-        </button>
-    </form>
+    <div class="flex flex-none items-center gap-2.5 border-t border-white/5 px-3.5 py-3">
+        <div class="grid h-[30px] w-[30px] flex-none place-items-center rounded-full bg-[#1E293B] text-[11.5px] font-semibold text-[#E2E8F0]"><?= htmlspecialchars($adminInitials) ?></div>
+        <div class="min-w-0 leading-tight">
+            <div class="truncate text-[12.5px] font-medium text-white"><?= htmlspecialchars($adminName) ?></div>
+            <div class="truncate text-[11.5px] text-[#8391A8]"><?= htmlspecialchars($adminEmail ?: 'Platform admin') ?></div>
+        </div>
+        <span class="flex-1"></span>
+        <form method="post" action="/admin/logout">
+            <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf ?? \App\Services\CsrfService::token()) ?>">
+            <button type="submit" class="h-[26px] flex-none whitespace-nowrap rounded-md border border-white/10 px-2 text-[11.5px] text-[#C8D1DF] hover:bg-white/5">Sign out</button>
+        </form>
+    </div>
 </aside>
 
-<!-- Mobile: dim + tap-to-close backdrop behind the open sidebar -->
-<div class="fixed inset-0 z-20 bg-slate-900/50 md:hidden" x-data x-cloak
-     x-show="$store.adminNav.open" @click="$store.adminNav.open = false"
-     x-transition.opacity aria-hidden="true"></div>
+<!-- Phones: dim + tap-to-close backdrop behind the open sidebar -->
+<div class="fixed inset-0 z-30 bg-black/40 md:hidden" x-data x-cloak
+     x-show="$store.adminNav.open" @click="$store.adminNav.open = false" aria-hidden="true"></div>
 
-<!-- Mobile: toggle button to reveal the sidebar -->
-<button type="button" class="fixed left-3 top-3 z-40 rounded-lg bg-slate-900 p-2 text-white md:hidden"
-        x-data @click="$store.adminNav.open = !$store.adminNav.open"
-        aria-label="Toggle menu">
-    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
-</button>
+<header class="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-[#e4e7ec] bg-white px-3 md:gap-3.5 md:px-5" x-data>
+    <button type="button" @click="$store.adminNav.open = !$store.adminNav.open" title="Menu" aria-label="Toggle menu"
+            class="grid h-8 w-8 flex-none place-items-center rounded-lg border border-[#e4e7ec] bg-white text-[#475569] hover:bg-[#f8fafc] md:hidden">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+    </button>
+    <div class="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-[13px] max-md:flex-1">
+        <?php foreach ($crumbs as $i => $c): $last = $i === count($crumbs) - 1; ?>
+            <span class="flex min-w-0 items-center gap-1.5 <?= $last ? 'truncate' : 'max-md:hidden' ?>">
+                <?php if ($i > 0): ?><span class="text-[#e4e7ec] max-md:hidden">/</span><?php endif; ?>
+                <span class="<?= $last ? 'font-medium text-[#0f172a]' : 'text-[#64748b]' ?>"><?= htmlspecialchars($c) ?></span>
+            </span>
+        <?php endforeach; ?>
+    </div>
+    <span class="flex-1 max-md:hidden"></span>
+    <a href="<?= $inStore ? 'https://eclinicpro.com/store' : 'https://eclinicpro.com/' ?>" target="_blank" rel="noopener"
+       class="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-[7px] border border-[#e4e7ec] bg-white px-3 text-[13px] font-medium text-[#0f172a] hover:bg-[#f8fafc] max-md:hidden"><?= $inStore ? 'View store ↗' : 'View site ↗' ?></a>
+    <span class="inline-flex h-[26px] items-center gap-1.5 whitespace-nowrap rounded-full bg-[#f1f5f9] max-md:hidden px-2.5 text-xs font-medium text-[#475569]">
+        <span class="h-1.5 w-1.5 rounded-full bg-[#059669]"></span>Super admin
+    </span>
+</header>
