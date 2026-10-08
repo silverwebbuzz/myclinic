@@ -163,7 +163,7 @@ $whyShop = [
     ['✓', 'Genuine Products', '100% authentic products sourced directly from brands and certified distributors'],
     ['🎧', 'Expert Support', '24×7 customer care with certified health advisors to assist you'],
     ['🔒', 'Secure Payments', '256-bit SSL encryption for all payment transactions — your data is safe'],
-    ['↩', 'Easy Returns', 'Hassle-free 30-day return policy with free pickup from your doorstep'],
+    ['↩', 'Safe Returns', 'Return damaged, wrong or defective items within the return window shown on the product'],
     ['🚀', 'Fast Delivery', 'Same-day delivery in 50+ cities and express delivery on every order'],
 ];
 
@@ -2398,7 +2398,7 @@ require __DIR__ . '/partials/header.php';
                     <div class="badge"><span class="bdg-ic">✅</span> 100% Authentic</div>
                     <div class="badge"><span class="bdg-ic">🔒</span> Secure Payment</div>
                     <div class="badge"><span class="bdg-ic">🚀</span> Fast Delivery</div>
-                    <div class="badge"><span class="bdg-ic">↩️</span> Easy Returns</div>
+                    <div class="badge"><span class="bdg-ic">↩️</span> Returns on Damaged Items</div>
                 </div>
             </div>
             <!-- <div class="hero-img-wrap reveal-anim">

@@ -222,7 +222,7 @@ final class StorePolicyService
         }
 
         return <<<'MD'
-These rules are an agreement between you (the "seller", including everyone who uses your seller account) and **{{platform_legal_name}}**, {{platform_address}} ("eClinicPro", "we"), which runs eClinicPro Store. By ticking the box and accepting them in the seller portal you agree to be bound by them. Numbers shown here (commission, time limits, fees) are the current settings and update automatically.
+These rules are an agreement between you (the "seller", including everyone who uses your seller account) and **{{platform_legal_name}}**, {{platform_address}}, which owns the eClinicPro brand and runs eClinicPro Store ("eClinicPro", "we"). By ticking the box and accepting them in the seller portal you agree to be bound by them. Numbers shown here (commission, time limits, fees) are the current settings and update automatically.
 
 ## 1. Who sells to the customer
 - **You are the seller.** The contract of sale is between you and the customer. eClinicPro only provides the online marketplace (as an "intermediary" under the Information Technology Act, 2000 and an "e-commerce entity" under the Consumer Protection (E-Commerce) Rules, 2020), collects payment on your behalf and arranges delivery.
