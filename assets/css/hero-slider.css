@@ -1,0 +1,421 @@
+/* =====================================================================
+   HOMEPAGE HERO SLIDER — markup: partials/hero-slider.php
+   Everything is scoped to .hh and prefixed hh- so it can't leak into (or
+   be broken by) the rest of the site. Top padding clears the fixed 80px nav.
+   ===================================================================== */
+
+/* --hh-h: slide height on desktop. Viewport minus the 80px nav and the 64px slider footer, so the controls stay on screen. */
+.hh{--ink:#090f20;--green:#006955;--mint:#d9f3e9;--muted:#73798b;--gold:#d9b66d;--hh-h:clamp(420px,calc(100svh - 144px),720px);margin:0;padding:80px 0 0;color:var(--ink);font-family:Arial,Helvetica,sans-serif;background:#f5faf7}
+/* Base resets use :where() (zero specificity) so component rules below win exactly as in the original design.
+   styles.css has a global `*{margin:0;padding:0;font-family:'Segoe UI'}` — undo it here so the hero gets browser defaults + Arial. */
+:where(.hh) *{margin:revert;padding:revert;font-family:inherit}
+:where(.hh) *,:where(.hh) *:before,:where(.hh) *:after{box-sizing:border-box}
+:where(.hh) :is(button,input,select){font:inherit}
+:where(.hh) :is(button,a,input,select){-webkit-tap-highlight-color:transparent}
+:where(.hh) button{cursor:pointer;color:inherit}
+:where(.hh) :is(button,a,input,select):focus-visible{outline:0px solid #d4ab50;outline-offset:4px}
+:where(.hh) :is(h1,h2,h3,p){margin:0}
+svg.hh-icon{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+
+.hh-slider{position:relative;isolation:isolate;overflow:hidden;background:#fff}
+/* All slides share one grid cell, so the slider is as tall as the tallest slide (never clips content) and at least --hh-h on desktop. */
+.hh-slides{position:relative;display:grid;min-height:var(--hh-h)}
+.hh-slide{position:relative;grid-area:1/1;display:flex;align-items:center;min-width:0;overflow:hidden;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .65s,visibility .65s}
+.hh-slide:before{content:"";position:absolute;width:650px;height:650px;border:80px solid #d2eee4;border-radius:48%;left:-480px;bottom:-465px;transform:rotate(32deg);opacity:.6;pointer-events:none}
+.hh-slide.hh-active{opacity:1;visibility:visible;pointer-events:auto;z-index:1}
+section#top {
+  padding-top: 75px;
+}
+.hh-slide .wrap {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: clamp(28px, 6vh, 56px) clamp(20px, 4vw, 40px);
+}
+.hh-copy {
+  max-width: 60%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.hh-badge{flex-wrap:wrap;align-self:flex-start;max-width:100%}
+.hh-copy .hh-copy h1 {  font-size: 57px !important;position:relative;z-index:3;padding-top:8px}
+.hh-badge{display:inline-flex;align-items:center;gap:12px;background:#e9f5ef;border:1px solid #fff;padding:10px 16px;border-radius:40px;font-size:12px;font-weight:600;min-height:43px}
+.hh-badge .hh-status{width:7px;height:7px;border-radius:50%;background:#36a88b}
+.hh-badge .hh-divider{height:18px;width:1px;background:#c8e3da}
+.hh-avatars{display:flex;padding-left:5px}
+.hh-avatars span{display:grid;place-items:center;margin-left:-6px;width:25px;height:25px;background:#c4ddd4;border:2px solid #fff;border-radius:50%;font-size:17px}
+.hh-headline{margin:clamp(12px,4vh,38px) 0 clamp(10px,2.2vh,20px);font-size:clamp(38px,min(5.25vw,8.4vh),82px);line-height:1.04;letter-spacing:-4px;font-weight:750}
+.hh-headline em{font-style:normal;color:var(--green);position:relative}
+.hh-headline em:after{content:"";position:absolute;bottom:-8px;left:5%;height:9px;width:85%;border-top:3px solid #b5e0d0;border-radius:50%}
+.hh-description{font-size:clamp(14px,min(1.45vw,2.6vh),18px);line-height:1.5;color:var(--muted);max-width:590px}
+
+.hh-search{display:flex;align-items:center;gap:13px;margin-top:clamp(12px,3vh,28px);padding:8px 9px 8px 21px;background:#fff;border:1px solid #c1e6d8;border-radius:50px;box-shadow:0 7px 25px #0069550b;position:relative;z-index:4}
+.hh-search input{min-width:0;flex:1;border:0;background:transparent;font-size:15px;outline-offset:7px;color:var(--ink);width:100%;padding:10px 0}
+.hh-location{display:flex;align-items:center;gap:7px;border-left:1px solid #e8eceb;padding-left:15px;color:var(--green)}
+.hh-location select{max-width:115px;border:0;background:transparent;font-size:11px;color:#50586c;padding:5px 0}
+.hh-search-submit{border:0;border-radius:50%;width:49px;height:49px;background:var(--green);color:#fff;display:grid;place-items:center;flex-shrink:0}
+.hh-popular{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:clamp(8px,1.6vh,15px) 0;font-size:14px;color:var(--muted)}
+.hh-chip{font-size:12px;background:#f8fffc;color:var(--green);border:1px solid #e0efe9;border-radius:30px;padding:6px 9px;transition:background .2s}
+.hh-chip:hover{background:#d8f1e7}
+
+.hh-stats{display:flex;margin-top:clamp(12px,4vh,39px);gap:22px}
+.hh-stat{display:flex;align-items:center;gap:13px;flex:1}
+.hh-stat+.hh-stat{border-left:1px solid #c7dcd4;padding-left:22px}
+.hh-stat svg.hh-icon{width:32px;height:32px;color:var(--green)}
+.hh-stat strong{display:block;font-size:29px;letter-spacing:-1px}
+.hh-stat small{display:block;font-size:11px;margin-top:4px;color:#465066;line-height:1.45}
+
+/* ---- Slide 1 scene: everything is laid out relative to the circle (.hh-ring) ---- */
+.hh-scene{position:relative;min-height:0;margin-left:20px;z-index:2;container-type:size}
+/* --k scales the cards/phone with the circle; 462px is the circle size the card sizes were designed for. */
+.hh-ring{position:absolute;left:50%;top:54%;width:min(74cqh,80cqw);aspect-ratio:1;translate:-50% -50%;--k:clamp(.55,tan(atan2(min(74cqh,80cqw),462px)),1.1)}
+.hh-rings{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,#60bda0 0,#b7e8d7 55%,#eafff6 56%,#b4e4d3 62%,transparent 63%);box-shadow:0 0 0 15px #fff6,0 0 0 30px #bce7d940,0 0 0 50px #ffffff66}
+.hh-orbit{position:absolute;inset:-30px;border:1px dashed #7fceb5;border-radius:50%;animation:hh-spin 65s linear infinite}
+.hh-orbit:before,.hh-orbit:after{content:"+";position:absolute;left:11%;top:11%;display:grid;place-items:center;width:40px;height:40px;background:#fff;color:#049a76;border-radius:50%;font-size:28px;box-shadow:0 5px 15px #16805e15}
+.hh-orbit:after{left:auto;top:auto;right:11%;bottom:11%;content:"♥";font-size:22px}
+.hh-avatar{position:absolute;inset:0;animation:hh-float 6s ease-in-out infinite}
+.hh-avatar:before,.hh-avatar:after{content:"";position:absolute;inset:2%;border:2px solid #4fbf9c;border-radius:50%;opacity:0;pointer-events:none}
+.hh-active .hh-avatar:before{animation:hh-avatar-pulse 3.6s ease-out 1.4s infinite}
+.hh-active .hh-avatar:after{animation:hh-avatar-pulse 3.6s ease-out 3.2s infinite}
+.hh-avatar img{position:relative;display:block;width:100%;height:100%;border-radius:50%;object-fit:cover;filter:drop-shadow(0 18px 28px #0069551f)}
+.hh-active .hh-avatar img{animation:hh-avatar-in 1.1s cubic-bezier(.2,.7,.2,1) .35s both,hh-avatar-breathe 7s ease-in-out 1.5s infinite}
+
+.hh-feature{position:absolute;z-index:6;display:flex;align-items:center;gap:12px;width:max-content;background:#ffffffed;border:1px solid #fff;border-radius:23px;padding:17px 16px;box-shadow:0 10px 28px #135c4810;max-width:260px;animation:hh-float 6s ease-in-out infinite}
+.hh-feature .hh-bubble{width:49px;height:49px;display:grid;place-items:center;border-radius:50%;background:#d8f2e9;color:#007f67;flex-shrink:0}
+.hh-feature b{display:block;font-size:12px;line-height:1.4}
+.hh-feature small{display:block;font-size:10px;color:var(--muted);line-height:1.6;margin-top:5px}
+.hh-feature .hh-mini-arrow{border:0;background:#f0f8f4;border-radius:50%;width:28px;height:28px;display:grid;place-items:center;color:var(--green);flex-shrink:0}
+.hh-mini-arrow svg.hh-icon{width:16px;height:16px}
+.hh-f2{animation-delay:-1.7s}
+.hh-f3{animation-delay:-3.3s}
+.hh-f4{animation-delay:-4.8s}
+.hh-f3 .hh-bubble{background:#fff0ee;color:#ca5661}
+.hh-f4 .hh-bubble{background:#e4f1ff;color:#1886ee}
+
+/* Cards sit on the circle: --a is the angle (0deg = right, 90deg = bottom), --r the distance from the centre as a fraction of the circle's width. */
+.hh-ring>.hh-feature,.hh-ring>.hh-revenue,.hh-arc>.hh-feature{left:calc(50% + var(--r,.56) * 100% * cos(var(--a)));top:calc(50% + var(--r,.56) * 100% * sin(var(--a)));translate:-50% -50%;scale:clamp(.72,var(--k,1),1)}
+
+.hh-revenue{position:absolute;z-index:5;background:#fff;padding:16px;border-radius:20px;width:140px;box-shadow:0 12px 30px #00584112;font-size:11px}
+.hh-revenue strong{display:block;font-size:23px;margin:8px 0}
+.hh-revenue small{font-size:9px;color:#0a9d72}
+.hh-bars{display:flex;height:40px;align-items:flex-end;gap:4px;float:right}
+.hh-bars i{width:8px;height:var(--h);background:linear-gradient(#0aa574,#b8ebd9);border-radius:2px}
+
+.hh-phone{position:absolute;z-index:7;bottom:1%;left:3%;width:174px;height:310px;background:#fff;border:6px solid #172323;border-radius:29px;transform:rotate(-14deg);transform-origin:0 100%;scale:var(--k,1);box-shadow:9px 13px 0 #20332b25;padding:24px 12px 12px}
+.hh-phone:before{content:"";position:absolute;top:0;left:25%;width:50%;height:12px;background:#172323;border-radius:0 0 10px 10px}
+.hh-phone small{font-size:8px}
+.hh-phone h3{font-size:17px;margin:8px 0 16px}
+.hh-phone .hh-phone-search{padding:9px 6px;border-radius:8px;background:#f2f8f5;font-size:7px;color:#84918a}
+.hh-phone-label{font-size:9px;font-weight:bold;margin:18px 0 9px}
+.hh-specialties{display:flex;gap:5px}
+.hh-specialties span{font-size:7px;flex:1;text-align:center}
+.hh-specialties svg.hh-icon{width:24px;height:24px;display:block;margin:0 auto 6px;color:#09856a}
+.hh-appointment{padding:10px 6px;border:1px solid #e6f1eb;border-radius:10px;font-size:8px;line-height:1.8}
+.hh-appointment b{font-size:9px}
+
+/* ---- Slides 2 & 3: banner photo ----
+   The whole image is always shown (never cropped). On desktop it is the slide's background, anchored right
+   and as large as fits; its empty left side runs under the copy. --ratio is the image's width/height. */
+.hh-photo{position:relative;z-index:1;container-type:inline-size;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 12%),linear-gradient(180deg,transparent 0,#000 5%,#000 95%,transparent 100%);-webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,transparent 0,#000 12%),linear-gradient(180deg,transparent 0,#000 5%,#000 95%,transparent 100%);mask-composite:intersect}
+.hh-photo img{display:block;width:100%;height:auto}
+/* .hh-arc is the circle of the arch inside the photo (--x/--y/--d in % of the photo); the cards orbit it. */
+.hh-arc{position:absolute;left:var(--x);top:var(--y);width:var(--d);aspect-ratio:1;--k:tan(atan2(100cqw,var(--base,1300px)))}
+.hh-arc>.hh-feature{scale:clamp(.6,var(--k),1)}
+.hh-active .hh-photo img{animation:hh-photo-in 1.1s cubic-bezier(.2,.7,.2,1) .2s both}
+
+/* ---- Slide 2: Health Store ---- */
+.hh-slide.hh-store{background:radial-gradient(ellipse at 86% 47%,#e1e8ce 0,transparent 56%),#fffdf7}
+.hh-store .hh-headline{font-weight:400}
+.hh-store .hh-headline em{font-weight:750}
+.hh-store .hh-headline em:after{display:none}
+.hh-store .hh-headline .hh-under{position:relative}
+.hh-under:after{content:"";position:absolute;bottom:-7px;left:0;width:100%;border-top:4px solid var(--gold);border-radius:50%;height:8px}
+.hh-store .hh-stats strong,.hh-lab .hh-stats strong{font-size:13px;letter-spacing:0;line-height:1.35}
+.hh-store .hh-stats,.hh-lab .hh-stats{gap:14px;margin-top:clamp(12px,3.6vh,35px)}
+.hh-store .hh-stat+.hh-stat,.hh-lab .hh-stat+.hh-stat{padding-left:14px}
+.hh-store .hh-scene{margin-left:35px}
+.hh-categories{position:absolute;bottom:calc(48px - clamp(48px,9vh,92px));left:0;right:-6%;display:flex;align-items:center;justify-content:space-around;gap:6px;padding:18px 12px;background:#ffffffeb;border:1px solid #fff;border-radius:50px;z-index:8}
+.hh-category{display:flex;align-items:center;gap:8px;border:0;background:none;text-align:left;font-size:10px;line-height:1.4}
+.hh-category svg.hh-icon{color:var(--green)}
+
+/* ---- Slide 3: Diagnostics ---- */
+.hh-lab .hh-headline{font-size:clamp(34px,min(4.2vw,7vh),66px);margin-top:clamp(12px,3.6vh,33px)}
+.hh-lab .hh-badge{background:#ffffffbb;border-color:#b9dfd0}
+.hh-brand{font-size:22px;letter-spacing:-1px;color:#0d2441;font-weight:800}
+.hh-brand span{color:#dd2943}
+.hh-lab .hh-f3 .hh-mini-arrow{display:none}
+@media(max-width:1399px){.hh-lab .hh-f3{display:none}}
+
+/* ---- Entrance animations (replay on every active slide) ---- */
+.hh-entry{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .8s cubic-bezier(.2,.65,.25,1);transition-delay:0s}
+.hh-active .hh-entry{opacity:1;transform:translateY(0);transition-delay:var(--delay,.15s)}
+.hh-scene.hh-entry,.hh-photo.hh-entry{transform:translateX(35px) scale(.96)}
+.hh-active .hh-scene.hh-entry,.hh-active .hh-photo.hh-entry{transform:translateX(0) scale(1);transition-delay:.2s;transition-duration:1s}
+
+/* ---- Footer controls ---- */
+.hh-slider-footer{position:relative;z-index:10;display:flex;align-items:center;justify-content:center;gap:20px;padding:13px;background:#fff;border-top:1px solid #e5eee8}
+.hh-arrow,.hh-play{display:grid;place-items:center;width:35px;height:35px;background:#f2f8f5;color:var(--green);border:1px solid #deeee5;border-radius:50%;transition:background .2s}
+.hh-arrow:hover,.hh-play:hover{background:#d8eee3}
+.hh-arrow svg.hh-icon,.hh-play svg.hh-icon{width:17px;height:17px}
+.hh-tabs{display:flex;gap:20px}
+.hh-tab{position:relative;padding:10px 0;font-size:14px;color:#7b8780;border:0;background:none}
+.hh-tab[aria-current=true]{color:var(--green);font-weight:bold}
+.hh-tab:after{content:"";position:absolute;bottom:1px;left:0;width:100%;height:2px;background:var(--green);transform:scaleX(0);transition:transform .3s}
+.hh-tab[aria-current=true]:after{transform:scaleX(1)}
+.hh-timer{height:2px;background:#dfede5;position:relative;z-index:11}
+.hh-timer span{display:block;height:100%;background:#008567;transform:scaleX(0);transform-origin:left}
+.hh-sr-only{position:absolute;clip:rect(0,0,0,0);width:1px;height:1px;overflow:hidden}
+
+.hh-modal{border:1px solid #d8e9df;border-radius:22px;padding:30px;max-width:420px;width:calc(100% - 40px);color:var(--ink);box-shadow:0 25px 90px #002b2740}
+.hh-modal::backdrop{background:#062d2566;backdrop-filter:blur(4px)}
+.hh-modal h3{margin-top:0}
+.hh-modal p{color:var(--muted);line-height:1.6;font-size:14px}
+.hh-modal button{border:0;background:var(--green);color:#fff;padding:10px 20px;border-radius:25px;margin-top:20px}
+
+@keyframes hh-float{50%{transform:translateY(-8px)}}
+@keyframes hh-spin{to{transform:rotate(360deg)}}
+@keyframes hh-avatar-in{from{opacity:0;transform:scale(.86);clip-path:circle(18% at 50% 62%)}to{opacity:1;transform:scale(1);clip-path:circle(50% at 50% 50%)}}
+@keyframes hh-avatar-breathe{50%{transform:scale(1.025)}}
+@keyframes hh-avatar-pulse{0%{opacity:.65;transform:scale(1)}100%{opacity:0;transform:scale(1.2)}}
+@keyframes hh-photo-in{from{opacity:0}to{opacity:1}}
+
+@media(min-width:1600px){
+  .hh{--hh-h:clamp(420px,calc(100svh - 144px),820px)}
+}
+
+/* Desktop: the photo becomes the slide background — right-anchored, vertically centred, as large as fits the slide. */
+@media(min-width:992px){
+  .hh-photo{position:absolute;right:0;top:50%;translate:0 -50%;width:min(100cqw,100cqh * var(--ratio))}
+}
+
+/* Short desktop windows: tighten the copy so the slide still fits above the controls. */
+@media(min-width:992px) and (max-height:660px){
+  .hh-badge{min-height:36px;padding:7px 14px}
+  .hh-popular{display:none}
+  .hh-description{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+  .hh-search{padding-top:5px;padding-bottom:5px}.hh-search-submit{width:42px;height:42px}
+  .hh-headline{font-size:clamp(34px,min(5.25vw,7.4vh),82px)}.hh-lab .hh-headline{font-size:clamp(30px,min(4.2vw,6.4vh),66px)}
+  .hh-stats,.hh-store .hh-stats,.hh-lab .hh-stats{margin-top:12px}.hh-stat strong{font-size:24px}
+}
+
+@media(max-width:1150px){
+  .hh-headline{letter-spacing:-2.5px}.hh-scene{margin-left:14px}
+  .hh-feature{padding:12px 10px;gap:8px;border-radius:17px;max-width:200px}.hh-feature .hh-bubble{width:36px;height:36px}.hh-feature b{font-size:10px}.hh-feature small{font-size:8px}.hh-feature .hh-mini-arrow{display:none}
+  .hh-badge{font-size:10px;gap:8px}.hh-avatars{display:none}
+  .hh-search{gap:8px;padding-left:14px}.hh-location{padding-left:8px}.hh-location select{max-width:82px}
+  .hh-stats{gap:10px}.hh-stat{gap:8px}.hh-stat+.hh-stat{padding-left:10px}.hh-stat strong{font-size:24px}.hh-stat svg.hh-icon{width:27px}
+  .hh-categories{padding:14px 10px}.hh-category{font-size:8px;gap:4px}.hh-category svg.hh-icon{width:21px}
+  .hh-brand{font-size:17px}.hh-store .hh-scene{margin-left:20px}
+}
+
+/* Tablet/phone: one column — copy first, then the slide visual (ring scene or photo) underneath. */
+@media(max-width:991px){
+  .hh-slides{min-height:0}
+  .hh-slide{flex-direction:column;align-items:stretch}
+  .hh-slide .wrap{padding:28px 24px 32px}
+  .hh-copy{max-width:640px;margin:0 auto;width:100%}.hh-headline{font-size:clamp(40px,7.4vw,58px);margin:10px 0 4px;letter-spacing:-2px}.hh-description{font-size:17px;max-width:560px}
+  .hh-badge{font-size:11px}.hh-search{margin-top:23px}.hh-stats{margin-top:25px}
+  .hh-scene{width:90%;max-width:540px;margin:0 auto}
+  .hh-store .hh-scene,.hh-lab .hh-scene{width:100%;max-width:none;container-type:normal}
+  .hh-feature{max-width:230px}.hh-feature b{font-size:12px}.hh-feature small{font-size:10px}.hh-feature .hh-bubble{width:43px;height:43px}
+  .hh-lab .hh-headline{font-size:clamp(34px,6.2vw,48px)}.hh-store .hh-headline{font-size:clamp(40px,7.2vw,56px)}
+  .hh-store .hh-stats,.hh-lab .hh-stats{margin-top:26px}
+  .hh-photo{margin:0 -6%;-webkit-mask-image:none;mask-image:none}
+  .hh-arc{display:none}
+  .hh-categories{position:relative;bottom:auto;left:auto;right:auto}
+  .hh-slider-footer{gap:13px}.hh-tabs{gap:18px}
+}
+
+
+@media(max-width:450px){
+  .hh-slide .wrap{padding:22px 16px 26px}
+  .hh-copy{gap:16px}
+  .hh-headline{font-size:clamp(34px,10.5vw,44px);letter-spacing:-1.5px}.hh-description{font-size:15px}
+  .hh-badge{font-size:9px;padding:10px;gap:7px}.hh-badge .hh-divider{height:14px}
+  .hh-search{padding:6px 7px 6px 12px;gap:7px}.hh-search>svg.hh-icon{width:20px}.hh-search input{font-size:10px}
+  .hh-location{padding-left:6px;gap:3px}.hh-location>svg.hh-icon{display:none}.hh-location select{font-size:9px;max-width:76px}.hh-search-submit{width:38px;height:38px}
+  .hh-popular{gap:4px;font-size:9px}.hh-chip{font-size:9px;padding:5px 7px}
+  .hh-stat strong{font-size:23px}.hh-stat small{font-size:9px}.hh-stat svg.hh-icon{width:23px}.hh-stats{gap:9px}.hh-stat{gap:7px}.hh-stat+.hh-stat{padding-left:9px}
+  .hh-scene{width:95%}
+  .hh-feature{max-width:170px;padding:10px;gap:8px}.hh-feature b{font-size:10px}.hh-feature small{font-size:8px}.hh-feature .hh-bubble{width:31px;height:31px}.hh-feature svg.hh-icon{width:21px;height:21px}
+  .hh-revenue{width:110px;padding:12px;font-size:9px}.hh-revenue strong{font-size:18px}.hh-bars{height:27px;gap:2px}.hh-bars i{width:5px}
+  .hh-store .hh-headline{font-size:clamp(34px,10.5vw,44px)}
+  .hh-store .hh-stats,.hh-lab .hh-stats{gap:7px}.hh-store .hh-stat,.hh-lab .hh-stat{gap:6px}.hh-store .hh-stat+.hh-stat,.hh-lab .hh-stat+.hh-stat{padding-left:7px}
+  .hh-store .hh-stats strong,.hh-lab .hh-stats strong{font-size:10px}.hh-store .hh-stats small,.hh-lab .hh-stats small{font-size:8px}
+  .hh-categories{padding:13px 7px;gap:1px}.hh-category{font-size:8px;gap:4px}.hh-category svg.hh-icon{width:19px}.hh-category:nth-child(4){display:none}
+  .hh-lab .hh-headline{font-size:clamp(30px,9.4vw,38px);line-height:1.08;margin-top:10px}.hh-lab .hh-brand{font-size:16px}
+  .hh-tabs{gap:12px}.hh-tab{font-size:10px}.hh-slider-footer{gap:10px}.hh-arrow,.hh-play{width:30px;height:30px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .hh *,.hh *:before,.hh *:after{animation:none!important;transition:none!important}
+  .hh-entry,.hh-scene.hh-entry,.hh-photo.hh-entry{transform:none!important}
+}
+
+
+/* Slides 2 & 3 photo. Desktop: a right-hand panel behind the copy, fading in from the left.
+   Hidden on inactive slides so the large photos only download when their slide is shown. */
+.background-image {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 55%;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: 75% center;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 30%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 30%);
+  z-index: 0;
+  display: none;
+}
+.hh-slide.hh-active .background-image {
+  display: block;
+}
+.first-slide .background-image {
+  background-size: 35% 85% !important;
+}
+/* Slide 1 layout: copy on the left, the ring scene (doctor, orbit, cards, phone) on the right.
+   .hh-scene is size-contained, so it needs a height from the grid row (desktop) or an explicit one (stacked). */
+.hh-slide.first-slide .background-image {
+  display: none;
+}
+.first-slide .hh-scene {
+  height: 475px;
+}
+@media (min-width: 992px) {
+  .first-slide .wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .first-slide .hh-copy {
+    max-width: none;
+  }
+  /* The scene may spill into the empty gutter beside the 1280px .wrap (up to 200px), but never past the screen edge. */
+  .first-slide .hh-scene {
+    height: auto;
+    margin-right: clamp(-200px, (1280px - 100vw) / 2, 0px);
+  }
+  /* The cards hang further out on the right than the left. */
+  .first-slide .hh-ring {
+    left: 46%;
+    width: min(74cqh, 62cqw);
+    --k: clamp(.55, tan(atan2(min(74cqh, 62cqw), 462px)), 1.1);
+  }
+}
+@media (max-width: 991px) {
+  .first-slide .hh-scene {
+    width: 100%;
+    max-width: 560px;
+    height: clamp(380px, 82vw, 500px);
+    margin: 8px auto 0;
+  }
+  .first-slide .hh-ring {
+    width: min(70cqh, 64cqw);
+    --k: clamp(.55, tan(atan2(min(70cqh, 64cqw), 462px)), 1.1);
+  }
+}
+@media (max-width: 450px) {
+  .first-slide .hh-scene {
+    height: clamp(330px, 95vw, 420px);
+  }
+  .first-slide .hh-ring {
+    width: min(68cqh, 62cqw);
+    --k: clamp(.55, tan(atan2(min(68cqh, 62cqw), 462px)), 1.1);
+  }
+  .first-slide .hh-orbit:before,
+  .first-slide .hh-orbit:after {
+    width: 30px;
+    height: 30px;
+    font-size: 20px;
+  }
+}
+/* Slide 1 orbit: the dashed ring turns continuously and carries the + / ♥ badges along it.
+   --hh-orbit-start is the resting angle (puts + at the upper-right); the badges counter-rotate
+   with the same timing so their icons stay upright. 14.645% / 85.355% = 50% ∓ 50%·cos(45°), i.e. exactly on the ring. */
+.first-slide .hh-orbit {
+  --hh-orbit-start: 71deg;
+  --hh-orbit-time: 28s;
+  rotate: var(--hh-orbit-start);
+  animation: hh-spin var(--hh-orbit-time) linear infinite;
+  will-change: transform;
+}
+.first-slide .hh-orbit:before,
+.first-slide .hh-orbit:after {
+  left: 14.645%;
+  top: 14.645%;
+  right: auto;
+  bottom: auto;
+  translate: -50% -50%;
+  rotate: calc(var(--hh-orbit-start) * -1);
+  animation: hh-spin var(--hh-orbit-time) linear infinite reverse;
+  backface-visibility: hidden;
+}
+.first-slide .hh-orbit:after {
+  left: 85.355%;
+  top: 85.355%;
+}
+/* six.jpg: the scientist stands at ~61–87% across the photo; seven.jpg's pill bowl starts at ~58%. */
+.third-slide .background-image {
+  background-position: 85% center;
+}
+@media (min-width: 992px) {
+  .second-slide .hh-copy,
+  .third-slide .hh-copy {
+    max-width: min(50%, 600px);
+  }
+}
+/* Tablet/phone: the photo becomes a rounded banner under the copy. It grows to fill any height left over
+   (slide 1 sets the slider height), so the crop is anchored on each photo's subject rather than sized. */
+@media (max-width: 991px) {
+  .second-slide .background-image,
+  .third-slide .background-image {
+    position: relative;
+    order: 2;
+    flex: 1 0 auto;
+    width: calc(100% - 48px);
+    max-width: 640px;
+    aspect-ratio: 16 / 10;
+    margin: 0 auto 32px;
+    border-radius: 24px;
+    -webkit-mask-image: none;
+    mask-image: none;
+    box-shadow: 0 12px 30px #0058410f;
+  }
+  .second-slide .background-image {
+    background-position: 100% 50%;
+  }
+  .third-slide .background-image {
+    background-position: 88% 25%;
+  }
+}
+@media (max-width: 450px) {
+  .second-slide .background-image,
+  .third-slide .background-image {
+    width: calc(100% - 32px);
+    margin-bottom: 26px;
+    border-radius: 18px;
+  }
+}
+
+/* Sized from the ring (--k) so the phone shrinks with the circle on smaller screens. */
+.phone-image {
+  position: absolute;
+  z-index: 1;
+  bottom: calc(-70px * var(--k, 1));
+  left: 0px;
+  transform: rotate(-20deg);
+  height: calc(300px * var(--k, 1));
+  aspect-ratio: 1 / 2;
+}
+
+.phone-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}

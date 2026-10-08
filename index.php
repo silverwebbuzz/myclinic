@@ -86,121 +86,13 @@ $extraHead = '<script type="application/ld+json">' . json_encode([
     ],
 ], JSON_UNESCAPED_SLASHES) . '</script>';
 
+$heroCssBust = @filemtime(__DIR__ . '/assets/css/hero-slider.css') ?: time();
+$extraHead  .= '<link rel="stylesheet" href="/assets/css/hero-slider.css?v=' . $heroCssBust . '">';
+
 require __DIR__ . '/partials/header.php';
 ?>
 
-<!-- ============ DUAL-PATH HERO ============ -->
-<section class="hp-hero" id="top">
-    <div class="hp-hero-bg"></div>
-    <div class="nav-inner">
-        <div class="hp-hero-grid">
-            <div class="hp-hero-copy reveal">
-                <span class="hp-pill">
-                    <span class="hp-pill-dot"></span>
-                    Now serving 🇮🇳 India · <?= ecp_num($doctorCount) ?> verified doctors
-                </span>
-                <h1 class="hp-h1">
-                    Healthcare,<br>
-                    <span class="grad">made simple.</span>
-                </h1>
-                <p class="hp-lede">
-                    Whether you want to book a doctor or run your clinic — eClinicPro
-                    is one place for both. Verified clinicians, real availability,
-                    transparent fees, and software doctors actually love.
-                </p>
-
-                <!-- The two paths. Each goes to an existing, working flow. -->
-                <div class="hp-paths">
-                    <a href="/find-a-doctor" class="hp-path hp-path-patient">
-                        <!-- <div class="hp-path-ic">🔍</div> -->
-                        <div class="hp-path-ic"><img src="/assets/img/icon/search-icon.svg" alt="" width="26" height="26" /></div>
-                        <div class="hp-path-body">
-                            <div class="hp-path-title">Find a Doctor</div>
-                            <div class="hp-path-sub">Find &amp; book a doctor in 60 seconds</div>
-                        </div>
-                        <span class="hp-path-arrow">→</span>
-                    </a>
-                    <!-- <a href="<?= e(ecp_portal_url('/register')) ?>" class="hp-path hp-path-doctor">
-                            <div class="hp-path-ic">🩺</div>
-                            <div class="hp-path-body">
-                                <div class="hp-path-title">I'm a doctor</div>
-                                <div class="hp-path-sub">Run my clinic — free for 30 days</div>
-                            </div>
-                            <span class="hp-path-arrow">→</span>
-                        </a> -->
-                </div>
-
-                <div class="hp-hero-trust">
-                    <span class="hp-stars">★★★★★</span>
-                    <span><strong>4.8</strong> from patients · Free to search · No phone-tag</span>
-                </div>
-            </div>
-
-            <!-- Live doctor-card preview (matches the directory result style) -->
-            <!-- <div class="hp-hero-preview reveal">
-                <div class="hp-preview-tag">⚡ Verified · Real availability</div>
-                <div class="hp-preview-card">
-                    <div class="hp-preview-search">Search doctors in your city…</div>
-                    <?php
-                    $previewDocs = [
-                        ['AS', 'Dr. Aarav Sharma', 'Cardiology · 18 yrs · Apollo', '4.9', '₹1,200', 'Today 4:45 PM', 'linear-gradient(135deg,#2DC08A,#0B7F5A)'],
-                        ['PI', 'Dr. Priya Iyer', 'Dermatology · 12 yrs · Fortis', '4.8', '₹950', 'Tomorrow 11 AM', 'linear-gradient(135deg,#60A5FA,#2563EB)'],
-                        ['RV', 'Dr. Rohan Verma', 'Homeopathy · 22 yrs · Clinic', '4.7', '₹600', 'In 2 days', 'linear-gradient(135deg,#C084FC,#7C3AED)'],
-                    ];
-                    foreach ($previewDocs as [$ini, $name, $meta, $rating, $fee, $slot, $grad]):
-                    ?>
-                    <div class="hp-doc-row">
-                        <span class="hp-doc-av" style="background: <?= $grad ?>;"><?= e($ini) ?></span>
-                        <div class="hp-doc-info">
-                            <div class="hp-doc-name"><?= e($name) ?></div>
-                            <div class="hp-doc-meta"><?= e($meta) ?></div>
-                            <div class="hp-doc-line">
-                                <span class="hp-doc-star">★ <?= e($rating) ?></span>
-                                · <?= e($fee) ?> · <?= e($slot) ?>
-                            </div>
-                        </div>
-                        <a href="/find-a-doctor" class="hp-doc-book">Book</a>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-                <div class="hp-preview-float">
-                    <span class="hp-float-dot"></span>
-                    <strong><?= ecp_num(max(1200, $doctorCount * 6)) ?></strong>&nbsp;bookings this week
-                </div>
-            </div> -->
-
-            <div class="hp-hero-preview reveal">
-                <div class="image-box">
-                    <img src="/assets/img/logos/carely-hero-img1.webp" alt="Doctor">
-                    <div class="security">
-                        <div class="security-item">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0c8b6f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M12 2l8 4v6c0 5-3.5 9.5-8 10-4.5-.5-8-5-8-10V6l8-4z" />
-                            </svg>
-                            <span>HIPAA Compliant</span>
-                        </div>
-
-                        <div class="security-item">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0c8b6f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M19 18H6a4 4 0 010-8 5 5 0 019.7-1.6A4.5 4.5 0 1119 18z" />
-                                <path d="M12 13v4m-2-2h4" />
-                            </svg>
-                            <span>Secure Cloud Storage</span>
-                        </div>
-
-                        <div class="security-item">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0c8b6f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M3 12h4l2-5 4 10 2-5h6" />
-                            </svg>
-                            <span>99.9% Uptime</span>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </div>
-</section>
+<?php require __DIR__ . '/partials/hero-slider.php'; ?>
 
 <!-- ============ SPECIALTIES (patient discovery) ============ -->
 <section class="hp-specialties" id="specialties">
