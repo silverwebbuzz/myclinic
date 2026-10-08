@@ -183,8 +183,19 @@ if (!defined('ECP_ADMIN_ALPINE_LOADED')) {
     [x-cloak] { display: none !important; }
     .font-mono, code { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
 
-    /* Page title */
+    /* Page area: left-aligned, 20px gutter like the seller console. List pages
+       (5xl and wider) use the full width; form pages keep their reading width. */
+    body > main { margin-left: 0 !important; margin-right: 0 !important; padding: 20px !important; }
+    body > main.max-w-5xl, body > main.max-w-6xl, body > main.max-w-7xl { max-width: none !important; }
+    @media (max-width: 767px) { body > main { padding: 12px !important; } }
+
+    /* Page title + section titles */
     body > main h1 { font-size: 22px; line-height: 1.3; font-weight: 600; letter-spacing: -.015em; }
+    body > main h1 ~ p:is(.text-slate-500, .text-slate-600, .text-gray-500) { font-size: 13px; color: #64748b; }
+    body > main h2 { font-size: 14px; line-height: 1.4; font-weight: 600; letter-spacing: 0; }
+    body > main h3 { font-size: 13px; font-weight: 600; }
+    body > main .text-2xl, body > main .text-3xl { font-size: 19px; line-height: 1.35; font-weight: 600; letter-spacing: -.02em; }
+    body > main .ui-card > p.text-xs:first-child { color: #475569; }
 
     /* Cards / panels: flat, hairline border, 10px radius */
     .ui-card { border-radius: 10px; border-color: #e4e7ec; box-shadow: none; }
@@ -194,11 +205,57 @@ if (!defined('ECP_ADMIN_ALPINE_LOADED')) {
     body > main .border:not([class*="border-"]) { border-color: #e4e7ec; }
     body > main .divide-y > :not([hidden]) ~ :not([hidden]) { border-color: #eef0f3; }
 
-    /* Tables */
-    thead { background: #f8fafc; }
-    thead th { color: #64748b; font-weight: 600; }
-    tbody tr { transition: background .15s ease; }
-    tbody tr:hover { background: #f8fafc; }
+    /* White panels get the hairline border even when the page only gave them a shadow */
+    body > main :is(div, section, form).bg-white[class*="rounded"]:not(.rounded-full) {
+        border: 1px solid #e4e7ec; border-radius: 10px;
+    }
+
+    /* Tables: 13px rows, quiet sentence-case header strip, hairline row rules */
+    body > main table { font-size: 13px; }
+    body > main thead, body > main thead tr, body > main thead th { background: #f8fafc !important; border-color: #eef0f3; }
+    body > main thead th {
+        color: #64748b !important; font-size: 12px !important; font-weight: 500 !important; text-transform: none !important; letter-spacing: 0 !important;
+        padding-top: 8px !important; padding-bottom: 8px !important; white-space: nowrap;
+    }
+    body > main .ui-card td, body > main td { font-size: 13px; }
+    body > main td { padding-top: 10px; padding-bottom: 10px; }
+    body > main td.py-1, body > main td.py-1\.5, body > main td.py-2 { padding-top: 8px; padding-bottom: 8px; }
+    body > main tbody tr { border-color: #eef0f3; transition: background .15s ease; }
+    body > main tbody tr:hover { background: #f8fafc; }
+
+    /* Status badges (small tinted spans): 22px, 6px radius, seller-console tones */
+    body > main span.text-xs[class*="bg-"][class*="px-"], body > main span.text-\[11px\][class*="bg-"][class*="px-"] {
+        display: inline-flex; align-items: center; min-height: 22px; padding-top: 0; padding-bottom: 0;
+        border-radius: 6px; font-weight: 500; white-space: nowrap;
+    }
+    body > main span.bg-emerald-100, body > main span.bg-emerald-50, body > main span.bg-green-100, body > main span.bg-green-50, body > main span.bg-teal-100 { background: #ecfdf5 !important; color: #047857 !important; }
+    body > main span.bg-amber-100, body > main span.bg-amber-50, body > main span.bg-yellow-100, body > main span.bg-orange-100, body > main span.bg-orange-50 { background: #fffbeb !important; color: #b45309 !important; }
+    body > main span.bg-red-100, body > main span.bg-red-50, body > main span.bg-rose-100, body > main span.bg-rose-50 { background: #fef2f2 !important; color: #b91c1c !important; }
+    body > main span.bg-sky-100, body > main span.bg-sky-50, body > main span.bg-blue-100, body > main span.bg-blue-50, body > main span.bg-indigo-100, body > main span.bg-cyan-100 { background: #eff6ff !important; color: #1d4ed8 !important; }
+    body > main span.bg-violet-100, body > main span.bg-purple-100, body > main span.bg-fuchsia-100 { background: #f5f3ff !important; color: #6d28d9 !important; }
+    body > main span.bg-slate-100, body > main span.bg-slate-200, body > main span.bg-gray-100, body > main span.bg-gray-200 { background: #f1f5f9 !important; color: #475569 !important; }
+
+    /* Row actions (text links/buttons in a table's last column) become compact outline buttons */
+    body > main td:last-child:not(:first-child) a:not([class*="bg-"]),
+    body > main td:last-child:not(:first-child) button:not([class*="bg-"]) {
+        display: inline-flex; align-items: center; height: 28px; padding: 0 10px; margin: 2px 0;
+        border: 1px solid #e4e7ec; border-radius: 7px; background: #fff;
+        font-size: 12.5px; font-weight: 500; text-decoration: none !important; white-space: nowrap;
+    }
+    body > main td:last-child:not(:first-child) a:not([class*="bg-"]):not([class*="text-"]),
+    body > main td:last-child:not(:first-child) a.text-slate-700, body > main td:last-child:not(:first-child) a.text-slate-600 { color: #0f172a; }
+    body > main td:last-child:not(:first-child) a:not([class*="bg-"]):hover,
+    body > main td:last-child:not(:first-child) button:not([class*="bg-"]):hover { background: #f8fafc; }
+    body > main td:last-child.space-x-3 > * + *, body > main td:last-child.space-x-2 > * + * { margin-left: 6px; }
+
+    /* Notices / flash boxes: tinted with a matching hairline border, 10px radius */
+    body > main :is(p, div)[class*="px-"].bg-emerald-50 { border: 1px solid rgb(4 120 87 / .2); color: #047857; border-radius: 10px; background: #ecfdf5 !important; }
+    body > main :is(p, div)[class*="px-"].bg-amber-50 { border: 1px solid rgb(180 83 9 / .2); color: #b45309; border-radius: 10px; }
+    body > main :is(p, div)[class*="px-"]:is(.bg-red-50, .bg-rose-50) { border: 1px solid rgb(185 28 28 / .2); color: #b91c1c; border-radius: 10px; }
+    body > main :is(p, div)[class*="px-"]:is(.bg-sky-50, .bg-blue-50) { border: 1px solid rgb(29 78 216 / .2); color: #1d4ed8; border-radius: 10px; }
+
+    /* Generic text links in page content pick up the accent */
+    body > main a.underline, body > main a.hover\:underline:not([class*="text-"]) { color: #065f46; }
 
     /* Form controls: 7px radius, hairline border, emerald focus ring */
     input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="button"]),
