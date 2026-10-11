@@ -6,7 +6,7 @@ const HH_CONFIG = {
     searchRoutes: {
         Doctors: { url: '/find-a-doctor', query: 'q', location: 'loc' },
         Products: { url: '/store/search', query: 'q' },
-        Diagnostics: { url: '/lab', query: 'q' }
+        Diagnostics: { url: '/patient', query: 'q', extra: { tab: 'labbook' } }
     },
     actions: {
         'Book Appointment': '/find-a-doctor',
@@ -19,10 +19,10 @@ const HH_CONFIG = {
         'Vitamins & Supplements': '/store/search?q=vitamins',
         'Personal Care & Wellness': '/store/search?q=personal%20care',
         'More Categories': '/store/categories',
-        'Book Lab Test': '/lab',
-        'Home Sample Collection': '/lab',
-        'Full Body Checkup': '/lab',
-        'Thyrocare Partner': '/lab'
+        'Book Lab Test': '/patient?tab=labbook',
+        'Home Sample Collection': '/patient?tab=labbook',
+        'Full Body Checkup': '/patient?tab=labbook',
+        'Thyrocare Partner': '/patient?tab=labbook'
     }
 };
 
@@ -122,6 +122,7 @@ const HH_CONFIG = {
         const url = new URL(route.url, location.href);
         url.searchParams.set(route.query, query);
         if (route.location) url.searchParams.set(route.location, city);
+        Object.entries(route.extra || {}).forEach(([k, v]) => url.searchParams.set(k, v));
         location.href = url.href;
     }));
 

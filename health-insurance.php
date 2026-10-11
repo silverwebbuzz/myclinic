@@ -657,7 +657,7 @@ require __DIR__ . '/partials/header.php';
         <div class="store-cta-actions">
             <button type="button" class="btn btn-primary ins-lead" data-lead="Insurance Advisor">🧑‍💼 Talk to an Advisor</button>
             <a href="/find-a-doctor" class="btn btn-ghost">👨‍⚕️ Find a Doctor</a>
-            <a href="/lab" class="btn btn-ghost">🧪 Lab Tests</a>
+            <a href="/patient?tab=labbook" class="btn btn-ghost">🧪 Book a Lab Test</a>
         </div>
     </div>
 </section>

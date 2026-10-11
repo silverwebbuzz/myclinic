@@ -137,7 +137,10 @@ if ($db) {
 // ---- Lab catalog: hub, category listings, packages/offers & test pages ----
 // Every crawlable lab URL so Google indexes "diabetes test", "aarogyam",
 // "full body checkup", "vitamin d test price", etc.
-if (function_exists('ecp_db') && ($labDb = ecp_db())) {
+// Lab storefront is hidden for now (/lab* 302 → /patient?tab=labbook), so its
+// URLs stay out of the sitemap. Set to true when the pages come back.
+$ecpLabPagesLive = false;
+if ($ecpLabPagesLive && function_exists('ecp_db') && ($labDb = ecp_db())) {
     $emit = static function (string $path, string $priority, string $freq) use ($base, $now): void {
         echo "  <url>\n";
         echo "    <loc>{$base}{$path}</loc>\n";

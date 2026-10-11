@@ -33,6 +33,13 @@ RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
 # Serve /partner1/ as-is: skip every rewrite below (clean URLs, .php strip, routing).
 RewriteRule ^partner1(/|$) - [L]
 
+# -------- Hidden for now (2026-10-11): lab storefront + store blueprint --------
+# Lab tests are booked inside the patient panel (Book lab test tab), and the
+# /eclinicpro-health-store mockup is not a real store. Temporary (302) so the
+# pages can be switched back on by deleting these two rules.
+RewriteRule ^(lab|lab-listing|lab-detail)(\.php)?(/.*)?$ /patient?tab=labbook [R=302,L,NC]
+RewriteRule ^eclinicpro-health-store(\.php)?/?$ / [R=302,L,NC]
+
 # -------- Lead landing URLs (/L/{token}) --------
 # Short URL goes into outbound SMS — keep it as short and clean as possible.
 RewriteRule ^L/([a-f0-9]{16})/?$ L.php?t=$1 [L,QSA]

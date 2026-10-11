@@ -127,7 +127,6 @@ $presenceSub = $presenceSub ?? 'Find doctors & clinics across these cities';
                 <h5>Product</h5>
                 <ul>
                     <li><a href="/find-a-doctor">Find a doctor</a></li>
-                    <li><a href="/eclinicpro-health-store">Health Store</a></li>
                     <?php // Lab Tests link hidden — /lab is the legacy storefront blueprint.
                           // Kept, not deleted: restore this line if /lab goes live again. ?>
                     <?php /* <li><a href="/lab">Lab Tests</a></li> */ ?>

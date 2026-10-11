@@ -15,6 +15,18 @@ function ecp_dispatch_clean_url(string $requestUri): bool
         return false;
     }
 
+    // Hidden for now — mirrors the 302s at the top of .htaccess.
+    if (preg_match('#^/(lab|lab-listing|lab-detail)(\.php)?(/.*)?$#i', $uri)) {
+        header('Location: /patient?tab=labbook', true, 302);
+
+        return true;
+    }
+    if (preg_match('#^/eclinicpro-health-store(\.php)?/?$#i', $uri)) {
+        header('Location: /', true, 302);
+
+        return true;
+    }
+
     if (preg_match('#^/find-a-doctor/([A-Za-z0-9][A-Za-z0-9\-]*)/?$#', $uri, $m)) {
         $_GET['seo'] = $m[1];
         require __DIR__ . '/../find-a-doctor.php';
