@@ -551,6 +551,16 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/outreach/export', [\App\Controllers\OutreachAdminController::class, 'exportCsv']);
         $admin->post('/outreach/status', [\App\Controllers\OutreachAdminController::class, 'saveStatus']);
 
+        // Health Tips — contributor post review + contributor access. Static
+        // segments BEFORE /health-tips/{id} ({id} matches any segment).
+        $admin->get('/health-tips', [\App\Controllers\HealthTipAdminController::class, 'index']);
+        $admin->get('/health-tips/contributors', [\App\Controllers\HealthTipAdminController::class, 'contributors']);
+        $admin->post('/health-tips/contributors/grant', [\App\Controllers\HealthTipAdminController::class, 'grant']);
+        $admin->post('/health-tips/contributors/{id}/status', [\App\Controllers\HealthTipAdminController::class, 'setStatus']);
+        $admin->get('/health-tips/media/{id}', [\App\Controllers\HealthTipAdminController::class, 'media']);
+        $admin->get('/health-tips/{id}', [\App\Controllers\HealthTipAdminController::class, 'show']);
+        $admin->post('/health-tips/{id}/review', [\App\Controllers\HealthTipAdminController::class, 'review']);
+
         // WordPress blog access for doctors
         $admin->get('/wordpress-settings', [WordPressAdminController::class, 'settings']);
         $admin->post('/wordpress-settings/save', [WordPressAdminController::class, 'saveSettings']);

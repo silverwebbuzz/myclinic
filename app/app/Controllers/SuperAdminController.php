@@ -153,6 +153,8 @@ final class SuperAdminController
             'appointments' => $data['appointments'],
             'sessions' => $data['sessions'],
             'wishlist' => $data['wishlist'],
+            'htContributor' => \App\Services\HealthTipAdminService::contributorForIdentity((int) $id),
+            'message' => $request->query['message'] ?? null,
         ]));
     }
 

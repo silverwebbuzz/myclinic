@@ -179,6 +179,32 @@ if (function_exists('ecp_db') && ($labDb = ecp_db())) {
     }
 }
 
+// ---- Health Tips: hub, every published post, contributor pages ----
+if (function_exists('ecp_db') && ecp_db()) {
+    require_once __DIR__ . '/partials/health_tips.php';
+    try {
+        $htDb = ecp_db();
+        echo "  <url>\n    <loc>{$base}/health-tips</loc>\n    <lastmod>{$now}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.8</priority>\n  </url>\n";
+        $rows = $htDb->query(
+            "SELECT t.slug, t.updated_at FROM health_tips t
+             JOIN health_tip_contributors c ON c.id = t.contributor_id AND c.status = 'active'
+             WHERE t.status = 'published' AND t.is_deleted = 0 ORDER BY t.published_at DESC"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as $r) {
+            $loc = $base . '/health-tips/' . rawurlencode((string) $r['slug']);
+            $mod = date('Y-m-d', strtotime((string) $r['updated_at']));
+            echo "  <url>\n    <loc>{$loc}</loc>\n    <lastmod>{$mod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n";
+        }
+        foreach (ecp_ht_public_contributors() as $c) {
+            $loc = $base . '/health-tips/by/' . rawurlencode((string) $c['slug']);
+            $mod = date('Y-m-d', strtotime((string) $c['last_updated']));
+            echo "  <url>\n    <loc>{$loc}</loc>\n    <lastmod>{$mod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n";
+        }
+    } catch (Throwable $e) {
+        error_log('[sitemap health tips] ' . $e->getMessage());   // patch not run yet
+    }
+}
+
 echo '</urlset>' . "\n";
 $xml = ob_get_clean();
 

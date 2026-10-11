@@ -35,6 +35,43 @@
             </dl>
         </div>
 
+        <!-- Health Tips contributor access -->
+        <?php if (!empty($message) && str_starts_with((string) $message, 'contributor_')): ?>
+        <div class="mt-3 rounded border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
+            <?= $message === 'contributor_granted' ? 'Contributor access granted — they’ll see “My health tips” in their patient panel.' : ($message === 'contributor_suspended' ? 'Contributor paused — their posts are hidden.' : 'Contributor re-activated.') ?>
+        </div>
+        <?php endif; ?>
+        <div class="mt-3 ui-card flex flex-wrap items-center justify-between gap-3 p-4">
+            <div class="text-sm">
+                <div class="font-semibold">🥗 Health Tips contributor</div>
+                <?php if (empty($htContributor)): ?>
+                    <div class="text-slate-500">Not a contributor. Granting lets them post recipes, exercises and tips for your review.</div>
+                <?php else: ?>
+                    <div class="text-slate-500">
+                        <?= $htContributor['status'] === 'active' ? 'Active' : 'Paused' ?> · posts as “<?= htmlspecialchars((string) $htContributor['display_name']) ?>”
+                        · <a href="/admin/health-tips/contributors" class="underline">manage</a>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <?php $htReturn = '/admin/signups/' . (int) ($identity['id'] ?? 0); ?>
+            <?php if (empty($htContributor)): ?>
+                <form method="post" action="/admin/health-tips/contributors/grant" class="flex flex-wrap items-center gap-2">
+                    <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+                    <input type="hidden" name="identity_id" value="<?= (int) ($identity['id'] ?? 0) ?>">
+                    <input type="hidden" name="return_to" value="<?= htmlspecialchars($htReturn) ?>">
+                    <input type="text" name="admin_note" maxlength="255" placeholder="Private note (optional)" class="w-52 rounded border px-2 py-1.5 text-xs">
+                    <button class="rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700">Make contributor</button>
+                </form>
+            <?php else: ?>
+                <form method="post" action="/admin/health-tips/contributors/<?= (int) $htContributor['id'] ?>/status">
+                    <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+                    <input type="hidden" name="return_to" value="<?= htmlspecialchars($htReturn) ?>">
+                    <input type="hidden" name="status" value="<?= $htContributor['status'] === 'active' ? 'suspended' : 'active' ?>">
+                    <button class="rounded border bg-white px-3 py-1.5 text-xs font-semibold <?= $htContributor['status'] === 'active' ? 'text-rose-700' : 'text-emerald-700' ?>"><?= $htContributor['status'] === 'active' ? 'Pause contributor' : 'Re-activate' ?></button>
+                </form>
+            <?php endif; ?>
+        </div>
+
         <!-- Linked clinic charts -->
         <h2 class="mt-6 text-lg font-semibold">Clinics joined <span class="text-sm font-normal text-slate-400">(<?= count($charts ?? []) ?>)</span></h2>
         <div class="mt-2 overflow-x-auto ui-card">

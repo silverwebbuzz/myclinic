@@ -101,6 +101,20 @@ function ecp_dispatch_clean_url(string $requestUri): bool
         return true;
     }
 
+    // Health Tips — contributor page, then single post (mirrors .htaccess).
+    if (preg_match('#^/health-tips/by/([a-z0-9][a-z0-9\-]*)/?$#i', $uri, $m)) {
+        $_GET['_ht_by'] = strtolower($m[1]);
+        require __DIR__ . '/../health-tips.php';
+
+        return true;
+    }
+    if (preg_match('#^/health-tips/([a-z0-9][a-z0-9\-]*)/?$#i', $uri, $m)) {
+        $_GET['_ht_slug'] = strtolower($m[1]);
+        require __DIR__ . '/../health-tips.php';
+
+        return true;
+    }
+
     // eClinicPro Store — mirrors the /store rules in the root .htaccess.
     if (preg_match('#^/store(/.*)?$#i', $uri)) {
         $storeDir = __DIR__ . '/../store/';

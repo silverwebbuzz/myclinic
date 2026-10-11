@@ -82,6 +82,10 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^lab/(package|organ|life|step|why|partner)/([a-z0-9][a-z0-9\-]*)/?$ lab-detail.php?type=$1&slug=$2 [L,QSA,NC]
 
+# -------- Health Tips (/health-tips/{slug}, /health-tips/by/{contributor}) --------
+RewriteRule ^health-tips/by/([a-z0-9][a-z0-9\-]*)/?$ health-tips.php?_ht_by=$1 [L,QSA,NC]
+RewriteRule ^health-tips/([a-z0-9][a-z0-9\-]*)/?$ health-tips.php?_ht_slug=$1 [L,QSA,NC]
+
 # -------- eClinicPro Store (/store/…) --------
 # store/_*.php are include-only partials: never reachable directly.
 RewriteRule ^store/_ - [F,L]

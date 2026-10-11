@@ -13,6 +13,9 @@ if (!isset($pendingClaimCount)) {
     }
 }
 
+// Health Tips posts waiting for review (0 until the patch is run).
+$healthTipsPending = \App\Services\HealthTipAdminService::pendingCount();
+
 // Admin pages are standalone (own <head>, no clinic shell): pull in shared UI
 // helpers + token stylesheet. Neutral slate brand for the .ui-* colors.
 require_once dirname(__DIR__) . '/components/ui.php';
@@ -50,6 +53,10 @@ $navGroups = [
         ['/admin/lab/products', 'Tests & Packages', 'M9 3h6v2l-1 1v4.586l4.707 4.707A2 2 0 0117.293 19H6.707a2 2 0 01-1.414-3.707L10 10.586V6L9 5V3z'],
         ['/admin/lab/categories', 'Categories', 'M4 6h16M4 10h16M4 14h10M4 18h10'],
         ['/admin/lab/coupons', 'Discount Coupons', 'M9 5H7a2 2 0 00-2 2v3a2 2 0 010 4v3a2 2 0 002 2h2M9 5h8a2 2 0 012 2v3a2 2 0 000 4v3a2 2 0 01-2 2H9M9 5v14'],
+    ],
+    'Health Tips' => [
+        ['/admin/health-tips', 'Review queue', 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11', $healthTipsPending],
+        ['/admin/health-tips/contributors', 'Contributors', 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 3a4 4 0 100 8 4 4 0 000-8zM20 8v6M23 11h-6'],
     ],
     'Growth' => [
         ['/admin/partners', 'Partners', 'M17 21v-2a4 4 0 00-3-3.87M9 21v-2a4 4 0 013-3.87M12 7a4 4 0 100 8 4 4 0 000-8z'],

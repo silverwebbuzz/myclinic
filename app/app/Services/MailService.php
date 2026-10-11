@@ -56,6 +56,9 @@ final class MailService
             'doctor_rejected' => $care,
 
             'health_tip',
+            'health_tip_published',
+            'health_tip_changes',
+            'health_tip_rejected',
             'newsletter' => $healthTips,
 
             'support',
@@ -152,6 +155,9 @@ final class MailService
             'rx_delivery', 'prescription_ready' => 'Your prescription from ' . $clinicName,
             'follow_up_reminder' => 'Follow-up reminder — ' . $clinicName,
             'diet_plan_shared' => 'Your diet plan from ' . $clinicName,
+            'health_tip_published' => 'Your post is live: ' . (string) ($payload['title'] ?? ''),
+            'health_tip_changes' => 'Small changes needed: ' . (string) ($payload['title'] ?? ''),
+            'health_tip_rejected' => 'About your post: ' . (string) ($payload['title'] ?? ''),
             default => 'eClinicPro notification',
         };
 
@@ -487,6 +493,37 @@ final class MailService
                 ])),
                 'cta' => ['label' => 'Review in admin', 'url' => (string) ($payload['review_url'] ?? $appUrl . '/admin/claims')],
                 'sign_off' => "— eClinicPro",
+            ],
+            // Health Tips contributor review outcomes (HealthTipAdminService::review).
+            'health_tip_published' => [
+                'greeting' => 'Hi ' . ($payload['name'] ?? 'there') . ',',
+                'paragraphs' => array_values(array_filter([
+                    'Great news — your ' . ($payload['type_label'] ?? 'post') . ' "' . ($payload['title'] ?? '') . '" is now live on eClinicPro Health Tips.',
+                    trim((string) ($payload['note'] ?? '')) !== '' ? 'A note from our team: ' . $payload['note'] : null,
+                    'Share the link with your followers — every view shows your name and links back to your profile.',
+                ])),
+                'cta' => ['label' => 'See it live', 'url' => (string) ($payload['url'] ?? '')],
+                'sign_off' => "Thank you for sharing,\nThe eClinicPro Health Tips team",
+            ],
+            'health_tip_changes' => [
+                'greeting' => 'Hi ' . ($payload['name'] ?? 'there') . ',',
+                'paragraphs' => [
+                    'Thanks for your ' . ($payload['type_label'] ?? 'post') . ' "' . ($payload['title'] ?? '') . '". Before we publish it, we need a few small changes:',
+                    (string) ($payload['note'] ?? ''),
+                    'Open it in My health tips, make the changes and send it for review again.',
+                ],
+                'cta' => ['label' => 'Edit my post', 'url' => (string) ($payload['studio_url'] ?? '')],
+                'sign_off' => "Thank you,\nThe eClinicPro Health Tips team",
+            ],
+            'health_tip_rejected' => [
+                'greeting' => 'Hi ' . ($payload['name'] ?? 'there') . ',',
+                'paragraphs' => [
+                    'Thank you for sending "' . ($payload['title'] ?? '') . '". After reviewing it, we are not able to publish this one.',
+                    'Reason: ' . ($payload['note'] ?? ''),
+                    'We would love to see your next recipe, exercise or tip.',
+                ],
+                'cta' => ['label' => 'Open My health tips', 'url' => (string) ($payload['studio_url'] ?? '')],
+                'sign_off' => "Thank you,\nThe eClinicPro Health Tips team",
             ],
             'password_reset' => [
                 'greeting' => 'Hello,',

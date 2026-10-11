@@ -49,6 +49,13 @@ if ($me && $storeOrdersCount !== null) {
     }
 }
 
+// Health Tips: contributors (granted by admin) get a link to their studio.
+$htContributor = null;
+if ($me) {
+    require_once __DIR__ . '/partials/health_tips.php';
+    $htContributor = ecp_ht_contributor_for_identity((int) $me['id']);
+}
+
 // The logged-in panel runs wider than the rest of the site (it holds a fixed
 // 1480px booking frame); this widens the site header to match. The logged-out
 // view keeps the standard 1280px layout.
@@ -1433,6 +1440,16 @@ require __DIR__ . '/partials/header.php';
               <span class="pt-nav-ic">👤</span>
               <span class="pt-nav-label">My Profile</span>
             </button>
+            <button type="button" onclick="window.location.href='/health-tips?saved=1'" title="Recipes, exercises and tips you saved">
+              <span class="pt-nav-ic">♥</span>
+              <span class="pt-nav-label">Saved health tips</span>
+            </button>
+<?php if ($htContributor !== null && $htContributor['status'] === 'active'): ?>
+            <button type="button" onclick="window.location.href='/my-health-tips'" title="Write and manage your recipes, exercises and tips">
+              <span class="pt-nav-ic">🥗</span>
+              <span class="pt-nav-label">My health tips</span>
+            </button>
+<?php endif; ?>
           </nav>
         </aside>
       </div>

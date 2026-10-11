@@ -560,12 +560,13 @@ function ecpAuthModal() {
       if (this.step === 'code') return 'Verify your number';
       // Step 1 — depends on intent + reason
       if (this.intent === 'signup') {
-        return this._reason === 'save_doctor' ? 'Create account to save'
+        return (this._reason === 'save_doctor' || this._reason === 'save_tip') ? 'Create account to save'
              : this._reason === 'book'        ? 'Create account to book'
              :                                  'Create your account';
       }
       return {
         save_doctor: 'Sign in to save this doctor',
+        save_tip:    'Sign in to save this tip',
         book:        'Sign in to book',
         default:     'Sign in to continue',
       }[this._reason] || 'Sign in to continue';
