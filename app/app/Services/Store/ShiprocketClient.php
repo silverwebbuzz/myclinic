@@ -14,6 +14,9 @@ namespace App\Services\Store;
  *
  * Every call returns the decoded JSON array; transport/API failures come back
  * as ['_error' => message, '_http' => code] so callers can persist the reason.
+ *
+ * Mode (store_shiprocket_mode): 'live' talks to Shiprocket; 'sandbox' answers
+ * from ShiprocketSandbox without any network call (Shiprocket has no test API).
  */
 final class ShiprocketClient
 {
@@ -22,9 +25,25 @@ final class ShiprocketClient
 
     public static function configured(): bool
     {
-        return StoreSettings::get('store_shiprocket_enabled', '0') === '1'
-            && StoreSettings::get('store_shiprocket_email') !== ''
-            && StoreSettings::get('store_shiprocket_password') !== '';
+        if (StoreSettings::get('store_shiprocket_enabled', '0') !== '1') {
+            return false;
+        }
+
+        return self::isSandbox() || (StoreSettings::get('store_shiprocket_email') !== ''
+            && StoreSettings::get('store_shiprocket_password') !== '');
+    }
+
+    public static function isSandbox(): bool
+    {
+        return StoreSettings::get('store_shiprocket_mode', 'live') === 'sandbox';
+    }
+
+    public static function setMode(string $mode): void
+    {
+        if (!in_array($mode, ['live', 'sandbox'], true)) {
+            throw new \InvalidArgumentException('Choose live or sandbox.');
+        }
+        StoreSettings::set('store_shiprocket_mode', $mode);
     }
 
     /** Save API-user credentials (password encrypted) and drop any cached token. */
@@ -41,6 +60,9 @@ final class ShiprocketClient
     /** @return array{ok: bool, error?: string} */
     public static function testLogin(): array
     {
+        if (self::isSandbox()) {
+            return ['ok' => true];
+        }
         $token = self::token(true);
 
         return $token !== null ? ['ok' => true] : ['ok' => false, 'error' => self::$lastError ?: 'Login failed.'];
@@ -63,6 +85,9 @@ final class ShiprocketClient
     /** @return array<string, mixed> */
     private static function request(string $method, string $path, ?array $body, bool $retried = false): array
     {
+        if (self::isSandbox()) {
+            return ShiprocketSandbox::respond($method, $path, $body);
+        }
         $token = self::token(false);
         if ($token === null) {
             return ['_error' => 'Shiprocket login failed: ' . (self::$lastError ?: 'check the API user in Store settings'), '_http' => 0];

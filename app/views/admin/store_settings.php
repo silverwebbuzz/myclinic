@@ -72,7 +72,7 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
     <section class="rounded-xl border bg-white p-5 shadow-sm">
         <div class="flex flex-wrap items-center justify-between gap-2">
             <h2 class="font-semibold">Shiprocket (courier)</h2>
-            <span class="rounded-full px-2 py-0.5 text-xs font-medium <?= $shiprocket['enabled'] ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600' ?>"><?= $shiprocket['enabled'] ? 'On' : 'Off' ?></span>
+            <span class="rounded-full px-2 py-0.5 text-xs font-medium <?= !$shiprocket['enabled'] ? 'bg-slate-200 text-slate-600' : ($shiprocket['sandbox'] ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800') ?>"><?= !$shiprocket['enabled'] ? 'Off' : ($shiprocket['sandbox'] ? 'On · SANDBOX' : 'On · LIVE') ?></span>
         </div>
         <p class="mt-1 text-sm text-slate-500">Use a Shiprocket <strong>API user</strong> (Shiprocket → Settings → API → Configure → Create API user), not your normal login. Sellers can book pickups only while this is on.</p>
         <form method="post" action="/admin/store/settings" class="mt-3 grid gap-3 sm:grid-cols-2" autocomplete="off">
@@ -87,6 +87,18 @@ $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'
                 <button class="rounded bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700">Save</button>
             </div>
         </form>
+        <form method="post" action="/admin/store/settings" class="mt-4 flex flex-wrap items-center gap-4 border-t pt-3"
+              onsubmit="return this.sr_mode.value !== 'live' || confirm('Switch Shiprocket to LIVE? Bookings will send real couriers and debit the Shiprocket wallet.')">
+            <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+            <input type="hidden" name="action" value="shiprocket_mode">
+            <span class="text-sm font-medium">Mode</span>
+            <label class="flex items-center gap-1.5 text-sm"><input type="radio" name="sr_mode" value="live" <?= !$shiprocket['sandbox'] ? 'checked' : '' ?>> Live</label>
+            <label class="flex items-center gap-1.5 text-sm"><input type="radio" name="sr_mode" value="sandbox" <?= $shiprocket['sandbox'] ? 'checked' : '' ?>> Sandbox (simulated)</label>
+            <button class="rounded bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700">Save mode</button>
+        </form>
+        <p class="mt-2 text-xs text-slate-500">Shiprocket has no test server, so Sandbox is simulated here: bookings get <code>SBX…</code> AWBs, a dummy label and no real courier or wallet charge.
+            Each "Refresh tracking" on an order moves a sandbox parcel one step (picked up → in transit → out for delivery → delivered). Every pincode is serviceable.
+            Sandbox and real shipments never mix: finish or cancel each one in the mode it was booked in. Courier booking must be switched on above in both modes; credentials are only needed for Live.</p>
         <form method="post" action="/admin/store/settings" class="mt-2">
             <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><input type="hidden" name="action" value="shiprocket_test">
             <button class="rounded border px-3 py-1.5 text-sm hover:bg-slate-50">Test connection</button>

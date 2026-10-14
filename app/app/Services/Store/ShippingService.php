@@ -111,6 +111,11 @@ final class ShippingService
             return ['ok' => false, 'error' => 'Courier booking failed at "' . $step . '". ' . self::friendly($res) . ' You can retry.', 'shipment_id' => $sid];
         };
 
+        if (!empty($s['sr_shipment_id']) && ShiprocketSandbox::isRef((string) $s['sr_shipment_id']) !== ShiprocketClient::isSandbox()) {
+            return ['ok' => false, 'shipment_id' => $sid, 'error' => 'This booking was started in Shiprocket '
+                . (ShiprocketClient::isSandbox() ? 'Live' : 'Sandbox') . ' mode. Switch back to finish it, or cancel the shipment.'];
+        }
+
         // 1. Seller's pickup location registered on our Shiprocket account.
         if (empty($s['pickup_location_name'])) {
             $pickup = json_decode((string) $s['pickup_snapshot_json'], true) ?: [];
@@ -199,7 +204,11 @@ final class ShippingService
         if ($s === null || (int) $s['status_rank'] >= 40 || in_array($s['status'], self::TERMINAL, true)) {
             return ['ok' => false, 'error' => 'Only shipments not yet picked up can be cancelled here.'];
         }
-        if (!empty($s['sr_order_id'])) {
+        $sandboxRef = ShiprocketSandbox::isRef((string) ($s['sr_order_id'] ?? ''));
+        if (!empty($s['sr_order_id']) && !$sandboxRef && ShiprocketClient::isSandbox()) {
+            return ['ok' => false, 'error' => 'This is a real Shiprocket booking. Switch Shiprocket to Live to cancel it.'];
+        }
+        if (!empty($s['sr_order_id']) && !$sandboxRef) {
             $res = ShiprocketClient::post('/orders/cancel', ['ids' => [(int) $s['sr_order_id']]]);
             if (isset($res['_error'])) {
                 return ['ok' => false, 'error' => 'Shiprocket refused: ' . self::friendly($res)];
@@ -222,6 +231,9 @@ final class ShippingService
     {
         if (empty($s['awb_code']) || !ShiprocketClient::configured()) {
             return false;
+        }
+        if (ShiprocketSandbox::isRef((string) $s['awb_code']) !== ShiprocketClient::isSandbox()) {
+            return false;   // sandbox AWBs only move in sandbox mode, real ones only in live
         }
         $res = ShiprocketClient::get('/courier/track/awb/' . rawurlencode((string) $s['awb_code']));
         Database::connection()->prepare('UPDATE store_shipments SET next_poll_at = :n WHERE id = :id')
@@ -252,8 +264,10 @@ final class ShippingService
             return 0;
         }
         $in = "'" . implode("','", self::TERMINAL) . "'";
+        $mode = ShiprocketClient::isSandbox() ? 'LIKE' : 'NOT LIKE';
         $st = Database::connection()->prepare(
             "SELECT * FROM store_shipments WHERE awb_code IS NOT NULL AND status NOT IN ($in)
+               AND awb_code $mode '" . ShiprocketSandbox::PREFIX . "%'
                AND (next_poll_at IS NULL OR next_poll_at < NOW()) ORDER BY next_poll_at LIMIT " . max(1, min(100, $limit))
         );
         $st->execute();
@@ -439,6 +453,9 @@ final class ShippingService
         }
         $vendor = QueryBuilder::table('store_vendors')->where('id', '=', $vendorId)->first() ?? [];
         $name = 'ECP-V' . $vendorId . '-A' . $addressId;   // ≤ 36 chars, stable, unique
+        if (ShiprocketClient::isSandbox()) {
+            return $name;   // don't mark the address registered: live mode must still add it on Shiprocket
+        }
         $res = ShiprocketClient::post('/settings/company/addpickup', [
             'pickup_location' => $name,
             'name' => mb_substr((string) $a['contact_name'], 0, 60),

@@ -64,6 +64,9 @@ final class PincodeService
         if (!ShiprocketClient::configured()) {
             return $unknown;
         }
+        if (ShiprocketClient::isSandbox()) {
+            return ['serviceable' => true, 'eta_days' => 4];   // nothing cached: live answers must come from Shiprocket
+        }
         $pickup = self::pickupPincode();
         if ($pickup === null) {
             return $unknown;

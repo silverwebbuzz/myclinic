@@ -202,6 +202,7 @@ final class StoreAdminController
             'shipping' => $this->defaultShippingRule(),
             'shiprocket' => [
                 'enabled' => StoreSettings::get('store_shiprocket_enabled', '0') === '1',
+                'sandbox' => \App\Services\Store\ShiprocketClient::isSandbox(),
                 'email' => StoreSettings::get('store_shiprocket_email'),
                 'has_password' => StoreSettings::get('store_shiprocket_password') !== '',
                 'webhook_key' => StoreSettings::get('store_shiprocket_webhook_key'),
@@ -267,6 +268,13 @@ final class StoreAdminController
                 StoreSettings::set('store_shiprocket_enabled', !empty($request->post['sr_enabled']) ? '1' : '0');
                 StoreAudit::log('store.shiprocket_save', 'setting', null, null, ['email' => $email, 'password_changed' => $password !== '']);
                 SessionFlash::put('store_ok', 'Shiprocket settings saved. Use "Test connection" to check the login.');
+            } elseif ($action === 'shiprocket_mode') {
+                $mode = (string) ($request->post['sr_mode'] ?? '');
+                \App\Services\Store\ShiprocketClient::setMode($mode);
+                StoreAudit::log('store.shiprocket_mode', 'setting', null, null, ['mode' => $mode]);
+                SessionFlash::put('store_ok', $mode === 'sandbox'
+                    ? 'Shiprocket is now in SANDBOX: bookings are simulated (SBX… AWBs), no courier, no wallet charge.'
+                    : 'Shiprocket is now LIVE: bookings create real pickups and debit the Shiprocket wallet.');
             } elseif ($action === 'shiprocket_test') {
                 $res = \App\Services\Store\ShiprocketClient::testLogin();
                 SessionFlash::put($res['ok'] ? 'store_ok' : 'store_err', $res['ok'] ? 'Connected to Shiprocket ✓' : 'Shiprocket login failed: ' . ($res['error'] ?? ''));
