@@ -143,8 +143,10 @@ final class MarketingService
     {
         $sql = 'COALESCE(o.opted_out, 0) = 1';
         if (self::tableExists('messaging_optout')) {
+            // messaging_optout is utf8mb4_unicode_ci, directory_doctors is
+            // utf8mb4_general_ci → explicit COLLATE or MySQL errors "Illegal mix of collations".
             $sql .= ' OR EXISTS (SELECT 1 FROM messaging_optout mo
-                                  WHERE mo.phone_tail = RIGHT(' . self::PHONE_SQL . ", 10)
+                                  WHERE mo.phone_tail = RIGHT(' . self::PHONE_SQL . ", 10) COLLATE utf8mb4_unicode_ci
                                     AND mo.channel IN ('all', 'whatsapp'))";
         }
         return '(' . $sql . ')';
