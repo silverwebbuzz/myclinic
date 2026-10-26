@@ -41,6 +41,10 @@ $navGroups = [
         ['/admin/outreach', 'Outreach', 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
         ['/admin/wordpress-doctors', 'Blog access', 'M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z'],
     ],
+    'Marketing' => [
+        ['/admin/marketing', 'Doctor list', 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2zM8 9h8M8 13h5'],
+        ['/admin/marketing/templates', 'Message templates', 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h4'],
+    ],
     'Catalog' => [
         ['/admin/plans', 'Plans', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2'],
         ['/admin/discounts', 'Plan Discounts', 'M9 14l6-6M9.5 8.5h.01M14.5 13.5h.01M5 3h14a2 2 0 012 2v14l-3-2-3 2-3-2-3 2-3-2-3 2V5a2 2 0 012-2z'],

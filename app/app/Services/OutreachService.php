@@ -48,8 +48,9 @@ final class OutreachService
             $bind[':specialty'] = (string) $f['specialty'];
         }
         if (!empty($f['q'])) {
-            $where[] = '(dd.name LIKE :q OR dd.doctor_name LIKE :q)';
-            $bind[':q'] = '%' . $f['q'] . '%';
+            // Distinct names per use: EMULATE_PREPARES is off, reuse → HY093.
+            $where[] = '(dd.name LIKE :q1 OR dd.doctor_name LIKE :q2)';
+            $bind[':q1'] = $bind[':q2'] = '%' . $f['q'] . '%';
         }
         if (!empty($f['status'])) {
             // 'not_contacted' also matches clinics with no outreach row yet.

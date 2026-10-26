@@ -551,6 +551,12 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/outreach/export', [\App\Controllers\OutreachAdminController::class, 'exportCsv']);
         $admin->post('/outreach/status', [\App\Controllers\OutreachAdminController::class, 'saveStatus']);
 
+        // Marketing — doctor list + manual WhatsApp drafts (never sends).
+        $admin->get('/marketing', [\App\Controllers\MarketingAdminController::class, 'index']);
+        $admin->post('/marketing/sent', [\App\Controllers\MarketingAdminController::class, 'markSent']);
+        $admin->get('/marketing/templates', [\App\Controllers\MarketingAdminController::class, 'templates']);
+        $admin->post('/marketing/templates', [\App\Controllers\MarketingAdminController::class, 'saveTemplates']);
+
         // Health Tips — contributor post review + contributor access. Static
         // segments BEFORE /health-tips/{id} ({id} matches any segment).
         $admin->get('/health-tips', [\App\Controllers\HealthTipAdminController::class, 'index']);
