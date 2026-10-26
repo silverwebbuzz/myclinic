@@ -58,18 +58,87 @@ final class SuperAdminMetricsService
 
         $plans = PlanService::all();
         $rows = QueryBuilder::table('tenants')->orderBy('created_at', 'DESC')->limit(200)->get();
+        $contacts = self::clinicContacts($rows);
 
-        return array_map(static function (array $row) use ($plans): array {
+        return array_map(static function (array $row) use ($plans, $contacts): array {
             $plan = (string) ($row['plan'] ?? 'free');
             $mrr = self::mrrForTenant($row, $plans);
+            $c = $contacts[(int) $row['id']] ?? [];
 
             return $row + [
                 'mrr_inr' => $mrr,
                 'plan_label' => $plans[$plan]['name'] ?? ucfirst($plan),
                 'billing_status' => self::billingStatus($row),
                 'churn_flag' => ($row['churn_risk_level'] ?? 'none') !== 'none',
+                'city' => $c['city'] ?? '',
+                'state' => $c['state'] ?? '',
+                'contact_email' => trim((string) ($row['email'] ?? '')) ?: ($c['user_email'] ?? ''),
+                'contact_phone' => trim((string) ($row['phone'] ?? '')) ?: ($c['user_phone'] ?? ''),
             ];
         }, $rows);
+    }
+
+    /**
+     * City/state + fallback contact for a page of clinics, in two batched
+     * queries (not one per clinic):
+     *   - city/state from the clinic's directory listing (claimed_tenant_id or
+     *     tenants.directory_doctor_id) — tenants has no city/state columns;
+     *   - email/phone of the clinic's admin (else first doctor) user, used only
+     *     when the tenant row's own email/phone is empty.
+     *
+     * @param list<array<string, mixed>> $tenants
+     * @return array<int, array{city?:string, state?:string, user_email?:string, user_phone?:string}>
+     */
+    private static function clinicContacts(array $tenants): array
+    {
+        $ids = array_values(array_filter(array_map(static fn ($t) => (int) ($t['id'] ?? 0), $tenants)));
+        if (!$ids) {
+            return [];
+        }
+        $in = implode(',', $ids);
+        $out = [];
+        $pdo = Database::connection();
+
+        $dirIds = array_values(array_filter(array_map(static fn ($t) => (int) ($t['directory_doctor_id'] ?? 0), $tenants)));
+        $dirToTenant = [];
+        foreach ($tenants as $t) {
+            if ((int) ($t['directory_doctor_id'] ?? 0) > 0) {
+                $dirToTenant[(int) $t['directory_doctor_id']] = (int) $t['id'];
+            }
+        }
+        try {
+            $rows = $pdo->query(
+                'SELECT id, claimed_tenant_id, city, state FROM directory_doctors
+                  WHERE claimed_tenant_id IN (' . $in . ')'
+                . ($dirIds ? ' OR id IN (' . implode(',', $dirIds) . ')' : '')
+            )->fetchAll(\PDO::FETCH_ASSOC);
+            foreach ($rows as $r) {
+                $tid = (int) ($r['claimed_tenant_id'] ?? 0) ?: ($dirToTenant[(int) $r['id']] ?? 0);
+                if ($tid > 0 && empty($out[$tid]['city'])) {
+                    $out[$tid]['city'] = (string) ($r['city'] ?? '');
+                    $out[$tid]['state'] = (string) ($r['state'] ?? '');
+                }
+            }
+        } catch (\Throwable) {
+            // No directory table → no city/state column data.
+        }
+
+        $rows = $pdo->query(
+            "SELECT clinic_id, email, phone FROM users
+              WHERE clinic_id IN ({$in}) AND role IN ('admin', 'doctor')
+              ORDER BY role = 'admin' DESC, id ASC"
+        )->fetchAll(\PDO::FETCH_ASSOC);
+        foreach ($rows as $r) {
+            $cid = (int) $r['clinic_id'];
+            if (!isset($out[$cid]['user_email']) && trim((string) $r['email']) !== '') {
+                $out[$cid]['user_email'] = trim((string) $r['email']);
+            }
+            if (!isset($out[$cid]['user_phone']) && trim((string) $r['phone']) !== '') {
+                $out[$cid]['user_phone'] = trim((string) $r['phone']);
+            }
+        }
+
+        return $out;
     }
 
     /**

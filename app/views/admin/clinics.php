@@ -7,7 +7,7 @@
 </head>
 <body class="min-h-screen bg-slate-100">
     <?php require __DIR__ . '/_nav.php'; ?>
-    <main class="mx-auto max-w-6xl p-6">
+    <main class="mx-auto max-w-7xl p-6">
         <h1 class="text-xl font-semibold">All clinics</h1>
         <?php if (!empty($_GET['message']) && $_GET['message'] === 'clinic_deleted'): ?>
         <p class="mt-2 text-sm text-emerald-700">Clinic and all related data were deleted.</p>
@@ -17,10 +17,13 @@
         <?php endif; ?>
         <p class="mt-1 text-xs text-slate-500">MRR shows monthly revenue from <strong>paid</strong> subscriptions only (₹/mo). Trials and free plans count as ₹0.</p>
         <div class="mt-4 overflow-x-auto ui-card">
-            <table data-filter="Plan,Status,Churn" class="w-full text-left text-sm">
+            <table data-filter="Plan,Status,Churn,state:State,city:City" class="w-full text-left text-sm">
                 <thead class="border-b bg-slate-50 text-xs uppercase text-slate-500">
                     <tr>
                         <th class="px-4 py-3">Clinic</th>
+                        <th class="px-4 py-3">Location</th>
+                        <th class="px-4 py-3">Contact</th>
+                        <th class="px-4 py-3">Registered</th>
                         <th class="px-4 py-3">Plan</th>
                         <th class="px-4 py-3">Status</th>
                         <th class="px-4 py-3">MRR</th>
@@ -30,10 +33,42 @@
                 </thead>
                 <tbody>
                     <?php foreach ($clinics as $c): ?>
-                    <tr class="border-b">
+                    <?php
+                    $email = (string) ($c['contact_email'] ?? '');
+                    $phone = (string) ($c['contact_phone'] ?? '');
+                    $registered = !empty($c['created_at']) ? strtotime((string) $c['created_at']) : false;
+                    ?>
+                    <tr class="border-b align-top" data-f-state="<?= htmlspecialchars((string) ($c['state'] ?? '')) ?>" data-f-city="<?= htmlspecialchars((string) ($c['city'] ?? '')) ?>">
                         <td class="px-4 py-3">
                             <span class="font-medium"><?= htmlspecialchars($c['name'] ?? '') ?></span>
                             <span class="block text-xs text-slate-500"><?= htmlspecialchars($c['slug'] ?? '') ?></span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <?php if (!empty($c['city']) || !empty($c['state'])): ?>
+                            <span class="block"><?= htmlspecialchars((string) ($c['city'] ?: '—')) ?></span>
+                            <span class="block text-xs text-slate-500"><?= htmlspecialchars((string) ($c['state'] ?? '')) ?></span>
+                            <?php else: ?>
+                            <span class="text-slate-400">—</span>
+                            <?php endif; ?>
+                        </td>
+                        <td class="px-4 py-3">
+                            <?php if ($email !== ''): ?>
+                            <a href="mailto:<?= htmlspecialchars($email) ?>" class="block max-w-[14rem] truncate text-slate-700 hover:underline" title="<?= htmlspecialchars($email) ?>"><?= htmlspecialchars($email) ?></a>
+                            <?php endif; ?>
+                            <?php if ($phone !== ''): ?>
+                            <a href="tel:<?= htmlspecialchars($phone) ?>" class="block whitespace-nowrap text-xs text-emerald-700 hover:underline"><?= htmlspecialchars($phone) ?></a>
+                            <?php endif; ?>
+                            <?php if ($email === '' && $phone === ''): ?>
+                            <span class="text-slate-400">—</span>
+                            <?php endif; ?>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <?php if ($registered): ?>
+                            <span class="block"><?= date('d M Y', $registered) ?></span>
+                            <span class="block text-xs text-slate-500"><?= date('h:i A', $registered) ?></span>
+                            <?php else: ?>
+                            <span class="text-slate-400">—</span>
+                            <?php endif; ?>
                         </td>
                         <td class="px-4 py-3"><?= htmlspecialchars($c['plan_label'] ?? '') ?></td>
                         <td class="px-4 py-3">
