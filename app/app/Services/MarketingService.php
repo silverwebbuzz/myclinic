@@ -237,7 +237,8 @@ final class MarketingService
                 ? DirectoryProfileUrlService::publicProfileUrlFromRow($r)
                 : null;
             $r['wa_digits'] = self::waDigits($r);
-            $r['message'] = self::render(self::templateFor((string) $r['specialty'], $templates), $r);
+            $r['template_key'] = self::templateKey((string) $r['specialty'], $templates);
+            $r['message'] = self::render($templates[$r['template_key']], $r);
             $out[] = $r;
         }
 
@@ -376,7 +377,25 @@ final class MarketingService
     /** @param array<string,string> $templates */
     public static function templateFor(string $specialty, array $templates): string
     {
-        return $templates[$specialty] ?? $templates['default'];
+        return $templates[self::templateKey($specialty, $templates)];
+    }
+
+    /**
+     * Which template a specialty uses: its own override, else 'default'.
+     * Case/space-insensitive — the column's _ci collation lets 'ENT' rows
+     * match an 'ent' filter, so the template lookup must agree.
+     *
+     * @param array<string,string> $templates
+     */
+    public static function templateKey(string $specialty, array $templates): string
+    {
+        $want = strtolower(trim($specialty));
+        foreach (array_keys($templates) as $code) {
+            if ($code !== 'default' && strtolower(trim((string) $code)) === $want) {
+                return (string) $code;
+            }
+        }
+        return 'default';
     }
 
     /**
@@ -441,6 +460,8 @@ final class MarketingService
             }
         }
         $out = preg_replace("/\n{3,}/", "\n\n", implode("\n", $lines)) ?? '';
+        // {{doctor_name}} already carries "Dr." — "Hello Dr. {{doctor_name}}" mustn't become "Dr. Dr.".
+        $out = preg_replace('/\bDr\.?\s+Dr\.?\s*/i', 'Dr. ', $out) ?? $out;
         return trim($out);
     }
 

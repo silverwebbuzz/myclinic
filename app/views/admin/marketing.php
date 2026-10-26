@@ -28,6 +28,7 @@ foreach ($rows as $r) {
         'wa' => (string) $r['wa_digits'],
         'profile' => (string) ($r['profile_url'] ?? ''),
         'message' => (string) $r['message'],
+        'template' => $r['template_key'] === 'default' ? 'Default' : (string) $r['specialty_label'],
         'sent_at' => $r['last_contacted_at'] ? date('d M Y, h:i A', strtotime((string) $r['last_contacted_at'])) : '',
         'opted_out' => (int) $r['opted_out'] === 1,
     ];
@@ -259,7 +260,7 @@ foreach ($rows as $r) {
                 <div id="mSent" class="text-sky-700"></div>
                 <div id="mWarn" class="rounded bg-amber-50 px-2 py-1 text-amber-800"></div>
             </div>
-            <label class="mt-3 block text-xs text-slate-600">Message (edit before sending)
+            <label class="mt-3 block text-xs text-slate-600">Message (edit before sending) · template: <strong id="mTpl"></strong>
                 <textarea id="mText" rows="12" class="mt-1 w-full rounded border p-2 text-sm leading-relaxed"></textarea>
             </label>
             <div class="mt-3 flex flex-wrap gap-2">
@@ -295,6 +296,7 @@ foreach ($rows as $r) {
         $('mProfileWrap').style.display = d.profile ? '' : 'none';
         $('mProfile').href = d.profile; $('mProfile').textContent = d.profile;
         $('mText').value = d.message;
+        $('mTpl').textContent = d.template;
         renderSent(d);
         const warn = [];
         if (d.opted_out) warn.push('This number has opted out. Do not message it.');
