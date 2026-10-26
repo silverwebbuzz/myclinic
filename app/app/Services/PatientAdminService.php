@@ -22,8 +22,11 @@ final class PatientAdminService
      * Onboarded clinic-patient list across every clinic, newest first, with
      * the clinic name and a quick visit/appointment count per patient.
      *
-     * Search matches name / phone / UHID / email. The total reflects the
-     * SAME filter as the page, so pagination is correct while searching.
+     * Search matches name / phone / UHID / email / clinic / city. The total
+     * reflects the SAME filter as the page, so pagination is correct while
+     * searching. City/state come from the linked patient_identities account
+     * (patients has only a free-text address); "doctor" is whoever saw them
+     * last (latest visit, else latest appointment).
      *
      * @return array{patients: list<array<string, mixed>>, total: int, page: int, per_page: int, pages: int}
      */
@@ -37,26 +40,41 @@ final class PatientAdminService
         $where = '';
         $params = [];
         if ($search !== '') {
-            $where = 'WHERE p.name LIKE :q OR p.phone LIKE :q OR p.uhid LIKE :q OR p.email LIKE :q';
-            $params[':q'] = '%' . $search . '%';
+            // One placeholder per use: EMULATE_PREPARES is off, reusing :q → HY093.
+            $cols = ['p.name', 'p.phone', 'p.uhid', 'p.email', 't.name', 'pi.address_city'];
+            $or = [];
+            foreach ($cols as $i => $col) {
+                $or[] = "{$col} LIKE :q{$i}";
+                $params[":q{$i}"] = '%' . $search . '%';
+            }
+            $where = 'WHERE ' . implode(' OR ', $or);
         }
+        $joins = 'LEFT JOIN tenants t ON t.id = p.clinic_id
+                  LEFT JOIN patient_identities pi ON pi.id = p.identity_id';
 
         // Filtered total — drives the page count and must use the same WHERE.
-        $countStmt = $pdo->prepare("SELECT COUNT(*) FROM patients p {$where}");
+        $countStmt = $pdo->prepare("SELECT COUNT(*) FROM patients p {$joins} {$where}");
         $countStmt->execute($params);
         $total = (int) $countStmt->fetchColumn();
 
         [$page, $perPage, $offset, $pages] = self::paginate($page, $perPage, $total);
 
         $sql = "
-            SELECT p.id, p.uhid, p.name, p.phone, p.email, p.gender, p.dob,
-                   p.source, p.is_active, p.created_at,
+            SELECT p.id, p.uhid, p.name, p.phone, p.email, p.gender, p.dob, p.blood_group,
+                   p.address, p.source, p.is_active, p.created_at,
                    t.name AS clinic_name, t.slug AS clinic_slug,
+                   pi.email AS account_email, pi.address_city AS city, pi.address_state AS state,
                    (SELECT COUNT(*) FROM visits v WHERE v.patient_id = p.id) AS visit_count,
                    (SELECT COUNT(*) FROM appointments a WHERE a.patient_id = p.id) AS appointment_count,
-                   (SELECT MAX(v.visited_at) FROM visits v WHERE v.patient_id = p.id) AS last_visit_at
+                   (SELECT MAX(v.visited_at) FROM visits v WHERE v.patient_id = p.id) AS last_visit_at,
+                   COALESCE(
+                       (SELECT u.name FROM visits v JOIN users u ON u.id = v.doctor_id
+                         WHERE v.patient_id = p.id ORDER BY v.visited_at DESC LIMIT 1),
+                       (SELECT u.name FROM appointments a JOIN users u ON u.id = a.doctor_id
+                         WHERE a.patient_id = p.id ORDER BY a.scheduled_at DESC LIMIT 1)
+                   ) AS doctor_name
               FROM patients p
-         LEFT JOIN tenants t ON t.id = p.clinic_id
+              {$joins}
               {$where}
           ORDER BY p.created_at DESC
              LIMIT {$perPage} OFFSET {$offset}
@@ -92,8 +110,10 @@ final class PatientAdminService
             $where = '';
             $params = [];
             if ($search !== '') {
-                $where = 'WHERE pi.name LIKE :q OR pi.phone LIKE :q OR pi.email LIKE :q';
-                $params[':q'] = '%' . $search . '%';
+                // One placeholder per use: EMULATE_PREPARES is off, reusing :q → HY093
+                // (swallowed by the catch below → search looked like "no results").
+                $where = 'WHERE pi.name LIKE :q1 OR pi.phone LIKE :q2 OR pi.email LIKE :q3';
+                $params[':q1'] = $params[':q2'] = $params[':q3'] = '%' . $search . '%';
             }
 
             $countStmt = $pdo->prepare("SELECT COUNT(*) FROM patient_identities pi {$where}");
