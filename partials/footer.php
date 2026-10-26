@@ -24,7 +24,7 @@ $clinicCount = ecp_active_clinic_count();
             </p>
             <div class="hero-ctas">
                 <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg">
-                    Start 30-day free trial
+                    <?= ecp_trial_offer_active() ? 'Start free — till 31 Dec 2026' : 'Start 30-day free trial' ?>
                 </a>
                 <a href="/book-a-demo" class="btn btn-ghost-dark btn-lg">
                     Schedule a 15-min demo →

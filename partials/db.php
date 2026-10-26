@@ -275,6 +275,18 @@ function ecp_plan_price_label(): string
 }
 
 /**
+ * Diwali launch offer: free trial until this date for every signup. Must match
+ * PlanService::TRIAL_OFFER_UNTIL in the app (that one sets the real date).
+ */
+const ECP_TRIAL_OFFER_UNTIL = '2026-12-31';
+
+/** True while the Diwali free-trial offer is running. */
+function ecp_trial_offer_active(): bool
+{
+    return date('Y-m-d') <= ECP_TRIAL_OFFER_UNTIL;
+}
+
+/**
  * Logs a demo request. Creates the table on first use so we don't need a migration.
  */
 function ecp_save_demo_request(array $data): bool

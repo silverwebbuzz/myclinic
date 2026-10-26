@@ -2,9 +2,9 @@
 // =====================================================================
 // pricing.php — standalone Software Pricing page, served at /pricing.
 //
-// One plan only: Standard at ₹999/month + GST, billed monthly. No free
-// trial — every "Sign up" goes to the app's /register flow
-// (phone → code → details → checkout → payment).
+// One plan only: Standard at ₹999/month + GST, billed monthly. Signup is
+// free: phone → code → details, then a free trial (Diwali Offer: till
+// 31 Dec 2026, else 30 days). Renewal is paid from the doctor panel.
 //
 // Name and monthly price come from the app admin (/admin/plans → 'standard')
 // via ecp_standard_plan() — the same row checkout charges from.
@@ -23,6 +23,8 @@ $pageTitle = 'Pricing — eClinicPro Clinic Management Software';
 $metaDesc  = 'Simple, transparent pricing for eClinicPro clinic management software. One plan with everything included — ' . $priceLabel . '/month + GST, billed monthly. Unlimited patients and staff.';
 
 $signupUrl = ecp_portal_url('/register');
+$offer = ecp_trial_offer_active();
+$trialText = $offer ? 'free till 31 Dec 2026' : 'free for 30 days';
 
 $inr = static fn (float $n, int $dec = 0): string => '₹' . number_format($n, $dec);
 
@@ -50,17 +52,20 @@ $steps = [
     ['Verify phone', 'Enter your WhatsApp number.'],
     ['Enter code', 'Confirm the 6-digit code we send.'],
     ['Your details', 'Your name, clinic name and password.'],
-    ['Checkout', 'Review your plan and the monthly total.'],
-    ['Payment', 'Pay securely with UPI, card or net banking.'],
+    ['Use it free', 'Every feature, ' . $trialText . '. No card needed.'],
+    ['Renew in panel', 'When the trial ends, pay ' . $priceLabel . ' + GST from Subscription.'],
 ];
 
 $faqs = [
-    ['Is there a free trial?', 'No — you sign up and pay for your first month. If you would like to see the software first, book a free 15-minute demo and we will walk you through everything.'],
+    ['Is there a free trial?', $offer
+        ? 'Yes — our Diwali Offer: sign up today and use every feature free till 31 Dec 2026. No card or payment is needed to start. After that it is ' . $priceLabel . ' + GST, renewed from your panel.'
+        : 'Yes — every new clinic gets a 30-day free trial with every feature. No card or payment is needed to start.'],
+    ['What happens when the free trial ends?', 'We remind you a few days before. Go to Subscription in your doctor panel and pay ' . $priceLabel . ' + GST to keep going — your data and settings stay exactly as they are. Have a discount code? Apply it there before paying.'],
     ['What does the price include?', 'Everything listed on this page: every module, unlimited patients, unlimited staff users, updates and support. The only extras are the optional add-ons.'],
     ['How is GST charged?', '18% GST is added at checkout and shown clearly before you pay. You get a GST invoice by email right after payment.'],
     ['How do I pay?', 'Payment is handled by Razorpay. You can pay with UPI, debit or credit card, net banking or wallets.'],
-    ['When can I start using it?', 'Immediately. As soon as the payment is confirmed your account is activated and you can log in and set up your clinic.'],
-    ['How does monthly billing work?', 'You pay ' . $priceLabel . ' + GST for one month at a time. We remind you before the month ends and you renew from Settings → Subscription in a couple of clicks. No long contract, and your data is never deleted.'],
+    ['When can I start using it?', 'Immediately. As soon as you sign up your account is active and you can set up your clinic — no payment needed to start.'],
+    ['How does monthly billing work?', 'You pay ' . $priceLabel . ' + GST for one month at a time. We remind you before the month ends and you renew from Subscription in your doctor panel in a couple of clicks. No long contract, and your data is never deleted.'],
     ['Can I add more doctors or staff later?', 'Yes. Staff users are unlimited on every plan. Only extra clinic branches are charged, through the Clinic Network add-on.'],
 ];
 
@@ -104,6 +109,16 @@ require __DIR__ . '/partials/header.php';
         color: #3a5742;
     }
     .pr-trust span::before { content: '✓ '; color: #0F9B6E; font-weight: 700; }
+    .pr-offer {
+        display: inline-block;
+        margin: 0 auto 18px;
+        padding: 9px 18px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #fff4dc, #ffe7c2);
+        border: 1px solid #f5c26b;
+        color: #8a4b00;
+        font-size: 14px;
+    }
 
     /* ── Plan cards ── */
     .pr-plans { padding: 0 0 80px; margin-top: -24px; position: relative; }
@@ -343,11 +358,15 @@ require __DIR__ . '/partials/header.php';
             No tiers, no per-seat games, no surprise upsells. One monthly price gets you every
             feature, every specialty and unlimited staff — no long contract.
         </p>
+        <?php if ($offer): ?>
+            <p class="pr-offer">🪔 <b>Diwali Offer</b> — sign up today, free till <b>31 Dec 2026</b>. No card needed.</p>
+        <?php endif; ?>
         <div class="pr-trust">
             <span>Unlimited patients</span>
             <span>Unlimited staff users</span>
             <span>GST invoice included</span>
-            <span>Start using right after payment</span>
+            <span><?= $offer ? 'Free till 31 Dec 2026' : '30-day free trial' ?></span>
+            <span>No card to start</span>
         </div>
     </div>
 </section>
@@ -387,15 +406,15 @@ require __DIR__ . '/partials/header.php';
                     <li>1 Instagram Reel post per month</li>
                 </ul>
 
-                <a href="<?= e($signupUrl) ?>" class="pr-btn pr-btn-solid">Sign up →</a>
-                <p class="pr-plan-fine">Secure payment via Razorpay · UPI, cards, net banking</p>
+                <a href="<?= e($signupUrl) ?>" class="pr-btn pr-btn-solid"><?= $offer ? 'Start free till 31 Dec →' : 'Start free trial →' ?></a>
+                <p class="pr-plan-fine">No card to start · Renew later via Razorpay · UPI, cards, net banking</p>
             </article>
         </div>
 
         <div class="pr-secure">
-            <span>🔒 <b>256-bit SSL</b> secure checkout</span>
-            <span>🧾 <b>GST invoice</b> emailed instantly</span>
-            <span>⚡ <b>Instant activation</b> after payment</span>
+            <span>⚡ <b>Instant access</b> — no payment to start</span>
+            <span>🔒 <b>256-bit SSL</b> secure renewal</span>
+            <span>🧾 <b>GST invoice</b> emailed on every payment</span>
         </div>
     </div>
 </section>
@@ -449,7 +468,7 @@ require __DIR__ . '/partials/header.php';
         <div class="pr-head reveal">
             <p class="hp-eyebrow">How it works</p>
             <h2>Up and running in 5 minutes</h2>
-            <p>Five quick steps from sign up to your first patient.</p>
+            <p>Sign up in three quick steps, use everything <?= e($trialText) ?>, and renew from your panel when you're ready.</p>
         </div>
         <div class="pr-steps reveal">
             <?php foreach ($steps as [$name, $desc]): ?>
@@ -459,7 +478,7 @@ require __DIR__ . '/partials/header.php';
                 </div>
             <?php endforeach; ?>
         </div>
-        <p class="pr-steps-done">✅ Payment confirmed — <b>log in and start seeing patients.</b></p>
+        <p class="pr-steps-done">✅ Account ready the moment you sign up — <b>start seeing patients today.</b></p>
     </div>
 </section>
 
@@ -486,9 +505,9 @@ require __DIR__ . '/partials/header.php';
     <div class="wrap">
         <div class="pr-cta reveal">
             <h2>Ready to run your clinic beautifully?</h2>
-            <p>Sign up in a few minutes, pay securely, and start using eClinicPro right away.</p>
+            <p>Sign up in a few minutes and start using eClinicPro right away — <?= e($trialText) ?>, no card needed.</p>
             <div class="pr-cta-actions">
-                <a href="<?= e($signupUrl) ?>" class="pr-btn pr-btn-solid">Sign up now →</a>
+                <a href="<?= e($signupUrl) ?>" class="pr-btn pr-btn-solid"><?= $offer ? 'Start free till 31 Dec →' : 'Start free trial →' ?></a>
                 <a href="/book-a-demo" data-open-demo-modal class="pr-btn pr-btn-line">Book a free demo</a>
             </div>
         </div>

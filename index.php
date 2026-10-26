@@ -618,7 +618,7 @@ require __DIR__ . '/partials/header.php';
                     <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg">Start your clinic — free →</a>
                     <a href="/product-tour" class="btn btn-ghost-light btn-lg">See a 2-min walkthrough</a>
                 </div>
-                <p class="hp-doc-fine">30-day free trial · No credit card · Your data stays yours.</p>
+                <p class="hp-doc-fine"><?= ecp_trial_offer_active() ? '🪔 Diwali Offer: free till 31 Dec 2026' : '30-day free trial' ?> · No credit card · Your data stays yours.</p>
 
                 <div class="hp-feat-grid">
                     <?php foreach (
@@ -780,9 +780,18 @@ require __DIR__ . '/partials/header.php';
 
         <div class="heroo">
             <div class="hero-eyebroww">All-in-one Clinic Management Software</div>
+            <?php if (ecp_trial_offer_active()): ?>
+                <div style="display:inline-flex;align-items:center;gap:8px;margin:0 auto 14px;padding:7px 16px;border-radius:999px;background:linear-gradient(90deg,#fff4dc,#ffe7c2);border:1px solid #f5c26b;color:#8a4b00;font-size:13px;font-weight:700;">
+                    🪔 Diwali Offer — Free till 31 Dec 2026
+                </div>
+            <?php endif; ?>
             <h1 class="hero-titlee">One plan. Everything to run<br>your clinic.</h1>
             <p class="hero-subb">No tiers, no per-seat games, no surprise upsells.<br>
-                Try free for <strong>30 days</strong> — <strong>no card.</strong></p>
+                <?php if (ecp_trial_offer_active()): ?>
+                    Sign up today and use everything <strong>free till 31 Dec 2026</strong> — <strong>no card.</strong>
+                <?php else: ?>
+                    Try free for <strong>30 days</strong> — <strong>no card.</strong>
+                <?php endif; ?></p>
         </div>
 
         <!-- <div class="pills-row">
@@ -1041,7 +1050,7 @@ require __DIR__ . '/partials/header.php';
                         </div>
                     </div>
 
-                    <a href="<?= e(ecp_portal_url('/register')) ?>" class="cta-btn">Sign up</a>
+                    <a href="<?= e(ecp_portal_url('/register')) ?>" class="cta-btn"><?= ecp_trial_offer_active() ? 'Start free till 31 Dec' : 'Start free trial' ?></a>
                     <div class="trust-row">
                         <span class="trust-item"><svg viewBox="0 0 14 14">
                                 <polyline points="2,7 5,10 12,3" />
@@ -1053,7 +1062,7 @@ require __DIR__ . '/partials/header.php';
                                 <polyline points="2,7 5,10 12,3" />
                             </svg> Setup in minutes</span>
                     </div>
-                    <a href="#" class="see-link">See full pricing &amp; FAQ →</a>
+                    <a href="/pricing" class="see-link">See full pricing &amp; FAQ →</a>
                 </div>
             </div>
 
@@ -1074,7 +1083,7 @@ $faqPatients = [
     ['Which cities and specialties are covered?', 'We\'re live across India with 50+ specialties — from general physicians and dentists to homeopaths, dermatologists, physiotherapists and more.'],
 ];
 $faqDoctors = [
-    ['What does it cost?', 'One monthly plan: ' . ecp_plan_price_label() . ' (GST added at checkout). Everything to run a clinic is included, with a 30-day free trial and no card required.'],
+    ['What does it cost?', 'One monthly plan: ' . ecp_plan_price_label() . ' (GST added at checkout). Everything to run a clinic is included, with a ' . (ecp_trial_offer_active() ? 'free trial till 31 Dec 2026 (Diwali Offer)' : '30-day free trial') . ' and no card required.'],
     ['Is WhatsApp/SMS an extra add-on?', 'No. WhatsApp-first messaging with SMS fallback — confirmations, reminders, prescription delivery and follow-up nudges — is built into every plan at no extra cost.'],
     ['Will patients actually find me?', 'Yes. Your public profile on eclinicpro.com\'s directory is included, so patients searching your city and specialty can discover and book you directly.'],
     ['Is my clinic and patient data secure?', 'Records are encrypted at rest and in transit, with per-clinic isolation and audit logging. You can export everything as PDF or JSON anytime.'],
