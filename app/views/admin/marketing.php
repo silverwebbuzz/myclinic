@@ -48,7 +48,7 @@ foreach ($rows as $r) {
         <div class="flex items-baseline justify-between gap-4 flex-wrap">
             <div>
                 <h1 class="text-xl font-semibold">Doctor marketing</h1>
-                <p class="text-sm text-slate-500">Filter listings, open a doctor's draft, send it yourself on WhatsApp, then mark it sent. <strong><?= number_format($total) ?></strong> listings match.</p>
+                <p class="text-sm text-slate-500">Filter listings, open a doctor's draft, send it yourself on WhatsApp, then mark it sent. <?= (int) $perPage ?> listings per page.</p>
             </div>
             <a href="/admin/marketing/templates" class="rounded border bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">✎ Message templates</a>
         </div>
@@ -228,14 +228,14 @@ foreach ($rows as $r) {
             <?php endif; ?>
         </section>
 
-        <?php if ($pages > 1): ?>
+        <?php if ($page > 1 || $hasMore): ?>
         <div class="mt-4 flex items-center justify-between text-sm">
-            <span class="text-slate-500">Page <?= (int) $page ?> of <?= number_format($pages) ?></span>
+            <span class="text-slate-500">Page <?= (int) $page ?> · listings <?= number_format(($page - 1) * $perPage + 1) ?>–<?= number_format(($page - 1) * $perPage + count($rows)) ?></span>
             <div class="flex gap-2">
                 <?php if ($page > 1): ?>
                 <a href="<?= $h($mk(['page' => $page - 1])) ?>" class="rounded border bg-white px-3 py-1.5 hover:bg-slate-50">← Prev</a>
                 <?php endif; ?>
-                <?php if ($page < $pages): ?>
+                <?php if ($hasMore): ?>
                 <a href="<?= $h($mk(['page' => $page + 1])) ?>" class="rounded border bg-white px-3 py-1.5 hover:bg-slate-50">Next →</a>
                 <?php endif; ?>
             </div>

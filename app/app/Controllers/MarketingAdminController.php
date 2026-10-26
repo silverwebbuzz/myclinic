@@ -26,18 +26,17 @@ final class MarketingAdminController
         $filters = self::filtersFromRequest($request);
         $page = max(1, (int) ($request->query['page'] ?? 1));
 
-        $total = MarketingService::count($filters);
-        $perPage = MarketingService::PER_PAGE;
+        $result = MarketingService::page($filters, $page);
 
         return Response::html(View::render('admin/marketing', [
             'admin' => RequestContext::superAdmin(),
             'csrf' => CsrfService::token(),
-            'rows' => MarketingService::page($filters, $page),
+            'rows' => $result['rows'],
+            'hasMore' => $result['has_more'],
             'filters' => $filters,
             'options' => MarketingService::filterOptions($filters['state']),
             'page' => $page,
-            'pages' => (int) max(1, ceil($total / $perPage)),
-            'total' => $total,
+            'perPage' => MarketingService::PER_PAGE,
         ]));
     }
 

@@ -48,16 +48,25 @@ final class MarketingService
         . "{{website_url}}\n\n"
         . "Reply STOP if you would prefer not to hear from us.";
 
-    /** Whitelisted sort keys → ORDER BY. */
+    /**
+     * Whitelisted sort keys → ORDER BY. Every sort ends in dd.id so paging is
+     * stable. 'quality' (the default) matches idx_dir_claimed_quality
+     * (is_claimed, quality_score, rating, +PK), so with claimed=0 MySQL walks
+     * the index and stops after one page instead of sorting the table.
+     */
     private const SORTS = [
-        'quality' => 'dd.quality_score %s, dd.id DESC',
-        'name' => "COALESCE(NULLIF(dd.doctor_name, ''), dd.name) %s",
-        'city' => 'dd.city %s, dd.name ASC',
-        'leads' => 'leads %s, dd.quality_score DESC',
-        'rating' => 'dd.rating %s, dd.reviews DESC',
-        'reviews' => 'dd.reviews %s',
-        'sent' => 'o.last_contacted_at %s',
+        'quality' => 'dd.quality_score %1$s, dd.rating %1$s, dd.id %1$s',
+        'name' => 'dd.name %1$s, dd.id %1$s',
+        'city' => 'dd.city %1$s, dd.id %1$s',
+        'leads' => '(' . self::LEADS_SQL . ') %1$s, dd.id %1$s',
+        'rating' => 'dd.rating %1$s, dd.id %1$s',
+        'reviews' => 'dd.reviews %1$s, dd.id %1$s',
+        'sent' => 'o.last_contacted_at %1$s, dd.id %1$s',
     ];
+
+    /** Booking requests for one listing — uses the fk_dl_doctor index, per row only when needed. */
+    private const LEADS_SQL = "SELECT COUNT(*) FROM directory_leads dl
+                                WHERE dl.directory_doctor_id = dd.id AND dl.type = 'book_submitted'";
 
     /** intl_phone with spaces/dashes stripped (pre-normalisation rows have "+91 82372 89431"). */
     private const PHONE_SQL = "REPLACE(REPLACE(COALESCE(dd.intl_phone, ''), ' ', ''), '-', '')";
@@ -127,7 +136,8 @@ final class MarketingService
             $bind[':sent_to'] = $f['sent_to'] . ' 23:59:59';
         }
         if (($f['leads'] ?? '') === 'yes') {
-            $where[] = 'COALESCE(l.leads, 0) > 0';
+            $where[] = "EXISTS (SELECT 1 FROM directory_leads dl
+                                 WHERE dl.directory_doctor_id = dd.id AND dl.type = 'book_submitted')";
         }
         if (($f['optout'] ?? 'exclude') === 'exclude') {
             $where[] = 'NOT (' . self::optedOutSql() . ')';
@@ -152,82 +162,93 @@ final class MarketingService
         return '(' . $sql . ')';
     }
 
-    private static function fromSql(): string
-    {
-        return "FROM directory_doctors dd
-           LEFT JOIN directory_outreach o ON o.directory_doctor_id = dd.id
-           LEFT JOIN (SELECT directory_doctor_id, COUNT(*) AS leads
-                        FROM directory_leads
-                       WHERE type = 'book_submitted'
-                       GROUP BY directory_doctor_id) l ON l.directory_doctor_id = dd.id";
-    }
-
     /**
-     * One page of listings.
+     * One page of listings + whether a next page exists. Never reads more than
+     * one page of full rows:
+     *   1. pick PER_PAGE + 1 ids with the filters (lean: no lead counts, no text);
+     *   2. load details, lead counts and drafts for just those ids.
+     * No COUNT(*) of the whole match set; the extra id only answers "is there a next page".
      *
      * @param array<string,mixed> $filters
-     * @return list<array<string,mixed>>
+     * @return array{rows:list<array<string,mixed>>, has_more:bool}
      */
     public static function page(array $filters, int $page = 1): array
     {
+        $pdo = Database::connection();
         $f = self::filterSql($filters);
         $sort = self::SORTS[$filters['sort'] ?? ''] ?? self::SORTS['quality'];
         $dir = ($filters['dir'] ?? '') === 'asc' ? 'ASC' : 'DESC';
         $offset = max(0, $page - 1) * self::PER_PAGE;
 
+        // 1) ids for this page.
+        $stmt = $pdo->prepare(
+            "SELECT dd.id
+               FROM directory_doctors dd
+          LEFT JOIN directory_outreach o ON o.directory_doctor_id = dd.id
+              WHERE {$f['where']}
+              ORDER BY " . sprintf($sort, $dir) . '
+              LIMIT :lim OFFSET :off'
+        );
+        self::bindAll($stmt, $f['bind']);
+        $stmt->bindValue(':lim', self::PER_PAGE + 1, PDO::PARAM_INT);
+        $stmt->bindValue(':off', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        $ids = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+
+        $hasMore = count($ids) > self::PER_PAGE;
+        $ids = array_slice($ids, 0, self::PER_PAGE);
+        if (!$ids) {
+            return ['rows' => [], 'has_more' => false];
+        }
+
+        // 2) details for those ids only (ids are ints from step 1 → safe to inline).
         $optional = '';
         foreach (['entity_type', 'listing_slug'] as $col) {
             if (self::hasColumn($col)) {
                 $optional .= ', dd.' . $col;
             }
         }
-
-        $sql = "SELECT dd.id, dd.name, dd.doctor_name, dd.specialty, dd.phone, dd.intl_phone,
-                       dd.city, dd.state, dd.area, dd.types, dd.is_active, dd.is_claimed,
-                       dd.rating, dd.reviews{$optional},
-                       COALESCE(l.leads, 0) AS leads,
-                       o.status AS outreach_status, o.last_contacted_at, o.contacted_count,
-                       " . self::optedOutSql() . " AS opted_out
-                  " . self::fromSql() . "
-                 WHERE {$f['where']}
-                 ORDER BY " . sprintf($sort, $dir) . "
-                 LIMIT :lim OFFSET :off";
-
-        $stmt = Database::connection()->prepare($sql);
-        self::bindAll($stmt, $f['bind']);
-        $stmt->bindValue(':lim', self::PER_PAGE, PDO::PARAM_INT);
-        $stmt->bindValue(':off', $offset, PDO::PARAM_INT);
-        $stmt->execute();
+        $byId = [];
+        $rows = $pdo->query(
+            "SELECT dd.id, dd.name, dd.doctor_name, dd.specialty, dd.phone, dd.intl_phone,
+                    dd.city, dd.state, dd.area, dd.types, dd.is_active, dd.is_claimed,
+                    dd.rating, dd.reviews{$optional},
+                    (" . self::LEADS_SQL . ") AS leads,
+                    o.status AS outreach_status, o.last_contacted_at, o.contacted_count,
+                    " . self::optedOutSql() . " AS opted_out
+               FROM directory_doctors dd
+          LEFT JOIN directory_outreach o ON o.directory_doctor_id = dd.id
+              WHERE dd.id IN (" . implode(',', $ids) . ')'
+        )->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as $r) {
+            $byId[(int) $r['id']] = $r;
+        }
 
         $labels = self::specialtyLabels();
         $templates = self::templates();
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($rows as &$r) {
+        $out = [];
+        foreach ($ids as $id) {
+            if (!isset($byId[$id])) {
+                continue;
+            }
+            $r = $byId[$id];
             $r['specialty_label'] = $labels[(string) $r['specialty']] ?? (string) $r['specialty'];
             $r['profile_url'] = (int) $r['is_active'] === 1
                 ? DirectoryProfileUrlService::publicProfileUrlFromRow($r)
                 : null;
             $r['wa_digits'] = self::waDigits($r);
             $r['message'] = self::render(self::templateFor((string) $r['specialty'], $templates), $r);
+            $out[] = $r;
         }
-        unset($r);
 
-        return $rows;
-    }
-
-    /** @param array<string,mixed> $filters */
-    public static function count(array $filters): int
-    {
-        $f = self::filterSql($filters);
-        $stmt = Database::connection()->prepare('SELECT COUNT(*) ' . self::fromSql() . ' WHERE ' . $f['where']);
-        self::bindAll($stmt, $f['bind']);
-        $stmt->execute();
-        return (int) $stmt->fetchColumn();
+        return ['rows' => $out, 'has_more' => $hasMore];
     }
 
     /**
-     * Filter dropdown data. Specialties carry their unclaimed-listing counts so
-     * the admin can pick where to start; any new specialty shows up on its own.
+     * Filter dropdown data. Specialties carry their all/unclaimed counts so the
+     * admin can pick where to start; any new specialty shows up on its own.
+     * Whole-table aggregates → cached 10 minutes. Cities load only once a state
+     * is picked (the city box stays free text otherwise).
      *
      * @return array{specialties:list<array{code:string,label:string,total:int,unclaimed:int}>, states:list<string>, cities:list<string>}
      */
@@ -236,44 +257,63 @@ final class MarketingService
         $pdo = Database::connection();
         $labels = self::specialtyLabels();
 
-        $specialties = [];
-        $rows = $pdo->query(
+        $counts = self::cached('spec_counts', 600, fn () => $pdo->query(
             "SELECT specialty, COUNT(*) AS total, SUM(is_claimed = 0) AS unclaimed
                FROM directory_doctors
               WHERE specialty IS NOT NULL AND specialty <> ''
               GROUP BY specialty"
-        )->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($rows as $r) {
+        )->fetchAll(PDO::FETCH_ASSOC));
+
+        $specialties = [];
+        foreach ($counts as $r) {
             $code = (string) $r['specialty'];
             $specialties[] = [
                 'code' => $code,
-                'label' => $labels[$code] ?? $code,
+                'label' => (string) ($labels[$code] ?? $code),
                 'total' => (int) $r['total'],
                 'unclaimed' => (int) $r['unclaimed'],
             ];
         }
         usort($specialties, fn ($a, $b) => strcasecmp($a['label'], $b['label']));
 
-        $states = $pdo->query(
+        $states = self::cached('states', 600, fn () => $pdo->query(
             "SELECT DISTINCT state FROM directory_doctors
               WHERE state IS NOT NULL AND state <> '' ORDER BY state"
-        )->fetchAll(PDO::FETCH_COLUMN);
+        )->fetchAll(PDO::FETCH_COLUMN));
 
+        $cities = [];
         if ($state !== '') {
-            $stmt = $pdo->prepare(
-                "SELECT DISTINCT city FROM directory_doctors
-                  WHERE state = :st AND city IS NOT NULL AND city <> '' ORDER BY city LIMIT 3000"
-            );
-            $stmt->execute([':st' => $state]);
-            $cities = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        } else {
-            $cities = $pdo->query(
-                "SELECT DISTINCT city FROM directory_doctors
-                  WHERE city IS NOT NULL AND city <> '' ORDER BY city LIMIT 3000"
-            )->fetchAll(PDO::FETCH_COLUMN);
+            $cities = self::cached('cities_' . md5($state), 600, function () use ($pdo, $state) {
+                $stmt = $pdo->prepare(
+                    "SELECT DISTINCT city FROM directory_doctors
+                      WHERE state = :st AND city IS NOT NULL AND city <> '' ORDER BY city LIMIT 3000"
+                );
+                $stmt->execute([':st' => $state]);
+                return $stmt->fetchAll(PDO::FETCH_COLUMN);
+            });
         }
 
         return ['specialties' => $specialties, 'states' => $states, 'cities' => $cities];
+    }
+
+    /**
+     * Tiny file cache for whole-table aggregates (no shared cache in the app).
+     *
+     * @param callable():array<mixed> $build
+     * @return array<mixed>
+     */
+    private static function cached(string $key, int $ttl, callable $build): array
+    {
+        $file = sys_get_temp_dir() . '/ecp_marketing_' . $key . '.json';
+        if (is_file($file) && filemtime($file) > time() - $ttl) {
+            $data = json_decode((string) @file_get_contents($file), true);
+            if (is_array($data)) {
+                return $data;
+            }
+        }
+        $data = $build();
+        @file_put_contents($file, json_encode($data, JSON_INVALID_UTF8_SUBSTITUTE), LOCK_EX);
+        return $data;
     }
 
     // ------------------------------------------------------------------
@@ -451,7 +491,7 @@ final class MarketingService
             'listed' => '1',
             'phone' => 'mobile',
         ]), 1);
-        return $rows[0] ?? null;
+        return $rows['rows'][0] ?? null;
     }
 
     // ------------------------------------------------------------------
