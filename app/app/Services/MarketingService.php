@@ -82,7 +82,7 @@ final class MarketingService
     private static function filterSql(array $f): array
     {
         $f += array_fill_keys(['state', 'city', 'q', 'phone', 'claimed', 'listed', 'sent', 'sent_from', 'sent_to', 'leads'], '');
-        $f += ['optout' => 'exclude'];
+        $f += ['optout' => 'all'];
         $where = ['1 = 1'];
         $bind = [];
         $mobile = self::PHONE_SQL . " REGEXP '^[+]91[6-9][0-9]{9}$'";
@@ -139,10 +139,13 @@ final class MarketingService
             $where[] = "EXISTS (SELECT 1 FROM directory_leads dl
                                  WHERE dl.directory_doctor_id = dd.id AND dl.type = 'book_submitted')";
         }
-        if (($f['optout'] ?? 'exclude') === 'exclude') {
-            $where[] = 'NOT (' . self::optedOutSql() . ')';
+        // Filter on the stored flag only (cheap: unique-key join). Phone-matching
+        // messaging_optout for every scanned row made filtering slow; that check
+        // runs for the 50 shown rows instead (optedOutSql in page()).
+        if ($f['optout'] === 'exclude') {
+            $where[] = 'COALESCE(o.opted_out, 0) = 0';
         } elseif ($f['optout'] === 'only') {
-            $where[] = self::optedOutSql();
+            $where[] = 'o.opted_out = 1';
         }
 
         return ['where' => implode(' AND ', $where), 'bind' => $bind];
@@ -358,6 +361,62 @@ final class MarketingService
         )->execute([':id' => $doctorId, ':uid' => $adminId]);
 
         return ['ok' => true, 'sent_at' => date('Y-m-d H:i:s')];
+    }
+
+    /**
+     * The doctor asked us to stop (or undo a mistaken click). Stamps the
+     * outreach row and, on STOP, also adds the number to the platform-wide
+     * messaging_optout ledger so automated SMS/WhatsApp respect it too. Undo
+     * removes only ledger rows an admin added, never a doctor's own STOP reply.
+     *
+     * @return array{ok:bool, error?:string}
+     */
+    public static function setStopped(int $doctorId, bool $stop, ?int $adminId): array
+    {
+        if ($doctorId <= 0) {
+            return ['ok' => false, 'error' => 'invalid'];
+        }
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare('SELECT intl_phone, phone FROM directory_doctors WHERE id = :id');
+        $stmt->execute([':id' => $doctorId]);
+        $doc = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$doc) {
+            return ['ok' => false, 'error' => 'not_found'];
+        }
+
+        if ($stop) {
+            $pdo->prepare(
+                "INSERT INTO directory_outreach
+                    (directory_doctor_id, status, opted_out, opted_out_at, updated_by)
+                 VALUES (:id, 'opted_out', 1, NOW(), :uid)
+                 ON DUPLICATE KEY UPDATE
+                    status = 'opted_out', opted_out = 1,
+                    opted_out_at = COALESCE(opted_out_at, NOW()),
+                    updated_by = VALUES(updated_by)"
+            )->execute([':id' => $doctorId, ':uid' => $adminId]);
+        } else {
+            $pdo->prepare(
+                "UPDATE directory_outreach
+                    SET opted_out = 0, opted_out_at = NULL, updated_by = :uid,
+                        status = IF(last_contacted_at IS NULL, 'not_contacted', 'contacted')
+                  WHERE directory_doctor_id = :id"
+            )->execute([':id' => $doctorId, ':uid' => $adminId]);
+        }
+
+        $phone = (string) ($doc['intl_phone'] ?: $doc['phone']);
+        if ($phone !== '' && self::tableExists('messaging_optout')) {
+            if ($stop) {
+                MessagingConsent::recordStop($phone, 'all', 'STOP', 'admin');
+            } else {
+                $digits = preg_replace('/\D/', '', $phone) ?? '';
+                if (strlen($digits) >= 10) {
+                    $pdo->prepare("DELETE FROM messaging_optout WHERE phone_tail = :t AND source = 'admin'")
+                        ->execute([':t' => substr($digits, -10)]);
+                }
+            }
+        }
+
+        return ['ok' => true];
     }
 
     // ------------------------------------------------------------------

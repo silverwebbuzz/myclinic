@@ -555,6 +555,7 @@ return static function (RouteRegistrar $router): void {
         // Marketing — doctor list + manual WhatsApp drafts (never sends).
         $admin->get('/marketing', [\App\Controllers\MarketingAdminController::class, 'index']);
         $admin->post('/marketing/sent', [\App\Controllers\MarketingAdminController::class, 'markSent']);
+        $admin->post('/marketing/stop', [\App\Controllers\MarketingAdminController::class, 'stop']);
         $admin->get('/marketing/templates', [\App\Controllers\MarketingAdminController::class, 'templates']);
         $admin->post('/marketing/templates', [\App\Controllers\MarketingAdminController::class, 'saveTemplates']);
 

@@ -55,6 +55,21 @@ final class MarketingAdminController
         return Response::json($result, $result['ok'] ? 200 : 422);
     }
 
+    /** POST /admin/marketing/stop — JSON; doctor asked us to stop (stop=0 undoes a mistake). */
+    public function stop(Request $request): Response
+    {
+        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
+            return Response::json(['ok' => false, 'error' => 'csrf'], 419);
+        }
+        $admin = RequestContext::superAdmin();
+        $result = MarketingService::setStopped(
+            (int) ($request->post['directory_doctor_id'] ?? 0),
+            ($request->post['stop'] ?? '1') === '1',
+            isset($admin['id']) ? (int) $admin['id'] : null,
+        );
+        return Response::json($result, $result['ok'] ? 200 : 422);
+    }
+
     /** GET /admin/marketing/templates */
     public function templates(Request $request): Response
     {
@@ -149,7 +164,8 @@ final class MarketingAdminController
             'sent_from' => $date('sent_from'),
             'sent_to' => $date('sent_to'),
             'leads' => $str('leads'),
-            'optout' => $str('optout', 'exclude'),
+            // Stopped doctors stay visible (in red) so nobody messages them again.
+            'optout' => $str('optout', 'all'),
             'sort' => $str('sort', 'quality'),
             'dir' => $str('dir', 'desc'),
         ];

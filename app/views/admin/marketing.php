@@ -135,11 +135,11 @@ foreach ($rows as $r) {
                 <input type="date" name="sent_from" value="<?= $h($f['sent_from']) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm"></label>
             <label class="block text-xs"><span class="text-slate-600">Sent to</span>
                 <input type="date" name="sent_to" value="<?= $h($f['sent_to']) ?>" class="mt-1 w-full rounded border px-2 py-1.5 text-sm"></label>
-            <label class="block text-xs"><span class="text-slate-600">Opted out</span>
+            <label class="block text-xs"><span class="text-slate-600">Asked to STOP</span>
                 <select name="optout" class="mt-1 w-full rounded border px-2 py-1.5 text-sm">
-                    <option value="exclude" <?= $sel($f['optout'], 'exclude') ?>>Hide opted out</option>
-                    <option value="only" <?= $sel($f['optout'], 'only') ?>>Only opted out</option>
-                    <option value="all" <?= $sel($f['optout'], 'all') ?>>Show all</option>
+                    <option value="all" <?= $sel($f['optout'], 'all') ?>>Show all (stopped in red)</option>
+                    <option value="exclude" <?= $sel($f['optout'], 'exclude') ?>>Hide stopped</option>
+                    <option value="only" <?= $sel($f['optout'], 'only') ?>>Only stopped</option>
                 </select></label>
             <input type="hidden" name="sort" value="<?= $h($f['sort']) ?>">
             <input type="hidden" name="dir" value="<?= $h($f['dir']) ?>">
@@ -174,8 +174,9 @@ foreach ($rows as $r) {
                             $id = (int) $r['id'];
                             $display = (string) ($r['doctor_name'] ?: $r['name']);
                             $phone = (string) ($r['intl_phone'] ?: $r['phone']);
+                            $stopped = (int) $r['opted_out'] === 1;
                         ?>
-                        <tr class="align-top hover:bg-slate-50" id="row-<?= $id ?>">
+                        <tr class="align-top <?= $stopped ? 'bg-rose-50 hover:bg-rose-100' : 'hover:bg-slate-50' ?>" id="row-<?= $id ?>">
                             <td class="px-4 py-3">
                                 <div class="font-semibold text-slate-900"><?= $h($display) ?></div>
                                 <?php if ($r['doctor_name'] && $r['name'] !== $r['doctor_name']): ?>
@@ -209,8 +210,8 @@ foreach ($rows as $r) {
                             </td>
                             <td class="px-4 py-3 text-right font-semibold text-slate-800"><?= (int) $r['leads'] ?: '<span class="font-normal text-slate-300">0</span>' ?></td>
                             <td class="px-4 py-3 whitespace-nowrap" data-sent-cell>
-                                <?php if ((int) $r['opted_out']): ?>
-                                <span class="rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-800">Opted out</span>
+                                <?php if ($stopped): ?>
+                                <span class="rounded-full bg-rose-600 px-2 py-0.5 text-[11px] font-semibold text-white">STOP · don't message</span>
                                 <?php elseif ($r['last_contacted_at']): ?>
                                 <span class="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-800">Sent</span>
                                 <div class="mt-0.5 text-[11px] text-slate-400"><?= $h(date('d M Y', strtotime((string) $r['last_contacted_at']))) ?><?= (int) $r['contacted_count'] > 1 ? ' · ' . (int) $r['contacted_count'] . '×' : '' ?></div>
@@ -258,6 +259,8 @@ foreach ($rows as $r) {
                 <div>📞 <span id="mPhone"></span></div>
                 <div id="mProfileWrap">🔗 <a id="mProfile" target="_blank" rel="noopener" class="text-sky-700 hover:underline"></a></div>
                 <div id="mSent" class="text-sky-700"></div>
+                <div id="mStop" class="rounded bg-rose-600 px-3 py-2 text-sm font-semibold text-white">This doctor asked us to STOP. Do not message them.
+                    <button type="button" onclick="setStop(false)" class="ml-2 rounded bg-white/20 px-2 py-0.5 text-[11px] font-semibold hover:bg-white/30">Undo (marked by mistake)</button></div>
                 <div id="mWarn" class="rounded bg-amber-50 px-2 py-1 text-amber-800"></div>
             </div>
             <label class="mt-3 block text-xs text-slate-600">Message (edit before sending) · template: <strong id="mTpl"></strong>
@@ -266,6 +269,7 @@ foreach ($rows as $r) {
             <div class="mt-3 flex flex-wrap gap-2">
                 <button type="button" onclick="copyMsg()" id="mCopy" class="rounded border px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">Copy message</button>
                 <a id="mWa" target="_blank" rel="noopener" class="rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700">Open WhatsApp</a>
+                <button type="button" onclick="setStop(true)" id="mStopBtn" class="rounded border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50">Doctor said STOP</button>
                 <button type="button" onclick="markSent()" id="mMark" class="ml-auto rounded bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-900">I sent it: mark sent</button>
             </div>
             <p class="mt-2 text-[11px] text-slate-400">Nothing is sent from here. Copy or Open WhatsApp, send it yourself, then mark it sent.</p>
@@ -299,8 +303,11 @@ foreach ($rows as $r) {
         $('mTpl').textContent = d.template;
         renderSent(d);
         const warn = [];
-        if (d.opted_out) warn.push('This number has opted out. Do not message it.');
-        else if (!d.wa) warn.push('Not a mobile number, so WhatsApp is unlikely to work.');
+        $('mStop').style.display = d.opted_out ? '' : 'none';
+        $('mStopBtn').style.display = d.opted_out ? 'none' : '';
+        $('mText').disabled = d.opted_out;
+        $('mCopy').style.display = d.opted_out ? 'none' : '';
+        if (!d.opted_out && !d.wa) warn.push('Not a mobile number, so WhatsApp is unlikely to work.');
         if (!d.profile) warn.push('No public profile, so the profile link line was left out.');
         $('mWarn').textContent = warn.join(' ');
         $('mWarn').style.display = warn.length ? '' : 'none';
@@ -347,6 +354,33 @@ foreach ($rows as $r) {
         renderSent(d);
         const cell = document.querySelector('#row-' + cur + ' [data-sent-cell]');
         if (cell) cell.innerHTML = '<span class="rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-800">Sent</span><div class="mt-0.5 text-[11px] text-slate-400">just now</div>';
+        closeMsg();
+    }
+
+    async function setStop(stop) {
+        const d = MSG[cur];
+        const q = stop
+            ? d.name + ' asked us to stop messaging? They will be shown in red and blocked from messages.'
+            : 'Undo STOP for ' + d.name + '? Only do this if it was marked by mistake.';
+        if (!confirm(q)) return;
+        const body = new FormData();
+        body.append('_csrf', CSRF);
+        body.append('directory_doctor_id', cur);
+        body.append('stop', stop ? '1' : '0');
+        const res = await fetch('/admin/marketing/stop', { method: 'POST', body });
+        const j = await res.json().catch(() => ({ ok: false, error: 'network' }));
+        if (!j.ok) { alert('Could not save (' + j.error + '). Reload and try again.'); return; }
+        d.opted_out = stop;
+        const row = $('row-' + cur);
+        if (row) {
+            row.classList.toggle('bg-rose-50', stop);
+            row.classList.toggle('hover:bg-rose-100', stop);
+            row.classList.toggle('hover:bg-slate-50', !stop);
+            const cell = row.querySelector('[data-sent-cell]');
+            if (cell) cell.innerHTML = stop
+                ? '<span class="rounded-full bg-rose-600 px-2 py-0.5 text-[11px] font-semibold text-white">STOP · don\'t message</span>'
+                : '<span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">' + (d.sent_at ? 'Sent' : 'Not sent') + '</span>';
+        }
         closeMsg();
     }
     </script>
