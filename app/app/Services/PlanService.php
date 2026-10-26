@@ -114,11 +114,28 @@ final class PlanService
     }
 
     /**
-     * Free-trial end date (Y-m-d) for a new signup: trial_days of the Standard
-     * plan from /admin/plans, falling back to 30 days when unset.
+     * Launch offer: every clinic that signs up on or before this date gets a
+     * free trial up to this date. From the day after, signups go back to the
+     * normal trial_days trial.
+     */
+    public const TRIAL_OFFER_UNTIL = '2026-12-31';
+
+    public static function trialOfferActive(): bool
+    {
+        return date('Y-m-d') <= self::TRIAL_OFFER_UNTIL;
+    }
+
+    /**
+     * Free-trial end date (Y-m-d) for a new signup: the launch-offer date while
+     * it runs, otherwise trial_days of the Standard plan from /admin/plans,
+     * falling back to 30 days when unset.
      */
     public static function trialEndsAt(): string
     {
+        if (self::trialOfferActive()) {
+            return self::TRIAL_OFFER_UNTIL;
+        }
+
         $days = (int) (self::get('standard')['trial_days'] ?? 0);
 
         return date('Y-m-d', strtotime('+' . ($days > 0 ? $days : 30) . ' days'));

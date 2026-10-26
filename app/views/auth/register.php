@@ -15,7 +15,7 @@ ob_start();
 ?>
 <div class="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
     <h1 class="text-xl font-semibold text-slate-900">Start your clinic</h1>
-    <p class="mt-1 text-sm text-slate-500">Start your <?= (int) ((\App\Services\PlanService::get('standard')['trial_days'] ?? 0) ?: 30) ?>-day free trial — no payment needed. Renew from your panel at ₹<?= number_format(\App\Services\BillingGatewayService::monthlyPriceInr()) ?>/month + GST when it ends.</p>
+    <p class="mt-1 text-sm text-slate-500"><?php if (\App\Services\PlanService::trialOfferActive()): ?><strong class="text-emerald-700">Launch offer:</strong> free until <?= htmlspecialchars(\App\Support\IndianDate::date(\App\Services\PlanService::TRIAL_OFFER_UNTIL)) ?> — no payment needed.<?php else: ?>Start your <?= (int) ((\App\Services\PlanService::get('standard')['trial_days'] ?? 0) ?: 30) ?>-day free trial — no payment needed.<?php endif; ?> Renew from your panel at ₹<?= number_format(\App\Services\BillingGatewayService::monthlyPriceInr()) ?>/month + GST when it ends.</p>
 
     <?php if (!empty($info)): ?>
         <div class="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800"><?= htmlspecialchars((string) $info) ?></div>
