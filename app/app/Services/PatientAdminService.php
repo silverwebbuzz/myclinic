@@ -112,8 +112,8 @@ final class PatientAdminService
             if ($search !== '') {
                 // One placeholder per use: EMULATE_PREPARES is off, reusing :q → HY093
                 // (swallowed by the catch below → search looked like "no results").
-                $where = 'WHERE pi.name LIKE :q1 OR pi.phone LIKE :q2 OR pi.email LIKE :q3';
-                $params[':q1'] = $params[':q2'] = $params[':q3'] = '%' . $search . '%';
+                $where = 'WHERE pi.name LIKE :q1 OR pi.phone LIKE :q2 OR pi.email LIKE :q3 OR pi.address_city LIKE :q4';
+                $params[':q1'] = $params[':q2'] = $params[':q3'] = $params[':q4'] = '%' . $search . '%';
             }
 
             $countStmt = $pdo->prepare("SELECT COUNT(*) FROM patient_identities pi {$where}");
@@ -123,11 +123,23 @@ final class PatientAdminService
             [$page, $perPage, $offset, $pages] = self::paginate($page, $perPage, $total);
 
             $sql = "
-                SELECT pi.id, pi.name, pi.phone, pi.email, pi.gender, pi.dob,
+                SELECT pi.id, pi.name, pi.phone, pi.email, pi.gender, pi.dob, pi.blood_group,
+                       pi.address_city AS city, pi.address_state AS state,
                        pi.source, pi.is_active, pi.phone_verified_at, pi.created_at,
                        (SELECT COUNT(*) FROM patients p WHERE p.identity_id = pi.id) AS clinic_count,
+                       (SELECT GROUP_CONCAT(DISTINCT t.name ORDER BY t.name SEPARATOR '||')
+                          FROM patients p JOIN tenants t ON t.id = p.clinic_id
+                         WHERE p.identity_id = pi.id) AS clinic_names,
+                       (SELECT COUNT(*) FROM appointments a JOIN patients p ON p.id = a.patient_id
+                         WHERE p.identity_id = pi.id) AS booking_count,
+                       (SELECT u.name FROM appointments a
+                          JOIN patients p ON p.id = a.patient_id
+                          JOIN users u ON u.id = a.doctor_id
+                         WHERE p.identity_id = pi.id ORDER BY a.scheduled_at DESC LIMIT 1) AS doctor_name,
                        (SELECT COUNT(*) FROM patient_sessions s WHERE s.identity_id = pi.id) AS session_count,
-                       (SELECT MAX(s.last_seen_at) FROM patient_sessions s WHERE s.identity_id = pi.id) AS last_seen_at
+                       (SELECT MAX(s.last_seen_at) FROM patient_sessions s WHERE s.identity_id = pi.id) AS last_seen_at,
+                       (SELECT s.user_agent FROM patient_sessions s WHERE s.identity_id = pi.id
+                         ORDER BY s.last_seen_at DESC LIMIT 1) AS last_user_agent
                   FROM patient_identities pi
                   {$where}
               ORDER BY pi.created_at DESC
