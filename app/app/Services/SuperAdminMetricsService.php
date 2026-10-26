@@ -74,6 +74,8 @@ final class SuperAdminMetricsService
                 'state' => $c['state'] ?? '',
                 'contact_email' => trim((string) ($row['email'] ?? '')) ?: ($c['user_email'] ?? ''),
                 'contact_phone' => trim((string) ($row['phone'] ?? '')) ?: ($c['user_phone'] ?? ''),
+                // Doctor users first; else the owner; else the listing's doctor name.
+                'doctor_names' => $c['doctors'] ?? array_values(array_filter([$c['owner_name'] ?? $c['listing_doctor'] ?? ''])),
             ];
         }, $rows);
     }
@@ -83,11 +85,12 @@ final class SuperAdminMetricsService
      * queries (not one per clinic):
      *   - city/state from the clinic's directory listing (claimed_tenant_id or
      *     tenants.directory_doctor_id) — tenants has no city/state columns;
-     *   - email/phone of the clinic's admin (else first doctor) user, used only
-     *     when the tenant row's own email/phone is empty.
+     *   - doctor names (role='doctor' users), the owner's name as fallback;
+     *   - email/phone of the owner (else admin, else first doctor) user, used
+     *     only when the tenant row's own email/phone is empty.
      *
      * @param list<array<string, mixed>> $tenants
-     * @return array<int, array{city?:string, state?:string, user_email?:string, user_phone?:string}>
+     * @return array<int, array{city?:string, state?:string, listing_doctor?:string, doctors?:list<string>, owner_name?:string, user_email?:string, user_phone?:string}>
      */
     private static function clinicContacts(array $tenants): array
     {
@@ -108,7 +111,7 @@ final class SuperAdminMetricsService
         }
         try {
             $rows = $pdo->query(
-                'SELECT id, claimed_tenant_id, city, state FROM directory_doctors
+                'SELECT id, claimed_tenant_id, city, state, doctor_name FROM directory_doctors
                   WHERE claimed_tenant_id IN (' . $in . ')'
                 . ($dirIds ? ' OR id IN (' . implode(',', $dirIds) . ')' : '')
             )->fetchAll(\PDO::FETCH_ASSOC);
@@ -117,6 +120,9 @@ final class SuperAdminMetricsService
                 if ($tid > 0 && empty($out[$tid]['city'])) {
                     $out[$tid]['city'] = (string) ($r['city'] ?? '');
                     $out[$tid]['state'] = (string) ($r['state'] ?? '');
+                    if (trim((string) ($r['doctor_name'] ?? '')) !== '') {
+                        $out[$tid]['listing_doctor'] = trim((string) $r['doctor_name']);
+                    }
                 }
             }
         } catch (\Throwable) {
@@ -124,12 +130,19 @@ final class SuperAdminMetricsService
         }
 
         $rows = $pdo->query(
-            "SELECT clinic_id, email, phone FROM users
-              WHERE clinic_id IN ({$in}) AND role IN ('admin', 'doctor')
-              ORDER BY role = 'admin' DESC, id ASC"
+            "SELECT clinic_id, name, email, phone, role, is_owner FROM users
+              WHERE clinic_id IN ({$in}) AND (role IN ('admin', 'doctor') OR is_owner = 1)
+              ORDER BY is_owner DESC, role = 'admin' DESC, id ASC"
         )->fetchAll(\PDO::FETCH_ASSOC);
         foreach ($rows as $r) {
             $cid = (int) $r['clinic_id'];
+            $name = trim((string) $r['name']);
+            if ($name !== '' && $r['role'] === 'doctor') {
+                $out[$cid]['doctors'][] = $name;
+            }
+            if ($name !== '' && (int) $r['is_owner'] === 1 && !isset($out[$cid]['owner_name'])) {
+                $out[$cid]['owner_name'] = $name;
+            }
             if (!isset($out[$cid]['user_email']) && trim((string) $r['email']) !== '') {
                 $out[$cid]['user_email'] = trim((string) $r['email']);
             }

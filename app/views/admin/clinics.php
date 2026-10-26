@@ -21,6 +21,7 @@
                 <thead class="border-b bg-slate-50 text-xs uppercase text-slate-500">
                     <tr>
                         <th class="px-4 py-3">Clinic</th>
+                        <th class="px-4 py-3">Doctor</th>
                         <th class="px-4 py-3">Location</th>
                         <th class="px-4 py-3">Contact</th>
                         <th class="px-4 py-3">Registered</th>
@@ -42,6 +43,17 @@
                         <td class="px-4 py-3">
                             <span class="font-medium"><?= htmlspecialchars($c['name'] ?? '') ?></span>
                             <span class="block text-xs text-slate-500"><?= htmlspecialchars($c['slug'] ?? '') ?></span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <?php $docs = $c['doctor_names'] ?? []; ?>
+                            <?php if ($docs): ?>
+                            <span class="block"><?= htmlspecialchars((string) $docs[0]) ?></span>
+                            <?php if (count($docs) > 1): ?>
+                            <span class="block text-xs text-slate-500" title="<?= htmlspecialchars(implode(', ', array_slice($docs, 1))) ?>">+<?= count($docs) - 1 ?> more</span>
+                            <?php endif; ?>
+                            <?php else: ?>
+                            <span class="text-slate-400">—</span>
+                            <?php endif; ?>
                         </td>
                         <td class="px-4 py-3">
                             <?php if (!empty($c['city']) || !empty($c['state'])): ?>
