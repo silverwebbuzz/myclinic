@@ -1,8 +1,11 @@
 <?php
-// Registration progress bar: 1 Verify phone → 2 Enter code → 3 Your details
-// → 4 Checkout → 5 Payment. Set $signupStep (1–5) before including.
+// Registration progress bar: 1 Verify phone → 2 Enter code → 3 Your details,
+// then the free trial starts. Steps 4 Checkout / 5 Payment only show on the
+// legacy checkout pages (clinics still flagged payment_pending).
 $signupStep = (int) ($signupStep ?? 1);
-$signupSteps = ['Verify phone', 'Enter code', 'Your details', 'Checkout', 'Payment'];
+$signupSteps = $signupStep >= 4
+    ? ['Verify phone', 'Enter code', 'Your details', 'Checkout', 'Payment']
+    : ['Verify phone', 'Enter code', 'Your details'];
 ?>
 <ol class="flex items-start text-[11px] text-slate-500" aria-label="Sign-up progress">
     <?php foreach ($signupSteps as $i => $label): ?>

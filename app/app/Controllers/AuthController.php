@@ -261,8 +261,9 @@ final class AuthController
             SessionFlash::put('new_username', $username);
         }
 
-        // Registration continues with the last two steps: Checkout → Payment.
-        return Response::redirect('/register/checkout');
+        // Free trial — straight into onboarding; paying happens later from
+        // /subscription in the panel.
+        return Response::redirect(OnboardingService::resumeUrl($result['tenant_id']));
     }
 
     /**

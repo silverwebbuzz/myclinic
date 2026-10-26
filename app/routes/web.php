@@ -231,6 +231,7 @@ return static function (RouteRegistrar $router): void {
         $app->post('/onboarding/plan-selection', [OnboardingController::class, 'selectPlan']);
         // Real gateway checkout (Razorpay) — used by onboarding + Settings.
         $app->post('/subscription/checkout', [SubscriptionController::class, 'checkout']);
+        $app->post('/subscription/code', [SubscriptionController::class, 'code']);
         $app->get('/onboarding/billing/success', [OnboardingController::class, 'billingSuccess']);
         $app->get('/onboarding/billing/razorpay-return', [OnboardingController::class, 'razorpayReturn']);
         $app->get('/onboarding/clinic-setup', [OnboardingController::class, 'clinicSetup']);

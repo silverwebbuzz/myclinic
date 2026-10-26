@@ -12,7 +12,7 @@
             ends in <strong><?= $daysLeft ?> day<?= $daysLeft === 1 ? '' : 's' ?></strong>.
             Renew now to avoid any interruption.
         </span>
-        <a href="/settings?tab=subscription" class="shrink-0 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
+        <a href="/subscription" class="shrink-0 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">
             Renew now →
         </a>
     </div>

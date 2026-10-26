@@ -10,6 +10,7 @@ use App\Http\Response;
 use App\Services\AuditService;
 use App\Services\BillingGatewayService;
 use App\Services\CsrfService;
+use App\Services\DiscountService;
 use App\Services\OnboardingService;
 use App\Services\PlanService;
 use App\Support\View;
@@ -22,6 +23,9 @@ use App\Support\View;
  */
 final class SubscriptionController
 {
+    /** Discount code applied on /subscription, re-validated when paying. */
+    private const SESSION_CODE = 'subscription_discount_code';
+
     /**
      * The hard-block "Plan expired" screen. SubscriptionMiddleware redirects
      * every panel page here once the trial/plan is expired. From here the only
@@ -79,7 +83,14 @@ final class SubscriptionController
         $clinic = RequestContext::clinic() ?? [];
         $country = (string) ($clinic['country_code'] ?? 'IN');
 
-        $result = BillingGatewayService::startCheckout($clinicId, $planId, $cycle, $country);
+        // Re-check the applied code at the moment of paying (it may have
+        // expired or hit its limit since it was applied).
+        [$discount, $codeError] = self::sessionDiscount($clinicId);
+        if ($codeError !== null) {
+            return Response::redirect('/subscription?code_error=' . urlencode($codeError));
+        }
+
+        $result = BillingGatewayService::startCheckout($clinicId, $planId, $cycle, $country, $discount);
         AuditService::log($request, 'INSERT', 'saas_invoices', $clinicId);
 
         $cancelUrl = $onboarded ? '/subscription' : '/onboarding/clinic-setup';
@@ -99,11 +110,75 @@ final class SubscriptionController
         }
 
         if (($result['type'] ?? '') === 'redirect' && !empty($result['url'])) {
+            self::ensureSession();
+            unset($_SESSION[self::SESSION_CODE]);
+
             return Response::redirect($result['url']);
         }
 
         $msg = $result['message'] ?? 'Could not start checkout. Please try again.';
 
         return $returnUrl($msg);
+    }
+
+    /** POST /subscription/code — apply or remove a discount code on the renew card. */
+    public function code(Request $request): Response
+    {
+        $clinicId = RequestContext::clinicId();
+        if ($clinicId === null) {
+            return Response::redirect('/login');
+        }
+        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
+            return Response::redirect('/subscription?error=' . urlencode('Security token expired, please try again.'));
+        }
+
+        self::ensureSession();
+        if (($request->post['action'] ?? '') === 'remove') {
+            unset($_SESSION[self::SESSION_CODE]);
+
+            return Response::redirect('/subscription');
+        }
+
+        $check = DiscountService::validate((string) ($request->post['code'] ?? ''), $clinicId);
+        if (!$check['ok']) {
+            unset($_SESSION[self::SESSION_CODE]);
+
+            return Response::redirect('/subscription?code_error=' . urlencode((string) $check['error']));
+        }
+
+        $_SESSION[self::SESSION_CODE] = (string) $check['code']['code'];
+
+        return Response::redirect('/subscription?code=applied');
+    }
+
+    /**
+     * The code saved in the session, re-validated. A code that no longer
+     * validates (e.g. just redeemed by a payment) is dropped.
+     *
+     * @return array{0: ?array<string, mixed>, 1: ?string}  [code row, error]
+     */
+    public static function sessionDiscount(int $clinicId): array
+    {
+        self::ensureSession();
+        $saved = (string) ($_SESSION[self::SESSION_CODE] ?? '');
+        if ($saved === '') {
+            return [null, null];
+        }
+
+        $check = DiscountService::validate($saved, $clinicId);
+        if (!$check['ok']) {
+            unset($_SESSION[self::SESSION_CODE]);
+
+            return [null, (string) $check['error']];
+        }
+
+        return [$check['code'], null];
+    }
+
+    private static function ensureSession(): void
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_start();
+        }
     }
 }

@@ -7,7 +7,9 @@ $seatLimit = (int) ($clinic['seat_limit'] ?? 2) + (int) ($clinic['extra_seats_pu
 // Single-plan model: Standard at ₹999/month + GST, paid a month at a time.
 // The price lives in BillingGatewayService (what Razorpay actually charges).
 $standard = $plans['standard'] ?? reset($plans) ?: [];
-$monthly = \App\Services\BillingGatewayService::monthlyBreakdown();
+// $discount: a code applied via POST /subscription/code (re-validated at pay time).
+$discount = $discount ?? null;
+$monthly = \App\Services\BillingGatewayService::monthlyBreakdown($discount);
 $base = $monthly['base'];
 $tax = $monthly['tax'];
 $gross = $monthly['gross'];
@@ -89,9 +91,45 @@ $fmtDate = static fn (?string $d): string => $d ? date('d M Y', strtotime((strin
         <div class="mt-4 rounded-xl border border-slate-200 p-4" style="max-width:380px;">
             <p class="text-sm font-semibold text-slate-800"><?= htmlspecialchars((string) ($standard['name'] ?? 'Standard')) ?> — Monthly</p>
             <p class="text-xs text-slate-500"><?= htmlspecialchars((string) ($standard['tagline'] ?? 'Everything to run your clinic · unlimited patients & users')) ?></p>
+            <!-- Discount code -->
+            <div class="mt-3 border-b border-slate-100 pb-3">
+                <?php if (!empty($discount)): ?>
+                <div class="flex items-center justify-between gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                    <div class="min-w-0 text-sm">
+                        <span class="font-mono font-semibold text-emerald-800"><?= htmlspecialchars((string) $discount['code']) ?></span>
+                        <span class="text-emerald-700"> · <?= htmlspecialchars((string) ($discountLabel ?? '')) ?></span>
+                    </div>
+                    <form method="post" action="/subscription/code">
+                        <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+                        <input type="hidden" name="action" value="remove">
+                        <button type="submit" class="text-xs font-medium text-slate-500 hover:text-rose-600 hover:underline">Remove</button>
+                    </form>
+                </div>
+                <?php if (!empty($codeApplied)): ?>
+                <p class="mt-1.5 text-xs text-emerald-700">Discount applied — you save ₹<?= number_format($monthly['discount'], 2) ?> + GST.</p>
+                <?php endif; ?>
+                <?php else: ?>
+                <form method="post" action="/subscription/code" x-data="{ open: <?= !empty($codeError) ? 'true' : 'false' ?> }">
+                    <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
+                    <button type="button" x-show="!open" @click="open = true; $nextTick(() => $refs.code.focus())"
+                            class="text-sm font-medium text-emerald-700 hover:underline">Have a discount code?</button>
+                    <div x-show="open" x-cloak class="flex gap-2">
+                        <input x-ref="code" name="code" type="text" autocomplete="off" maxlength="40" placeholder="Enter code"
+                               class="ui-input min-w-0 flex-1 uppercase">
+                        <button type="submit" class="ui-btn ui-btn-secondary">Apply</button>
+                    </div>
+                </form>
+                <?php if (!empty($codeError)): ?>
+                <p class="mt-1.5 text-xs text-rose-600"><?= htmlspecialchars((string) $codeError) ?></p>
+                <?php endif; ?>
+                <?php endif; ?>
+            </div>
             <dl class="mt-3 space-y-1 text-sm">
-                <div class="flex justify-between"><dt class="text-slate-500">Plan price</dt><dd class="text-slate-800">₹<?= number_format($base, 2) ?></dd></div>
-                <div class="flex justify-between"><dt class="text-slate-500">GST (18%)</dt><dd class="text-slate-800">₹<?= number_format($tax, 2) ?></dd></div>
+                <div class="flex justify-between"><dt class="text-slate-500">Plan price</dt><dd class="text-slate-800">₹<?= number_format($monthly['list'], 2) ?></dd></div>
+                <?php if ($monthly['discount'] > 0): ?>
+                <div class="flex justify-between"><dt class="text-emerald-700">Discount (<?= htmlspecialchars((string) $monthly['code']) ?>)</dt><dd class="text-emerald-700">− ₹<?= number_format($monthly['discount'], 2) ?></dd></div>
+                <?php endif; ?>
+                <div class="flex justify-between"><dt class="text-slate-500">GST (<?= (int) $monthly['percent'] ?>%)</dt><dd class="text-slate-800">₹<?= number_format($tax, 2) ?></dd></div>
                 <div class="mt-1 flex justify-between border-t border-slate-100 pt-1.5"><dt class="font-semibold text-slate-900">Total / month</dt><dd class="font-bold text-slate-900">₹<?= number_format($gross, 2) ?></dd></div>
             </dl>
             <form method="post" action="/subscription/checkout" class="mt-3"
@@ -99,7 +137,7 @@ $fmtDate = static fn (?string $d): string => $d ? date('d M Y', strtotime((strin
                 <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
                 <input type="hidden" name="plan" value="standard">
                 <input type="hidden" name="billing_cycle" value="monthly">
-                <button type="submit" class="ui-btn ui-btn-primary w-full"><?= $isPaid ? 'Renew 1 month' : 'Subscribe now' ?> · ₹<?= number_format($gross, 2) ?></button>
+                <button type="submit" class="ui-btn ui-btn-primary w-full"><?= $gross > 0 ? (($isPaid ? 'Renew 1 month' : 'Subscribe now') . ' · ₹' . number_format($gross, 2)) : 'Activate 1 month free' ?></button>
             </form>
             <p class="mt-2 text-center text-[11px] text-slate-400">Secure payment via Razorpay</p>
         </div>

@@ -42,7 +42,7 @@ final class AuthService
                 'name' => $clinicName,
                 'slug' => $slug,
                 'email' => $email,
-                'trial_ends_at' => date('Y-m-d', strtotime('+1 month')),
+                'trial_ends_at' => PlanService::trialEndsAt(),
             ]);
 
             QueryBuilder::table('specialty_configs')->insert([
@@ -119,7 +119,7 @@ final class AuthService
                 'slug' => $slug,
                 'phone' => $phone,
                 'email' => $email !== '' ? $email : null,
-                'trial_ends_at' => date('Y-m-d', strtotime('+1 month')),
+                'trial_ends_at' => PlanService::trialEndsAt(),
             ]);
 
             QueryBuilder::table('specialty_configs')->insert([
@@ -147,15 +147,9 @@ final class AuthService
 
         PlanService::applyPlanToTenant($tenantId, 'standard', true);
 
-        // Signup ends with Checkout → Payment (no free trial). The panel stays
-        // locked on /register/checkout until the first payment is captured.
-        // Separate write so a missing column (patch not run) can't break signup.
-        try {
-            SubscriptionStatus::ensurePendingColumn();
-            QueryBuilder::table('tenants')->where('id', '=', $tenantId)->update(['payment_pending' => 1]);
-        } catch (\Throwable $e) {
-            error_log('[registerClinicViaPhone] payment_pending not set: ' . $e->getMessage());
-        }
+        // Signup starts a free trial (trial_ends_at above) — no payment up front.
+        // Once the trial lapses, SubscriptionMiddleware sends the clinic to
+        // /subscription-expired, and they renew from /subscription in the panel.
 
         if ($email !== '') {
             try {

@@ -113,6 +113,17 @@ final class PlanService
         return $plans[$planId] ?? null;
     }
 
+    /**
+     * Free-trial end date (Y-m-d) for a new signup: trial_days of the Standard
+     * plan from /admin/plans, falling back to 30 days when unset.
+     */
+    public static function trialEndsAt(): string
+    {
+        $days = (int) (self::get('standard')['trial_days'] ?? 0);
+
+        return date('Y-m-d', strtotime('+' . ($days > 0 ? $days : 30) . ' days'));
+    }
+
     public static function seatLimitFor(string $planId): int
     {
         return (int) (self::get($planId)['seat_limit'] ?? 2);
@@ -207,7 +218,7 @@ final class PlanService
                 ->where('id', '=', $clinicId)
                 ->first();
             if (empty($existing['trial_ends_at'])) {
-                $data['trial_ends_at'] = date('Y-m-d', strtotime('+1 month'));
+                $data['trial_ends_at'] = self::trialEndsAt();
             }
         }
 

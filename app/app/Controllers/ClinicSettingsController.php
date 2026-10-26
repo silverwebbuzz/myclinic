@@ -184,8 +184,16 @@ final class ClinicSettingsController
             return Response::redirect('/login');
         }
 
+        // A stale code (already redeemed by the last payment) is dropped
+        // quietly; only errors from applying a code are shown.
+        [$discount] = SubscriptionController::sessionDiscount($clinicId);
+
         $section = View::render('settings/tabs/subscription', [
             'clinic'     => $clinic,
+            'discount'   => $discount,
+            'discountLabel' => $discount !== null ? \App\Services\DiscountService::label($discount) : null,
+            'codeError'  => isset($request->query['code_error']) ? (string) $request->query['code_error'] : null,
+            'codeApplied' => ($request->query['code'] ?? '') === 'applied',
             'plans'      => PlanService::all(),
             'modules'    => ClinicSettingsService::activeModulesDetail($clinicId),
             'invoices'   => \App\Services\SaasInvoiceService::forClinic($clinicId),

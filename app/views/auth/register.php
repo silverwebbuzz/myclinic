@@ -15,7 +15,7 @@ ob_start();
 ?>
 <div class="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
     <h1 class="text-xl font-semibold text-slate-900">Start your clinic</h1>
-    <p class="mt-1 text-sm text-slate-500">Create your account, pay ₹<?= number_format(\App\Services\BillingGatewayService::monthlyPriceInr()) ?>/month + GST securely — and start using eClinicPro.</p>
+    <p class="mt-1 text-sm text-slate-500">Start your <?= (int) ((\App\Services\PlanService::get('standard')['trial_days'] ?? 0) ?: 30) ?>-day free trial — no payment needed. Renew from your panel at ₹<?= number_format(\App\Services\BillingGatewayService::monthlyPriceInr()) ?>/month + GST when it ends.</p>
 
     <?php if (!empty($info)): ?>
         <div class="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800"><?= htmlspecialchars((string) $info) ?></div>
@@ -165,7 +165,7 @@ ob_start();
             <?php endif; ?>
 
             <button type="submit" class="w-full rounded-lg bg-emerald-600 py-2.5 text-sm font-medium text-white hover:bg-emerald-700">
-                Continue to checkout →
+                Start free trial →
             </button>
         </form>
     <?php endif; ?>
