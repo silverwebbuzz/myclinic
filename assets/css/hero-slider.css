@@ -23,6 +23,12 @@ svg.hh-icon{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.
 .hh-slide{position:relative;grid-area:1/1;display:flex;align-items:center;min-width:0;overflow:hidden;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .65s,visibility .65s}
 .hh-slide:before{content:"";position:absolute;width:650px;height:650px;border:80px solid #d2eee4;border-radius:48%;left:-480px;bottom:-465px;transform:rotate(32deg);opacity:.6;pointer-events:none}
 .hh-slide.hh-active{opacity:1;visibility:visible;pointer-events:auto;z-index:1}
+
+/* Full-bleed Diwali offer banner as the first homepage slide — image shown uncropped. */
+.hh-slide.diwali-slide{padding:0;align-items:stretch;background:#16042a}
+.hh-slide.diwali-slide:before{display:none}
+.hh-slide.diwali-slide .hh-offer-banner{display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-height:var(--hh-h)}
+.hh-slide.diwali-slide .hh-offer-banner img{display:block;width:100%;height:100%;object-fit:contain}
 section#top {
   padding-top: 75px;
 }
@@ -159,7 +165,7 @@ section#top {
 .hh-arrow,.hh-play{display:grid;place-items:center;width:35px;height:35px;background:#f2f8f5;color:var(--green);border:1px solid #deeee5;border-radius:50%;transition:background .2s}
 .hh-arrow:hover,.hh-play:hover{background:#d8eee3}
 .hh-arrow svg.hh-icon,.hh-play svg.hh-icon{width:17px;height:17px}
-.hh-tabs{display:flex;gap:20px}
+.hh-tabs{display:flex;flex-wrap:wrap;justify-content:center;gap:20px}
 .hh-tab{position:relative;padding:10px 0;font-size:14px;color:#7b8780;border:0;background:none}
 .hh-tab[aria-current=true]{color:var(--green);font-weight:bold}
 .hh-tab:after{content:"";position:absolute;bottom:1px;left:0;width:100%;height:2px;background:var(--green);transform:scaleX(0);transition:transform .3s}

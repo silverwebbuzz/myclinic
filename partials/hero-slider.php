@@ -81,8 +81,15 @@ $hsJsBust = @filemtime(__DIR__ . '/../assets/js/hero-slider.js') ?: time();
     </svg>
 
     <div class="hh-slides">
-        <!-- SLIDE 1: Healthcare -->
-        <div class="hh-slide hh-active first-slide" data-name="Healthcare" aria-label="1 of 3: Healthcare" aria-roledescription="slide">
+        <!-- SLIDE 1: Diwali Offer -->
+        <div class="hh-slide hh-active diwali-slide" data-name="Diwali Offer" aria-label="1 of 4: Diwali Offer" aria-roledescription="slide">
+            <a href="/pricing" class="hh-offer-banner">
+                <img src="/assets/img/hero/diwali-offer.png" width="1024" height="576" alt="eClinicPro Diwali Offer — Clinic Management Software free till 31st Dec 2026" fetchpriority="high" decoding="async">
+            </a>
+        </div>
+
+        <!-- SLIDE 2: Healthcare -->
+        <div class="hh-slide first-slide" data-name="Healthcare" aria-label="2 of 4: Healthcare" aria-roledescription="slide" aria-hidden="true" inert>
             <div class="background-image" style="background-image: url('/assets/img/hero/doctor-avatar.webp');">
             </div>
             <div class="wrap">
@@ -127,7 +134,7 @@ $hsJsBust = @filemtime(__DIR__ . '/../assets/js/hero-slider.js') ?: time();
                     <div class="hh-rings">
                         <div class="hh-orbit"></div>
                     </div>
-                    <div class="hh-avatar"><img src="/assets/img/hero/doctor-avatar.webp" width="800" height="800" alt="Smiling doctor with a stethoscope holding a tablet" fetchpriority="high" decoding="async"></div>
+                    <div class="hh-avatar"><img src="/assets/img/hero/doctor-avatar.webp" width="800" height="800" alt="Smiling doctor with a stethoscope holding a tablet" loading="lazy" decoding="async"></div>
                     <div class="hh-revenue" style="--a:200deg;--r:.52"><b>Clinic Revenue</b><strong>₹24,250</strong>
                         <div class="hh-bars"><i style="--h:20%"></i><i style="--h:35%"></i><i style="--h:50%"></i><i style="--h:75%"></i><i style="--h:100%"></i></div><small>↑ +15%<br>vs last month</small>
                     </div>
@@ -146,7 +153,7 @@ $hsJsBust = @filemtime(__DIR__ . '/../assets/js/hero-slider.js') ?: time();
         </div>
 
         <!-- SLIDE 2: Health Store -->
-        <div class="hh-slide hh-store second-slide" data-name="Health Store" aria-label="2 of 3: Health Store" aria-roledescription="slide" aria-hidden="true" inert>
+        <div class="hh-slide hh-store second-slide" data-name="Health Store" aria-label="3 of 4: Health Store" aria-roledescription="slide" aria-hidden="true" inert>
             <div class="background-image" style="background-image: url('/assets/img/hero/nine.jpg');">
             </div>
             <div class="wrap">
@@ -189,7 +196,7 @@ $hsJsBust = @filemtime(__DIR__ . '/../assets/js/hero-slider.js') ?: time();
         </div>
 
         <!-- SLIDE 3: Diagnostics -->
-        <div class="hh-slide hh-lab third-slide" data-name="Diagnostics" aria-label="3 of 3: Diagnostics" aria-roledescription="slide" aria-hidden="true" inert>
+        <div class="hh-slide hh-lab third-slide" data-name="Diagnostics" aria-label="4 of 4: Diagnostics" aria-roledescription="slide" aria-hidden="true" inert>
             <div class="background-image" style="background-image: url('/assets/img/hero/six.jpg');"></div>
             <div class="wrap">
                 <div class="hh-copy">
@@ -234,7 +241,7 @@ $hsJsBust = @filemtime(__DIR__ . '/../assets/js/hero-slider.js') ?: time();
     <div class="hh-slider-footer"><button type="button" class="hh-arrow hh-previous" aria-label="Previous slide"><svg class="hh-icon" style="transform:rotate(180deg)">
                 <use href="#hh-i-arrow" />
             </svg></button>
-        <div class="hh-tabs" role="group" aria-label="Choose a slide"><button type="button" class="hh-tab" aria-current="true">Healthcare</button><button type="button" class="hh-tab" aria-current="false">Health Store</button><button type="button" class="hh-tab" aria-current="false">Diagnostics</button></div><button type="button" class="hh-arrow hh-next" aria-label="Next slide"><svg class="hh-icon">
+        <div class="hh-tabs" role="group" aria-label="Choose a slide"><button type="button" class="hh-tab" aria-current="true">Diwali Offer</button><button type="button" class="hh-tab" aria-current="false">Healthcare</button><button type="button" class="hh-tab" aria-current="false">Health Store</button><button type="button" class="hh-tab" aria-current="false">Diagnostics</button></div><button type="button" class="hh-arrow hh-next" aria-label="Next slide"><svg class="hh-icon">
                 <use href="#hh-i-arrow" />
             </svg></button><button type="button" class="hh-play" aria-label="Pause slideshow">Ⅱ</button>
     </div>
