@@ -84,7 +84,8 @@ $hsJsBust = @filemtime(__DIR__ . '/../assets/js/hero-slider.js') ?: time();
         <!-- SLIDE 1: Diwali Offer -->
         <div class="hh-slide hh-active diwali-slide" data-name="Diwali Offer" aria-label="1 of 4: Diwali Offer" aria-roledescription="slide">
             <a href="/pricing" class="hh-offer-banner">
-                <img src="/assets/img/hero/diwali-offer.png" width="1024" height="576" alt="eClinicPro Diwali Offer — Clinic Management Software free till 31st Dec 2026" fetchpriority="high" decoding="async">
+                <img class="desktop-banner" src="/assets/img/hero/diwali-offer.webp" alt="eClinicPro Diwali Offer — Clinic Management Software free till 31st Dec 2026" fetchpriority="high" decoding="async">
+                <img class="mobile-banner" src="/assets/img/hero/mobille-banner.webp" alt="eClinicPro Diwali Offer — Clinic Management Software free till 31st Dec 2026" fetchpriority="high" decoding="async">
             </a>
         </div>
 
@@ -144,7 +145,7 @@ $hsJsBust = @filemtime(__DIR__ . '/../assets/js/hero-slider.js') ?: time();
                     <div class="hh-feature hh-f4" style="--a:49deg;--r:.45" data-feature="Secure Payments" data-icon="wallet" data-sub="Multiple payment options<br>& transparent fees"></div>
                     <div class="phone-image">
 
-                    <img src="/assets/img/hero/phone-image.png" alt="Phone image" width="200" height="200">
+                    <img src="/assets/img/hero/phone-image.webp" alt="Phone image" width="200" height="200">
             
                     </div>
                 </div>
