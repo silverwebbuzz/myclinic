@@ -9,6 +9,10 @@
 -- Requires 2026_07_10_directory_states_cities.sql (directory_states table and
 -- directory_cities.state_id / is_active / sort_order columns).
 --
+-- directory_cities may use a different collation than these seed tables
+-- (e.g. utf8mb4_general_ci on production), so comparisons against it pin
+-- the collation explicitly to avoid "Illegal mix of collations".
+--
 -- Safe to re-run: existing states/cities (matched by slug) are left alone,
 -- including anything an admin renamed, reordered or deactivated.
 --
@@ -291,7 +295,7 @@ WHERE NOT EXISTS (
 --    to their state instead of adding a duplicate. City slugs in the seed are
 --    unique across states, so the match is unambiguous.
 UPDATE IGNORE `directory_cities` c
-JOIN `_seed_cities` v ON v.slug = c.slug
+JOIN `_seed_cities` v ON v.slug = c.slug COLLATE utf8mb4_unicode_ci
 JOIN `directory_states` s ON s.slug = v.state_slug AND s.country_code = 'IN'
 SET c.state_id = s.id,
     c.state = s.name,
@@ -308,7 +312,7 @@ FROM `_seed_cities` v
 JOIN `directory_states` s ON s.slug = v.state_slug AND s.country_code = 'IN'
 WHERE NOT EXISTS (
     SELECT 1 FROM `directory_cities` c
-    WHERE c.state_id = s.id AND c.slug = v.slug
+    WHERE c.state_id = s.id AND c.slug COLLATE utf8mb4_unicode_ci = v.slug
 );
 
 DROP TEMPORARY TABLE IF EXISTS `_seed_cities`;
