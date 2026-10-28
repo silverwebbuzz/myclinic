@@ -54,6 +54,10 @@ RewriteRule ^book/([a-z0-9-]+)/?$ book.php?slug=$1 [L,QSA]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^([a-z0-9][a-z0-9\-]*)/(clinic|doctor)/([a-z0-9][a-z0-9\-]*)/?$ profile.php?city=$1&entity_type=$2&slug=$3 [L,QSA,NC]
+# /nashik/doctor/ (no listing slug) → that city's listing page. find-a-doctor
+# then 301s on again if the city has too few listings for its own page.
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-z0-9][a-z0-9\-]*)/(clinic|doctor)s?/?$ /find-a-doctor/$1 [R=301,L,NC]
 
 # -------- SEO city / specialty-in-city pages --------
 # Examples:
@@ -108,6 +112,8 @@ RewriteRule ^store/order/([A-Za-z0-9\-]+)/?$ store/order.php?_r_a=$1 [L,QSA]
 # -------- /features renamed to /clinic-management-software (keyword URL) --------
 # Permanent redirect so existing links, ads and search results keep working.
 RewriteRule ^features/?$ /clinic-management-software [R=301,L]
+# Same for the old /homeopaths specialty page (still in Google's index).
+RewriteRule ^homeopaths/?$ /homeopathy-clinic-management-software [R=301,L,NC]
 
 # -------- Clean URLs --------
 # /clinic-management-software -> clinic-management-software.php

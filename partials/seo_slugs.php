@@ -390,12 +390,69 @@ function _ecp_resolve_spec_only(string $specSlug, array $spec): array {
     ];
 }
 
+/**
+ * Alternate spellings people (and old links) use for a city we store under
+ * another name. Only applied when the alias itself has no listings.
+ */
+const ECP_SEO_CITY_ALIASES = [
+    'bengaluru' => 'bangalore', 'bangalore' => 'bengaluru',
+    'gurugram'  => 'gurgaon',   'gurgaon'   => 'gurugram',
+    'mysuru'    => 'mysore',    'mysore'    => 'mysuru',
+    'bombay'    => 'mumbai',    'calcutta'  => 'kolkata',   'madras' => 'chennai',
+    'vizag'     => 'visakhapatnam', 'trivandrum' => 'thiruvananthapuram',
+    'cochin'    => 'kochi',     'baroda'    => 'vadodara',  'pondicherry' => 'puducherry',
+];
+
+/** City slug with enough listings for its own page, following an alias if needed. */
+function _ecp_seo_live_city_slug(string $citySlug): ?string {
+    foreach ([$citySlug, ECP_SEO_CITY_ALIASES[$citySlug] ?? null] as $slug) {
+        if ($slug === null) continue;
+        $city = ecp_city_by_slug($slug);
+        if ($city !== null && ecp_count_doctors($city['city'], null) >= ECP_SEO_MIN_LISTINGS) {
+            return $slug;
+        }
+    }
+    return null;
+}
+
+/** "chhattisgarh" → "Chhattisgarh" when it is a state we have listings in. */
+function _ecp_seo_state_by_slug(string $slug): ?string {
+    foreach (_ecp_city_slug_index() as $c) {
+        $state = (string) ($c['state'] ?? '');
+        if ($state !== '' && ecp_slug($state) === $slug) return $state;
+    }
+    return null;
+}
+
+/**
+ * Where to send an SEO URL that has no page (unknown slug, or too few
+ * listings — these were once in the sitemap, so Google keeps asking for them).
+ * A 301 to the closest live page beats a 404: city → specialty → state → all.
+ */
+function _ecp_seo_fallback(?string $citySlug, ?string $specSlug): array {
+    if ($citySlug !== null) {
+        $live = _ecp_seo_live_city_slug($citySlug);
+        if ($live !== null && $specSlug !== null && $live !== $citySlug) {
+            // Alias city (bengaluru → bangalore): try the same specialty there first.
+            return ['redirect' => '/find-a-doctor/' . $specSlug . '-in-' . $live];
+        }
+        if ($live !== null) return ['redirect' => '/find-a-doctor/' . $live];
+    }
+    if ($specSlug !== null && ecp_specialty_by_slug($specSlug) !== null) {
+        return ['redirect' => '/find-a-doctor/' . $specSlug];
+    }
+    if ($citySlug !== null && ($state = _ecp_seo_state_by_slug($citySlug)) !== null) {
+        return ['redirect' => '/find-a-doctor?state=' . rawurlencode($state)];
+    }
+    return ['redirect' => '/find-a-doctor'];
+}
+
 function _ecp_resolve_city_only(string $citySlug): array {
     $city = ecp_city_by_slug($citySlug);
-    if ($city === null) return ['notfound' => true];
+    if ($city === null) return _ecp_seo_fallback($citySlug, null);
 
     $count = ecp_count_doctors($city['city'], null);
-    if ($count < ECP_SEO_MIN_LISTINGS) return ['notfound' => true];
+    if ($count < ECP_SEO_MIN_LISTINGS) return _ecp_seo_fallback($citySlug, null);
 
     $cityName = $city['city'];
     return [
@@ -560,10 +617,10 @@ function ecp_seo_also_specialties(array $seoMeta): array {
 function _ecp_resolve_city_spec(string $citySlug, string $specSlug, string $path): array {
     $city = ecp_city_by_slug($citySlug);
     $spec = ecp_specialty_by_slug($specSlug);
-    if ($city === null || $spec === null) return ['notfound' => true];
+    if ($city === null || $spec === null) return _ecp_seo_fallback($citySlug, $specSlug);
 
     $count = ecp_count_doctors($city['city'], $spec['db']);
-    if ($count < ECP_SEO_MIN_LISTINGS) return ['notfound' => true];
+    if ($count < ECP_SEO_MIN_LISTINGS) return _ecp_seo_fallback($citySlug, $specSlug);
 
     $cityName = $city['city'];
     $plural   = $spec['plural'];

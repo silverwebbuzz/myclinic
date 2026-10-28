@@ -269,6 +269,36 @@ function ecp_profile_find_row(PDO $db, string $city, string $entityType, string 
         return $row ?: null;
     }
 
+    // No stored slug: derive it per row. Scan only the columns the slug needs —
+    // fetchAll() of dd.* for a big city (Mumbai, Hyderabad, Pune…) ran PHP out
+    // of memory and every profile page there returned a 500.
+    static $hasEntityType = null;
+    if ($hasEntityType === null) {
+        try {
+            $hasEntityType = (bool) $db->query("SHOW COLUMNS FROM directory_doctors LIKE 'entity_type'")->fetch();
+        } catch (Throwable $e) {
+            $hasEntityType = false;
+        }
+    }
+    $stmt = $db->prepare(
+        'SELECT id, name, doctor_name, area, types' . ($hasEntityType ? ', entity_type' : '') . "
+         FROM directory_doctors
+         WHERE is_active = 1 AND status = 'OPERATIONAL' AND city = :city"
+    );
+    $stmt->execute(['city' => $city]);
+    $matchId = null;
+    while (($row = $stmt->fetch(PDO::FETCH_ASSOC)) !== false) {
+        $et = ecp_directory_entity_type($row);
+        if ($et === $entityType && ecp_directory_listing_slug($row, $et) === $slug) {
+            $matchId = (int) $row['id'];
+            break;
+        }
+    }
+    $stmt->closeCursor();
+    if ($matchId === null) {
+        return null;
+    }
+
     $stmt = $db->prepare(
         "SELECT dd.*, t.slug AS tenant_slug, t.logo_path, t.phone AS tenant_phone, t.address AS tenant_address,
                 sc.working_hours AS tenant_hours,
@@ -277,17 +307,13 @@ function ecp_profile_find_row(PDO $db, string $city, string $entityType, string 
          LEFT JOIN tenants t ON t.id = dd.claimed_tenant_id AND t.is_active = 1
          LEFT JOIN specialty_configs sc ON sc.clinic_id = t.id
          LEFT JOIN specialty_master sm ON sm.slug = dd.specialty AND sm.is_active = 1
-         WHERE dd.is_active = 1 AND dd.status = 'OPERATIONAL' AND dd.city = :city"
+         WHERE dd.id = :id
+         LIMIT 1"
     );
-    $stmt->execute(['city' => $city]);
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        $et = ecp_directory_entity_type($row);
-        if ($et === $entityType && ecp_directory_listing_slug($row, $et) === $slug) {
-            return $row;
-        }
-    }
+    $stmt->execute(['id' => $matchId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    return null;
+    return $row ?: null;
 }
 
 /** @return array<string, mixed>|null */
