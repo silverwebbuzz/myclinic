@@ -508,6 +508,7 @@ require __DIR__ . '/partials/header.php';
           }
           this.successMsg = j.message || "Thanks — we've received your message and will reply soon.";
           this.sent = true;
+          if (window.ecpTrack) window.ecpTrack('Contact');
         } catch (e) {
           this.errorMsg = "Couldn't reach the server. Please try again, or email hello@eclinicpro.com directly.";
           this.resetCaptcha();

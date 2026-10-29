@@ -12,7 +12,7 @@ require_once __DIR__ . '/partials/helpers.php';
 $pageTitle  = 'Privacy Policy — eClinicPro';
 $metaDesc   = 'How eClinicPro (a brand of Silver Webbuzz Pvt Ltd) collects, uses, stores and protects personal and health data — DPDP, GDPR and HIPAA aligned.';
 $activePage = 'legal';
-$lastUpdated = 'June 8, 2026';
+$lastUpdated = 'October 29, 2026';
 
 require __DIR__ . '/partials/header.php';
 ?>
@@ -140,6 +140,18 @@ require __DIR__ . '/partials/header.php';
             keep the Services secure, and understand usage. You can control cookies through your
             browser settings; disabling some cookies may affect functionality. We do not control
             third-party cookies that those third parties may set.
+        </p>
+        <p>
+            <strong>Analytics and advertising.</strong> On our public pages we use Google Analytics
+            and the Meta (Facebook) Pixel to understand how visitors use the site and to measure and
+            improve our advertising on Facebook and Instagram. These tools may set cookies and receive
+            your IP address, browser details, the addresses of the public pages you visit (for
+            example a doctor listing page), and general actions such as submitting a booking request,
+            demo request or contact form, or creating an account. We do not send them your name,
+            phone number, email, the reason for your visit, or any medical information, and they are
+            not used in your logged-in patient account. You
+            can limit ad tracking in your browser, in your device settings, or in your Facebook
+            <a href="https://www.facebook.com/adpreferences" target="_blank" rel="noopener">ad preferences</a>.
         </p>
 
         <h2>9. Children</h2>

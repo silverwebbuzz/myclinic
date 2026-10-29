@@ -706,6 +706,7 @@ function ecpAuthModal() {
         // Success. Stash a minimal copy in localStorage so any other
         // open tabs pick up the new session via the 'storage' event.
         ecpSetPatientSession(j.patient);
+        if (j.is_new && window.ecpTrack) window.ecpTrack('CompleteRegistration');
 
         // If the caller wanted us to do something after login (save a
         // doctor, start a booking), do it BEFORE reloading.
@@ -719,7 +720,8 @@ function ecpAuthModal() {
           return;
         }
 
-        location.reload();
+        // Brief pause for a new account so the pixel request leaves before reload.
+        setTimeout(() => location.reload(), j.is_new ? 400 : 0);
       } catch (e) {
         this.errorMsg = "Couldn't reach server. Check your connection.";
         this.resetCaptcha();

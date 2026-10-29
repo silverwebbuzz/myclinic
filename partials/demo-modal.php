@@ -292,6 +292,7 @@ function ecpDemoModal() {
                 const data = await res.json();
                 if (data.ok) {
                     this.success = true;
+                    if (window.ecpTrack) window.ecpTrack('Schedule');
                 } else {
                     this.errorMsg = data.error || 'Something went wrong. Please try again.';
                 }

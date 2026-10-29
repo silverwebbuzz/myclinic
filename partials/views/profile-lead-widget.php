@@ -236,6 +236,7 @@ function ecpProfileLeadBook(doctor, initialDays) {
         }
         this.done = true;
         this.resultMsg = j.message || 'Your booking request was sent.';
+        if (window.ecpTrack) window.ecpTrack('Lead');
       } catch (e) {
         this.errorMsg = "Couldn't reach the server. Please try again.";
       } finally {

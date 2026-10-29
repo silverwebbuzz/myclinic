@@ -143,6 +143,43 @@ $ecpPatientJson = $ecpPatient
         gtag('js', new Date());
         gtag('config', 'G-YTM2L1L5RZ');
     </script>
+
+    <?php
+    // ---- Meta (Facebook) Pixel — public marketing/booking pages only ----
+    // Never on private health areas: the logged-in patient panel, a patient's
+    // own health-tips studio, or store order history. The events we fire carry
+    // no doctor, condition or product data (Meta still sees each page URL). Set
+    // META_PIXEL_ID= (empty) in .env to switch the pixel off entirely.
+    $ecpPixelId   = ecp_env('META_PIXEL_ID', '1438335777764557');
+    $ecpPixelPath = (string) strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
+    $ecpPixelOn   = preg_match('/^\d{10,20}$/', $ecpPixelId)
+        && !($ecpPatient && preg_match('#^/patient(\.php)?(/|$)#', $ecpPixelPath))
+        && !preg_match('#^/(my-health-tips|store/orders?)(\.php)?(/|$)#', $ecpPixelPath);
+    ?>
+    <script>
+        // Safe everywhere: a no-op when the pixel isn't loaded on this page.
+        window.ecpTrack = function (ev, params) {
+            if (typeof window.fbq === 'function') window.fbq('track', ev, params || {});
+        };
+    </script>
+    <?php if ($ecpPixelOn): ?>
+    <!-- Meta Pixel -->
+    <script>
+        !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+        n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t,s)}(window, document,'script',
+        'https://connect.facebook.net/en_US/fbevents.js');
+        // No automatic button/form-text capture — only the events we fire.
+        fbq('set', 'autoConfig', false, '<?= e($ecpPixelId) ?>');
+        fbq('init', '<?= e($ecpPixelId) ?>');
+        fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none" alt=""
+        src="https://www.facebook.com/tr?id=<?= e($ecpPixelId) ?>&amp;ev=PageView&amp;noscript=1"></noscript>
+    <?php endif; ?>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3947971704697505"
      crossorigin="anonymous"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">

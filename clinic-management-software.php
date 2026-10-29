@@ -182,6 +182,7 @@ $faqs = [
 
 require __DIR__ . '/partials/header.php';
 ?>
+<script>if (window.ecpTrack) window.ecpTrack('ViewContent', { content_name: 'Clinic management software' });</script>
 
 <style>
     .cms { --c-ink: #0d1f12; --c-body: #4e6e56; --c-mute: #6b8a72; --c-brand: #0F9B6E; --c-brand-d: #0B7F5A; --c-deep: #03382A; --c-soft: #e8f6ef; --c-line: #e3efe8; }

@@ -4248,7 +4248,9 @@ require __DIR__ . '/partials/header.php';
           }
           // Success — reload into the logged-in panel.
           if (typeof ecpSetPatientSession === 'function') ecpSetPatientSession(j.patient);
-          location.reload();
+          if (j.is_new && window.ecpTrack) window.ecpTrack('CompleteRegistration');
+          // Brief pause for a new account so the pixel request leaves before reload.
+          setTimeout(() => location.reload(), j.is_new ? 400 : 0);
         } catch (e) {
           this.errorMsg = "Couldn't reach server. Check your connection.";
           this.resetCaptcha();

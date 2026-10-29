@@ -289,6 +289,7 @@ require __DIR__ . '/partials/header.php';
             <!-- ============ FORM / CONFIRMATION ============ -->
             <div class="reveal">
                 <?php if ($submitted): ?>
+                    <script>if (window.ecpTrack) window.ecpTrack('Schedule');</script>
 
                     <div style="background: #fff; border-radius: 18px; border: 0.5px solid var(--line); padding: 56px; text-align: center;">
                         <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--teal-50); color: var(--teal-700); display: grid; place-items: center; margin: 0 auto 22px; font-size: 28px;">✓</div>

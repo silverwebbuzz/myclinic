@@ -71,6 +71,7 @@ $faqs = [
 
 require __DIR__ . '/partials/header.php';
 ?>
+<script>if (window.ecpTrack) window.ecpTrack('ViewContent', { content_name: 'Pricing' });</script>
 
 <style>
     .pr-hero {
