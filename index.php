@@ -583,7 +583,7 @@ require __DIR__ . '/partials/header.php';
             <!-- ── Phones ── -->
             <div class="phones-col">
 
-                <img src="/assets/img/logos/remove-bg.png" alt="Doctor" style="width: 100%; height: 100%; object-fit: contain;">
+                <img src="/assets/img/logos/remove-bg.webp" alt="Doctor" style="width: 100%; height: 100%; object-fit: contain;">
 
             </div>
             <!-- /phones-col -->
