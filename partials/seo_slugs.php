@@ -415,6 +415,30 @@ function _ecp_seo_live_city_slug(string $citySlug): ?string {
     return null;
 }
 
+/**
+ * Footer "Our Presence" list: display name → live /find-a-doctor/{city} URL,
+ * or null when that name has no page of its own (states like Kerala,
+ * localities like Mulund, thin cities). Linking those sent every page's
+ * footer through a 301, so callers render them as plain text instead.
+ * Aliases resolve to the real page (Bengaluru → /find-a-doctor/bangalore).
+ * Cached 6h: one COUNT per name otherwise, on every page site-wide.
+ *
+ * @param string[] $names
+ * @return array<string,?string>
+ */
+function ecp_presence_city_links(array $names): array {
+    $cacheName = 'presence_' . substr(sha1(implode('|', $names)), 0, 12);
+    return _ecp_seo_file_cache($cacheName, 6 * 3600, static function () use ($names): ?array {
+        if (!ecp_db()) return null;
+        $out = [];
+        foreach ($names as $name) {
+            $live = _ecp_seo_live_city_slug(ecp_slug_for_city($name));
+            $out[$name] = $live !== null ? '/find-a-doctor/' . $live : null;
+        }
+        return $out;
+    });
+}
+
 /** "chhattisgarh" → "Chhattisgarh" when it is a state we have listings in. */
 function _ecp_seo_state_by_slug(string $slug): ?string {
     foreach (_ecp_city_slug_index() as $c) {

@@ -120,7 +120,7 @@ $ccFaqs = [
 // =====================================================================
 // SEO — page meta + structured data (MedicalWebPage + FAQPage)
 // =====================================================================
-$pageTitle = 'Cervical Cancer Awareness in India — Facts, HPV Vaccine & Screening | eClinicPro';
+$pageTitle = 'Cervical Cancer in India: HPV Vaccine & Screening | eClinicPro';
 $metaDesc  = 'Cervical cancer is preventable. Understand the figures & facts, India’s 2026 HPV vaccination campaign, the screening tests (Pap smear, LBC, HPV DNA) with costs, an age-wise prevention schedule, FAQs, and find a gynecologist near you.';
 $activePage = '';
 $ogType = 'article';
@@ -3905,10 +3905,10 @@ require __DIR__ . '/partials/header.php';
   <div class="basics-row">
     <div class="basics-text">
       <p class="basics-label">THE BASICS</p>
-      <h1 class="basics-heading">
+      <h2 class="basics-heading">
         What is<br />
         <span class="basics-heading-green">Cervical Cancer?</span>
-      </h1>
+      </h2>
       <p class="basics-description">
         Cervical cancer begins in the <strong>cervix</strong> &mdash; the lower, narrow
         part of the uterus (womb) that connects to the vagina.

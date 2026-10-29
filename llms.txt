@@ -1,0 +1,31 @@
+# eClinicPro
+
+> eClinicPro is an Indian healthcare platform with two sides: patients find and book verified doctors and clinics across India, and clinics run their practice on one clinic management system (patient records, appointments and walk-in queue, prescriptions, GST billing, vitals, follow-ups, reports and a public doctor profile). One plan: ₹999/month + GST with unlimited patients and staff. eClinicPro is a brand of Silver Webbuzz Pvt Ltd.
+
+## For patients
+
+- [Find a doctor](https://eclinicpro.com/find-a-doctor): search verified doctors and clinics across India by city, specialty and location; see fees, ratings and timings, and book online.
+- [For patients](https://eclinicpro.com/for-patients): the free patient account — book doctors, shortlist favourites, manage family health profiles and store prescriptions.
+- [Health tips](https://eclinicpro.com/health-tips): recipes, exercises and health tips.
+- [Cervical cancer awareness](https://eclinicpro.com/cervical-cancer): facts, India's HPV vaccination campaign, screening tests and an age-wise prevention schedule.
+- [eClinicPro Store](https://eclinicpro.com/store/): health, wellness and everyday essentials from verified sellers.
+
+City pages follow the pattern https://eclinicpro.com/find-a-doctor/{city} (for example /find-a-doctor/mumbai), specialty pages /find-a-doctor/{specialty} (for example /find-a-doctor/dermatologist), and combined pages /find-a-doctor/{specialty}-in-{city}.
+
+## For clinics and doctors
+
+- [Clinic management software](https://eclinicpro.com/clinic-management-software): features and pricing.
+- [Product tour](https://eclinicpro.com/product-tour): a guided walk-through of every screen.
+- [Pricing](https://eclinicpro.com/pricing)
+- [Book a demo](https://eclinicpro.com/book-a-demo): a 15-minute demo tailored to your specialty.
+- [Customer stories](https://eclinicpro.com/customer-stories)
+- Specialty editions: [GPs](https://eclinicpro.com/gps), [Dentists](https://eclinicpro.com/dentists), [Dermatologists](https://eclinicpro.com/dermatologists), [Pediatricians](https://eclinicpro.com/pediatricians), [Homeopaths](https://eclinicpro.com/homeopathy-clinic-management-software), [Physiotherapists](https://eclinicpro.com/physiotherapists)
+- [Become a partner](https://eclinicpro.com/become-a-partner): refer clinics and earn recurring commission.
+
+## Company
+
+- [Contact](https://eclinicpro.com/contact)
+- [Security](https://eclinicpro.com/security)
+- [Terms of service](https://eclinicpro.com/terms)
+- [Privacy policy](https://eclinicpro.com/privacy-policy)
+- [Refund and cancellation policy](https://eclinicpro.com/refund-policy)

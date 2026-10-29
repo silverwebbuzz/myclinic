@@ -68,13 +68,22 @@ $presenceSub = $presenceSub ?? 'Find doctors & clinics across these cities';
         <p class="foot-presence-sub"><?= e($presenceSub) ?></p>
         <div class="foot-presence-rule" aria-hidden="true"></div>
         <div class="foot-presence-list">
+            <?php
+            try {
+                $presenceLinks = ecp_presence_city_links($presenceCities);
+            } catch (\Throwable $e) {
+                error_log('[footer-presence] ' . $e->getMessage());
+                $presenceLinks = [];
+            }
+            ?>
             <?php foreach ($presenceCities as $i => $cityName): ?>
-                <?php
-                $slug = function_exists('ecp_slug_for_city') ? ecp_slug_for_city($cityName) : '';
-                $href = $slug !== '' ? '/find-a-doctor/' . rawurlencode($slug) : '/find-a-doctor';
-                ?>
+                <?php $href = $presenceLinks[$cityName] ?? null; ?>
                 <?php if ($i > 0): ?><span class="foot-presence-sep" aria-hidden="true">|</span><?php endif; ?>
-                <a class="foot-presence-link" href="<?= e($href) ?>"><?= e($cityName) ?></a>
+                <?php if ($href !== null): ?>
+                    <a class="foot-presence-link" href="<?= e($href) ?>"><?= e($cityName) ?></a>
+                <?php else: ?>
+                    <span class="foot-presence-link"><?= e($cityName) ?></span>
+                <?php endif; ?>
             <?php endforeach; ?>
         </div>
         <!-- Optional image grid (hidden until assets are added):
@@ -171,7 +180,7 @@ $presenceSub = $presenceSub ?? 'Find doctors & clinics across these cities';
             </div>
         </div>
         <div class="foot-bottom">
-            <div>© <?= date('Y') ?> eClinicPro — a brand of <a href="https://silverwebbuzz.com" target="_blank" rel="noopener">Silver Webbuzz Pvt Ltd</a> · Made with care for clinics across India 🌿</div>
+            <div>© <?= date('Y') ?> eClinicPro — a brand of <a href="https://www.silverwebbuzz.com/" target="_blank" rel="noopener">Silver Webbuzz Pvt Ltd</a> · Made with care for clinics across India 🌿</div>
             <div class="links">
                 <a href="/privacy-policy">Privacy</a>
                 <a href="/terms">Terms</a>

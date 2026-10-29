@@ -49,6 +49,9 @@ $marketing = [
     ['/book-a-demo',       0.7, 'monthly'],
     ['/contact',           0.5, 'yearly'],
     ['/cervical-cancer',   0.7, 'monthly'],
+    ['/health-tips',       0.6, 'weekly'],
+    ['/store/',            0.6, 'weekly'],
+    ['/become-a-partner',  0.5, 'monthly'],
     ['/privacy-policy',    0.3, 'yearly'],
     ['/terms',             0.3, 'yearly'],
     ['/refund-policy',     0.3, 'yearly'],
@@ -100,6 +103,18 @@ if ($db) {
             echo "    <lastmod>{$now}</lastmod>\n";
             echo "    <changefreq>weekly</changefreq>\n";
             echo "    <priority>0.8</priority>\n";  // city pages
+            echo "  </url>\n";
+        }
+
+        // Specialty-only pages (/find-a-doctor/cardiologist, all of India).
+        // These render even when empty, so only list the ones with listings.
+        foreach (ecp_specialty_map_safe() as $specSlug => $spec) {
+            if (ecp_count_doctors(null, $spec['db']) < ECP_SEO_MIN_LISTINGS) continue;
+            echo "  <url>\n";
+            echo "    <loc>{$base}/find-a-doctor/{$specSlug}</loc>\n";
+            echo "    <lastmod>{$now}</lastmod>\n";
+            echo "    <changefreq>weekly</changefreq>\n";
+            echo "    <priority>0.8</priority>\n";
             echo "  </url>\n";
         }
 

@@ -453,7 +453,7 @@ require __DIR__ . '/partials/header.php';
         <!-- ── Header ── -->
         <div class="header">
             <div class="eyebrow">For Patients</div>
-            <h1 class="headline">Book in 60 seconds. No call centre.</h1>
+            <h2 class="headline">Book in 60 seconds. No call centre.</h2>
             <p class="subline">EclinicPro makes appointment booking simple, fast and hassle-free<br>for every patient.</p>
         </div>
 
@@ -785,7 +785,7 @@ require __DIR__ . '/partials/header.php';
                     🪔 Diwali Offer — Free till 31 Dec 2026
                 </div>
             <?php endif; ?>
-            <h1 class="hero-titlee">One plan. Everything to run<br>your clinic.</h1>
+            <h2 class="hero-titlee">One plan. Everything to run<br>your clinic.</h2>
             <p class="hero-subb">No tiers, no per-seat games, no surprise upsells.<br>
                 <?php if (ecp_trial_offer_active()): ?>
                     Sign up today and use everything <strong>free till 31 Dec 2026</strong> — <strong>no card.</strong>

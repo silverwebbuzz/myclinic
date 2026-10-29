@@ -509,7 +509,7 @@ require __DIR__ . '/partials/header.php';
 
                     <div class="fd-ac" x-show="acOpen" @mousedown.prevent x-transition.opacity>
                         <div class="fd-ac-item use-loc" @click="loc = ''; locValue = null; acOpen = false; mLocOpen = true; requestLocation()">
-                            <div class="ic"><img src="/assets/img/icon/location-pin.png" alt="Location Pin"></div>
+                            <div class="ic"><img src="/assets/img/icon/maps.png" alt="Location Pin"></div>
                             <div><div class="nm">Use my precise location</div><div class="sb">Allow browser to share where you are</div></div>
                         </div>
                         <template x-if="filteredLocations().length === 0">
@@ -648,7 +648,7 @@ require __DIR__ . '/partials/header.php';
                     <div class="fd-pop" x-show="distanceOpen" @click.outside="distanceOpen = false" x-transition.opacity>
                         <template x-if="!userLoc">
                             <div class="row" @click="requestLocation(); distanceOpen = false">
-                                <span class="ck"><img src="/assets/img/icon/location-pin.png" alt="location pin"></span>
+                                <span class="ck"><img src="/assets/img/icon/maps.png" alt="location pin"></span>
                                 <span>Use my location</span>
                             </div>
                         </template>

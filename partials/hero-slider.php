@@ -161,7 +161,7 @@ $hsJsBust = @filemtime(__DIR__ . '/../assets/js/hero-slider.js') ?: time();
                 <div class="hh-copy">
                     <div class="hh-badge hh-entry"><i class="hh-status"></i>Trusted by 2M+ customers across India<div class="hh-avatars"><span>👩🏻</span><span>👨🏽</span><span>👩🏽</span></div>
                     </div>
-                    <h1 class="hh-headline hh-entry" style="--delay:.22s">Your<br><em>Health Store,</em><br><span class="hh-under">Simplified.</span></h1>
+                    <h2 class="hh-headline hh-entry" style="--delay:.22s">Your<br><em>Health Store,</em><br><span class="hh-under">Simplified.</span></h2>
                     <p class="hh-description hh-entry" style="--delay:.33s">Genuine medicines, wellness products, and healthcare essentials — delivered to your doorstep. Because a healthier you, is a happier tomorrow.</p>
                     <form class="hh-search hh-entry" style="--delay:.42s" data-kind="Products"><svg class="hh-icon">
                             <use href="#hh-i-search" />
@@ -202,7 +202,7 @@ $hsJsBust = @filemtime(__DIR__ . '/../assets/js/hero-slider.js') ?: time();
             <div class="wrap">
                 <div class="hh-copy">
                     <div class="hh-badge hh-entry"><i class="hh-status"></i>Now partnered with<span class="hh-divider"></span><span class="hh-brand">Thyro<span>care</span></span><span class="hh-divider"></span><span>Trusted Diagnostics<br>Home Collection</span></div>
-                    <h1 class="hh-headline hh-entry" style="--delay:.22s">Medicines. Wellness.<br>Diagnostics.<br><em class="hh-under">All in one place.</em></h1>
+                    <h2 class="hh-headline hh-entry" style="--delay:.22s">Medicines. Wellness.<br>Diagnostics.<br><em class="hh-under">All in one place.</em></h2>
                     <p class="hh-description hh-entry" style="--delay:.33s">Shop healthcare essentials or book trusted diagnostic tests from the comfort of your home.</p>
                     <form class="hh-search hh-entry" style="--delay:.42s" data-kind="Diagnostics"><svg class="hh-icon">
                             <use href="#hh-i-search" />

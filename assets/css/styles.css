@@ -1528,7 +1528,7 @@ button {
   transition: color .15s ease;
 }
 
-.foot-presence-link:hover {
+a.foot-presence-link:hover {
   color: var(--teal-700);
   text-decoration: underline;
 }
@@ -3160,6 +3160,11 @@ footer.foot {
   place-items: center;
   flex-shrink: 0;
   font-size: 11px;
+}
+
+.fd-pop .row .ck img {
+  width: 10px;
+  height: auto;
 }
 
 .fd-pop .row.on .ck {

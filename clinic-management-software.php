@@ -650,11 +650,15 @@ require __DIR__ . '/partials/header.php';
     '@context' => 'https://schema.org',
     '@graph' => [
         [
-            '@type' => 'SoftwareApplication',
-            'name' => 'eClinicPro',
-            'applicationCategory' => 'BusinessApplication',
-            'operatingSystem' => 'Web',
+            // Service, not SoftwareApplication: Google's Software App rich
+            // result requires aggregateRating/review, which we don't have —
+            // the SoftwareApplication block was flagged as a markup error.
+            '@type' => 'Service',
+            'name' => 'eClinicPro clinic management software',
+            'serviceType' => 'Clinic management software',
             'description' => $metaDesc,
+            'provider' => ['@type' => 'Organization', 'name' => 'eClinicPro', 'url' => 'https://eclinicpro.com'],
+            'areaServed' => ['@type' => 'Country', 'name' => 'India'],
             'offers' => ['@type' => 'Offer', 'price' => (string) $plan['monthly'], 'priceCurrency' => 'INR'],
         ],
         [

@@ -12,7 +12,7 @@
 // =====================================================================
 require_once __DIR__ . '/partials/helpers.php';
 
-$pageTitle = 'For Patients — Book doctors, keep your family’s health in one place | eClinicPro';
+$pageTitle = 'For Patients — Book Doctors & Manage Family Health | eClinicPro';
 $metaDesc  = 'Create a free eClinicPro patient account: book verified doctors, shortlist favourites, manage family health profiles, store prescriptions, and keep your medical details safe. Free forever — sign in with your phone.';
 $activePage = 'for-patients';
 
