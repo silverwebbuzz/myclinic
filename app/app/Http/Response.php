@@ -84,6 +84,8 @@ final class Response
         foreach ($this->headers as $name => $value) {
             header("{$name}: {$value}");
         }
-        echo $this->body;
+
+        $isHtml = str_starts_with(strtolower($this->headers['Content-Type'] ?? ''), 'text/html');
+        echo $isHtml ? \App\Support\Clarity::inject($this->body) : $this->body;
     }
 }
