@@ -117,10 +117,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['files'])) {
             photo_reference = VALUES(photo_reference),
             photo_references = VALUES(photo_references),
             quality_score = VALUES(quality_score),
-            -- Don't overwrite is_active if a human deactivated this row.
-            -- Only re-activate when we see fresh OPERATIONAL data.
-            is_active = IF(VALUES(status) = 'OPERATIONAL', 1, 0),
-            dropped_reason = VALUES(dropped_reason),
+            -- Rows hidden from /admin/directory (dropped_reason = 'admin_hidden')
+            -- stay hidden. Otherwise active only on fresh OPERATIONAL data.
+            -- is_active is assigned first, so it still sees the OLD dropped_reason.
+            is_active = IF(dropped_reason = 'admin_hidden', 0, IF(VALUES(status) = 'OPERATIONAL', 1, 0)),
+            dropped_reason = IF(dropped_reason = 'admin_hidden', dropped_reason, VALUES(dropped_reason)),
             refreshed_at = NOW()";
     $stmt = $pdo->prepare($sql);
 

@@ -552,6 +552,11 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/outreach/export', [\App\Controllers\OutreachAdminController::class, 'exportCsv']);
         $admin->post('/outreach/status', [\App\Controllers\OutreachAdminController::class, 'saveStatus']);
 
+        // Directory listings — hide / show public directory_doctors rows.
+        $admin->get('/directory', [\App\Controllers\DirectoryAdminController::class, 'index']);
+        $admin->post('/directory/{id}/hide', [\App\Controllers\DirectoryAdminController::class, 'hide']);
+        $admin->post('/directory/{id}/show', [\App\Controllers\DirectoryAdminController::class, 'show']);
+
         // Marketing — doctor list + manual WhatsApp drafts (never sends).
         $admin->get('/marketing', [\App\Controllers\MarketingAdminController::class, 'index']);
         $admin->post('/marketing/sent', [\App\Controllers\MarketingAdminController::class, 'markSent']);
