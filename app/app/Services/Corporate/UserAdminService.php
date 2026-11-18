@@ -32,13 +32,19 @@ final class UserAdminService
         $users = $st->fetchAll();
 
         $rs = Database::connection()->prepare(
-            'SELECT ur.user_id, r.id, r.name FROM corp_user_roles ur JOIN corp_roles r ON r.id = ur.role_id
+            'SELECT ur.user_id, ur.scope_id, r.id, r.name, r.scope_type, b.name AS branch_name
+               FROM corp_user_roles ur JOIN corp_roles r ON r.id = ur.role_id
+               LEFT JOIN corp_branches b ON b.id = ur.scope_id AND b.company_id = ur.company_id
               WHERE ur.company_id = :cid ORDER BY r.sort_order, r.name'
         );
         $rs->execute(['cid' => $companyId]);
         $byUser = [];
         foreach ($rs->fetchAll() as $row) {
-            $byUser[(int) $row['user_id']][] = ['id' => (int) $row['id'], 'name' => (string) $row['name']];
+            $byUser[(int) $row['user_id']][] = [
+                'id' => (int) $row['id'],
+                'name' => (string) $row['name'] . ($row['scope_type'] === 'branch' && $row['branch_name'] ? ' · ' . $row['branch_name'] : ''),
+                'scope_id' => (int) $row['scope_id'],
+            ];
         }
         foreach ($users as &$u) {
             $u['roles'] = $byUser[(int) $u['id']] ?? [];
@@ -72,7 +78,7 @@ final class UserAdminService
      * @param array<string, true> $actorPerms
      * @return array{ok: bool, error?: string}
      */
-    public static function invite(int $companyId, int $actorId, array $actorPerms, string $email, string $name, int $roleId): array
+    public static function invite(int $companyId, int $actorId, array $actorPerms, string $email, string $name, int $roleId, int $branchId = 0): array
     {
         $email = strtolower(trim($email));
         $name = trim($name);
@@ -85,6 +91,10 @@ final class UserAdminService
         $role = RoleService::findRole($companyId, $roleId);
         if ($role === null || !RoleService::canAssign($role, $actorPerms)) {
             return ['ok' => false, 'error' => 'Please choose a role you\'re allowed to give.'];
+        }
+        $scopeId = self::scopeFor($companyId, $role, $branchId);
+        if ($scopeId === null) {
+            return ['ok' => false, 'error' => 'Choose which branch this ' . $role['name'] . ' looks after.'];
         }
         $existing = CompanyService::findUserByEmail($email);
         if ($existing !== null) {
@@ -103,12 +113,13 @@ final class UserAdminService
         $token = bin2hex(random_bytes(32));
         Database::connection()->prepare(
             'INSERT INTO corp_invitations (company_id, email, name, role_id, scope_id, token_hash, invited_by, expires_at, created_at)
-             VALUES (:cid, :email, :name, :rid, 0, :hash, :by, :exp, :at)'
+             VALUES (:cid, :email, :name, :rid, :scope, :hash, :by, :exp, :at)'
         )->execute([
             'cid' => $companyId,
             'email' => $email,
             'name' => $name !== '' ? $name : null,
             'rid' => $roleId,
+            'scope' => $scopeId,
             'hash' => hash('sha256', $token),
             'by' => $actorId,
             'exp' => LocalDate::utcPlusSeconds(self::INVITE_DAYS * 86400),
@@ -265,7 +276,7 @@ final class UserAdminService
      * @param array<string, true> $actorPerms
      * @return array{ok: bool, error?: string}
      */
-    public static function setRoles(int $companyId, int $actorId, array $actorPerms, int $userId, array $roleIds): array
+    public static function setRoles(int $companyId, int $actorId, array $actorPerms, int $userId, array $roleIds, array $branchByRole = []): array
     {
         $target = self::guardTarget($companyId, $actorId, $actorPerms, $userId);
         if (isset($target['error'])) {
@@ -276,12 +287,18 @@ final class UserAdminService
             return ['ok' => false, 'error' => 'Everyone needs at least one role. To stop someone signing in, disable them instead.'];
         }
         $names = [];
+        $scopes = [];
         foreach ($roleIds as $rid) {
             $role = RoleService::findRole($companyId, $rid);
             if ($role === null || !RoleService::canAssign($role, $actorPerms)) {
                 return ['ok' => false, 'error' => 'You can only give roles whose permissions you have yourself.'];
             }
-            $names[] = $role['name'];
+            $scope = self::scopeFor($companyId, $role, (int) ($branchByRole[$rid] ?? 0));
+            if ($scope === null) {
+                return ['ok' => false, 'error' => 'Choose which branch the ' . $role['name'] . ' role covers.'];
+            }
+            $scopes[$rid] = $scope;
+            $names[] = $role['name'] . ($scope > 0 ? ' (branch #' . $scope . ')' : '');
         }
         $adminRole = CompanyService::systemRoleId('company_admin');
         $keepsAdmin = in_array($adminRole, $roleIds, true);
@@ -297,10 +314,10 @@ final class UserAdminService
         try {
             $pdo->prepare('DELETE FROM corp_user_roles WHERE company_id = :cid AND user_id = :uid')->execute(['cid' => $companyId, 'uid' => $userId]);
             $ins = $pdo->prepare(
-                'INSERT INTO corp_user_roles (company_id, user_id, role_id, scope_id, granted_by, created_at) VALUES (:cid, :uid, :rid, 0, :by, :at)'
+                'INSERT INTO corp_user_roles (company_id, user_id, role_id, scope_id, granted_by, created_at) VALUES (:cid, :uid, :rid, :scope, :by, :at)'
             );
             foreach ($roleIds as $rid) {
-                $ins->execute(['cid' => $companyId, 'uid' => $userId, 'rid' => $rid, 'by' => $actorId, 'at' => LocalDate::nowUtc()]);
+                $ins->execute(['cid' => $companyId, 'uid' => $userId, 'rid' => $rid, 'scope' => $scopes[$rid], 'by' => $actorId, 'at' => LocalDate::nowUtc()]);
             }
             $pdo->commit();
         } catch (\Throwable $e) {
@@ -434,6 +451,26 @@ final class UserAdminService
         $st->execute(['cid' => $companyId]);
 
         return (int) $st->fetchColumn();
+    }
+
+    /**
+     * scope_id for a role: 0 for company-wide roles; a valid active branch of
+     * the company for branch roles; null when a branch role has no valid branch.
+     *
+     * @param array<string, mixed> $role
+     */
+    private static function scopeFor(int $companyId, array $role, int $branchId): ?int
+    {
+        if (($role['scope_type'] ?? 'company') !== 'branch') {
+            return 0;
+        }
+        if ($branchId <= 0) {
+            return null;
+        }
+        $st = Database::connection()->prepare('SELECT 1 FROM corp_branches WHERE id = :id AND company_id = :cid AND is_active = 1 LIMIT 1');
+        $st->execute(['id' => $branchId, 'cid' => $companyId]);
+
+        return $st->fetchColumn() !== false ? $branchId : null;
     }
 
     /** @return array<string, mixed>|null */

@@ -32,6 +32,9 @@ final class CorpTenantGuardTest extends TestCase
     private const COMPANY_TABLES = [
         'corp_companies', 'corp_company_documents', 'corp_users', 'corp_user_roles', 'corp_invitations',
         'corp_password_resets', 'corp_sessions', 'corp_audit_log',
+        // Phase 1A
+        'corp_branches', 'corp_departments', 'corp_job_roles', 'corp_employments', 'corp_employment_events',
+        'corp_employee_imports', 'corp_employee_import_rows',
     ];
 
     private const SCOPE_MARKERS = [

@@ -31,12 +31,12 @@ final class CorpPermissionTest extends TestCase
         $this->assertTrue(RoleService::isWithin([], $hr));
     }
 
-    public function testBranchRolesNotAssignableYet(): void
+    public function testBranchRolesAssignableWhenWithinPermissions(): void
     {
         $all = array_fill_keys(['company.view', 'employees.view'], true);
         $branch = ['scope_type' => 'branch', 'is_clinical' => 0, 'permissions' => ['company.view']];
         $company = ['scope_type' => 'company', 'is_clinical' => 0, 'permissions' => ['company.view']];
-        $this->assertFalse(RoleService::canAssign($branch, $all));
+        $this->assertTrue(RoleService::canAssign($branch, $all));
         $this->assertTrue(RoleService::canAssign($company, $all));
         $this->assertFalse(RoleService::canAssign(['scope_type' => 'company', 'is_clinical' => 0, 'permissions' => ['roles.manage']], $all));
     }

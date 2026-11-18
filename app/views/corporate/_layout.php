@@ -33,6 +33,11 @@ $navGroups = [
         ['/company/screening', 'Screening', false],
         ['/company/reports', 'Reports', false],
     ],
+    'Structure' => [
+        ['/company/branches', 'Branches', true, 'branches.manage'],
+        ['/company/departments', 'Departments', true, 'departments.manage'],
+        ['/company/job-roles', 'Job roles', true, 'jobroles.manage'],
+    ],
     'Company' => [
         ['/company/profile', 'Company profile', true, 'company.view'],
         ['/company/users', 'Users & roles', true, 'users.view'],

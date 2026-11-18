@@ -35,6 +35,7 @@ final class CorpUsersController
             'users' => UserAdminService::listUsers($cid),
             'invites' => $canManage ? UserAdminService::pendingInvites($cid) : [],
             'assignable' => $canManage ? RoleService::assignableRoles($cid, CorpAuth::permissions()) : [],
+            'branches' => $canManage ? \App\Services\Corporate\StructureService::branches($cid, true) : [],
             'canManage' => $canManage,
             'old' => SessionFlash::pull('corp_invite_old') ?? [],
             'flashOk' => SessionFlash::pull('corp_ok'),
@@ -50,9 +51,9 @@ final class CorpUsersController
         $email = (string) ($request->post['email'] ?? '');
         $name = (string) ($request->post['name'] ?? '');
         $res = UserAdminService::invite((int) CorpContext::companyId(), (int) CorpContext::userId(), CorpAuth::permissions(),
-            $email, $name, (int) ($request->post['role_id'] ?? 0));
+            $email, $name, (int) ($request->post['role_id'] ?? 0), (int) ($request->post['branch_id'] ?? 0));
         if (!$res['ok']) {
-            SessionFlash::put('corp_invite_old', ['email' => $email, 'name' => $name, 'role_id' => (int) ($request->post['role_id'] ?? 0)]);
+            SessionFlash::put('corp_invite_old', ['email' => $email, 'name' => $name, 'role_id' => (int) ($request->post['role_id'] ?? 0), 'branch_id' => (int) ($request->post['branch_id'] ?? 0)]);
         }
 
         return $this->back($res, 'Invitation sent to ' . strtolower(trim($email)) . '.');
@@ -82,9 +83,10 @@ final class CorpUsersController
             return $deny;
         }
         $roleIds = $request->post['role_ids'] ?? [];
+        $branches = $request->post['branch_for'] ?? [];
 
         return $this->back(UserAdminService::setRoles((int) CorpContext::companyId(), (int) CorpContext::userId(), CorpAuth::permissions(),
-            (int) $id, is_array($roleIds) ? $roleIds : []), 'Roles updated.');
+            (int) $id, is_array($roleIds) ? $roleIds : [], is_array($branches) ? array_map('intval', $branches) : []), 'Roles updated.');
     }
 
     public function disable(Request $request, string $id): Response

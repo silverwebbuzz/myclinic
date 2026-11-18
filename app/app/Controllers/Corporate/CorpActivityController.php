@@ -61,6 +61,9 @@ final class CorpActivityController
         'document_rejected' => 'Document not accepted by eClinicPro',
         'plan_set' => 'Plan updated by eClinicPro',
         'mfa_reset_by_eclinicpro' => 'Two-step sign-in reset by eClinicPro support',
+        'branch_created' => 'Added a branch', 'branch_updated' => 'Edited a branch', 'branch_activated' => 'Re-activated a branch', 'branch_deactivated' => 'Deactivated a branch',
+        'department_created' => 'Added a department', 'department_updated' => 'Edited a department', 'department_activated' => 'Re-activated a department', 'department_deactivated' => 'Deactivated a department',
+        'job_role_created' => 'Added a job role', 'job_role_updated' => 'Edited a job role', 'job_role_activated' => 'Re-activated a job role', 'job_role_deactivated' => 'Deactivated a job role',
     ];
 
     public function index(Request $request): Response

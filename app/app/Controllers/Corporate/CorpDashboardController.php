@@ -38,6 +38,8 @@ final class CorpDashboardController
         $st->execute(['cid' => (int) $company['id'], 'cid2' => (int) $company['id']]);
         $teamInvited = (int) $st->fetchColumn() > 1;
 
+        $hasBranch = \App\Services\Corporate\StructureService::branches((int) $company['id'], true) !== [];
+        $hasJobRole = \App\Services\Corporate\StructureService::jobRoles((int) $company['id'], true) !== [];
         $hasProfile = \App\Services\Corporate\CompanyProfileService::isComplete($company);
         $hasDocs = \App\Services\Corporate\CompanyDocumentService::list((int) $company['id']) !== [];
 
@@ -48,6 +50,8 @@ final class CorpDashboardController
             ['Complete your company profile', 'Address, ' . ($country['company_id_label'] ?? 'registration number') . ' and licence details.', $hasProfile, CorpAuth::can('company.edit') ? '/company/profile' : ''],
             ['Upload your trade licence', 'Needed before we can approve your account.', $hasDocs, CorpAuth::can('company.edit') ? '/company/profile#documents' : ''],
             ['Invite your team', 'HR, HSE and branch managers.', $teamInvited, CorpAuth::can('users.manage') ? '/company/users' : ''],
+            ['Add your branches', 'Offices, sites and yards where your people work.', $hasBranch, CorpAuth::can('branches.manage') ? '/company/branches' : ''],
+            ['Add job roles', 'Screening is assigned by job role.', $hasJobRole, CorpAuth::can('jobroles.manage') ? '/company/job-roles' : ''],
         ];
 
         return Response::html(View::render('corporate/dashboard', [

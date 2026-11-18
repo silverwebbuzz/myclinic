@@ -15,6 +15,16 @@ $input = 'mt-1 w-full rounded-[7px] border border-ln bg-sf px-3 py-2 focus:borde
 $btn = 'inline-flex h-8 items-center justify-center whitespace-nowrap rounded-[7px] px-3 text-[13px] font-medium';
 $me = (int) ($user['id'] ?? 0);
 $assignableIds = array_map(static fn ($r) => (int) $r['id'], $assignable);
+$branchRoleIds = array_values(array_map(static fn ($r) => (int) $r['id'], array_filter($assignable, static fn ($r) => ($r['scope_type'] ?? 'company') === 'branch')));
+$branches = $branches ?? [];
+$branchSelect = static function (string $name, int $selected, string $extra = '') use ($branches, $e): string {
+    $html = '<select name="' . $e($name) . '" ' . $extra . ' class="mt-1 w-full rounded-[7px] border border-ln bg-sf px-2 py-1.5 text-[13px]"><option value="">Which branch?</option>';
+    foreach ($branches as $b) {
+        $html .= '<option value="' . (int) $b['id'] . '"' . ((int) $b['id'] === $selected ? ' selected' : '') . '>' . $e($b['name']) . '</option>';
+    }
+
+    return $html . '</select>';
+};
 $nowUtc = \App\Support\Locale\LocalDate::nowUtc();
 ob_start();
 ?>
@@ -27,7 +37,7 @@ ob_start();
 </div>
 
 <?php if ($canManage): ?>
-    <section class="mt-4 rounded-[10px] border border-ln bg-sf p-5" x-data="{ open: <?= !empty($old) ? 'true' : 'false' ?> }">
+    <section class="mt-4 rounded-[10px] border border-ln bg-sf p-5" x-data="{ open: <?= !empty($old) ? 'true' : 'false' ?>, role: '<?= (int) ($old['role_id'] ?? 0) ?: '' ?>', branchRoles: <?= $e(json_encode($branchRoleIds)) ?> }">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
                 <h2 class="text-[15px] font-semibold">Invite someone</h2>
@@ -47,7 +57,7 @@ ob_start();
             </label>
             <label class="block">
                 <span class="text-tx2">Role</span>
-                <select name="role_id" required class="<?= $input ?>">
+                <select name="role_id" required x-model="role" class="<?= $input ?>">
                     <option value="">Select…</option>
                     <?php foreach ($assignable as $r): ?>
                         <option value="<?= (int) $r['id'] ?>" <?= (int) ($old['role_id'] ?? 0) === (int) $r['id'] ? 'selected' : '' ?>><?= $e($r['name']) ?></option>
@@ -55,6 +65,13 @@ ob_start();
                 </select>
             </label>
             <button class="<?= $btn ?> h-[38px] bg-ac px-4 text-white hover:opacity-90">Send invite</button>
+            <div x-show="branchRoles.includes(Number(role))" x-cloak class="sm:col-span-4">
+                <?php if ($branches === []): ?>
+                    <p class="rounded-[7px] bg-wnb px-3 py-2 text-wn">Add a branch first (Workforce → Branches), then you can invite a Branch Manager.</p>
+                <?php else: ?>
+                    <label class="block max-w-sm"><span class="text-tx2">Branch they look after</span><?= $branchSelect('branch_id', (int) ($old['branch_id'] ?? 0)) ?></label>
+                <?php endif; ?>
+            </div>
         </form>
     </section>
 <?php endif; ?>
@@ -67,6 +84,7 @@ ob_start();
             $isMe = (int) $u['id'] === $me;
             $disabled = $u['status'] === 'disabled';
             $userRoleIds = array_map(static fn ($r) => (int) $r['id'], $u['roles']);
+            $scopeByRole = array_column($u['roles'], 'scope_id', 'id');
             ?>
             <li class="px-5 py-3.5" x-data="{ edit: false }">
                 <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -100,9 +118,14 @@ ob_start();
                             <div class="font-medium">Roles</div>
                             <div class="mt-2 grid gap-1.5 sm:grid-cols-2">
                                 <?php foreach ($assignable as $r): ?>
-                                    <label class="flex items-start gap-2">
-                                        <input type="checkbox" name="role_ids[]" value="<?= (int) $r['id'] ?>" class="mt-0.5" <?= in_array((int) $r['id'], $userRoleIds, true) ? 'checked' : '' ?>>
-                                        <span><?= $e($r['name']) ?><?php if (!empty($r['description'])): ?><span class="block text-[12px] text-tx3"><?= $e($r['description']) ?></span><?php endif; ?></span>
+                                    <?php $isBranchRole = ($r['scope_type'] ?? 'company') === 'branch'; $has = in_array((int) $r['id'], $userRoleIds, true); ?>
+                                    <label class="flex items-start gap-2" <?= $isBranchRole ? 'x-data="{ on: ' . ($has ? 'true' : 'false') . ' }"' : '' ?>>
+                                        <input type="checkbox" name="role_ids[]" value="<?= (int) $r['id'] ?>" class="mt-0.5" <?= $has ? 'checked' : '' ?> <?= $isBranchRole ? 'x-model="on"' : '' ?>>
+                                        <span class="flex-1"><?= $e($r['name']) ?><?php if (!empty($r['description'])): ?><span class="block text-[12px] text-tx3"><?= $e($r['description']) ?></span><?php endif; ?>
+                                            <?php if ($isBranchRole): ?>
+                                                <span x-show="on" x-cloak class="block"><?= $branchSelect('branch_for[' . (int) $r['id'] . ']', (int) ($scopeByRole[(int) $r['id']] ?? 0)) ?></span>
+                                            <?php endif; ?>
+                                        </span>
                                     </label>
                                 <?php endforeach; ?>
                                 <?php foreach ($u['roles'] as $r): ?>

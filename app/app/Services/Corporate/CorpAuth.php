@@ -25,6 +25,9 @@ final class CorpAuth
     /** @var array<string, true>|null */
     private static ?array $perms = null;
 
+    /** @var array{0: string, 1: list<int>|null}|null cached [permission, scope] */
+    private static ?array $branchScope = null;
+
     /** @return array<string, true> permission code => true */
     public static function permissions(): array
     {
@@ -80,6 +83,50 @@ final class CorpAuth
         return $out;
     }
 
+    /**
+     * Which branches' employees the signed-in user may see for $permission:
+     * null = every branch (some role giving it is company-wide), otherwise the
+     * branch ids of their branch-scoped roles (Branch Manager). [] = none.
+     *
+     * @return list<int>|null
+     */
+    public static function branchScope(string $permission = 'employees.view'): ?array
+    {
+        if (self::$branchScope !== null && self::$branchScope[0] === $permission) {
+            return self::$branchScope[1];
+        }
+        $cid = CorpContext::companyId();
+        $uid = CorpContext::userId();
+        $scope = ($cid !== null && $uid !== null) ? self::branchScopeFor($cid, $uid, $permission) : [];
+        self::$branchScope = [$permission, $scope];
+
+        return $scope;
+    }
+
+    /** @return list<int>|null */
+    public static function branchScopeFor(int $companyId, int $userId, string $permission): ?array
+    {
+        $st = Database::connection()->prepare(
+            'SELECT r.scope_type, ur.scope_id
+               FROM corp_user_roles ur
+               JOIN corp_roles r ON r.id = ur.role_id AND (r.company_id = 0 OR r.company_id = ur.company_id)
+               JOIN corp_role_permissions rp ON rp.role_id = r.id AND rp.permission_code = :perm
+              WHERE ur.company_id = :cid AND ur.user_id = :uid'
+        );
+        $st->execute(['perm' => $permission, 'cid' => $companyId, 'uid' => $userId]);
+        $ids = [];
+        foreach ($st->fetchAll() as $row) {
+            if ($row['scope_type'] !== 'branch') {
+                return null;
+            }
+            if ((int) $row['scope_id'] > 0) {
+                $ids[] = (int) $row['scope_id'];
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
     /** Test hook: pretend the current user has exactly these permissions. */
     public static function prime(array $codes): void
     {
@@ -89,5 +136,6 @@ final class CorpAuth
     public static function reset(): void
     {
         self::$perms = null;
+        self::$branchScope = null;
     }
 }

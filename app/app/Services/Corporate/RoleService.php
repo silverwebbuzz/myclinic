@@ -73,10 +73,8 @@ final class RoleService
      */
     public static function canAssign(array $role, array $actorPerms): bool
     {
-        if (($role['scope_type'] ?? 'company') === 'branch') {
-            return false;   // branch roles need branches (Phase 1)
-        }
-
+        // Branch-scoped roles (Branch Manager) are assignable; UserAdminService
+        // requires a valid branch of the company for them.
         return self::isWithin($role['permissions'] ?? [], $actorPerms, (int) ($role['is_clinical'] ?? 0) === 1);
     }
 

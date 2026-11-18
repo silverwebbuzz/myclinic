@@ -850,6 +850,17 @@ return static function (RouteRegistrar $router): void {
         $company->get('/documents/{id}', [\App\Controllers\Corporate\CorpCompanyController::class, 'file']);
         $company->post('/documents/{id}/delete', [\App\Controllers\Corporate\CorpCompanyController::class, 'delete']);
 
+        // Workforce structure (Phase 1A-1)
+        $company->get('/branches', [\App\Controllers\Corporate\CorpStructureController::class, 'branches']);
+        $company->post('/branches', [\App\Controllers\Corporate\CorpStructureController::class, 'saveBranch']);
+        $company->post('/branches/{id}/toggle', [\App\Controllers\Corporate\CorpStructureController::class, 'toggleBranch']);
+        $company->get('/departments', [\App\Controllers\Corporate\CorpStructureController::class, 'departments']);
+        $company->post('/departments', [\App\Controllers\Corporate\CorpStructureController::class, 'saveDepartment']);
+        $company->post('/departments/{id}/toggle', [\App\Controllers\Corporate\CorpStructureController::class, 'toggleDepartment']);
+        $company->get('/job-roles', [\App\Controllers\Corporate\CorpStructureController::class, 'jobRoles']);
+        $company->post('/job-roles', [\App\Controllers\Corporate\CorpStructureController::class, 'saveJobRole']);
+        $company->post('/job-roles/{id}/toggle', [\App\Controllers\Corporate\CorpStructureController::class, 'toggleJobRole']);
+
         // Plan & trial (chunk 0.6) — also the page an expired company is sent to
         $company->get('/billing', [\App\Controllers\Corporate\CorpBillingController::class, 'index']);
     });
