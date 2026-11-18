@@ -17,7 +17,9 @@ $statusPill = [
     'suspended' => ['Suspended', 'bg-erb text-er'],
 ][$status] ?? [ucfirst($status), 'bg-ntb text-nt'];
 
-// [href, label, available] — items not built yet show "Soon" and don't link.
+// [href, label, available, permission|null] — items not built yet show "Soon";
+// items the user's roles don't allow are hidden.
+$can = static fn (?string $perm): bool => $perm === null || \App\Services\Corporate\CorpAuth::can($perm);
 $navGroups = [
     'Overview' => [
         ['/company/dashboard', 'Dashboard', true],
@@ -29,8 +31,8 @@ $navGroups = [
     ],
     'Company' => [
         ['/company/profile', 'Company profile', false],
-        ['/company/users', 'Users & roles', false],
-        ['/company/activity', 'Activity log', false],
+        ['/company/users', 'Users & roles', true, 'users.view'],
+        ['/company/activity', 'Activity log', true, 'audit.view'],
     ],
     'Account' => [
         ['/company/security', 'Security', true],
@@ -39,9 +41,14 @@ $navGroups = [
 ];
 $crumbs = [];
 $activeHref = null;
+$matchPath = str_starts_with($path, '/company/roles') ? '/company/users' : $path;
+foreach ($navGroups as $group => $items) {
+    $navGroups[$group] = array_values(array_filter($items, static fn ($i) => $can($i[3] ?? null)));
+}
+$navGroups = array_filter($navGroups);
 foreach ($navGroups as $group => $items) {
     foreach ($items as [$href, $label]) {
-        if (($path === $href || str_starts_with($path, $href . '/')) && ($activeHref === null || strlen($href) > strlen($activeHref))) {
+        if (($matchPath === $href || str_starts_with($matchPath, $href . '/')) && ($activeHref === null || strlen($href) > strlen($activeHref))) {
             $activeHref = $href;
             $crumbs = [$group, $label];
         }
@@ -77,7 +84,7 @@ $companyName = (string) (($company['trade_name'] ?? '') ?: ($company['legal_name
             <?php foreach ($navGroups as $group => $items): ?>
                 <div class="mt-3">
                     <div class="px-2.5 pb-1.5 text-[10.5px] font-semibold uppercase tracking-[.06em] text-[#6B778C]"><?= $e($group) ?></div>
-                    <?php foreach ($items as [$href, $label, $available]): ?>
+                    <?php foreach ($items as $item): [$href, $label, $available] = $item; ?>
                         <?php $active = $href === $activeHref; ?>
                         <?php if (!$available): ?>
                             <span class="flex h-8 w-full cursor-default items-center gap-2.5 rounded-[7px] px-2.5 text-[13px] font-medium text-[#7B879C]" title="Coming soon">

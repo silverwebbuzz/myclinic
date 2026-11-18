@@ -800,6 +800,24 @@ return static function (RouteRegistrar $router): void {
         $company->post('/security/sessions/{id}/revoke', [\App\Controllers\Corporate\CorpSecurityController::class, 'revokeSession']);
         $company->post('/security/mfa/recovery-codes', [\App\Controllers\Corporate\CorpSecurityController::class, 'regenerateCodes']);
         $company->post('/security/mfa/disable', [\App\Controllers\Corporate\CorpSecurityController::class, 'disableMfa']);
+
+        // Users, invitations, roles, activity log (chunk 0.4). "new" before {id}.
+        $company->get('/invite', [\App\Controllers\Corporate\CorpUsersController::class, 'showAccept']);
+        $company->post('/invite', [\App\Controllers\Corporate\CorpUsersController::class, 'accept']);
+        $company->get('/users', [\App\Controllers\Corporate\CorpUsersController::class, 'index']);
+        $company->post('/users/invite', [\App\Controllers\Corporate\CorpUsersController::class, 'invite']);
+        $company->post('/users/invites/{id}/resend', [\App\Controllers\Corporate\CorpUsersController::class, 'resendInvite']);
+        $company->post('/users/invites/{id}/revoke', [\App\Controllers\Corporate\CorpUsersController::class, 'revokeInvite']);
+        $company->post('/users/{id}/roles', [\App\Controllers\Corporate\CorpUsersController::class, 'updateRoles']);
+        $company->post('/users/{id}/disable', [\App\Controllers\Corporate\CorpUsersController::class, 'disable']);
+        $company->post('/users/{id}/enable', [\App\Controllers\Corporate\CorpUsersController::class, 'enable']);
+        $company->post('/users/{id}/reset-mfa', [\App\Controllers\Corporate\CorpUsersController::class, 'resetMfa']);
+        $company->get('/roles', [\App\Controllers\Corporate\CorpRolesController::class, 'index']);
+        $company->get('/roles/new', [\App\Controllers\Corporate\CorpRolesController::class, 'create']);
+        $company->post('/roles', [\App\Controllers\Corporate\CorpRolesController::class, 'save']);
+        $company->get('/roles/{id}', [\App\Controllers\Corporate\CorpRolesController::class, 'edit']);
+        $company->post('/roles/{id}/delete', [\App\Controllers\Corporate\CorpRolesController::class, 'delete']);
+        $company->get('/activity', [\App\Controllers\Corporate\CorpActivityController::class, 'index']);
     });
 
     // Partner program — public auth pages + guarded partner dashboard.

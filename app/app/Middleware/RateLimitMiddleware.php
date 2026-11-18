@@ -21,7 +21,7 @@ final class RateLimitMiddleware implements MiddlewareInterface
             return $next($request);
         }
         // Company portal: only form SUBMITS count against the tight auth limits.
-        if (in_array($request->uri, ['/company/login', '/company/register', '/company/forgot-password', '/company/reset-password'], true)
+        if (in_array($request->uri, ['/company/login', '/company/register', '/company/forgot-password', '/company/reset-password', '/company/invite'], true)
             && $request->method === 'GET') {
             return $next($request);
         }
@@ -97,7 +97,7 @@ final class RateLimitMiddleware implements MiddlewareInterface
         if ($request->uri === '/company/register') {
             return [5, 3600];
         }
-        if ($request->uri === '/company/forgot-password' || $request->uri === '/company/reset-password') {
+        if ($request->uri === '/company/forgot-password' || $request->uri === '/company/reset-password' || $request->uri === '/company/invite') {
             return [5, 3600];
         }
         if (str_starts_with($request->uri, '/api/')) {

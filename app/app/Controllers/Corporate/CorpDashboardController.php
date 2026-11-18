@@ -6,7 +6,9 @@ namespace App\Controllers\Corporate;
 
 use App\Http\Request;
 use App\Http\Response;
+use App\Core\Database;
 use App\Services\Corporate\CompanyService;
+use App\Services\Corporate\CorpAuth;
 use App\Services\Corporate\CorpAuthService;
 use App\Services\Corporate\CorpContext;
 use App\Services\CsrfService;
@@ -31,6 +33,12 @@ final class CorpDashboardController
             ? LocalDate::daysUntil((string) $company['trial_ends_at'], $loc->timezone)
             : null;
 
+        $st = Database::connection()->prepare(
+            'SELECT (SELECT COUNT(*) FROM corp_users WHERE company_id = :cid) + (SELECT COUNT(*) FROM corp_invitations WHERE company_id = :cid2 AND revoked_at IS NULL)'
+        );
+        $st->execute(['cid' => (int) $company['id'], 'cid2' => (int) $company['id']]);
+        $teamInvited = (int) $st->fetchColumn() > 1;
+
         $hasProfile = !empty($company['address_line1']) && !empty($company['registration_no']);
 
         // [label, hint, done, href] — href null = coming soon, '' = no button (handled elsewhere on the page)
@@ -39,7 +47,7 @@ final class CorpDashboardController
             ['Secure your login', 'Set up an authenticator app (two-step sign-in).', !empty($user['mfa_enabled_at']), '/company/security'],
             ['Complete your company profile', 'Address, ' . ($country['company_id_label'] ?? 'registration number') . ' and licence details.', $hasProfile, null],
             ['Upload your trade licence', 'Needed before we can approve your account.', false, null],
-            ['Invite your team', 'HR, HSE and branch managers.', false, null],
+            ['Invite your team', 'HR, HSE and branch managers.', $teamInvited, CorpAuth::can('users.manage') ? '/company/users' : ''],
         ];
 
         return Response::html(View::render('corporate/dashboard', [

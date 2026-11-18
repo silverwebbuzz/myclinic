@@ -35,6 +35,7 @@ final class CorpContext
         self::$user = $user;
         self::$session = $session;
         self::$locale = null;
+        CorpAuth::reset();
     }
 
     /** @return array<string, mixed>|null */
@@ -81,5 +82,6 @@ final class CorpContext
         self::$user = null;
         self::$session = null;
         self::$locale = null;
+        CorpAuth::reset();
     }
 }

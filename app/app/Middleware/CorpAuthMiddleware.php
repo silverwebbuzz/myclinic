@@ -28,6 +28,7 @@ final class CorpAuthMiddleware implements MiddlewareInterface
         '/company/forgot-password',
         '/company/reset-password',
         '/company/verify-email',
+        '/company/invite',
     ];
 
     public function handle(Request $request, callable $next): Response
