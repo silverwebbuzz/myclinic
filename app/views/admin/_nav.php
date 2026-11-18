@@ -170,7 +170,7 @@ if (!defined('ECP_ADMIN_ALPINE_LOADED')) {
 <?php if (!defined('ECP_ADMIN_SKIN_EMITTED')): define('ECP_ADMIN_SKIN_EMITTED', true); ?>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
     /* ============================================================
        Admin skin — same console look as the seller portal
