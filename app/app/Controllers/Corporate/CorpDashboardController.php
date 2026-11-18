@@ -12,7 +12,6 @@ use App\Services\Corporate\CorpAuth;
 use App\Services\Corporate\CorpAuthService;
 use App\Services\Corporate\CorpContext;
 use App\Services\CsrfService;
-use App\Services\SubscriptionStatus;
 use App\Support\Locale\CountryRepo;
 use App\Support\Locale\LocalDate;
 use App\Support\SessionFlash;
@@ -28,7 +27,7 @@ final class CorpDashboardController
         $loc = CorpContext::locale();
         $country = CountryRepo::country((string) ($company['country_code'] ?? ''));
 
-        $plan = SubscriptionStatus::forClinic($company);
+        $plan = \App\Services\Corporate\CorpPlanStatus::for($company);
         $trialDaysLeft = !empty($company['trial_ends_at'])
             ? LocalDate::daysUntil((string) $company['trial_ends_at'], $loc->timezone)
             : null;

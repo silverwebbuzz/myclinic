@@ -11,6 +11,7 @@ use App\Services\Corporate\CorpAuthService;
 use App\Services\Corporate\CorpContext;
 use App\Services\Corporate\CorpJwtService;
 use App\Services\Corporate\CorpMfaService;
+use App\Services\Corporate\CorpPlanStatus;
 use App\Services\Corporate\CorpSessionService;
 
 /**
@@ -85,7 +86,24 @@ final class CorpAuthMiddleware implements MiddlewareInterface
             return Response::redirect('/company/mfa/' . $step . $next);
         }
 
+        // Trial / plan gate: once it has ended, only the plan page, own security
+        // settings and sign-out stay open. Pending companies have no dates, so
+        // they are never blocked here.
+        if (CorpPlanStatus::for($company)['expired'] && !$this->allowedWhenExpired($path)) {
+            if ($request->isJson()) {
+                return Response::json(['error' => 'Your company\'s plan has ended.', 'code' => 'plan_expired'], 402);
+            }
+
+            return Response::redirect('/company/billing');
+        }
+
         return $next();
+    }
+
+    private function allowedWhenExpired(string $path): bool
+    {
+        return in_array($path, ['/company/billing', '/company/logout', '/company/mfa/setup', '/company/mfa/verify'], true)
+            || $path === '/company/security' || str_starts_with($path, '/company/security/');
     }
 
     /** Reachable while two-step sign-in is still pending. */

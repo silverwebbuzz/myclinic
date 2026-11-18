@@ -16,6 +16,10 @@ $statusPill = [
     'active' => ['Active', 'bg-okb text-ok'],
     'suspended' => ['Suspended', 'bg-erb text-er'],
 ][$status] ?? [ucfirst($status), 'bg-ntb text-nt'];
+$planStatus = \App\Services\Corporate\CorpPlanStatus::for($company);
+if ($status === 'active' && $planStatus['expired']) {
+    $statusPill = [$planStatus['reason'] === 'trial' ? 'Trial ended' : 'Plan ended', 'bg-erb text-er'];
+}
 
 // [href, label, available, permission|null] — items not built yet show "Soon";
 // items the user's roles don't allow are hidden.
@@ -36,7 +40,7 @@ $navGroups = [
     ],
     'Account' => [
         ['/company/security', 'Security', true],
-        ['/company/billing', 'Plan & trial', false],
+        ['/company/billing', 'Plan & trial', true],
     ],
 ];
 $crumbs = [];
@@ -138,6 +142,13 @@ $companyName = (string) (($company['trade_name'] ?? '') ?: ($company['legal_name
         </header>
 
         <div class="flex flex-1 flex-col gap-4 p-3 md:p-5">
+            <?php if ($planStatus['state'] === 'expiring_soon' && $path !== '/company/billing'): ?>
+                <div class="flex flex-wrap items-center gap-2 rounded-[10px] border border-wn/20 bg-wnb px-4 py-3 text-wn">
+                    <strong><?= $planStatus['reason'] === 'trial' ? 'Your free trial' : 'Your plan' ?> ends <?= (int) $planStatus['days_left'] === 0 ? 'today' : 'in ' . (int) $planStatus['days_left'] . ' day' . ((int) $planStatus['days_left'] === 1 ? '' : 's') ?>.</strong>
+                    <span>After that, only the plan page stays open until it's renewed.</span>
+                    <a href="/company/billing" class="font-semibold underline">See plan options</a>
+                </div>
+            <?php endif; ?>
             <?php if ($status === 'pending'): ?>
                 <div class="rounded-[10px] border border-wn/20 bg-wnb px-4 py-3 text-wn">
                     <strong>Your company is under review.</strong> We check every company before it can add employees. This usually takes one working day; we'll email you when it's done.

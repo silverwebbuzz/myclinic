@@ -849,6 +849,9 @@ return static function (RouteRegistrar $router): void {
         $company->post('/documents', [\App\Controllers\Corporate\CorpCompanyController::class, 'upload']);
         $company->get('/documents/{id}', [\App\Controllers\Corporate\CorpCompanyController::class, 'file']);
         $company->post('/documents/{id}/delete', [\App\Controllers\Corporate\CorpCompanyController::class, 'delete']);
+
+        // Plan & trial (chunk 0.6) — also the page an expired company is sent to
+        $company->get('/billing', [\App\Controllers\Corporate\CorpBillingController::class, 'index']);
     });
 
     // Partner program — public auth pages + guarded partner dashboard.
