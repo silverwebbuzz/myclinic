@@ -30,7 +30,7 @@ $navGroups = [
         ['/company/reports', 'Reports', false],
     ],
     'Company' => [
-        ['/company/profile', 'Company profile', false],
+        ['/company/profile', 'Company profile', true, 'company.view'],
         ['/company/users', 'Users & roles', true, 'users.view'],
         ['/company/activity', 'Activity log', true, 'audit.view'],
     ],

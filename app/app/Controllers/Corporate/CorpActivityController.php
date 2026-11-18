@@ -54,6 +54,13 @@ final class CorpActivityController
         'role_updated' => 'Edited a custom role',
         'role_deleted' => 'Deleted a custom role',
         'permission_denied' => 'Tried to open a page without permission',
+        'profile_updated' => 'Updated the company profile',
+        'document_uploaded' => 'Uploaded a document',
+        'document_deleted' => 'Deleted a document',
+        'document_approved' => 'Document approved by eClinicPro',
+        'document_rejected' => 'Document not accepted by eClinicPro',
+        'plan_set' => 'Plan updated by eClinicPro',
+        'mfa_reset_by_eclinicpro' => 'Two-step sign-in reset by eClinicPro support',
     ];
 
     public function index(Request $request): Response

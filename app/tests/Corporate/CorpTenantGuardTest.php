@@ -15,6 +15,8 @@ use PHPUnit\Framework\TestCase;
  *   a key that already identifies one company's row: id, user_id, jti,
  *   token_hash, public_ref, email (unique login), role_id + company scope.
  * A brand-new unscoped query ("SELECT * FROM corp_users") fails the build.
+ * Deliberate platform-wide admin queries carry the SQL comment
+ * cross-company: admin so they are explicit and greppable.
  * Master tables (corp_permissions, corp_industries, corp_roles system rows)
  * are not company-owned and are skipped.
  */
@@ -24,6 +26,7 @@ final class CorpTenantGuardTest extends TestCase
         __DIR__ . '/../../app/Services/Corporate',
         __DIR__ . '/../../app/Controllers/Corporate',
         __DIR__ . '/../../app/Middleware/CorpAuthMiddleware.php',
+        __DIR__ . '/../../app/Controllers/CorporateAdminController.php',
     ];
 
     private const COMPANY_TABLES = [
@@ -33,6 +36,7 @@ final class CorpTenantGuardTest extends TestCase
 
     private const SCOPE_MARKERS = [
         'company_id', 'cid', 'id = :id', 'user_id', 'jti', 'token_hash', 'public_ref', 'email = :email', 'INSERT INTO',
+        'cross-company: admin',   // deliberate platform-level query (super admin screens only)
     ];
 
     public function testEveryCompanyTableQueryIsScoped(): void

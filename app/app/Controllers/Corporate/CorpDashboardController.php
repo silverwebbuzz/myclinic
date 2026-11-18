@@ -39,14 +39,15 @@ final class CorpDashboardController
         $st->execute(['cid' => (int) $company['id'], 'cid2' => (int) $company['id']]);
         $teamInvited = (int) $st->fetchColumn() > 1;
 
-        $hasProfile = !empty($company['address_line1']) && !empty($company['registration_no']);
+        $hasProfile = \App\Services\Corporate\CompanyProfileService::isComplete($company);
+        $hasDocs = \App\Services\Corporate\CompanyDocumentService::list((int) $company['id']) !== [];
 
         // [label, hint, done, href] — href null = coming soon, '' = no button (handled elsewhere on the page)
         $checklist = [
             ['Confirm your email', 'Click the link we sent to ' . ($user['email'] ?? '') . '.', !empty($user['email_verified_at']), ''],
             ['Secure your login', 'Set up an authenticator app (two-step sign-in).', !empty($user['mfa_enabled_at']), '/company/security'],
-            ['Complete your company profile', 'Address, ' . ($country['company_id_label'] ?? 'registration number') . ' and licence details.', $hasProfile, null],
-            ['Upload your trade licence', 'Needed before we can approve your account.', false, null],
+            ['Complete your company profile', 'Address, ' . ($country['company_id_label'] ?? 'registration number') . ' and licence details.', $hasProfile, CorpAuth::can('company.edit') ? '/company/profile' : ''],
+            ['Upload your trade licence', 'Needed before we can approve your account.', $hasDocs, CorpAuth::can('company.edit') ? '/company/profile#documents' : ''],
             ['Invite your team', 'HR, HSE and branch managers.', $teamInvited, CorpAuth::can('users.manage') ? '/company/users' : ''],
         ];
 

@@ -42,6 +42,11 @@ $navGroups = [
         ['/admin/outreach', 'Outreach', 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
         ['/admin/wordpress-doctors', 'Blog access', 'M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z'],
     ],
+    'Workforce Health' => [
+        ['/admin/corporate/companies', 'Companies', 'M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M9 17h1M14 9h1M14 13h1M14 17h1', \App\Services\Corporate\CorpAdminService::pendingCount()],
+        ['/admin/corporate/geo', 'Countries & industries', 'M12 2a10 10 0 100 20 10 10 0 000-20zM2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20'],
+        ['/admin/corporate/settings', 'Settings & team', 'M12 15a3 3 0 100-6 3 3 0 000 6zM4 12h2M18 12h2M12 4v2M12 18v2'],
+    ],
     'Marketing' => [
         ['/admin/marketing', 'Doctor list', 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2zM8 9h8M8 13h5'],
         ['/admin/marketing/templates', 'Message templates', 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h4'],
@@ -128,6 +133,12 @@ if ($inStore) {
     ];
 } else {
     $navGroups['Overview'][] = ['/admin/store/dashboard', 'Store (marketplace)', 'M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6', $storePending];
+}
+
+// Non-super team roles (country admin / billing / support) only see Workforce Health.
+if (!\App\Services\Corporate\PlatformAdminScope::isSuper(\App\Core\RequestContext::superAdmin())) {
+    $wh = array_values(array_filter($navGroups['Workforce Health'] ?? [], static fn ($i) => $i[0] !== '/admin/corporate/settings'));
+    $navGroups = ['Workforce Health' => $wh];
 }
 
 // Current item: exact match, else the longest parent path (/admin/store/orders/12 → Orders).

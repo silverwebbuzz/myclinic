@@ -405,6 +405,30 @@ return static function (RouteRegistrar $router): void {
     ], static function (GroupedRouteRegistrar $admin): void {
         $admin->get('/dashboard', [SuperAdminController::class, 'dashboard']);
         $admin->get('/clinics', [SuperAdminController::class, 'clinics']);
+
+        // Workforce Health (corporate) — companies, countries, settings. Design: document/workforce-health-phase0-design.md
+        $admin->get('/corporate', static fn () => \App\Http\Response::redirect('/admin/corporate/companies'));
+        $admin->get('/corporate/companies', [\App\Controllers\CorporateAdminController::class, 'companies']);
+        $admin->get('/corporate/companies/{id}', [\App\Controllers\CorporateAdminController::class, 'company']);
+        $admin->post('/corporate/companies/{id}/approve', [\App\Controllers\CorporateAdminController::class, 'approve']);
+        $admin->post('/corporate/companies/{id}/reject', [\App\Controllers\CorporateAdminController::class, 'reject']);
+        $admin->post('/corporate/companies/{id}/suspend', [\App\Controllers\CorporateAdminController::class, 'suspend']);
+        $admin->post('/corporate/companies/{id}/reactivate', [\App\Controllers\CorporateAdminController::class, 'reactivate']);
+        $admin->post('/corporate/companies/{id}/extend-trial', [\App\Controllers\CorporateAdminController::class, 'extendTrial']);
+        $admin->post('/corporate/companies/{id}/plan', [\App\Controllers\CorporateAdminController::class, 'setPlan']);
+        $admin->get('/corporate/companies/{id}/documents/{docId}', [\App\Controllers\CorporateAdminController::class, 'document']);
+        $admin->post('/corporate/companies/{id}/documents/{docId}/review', [\App\Controllers\CorporateAdminController::class, 'reviewDocument']);
+        $admin->post('/corporate/companies/{id}/users/{userId}/reset-mfa', [\App\Controllers\CorporateAdminController::class, 'resetUserMfa']);
+        $admin->get('/corporate/geo', [\App\Controllers\CorporateAdminController::class, 'geo']);
+        $admin->get('/corporate/geo/countries/{code}', [\App\Controllers\CorporateAdminController::class, 'country']);
+        $admin->post('/corporate/geo/countries/{code}', [\App\Controllers\CorporateAdminController::class, 'saveCountry']);
+        $admin->post('/corporate/geo/countries/{code}/regions', [\App\Controllers\CorporateAdminController::class, 'addRegion']);
+        $admin->post('/corporate/geo/regions/{id}/toggle', [\App\Controllers\CorporateAdminController::class, 'toggleRegion']);
+        $admin->post('/corporate/geo/industries', [\App\Controllers\CorporateAdminController::class, 'addIndustry']);
+        $admin->post('/corporate/geo/industries/{id}/toggle', [\App\Controllers\CorporateAdminController::class, 'toggleIndustry']);
+        $admin->get('/corporate/settings', [\App\Controllers\CorporateAdminController::class, 'settings']);
+        $admin->post('/corporate/settings', [\App\Controllers\CorporateAdminController::class, 'saveSettings']);
+        $admin->post('/corporate/settings/admins/{id}', [\App\Controllers\CorporateAdminController::class, 'saveAdminRole']);
         $admin->get('/patients', [SuperAdminController::class, 'patients']);
         $admin->get('/patients/{id}', [SuperAdminController::class, 'patientDetail']);
         $admin->get('/signups', [SuperAdminController::class, 'signups']);
@@ -818,6 +842,13 @@ return static function (RouteRegistrar $router): void {
         $company->get('/roles/{id}', [\App\Controllers\Corporate\CorpRolesController::class, 'edit']);
         $company->post('/roles/{id}/delete', [\App\Controllers\Corporate\CorpRolesController::class, 'delete']);
         $company->get('/activity', [\App\Controllers\Corporate\CorpActivityController::class, 'index']);
+
+        // Company profile + registration documents (chunk 0.5)
+        $company->get('/profile', [\App\Controllers\Corporate\CorpCompanyController::class, 'show']);
+        $company->post('/profile', [\App\Controllers\Corporate\CorpCompanyController::class, 'save']);
+        $company->post('/documents', [\App\Controllers\Corporate\CorpCompanyController::class, 'upload']);
+        $company->get('/documents/{id}', [\App\Controllers\Corporate\CorpCompanyController::class, 'file']);
+        $company->post('/documents/{id}/delete', [\App\Controllers\Corporate\CorpCompanyController::class, 'delete']);
     });
 
     // Partner program — public auth pages + guarded partner dashboard.
