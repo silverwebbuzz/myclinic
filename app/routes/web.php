@@ -765,6 +765,30 @@ return static function (RouteRegistrar $router): void {
         $vendor->get('/payouts/{id}/statement', [\App\Controllers\VendorPayoutController::class, 'statement']);
     });
 
+    // Workforce Health — company (employer) portal. Own guard (mc_corp_token, path /company),
+    // separate from clinic users, admins, partners and sellers. Design: document/workforce-health-phase0-design.md
+    $router->get('/company', static fn () => \App\Http\Response::redirect('/company/dashboard'));
+    $router->group([
+        'prefix' => '/company',
+        'middleware' => ['rate', 'csrf', 'corp'],
+    ], static function (GroupedRouteRegistrar $company): void {
+        // Public (CorpAuthMiddleware lets exactly these paths through)
+        $company->get('/login', [\App\Controllers\Corporate\CorpAuthController::class, 'showLogin']);
+        $company->post('/login', [\App\Controllers\Corporate\CorpAuthController::class, 'login']);
+        $company->get('/register', [\App\Controllers\Corporate\CorpAuthController::class, 'showRegister']);
+        $company->post('/register', [\App\Controllers\Corporate\CorpAuthController::class, 'register']);
+        $company->get('/forgot-password', [\App\Controllers\Corporate\CorpAuthController::class, 'showForgot']);
+        $company->post('/forgot-password', [\App\Controllers\Corporate\CorpAuthController::class, 'forgot']);
+        $company->get('/reset-password', [\App\Controllers\Corporate\CorpAuthController::class, 'showReset']);
+        $company->post('/reset-password', [\App\Controllers\Corporate\CorpAuthController::class, 'reset']);
+        $company->get('/verify-email', [\App\Controllers\Corporate\CorpAuthController::class, 'verifyEmail']);
+
+        // Signed in
+        $company->post('/logout', [\App\Controllers\Corporate\CorpAuthController::class, 'logout']);
+        $company->get('/dashboard', [\App\Controllers\Corporate\CorpDashboardController::class, 'index']);
+        $company->post('/verify-email/resend', [\App\Controllers\Corporate\CorpDashboardController::class, 'resendVerification']);
+    });
+
     // Partner program — public auth pages + guarded partner dashboard.
     // Separate guard (mc_partner_token) from clinic users and platform admins.
     $router->group([

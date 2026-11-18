@@ -20,6 +20,11 @@ final class RateLimitMiddleware implements MiddlewareInterface
         if ($request->uri === '/forgot-username' && $request->method === 'GET') {
             return $next($request);
         }
+        // Company portal: only form SUBMITS count against the tight auth limits.
+        if (in_array($request->uri, ['/company/login', '/company/register', '/company/forgot-password', '/company/reset-password'], true)
+            && $request->method === 'GET') {
+            return $next($request);
+        }
 
         [$limit, $window] = $this->limitsFor($request);
         $subject = $this->rateSubject($request);
@@ -58,6 +63,9 @@ final class RateLimitMiddleware implements MiddlewareInterface
         if ($request->uri === '/login') {
             return Response::redirect('/login?error=' . urlencode('Too many login attempts. Please wait a minute and try again.'));
         }
+        if (str_starts_with($request->uri, '/company/')) {
+            return Response::redirect('/company/login?error=' . urlencode('Too many attempts. Please wait a few minutes and try again.'));
+        }
 
         return Response::html(
             '<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap"><title>Too many requests</title></head>'
@@ -78,6 +86,15 @@ final class RateLimitMiddleware implements MiddlewareInterface
             return [5, 3600];
         }
         if (str_starts_with($request->uri, '/forgot-username')) {
+            return [5, 3600];
+        }
+        if ($request->uri === '/company/login') {
+            return [10, 60];
+        }
+        if ($request->uri === '/company/register') {
+            return [5, 3600];
+        }
+        if ($request->uri === '/company/forgot-password' || $request->uri === '/company/reset-password') {
             return [5, 3600];
         }
         if (str_starts_with($request->uri, '/api/')) {
