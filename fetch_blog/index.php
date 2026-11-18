@@ -43,7 +43,7 @@ function fb_spec_anchor(string $spec): string {
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap">
 <meta charset="utf-8">
 <meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -51,7 +51,7 @@ function fb_spec_anchor(string $spec): string {
 <style>
   :root { --teal:#0F766E; --border:#dbe7e5; }
   * { box-sizing:border-box; }
-  body { font-family:-apple-system,Segoe UI,Roboto,sans-serif; margin:0; background:#f4f8f7; color:#1d2b2a; }
+  body { font-family:'Inter', -apple-system, BlinkMacSystemFont, sans-serif; margin:0; background:#f4f8f7; color:#1d2b2a; }
   header { background:var(--teal); color:#fff; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
   header h1 { margin:0; font-size:19px; }
   header .count { font-size:14px; opacity:.9; }

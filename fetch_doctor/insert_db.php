@@ -286,14 +286,14 @@ if ($dbReady) {
 }
 ?><!doctype html>
 <html lang="en">
-<head>
+<head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Import Doctors to DB — eClinicPro</title>
 <style>
 :root { --teal: #0F9B6E; --line: rgba(0,0,0,0.08); --bg: #f8fafc; --mute: #64748b; --ink: #0f172a; }
 * { box-sizing: border-box; }
-body { font: 14px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--ink); }
+body { font: 14px/1.5 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; background: var(--bg); color: var(--ink); }
 .wrap { max-width: 880px; margin: 0 auto; padding: 32px 20px 80px; }
 h1 { font-size: 24px; font-weight: 600; margin: 0 0 8px; }
 .lede { color: var(--mute); margin: 0 0 24px; }

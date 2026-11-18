@@ -249,7 +249,7 @@ function ecp_email_template(string $heading, string $bodyHtml): string
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{$safeHeading}</title>
 </head>
-<body style="margin:0; padding:0; background:#f5f5f7; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#1c1c1e;">
+<body style="margin:0; padding:0; background:#f5f5f7; font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#1c1c1e;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f7; padding:24px 0;">
     <tr>
       <td align="center">

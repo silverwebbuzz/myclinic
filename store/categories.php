@@ -22,7 +22,7 @@ require __DIR__ . '/_header.php';
     <?php foreach (store_tree() as $d): ?>
       <?php if (!$d['subs']) { continue; } ?>
       <section>
-        <h2 style="margin:0 0 10px;font:500 22px 'Newsreader',serif"><a href="<?= e(store_url('c/' . $d['slug'])) ?>" style="text-decoration:none;color:var(--st-navy)"><?= e($d['name']) ?></a></h2>
+        <h2 style="margin:0 0 10px;font:600 22px 'Inter',sans-serif"><a href="<?= e(store_url('c/' . $d['slug'])) ?>" style="text-decoration:none;color:var(--st-navy)"><?= e($d['name']) ?></a></h2>
         <ul style="list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px">
           <?php foreach ($d['subs'] as $s): ?>
             <li><a href="<?= e(store_url('c/' . $d['slug'] . '/' . $s['slug'])) ?>" style="color:var(--st-ink-2);text-decoration:none"><?= e($s['name']) ?></a></li>

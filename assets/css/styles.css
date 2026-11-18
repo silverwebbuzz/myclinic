@@ -326,7 +326,16 @@ button {
 }
 
 .nav-drop-caret {
-  transition: transform .15s;
+  /* Never let a crowded nav squeeze the arrow to 0 width. */
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  opacity: .7;
+  transition: transform .15s, opacity .15s;
+}
+
+.nav-drop:hover .nav-drop-caret {
+  opacity: 1;
 }
 
 .nav-drop:hover .nav-drop-caret {
@@ -2326,8 +2335,14 @@ footer.foot {
     display: block;
   }
 
-  .nav-drop-caret {
-    display: none;
+  /* Keep the arrow on mobile too so it's clear "For doctors" has sub-items. */
+  .nav-link-drop {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .nav-drop:hover .nav-drop-caret {
+    transform: none;
   }
 
   .nav-drop-menu {

@@ -60,8 +60,8 @@ final class RateLimitMiddleware implements MiddlewareInterface
         }
 
         return Response::html(
-            '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Too many requests</title></head>'
-            . '<body style="font-family:sans-serif;padding:2rem;text-align:center">'
+            '<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap"><title>Too many requests</title></head>'
+            . '<body style="font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;padding:2rem;text-align:center">'
             . '<h1>Too many requests</h1><p>Please wait a few minutes and try again.</p>'
             . '<p><a href="/login">Back to login</a></p></body></html>',
             429,

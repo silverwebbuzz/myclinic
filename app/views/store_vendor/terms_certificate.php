@@ -22,13 +22,13 @@ $types = ['proprietorship' => 'Proprietorship', 'partnership' => 'Partnership', 
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Seller agreement v<?= (int) $ver['version'] ?> · <?= $e($vendor['legal_name'] ?: $vendor['display_name']) ?></title>
     <style>
         * { box-sizing: border-box; }
-        body { margin: 0; background: #f1f5f9; color: #0f172a; font: 14px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+        body { margin: 0; background: #f1f5f9; color: #0f172a; font: 14px/1.55 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
         .bar { max-width: 820px; margin: 16px auto 0; padding: 0 16px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
         .bar a, .bar button { font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 7px; border: 1px solid #cbd5e1; background: #fff; color: #0f172a; cursor: pointer; text-decoration: none; }
         .bar button { background: #0e4d34; border-color: #0e4d34; color: #fff; }

@@ -419,12 +419,12 @@ function fb_render_preview_page(array $row, string $contentHtml): string {
     $wpBase = rtrim(fb_env('WP_BASE_URL', 'https://eclinicpro.com/blog'), '/');
     $css = $wpBase . '/wp-content/themes/eclinicpro-blog/style.css';
     $blocksCss = (string) @file_get_contents(__DIR__ . '/blog-blocks.css');
-    return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap">'
         . '<meta name="viewport" content="width=device-width, initial-scale=1">'
         . '<meta name="robots" content="noindex,nofollow">'
         . '<title>' . fb_e((string) $row['title']) . ' — preview</title>'
         . '<link rel="stylesheet" href="' . fb_e($css) . '">'
-        . '<style>body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;margin:0;background:#fafafa;color:#222;}'
+        . '<style>body{font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;margin:0;background:#fafafa;color:#222;}'
         . '.preview-note{background:#fff8e6;border-bottom:1px solid #f1e2b0;padding:10px 16px;font-size:13px;text-align:center;}'
         . '.wrap{max-width:900px;margin:0 auto;padding:30px 18px 60px;background:#fff;}h1{line-height:1.3;}'
         . $blocksCss . '</style></head>'

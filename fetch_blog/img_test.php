@@ -130,13 +130,13 @@ $existing = is_dir($imgDir) ? array_values(array_diff(scandir($imgDir) ?: [], ['
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap">
 <meta charset="utf-8">
 <meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gemini image debug — fetch_blog</title>
 <style>
-  body { font-family:-apple-system,Segoe UI,Roboto,sans-serif; margin:0; background:#f4f8f7; color:#1d2b2a; }
+  body { font-family:'Inter', -apple-system, BlinkMacSystemFont, sans-serif; margin:0; background:#f4f8f7; color:#1d2b2a; }
   header { background:#0F766E; color:#fff; padding:14px 22px; }
   header h1 { margin:0; font-size:18px; }
   main { max-width:900px; margin:0 auto; padding:18px; }

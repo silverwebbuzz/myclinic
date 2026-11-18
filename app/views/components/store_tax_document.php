@@ -22,7 +22,7 @@ $ecoGstin = \App\Services\Store\StoreSettings::get('store_platform_gstin');
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
@@ -30,7 +30,7 @@ $ecoGstin = \App\Services\Store\StoreSettings::get('store_platform_gstin');
 <style>
   :root { --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#f1f5f9; }
   * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.45 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
   .bar { max-width:900px; margin:16px auto 0; padding:0 16px; display:flex; gap:8px; justify-content:space-between; }
   .bar a, .bar button { font:inherit; font-size:13px; padding:7px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); text-decoration:none; cursor:pointer; }
   .page { max-width:900px; margin:12px auto 32px; background:#fff; padding:28px; border:1px solid var(--line); border-radius:8px; }

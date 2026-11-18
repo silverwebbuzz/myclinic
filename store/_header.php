@@ -26,8 +26,7 @@ $noindex = !store_is_live();
 if (!empty($storeCanonical)) {
     $canonicalUrl = ecp_site_url($storeCanonical);
 }
-$extraHead = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap">'
-    . "\n    " . '<link rel="stylesheet" href="/assets/css/store.css?v=' . (int) $cssBust . '">'
+$extraHead = '<link rel="stylesheet" href="/assets/css/store.css?v=' . (int) $cssBust . '">'
     . (!empty($storeJsonLd)
         ? "\n    " . '<script type="application/ld+json">' . json_encode($storeJsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) . '</script>'
         : '');

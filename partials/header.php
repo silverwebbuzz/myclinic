@@ -287,7 +287,7 @@ body.patient-wide .nav-inner{max-width:1572px}
             <div class="nav-drop">
                 <a href="/clinic-management-software" class="nav-link nav-link-drop <?= nav_active('features') ?>">
                     For doctors
-                    <svg class="nav-drop-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                    <svg class="nav-drop-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
                 </a>
                 <div class="nav-drop-menu">
                     <a href="/clinic-management-software" class="nav-drop-item">Clinic Management Software</a>
@@ -300,8 +300,6 @@ body.patient-wide .nav-inner{max-width:1572px}
             <a href="/store/" class="nav-link <?= nav_active('store') ?>">Health Store</a>
             <?php endif; ?>
             <a href="/pricing" class="nav-link <?= nav_active('pricing') ?>">Pricing</a>
-            <a href="/#specialties" class="nav-link <?= nav_active('specialties') ?>">Specialties</a>
-            <a href="/security" class="nav-link <?= nav_active('security') ?>">Security</a>
 
             <!-- Auth lives in the burger on mobile: .nav-signin is display:none
                  below 900px, so without this a patient on a phone has no way

@@ -170,13 +170,13 @@ if (!$isCli) {
     $state = $ready ? sib_load_state($stateFile) : null;
     ?><!doctype html>
 <html lang="en">
-<head>
+<head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap">
 <meta charset="utf-8">
 <meta name="robots" content="noindex">
 <?php if ($continue): ?><meta http-equiv="refresh" content="1;url=?action=run"><?php endif; ?>
 <title>Build clinic siblings — eClinicPro</title>
 <style>
-body { font: 14px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; margin: 0; background: #f8fafc; color: #0f172a; }
+body { font: 14px/1.5 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; background: #f8fafc; color: #0f172a; }
 .wrap { max-width: 880px; margin: 0 auto; padding: 32px 20px 80px; }
 pre { background: #fff; border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; padding: 14px; white-space: pre-wrap; font-size: 12px; }
 .btn { display: inline-block; background: #0f172a; color: #fff; padding: 9px 16px; border-radius: 8px; text-decoration: none; margin-right: 8px; }
