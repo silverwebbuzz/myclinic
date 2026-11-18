@@ -33,7 +33,7 @@ $navGroups = [
         ['/company/activity', 'Activity log', false],
     ],
     'Account' => [
-        ['/company/security', 'Security', false],
+        ['/company/security', 'Security', true],
         ['/company/billing', 'Plan & trial', false],
     ],
 ];

@@ -787,6 +787,19 @@ return static function (RouteRegistrar $router): void {
         $company->post('/logout', [\App\Controllers\Corporate\CorpAuthController::class, 'logout']);
         $company->get('/dashboard', [\App\Controllers\Corporate\CorpDashboardController::class, 'index']);
         $company->post('/verify-email/resend', [\App\Controllers\Corporate\CorpDashboardController::class, 'resendVerification']);
+
+        // Two-step sign-in + security page (chunk 0.3)
+        $company->get('/mfa/setup', [\App\Controllers\Corporate\CorpSecurityController::class, 'showSetup']);
+        $company->post('/mfa/setup', [\App\Controllers\Corporate\CorpSecurityController::class, 'confirmSetup']);
+        $company->get('/mfa/verify', [\App\Controllers\Corporate\CorpSecurityController::class, 'showVerify']);
+        $company->post('/mfa/verify', [\App\Controllers\Corporate\CorpSecurityController::class, 'verify']);
+        $company->get('/security', [\App\Controllers\Corporate\CorpSecurityController::class, 'index']);
+        $company->post('/security/password', [\App\Controllers\Corporate\CorpSecurityController::class, 'changePassword']);
+        $company->post('/security/timezone', [\App\Controllers\Corporate\CorpSecurityController::class, 'saveTimezone']);
+        $company->post('/security/sessions/revoke-others', [\App\Controllers\Corporate\CorpSecurityController::class, 'revokeOthers']);
+        $company->post('/security/sessions/{id}/revoke', [\App\Controllers\Corporate\CorpSecurityController::class, 'revokeSession']);
+        $company->post('/security/mfa/recovery-codes', [\App\Controllers\Corporate\CorpSecurityController::class, 'regenerateCodes']);
+        $company->post('/security/mfa/disable', [\App\Controllers\Corporate\CorpSecurityController::class, 'disableMfa']);
     });
 
     // Partner program — public auth pages + guarded partner dashboard.

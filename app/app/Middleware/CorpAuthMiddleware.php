@@ -10,6 +10,7 @@ use App\Services\Corporate\CompanyService;
 use App\Services\Corporate\CorpAuthService;
 use App\Services\Corporate\CorpContext;
 use App\Services\Corporate\CorpJwtService;
+use App\Services\Corporate\CorpMfaService;
 use App\Services\Corporate\CorpSessionService;
 
 /**
@@ -69,8 +70,25 @@ final class CorpAuthMiddleware implements MiddlewareInterface
 
         CorpContext::set($company, $user, $session);
 
+        // Two-step sign-in gate: until it's passed (or set up, when required),
+        // only the MFA pages and sign-out are reachable.
+        $step = CorpMfaService::pendingStep($user, $session);
+        if ($step !== null && !in_array($path, self::MFA_PATHS, true)) {
+            if ($request->isJson()) {
+                return Response::json(['error' => 'Two-step sign-in required.', 'code' => 'mfa_' . $step], 401);
+            }
+            $next = $request->method === 'GET' && !in_array($path, ['/company', '/company/dashboard'], true)
+                ? '?next=' . rawurlencode($request->uri)
+                : '';
+
+            return Response::redirect('/company/mfa/' . $step . $next);
+        }
+
         return $next();
     }
+
+    /** Reachable while two-step sign-in is still pending. */
+    private const MFA_PATHS = ['/company/mfa/setup', '/company/mfa/verify', '/company/logout'];
 
     private function toLogin(Request $request, bool $clearCookie, ?string $message = null): Response
     {

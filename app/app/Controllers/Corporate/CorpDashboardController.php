@@ -36,7 +36,7 @@ final class CorpDashboardController
         // [label, hint, done, href] — href null = coming soon, '' = no button (handled elsewhere on the page)
         $checklist = [
             ['Confirm your email', 'Click the link we sent to ' . ($user['email'] ?? '') . '.', !empty($user['email_verified_at']), ''],
-            ['Secure your login', 'Set up an authenticator app (two-step sign-in).', !empty($user['mfa_enabled_at']), null],
+            ['Secure your login', 'Set up an authenticator app (two-step sign-in).', !empty($user['mfa_enabled_at']), '/company/security'],
             ['Complete your company profile', 'Address, ' . ($country['company_id_label'] ?? 'registration number') . ' and licence details.', $hasProfile, null],
             ['Upload your trade licence', 'Needed before we can approve your account.', false, null],
             ['Invite your team', 'HR, HSE and branch managers.', false, null],

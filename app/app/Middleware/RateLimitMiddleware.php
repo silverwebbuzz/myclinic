@@ -91,6 +91,9 @@ final class RateLimitMiddleware implements MiddlewareInterface
         if ($request->uri === '/company/login') {
             return [10, 60];
         }
+        if ($request->uri === '/company/mfa/verify' && $request->method === 'POST') {
+            return [10, 60];
+        }
         if ($request->uri === '/company/register') {
             return [5, 3600];
         }
