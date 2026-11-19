@@ -71,7 +71,7 @@ final class CorpEmployeesController
         }
         $inv = \App\Services\Corporate\EmployeeInviteService::invite((int) CorpContext::companyId(), (int) CorpContext::userId(), (int) $res['id'], CorpAuth::branchScope('employees.manage'));
         SessionFlash::put('corp_ok', 'Employee added. ' . ($inv['ok']
-            ? 'We sent them an invitation by ' . implode(' and ', array_map(static fn (string $c): string => $c === 'sms' ? 'SMS' : 'email', $inv['channels'] ?? [])) . ' to sign in and confirm.'
+            ? 'We sent them an invitation by ' . implode(' and ', array_map(static fn (string $c): string => $c === 'whatsapp' ? 'WhatsApp' : 'email', $inv['channels'] ?? [])) . ' to sign in and confirm.'
             : 'They\'ll be asked to confirm the link when they sign in to eClinicPro with their mobile number.'));
 
         return Response::redirect('/company/employees/' . (int) $res['id']);
@@ -132,7 +132,7 @@ final class CorpEmployeesController
         }
         $res = \App\Services\Corporate\EmployeeInviteService::invite((int) CorpContext::companyId(), (int) CorpContext::userId(), (int) $id, CorpAuth::branchScope('employees.manage'));
         SessionFlash::put($res['ok'] ? 'corp_ok' : 'corp_err', $res['ok']
-            ? 'Invitation sent by ' . implode(' and ', array_map(static fn (string $c): string => $c === 'sms' ? 'SMS' : 'email', $res['channels'] ?? [])) . '.'
+            ? 'Invitation sent by ' . implode(' and ', array_map(static fn (string $c): string => $c === 'whatsapp' ? 'WhatsApp' : 'email', $res['channels'] ?? [])) . '.'
             : ($res['error'] ?? 'Could not send.'));
 
         return Response::redirect('/company/employees/' . (int) $id);
@@ -146,7 +146,7 @@ final class CorpEmployeesController
         $r = \App\Services\Corporate\EmployeeInviteService::inviteAll((int) CorpContext::companyId(), (int) CorpContext::userId(), CorpAuth::branchScope('employees.manage'));
         $msg = number_format($r['sent']) . ' invitation' . ($r['sent'] === 1 ? '' : 's') . ' sent.';
         if ($r['unreachable'] > 0) {
-            $msg .= ' ' . number_format($r['unreachable']) . ' couldn\'t be reached (no work email, and not an Indian mobile); ask them to sign in at eclinicpro.com/patient.';
+            $msg .= ' ' . number_format($r['unreachable']) . ' couldn\'t be reached (no work email, and not yet an eClinicPro user for WhatsApp); ask them to sign in at eclinicpro.com/patient.';
         }
         if ($r['remaining'] > 0) {
             $msg .= ' ' . number_format($r['remaining']) . ' still to go: click again to continue.';

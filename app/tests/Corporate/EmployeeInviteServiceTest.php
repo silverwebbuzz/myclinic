@@ -26,10 +26,9 @@ final class EmployeeInviteServiceTest extends TestCase
         $this->assertNotNull(EmployeeInviteService::cannotInvite($this->emp(['invited_at' => gmdate('Y-m-d H:i:s', time() - 3600)])));
     }
 
-    public function testSmsFitsOneMessageWithALongCompanyName(): void
+    public function testNoSmsChannelAnyMore(): void
     {
-        $text = str_replace('{#var#}', str_repeat('X', 30), EmployeeInviteService::SMS_TEXT);
-        $this->assertLessThanOrEqual(160, strlen($text));
-        $this->assertSame(1, substr_count(EmployeeInviteService::SMS_TEXT, '{#var#}'));
+        $this->assertFalse(defined(EmployeeInviteService::class . '::SMS_TEXT'));
+        $this->assertSame('corp_employee_invite', EmployeeInviteService::WA_TEMPLATE);
     }
 }

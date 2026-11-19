@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Workforce Health demo data (Phase 0) — two dummy companies for testing.
+ * Workforce Health demo data (Phase 0 + 1A) — two dummy companies for testing.
  *
  *   php database/seeds/corp_demo_seed.php                 create (refused when APP_ENV=production)
  *   php database/seeds/corp_demo_seed.php --allow-demo    create even on production (clearly flagged is_demo=1)
@@ -12,9 +12,15 @@ declare(strict_types=1);
  * Creates (is_demo = 1, excluded from metrics):
  *   Demo Infra Pvt Ltd     ECW-DEMOIN  India · Maharashtra · Construction · INR · Asia/Kolkata
  *   Demo Gulf Marine LLC   ECW-DEMOAE  UAE · Dubai · Maritime · AED · Asia/Dubai
- * each active with a 30-day trial and one login per built-in role
- * (Branch Manager skipped until branches exist). Emails use the reserved
- * .example domain, so nothing is ever delivered to a real inbox.
+ * each active with a 30-day trial and one login per built-in role, plus
+ * (Phase 1A) 4 branches (Gulf Marine has one in India: a branch can be in
+ * another country), 5 departments, 8 job roles and 100 employees each:
+ * contractors, temporary staff, interns, some on leave or left, and a mix of
+ * confirmed / unconfirmed / declined links. Emails use the reserved .example
+ * domain, so nothing is ever delivered to a real inbox. Demo employees have
+ * made-up mobiles (+91 5…, +971 59…, not real mobile ranges) and are NOT
+ * linked to any patient account; invitations to them can't be delivered
+ * (WhatsApp needs a recorded opt-in, email goes to .example).
  *
  * All demo logins share ONE password and ONE authenticator secret, printed at
  * the end (never stored in a file). Needs the Phase 0 SQL patches run first.
@@ -69,17 +75,21 @@ if ($purge) {
     if ($customRoles !== []) {
         $pdo->exec('DELETE FROM corp_role_permissions WHERE role_id IN (' . implode(',', $customRoles) . ')');
     }
-    foreach (['corp_sessions', 'corp_user_roles', 'corp_invitations', 'corp_audit_log', 'corp_company_documents', 'corp_users', 'corp_roles'] as $t) {
+    foreach (['corp_sessions', 'corp_user_roles', 'corp_invitations', 'corp_audit_log', 'corp_company_documents', 'corp_users', 'corp_roles',
+              'corp_employment_events', 'corp_employee_import_rows', 'corp_employee_imports', 'corp_employments',
+              'corp_branches', 'corp_departments', 'corp_job_roles'] as $t) {
         $n = $pdo->exec("DELETE FROM {$t} WHERE company_id IN ($in)");
         echo str_pad($t, 26) . " {$n} rows\n";
     }
     $pdo->exec("DELETE FROM corp_companies WHERE id IN ($in) AND is_demo = 1");
     $pdo->commit();
     foreach ($ids as $id) {
-        $dir = dirname($base) . '/storage/corporate_docs/' . $id;
-        if (is_dir($dir)) {
-            array_map('unlink', glob($dir . '/*') ?: []);
-            @rmdir($dir);
+        foreach (['corporate_docs', 'corporate_imports'] as $folder) {
+            $dir = dirname($base) . '/storage/' . $folder . '/' . $id;
+            if (is_dir($dir)) {
+                array_map('unlink', glob($dir . '/*') ?: []);
+                @rmdir($dir);
+            }
         }
     }
     echo 'Removed ' . count($ids) . " demo companies.\n";
@@ -119,14 +129,154 @@ $companies = [
         'addr' => 'Plot 21, MIDC Industrial Area, Andheri East', 'postal' => '400093', 'reg' => 'U45200MH2015PTC000001', 'tax' => '27AAACD0000A1Z5',
         'industry' => 'construction', 'band' => '1000-4999', 'domain' => 'demo-infra.example', 'phone' => '+919800000001',
         'people' => ['company_admin' => 'Anita Sharma', 'hr_manager' => 'Rohit Verma', 'hse_manager' => 'Suresh Patil', 'billing_admin' => 'Kavya Iyer', 'viewer' => 'Manoj Rao', 'oh_physician' => 'Dr. Neha Kulkarni'],
+        'branch_manager' => 'Vikram Desai',
+        'no_prefix' => 'DI-', 'phone_base' => '+91500000', 'nationalities' => ['IN'],
+        // [code, name, type, country, region, city]
+        'branches' => [
+            ['HQ-MUM', 'Mumbai Head Office', 'office', 'IN', 'Maharashtra', 'Mumbai'],
+            ['SITE-NM', 'Navi Mumbai Metro Site', 'site', 'IN', 'Maharashtra', 'Navi Mumbai'],
+            ['PLANT-PUNE', 'Pune Precast Plant', 'factory', 'IN', 'Maharashtra', 'Pune'],
+            ['SITE-BLR', 'Bengaluru Tech Park Site', 'site', 'IN', 'Karnataka', 'Bengaluru'],
+        ],
+        'departments' => ['Projects', 'HSE', 'Plant & Machinery', 'Administration', 'Quality'],
+        // [title, risk, ISCO-08, department index]
+        'jobs' => [
+            ['Site Engineer', 'medium', '2142', 0], ['Mason', 'high', '7112', 0], ['Welder', 'high', '7212', 2], ['Crane Operator', 'high', '8343', 2],
+            ['Electrician', 'high', '7411', 2], ['Safety Officer', 'medium', '2263', 1], ['Office Executive', 'low', '4110', 3], ['Quality Inspector', 'medium', '3115', 4],
+        ],
+        'contractors' => ['Shree Labour Services', 'Om Sai Manpower', 'BuildForce Contractors'],
+        'first_m' => ['Rajesh', 'Amit', 'Sunil', 'Ganesh', 'Imran', 'Prakash', 'Ravi', 'Santosh', 'Vijay', 'Arjun', 'Deepak', 'Mahesh'],
+        'first_f' => ['Pooja', 'Sunita', 'Kavita', 'Meena', 'Ayesha', 'Lakshmi', 'Divya', 'Rekha'],
+        'last' => ['Patil', 'Yadav', 'Shaikh', 'Kumar', 'Naik', 'Jadhav', 'Pawar', 'Gowda', 'Reddy', 'Singh', 'More', 'Khan', 'Pillai', 'Joshi'],
     ],
     [
         'ref' => 'ECW-DEMOAE', 'legal' => 'Demo Gulf Marine LLC', 'trade' => 'Gulf Marine', 'cc' => 'AE', 'region' => 'Dubai', 'city' => 'Dubai',
         'addr' => 'Plot 14, Jebel Ali Freezone South', 'postal' => '', 'reg' => 'DMCC-000123', 'tax' => '100000000000003',
         'industry' => 'maritime', 'band' => '250-999', 'domain' => 'demo-gulfmarine.example', 'phone' => '+971500000001',
         'people' => ['company_admin' => 'Priya Nair', 'hr_manager' => 'Ahmed Khan', 'hse_manager' => 'Omar Saeed', 'billing_admin' => 'Fatima Ali', 'viewer' => 'Lina Joseph', 'oh_physician' => 'Dr. Yusuf Haddad'],
+        'branch_manager' => 'Rajesh Menon',
+        'no_prefix' => 'E-', 'phone_base' => '+97159000', 'nationalities' => ['IN', 'PK', 'PH', 'AE', 'EG', 'BD', 'NP'],
+        'branches' => [
+            ['HO-DXB', 'Head Office Dubai', 'office', 'AE', 'Dubai', 'Dubai'],
+            ['JAFZ-YARD', 'Jebel Ali Yard', 'yard', 'AE', 'Dubai', 'Dubai'],
+            ['AUH-BASE', 'Abu Dhabi Offshore Base', 'vessel', 'AE', 'Abu Dhabi', 'Abu Dhabi'],
+            ['MUM-FAB', 'Mumbai Fabrication Yard', 'yard', 'IN', 'Maharashtra', 'Mumbai'],
+        ],
+        'departments' => ['Marine Operations', 'Fabrication', 'HSE', 'Logistics', 'Administration'],
+        'jobs' => [
+            ['Deck Officer', 'medium', '3152', 0], ['Able Seaman', 'high', '8350', 0], ['Welder', 'high', '7212', 1], ['Crane Operator', 'high', '8343', 1],
+            ['Marine Engineer', 'high', '2151', 0], ['HSE Officer', 'medium', '2263', 2], ['Storekeeper', 'low', '4321', 3], ['Office Administrator', 'low', '4110', 4],
+        ],
+        'contractors' => ['Al Noor Manpower Supply', 'Seacrest Crew Services', 'Desert Star Technical'],
+        'first_m' => ['Ahmed', 'Mohammed', 'Joseph', 'Ramesh', 'Bilal', 'Jose', 'Tariq', 'Anil', 'Hassan', 'Rizwan', 'Mark', 'Suresh'],
+        'first_f' => ['Fatima', 'Maria', 'Aisha', 'Grace', 'Noura', 'Anjali', 'Sara', 'Leah'],
+        'last' => ['Al Mansoori', 'Hussain', 'D\'Souza', 'Fernandes', 'Rahman', 'Santos', 'Qureshi', 'Menon', 'Hassan', 'Reyes', 'Mathew', 'Iqbal', 'Thomas', 'Ali'],
     ],
 ];
+
+/**
+ * Phase 1A: branches, departments, job roles, a Branch Manager login and 100 employees.
+ * Deterministic (same data every run). Returns a one-line summary.
+ */
+$seedWorkforce = static function (int $companyId, array $c, array $country, string $hash, string $now, bool $mfaOn, string $secret, string $recoveryJson, array &$logins) use ($pdo, $one): string {
+    $branchIds = [];
+    $branchCountry = [];
+    foreach ($c['branches'] as [$code, $bname, $type, $cc, $region, $city]) {
+        $tz = (string) $one('SELECT default_timezone FROM geo_countries WHERE code = :c', ['c' => $cc]);
+        $pdo->prepare(
+            'INSERT INTO corp_branches (company_id, name, code, type, country_code, region_id, city, timezone, is_active, created_at, updated_at)
+             VALUES (:cid, :n, :code, :type, :cc, :rid, :city, :tz, 1, :cr, :up)'
+        )->execute([
+            'cid' => $companyId, 'n' => $bname, 'code' => $code, 'type' => $type, 'cc' => $cc,
+            'rid' => $one('SELECT id FROM geo_regions WHERE country_code = :c AND name = :n', ['c' => $cc, 'n' => $region]) ?: null,
+            'city' => $city, 'tz' => $tz, 'cr' => $now, 'up' => $now,
+        ]);
+        $branchIds[] = (int) $pdo->lastInsertId();
+        $branchCountry[] = $cc;
+    }
+    $deptIds = [];
+    foreach ($c['departments'] as $dname) {
+        $pdo->prepare('INSERT INTO corp_departments (company_id, name, is_active, created_at, updated_at) VALUES (:cid, :n, 1, :cr, :up)')
+            ->execute(['cid' => $companyId, 'n' => $dname, 'cr' => $now, 'up' => $now]);
+        $deptIds[] = (int) $pdo->lastInsertId();
+    }
+    $jobIds = [];
+    $jobDept = [];
+    foreach ($c['jobs'] as [$title, $risk, $isco, $deptIndex]) {
+        $pdo->prepare('INSERT INTO corp_job_roles (company_id, title, risk_level, isco_code, is_active, created_at, updated_at) VALUES (:cid, :t, :r, :i, 1, :cr, :up)')
+            ->execute(['cid' => $companyId, 't' => $title, 'r' => $risk, 'i' => $isco, 'cr' => $now, 'up' => $now]);
+        $jobIds[] = (int) $pdo->lastInsertId();
+        $jobDept[] = $deptIds[$deptIndex];
+    }
+
+    // Branch Manager for the second branch (a site / yard).
+    $bmRole = $one('SELECT id FROM corp_roles WHERE company_id = 0 AND code = :c', ['c' => 'branch_manager']);
+    if ($bmRole !== false) {
+        $email = 'branch.manager@' . $c['domain'];
+        $pdo->prepare(
+            'INSERT INTO corp_users (company_id, name, email, password_hash, status, is_owner, email_verified_at,
+                mfa_secret_enc, mfa_enabled_at, mfa_recovery, created_at, updated_at)
+             VALUES (:cid, :name, :email, :hash, \'active\', 0, :verified, :mfa, :mfa_at, :rec, :created, :updated)'
+        )->execute([
+            'cid' => $companyId, 'name' => $c['branch_manager'], 'email' => $email, 'hash' => $hash, 'verified' => $now,
+            'mfa' => $mfaOn ? CorpCrypto::encrypt($secret) : null, 'mfa_at' => $mfaOn ? $now : null, 'rec' => $mfaOn ? $recoveryJson : null,
+            'created' => $now, 'updated' => $now,
+        ]);
+        $pdo->prepare('INSERT INTO corp_user_roles (company_id, user_id, role_id, scope_id, created_at) VALUES (:cid, :uid, :rid, :sid, :at)')
+            ->execute(['cid' => $companyId, 'uid' => (int) $pdo->lastInsertId(), 'rid' => (int) $bmRole, 'sid' => $branchIds[1], 'at' => $now]);
+        $logins[] = [$c['legal'], $c['branch_manager'], 'branch_manager (' . $c['branches'][1][1] . ' only)', $email];
+    }
+
+    $emp = $pdo->prepare(
+        'INSERT INTO corp_employments (company_id, identity_id, employee_no, full_name, work_email, work_phone, dob, gender, nationality,
+            branch_id, department_id, job_role_id, employment_type, contractor_company, status, joined_on, left_on, leave_reason,
+            link_status, link_confirmed_at, invited_at, created_by, created_at, updated_at)
+         VALUES (:cid, NULL, :no, :name, :email, :phone, :dob, :gender, :nat, :bid, :did, :jid, :type, :contr, :status, :joined, :left_on, :reason,
+            :link, :link_at, :inv, 0, :cr, :up)'
+    );
+    $ev = $pdo->prepare(
+        "INSERT INTO corp_employment_events (company_id, employment_id, event, from_json, to_json, effective_on, actor_type, actor_id, created_at)
+         VALUES (:cid, :eid, :ev, :fj, :tj, :eff, 'system', NULL, :at)"
+    );
+    $today = LocalDate::today((string) $country['default_timezone']);
+    $count = ['contractor' => 0, 'left' => 0, 'confirmed' => 0];
+    for ($i = 1; $i <= 100; $i++) {
+        $female = $i % 4 === 0;
+        $first = $female ? $c['first_f'][$i % count($c['first_f'])] : $c['first_m'][$i % count($c['first_m'])];
+        $name = $first . ' ' . $c['last'][($i * 7) % count($c['last'])];
+        $j = ($i * 3) % count($jobIds);
+        $type = match (true) { $i % 7 === 0 => 'contractor', $i % 23 === 0 => 'temporary', $i % 31 === 0 => 'intern', default => 'employee' };
+        $status = match (true) { $i % 19 === 0 => 'terminated', $i % 17 === 0 => 'on_leave', default => 'active' };
+        $link = match (true) { $i % 13 === 0 => 'declined', in_array($i % 5, [0, 1, 2], true) => 'confirmed', default => 'pending' };
+        $joined = LocalDate::addDays('2016-01-01', ($i * 37) % 3500);
+        $left = $status === 'terminated' ? LocalDate::addDays($today, -(10 + $i)) : null;
+        $no = $c['no_prefix'] . (1000 + $i);
+        $emp->execute([
+            'cid' => $companyId, 'no' => $no, 'name' => $name,
+            'email' => $i % 3 === 0 ? null : strtolower(str_replace([' ', '\''], ['.', ''], $name)) . $i . '@' . $c['domain'],
+            'phone' => $c['phone_base'] . sprintf('%04d', 1000 + $i),
+            'dob' => sprintf('%04d-%02d-%02d', 1968 + ($i * 53) % 34, 1 + $i % 12, 1 + ($i * 5) % 28),
+            'gender' => $female ? 'F' : 'M', 'nat' => $c['nationalities'][$i % count($c['nationalities'])],
+            'bid' => $branchIds[$i % count($branchIds)], 'did' => $jobDept[$j], 'jid' => $jobIds[$j],
+            'type' => $type, 'contr' => $type === 'contractor' ? $c['contractors'][$i % count($c['contractors'])] : null,
+            'status' => $status, 'joined' => $joined, 'left_on' => $left, 'reason' => $left !== null ? ($i % 2 ? 'Resigned' : 'Contract ended') : null,
+            'link' => $link, 'link_at' => $link === 'confirmed' ? $now : null, 'inv' => $link === 'pending' && $i % 2 ? null : $now,
+            'cr' => $now, 'up' => $now,
+        ]);
+        $eid = (int) $pdo->lastInsertId();
+        $ev->execute(['cid' => $companyId, 'eid' => $eid, 'ev' => 'joined', 'fj' => null, 'tj' => json_encode(['employee_no' => $no, 'source' => 'demo seed']), 'eff' => $joined, 'at' => $now]);
+        if ($left !== null) {
+            $ev->execute(['cid' => $companyId, 'eid' => $eid, 'ev' => 'terminated', 'fj' => json_encode(['status' => 'active']),
+                'tj' => json_encode(['status' => 'terminated', 'left_on' => $left, 'leave_reason' => $i % 2 ? 'Resigned' : 'Contract ended']), 'eff' => $left, 'at' => $now]);
+            $count['left']++;
+        }
+        $count['contractor'] += $type === 'contractor' ? 1 : 0;
+        $count['confirmed'] += $link === 'confirmed' ? 1 : 0;
+    }
+
+    return count($branchIds) . ' branches (' . implode(', ', array_unique($branchCountry)) . '), ' . count($deptIds) . ' departments, ' . count($jobIds)
+        . " job roles, 100 employees ({$count['contractor']} contractors, {$count['left']} left, {$count['confirmed']} linked)";
+};
 
 $logins = [];
 $pdo->beginTransaction();
@@ -179,6 +329,8 @@ try {
             $logins[] = [$c['legal'], $name, $roleCode, $email];
             $first = false;
         }
+        $stats = $seedWorkforce($companyId, $c, $country, $hash, $now, $mfaOn, $secret, $recoveryJson, $logins);
+        echo "  {$stats}\n";
         $pdo->prepare(
             "INSERT INTO corp_audit_log (company_id, actor_type, actor_id, action, entity_type, entity_id, details, created_at)
              VALUES (:cid, 'system', NULL, 'company_approved', 'company', :eid, :d, :at)"

@@ -6,7 +6,8 @@ namespace App\Services\Corporate;
 
 use App\Core\Database;
 use App\Services\MessagingConsent;
-use App\Services\SmsService;
+use App\Services\WhatsAppService;
+use App\Support\MessagingSettings;
 use App\Support\Locale\LocalDate;
 
 /**
@@ -14,17 +15,19 @@ use App\Support\Locale\LocalDate;
  * eclinicpro.com/patient with that mobile and confirm the link (P3).
  *
  *  - Email when the company entered a work email.
- *  - SMS to Indian (+91) numbers through MSG91, unless the number opted out
- *    of SMS. India first: other countries get email only for now (Q1).
- *    The SMS text must match a DLT-registered template (see SMS_TEXT).
+ *  - WhatsApp (approved template WA_TEMPLATE only) when the number has a
+ *    recorded opt-in with eClinicPro (verified an OTP before) and has not
+ *    opted out. A number HR typed in is NOT consent: cold WhatsApp to it is
+ *    what got the business account banned in 2026, so it is never sent.
+ *    No SMS (decided 19 Nov 2026).
  *  - At most one invitation per person per 24 hours; never to someone who
  *    has left, already confirmed, or declined (HR fixes the number first,
  *    which puts the link back to "pending").
  */
 final class EmployeeInviteService
 {
-    /** DLT template text. {#var#} = company name (max 30 characters). Register exactly this in MSG91 → DLT. */
-    public const SMS_TEXT = '{#var#} has added you to eClinicPro Workforce Health. Sign in at eclinicpro.com/patient with this mobile number to confirm. -eClinicPro';
+    /** wa_templates key (patch 2026_11_19_workforce_invite_wa_template.sql); sent only once approved in Meta. */
+    public const WA_TEMPLATE = 'corp_employee_invite';
     public const BULK_LIMIT = 200;
     private const RESEND_SECONDS = 86400;
 
@@ -44,7 +47,7 @@ final class EmployeeInviteService
         }
         $channels = self::send($companyId, $emp);
         if ($channels === []) {
-            return ['ok' => false, 'error' => 'We couldn\'t reach them: no work email, and SMS goes only to Indian (+91) numbers that haven\'t opted out. Ask them to sign in at eclinicpro.com/patient with this mobile number.'];
+            return ['ok' => false, 'error' => 'We couldn\'t reach them: there is no work email, and WhatsApp goes only to people who already use eClinicPro. Ask them to sign in at eclinicpro.com/patient with this mobile number.'];
         }
         self::record($companyId, $actorId, $employmentId, $channels);
         CorpAudit::log($companyId, 'corp_user', $actorId, 'employee_invited', 'corp_employment', $employmentId, ['employee_no' => $emp['employee_no'], 'channels' => $channels]);
@@ -132,17 +135,33 @@ final class EmployeeInviteService
         }
 
         $phone = (string) ($emp['work_phone'] ?? '');
-        if (str_starts_with($phone, '+91') && !MessagingConsent::isOptedOut($phone, 'sms')) {
-            $text = str_replace('{#var#}', mb_substr($name, 0, 30), self::SMS_TEXT);
-            $res = SmsService::send($phone, $text);
-            if ($res['ok']) {
-                $channels[] = 'sms';
-            } else {
-                error_log('[EmployeeInvite] SMS failed: ' . $res['message']);
+        if ($phone !== '' && self::whatsappAllowed($phone)) {
+            $res = WhatsAppService::send($phone, self::WA_TEMPLATE, [
+                'employee_name' => (string) $emp['full_name'],
+                'company_name' => mb_substr($name, 0, 60),
+                'link' => $site . '/patient?tab=work',
+            ]);
+            // configured=false is the dev stub (nothing really sent): don't count it.
+            if ($res['ok'] && ($res['configured'] ?? false)) {
+                $channels[] = 'whatsapp';
+            } elseif (!$res['ok']) {
+                error_log('[EmployeeInvite] WhatsApp not sent: ' . $res['message']);
             }
         }
 
         return $channels;
+    }
+
+    /**
+     * Opt-in rule: only numbers that proved ownership with an OTP on eClinicPro
+     * (MessagingConsent ledger), not opted out, and the template approved.
+     */
+    public static function whatsappAllowed(string $phone): bool
+    {
+        return MessagingSettings::whatsappConfigured()
+            && \App\Services\WaTemplateService::isApproved(self::WA_TEMPLATE)
+            && MessagingConsent::hasOptedIn($phone)
+            && !MessagingConsent::isOptedOut($phone, 'whatsapp');
     }
 
     /** @param list<string> $channels */
