@@ -176,6 +176,10 @@ final class CorpProgrammesController
             return $deny;
         }
         $res = $fn((int) CorpContext::companyId(), (int) CorpContext::userId());
+        if ($res['ok']) {
+            // Re-work due dates for everyone the change may affect.
+            \App\Services\Corporate\ScreeningEngine::safeSyncCompany((int) CorpContext::companyId());
+        }
         SessionFlash::put($res['ok'] ? 'corp_ok' : 'corp_err', $res['ok'] ? $ok : ($res['error'] ?? 'Could not save.'));
 
         return Response::redirect('/company/screening/programmes/' . $id . $anchor);

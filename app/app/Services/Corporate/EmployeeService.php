@@ -284,6 +284,8 @@ final class EmployeeService
             CorpAudit::log($companyId, 'corp_user', $actorId, $existing === null ? 'employee_created' : 'employee_updated', 'corp_employment', $id,
                 ['employee_no' => $in['employee_no']]);
         }
+        // Screening due dates follow branch / department / job role / joining date (1B).
+        ScreeningEngine::safeSyncEmployee($companyId, $id);
 
         return ['ok' => true, 'id' => $id, 'changed' => $changed ?? true];
     }
@@ -339,6 +341,7 @@ final class EmployeeService
         }
         self::event($companyId, $id, $event, $from, array_merge($set, $reason !== '' && $action !== 'terminate' ? ['reason' => $reason] : []), $date, 'corp_user', $actorId);
         CorpAudit::log($companyId, 'corp_user', $actorId, 'employee_' . $event, 'corp_employment', $id, ['employee_no' => $row['employee_no']]);
+        ScreeningEngine::safeSyncEmployee($companyId, $id);   // exit checks on leaving, cancel / restart on rehire
 
         return ['ok' => true];
     }
