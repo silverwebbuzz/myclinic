@@ -29,7 +29,7 @@ $navGroups = [
         ['/company/dashboard', 'Dashboard', true],
     ],
     'Workforce' => [
-        ['/company/employees', 'Employees', false],
+        ['/company/employees', 'Employees', true, 'employees.view'],
         ['/company/screening', 'Screening', false],
         ['/company/reports', 'Reports', false],
     ],

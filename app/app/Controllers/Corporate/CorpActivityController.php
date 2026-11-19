@@ -64,6 +64,9 @@ final class CorpActivityController
         'branch_created' => 'Added a branch', 'branch_updated' => 'Edited a branch', 'branch_activated' => 'Re-activated a branch', 'branch_deactivated' => 'Deactivated a branch',
         'department_created' => 'Added a department', 'department_updated' => 'Edited a department', 'department_activated' => 'Re-activated a department', 'department_deactivated' => 'Deactivated a department',
         'job_role_created' => 'Added a job role', 'job_role_updated' => 'Edited a job role', 'job_role_activated' => 'Re-activated a job role', 'job_role_deactivated' => 'Deactivated a job role',
+        'employee_created' => 'Added an employee', 'employee_updated' => 'Edited an employee', 'employee_terminated' => 'Marked an employee as left',
+        'employee_rehired' => 'Re-hired an employee', 'employee_on_leave' => 'Marked an employee as on leave', 'employee_returned' => 'Marked an employee as back at work',
+        'employee_id_viewed' => 'Viewed an employee\'s full ID number', 'employees_exported' => 'Exported the employee list',
     ];
 
     public function index(Request $request): Response

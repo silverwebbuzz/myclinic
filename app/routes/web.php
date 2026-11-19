@@ -860,6 +860,18 @@ return static function (RouteRegistrar $router): void {
         $company->get('/job-roles', [\App\Controllers\Corporate\CorpStructureController::class, 'jobRoles']);
         $company->post('/job-roles', [\App\Controllers\Corporate\CorpStructureController::class, 'saveJobRole']);
         $company->post('/job-roles/{id}/toggle', [\App\Controllers\Corporate\CorpStructureController::class, 'toggleJobRole']);
+        // Employees (Phase 1A-2). Static paths before /{id}: the first match wins.
+        $company->get('/employees', [\App\Controllers\Corporate\CorpEmployeesController::class, 'index']);
+        $company->get('/employees/new', [\App\Controllers\Corporate\CorpEmployeesController::class, 'create']);
+        $company->get('/employees/export', [\App\Controllers\Corporate\CorpEmployeesController::class, 'export']);
+        $company->post('/employees', [\App\Controllers\Corporate\CorpEmployeesController::class, 'store']);
+        $company->get('/employees/{id}', [\App\Controllers\Corporate\CorpEmployeesController::class, 'show']);
+        $company->post('/employees/{id}', [\App\Controllers\Corporate\CorpEmployeesController::class, 'update']);
+        $company->post('/employees/{id}/leave', [\App\Controllers\Corporate\CorpEmployeesController::class, 'leave']);
+        $company->post('/employees/{id}/return', [\App\Controllers\Corporate\CorpEmployeesController::class, 'returned']);
+        $company->post('/employees/{id}/terminate', [\App\Controllers\Corporate\CorpEmployeesController::class, 'terminate']);
+        $company->post('/employees/{id}/rehire', [\App\Controllers\Corporate\CorpEmployeesController::class, 'rehire']);
+        $company->post('/employees/{id}/reveal-id', [\App\Controllers\Corporate\CorpEmployeesController::class, 'revealId']);
 
         // Plan & trial (chunk 0.6) — also the page an expired company is sent to
         $company->get('/billing', [\App\Controllers\Corporate\CorpBillingController::class, 'index']);
