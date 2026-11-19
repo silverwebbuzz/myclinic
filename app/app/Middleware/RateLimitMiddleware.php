@@ -28,7 +28,8 @@ final class RateLimitMiddleware implements MiddlewareInterface
 
         [$limit, $window] = $this->limitsFor($request);
         $subject = $this->rateSubject($request);
-        $key = 'rate:' . md5($subject . ':' . $request->method . ':' . $request->uri);
+        $bucket = str_starts_with($request->uri, '/verify/') ? '/verify/*' : $request->uri;   // one counter for all certificate checks
+        $key = 'rate:' . md5($subject . ':' . $request->method . ':' . $bucket);
         $client = RedisClient::connection();
 
         if ($client !== null) {
@@ -102,6 +103,9 @@ final class RateLimitMiddleware implements MiddlewareInterface
         }
         if (str_starts_with($request->uri, '/api/')) {
             return [60, 60];
+        }
+        if (str_starts_with($request->uri, '/verify/')) {
+            return [30, 60];   // public certificate check: plenty for a person, slow for token guessing
         }
 
         return [120, 60];

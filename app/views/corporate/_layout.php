@@ -32,6 +32,7 @@ $navGroups = [
         ['/company/employees', 'Employees', true, 'employees.view'],
         ['/company/screening', 'Screening', true, 'screening.view_status'],
         ['/company/bookings', 'Bookings', true, 'bookings.manage'],
+        ['/company/certificates', 'Certificates', true, 'screening.view_status'],
         ['/company/reports', 'Reports', false],
     ],
     'Providers' => [

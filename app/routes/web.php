@@ -374,6 +374,11 @@ return static function (RouteRegistrar $router): void {
     $router->get('/impersonate/exit', [ImpersonateController::class, 'exit']);
     $router->get('/impersonate/{token}', [ImpersonateController::class, 'enter']);
 
+    // Workforce Health: public fitness-certificate check (QR on the PDF). No login; rate-limited.
+    $router->group(['middleware' => ['rate']], static function (GroupedRouteRegistrar $verify): void {
+        $verify->get('/verify/{token}', [\App\Controllers\CertificateVerifyController::class, 'show']);
+    });
+
     $router->group(['middleware' => ['rate']], static function (GroupedRouteRegistrar $docs): void {
         $docs->get('/docs', [DocsController::class, 'index']);
         $docs->get('/docs/openapi.json', [DocsController::class, 'openapi']);
@@ -907,6 +912,9 @@ return static function (RouteRegistrar $router): void {
         $company->post('/screening/programmes/{id}/items/{itemId}/frequency', [\App\Controllers\Corporate\CorpProgrammesController::class, 'frequency']);
         $company->post('/screening/programmes/{id}/assignments', [\App\Controllers\Corporate\CorpProgrammesController::class, 'assign']);
         $company->post('/screening/programmes/{id}/assignments/{assignmentId}/remove', [\App\Controllers\Corporate\CorpProgrammesController::class, 'unassign']);
+        // Phase 1C: fitness certificates (outcome only, with consent)
+        $company->get('/certificates', [\App\Controllers\Corporate\CorpCertificatesController::class, 'index']);
+        $company->get('/certificates/{id}/pdf', [\App\Controllers\Corporate\CorpCertificatesController::class, 'pdf']);
         // Phase 1C: bookings
         $company->get('/bookings', [\App\Controllers\Corporate\CorpBookingsController::class, 'index']);
         $company->get('/bookings/new', [\App\Controllers\Corporate\CorpBookingsController::class, 'create']);

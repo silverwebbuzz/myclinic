@@ -272,6 +272,24 @@ ob_start();
             </section>
 
             <?php if (($screening ?? null) !== null): ?>
+                <?php $curCert = array_values(array_filter($certificates ?? [], static fn ($c) => $c['status'] === 'valid'))[0] ?? null; ?>
+                <?php if ($curCert !== null): ?>
+                    <section id="certificate" class="rounded-[10px] border border-ln bg-sf p-5">
+                        <div class="flex items-center justify-between gap-2">
+                            <h2 class="text-[15px] font-semibold">Fitness certificate</h2>
+                            <?php if ($curCert['shared'] && $curCert['has_pdf']): ?><a href="/company/certificates/<?= (int) $curCert['id'] ?>/pdf" target="_blank" class="text-[13px] text-ac hover:underline">PDF</a><?php endif; ?>
+                        </div>
+                        <?php if ($curCert['shared']): ?>
+                            <div class="mt-2 text-[17px] font-semibold <?= $curCert['outcome'] === 'fit' ? 'text-ok' : ($curCert['outcome'] === 'fit_restricted' ? 'text-wn' : 'text-er') ?>"><?= $e($curCert['outcome_label']) ?></div>
+                            <?php if ($curCert['restrictions'] !== []): ?><ul class="mt-1 list-disc pl-5 text-[13px] text-tx2"><?php foreach ($curCert['restrictions'] as $rs): ?><li><?= $e($rs) ?></li><?php endforeach; ?></ul><?php endif; ?>
+                            <div class="mt-1 text-[13px] <?= $curCert['expired'] ? 'font-medium text-er' : 'text-tx2' ?>">
+                                <?= $curCert['valid_to'] ? ($curCert['expired'] ? 'Expired ' : 'Valid to ') . $e($loc->date($curCert['valid_to'])) : ($curCert['review_by'] ? 'Review by ' . $e($loc->date($curCert['review_by'])) : '') ?></div>
+                        <?php else: ?>
+                            <p class="mt-2 text-tx2">Attended on <?= $e($loc->date($curCert['exam_date'])) ?>. The employee chose not to share the outcome.</p>
+                        <?php endif; ?>
+                        <p class="mt-2 text-[12px] text-tx3"><?= $e($curCert['cert_no']) ?> · <?= $e($curCert['clinic']) ?> · examined <?= $e($loc->date($curCert['exam_date'])) ?></p>
+                    </section>
+                <?php endif; ?>
                 <section id="screening" class="rounded-[10px] border border-ln bg-sf p-5">
                     <div class="flex items-center justify-between gap-2">
                         <h2 class="text-[15px] font-semibold">Screening</h2>

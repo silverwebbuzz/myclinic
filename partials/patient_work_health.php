@@ -12,6 +12,7 @@
 /** @var list<array<string, mixed>> $workItems */
 $whE = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
 $whDate = static fn (?string $utc): string => $utc ? date('d M Y', strtotime($utc . ' UTC')) : '';
+$whDay = static fn (?string $ymd): string => $ymd ? date('d M Y', strtotime($ymd)) : '';   // plain DATE columns
 $whTypes = ['contractor' => 'Contractor', 'temporary' => 'Temporary', 'intern' => 'Intern / trainee'];
 ?>
 <div x-show="tab === 'work'" class="pt-tab-pane" x-data="{
@@ -77,7 +78,27 @@ $whTypes = ['contractor' => 'Contractor', 'temporary' => 'Temporary', 'intern' =
           <?php endforeach; ?>
           <p class="wh-small">Bring a photo ID. To change the time, ask your HR team.</p>
         <?php else: ?>
-        <div class="wh-empty">No health check booked right now. When your employer books one, the clinic, date and time appear here; later also your fitness certificates.</div>
+        <?php if (empty($w['certificates'])): ?><div class="wh-empty">No health check booked right now. When your employer books one, the clinic, date and time appear here, and afterwards your fitness certificate.</div><?php endif; ?>
+        <?php endif; ?>
+        <?php if (!empty($w['certificates'])): ?>
+          <div class="wh-book-title">Fitness certificates</div>
+          <?php foreach ($w['certificates'] as $fc): $fcR = array_map(static fn ($k) => ECP_WH_RESTRICTIONS[$k] ?? $k, json_decode((string) ($fc['restrictions_json'] ?? '[]'), true) ?: []);
+              if (!empty($fc['restrictions_note'])) { $fcR[] = (string) $fc['restrictions_note']; }
+              $fcExpired = !empty($fc['valid_to']) && (string) $fc['valid_to'] < date('Y-m-d'); $fcSnap = json_decode((string) ($fc['checks_json'] ?? ''), true) ?: []; ?>
+            <div class="wh-cert <?= $fc['status'] !== 'valid' || $fcExpired ? 'wh-cert-old' : '' ?>">
+              <div class="wh-head" style="margin-bottom:4px">
+                <div class="wh-cert-out wh-out-<?= $whE($fc['outcome']) ?>"><?= $whE(ECP_WH_OUTCOMES[$fc['outcome']] ?? $fc['outcome']) ?></div>
+                <?php if ($fc['status'] === 'revoked'): ?><span class="wh-tag">Withdrawn by the doctor</span><?php elseif ($fcExpired): ?><span class="wh-tag">Expired</span><?php endif; ?>
+              </div>
+              <?php if ($fcR !== []): ?><div class="wh-sub">Restrictions: <?= $whE(implode('; ', $fcR)) ?></div><?php endif; ?>
+              <div class="wh-sub"><?= !empty($fc['valid_to']) ? 'Valid to ' . $whE($whDay($fc['valid_to'])) : (!empty($fc['review_by']) ? 'Review by ' . $whE($whDay($fc['review_by'])) : '') ?>
+                · examined <?= $whE($whDay($fc['exam_date'])) ?><?= !empty($fcSnap['issuer']['clinic']) ? ' at ' . $whE($fcSnap['issuer']['clinic']) : '' ?></div>
+              <div class="wh-sub"><?= (int) $fc['consent_shared'] === 1 ? 'Shared with your employer.' : 'Not shared with your employer: they only know you attended.' ?></div>
+              <?php if ((int) $fc['has_pdf'] === 1 && $fc['status'] === 'valid'): ?>
+                <div class="wh-actions"><a class="btn-mini primary" href="/api/work_health_certificate.php?id=<?= (int) $fc['id'] ?>" target="_blank" rel="noopener">Download certificate (PDF)</a></div>
+              <?php endif; ?>
+            </div>
+          <?php endforeach; ?>
         <?php endif; ?>
         <p class="wh-small">Details wrong, or you've left? Please tell your HR team; they keep this record.</p>
       </div>
@@ -106,4 +127,10 @@ $whTypes = ['contractor' => 'Contractor', 'temporary' => 'Temporary', 'intern' =
   .wh-book { border: 1px solid #c7d2fe; background: #eef2ff; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; font-size: 14px; }
   .wh-book-when { font-weight: 600; color: #3730a3; margin-bottom: 2px; }
   .wh-book a { color: inherit; }
+  .wh-cert { border: 1px solid #e4e7ec; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; background: #fff; }
+  .wh-cert-old { opacity: .65; }
+  .wh-cert-out { font-weight: 700; font-size: 15px; }
+  .wh-out-fit { color: #047857; } .wh-out-fit_restricted { color: #b45309; }
+  .wh-out-temp_unfit, .wh-out-unfit, .wh-out-further_assessment { color: #b91c1c; }
+  .wh-tag { flex: none; font-size: 12px; color: #475569; background: #f1f5f9; border-radius: 999px; padding: 2px 10px; }
 </style>

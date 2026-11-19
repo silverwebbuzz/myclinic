@@ -53,12 +53,93 @@ function ecp_wh_list(int $identityId): array
         return [];
     }
     $bookings = ecp_wh_bookings($identityId);
+    $certs = ecp_wh_certificates($identityId);
     foreach ($rows as &$r) {
         $r['bookings'] = $r['link_status'] === 'confirmed' ? ($bookings[(int) $r['id']] ?? []) : [];
+        $r['certificates'] = $r['link_status'] === 'confirmed' ? ($certs[(int) $r['id']] ?? []) : [];
     }
     unset($r);
 
     return $rows;
+}
+
+/** Outcome labels (same as App\Services\OccHealth\OccExamService). */
+const ECP_WH_OUTCOMES = ['fit' => 'Fit', 'fit_restricted' => 'Fit with restrictions', 'temp_unfit' => 'Temporarily unfit',
+    'unfit' => 'Unfit', 'further_assessment' => 'Further assessment required'];
+const ECP_WH_RESTRICTIONS = ['no_height' => 'No work at height', 'no_driving' => 'No driving, crane or heavy-plant operation',
+    'no_heavy_lifting' => 'No lifting over 20 kg', 'no_night' => 'No night shifts', 'no_confined' => 'No work in confined spaces',
+    'noise_ppe' => 'Hearing protection required in noise areas', 'no_hot_work' => 'No hot work or welding', 'no_food' => 'No food handling'];
+
+/**
+ * The employee's own fitness certificates (Phase 1C), per employment id, for
+ * CONFIRMED links. The employee always sees their own certificate, whether or
+ * not they agreed to share it with the employer.
+ *
+ * @return array<int, list<array<string, mixed>>>
+ */
+function ecp_wh_certificates(int $identityId): array
+{
+    $db = ecp_db();
+    if (!$db || $identityId <= 0) {
+        return [];
+    }
+    try {
+        $st = $db->prepare(
+            "SELECT f.id, f.employment_id, f.cert_no, f.exam_date, f.outcome, f.restrictions_json, f.restrictions_note, f.valid_to, f.review_by,
+                    f.consent_shared, f.status, f.checks_json, f.verify_token, (f.pdf_path IS NOT NULL) AS has_pdf
+               FROM corp_fitness_certificates f
+               JOIN corp_employments e ON e.id = f.employment_id AND e.company_id = f.company_id
+              WHERE e.identity_id = :iid AND e.link_status = 'confirmed' AND f.status IN ('valid', 'revoked')
+              ORDER BY f.id DESC
+              LIMIT 30"
+        );
+        $st->execute(['iid' => $identityId]);
+        $out = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $c) {
+            $out[(int) $c['employment_id']][] = $c;
+        }
+
+        return $out;
+    } catch (Throwable $e) {
+        return [];   // 1C patch not run yet
+    }
+}
+
+/**
+ * Stream one of the signed-in person's own certificate PDFs, or 404. Ends the request.
+ */
+function ecp_wh_certificate_download(int $identityId, int $certId): void
+{
+    $db = ecp_db();
+    $row = null;
+    if ($db && $identityId > 0 && $certId > 0) {
+        try {
+            $st = $db->prepare(
+                "SELECT f.cert_no, f.pdf_path FROM corp_fitness_certificates f
+                   JOIN corp_employments e ON e.id = f.employment_id AND e.company_id = f.company_id
+                  WHERE f.id = :id AND e.identity_id = :iid AND e.link_status = 'confirmed' LIMIT 1"
+            );
+            $st->execute(['id' => $certId, 'iid' => $identityId]);
+            $row = $st->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (Throwable $e) {
+            $row = null;
+        }
+    }
+    $root = realpath(__DIR__ . '/../storage/corporate_certs');
+    $abs = ($row && $root !== false && !empty($row['pdf_path'])) ? realpath($root . '/' . $row['pdf_path']) : false;
+    if ($abs === false || !str_starts_with($abs, $root . DIRECTORY_SEPARATOR) || !is_file($abs)) {
+        http_response_code(404);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo 'Certificate not found.';
+        exit;
+    }
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: inline; filename="' . preg_replace('/[^\w.\-]/', '_', (string) $row['cert_no']) . '.pdf"');
+    header('X-Content-Type-Options: nosniff');
+    header('Cache-Control: private, no-store');
+    header('Content-Length: ' . filesize($abs));
+    readfile($abs);
+    exit;
 }
 
 /**
@@ -211,5 +292,28 @@ function ecp_wh_shape(array $r): array
             'at_local' => (string) $b['scheduled_at'],          // clinic's local time, Y-m-d H:i:s
             'checks' => $b['checks'] !== null ? (string) $b['checks'] : '',
         ], $r['bookings'] ?? []),
+        'certificates' => array_map(static function (array $c): array {
+            $restr = array_map(static fn ($k) => ECP_WH_RESTRICTIONS[$k] ?? (string) $k, json_decode((string) ($c['restrictions_json'] ?? '[]'), true) ?: []);
+            if (!empty($c['restrictions_note'])) {
+                $restr[] = (string) $c['restrictions_note'];
+            }
+            $snap = json_decode((string) ($c['checks_json'] ?? ''), true) ?: [];
+
+            return [
+                'id' => (int) $c['id'],
+                'cert_no' => (string) $c['cert_no'],
+                'exam_date' => (string) $c['exam_date'],
+                'outcome' => (string) $c['outcome'],
+                'outcome_label' => ECP_WH_OUTCOMES[$c['outcome']] ?? (string) $c['outcome'],
+                'restrictions' => $restr,
+                'valid_to' => $c['valid_to'] !== null ? (string) $c['valid_to'] : null,
+                'review_by' => $c['review_by'] !== null ? (string) $c['review_by'] : null,
+                'status' => (string) $c['status'],                   // valid | revoked
+                'shared_with_employer' => (int) $c['consent_shared'] === 1,
+                'clinic' => (string) ($snap['issuer']['clinic'] ?? ''),
+                'has_pdf' => (int) $c['has_pdf'] === 1,
+                'verify_token' => (string) $c['verify_token'],
+            ];
+        }, $r['certificates'] ?? []),
     ];
 }

@@ -11,7 +11,12 @@
 // show_tab tells the app whether to show the Work health tab at all.
 // Items: id, company, employee_no, name_on_record, job_title, department,
 // branch, branch_city, employment_type, contractor_company,
-// status (pending|confirmed), confirmed_at_utc, on_leave.
+// status (pending|confirmed), confirmed_at_utc, on_leave,
+// upcoming_bookings[] (clinic, address, phone, at_local, checks),
+// certificates[] (id, cert_no, exam_date, outcome, outcome_label, restrictions[],
+// valid_to, review_by, status valid|revoked, shared_with_employer, clinic,
+// has_pdf, verify_token).
+//   GET  ?action=certificate&id=N                  (Bearer) → the PDF
 // =====================================================================
 
 declare(strict_types=1);
@@ -22,6 +27,13 @@ require_once __DIR__ . '/../../../partials/work_health.php';
 $action = $_GET['action'] ?? 'list';
 
 switch ($action) {
+    case 'certificate': {
+        // GET ?action=certificate&id=N (Bearer) → application/pdf (own certificates only)
+        ecp_m_require_method('GET');
+        $me = ecp_m_require_patient();
+        ecp_wh_certificate_download((int) $me['id'], (int) ($_GET['id'] ?? 0));
+        break;
+    }
     case 'list': {
         ecp_m_require_method('GET');
         $me = ecp_m_require_patient();

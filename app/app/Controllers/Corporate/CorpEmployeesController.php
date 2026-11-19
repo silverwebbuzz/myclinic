@@ -226,6 +226,7 @@ final class CorpEmployeesController
             'events' => $emp !== null ? EmployeeService::events($cid, (int) $emp['id']) : [],
             'screening' => $emp !== null && CorpAuth::can('screening.view_status') ? $this->screeningFor($cid, (int) $emp['id']) : null,
             'bookings' => $emp !== null && CorpAuth::can('bookings.manage') ? $this->bookingsFor($cid, (int) $emp['id']) : null,
+            'certificates' => $emp !== null && CorpAuth::can('screening.view_status') ? $this->certificatesFor($cid, (int) $emp['id']) : null,
             'branches' => $branches,
             'departments' => $keep(StructureService::departments($cid), 'department_id'),
             'jobRoles' => $keep(StructureService::jobRoles($cid), 'job_role_id'),
@@ -240,6 +241,16 @@ final class CorpEmployeesController
     }
 
     /** @return list<array<string, mixed>>|null null = screening tables not there yet (1B patch not run) */
+    /** @return list<array<string, mixed>>|null null = 1C patch not run yet */
+    private function certificatesFor(int $companyId, int $employmentId): ?array
+    {
+        try {
+            return \App\Services\Corporate\CertificateService::forEmployee($companyId, $employmentId, CorpContext::locale()->today());
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     /** @return list<array<string, mixed>>|null null = 1C patch not run yet */
     private function bookingsFor(int $companyId, int $employmentId): ?array
     {
