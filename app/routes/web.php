@@ -218,6 +218,10 @@ return static function (RouteRegistrar $router): void {
         $app->post('/visits/{id}/diet', [VisitController::class, 'saveDiet']);
         $app->post('/visits/{id}/diet/share', [VisitController::class, 'shareDiet']);
         $app->post('/visits/{id}/send-rx', [VisitController::class, 'sendRxWhatsApp']);
+        // Workforce Health: occupational exam + fitness certificate on a corporate visit
+        $app->post('/visits/{id}/occupational/sign', [\App\Controllers\OccExamController::class, 'sign']);
+        $app->post('/visits/{id}/occupational/{certId}/revoke', [\App\Controllers\OccExamController::class, 'revoke']);
+        $app->get('/visits/{id}/occupational/{certId}/pdf', [\App\Controllers\OccExamController::class, 'pdf']);
 
         $app->get('/settings/profile', [SettingsController::class, 'showProfile']);
         $app->post('/settings/profile', [SettingsController::class, 'updateProfile']);

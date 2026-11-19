@@ -198,6 +198,8 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
     </div>
     <?php endif; ?>
 
+    <?php if (!empty($occExam)) { require __DIR__ . '/partials/occupational.php'; } ?>
+
     <!-- ====== Two-column: visit form (left) + history (right) ====== -->
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
     <div class="space-y-4 lg:col-span-2">
