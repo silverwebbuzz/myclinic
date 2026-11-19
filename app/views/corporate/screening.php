@@ -111,6 +111,9 @@ ob_start();
                                 <?php endif; ?>
                             </div>
                             <div class="flex gap-2 md:justify-end">
+                                <?php if ($r['status'] === 'not_scheduled' && \App\Services\Corporate\CorpAuth::can('bookings.manage')): ?>
+                                    <a href="/company/bookings/new?employee=<?= (int) $r['employment_id'] ?>" class="<?= $btn ?> bg-ac text-white hover:opacity-90">Book</a>
+                                <?php endif; ?>
                                 <?php if ($canManage && !$closed): ?>
                                     <button type="button" @click="mode = mode === 'done' ? '' : 'done'" class="<?= $btn ?> border border-ln hover:bg-sf2">Done elsewhere</button>
                                     <button type="button" @click="mode = mode === 'waive' ? '' : 'waive'" class="<?= $btn ?> border border-ln text-tx2 hover:bg-sf2">Waive</button>

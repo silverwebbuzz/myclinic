@@ -31,6 +31,7 @@ $navGroups = [
     'Workforce' => [
         ['/company/employees', 'Employees', true, 'employees.view'],
         ['/company/screening', 'Screening', true, 'screening.view_status'],
+        ['/company/bookings', 'Bookings', true, 'bookings.manage'],
         ['/company/reports', 'Reports', false],
     ],
     'Providers' => [

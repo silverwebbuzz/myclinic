@@ -275,7 +275,12 @@ ob_start();
                 <section id="screening" class="rounded-[10px] border border-ln bg-sf p-5">
                     <div class="flex items-center justify-between gap-2">
                         <h2 class="text-[15px] font-semibold">Screening</h2>
-                        <a href="/company/screening?bucket=open&amp;q=<?= $e(rawurlencode((string) $emp['employee_no'])) ?>" class="text-[13px] text-ac hover:underline">Manage</a>
+                        <div class="flex items-center gap-3">
+                            <a href="/company/screening?bucket=open&amp;q=<?= $e(rawurlencode((string) $emp['employee_no'])) ?>" class="text-[13px] text-ac hover:underline">Manage</a>
+                            <?php if (($bookings ?? null) !== null && $emp['status'] !== 'terminated' && array_filter($screening, static fn ($s) => $s['status'] === 'not_scheduled') !== []): ?>
+                                <a href="/company/bookings/new?employee=<?= (int) $emp['id'] ?>" class="inline-flex h-7 items-center rounded-[7px] bg-ac px-2.5 text-[13px] font-medium text-white hover:opacity-90">Book</a>
+                            <?php endif; ?>
+                        </div>
                     </div>
                     <?php if ($screening === []): ?>
                         <p class="mt-2 text-tx3">No checks. They appear when a screening programme applies to this person's job role, department or branch.</p>
@@ -300,6 +305,19 @@ ob_start();
                                 </li>
                             <?php endforeach; ?>
                         </ul>
+                    <?php endif; ?>
+                    <?php if (!empty($bookings)): $bPill = ['booked' => 'text-in', 'attended' => 'text-ok', 'cancelled' => 'text-tx3', 'no_show' => 'text-er']; ?>
+                        <h3 class="mt-4 text-[13px] font-semibold text-tx2">Bookings</h3>
+                        <ul class="mt-1 divide-y divide-ln2 text-[13px]">
+                            <?php foreach (array_slice($bookings, 0, 5) as $bk): ?>
+                                <li class="flex items-start justify-between gap-3 py-2">
+                                    <div class="min-w-0"><div class="truncate"><?= $e($bk['clinic_name']) ?></div><div class="truncate text-[12px] text-tx3"><?= $e($bk['checks'] ?? '') ?></div></div>
+                                    <div class="whitespace-nowrap text-right text-[12px]"><div><?= $e(date('d M Y, h:i A', strtotime((string) $bk['scheduled_at']))) ?></div>
+                                        <div class="<?= $bPill[$bk['status']] ?? 'text-tx3' ?>"><?= $e(\App\Services\Corporate\BookingService::STATUSES[$bk['status']] ?? $bk['status']) ?></div></div>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <a href="/company/bookings?q=<?= $e(rawurlencode((string) $emp['employee_no'])) ?>" class="mt-1 inline-block text-[13px] text-ac hover:underline">All bookings</a>
                     <?php endif; ?>
                 </section>
             <?php endif; ?>

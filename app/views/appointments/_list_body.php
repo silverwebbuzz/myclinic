@@ -137,6 +137,9 @@ $cards = [
                             <span class="rounded px-2 py-0.5 text-xs <?= $typeBadge ?>">
                                 <?= $type === 'walkin' ? 'Walk-in' : ($type === 'online' ? 'Online' : ($type === 'followup' ? 'Follow-up' : 'Booked')) ?>
                             </span>
+                            <?php if (($a['source'] ?? '') === 'corporate'): ?>
+                            <span class="ml-1 rounded bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800" title="<?= htmlspecialchars((string) ($a['chief_complaint'] ?? 'Employer-booked health check')) ?>">Corporate</span>
+                            <?php endif; ?>
                         </td>
                         <td class="px-4 py-3 font-medium">
                             <?= htmlspecialchars(date('h:i A', strtotime((string) $a['scheduled_at']))) ?>

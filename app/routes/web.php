@@ -903,6 +903,12 @@ return static function (RouteRegistrar $router): void {
         $company->post('/screening/programmes/{id}/items/{itemId}/frequency', [\App\Controllers\Corporate\CorpProgrammesController::class, 'frequency']);
         $company->post('/screening/programmes/{id}/assignments', [\App\Controllers\Corporate\CorpProgrammesController::class, 'assign']);
         $company->post('/screening/programmes/{id}/assignments/{assignmentId}/remove', [\App\Controllers\Corporate\CorpProgrammesController::class, 'unassign']);
+        // Phase 1C: bookings
+        $company->get('/bookings', [\App\Controllers\Corporate\CorpBookingsController::class, 'index']);
+        $company->get('/bookings/new', [\App\Controllers\Corporate\CorpBookingsController::class, 'create']);
+        $company->get('/bookings/slots', [\App\Controllers\Corporate\CorpBookingsController::class, 'slots']);
+        $company->post('/bookings', [\App\Controllers\Corporate\CorpBookingsController::class, 'store']);
+        $company->post('/bookings/{id}/cancel', [\App\Controllers\Corporate\CorpBookingsController::class, 'cancel']);
         // Phase 1C: clinic network + agreed prices
         $company->get('/providers', [\App\Controllers\Corporate\CorpProvidersController::class, 'index']);
         $company->post('/providers/request', [\App\Controllers\Corporate\CorpProvidersController::class, 'request']);

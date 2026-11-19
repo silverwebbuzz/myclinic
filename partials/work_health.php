@@ -47,11 +47,55 @@ function ecp_wh_list(int $identityId): array
               LIMIT 20"
         );
         $st->execute(['iid' => $identityId]);
-
-        return $st->fetchAll(PDO::FETCH_ASSOC);
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC);
     } catch (Throwable $e) {
         // Workforce tables not created yet on this server: the tab just stays hidden.
         return [];
+    }
+    $bookings = ecp_wh_bookings($identityId);
+    foreach ($rows as &$r) {
+        $r['bookings'] = $r['link_status'] === 'confirmed' ? ($bookings[(int) $r['id']] ?? []) : [];
+    }
+    unset($r);
+
+    return $rows;
+}
+
+/**
+ * Upcoming health-check appointments the employer booked (Phase 1C), per
+ * employment id, for CONFIRMED links only. Clinic name/address/time and the
+ * names of the checks; nothing clinical.
+ *
+ * @return array<int, list<array<string, mixed>>>
+ */
+function ecp_wh_bookings(int $identityId): array
+{
+    $db = ecp_db();
+    if (!$db || $identityId <= 0) {
+        return [];
+    }
+    try {
+        $st = $db->prepare(
+            "SELECT b.id, b.employment_id, b.scheduled_at, t.name AS clinic_name, t.address AS clinic_address, t.phone AS clinic_phone,
+                    (SELECT GROUP_CONCAT(et.name ORDER BY et.sort_order SEPARATOR ', ') FROM corp_screening_cases c JOIN oh_exam_types et ON et.id = c.exam_type_id
+                      WHERE c.company_id = b.company_id AND c.booking_id = b.id) AS checks
+               FROM corp_bookings b
+               JOIN corp_employments e ON e.id = b.employment_id AND e.company_id = b.company_id
+               JOIN tenants t ON t.id = b.clinic_id
+              WHERE e.identity_id = :iid AND e.link_status = 'confirmed' AND b.status = 'booked'
+                AND b.scheduled_at >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+              ORDER BY b.scheduled_at
+              LIMIT 20"
+        );
+        $st->execute(['iid' => $identityId]);
+        $out = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $b) {
+            $out[(int) $b['employment_id']][] = $b;
+        }
+
+        return $out;
+    } catch (Throwable $e) {
+        return [];   // 1C patch not run yet
     }
 }
 
@@ -160,5 +204,12 @@ function ecp_wh_shape(array $r): array
         'status' => (string) $r['link_status'],            // pending | confirmed
         'confirmed_at_utc' => $r['link_confirmed_at'] !== null ? (string) $r['link_confirmed_at'] : null,
         'on_leave' => $r['status'] === 'on_leave',
+        'upcoming_bookings' => array_map(static fn (array $b): array => [
+            'clinic' => (string) $b['clinic_name'],
+            'address' => $b['clinic_address'] !== null ? (string) $b['clinic_address'] : null,
+            'phone' => $b['clinic_phone'] !== null ? (string) $b['clinic_phone'] : null,
+            'at_local' => (string) $b['scheduled_at'],          // clinic's local time, Y-m-d H:i:s
+            'checks' => $b['checks'] !== null ? (string) $b['checks'] : '',
+        ], $r['bookings'] ?? []),
     ];
 }

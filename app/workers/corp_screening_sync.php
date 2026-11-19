@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 // Cron: daily 02:45 — php workers/corp_screening_sync.php [company_id]
 // Workforce Health safety net: re-works every active company's screening due
-// dates (ScreeningEngine is idempotent, so a run with no changes writes nothing).
+// dates (ScreeningEngine is idempotent, so a run with no changes writes nothing),
+// after applying clinic-side booking changes (cancelled / no-show / attended / moved).
 // The engine also runs straight after each employee / programme change.
 require dirname(__DIR__) . '/vendor/autoload.php';
 
@@ -31,6 +32,15 @@ $ids = array_map('intval', Database::connection()
 $started = microtime(true);
 foreach ($ids as $id) {
     try {
+        // Bookings first: a clinic-side cancel / no-show puts checks back to "not booked" before the due dates are re-worked.
+        try {
+            $b = \App\Services\Corporate\BookingService::syncCompany($id);
+            if (array_sum($b) > 0) {
+                echo sprintf("company %d bookings: %d cancelled by clinic, %d no-show, %d attended\n", $id, $b['cancelled'], $b['no_show'], $b['attended']);
+            }
+        } catch (Throwable $e) {
+            error_log('[corp_screening_sync] bookings ' . $id . ': ' . $e->getMessage());   // 1C patch not run yet
+        }
         $r = ScreeningEngine::syncCompany($id);
         echo sprintf("company %d: %d people, %d created, %d re-dated, %d cancelled\n", $id, $r['employees'], $r['created'], $r['redated'], $r['cancelled']);
     } catch (Throwable $e) {

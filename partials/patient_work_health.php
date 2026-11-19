@@ -65,7 +65,20 @@ $whTypes = ['contractor' => 'Contractor', 'temporary' => 'Temporary', 'intern' =
           <?php if (isset($whTypes[$w['employment_type']])): ?><div><dt>Type</dt><dd><?= $whE($whTypes[$w['employment_type']]) ?></dd></div><?php endif; ?>
           <?php if (!empty($w['link_confirmed_at'])): ?><div><dt>Confirmed</dt><dd><?= $whE($whDate($w['link_confirmed_at'])) ?></dd></div><?php endif; ?>
         </dl>
-        <div class="wh-empty">Your work health checks will appear here: what's due, booked appointments and your fitness certificates.</div>
+        <?php if (!empty($w['bookings'])): ?>
+          <div class="wh-book-title">Booked health checks</div>
+          <?php foreach ($w['bookings'] as $bk): ?>
+            <div class="wh-book">
+              <div class="wh-book-when"><?= $whE(date('D, d M Y', strtotime((string) $bk['scheduled_at']))) ?> · <?= $whE(date('h:i A', strtotime((string) $bk['scheduled_at']))) ?></div>
+              <div><strong><?= $whE($bk['clinic_name']) ?></strong><?= !empty($bk['clinic_phone']) ? ' · <a href="tel:' . $whE(preg_replace('/[^0-9+]/', '', (string) $bk['clinic_phone'])) . '">' . $whE($bk['clinic_phone']) . '</a>' : '' ?></div>
+              <?php if (!empty($bk['clinic_address'])): ?><div class="wh-sub"><?= $whE($bk['clinic_address']) ?></div><?php endif; ?>
+              <?php if (!empty($bk['checks'])): ?><div class="wh-sub">Checks: <?= $whE($bk['checks']) ?></div><?php endif; ?>
+            </div>
+          <?php endforeach; ?>
+          <p class="wh-small">Bring a photo ID. To change the time, ask your HR team.</p>
+        <?php else: ?>
+        <div class="wh-empty">No health check booked right now. When your employer books one, the clinic, date and time appear here; later also your fitness certificates.</div>
+        <?php endif; ?>
         <p class="wh-small">Details wrong, or you've left? Please tell your HR team; they keep this record.</p>
       </div>
     <?php endif; ?>
@@ -89,4 +102,8 @@ $whTypes = ['contractor' => 'Contractor', 'temporary' => 'Temporary', 'intern' =
   .wh-ok { flex: none; font-size: 12px; font-weight: 600; color: #047857; background: #ecfdf5; border-radius: 999px; padding: 2px 10px; }
   .wh-empty { border: 1px dashed #cbd5e1; border-radius: 10px; padding: 12px 14px; color: #475569; font-size: 13px; background: #f8fafc; }
   .wh-err { color: #b91c1c; }
+  .wh-book-title { font-size: 13px; font-weight: 600; color: #334155; margin: 4px 0 6px; }
+  .wh-book { border: 1px solid #c7d2fe; background: #eef2ff; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; font-size: 14px; }
+  .wh-book-when { font-weight: 600; color: #3730a3; margin-bottom: 2px; }
+  .wh-book a { color: inherit; }
 </style>
