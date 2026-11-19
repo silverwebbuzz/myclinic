@@ -81,11 +81,11 @@ $hsJsBust = @filemtime(__DIR__ . '/../assets/js/hero-slider.js') ?: time();
     </svg>
 
     <div class="hh-slides">
-        <!-- SLIDE 1: Diwali Offer -->
-        <div class="hh-slide hh-active diwali-slide" data-name="Diwali Offer" aria-label="1 of 4: Diwali Offer" aria-roledescription="slide">
+        <!-- SLIDE 1: Christmas Offer -->
+        <div class="hh-slide hh-active diwali-slide" data-name="Christmas Offer" aria-label="1 of 4: Christmas Offer" aria-roledescription="slide">
             <a href="/pricing" class="hh-offer-banner">
-                <img class="desktop-banner" src="/assets/img/hero/diwali-offer.webp" alt="eClinicPro Diwali Offer — Clinic Management Software free till 31st Dec 2026" fetchpriority="high" decoding="async">
-                <img class="mobile-banner" src="/assets/img/hero/mobille-banner.webp" alt="eClinicPro Diwali Offer — Clinic Management Software free till 31st Dec 2026" fetchpriority="high" decoding="async">
+                <img class="desktop-banner" src="/assets/img/hero/christmas.webp" alt="eClinicPro Christmas Offer — Clinic Management Software free till 31st Dec 2026" fetchpriority="high" decoding="async">
+                <img class="mobile-banner" src="/assets/img/hero/christmas-mobile-view.webp" alt="eClinicPro Christmas Offer — Clinic Management Software free till 31st Dec 2026" fetchpriority="high" decoding="async">
             </a>
         </div>
 
@@ -242,7 +242,7 @@ $hsJsBust = @filemtime(__DIR__ . '/../assets/js/hero-slider.js') ?: time();
     <div class="hh-slider-footer"><button type="button" class="hh-arrow hh-previous" aria-label="Previous slide"><svg class="hh-icon" style="transform:rotate(180deg)">
                 <use href="#hh-i-arrow" />
             </svg></button>
-        <div class="hh-tabs" role="group" aria-label="Choose a slide"><button type="button" class="hh-tab" aria-current="true">Diwali Offer</button><button type="button" class="hh-tab" aria-current="false">Healthcare</button><button type="button" class="hh-tab" aria-current="false">Health Store</button><button type="button" class="hh-tab" aria-current="false">Diagnostics</button></div><button type="button" class="hh-arrow hh-next" aria-label="Next slide"><svg class="hh-icon">
+        <div class="hh-tabs" role="group" aria-label="Choose a slide"><button type="button" class="hh-tab" aria-current="true">Christmas Offer</button><button type="button" class="hh-tab" aria-current="false">Healthcare</button><button type="button" class="hh-tab" aria-current="false">Health Store</button><button type="button" class="hh-tab" aria-current="false">Diagnostics</button></div><button type="button" class="hh-arrow hh-next" aria-label="Next slide"><svg class="hh-icon">
                 <use href="#hh-i-arrow" />
             </svg></button><button type="button" class="hh-play" aria-label="Pause slideshow">Ⅱ</button>
     </div>
