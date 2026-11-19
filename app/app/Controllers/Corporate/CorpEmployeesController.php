@@ -43,6 +43,7 @@ final class CorpEmployeesController
             'jobRoles' => StructureService::jobRoles($cid),
             'canManage' => CorpAuth::can('employees.manage'),
             'canExport' => CorpAuth::can('employees.export'),
+            'notInvited' => CorpAuth::can('employees.manage') ? \App\Services\Corporate\EmployeeInviteService::notInvitedCount($cid, CorpAuth::branchScope('employees.manage')) : 0,
             'scoped' => $scope !== null,
         ]);
     }
@@ -68,7 +69,10 @@ final class CorpEmployeesController
 
             return Response::redirect('/company/employees/new');
         }
-        SessionFlash::put('corp_ok', 'Employee added. They\'ll be asked to confirm the link when they sign in with their mobile number.');
+        $inv = \App\Services\Corporate\EmployeeInviteService::invite((int) CorpContext::companyId(), (int) CorpContext::userId(), (int) $res['id'], CorpAuth::branchScope('employees.manage'));
+        SessionFlash::put('corp_ok', 'Employee added. ' . ($inv['ok']
+            ? 'We sent them an invitation by ' . implode(' and ', array_map(static fn (string $c): string => $c === 'sms' ? 'SMS' : 'email', $inv['channels'] ?? [])) . ' to sign in and confirm.'
+            : 'They\'ll be asked to confirm the link when they sign in to eClinicPro with their mobile number.'));
 
         return Response::redirect('/company/employees/' . (int) $res['id']);
     }
@@ -119,6 +123,37 @@ final class CorpEmployeesController
     public function rehire(Request $request, string $id): Response
     {
         return $this->status($request, (int) $id, 'rehire', 'Re-hired. Their earlier history is kept.');
+    }
+
+    public function invite(Request $request, string $id): Response
+    {
+        if ($deny = CorpAuth::guard('employees.manage')) {
+            return $deny;
+        }
+        $res = \App\Services\Corporate\EmployeeInviteService::invite((int) CorpContext::companyId(), (int) CorpContext::userId(), (int) $id, CorpAuth::branchScope('employees.manage'));
+        SessionFlash::put($res['ok'] ? 'corp_ok' : 'corp_err', $res['ok']
+            ? 'Invitation sent by ' . implode(' and ', array_map(static fn (string $c): string => $c === 'sms' ? 'SMS' : 'email', $res['channels'] ?? [])) . '.'
+            : ($res['error'] ?? 'Could not send.'));
+
+        return Response::redirect('/company/employees/' . (int) $id);
+    }
+
+    public function inviteAll(Request $request): Response
+    {
+        if ($deny = CorpAuth::guard('employees.manage')) {
+            return $deny;
+        }
+        $r = \App\Services\Corporate\EmployeeInviteService::inviteAll((int) CorpContext::companyId(), (int) CorpContext::userId(), CorpAuth::branchScope('employees.manage'));
+        $msg = number_format($r['sent']) . ' invitation' . ($r['sent'] === 1 ? '' : 's') . ' sent.';
+        if ($r['unreachable'] > 0) {
+            $msg .= ' ' . number_format($r['unreachable']) . ' couldn\'t be reached (no work email, and not an Indian mobile); ask them to sign in at eclinicpro.com/patient.';
+        }
+        if ($r['remaining'] > 0) {
+            $msg .= ' ' . number_format($r['remaining']) . ' still to go: click again to continue.';
+        }
+        SessionFlash::put('corp_ok', $msg);
+
+        return Response::redirect('/company/employees');
     }
 
     /** POST, returns JSON: the full ID number, for employees.manage only. Each view is logged. */

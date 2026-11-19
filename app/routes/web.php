@@ -864,6 +864,7 @@ return static function (RouteRegistrar $router): void {
         $company->get('/employees', [\App\Controllers\Corporate\CorpEmployeesController::class, 'index']);
         $company->get('/employees/new', [\App\Controllers\Corporate\CorpEmployeesController::class, 'create']);
         $company->get('/employees/export', [\App\Controllers\Corporate\CorpEmployeesController::class, 'export']);
+        $company->post('/employees/invite-all', [\App\Controllers\Corporate\CorpEmployeesController::class, 'inviteAll']);
         $company->get('/employees/import', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'index']);
         $company->get('/employees/import/template', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'template']);
         $company->post('/employees/import', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'upload']);
@@ -881,6 +882,7 @@ return static function (RouteRegistrar $router): void {
         $company->post('/employees/{id}/terminate', [\App\Controllers\Corporate\CorpEmployeesController::class, 'terminate']);
         $company->post('/employees/{id}/rehire', [\App\Controllers\Corporate\CorpEmployeesController::class, 'rehire']);
         $company->post('/employees/{id}/reveal-id', [\App\Controllers\Corporate\CorpEmployeesController::class, 'revealId']);
+        $company->post('/employees/{id}/invite', [\App\Controllers\Corporate\CorpEmployeesController::class, 'invite']);
 
         // Plan & trial (chunk 0.6) — also the page an expired company is sent to
         $company->get('/billing', [\App\Controllers\Corporate\CorpBillingController::class, 'index']);

@@ -55,6 +55,13 @@ ob_start();
     </div>
 </div>
 
+<?php if (($notInvited ?? 0) > 0): ?>
+    <form method="post" action="/company/employees/invite-all" class="mt-4 flex flex-wrap items-center gap-3 rounded-[10px] border border-ac/30 bg-acs px-4 py-3">
+        <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+        <span class="text-tx2"><?= number_format((int) $notInvited) ?> employee<?= (int) $notInvited === 1 ? ' hasn\'t' : 's haven\'t' ?> been invited to confirm their link yet.</span>
+        <button class="<?= $btn ?> ml-auto bg-ac text-white hover:opacity-90">Send invitations<?= (int) $notInvited > \App\Services\Corporate\EmployeeInviteService::BULK_LIMIT ? ' (next ' . \App\Services\Corporate\EmployeeInviteService::BULK_LIMIT . ')' : '' ?></button>
+    </form>
+<?php endif; ?>
 <?php if ($counts['declined'] > 0 || $counts['pending'] > 0): ?>
     <div class="mt-4 flex flex-wrap gap-2 text-[13px]">
         <?php if ($counts['declined'] > 0): ?>

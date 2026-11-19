@@ -56,7 +56,7 @@ $fieldLabel = [
     'full_name' => 'Name', 'employee_no' => 'Employee no.', 'work_phone' => 'Mobile', 'work_email' => 'Email', 'dob' => 'Date of birth',
     'gender' => 'Gender', 'nationality' => 'Nationality', 'branch_id' => 'Branch', 'department_id' => 'Department', 'job_role_id' => 'Job role',
     'employment_type' => 'Type', 'contractor_company' => 'Contractor company', 'joined_on' => 'Joined', 'id_type' => 'ID type', 'id_number' => 'ID number',
-    'status' => 'Status', 'left_on' => 'Left on', 'leave_reason' => 'Reason', 'reason' => 'Reason', 'account_link' => 'Account link',
+    'status' => 'Status', 'channels' => 'Sent by', 'left_on' => 'Left on', 'leave_reason' => 'Reason', 'reason' => 'Reason', 'account_link' => 'Account link',
 ];
 $countryNames = array_column($countries, 'name', 'code');
 $show = static function (string $field, $value) use ($allBranches, $allDepartments, $allJobRoles, $countryNames, $loc): string {
@@ -255,6 +255,16 @@ ob_start();
                 <?php [$lt, $lc, $lh] = $linkText[$emp['link_status']] ?? $linkText['pending']; ?>
                 <span class="mt-2 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium <?= $lc ?>"><?= $e($lt) ?></span>
                 <p class="mt-2 text-tx3"><?= $e($lh) ?></p>
+                <?php if ($emp['link_status'] === 'pending' && $emp['status'] !== 'terminated'): ?>
+                    <?php $whyNot = \App\Services\Corporate\EmployeeInviteService::cannotInvite($emp); ?>
+                    <?php if (!empty($emp['invited_at'])): ?><p class="mt-1 text-[12px] text-tx3">Invitation sent <?= $e($loc->dateTime($emp['invited_at'])) ?></p><?php endif; ?>
+                    <?php if ($canManage && $whyNot === null): ?>
+                        <form method="post" action="/company/employees/<?= (int) $emp['id'] ?>/invite" class="mt-2">
+                            <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+                            <button class="<?= $btn ?> border border-ln bg-sf hover:bg-sf2"><?= empty($emp['invited_at']) ? 'Send invitation' : 'Send again' ?></button>
+                        </form>
+                    <?php endif; ?>
+                <?php endif; ?>
                 <?php if ($emp['link_status'] === 'confirmed' && !empty($emp['link_confirmed_at'])): ?>
                     <p class="mt-1 text-[12px] text-tx3">Confirmed <?= $e($loc->dateTime($emp['link_confirmed_at'])) ?></p>
                 <?php endif; ?>

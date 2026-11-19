@@ -56,6 +56,15 @@ if ($me) {
     $htContributor = ecp_ht_contributor_for_identity((int) $me['id']);
 }
 
+// Workforce Health: a "Work health" tab only for people a company has added
+// (pending or confirmed link). A pending one opens first: it needs an answer.
+$workItems = [];
+if ($me) {
+    require_once __DIR__ . '/partials/work_health.php';
+    $workItems = ecp_wh_list((int) $me['id']);
+}
+$workPending = count(array_filter($workItems, static fn (array $w): bool => $w['link_status'] === 'pending'));
+
 // The logged-in panel runs wider than the rest of the site (it holds a fixed
 // 1480px booking frame); this widens the site header to match. The logged-out
 // view keeps the standard 1280px layout.
@@ -1158,6 +1167,7 @@ require __DIR__ . '/partials/header.php';
 
           <!-- ============ MY PROFILE TAB ============ -->
 <?php if ($pointsPanel !== null) { require __DIR__ . '/partials/patient_points.php'; } ?>
+<?php if ($workItems !== []) { require __DIR__ . '/partials/patient_work_health.php'; } ?>
 
           <div x-show="tab === 'profile'" class="pt-tab-pane">
             <div class="pt-section-head">
@@ -1369,6 +1379,15 @@ require __DIR__ . '/partials/header.php';
           <nav class="pt-navmenu" role="tablist" aria-label="Patient panel sections">
             <!-- Order is deliberate: lab booking first (the revenue surface and
                  the default tab), lab reports second, then everything else. -->
+<?php if ($workItems !== []): ?>
+            <button type="button" role="tab"
+              :class="tab === 'work' ? 'is-active' : ''"
+              @click="go('work')">
+              <span class="pt-nav-ic">🦺</span>
+              <span class="pt-nav-label">Work health</span>
+              <?php if ($workPending > 0): ?><span class="pt-tab-count" title="Waiting for your answer"><?= (int) $workPending ?></span><?php endif; ?>
+            </button>
+<?php endif; ?>
             <button type="button" role="tab"
               :class="tab === 'labbook' ? 'is-active' : ''"
               @click="go('labbook')">
@@ -4297,7 +4316,7 @@ require __DIR__ . '/partials/header.php';
       loggedIn: !!isLoggedIn,
       // Lab booking is the default landing tab — it's the revenue surface and
       // the one most patients arrive for.
-      tab: 'labbook',
+      tab: '<?= $workPending > 0 ? 'work' : 'labbook' ?>',
       // The partner iframe mounts lazily: src is only set once the tab is
       // opened, so a patient who never books never pays for that page load.
       labFrameLoaded: false,
@@ -5154,7 +5173,7 @@ require __DIR__ . '/partials/header.php';
         }
         // Deep links: /patient?tab=labs, or #labs from an email/banner CTA.
         // Anything unrecognised falls through to the default tab.
-        const known = ['labbook', 'laborders', 'labs', 'bookings', 'points', 'shortlist', 'family', 'rx', 'profile'];
+        const known = ['labbook', 'laborders', 'labs', 'bookings', 'points', 'shortlist', 'family', 'rx', 'profile'<?= $workItems !== [] ? ", 'work'" : '' ?>];
         let want = '';
         try {
           want = new URLSearchParams(window.location.search).get('tab') || '';
