@@ -204,13 +204,25 @@ final class EmployeeService
             }
         }
 
-        $clean = self::clean($companyId, $post, $scope, $existing);
+        $clean = self::prepare($companyId, $post, $scope, $existing);
         if (isset($clean['error'])) {
             return ['ok' => false, 'error' => $clean['error']];
         }
-        /** @var array<string, mixed> $in */
-        $in = $clean['data'];
-        $effective = $clean['effective_on'];
+
+        return self::persist($companyId, $actorId, $existing, $clean['data'], $clean['effective_on'], true);
+    }
+
+    /**
+     * Write validated data (from prepare()): duplicate checks, identity
+     * find/create, insert or update, events. Used by the form and the import.
+     *
+     * @param array<string, mixed>|null $existing  the current row for an update
+     * @param array<string, mixed> $in
+     * @return array{ok: bool, error?: string, id?: int, changed?: bool}
+     */
+    public static function persist(int $companyId, int $actorId, ?array $existing, array $in, ?string $effective, bool $audit): array
+    {
+        $id = $existing !== null ? (int) $existing['id'] : 0;
         $now = LocalDate::nowUtc();
         $pdo = Database::connection();
 
@@ -250,6 +262,7 @@ final class EmployeeService
                 self::event($companyId, $id, 'joined', null, self::eventView($in), $in['joined_on'] ?? null, 'corp_user', $actorId);
             } else {
                 $changes = self::diff($existing, $in);
+                $changed = $changes !== [];
                 if ($changes !== []) {
                     $set = implode(', ', array_map(static fn (string $k): string => "{$k} = :{$k}", array_keys($in)));
                     $pdo->prepare("UPDATE corp_employments SET {$set}, updated_at = :upd_v WHERE id = :id_v AND company_id = :cid_v")
@@ -267,10 +280,12 @@ final class EmployeeService
             return ['ok' => false, 'error' => 'Could not save the employee. Please try again.'];
         }
 
-        CorpAudit::log($companyId, 'corp_user', $actorId, $existing === null ? 'employee_created' : 'employee_updated', 'corp_employment', $id,
-            ['employee_no' => $in['employee_no']]);
+        if ($audit) {
+            CorpAudit::log($companyId, 'corp_user', $actorId, $existing === null ? 'employee_created' : 'employee_updated', 'corp_employment', $id,
+                ['employee_no' => $in['employee_no']]);
+        }
 
-        return ['ok' => true, 'id' => $id];
+        return ['ok' => true, 'id' => $id, 'changed' => $changed ?? true];
     }
 
     /**
@@ -369,22 +384,27 @@ final class EmployeeService
     // ------------------------------------------------------------------
 
     /**
-     * Validate and normalise the form.
+     * Validate and normalise one employee (form post, or an import row
+     * turned into the same shape).
      *
      * @param array<string, mixed> $post
      * @param list<int>|null $scope
      * @param array<string, mixed>|null $existing
+     * @param array{branch: array<int, array<string, mixed>>, department: array<int, array<string, mixed>>, job_role: array<int, array<string, mixed>>}|null $lookup
+     *        preloaded structure rows by id (the import passes these so 10,000 rows don't mean 30,000 queries)
      * @return array{error: string}|array{data: array<string, mixed>, effective_on: ?string}
      */
-    private static function clean(int $companyId, array $post, ?array $scope, ?array $existing): array
+    public static function prepare(int $companyId, array $post, ?array $scope, ?array $existing, ?array $lookup = null): array
     {
         $s = static fn (string $k, int $max): string => mb_substr(trim((string) ($post[$k] ?? '')), 0, $max);
+        $get = static fn (string $kind, int $id): ?array => $id <= 0 ? null
+            : ($lookup !== null ? ($lookup[$kind][$id] ?? null) : StructureService::find($kind, $companyId, $id));
         $branchId = (int) ($post['branch_id'] ?? 0);
-        $branch = $branchId > 0 ? StructureService::find('branch', $companyId, $branchId) : null;
+        $branch = $get('branch', $branchId);
         $deptId = (int) ($post['department_id'] ?? 0);
         $jobId = (int) ($post['job_role_id'] ?? 0);
-        $dept = $deptId > 0 ? StructureService::find('department', $companyId, $deptId) : null;
-        $job = $jobId > 0 ? StructureService::find('job_role', $companyId, $jobId) : null;
+        $dept = $get('department', $deptId);
+        $job = $get('job_role', $jobId);
 
         $in = [
             'employee_no' => strtoupper($s('employee_no', 40)),
@@ -500,6 +520,17 @@ final class EmployeeService
 
             return $id !== false ? (int) $id : null;
         }
+    }
+
+    /**
+     * Would writing $in change anything? (The import shows these rows as "no change".)
+     *
+     * @param array<string, mixed> $existing
+     * @param array<string, mixed> $in
+     */
+    public static function hasChanges(array $existing, array $in): bool
+    {
+        return self::diff($existing, $in) !== [];
     }
 
     /**

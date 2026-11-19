@@ -28,3 +28,7 @@ fetch_blog/img/
 
 # fetch_doctor runtime state (job progress, rebuild state/lock files)
 fetch_doctor/jobs/
+
+# Workforce Health uploads (company documents, employee import files): personal data, never commit
+storage/corporate_docs/
+storage/corporate_imports/

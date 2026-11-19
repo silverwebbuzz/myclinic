@@ -53,7 +53,7 @@ final class CorpDashboardController
             ['Invite your team', 'HR, HSE and branch managers.', $teamInvited, CorpAuth::can('users.manage') ? '/company/users' : ''],
             ['Add your branches', 'Offices, sites and yards where your people work.', $hasBranch, CorpAuth::can('branches.manage') ? '/company/branches' : ''],
             ['Add job roles', 'Screening is assigned by job role.', $hasJobRole, CorpAuth::can('jobroles.manage') ? '/company/job-roles' : ''],
-            ['Add your employees', 'One by one now; Excel import is coming next.', $hasEmployee, CorpAuth::can('employees.manage') && $hasBranch ? '/company/employees/new' : ''],
+            ['Add your employees', 'One by one, or import them from Excel / CSV.', $hasEmployee, $hasBranch ? (CorpAuth::can('employees.import') ? '/company/employees/import' : (CorpAuth::can('employees.manage') ? '/company/employees/new' : '')) : ''],
         ];
 
         return Response::html(View::render('corporate/dashboard', [

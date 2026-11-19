@@ -67,6 +67,7 @@ final class CorpActivityController
         'employee_created' => 'Added an employee', 'employee_updated' => 'Edited an employee', 'employee_terminated' => 'Marked an employee as left',
         'employee_rehired' => 'Re-hired an employee', 'employee_on_leave' => 'Marked an employee as on leave', 'employee_returned' => 'Marked an employee as back at work',
         'employee_id_viewed' => 'Viewed an employee\'s full ID number', 'employees_exported' => 'Exported the employee list',
+        'employees_imported' => 'Imported employees from a file', 'employee_import_cancelled' => 'Cancelled an employee import',
     ];
 
     public function index(Request $request): Response

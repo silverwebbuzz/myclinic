@@ -43,11 +43,13 @@ ob_start();
         </p>
     </div>
     <div class="flex flex-wrap gap-2">
+        <?php if (\App\Services\Corporate\CorpAuth::can('employees.import')): ?>
+            <a href="/company/employees/import" class="<?= $btn ?> border border-ln bg-sf hover:bg-sf2">Import from Excel</a>
+        <?php endif; ?>
         <?php if ($canExport && $result['total'] > 0): ?>
             <a href="/company/employees/export<?= $e($qs([])) ?>" class="<?= $btn ?> border border-ln bg-sf hover:bg-sf2">Export CSV</a>
         <?php endif; ?>
         <?php if ($canManage): ?>
-            <span class="<?= $btn ?> cursor-default border border-ln bg-sf text-tx3" title="Coming next">Import <span class="ml-1.5 rounded bg-sf2 px-1 text-[10px] uppercase tracking-wide ring-1 ring-ln">soon</span></span>
             <?php if ($branches !== []): ?><a href="/company/employees/new" class="<?= $btn ?> bg-ac text-white hover:opacity-90">Add employee</a><?php endif; ?>
         <?php endif; ?>
     </div>
@@ -111,7 +113,7 @@ ob_start();
         <div class="px-5 py-10 text-center">
             <div class="font-medium"><?= $hasFilter ? 'No one matches these filters' : 'No employees yet' ?></div>
             <?php if (!$hasFilter && $canManage): ?>
-                <p class="mt-1 text-tx3">Add people one by one now. Bulk import from Excel is coming next.</p>
+                <p class="mt-1 text-tx3">Add people one by one, or import them all from an Excel or CSV file.</p>
                 <a href="/company/employees/new" class="<?= $btn ?> mt-4 bg-ac text-white hover:opacity-90">Add the first employee</a>
             <?php endif; ?>
         </div>

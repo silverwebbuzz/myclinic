@@ -864,6 +864,15 @@ return static function (RouteRegistrar $router): void {
         $company->get('/employees', [\App\Controllers\Corporate\CorpEmployeesController::class, 'index']);
         $company->get('/employees/new', [\App\Controllers\Corporate\CorpEmployeesController::class, 'create']);
         $company->get('/employees/export', [\App\Controllers\Corporate\CorpEmployeesController::class, 'export']);
+        $company->get('/employees/import', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'index']);
+        $company->get('/employees/import/template', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'template']);
+        $company->post('/employees/import', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'upload']);
+        $company->get('/employees/import/{id}', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'show']);
+        $company->get('/employees/import/{id}/errors', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'errors']);
+        $company->post('/employees/import/{id}/check', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'check']);
+        $company->post('/employees/import/{id}/remap', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'remap']);
+        $company->post('/employees/import/{id}/commit', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'commit']);
+        $company->post('/employees/import/{id}/cancel', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'cancel']);
         $company->post('/employees', [\App\Controllers\Corporate\CorpEmployeesController::class, 'store']);
         $company->get('/employees/{id}', [\App\Controllers\Corporate\CorpEmployeesController::class, 'show']);
         $company->post('/employees/{id}', [\App\Controllers\Corporate\CorpEmployeesController::class, 'update']);
