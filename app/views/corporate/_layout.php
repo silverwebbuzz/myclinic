@@ -33,6 +33,9 @@ $navGroups = [
         ['/company/screening', 'Screening', true, 'screening.view_status'],
         ['/company/reports', 'Reports', false],
     ],
+    'Providers' => [
+        ['/company/providers', 'Clinics', true, 'providers.manage'],
+    ],
     'Structure' => [
         ['/company/branches', 'Branches', true, 'branches.manage'],
         ['/company/departments', 'Departments', true, 'departments.manage'],

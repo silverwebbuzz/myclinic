@@ -24,14 +24,15 @@ ob_start();
         <ul class="divide-y divide-ln2">
             <?php foreach ($rows as $r): ?>
                 <?php
+                $details = json_decode((string) ($r['details'] ?? ''), true);
                 $actor = match ((string) $r['actor_type']) {
                     'corp_user' => (string) ($r['actor_name'] ?? 'Unknown user'),
                     'platform_admin' => 'eClinicPro team',
                     'employee' => 'Employee',
+                    'provider' => 'Clinic' . (is_array($details) && !empty($details['clinic']) ? ' · ' . $details['clinic'] : ''),
                     default => 'System',
                 };
                 $label = $labels[(string) $r['action']] ?? (string) $r['action'];
-                $details = json_decode((string) ($r['details'] ?? ''), true);
                 $extra = [];
                 if (!empty($r['target_name']) && (int) $r['entity_id'] !== (int) $r['actor_id']) {
                     $extra[] = (string) $r['target_name'];
