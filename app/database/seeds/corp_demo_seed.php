@@ -22,6 +22,11 @@ declare(strict_types=1);
  * linked to any patient account; invitations to them can't be delivered
  * (WhatsApp needs a recorded opt-in, email goes to .example).
  *
+ * Phase 1C (when its patch is run): a demo clinic (slug demo-occ-health, doctor
+ * login doctor@demo-occ-health.example, same password) with a verified demo
+ * registration, linked to both companies, agreed prices, today's signed
+ * certificates (one not shared, one revoked) and upcoming bookings.
+ *
  * Phase 1B (when its patch is run): the SAMPLE screening templates adopted
  * and applied two years ago, with replayed history: done, waived, overdue,
  * due soon and later checks. HSE staff are left uncovered on purpose.
@@ -73,6 +78,30 @@ $demoCompanyIds = static fn (): array => array_map('intval', $pdo->query('SELECT
 // Purge
 // ---------------------------------------------------------------------------
 if ($purge) {
+    // Phase 1C demo clinic (a normal clinic tenant, found by its reserved slug). Children first: clinic tables have FKs.
+    $clinicId = (int) ($pdo->query("SELECT id FROM tenants WHERE slug = 'demo-occ-health'")->fetchColumn() ?: 0);
+    if ($clinicId > 0) {
+        foreach (['corp_fitness_certificates', 'corp_bookings', 'corp_provider_links', 'visits', 'appointments', 'patients',
+                  'occ_doctor_credentials', 'doctor_schedules', 'doctor_leaves', 'users'] as $t) {
+            if (!$hasTable($t)) {
+                continue;
+            }
+            try {
+                $n = $pdo->exec("DELETE FROM {$t} WHERE clinic_id = {$clinicId}");
+                echo str_pad($t . ' (demo clinic)', 40) . " {$n} rows\n";
+            } catch (Throwable $e) {
+                echo str_pad($t . ' (demo clinic)', 40) . ' kept: ' . $e->getMessage() . "\n";
+            }
+        }
+        try {
+            $pdo->exec("DELETE FROM tenants WHERE id = {$clinicId} AND slug = 'demo-occ-health'");
+            echo "Removed the demo clinic.\n";
+        } catch (Throwable $e) {
+            // Something else (created while testing) still points at it: switch it off instead.
+            $pdo->exec("UPDATE tenants SET is_active = 0, corporate_enabled = 0 WHERE id = {$clinicId}");
+            echo "Demo clinic switched off (other rows still use it): " . $e->getMessage() . "\n";
+        }
+    }
     $ids = $demoCompanyIds();
     if ($ids === []) {
         echo "No demo companies found.\n";
@@ -89,7 +118,7 @@ if ($purge) {
     if ($customRoles !== []) {
         $pdo->exec('DELETE FROM corp_role_permissions WHERE role_id IN (' . implode(',', $customRoles) . ')');
     }
-    foreach (['corp_case_events', 'corp_screening_cases', 'corp_programme_assignments', 'corp_programme_items', 'corp_programmes',
+    foreach (['corp_fitness_certificates', 'corp_bookings', 'corp_rate_items', 'corp_provider_links', 'corp_case_events', 'corp_screening_cases', 'corp_programme_assignments', 'corp_programme_items', 'corp_programmes',
               'corp_sessions', 'corp_user_roles', 'corp_invitations', 'corp_audit_log', 'corp_company_documents', 'corp_users', 'corp_roles',
               'corp_employment_events', 'corp_employee_import_rows', 'corp_employee_imports', 'corp_employments',
               'corp_branches', 'corp_departments', 'corp_job_roles'] as $t) {
@@ -102,7 +131,7 @@ if ($purge) {
     $pdo->exec("DELETE FROM corp_companies WHERE id IN ($in) AND is_demo = 1");
     $pdo->commit();
     foreach ($ids as $id) {
-        foreach (['corporate_docs', 'corporate_imports'] as $folder) {
+        foreach (['corporate_docs', 'corporate_imports', 'corporate_certs'] as $folder) {
             $dir = dirname($base) . '/storage/' . $folder . '/' . $id;
             if (is_dir($dir)) {
                 array_map('unlink', glob($dir . '/*') ?: []);
@@ -396,6 +425,156 @@ $seedScreening = static function (int $companyId, array $c, string $tz) use ($pd
         . ($counts['up_to_date_pct'] ?? 0) . '% of covered people up to date';
 };
 
+/**
+ * Phase 1C: one demo clinic (a normal clinic tenant, slug demo-occ-health) with
+ * a verified demo doctor, linked to both demo companies (Gulf Marine: only its
+ * Mumbai yard, to show branch scope), agreed prices, and per company 6 visits
+ * TODAY with signed certificates (fit, restricted, temp-unfit, one NOT shared,
+ * one revoked) plus 3 upcoming bookings. Rows are written directly (no
+ * reminders to the made-up phone numbers); certificates go through the real
+ * OccExamService, so PDFs, hashes and next due dates are genuine.
+ *
+ * @param list<array{0:int,1:array,2:string}> $made
+ */
+$seedClinic = static function (array $made, string $password, array &$logins) use ($pdo, $one, $base): void {
+    if ((int) ($one("SELECT COUNT(*) FROM tenants WHERE slug = :s", ['s' => 'demo-occ-health']) ?: 0) > 0) {
+        echo "  Demo clinic already exists (run --purge to recreate).\n";
+
+        return;
+    }
+    \App\Core\Application::boot($base);   // file paths for the certificate PDFs
+    $now = LocalDate::nowUtc();
+    $nowLocal = (new DateTimeImmutable('now', new DateTimeZone('Asia/Kolkata')));
+    $today = $nowLocal->format('Y-m-d');
+    $pdo->prepare(
+        "INSERT INTO tenants (name, slug, specialty, country_code, currency, timezone, plan, trial_ends_at, address, phone, email,
+                              is_active, onboarding_step, onboarding_completed_at, provider_kinds, corporate_enabled)
+         VALUES ('Demo Occupational Health Clinic', 'demo-occ-health', 'gp', 'IN', 'INR', 'Asia/Kolkata', 'standard', :trial,
+                 'Unit 7, Demo Business Park, Andheri East, Mumbai 400093', '+919800000077', 'desk@demo-occ-health.example',
+                 1, 5, :done, 'clinic', 1)"
+    )->execute(['trial' => LocalDate::addDays($today, 30), 'done' => $nowLocal->format('Y-m-d H:i:s')]);
+    $clinicId = (int) $pdo->lastInsertId();
+    $pdo->prepare(
+        "INSERT INTO users (clinic_id, name, email, username, password_hash, role, is_owner, specialization, qualification, is_active)
+         VALUES (:clinic, 'Dr. Meera Rao (demo)', 'doctor@demo-occ-health.example', 'demo-occ-doctor', :hash, 'admin', 1,
+                 'Occupational medicine', 'MBBS, AFIH', 1)"
+    )->execute(['clinic' => $clinicId, 'hash' => password_hash($password, PASSWORD_DEFAULT)]);
+    $doctorId = (int) $pdo->lastInsertId();
+    $pdo->prepare(
+        "INSERT INTO occ_doctor_credentials (clinic_id, user_id, reg_number, authority, country_code, valid_to, status, verified_at, created_at, updated_at)
+         VALUES (:clinic, :uid, 'DEMO-0001', 'Demo Medical Council (not a real registration)', 'IN', :vt, 'verified', :at, :cr, :up)"
+    )->execute(['clinic' => $clinicId, 'uid' => $doctorId, 'vt' => LocalDate::addDays($today, 900), 'at' => $now, 'cr' => $now, 'up' => $now]);
+    $logins[] = ['Demo Occupational Health Clinic', 'Dr. Meera Rao (demo)', 'clinic doctor (sign in at /login)', 'doctor@demo-occ-health.example'];
+
+    $prices = ['INR' => ['physical_exam' => 450, 'vision_acuity' => 150, 'audiometry' => 350, 'spirometry' => 400, 'chest_xray' => 600, 'cbc' => 250],
+               'AED' => ['physical_exam' => 150, 'vision_acuity' => 60, 'audiometry' => 120, 'spirometry' => 140, 'chest_xray' => 200, 'cbc' => 90]];
+    $outcomes = [
+        ['fit', [], 'yes'], ['fit_restricted', ['no_height'], 'yes'], ['fit', [], 'yes'],
+        ['temp_unfit', [], 'yes'], ['fit', [], 'no'], ['fit_restricted', ['no_heavy_lifting', 'no_night'], 'yes'],   // last one gets revoked
+    ];
+    $uhid = 0;
+    foreach ($made as [$companyId, $c, $tz]) {
+        // Link: Demo Infra all branches; Gulf Marine only its Mumbai yard (the clinic is in India).
+        $branchIds = null;
+        if ($c['cc'] !== 'IN') {
+            $mum = (int) $one('SELECT id FROM corp_branches WHERE company_id = :cid AND code = :code', ['cid' => $companyId, 'code' => 'MUM-FAB']);
+            $branchIds = $mum > 0 ? [$mum] : [];
+        }
+        $requester = (int) $one('SELECT id FROM corp_users WHERE company_id = :cid AND email = :e', ['cid' => $companyId, 'e' => 'hr.manager@' . $c['domain']]);
+        $pdo->prepare(
+            "INSERT INTO corp_provider_links (company_id, clinic_id, status, branch_ids, note, requested_by, responded_by, responded_at, created_at, updated_at)
+             VALUES (:cid, :clinic, 'active', :b, 'Demo arrangement', :by, :doc, :at, :cr, :up)"
+        )->execute(['cid' => $companyId, 'clinic' => $clinicId, 'b' => $branchIds === null ? null : json_encode($branchIds), 'by' => $requester,
+            'doc' => $doctorId, 'at' => $now, 'cr' => $now, 'up' => $now]);
+        $linkId = (int) $pdo->lastInsertId();
+        $cur = (string) $one('SELECT currency_code FROM corp_companies WHERE id = :cid', ['cid' => $companyId]);
+        foreach ($prices[$cur] ?? $prices['INR'] as $code => $price) {
+            $ex = (int) $one('SELECT id FROM oh_exam_types WHERE code = :c', ['c' => $code]);
+            if ($ex > 0) {
+                $pdo->prepare('INSERT INTO corp_rate_items (company_id, link_id, exam_type_id, price, currency_code, created_by, created_at, updated_at)
+                               VALUES (:cid, :lid, :ex, :p, :cur, :by, :cr, :up)')
+                    ->execute(['cid' => $companyId, 'lid' => $linkId, 'ex' => $ex, 'p' => $price, 'cur' => $cur, 'by' => $requester, 'cr' => $now, 'up' => $now]);
+            }
+        }
+
+        // People with open checks (Gulf Marine: Mumbai yard only).
+        $sql = "SELECT e.* FROM corp_employments e
+                 WHERE e.company_id = :cid AND e.status = 'active'
+                   AND EXISTS (SELECT 1 FROM corp_screening_cases s WHERE s.company_id = e.company_id AND s.employment_id = e.id AND s.status = 'not_scheduled')";
+        $params = ['cid' => $companyId];
+        if ($branchIds !== null) {
+            $sql .= ' AND e.branch_id = :bid';
+            $params['bid'] = $branchIds[0] ?? 0;
+        }
+        $st = $pdo->prepare($sql . ' ORDER BY e.id LIMIT 9');
+        $st->execute($params);
+        $people = $st->fetchAll();
+        $signed = 0;
+        $upcoming = 0;
+        foreach ($people as $i => $emp) {
+            $isToday = $i < 6;
+            $at = $isToday ? $nowLocal->setTime(9, 0)->modify('+' . ($i * 15 + ($companyId % 2) * 120) . ' minutes')
+                           : $nowLocal->setTime(10, 0)->modify('+' . ($i - 4) . ' days')->modify('+' . (($companyId % 2) * 60) . ' minutes');
+            $uhid++;
+            $pdo->prepare(
+                "INSERT INTO patients (clinic_id, identity_id, uhid, uhid_seq, name, dob, gender, phone, source, referred_by)
+                 VALUES (:clinic, :iid, :uhid, :seq, :name, :dob, :g, :phone, 'other', 'Employer (Workforce Health)')"
+            )->execute(['clinic' => $clinicId, 'iid' => $emp['identity_id'], 'uhid' => 'DEMO-' . str_pad((string) $uhid, 4, '0', STR_PAD_LEFT), 'seq' => $uhid,
+                'name' => $emp['full_name'], 'dob' => $emp['dob'], 'g' => in_array($emp['gender'], ['M', 'F'], true) ? $emp['gender'] : null, 'phone' => (string) $emp['work_phone']]);
+            $patientId = (int) $pdo->lastInsertId();
+            $cs = $pdo->prepare(
+                "SELECT s.id, et.name FROM corp_screening_cases s JOIN oh_exam_types et ON et.id = s.exam_type_id
+                  WHERE s.company_id = :cid AND s.employment_id = :eid AND s.status = 'not_scheduled' ORDER BY s.due_on LIMIT 4"
+            );
+            $cs->execute(['cid' => $companyId, 'eid' => (int) $emp['id']]);
+            $cases = $cs->fetchAll();
+            $pdo->prepare(
+                "INSERT INTO appointments (clinic_id, patient_id, doctor_id, scheduled_at, type, source, status, chief_complaint, notes)
+                 VALUES (:clinic, :pat, :doc, :at, 'prebooked', 'corporate', :st, :cc, 'Demo booking (Workforce Health)')"
+            )->execute(['clinic' => $clinicId, 'pat' => $patientId, 'doc' => $doctorId, 'at' => $at->format('Y-m-d H:i:s'), 'st' => $isToday ? 'in_progress' : 'scheduled',
+                'cc' => mb_substr('Occupational health check for ' . $c['trade'] . ': ' . implode(', ', array_column($cases, 'name')), 0, 1000)]);
+            $apptId = (int) $pdo->lastInsertId();
+            $pdo->prepare(
+                "INSERT INTO corp_bookings (company_id, employment_id, clinic_id, doctor_id, patient_id, appointment_id, scheduled_at, status, booked_by, created_at, updated_at)
+                 VALUES (:cid, :eid, :clinic, :doc, :pat, :appt, :at, 'booked', :by, :cr, :up)"
+            )->execute(['cid' => $companyId, 'eid' => (int) $emp['id'], 'clinic' => $clinicId, 'doc' => $doctorId, 'pat' => $patientId, 'appt' => $apptId,
+                'at' => $at->format('Y-m-d H:i:s'), 'by' => $requester, 'cr' => $now, 'up' => $now]);
+            $bookingId = (int) $pdo->lastInsertId();
+            $upd = $pdo->prepare("UPDATE corp_screening_cases SET status = 'scheduled', booking_id = :b, updated_at = :up WHERE id = :id AND company_id = :cid AND status = 'not_scheduled'");
+            foreach ($cases as $case) {
+                $upd->execute(['b' => $bookingId, 'up' => $now, 'id' => (int) $case['id'], 'cid' => $companyId]);
+            }
+            if (!$isToday) {
+                $upcoming++;
+                continue;
+            }
+            // Today's visit, signed by the demo doctor through the real service.
+            $pdo->prepare("INSERT INTO visits (clinic_id, appointment_id, patient_id, doctor_id, status, chief_complaint)
+                           VALUES (:clinic, :appt, :pat, :doc, 'completed', 'Occupational health check (demo)')")
+                ->execute(['clinic' => $clinicId, 'appt' => $apptId, 'pat' => $patientId, 'doc' => $doctorId]);
+            $visit = ['id' => (int) $pdo->lastInsertId(), 'appointment_id' => $apptId];
+            [$outcome, $restr, $consent] = $outcomes[$i];
+            $res = \App\Services\OccHealth\OccExamService::sign($clinicId, $doctorId, $visit, [
+                'done' => array_fill_keys(array_map(static fn ($x) => (int) $x['id'], $cases), '1'),
+                'outcome' => $outcome, 'restrictions' => $restr, 'restrictions_note' => $outcome === 'temp_unfit' ? 'Off site work for 2 weeks' : '',
+                'valid_to' => LocalDate::addDays(\App\Services\Corporate\ScreeningPlanner::addMonths($today, 12), -1),
+                'review_by' => LocalDate::addDays($today, 14), 'consent' => $consent,
+            ]);
+            if (!$res['ok']) {
+                echo '  ! certificate for ' . $emp['employee_no'] . ': ' . ($res['error'] ?? '') . "\n";
+                continue;
+            }
+            $signed++;
+            $pdo->prepare("UPDATE appointments SET status = 'completed' WHERE id = :id AND clinic_id = :clinic")->execute(['id' => $apptId, 'clinic' => $clinicId]);
+            if ($i === 5) {
+                \App\Services\OccHealth\OccExamService::revoke($clinicId, ['id' => $doctorId, 'role' => 'admin', 'is_owner' => 1], (int) $res['id'],
+                    'Demo: issued for the wrong date, will be reissued');
+            }
+        }
+        echo "  {$c['trade']}: clinic linked" . ($branchIds !== null ? ' (Mumbai yard only)' : '') . ", {$signed} certificates today (1 not shared, 1 revoked), {$upcoming} upcoming bookings\n";
+    }
+};
+
 $logins = [];
 $made = [];
 $pdo->beginTransaction();
@@ -479,6 +658,20 @@ if ($hasTable('corp_screening_cases') && $hasTable('oh_rule_templates')) {
     }
 } else {
     echo "\nScreening skipped: run the Phase 1B SQL patch first (then --purge and re-seed).\n";
+}
+// Phase 1C clinic, bookings and certificates (skipped when the 1C patch isn't run yet).
+if ($hasTable('corp_fitness_certificates') && $hasTable('occ_doctor_credentials')) {
+    echo "\nDemo clinic:\n";
+    try {
+        $seedClinic($made, $password, $logins);
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        fwrite(STDERR, '  Demo clinic failed (' . $e->getMessage() . "). Companies were created; run --purge and try again.\n");
+    }
+} else {
+    echo "\nDemo clinic skipped: run the Phase 1C SQL patch first (then --purge and re-seed).\n";
 }
 
 echo "\nDemo logins (sign in at /company/login):\n";
