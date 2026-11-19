@@ -861,6 +861,18 @@ return static function (RouteRegistrar $router): void {
         $company->post('/job-roles', [\App\Controllers\Corporate\CorpStructureController::class, 'saveJobRole']);
         $company->post('/job-roles/{id}/toggle', [\App\Controllers\Corporate\CorpStructureController::class, 'toggleJobRole']);
         // Employees (Phase 1A-2). Static paths before /{id}: the first match wins.
+        // Screening programmes (Phase 1B-1)
+        $company->get('/screening/library', [\App\Controllers\Corporate\CorpProgrammesController::class, 'library']);
+        $company->post('/screening/library/{templateId}/adopt', [\App\Controllers\Corporate\CorpProgrammesController::class, 'adopt']);
+        $company->get('/screening/programmes', [\App\Controllers\Corporate\CorpProgrammesController::class, 'index']);
+        $company->post('/screening/programmes', [\App\Controllers\Corporate\CorpProgrammesController::class, 'create']);
+        $company->get('/screening/programmes/{id}', [\App\Controllers\Corporate\CorpProgrammesController::class, 'show']);
+        $company->post('/screening/programmes/{id}/settings', [\App\Controllers\Corporate\CorpProgrammesController::class, 'settings']);
+        $company->post('/screening/programmes/{id}/items', [\App\Controllers\Corporate\CorpProgrammesController::class, 'addItem']);
+        $company->post('/screening/programmes/{id}/items/{itemId}/remove', [\App\Controllers\Corporate\CorpProgrammesController::class, 'removeItem']);
+        $company->post('/screening/programmes/{id}/items/{itemId}/frequency', [\App\Controllers\Corporate\CorpProgrammesController::class, 'frequency']);
+        $company->post('/screening/programmes/{id}/assignments', [\App\Controllers\Corporate\CorpProgrammesController::class, 'assign']);
+        $company->post('/screening/programmes/{id}/assignments/{assignmentId}/remove', [\App\Controllers\Corporate\CorpProgrammesController::class, 'unassign']);
         $company->get('/employees', [\App\Controllers\Corporate\CorpEmployeesController::class, 'index']);
         $company->get('/employees/new', [\App\Controllers\Corporate\CorpEmployeesController::class, 'create']);
         $company->get('/employees/export', [\App\Controllers\Corporate\CorpEmployeesController::class, 'export']);
