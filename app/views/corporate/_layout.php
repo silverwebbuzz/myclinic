@@ -30,7 +30,7 @@ $navGroups = [
     ],
     'Workforce' => [
         ['/company/employees', 'Employees', true, 'employees.view'],
-        ['/company/screening/programmes', 'Screening', true, 'screening.view_status'],
+        ['/company/screening', 'Screening', true, 'screening.view_status'],
         ['/company/reports', 'Reports', false],
     ],
     'Structure' => [
@@ -50,7 +50,7 @@ $navGroups = [
 ];
 $crumbs = [];
 $activeHref = null;
-$matchPath = str_starts_with($path, '/company/roles') ? '/company/users' : (str_starts_with($path, '/company/screening') ? '/company/screening/programmes' : $path);
+$matchPath = str_starts_with($path, '/company/roles') ? '/company/users' : (str_starts_with($path, '/company/screening') ? '/company/screening' : $path);
 foreach ($navGroups as $group => $items) {
     $navGroups[$group] = array_values(array_filter($items, static fn ($i) => $can($i[3] ?? null)));
 }

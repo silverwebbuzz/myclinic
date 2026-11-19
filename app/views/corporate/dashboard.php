@@ -47,6 +47,15 @@ ob_start();
     </div>
 <?php endif; ?>
 
+<?php if (($screening ?? null) !== null && $screening['people'] > 0): ?>
+    <div class="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <a href="/company/screening?bucket=overdue" class="rounded-[10px] border border-ln bg-sf px-4 py-3 hover:bg-sf2"><div class="text-[12px] text-tx3">Checks overdue</div><div class="mt-0.5 text-[22px] font-semibold <?= $screening['overdue'] > 0 ? 'text-er' : 'text-tx2' ?>"><?= number_format((int) $screening['overdue']) ?></div></a>
+        <a href="/company/screening?bucket=soon" class="rounded-[10px] border border-ln bg-sf px-4 py-3 hover:bg-sf2"><div class="text-[12px] text-tx3">Due in 30 days</div><div class="mt-0.5 text-[22px] font-semibold text-wn"><?= number_format((int) $screening['soon']) ?></div></a>
+        <a href="/company/screening?bucket=done" class="rounded-[10px] border border-ln bg-sf px-4 py-3 hover:bg-sf2"><div class="text-[12px] text-tx3">Done in last 12 months</div><div class="mt-0.5 text-[22px] font-semibold text-ok"><?= number_format((int) $screening['done_12m']) ?></div></a>
+        <a href="/company/screening" class="rounded-[10px] border border-ln bg-sf px-4 py-3 hover:bg-sf2"><div class="text-[12px] text-tx3">People up to date</div><div class="mt-0.5 text-[22px] font-semibold"><?= (int) $screening['up_to_date_pct'] ?>%</div><div class="text-[12px] text-tx3"><?= number_format((int) $screening['people_ok']) ?> of <?= number_format((int) $screening['people']) ?></div></a>
+    </div>
+<?php endif; ?>
+
 <div class="mt-4 grid gap-4 lg:grid-cols-3">
     <section class="rounded-[10px] border border-ln bg-sf p-5 lg:col-span-2">
         <div class="flex items-center justify-between">
@@ -100,9 +109,8 @@ ob_start();
 
 <section class="mt-4 rounded-[10px] border border-dashed border-ln bg-sf p-5">
     <h2 class="text-[15px] font-semibold">Coming next</h2>
-    <p class="mt-1 text-tx2"><?= $status === 'pending' ? 'Once your company is approved you\'ll be able to' : 'Soon you\'ll be able to' ?> add branches, departments and job roles, import employees,
-        assign screening programmes for your industry, book examinations with partner clinics and labs, and track
-        fitness certificates and due dates.</p>
+    <p class="mt-1 text-tx2"><?= $status === 'pending' ? 'Once your company is approved you\'ll be able to set up your workforce and screening programmes. Next, you\'ll' : 'Soon you\'ll be able to' ?>
+        book examinations with partner clinics and labs, and receive fitness certificates (the outcome only; medical results stay with the doctor).</p>
 </section>
 <?php
 $content = ob_get_clean();

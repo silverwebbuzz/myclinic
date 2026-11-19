@@ -271,6 +271,39 @@ ob_start();
                 <p class="mt-3 border-t border-ln2 pt-3 text-[12px] text-tx3">You see only what your company entered. The employee's own health profile stays private to them.</p>
             </section>
 
+            <?php if (($screening ?? null) !== null): ?>
+                <section id="screening" class="rounded-[10px] border border-ln bg-sf p-5">
+                    <div class="flex items-center justify-between gap-2">
+                        <h2 class="text-[15px] font-semibold">Screening</h2>
+                        <a href="/company/screening?bucket=open&amp;q=<?= $e(rawurlencode((string) $emp['employee_no'])) ?>" class="text-[13px] text-ac hover:underline">Manage</a>
+                    </div>
+                    <?php if ($screening === []): ?>
+                        <p class="mt-2 text-tx3">No checks. They appear when a screening programme applies to this person's job role, department or branch.</p>
+                    <?php else: ?>
+                        <ul class="mt-2 divide-y divide-ln2">
+                            <?php foreach ($screening as $sc): $open = in_array($sc['status'], ['not_scheduled', 'scheduled'], true); $late = $open && $sc['due_on'] < $today; ?>
+                                <li class="flex items-start justify-between gap-3 py-2">
+                                    <div class="min-w-0">
+                                        <div class="<?= $open ? '' : 'text-tx2' ?>"><?= $e($sc['exam_name']) ?></div>
+                                        <div class="text-[12px] text-tx3"><?= $e(\App\Services\Corporate\ScreeningCaseService::CATEGORIES[$sc['category']] ?? $sc['category']) ?></div>
+                                    </div>
+                                    <div class="whitespace-nowrap text-right text-[12px]">
+                                        <?php if ($open): ?>
+                                            <div class="<?= $late ? 'font-medium text-er' : 'text-tx2' ?>"><?= $late ? 'Overdue' : 'Due' ?> <?= $e($loc->date($sc['due_on'])) ?></div>
+                                            <?php if ($sc['status'] === 'scheduled'): ?><div class="text-tx3">booked</div><?php endif; ?>
+                                        <?php elseif ($sc['status'] === 'completed'): ?>
+                                            <div class="text-ok">Done <?= $e($loc->date($sc['completed_on'])) ?></div>
+                                        <?php else: ?>
+                                            <div class="text-tx3">Waived</div>
+                                        <?php endif; ?>
+                                    </div>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
+                </section>
+            <?php endif; ?>
+
             <section class="rounded-[10px] border border-ln bg-sf p-5">
                 <h2 class="text-[15px] font-semibold">History</h2>
                 <?php if ($events === []): ?>

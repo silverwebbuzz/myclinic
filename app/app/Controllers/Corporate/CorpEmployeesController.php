@@ -224,6 +224,7 @@ final class CorpEmployeesController
             'emp' => $emp,
             'old' => $old,
             'events' => $emp !== null ? EmployeeService::events($cid, (int) $emp['id']) : [],
+            'screening' => $emp !== null && CorpAuth::can('screening.view_status') ? $this->screeningFor($cid, (int) $emp['id']) : null,
             'branches' => $branches,
             'departments' => $keep(StructureService::departments($cid), 'department_id'),
             'jobRoles' => $keep(StructureService::jobRoles($cid), 'job_role_id'),
@@ -235,6 +236,16 @@ final class CorpEmployeesController
             'canManage' => $canManage && ($emp === null || EmployeeService::inScope($emp['branch_id'] !== null ? (int) $emp['branch_id'] : null, $manageScope)),
             'today' => LocalDate::today((string) ($emp['branch_timezone'] ?? CorpContext::company()['timezone'] ?? 'UTC')),
         ]);
+    }
+
+    /** @return list<array<string, mixed>>|null null = screening tables not there yet (1B patch not run) */
+    private function screeningFor(int $companyId, int $employmentId): ?array
+    {
+        try {
+            return \App\Services\Corporate\ScreeningCaseService::forEmployee($companyId, $employmentId);
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     /** @return array<string, string> */

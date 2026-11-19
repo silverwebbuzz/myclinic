@@ -16,6 +16,12 @@ ob_start();
         <h1 class="text-[20px] font-semibold tracking-[-.015em]">Screening programmes</h1>
         <p class="mt-0.5 text-tx3">What checks your people need and how often. Each programme applies to the job roles, departments, branches or people you choose.</p>
     </div>
+    <nav class="flex gap-1 rounded-[9px] bg-sf2 p-1 ring-1 ring-ln">
+        <a href="/company/screening" class="rounded-[7px] px-3 py-1 text-[13px] text-tx2 hover:text-tx">Due checks</a>
+        <a href="/company/screening/programmes" class="rounded-[7px] bg-sf px-3 py-1 text-[13px] font-medium shadow-sm">Programmes</a>
+    </nav>
+</div>
+<div class="mt-3 flex flex-wrap justify-end gap-3">
     <?php if ($canCustomise): ?>
         <div class="flex flex-wrap gap-2" x-data="{ own: false }">
             <button type="button" @click="own = !own" class="<?= $btn ?> border border-ln bg-sf hover:bg-sf2">Create your own</button>

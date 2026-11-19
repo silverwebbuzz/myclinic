@@ -861,6 +861,11 @@ return static function (RouteRegistrar $router): void {
         $company->post('/job-roles', [\App\Controllers\Corporate\CorpStructureController::class, 'saveJobRole']);
         $company->post('/job-roles/{id}/toggle', [\App\Controllers\Corporate\CorpStructureController::class, 'toggleJobRole']);
         // Employees (Phase 1A-2). Static paths before /{id}: the first match wins.
+        // Screening due checks (Phase 1B-3)
+        $company->get('/screening', [\App\Controllers\Corporate\CorpScreeningController::class, 'index']);
+        $company->get('/screening/export', [\App\Controllers\Corporate\CorpScreeningController::class, 'export']);
+        $company->post('/screening/cases/{id}/done', [\App\Controllers\Corporate\CorpScreeningController::class, 'doneElsewhere']);
+        $company->post('/screening/cases/{id}/waive', [\App\Controllers\Corporate\CorpScreeningController::class, 'waive']);
         // Screening programmes (Phase 1B-1)
         $company->get('/screening/library', [\App\Controllers\Corporate\CorpProgrammesController::class, 'library']);
         $company->post('/screening/library/{templateId}/adopt', [\App\Controllers\Corporate\CorpProgrammesController::class, 'adopt']);

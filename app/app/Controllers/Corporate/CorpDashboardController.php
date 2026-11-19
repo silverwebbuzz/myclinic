@@ -66,6 +66,7 @@ final class CorpDashboardController
             'plan' => $plan,
             'trialDaysLeft' => $trialDaysLeft,
             'checklist' => $checklist,
+            'screening' => $this->screeningTiles((int) $company['id'], (string) ($company['timezone'] ?? 'UTC')),
             'welcome' => !empty($request->query['welcome']),
             'flashOk' => SessionFlash::pull('corp_ok'),
             'flashErr' => SessionFlash::pull('corp_err'),
@@ -84,5 +85,19 @@ final class CorpDashboardController
         }
 
         return Response::redirect('/company/dashboard');
+    }
+
+    /** @return array<string, int|null>|null null = no permission, or 1B tables not there yet */
+    private function screeningTiles(int $companyId, string $tz): ?array
+    {
+        if (!CorpAuth::can('screening.view_status')) {
+            return null;
+        }
+        try {
+            return \App\Services\Corporate\ScreeningCaseService::counts($companyId, CorpAuth::branchScope('screening.view_status'),
+                \App\Support\Locale\LocalDate::today($tz));
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 }
