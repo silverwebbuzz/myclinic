@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Workforce Health demo data (Phase 0 + 1A) — two dummy companies for testing.
+ * Workforce Health demo data (Phase 0 + 1A + 1B) — two dummy companies for testing.
  *
  *   php database/seeds/corp_demo_seed.php                 create (refused when APP_ENV=production)
  *   php database/seeds/corp_demo_seed.php --allow-demo    create even on production (clearly flagged is_demo=1)
@@ -22,6 +22,10 @@ declare(strict_types=1);
  * linked to any patient account; invitations to them can't be delivered
  * (WhatsApp needs a recorded opt-in, email goes to .example).
  *
+ * Phase 1B (when its patch is run): the SAMPLE screening templates adopted
+ * and applied two years ago, with replayed history: done, waived, overdue,
+ * due soon and later checks. HSE staff are left uncovered on purpose.
+ *
  * All demo logins share ONE password and ONE authenticator secret, printed at
  * the end (never stored in a file). Needs the Phase 0 SQL patches run first.
  */
@@ -29,9 +33,13 @@ declare(strict_types=1);
 require dirname(__DIR__, 2) . '/vendor/autoload.php';
 
 use App\Core\Database;
+use App\Services\Corporate\CorpAudit;
 use App\Services\Corporate\CorpCrypto;
 use App\Services\Corporate\CorpMfaService;
 use App\Services\Corporate\CorpPasswordPolicy;
+use App\Services\Corporate\ProgrammeService;
+use App\Services\Corporate\ScreeningCaseService;
+use App\Services\Corporate\ScreeningEngine;
 use App\Services\Corporate\TotpService;
 use App\Support\ClinicTime;
 use App\Support\Locale\LocalDate;
@@ -53,6 +61,12 @@ $purge = in_array('--purge', $args, true);
 $allow = in_array('--allow-demo', $args, true);
 $pdo = Database::connection();
 
+$hasTable = static function (string $t) use ($pdo): bool {
+    $st = $pdo->prepare('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = :t');
+    $st->execute(['t' => $t]);
+
+    return (int) $st->fetchColumn() > 0;
+};
 $demoCompanyIds = static fn (): array => array_map('intval', $pdo->query('SELECT id FROM corp_companies /* cross-company: admin */ WHERE is_demo = 1')->fetchAll(PDO::FETCH_COLUMN));
 
 // ---------------------------------------------------------------------------
@@ -75,9 +89,13 @@ if ($purge) {
     if ($customRoles !== []) {
         $pdo->exec('DELETE FROM corp_role_permissions WHERE role_id IN (' . implode(',', $customRoles) . ')');
     }
-    foreach (['corp_sessions', 'corp_user_roles', 'corp_invitations', 'corp_audit_log', 'corp_company_documents', 'corp_users', 'corp_roles',
+    foreach (['corp_case_events', 'corp_screening_cases', 'corp_programme_assignments', 'corp_programme_items', 'corp_programmes',
+              'corp_sessions', 'corp_user_roles', 'corp_invitations', 'corp_audit_log', 'corp_company_documents', 'corp_users', 'corp_roles',
               'corp_employment_events', 'corp_employee_import_rows', 'corp_employee_imports', 'corp_employments',
               'corp_branches', 'corp_departments', 'corp_job_roles'] as $t) {
+        if (!$hasTable($t)) {
+            continue;   // a later phase's patch not run yet
+        }
         $n = $pdo->exec("DELETE FROM {$t} WHERE company_id IN ($in)");
         echo str_pad($t, 26) . " {$n} rows\n";
     }
@@ -144,6 +162,14 @@ $companies = [
             ['Site Engineer', 'medium', '2142', 0], ['Mason', 'high', '7112', 0], ['Welder', 'high', '7212', 2], ['Crane Operator', 'high', '8343', 2],
             ['Electrician', 'high', '7411', 2], ['Safety Officer', 'medium', '2263', 1], ['Office Executive', 'low', '4110', 3], ['Quality Inspector', 'medium', '3115', 4],
         ],
+        // Phase 1B: [template code, applies to, [department names / job titles]]. HSE is left uncovered on purpose.
+        'programmes' => [
+            ['IN-ALL-OFFICE', 'department', ['Administration']],
+            ['IN-CON-SITE', 'department', ['Projects', 'Plant & Machinery', 'Quality']],
+            ['IN-CON-HEIGHT', 'job_role', ['Mason']],
+            ['IN-CON-WELD', 'job_role', ['Welder']],
+            ['IN-CON-PLANT', 'job_role', ['Crane Operator', 'Electrician']],
+        ],
         'contractors' => ['Shree Labour Services', 'Om Sai Manpower', 'BuildForce Contractors'],
         'first_m' => ['Rajesh', 'Amit', 'Sunil', 'Ganesh', 'Imran', 'Prakash', 'Ravi', 'Santosh', 'Vijay', 'Arjun', 'Deepak', 'Mahesh'],
         'first_f' => ['Pooja', 'Sunita', 'Kavita', 'Meena', 'Ayesha', 'Lakshmi', 'Divya', 'Rekha'],
@@ -166,6 +192,11 @@ $companies = [
         'jobs' => [
             ['Deck Officer', 'medium', '3152', 0], ['Able Seaman', 'high', '8350', 0], ['Welder', 'high', '7212', 1], ['Crane Operator', 'high', '8343', 1],
             ['Marine Engineer', 'high', '2151', 0], ['HSE Officer', 'medium', '2263', 2], ['Storekeeper', 'low', '4321', 3], ['Office Administrator', 'low', '4110', 4],
+        ],
+        'programmes' => [
+            ['AE-ALL-OFFICE', 'department', ['Administration', 'Logistics']],
+            ['AE-MAR-SEAFARER', 'department', ['Marine Operations']],
+            ['AE-MAR-YARD', 'department', ['Fabrication']],
         ],
         'contractors' => ['Al Noor Manpower Supply', 'Seacrest Crew Services', 'Desert Star Technical'],
         'first_m' => ['Ahmed', 'Mohammed', 'Joseph', 'Ramesh', 'Bilal', 'Jose', 'Tariq', 'Anil', 'Hassan', 'Rizwan', 'Mark', 'Suresh'],
@@ -278,7 +309,95 @@ $seedWorkforce = static function (int $companyId, array $c, array $country, stri
         . " job roles, 100 employees ({$count['contractor']} contractors, {$count['left']} left, {$count['confirmed']} linked)";
 };
 
+/**
+ * Phase 1B: adopt the SAMPLE templates, apply them as if two years ago, then
+ * replay the history with the real engine: each round the engine creates the
+ * due checks, and of those already due ~68% are marked done elsewhere (a few
+ * days either side of the due date), ~8% waived with a reason and the rest
+ * left open (overdue). Done / waived checks start the next cycle, so the
+ * result mixes overdue, due soon, later, done and waived like a live account.
+ * Runs after the main commit (the services use their own transactions).
+ */
+$seedScreening = static function (int $companyId, array $c, string $tz) use ($pdo, $one): string {
+    $actor = (int) $one('SELECT id FROM corp_users WHERE company_id = :cid AND email = :e', ['cid' => $companyId, 'e' => 'hse.manager@' . $c['domain']]);
+    $hr = (int) $one('SELECT id FROM corp_users WHERE company_id = :cid AND email = :e', ['cid' => $companyId, 'e' => 'hr.manager@' . $c['domain']]);
+    $today = LocalDate::today($tz);
+    $applied = LocalDate::addDays($today, -730) . ' 06:00:00';   // UTC; a morning in both IN and AE
+    $made = 0;
+    foreach ($c['programmes'] as [$code, $type, $names]) {
+        $tid = (int) $one("SELECT id FROM oh_rule_templates WHERE code = :c AND status = 'published' ORDER BY version DESC LIMIT 1", ['c' => $code]);
+        $res = $tid > 0 ? ProgrammeService::adopt($companyId, $actor, $tid) : ['ok' => false, 'error' => 'not published'];
+        if (!$res['ok']) {
+            echo "  ! {$code}: " . ($res['error'] ?? '') . "\n";
+            continue;
+        }
+        foreach ($names as $n) {
+            $target = $type === 'job_role'
+                ? (int) $one('SELECT id FROM corp_job_roles WHERE company_id = :cid AND title = :n', ['cid' => $companyId, 'n' => $n])
+                : (int) $one('SELECT id FROM corp_departments WHERE company_id = :cid AND name = :n', ['cid' => $companyId, 'n' => $n]);
+            ProgrammeService::addAssignment($companyId, $actor, (int) $res['id'], $type, $target);
+        }
+        $made++;
+    }
+    $pdo->prepare('UPDATE corp_programmes SET created_at = :d, updated_at = :d2 WHERE company_id = :cid')->execute(['d' => $applied, 'd2' => $applied, 'cid' => $companyId]);
+    $pdo->prepare('UPDATE corp_programme_assignments SET created_at = :d WHERE company_id = :cid')->execute(['d' => $applied, 'cid' => $companyId]);
+
+    $reasons = ['Medically exempt: doctor letter on file', 'On long project abroad, will do on return', 'Done by previous employer last month, papers awaited', 'Role changed to office work this cycle'];
+    $pick = static fn (int $id, string $salt): int => (int) (crc32($id . ':' . $salt) % 100);
+    $openDue = $pdo->prepare("SELECT id, due_on FROM corp_screening_cases WHERE company_id = :cid AND status = 'not_scheduled' AND due_on <= :today ORDER BY due_on, id");
+    $done = $pdo->prepare(
+        "UPDATE corp_screening_cases SET status = 'completed', completed_on = :d, completion_source = 'elsewhere', note = :n, updated_at = :up
+          WHERE id = :id AND company_id = :cid AND status = 'not_scheduled'"
+    );
+    $waive = $pdo->prepare(
+        "UPDATE corp_screening_cases SET status = 'waived', closed_reason = :r, updated_at = :up
+          WHERE id = :id AND company_id = :cid AND status = 'not_scheduled'"
+    );
+    $event = $pdo->prepare(
+        "INSERT INTO corp_case_events (company_id, case_id, event, detail_json, actor_type, actor_id, created_at)
+         VALUES (:cid, :case, :ev, :d, 'corp_user', :uid, :at)"
+    );
+    $decided = [];
+    $tally = ['done' => 0, 'waived' => 0];
+    for ($round = 0; $round < 10; $round++) {
+        ScreeningEngine::syncCompany($companyId);
+        $openDue->execute(['cid' => $companyId, 'today' => $today]);
+        $fresh = array_filter($openDue->fetchAll(), static fn (array $r): bool => !isset($decided[(int) $r['id']]));
+        if ($fresh === []) {
+            break;
+        }
+        $now = LocalDate::nowUtc();
+        $pdo->beginTransaction();
+        foreach ($fresh as $r) {
+            $id = (int) $r['id'];
+            $decided[$id] = true;
+            $p = $pick($id, 'fate');
+            if ($p < 8) {
+                $reason = $reasons[$pick($id, 'why') % count($reasons)];
+                $waive->execute(['r' => $reason, 'up' => $now, 'id' => $id, 'cid' => $companyId]);
+                $event->execute(['cid' => $companyId, 'case' => $id, 'ev' => 'waived', 'd' => json_encode(['reason' => $reason]), 'uid' => $hr, 'at' => $now]);
+                CorpAudit::log($companyId, 'corp_user', $hr, 'screening_waived', 'corp_screening_case', $id, ['reason' => $reason, 'source' => 'demo seed']);
+                $tally['waived']++;
+            } elseif ($p < 76) {
+                $on = LocalDate::addDays((string) $r['due_on'], $pick($id, 'day') % 50 - 10);
+                $on = min($on, $today);
+                $done->execute(['d' => $on, 'n' => 'Demo history', 'up' => $now, 'id' => $id, 'cid' => $companyId]);
+                $event->execute(['cid' => $companyId, 'case' => $id, 'ev' => 'done_elsewhere', 'd' => json_encode(['completed_on' => $on, 'note' => 'Demo history']), 'uid' => $hr, 'at' => $now]);
+                $tally['done']++;
+            }
+            // else: left open → overdue
+        }
+        $pdo->commit();
+    }
+    $counts = ScreeningCaseService::counts($companyId, null, $today);
+
+    return "{$made} programmes; checks: {$tally['done']} done, {$tally['waived']} waived, "
+        . $counts['overdue'] . ' overdue, ' . $counts['soon'] . ' due in 30 days, ' . $counts['later'] . ' later; '
+        . ($counts['up_to_date_pct'] ?? 0) . '% of covered people up to date';
+};
+
 $logins = [];
+$made = [];
 $pdo->beginTransaction();
 try {
     foreach ($companies as $c) {
@@ -336,12 +455,30 @@ try {
              VALUES (:cid, 'system', NULL, 'company_approved', 'company', :eid, :d, :at)"
         )->execute(['cid' => $companyId, 'eid' => $companyId, 'd' => json_encode(['source' => 'demo seed', 'trial_ends' => $trialEnds]), 'at' => $now]);
         echo "Created {$c['legal']} ({$c['ref']}), trial to {$trialEnds}\n";
+        $made[] = [$companyId, $c, (string) $country['default_timezone']];
     }
     $pdo->commit();
 } catch (Throwable $e) {
     $pdo->rollBack();
     fwrite(STDERR, 'Failed, nothing was created: ' . $e->getMessage() . "\n");
     exit(1);
+}
+
+// Phase 1B screening (skipped when the 1B patch isn't run yet).
+if ($hasTable('corp_screening_cases') && $hasTable('oh_rule_templates')) {
+    echo "\nScreening history:\n";
+    foreach ($made as [$companyId, $c, $tz]) {
+        try {
+            echo '  ' . $c['trade'] . ': ' . $seedScreening($companyId, $c, $tz) . "\n";
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            fwrite(STDERR, '  ' . $c['trade'] . ': screening history failed (' . $e->getMessage() . "). Companies and employees were created; run --purge and try again.\n");
+        }
+    }
+} else {
+    echo "\nScreening skipped: run the Phase 1B SQL patch first (then --purge and re-seed).\n";
 }
 
 echo "\nDemo logins (sign in at /company/login):\n";
