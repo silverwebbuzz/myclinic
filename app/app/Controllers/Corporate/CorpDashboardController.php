@@ -43,6 +43,11 @@ final class CorpDashboardController
         $hasEmployee = \App\Services\Corporate\EmployeeService::counts((int) $company['id'], null)['active'] > 0;
         $hasProfile = \App\Services\Corporate\CompanyProfileService::isComplete($company);
         $hasDocs = \App\Services\Corporate\CompanyDocumentService::list((int) $company['id']) !== [];
+        try {
+            $hasClinic = \App\Services\Corporate\ProviderService::links((int) $company['id'], 'active') !== [];
+        } catch (\Throwable) {
+            $hasClinic = false;   // 1C patch not run yet
+        }
 
         // [label, hint, done, href] — href null = coming soon, '' = no button (handled elsewhere on the page)
         $checklist = [
@@ -54,6 +59,7 @@ final class CorpDashboardController
             ['Add your branches', 'Offices, sites and yards where your people work.', $hasBranch, CorpAuth::can('branches.manage') ? '/company/branches' : ''],
             ['Add job roles', 'Screening is assigned by job role.', $hasJobRole, CorpAuth::can('jobroles.manage') ? '/company/job-roles' : ''],
             ['Add your employees', 'One by one, or import them from Excel / CSV.', $hasEmployee, $hasBranch ? (CorpAuth::can('employees.import') ? '/company/employees/import' : (CorpAuth::can('employees.manage') ? '/company/employees/new' : '')) : ''],
+            ['Add a clinic', 'Where your employees go for their health checks.', $hasClinic, CorpAuth::can('providers.manage') ? '/company/providers' : ''],
         ];
 
         return Response::html(View::render('corporate/dashboard', [

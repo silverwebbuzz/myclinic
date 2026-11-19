@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Cron: daily 02:30 — php workers/corp_screening_sync.php [company_id]
+// Cron: daily 02:45 — php workers/corp_screening_sync.php [company_id]
 // Workforce Health safety net: re-works every active company's screening due
 // dates (ScreeningEngine is idempotent, so a run with no changes writes nothing).
 // The engine also runs straight after each employee / programme change.

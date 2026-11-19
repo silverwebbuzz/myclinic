@@ -31,4 +31,5 @@ fetch_doctor/jobs/
 
 # Workforce Health uploads (company documents, employee import files): personal data, never commit
 storage/corporate_docs/
+storage/occ_credentials/
 storage/corporate_imports/

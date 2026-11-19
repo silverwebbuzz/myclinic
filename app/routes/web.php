@@ -140,6 +140,13 @@ return static function (RouteRegistrar $router): void {
         $app->post('/settings/test-razorpay', [ClinicSettingsController::class, 'testRazorpay']);
         $app->post('/settings/leaves', [ClinicSettingsController::class, 'saveLeave']);
         $app->post('/settings/leaves/{id}/remove', [ClinicSettingsController::class, 'removeLeave']);
+        // Workforce Health: clinic side (admin-only via RoleAccessService)
+        $app->get('/settings/corporate', [\App\Controllers\ClinicCorporateController::class, 'index']);
+        $app->post('/settings/corporate/links/{id}/accept', [\App\Controllers\ClinicCorporateController::class, 'accept']);
+        $app->post('/settings/corporate/links/{id}/decline', [\App\Controllers\ClinicCorporateController::class, 'decline']);
+        $app->post('/settings/corporate/links/{id}/end', [\App\Controllers\ClinicCorporateController::class, 'end']);
+        $app->post('/settings/corporate/credentials', [\App\Controllers\ClinicCorporateController::class, 'saveCredential']);
+        $app->get('/settings/corporate/credentials/{id}/file', [\App\Controllers\ClinicCorporateController::class, 'credentialFile']);
         $app->get('/settings/team', [TeamSettingsController::class, 'index']);
         $app->post('/settings/team/invite', [TeamSettingsController::class, 'inviteStaff']);
         $app->post('/settings/team/create', [TeamSettingsController::class, 'createStaffAccount']);
@@ -439,6 +446,10 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/corporate/templates/{id}/new-version', [\App\Controllers\CorporateTemplatesAdminController::class, 'newVersion']);
         $admin->post('/corporate/templates/{id}/retire', [\App\Controllers\CorporateTemplatesAdminController::class, 'retire']);
         $admin->post('/corporate/templates/{id}/delete', [\App\Controllers\CorporateTemplatesAdminController::class, 'deleteDraft']);
+        $admin->get('/corporate/providers', [\App\Controllers\CorporateProvidersAdminController::class, 'index']);
+        $admin->post('/corporate/providers/{id}/toggle', [\App\Controllers\CorporateProvidersAdminController::class, 'toggle']);
+        $admin->post('/corporate/credentials/{id}/review', [\App\Controllers\CorporateProvidersAdminController::class, 'review']);
+        $admin->get('/corporate/credentials/{id}/file', [\App\Controllers\CorporateProvidersAdminController::class, 'file']);
         $admin->get('/corporate/settings', [\App\Controllers\CorporateAdminController::class, 'settings']);
         $admin->post('/corporate/settings', [\App\Controllers\CorporateAdminController::class, 'saveSettings']);
         $admin->post('/corporate/settings/admins/{id}', [\App\Controllers\CorporateAdminController::class, 'saveAdminRole']);
@@ -892,6 +903,14 @@ return static function (RouteRegistrar $router): void {
         $company->post('/screening/programmes/{id}/items/{itemId}/frequency', [\App\Controllers\Corporate\CorpProgrammesController::class, 'frequency']);
         $company->post('/screening/programmes/{id}/assignments', [\App\Controllers\Corporate\CorpProgrammesController::class, 'assign']);
         $company->post('/screening/programmes/{id}/assignments/{assignmentId}/remove', [\App\Controllers\Corporate\CorpProgrammesController::class, 'unassign']);
+        // Phase 1C: clinic network + agreed prices
+        $company->get('/providers', [\App\Controllers\Corporate\CorpProvidersController::class, 'index']);
+        $company->post('/providers/request', [\App\Controllers\Corporate\CorpProvidersController::class, 'request']);
+        $company->get('/providers/{id}', [\App\Controllers\Corporate\CorpProvidersController::class, 'show']);
+        $company->post('/providers/{id}/branches', [\App\Controllers\Corporate\CorpProvidersController::class, 'branches']);
+        $company->post('/providers/{id}/end', [\App\Controllers\Corporate\CorpProvidersController::class, 'end']);
+        $company->post('/providers/{id}/rates', [\App\Controllers\Corporate\CorpProvidersController::class, 'saveRate']);
+        $company->post('/providers/{id}/rates/{rateId}/remove', [\App\Controllers\Corporate\CorpProvidersController::class, 'removeRate']);
         $company->get('/employees', [\App\Controllers\Corporate\CorpEmployeesController::class, 'index']);
         $company->get('/employees/new', [\App\Controllers\Corporate\CorpEmployeesController::class, 'create']);
         $company->get('/employees/export', [\App\Controllers\Corporate\CorpEmployeesController::class, 'export']);

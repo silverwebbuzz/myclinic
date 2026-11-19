@@ -92,9 +92,9 @@ final class EmployeeService
     {
         [$where, $params] = self::filterSql($companyId, [], $scope);
         $st = Database::connection()->prepare(
-            'SELECT SUM(e.status = \'active\') AS active, SUM(e.status = \'on_leave\') AS on_leave, SUM(e.status = \'terminated\') AS terminated,
-                    SUM(e.status <> \'terminated\' AND e.link_status = \'pending\') AS pending,
-                    SUM(e.status <> \'terminated\' AND e.link_status = \'declined\') AS declined
+            'SELECT SUM(e.status = \'active\') AS `active`, SUM(e.status = \'on_leave\') AS `on_leave`, SUM(e.status = \'terminated\') AS `terminated`,
+                    SUM(e.status <> \'terminated\' AND e.link_status = \'pending\') AS `pending`,
+                    SUM(e.status <> \'terminated\' AND e.link_status = \'declined\') AS `declined`
                FROM corp_employments e WHERE e.company_id = :cid AND ' . $where
         );
         $st->execute($params);

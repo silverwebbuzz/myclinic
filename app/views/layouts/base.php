@@ -228,6 +228,12 @@
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/settings/team') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
                     <?= ui_icon('staff', 18, 'shrink-0') ?><span>Team</span>
                 </a>
+                <?php if (!empty($clinic['corporate_enabled'])): ?>
+                <a href="/settings/corporate"
+                   class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/settings/corporate') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
+                    <?= ui_icon('clinic', 18, 'shrink-0') ?><span>Corporate work</span>
+                </a>
+                <?php endif; ?>
                 <a href="/leaves"
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/leaves') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
                     <?= ui_icon('appointments', 18, 'shrink-0') ?><span>Leaves</span>
