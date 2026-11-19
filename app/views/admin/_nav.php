@@ -44,6 +44,7 @@ $navGroups = [
     ],
     'Workforce Health' => [
         ['/admin/corporate/companies', 'Companies', 'M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M9 17h1M14 9h1M14 13h1M14 17h1', \App\Services\Corporate\CorpAdminService::pendingCount()],
+        ['/admin/corporate/templates', 'Screening templates', 'M9 5h10M9 12h10M9 19h10M5 5h.01M5 12h.01M5 19h.01'],
         ['/admin/corporate/geo', 'Countries & industries', 'M12 2a10 10 0 100 20 10 10 0 000-20zM2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20'],
         ['/admin/corporate/settings', 'Settings & team', 'M12 15a3 3 0 100-6 3 3 0 000 6zM4 12h2M18 12h2M12 4v2M12 18v2'],
     ],

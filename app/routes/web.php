@@ -426,6 +426,19 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/corporate/geo/regions/{id}/toggle', [\App\Controllers\CorporateAdminController::class, 'toggleRegion']);
         $admin->post('/corporate/geo/industries', [\App\Controllers\CorporateAdminController::class, 'addIndustry']);
         $admin->post('/corporate/geo/industries/{id}/toggle', [\App\Controllers\CorporateAdminController::class, 'toggleIndustry']);
+        $admin->get('/corporate/exam-types', [\App\Controllers\CorporateTemplatesAdminController::class, 'examTypes']);
+        $admin->post('/corporate/exam-types', [\App\Controllers\CorporateTemplatesAdminController::class, 'saveExamType']);
+        $admin->post('/corporate/exam-types/{id}/toggle', [\App\Controllers\CorporateTemplatesAdminController::class, 'toggleExamType']);
+        $admin->get('/corporate/templates', [\App\Controllers\CorporateTemplatesAdminController::class, 'templates']);
+        $admin->post('/corporate/templates', [\App\Controllers\CorporateTemplatesAdminController::class, 'createTemplate']);
+        $admin->get('/corporate/templates/{id}', [\App\Controllers\CorporateTemplatesAdminController::class, 'template']);
+        $admin->post('/corporate/templates/{id}', [\App\Controllers\CorporateTemplatesAdminController::class, 'saveTemplate']);
+        $admin->post('/corporate/templates/{id}/items', [\App\Controllers\CorporateTemplatesAdminController::class, 'saveItem']);
+        $admin->post('/corporate/templates/{id}/items/{itemId}/remove', [\App\Controllers\CorporateTemplatesAdminController::class, 'removeItem']);
+        $admin->post('/corporate/templates/{id}/publish', [\App\Controllers\CorporateTemplatesAdminController::class, 'publish']);
+        $admin->post('/corporate/templates/{id}/new-version', [\App\Controllers\CorporateTemplatesAdminController::class, 'newVersion']);
+        $admin->post('/corporate/templates/{id}/retire', [\App\Controllers\CorporateTemplatesAdminController::class, 'retire']);
+        $admin->post('/corporate/templates/{id}/delete', [\App\Controllers\CorporateTemplatesAdminController::class, 'deleteDraft']);
         $admin->get('/corporate/settings', [\App\Controllers\CorporateAdminController::class, 'settings']);
         $admin->post('/corporate/settings', [\App\Controllers\CorporateAdminController::class, 'saveSettings']);
         $admin->post('/corporate/settings/admins/{id}', [\App\Controllers\CorporateAdminController::class, 'saveAdminRole']);
@@ -873,6 +886,7 @@ return static function (RouteRegistrar $router): void {
         $company->post('/screening/programmes', [\App\Controllers\Corporate\CorpProgrammesController::class, 'create']);
         $company->get('/screening/programmes/{id}', [\App\Controllers\Corporate\CorpProgrammesController::class, 'show']);
         $company->post('/screening/programmes/{id}/settings', [\App\Controllers\Corporate\CorpProgrammesController::class, 'settings']);
+        $company->post('/screening/programmes/{id}/update', [\App\Controllers\Corporate\CorpProgrammesController::class, 'acceptUpdate']);
         $company->post('/screening/programmes/{id}/items', [\App\Controllers\Corporate\CorpProgrammesController::class, 'addItem']);
         $company->post('/screening/programmes/{id}/items/{itemId}/remove', [\App\Controllers\Corporate\CorpProgrammesController::class, 'removeItem']);
         $company->post('/screening/programmes/{id}/items/{itemId}/frequency', [\App\Controllers\Corporate\CorpProgrammesController::class, 'frequency']);

@@ -69,6 +69,7 @@ final class CorpActivityController
         'employee_id_viewed' => 'Viewed an employee\'s full ID number', 'employees_exported' => 'Exported the employee list',
         'employees_imported' => 'Imported employees from a file', 'employee_invited' => 'Invited an employee to confirm', 'employees_invited' => 'Sent invitations to employees',
         'screening_done_elsewhere' => 'Recorded a check as done elsewhere', 'screening_waived' => 'Waived a screening check', 'screening_exported' => 'Exported the screening list',
+        'programme_template_updated' => 'Updated a programme to a new template version',
         'programme_adopted' => 'Adopted a screening template', 'programme_created' => 'Created a screening programme', 'programme_updated' => 'Edited a screening programme',
         'programme_archived' => 'Archived a screening programme', 'programme_reactivated' => 'Re-activated a screening programme',
         'programme_item_added' => 'Added a check to a programme', 'programme_item_removed' => 'Removed a check from a programme',

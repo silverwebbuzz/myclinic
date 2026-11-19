@@ -474,6 +474,150 @@ final class ProgrammeService
     }
 
     // ------------------------------------------------------------------
+    // Template updates (S12): offered, reviewed, never applied silently
+    // ------------------------------------------------------------------
+
+    /**
+     * Newer published version of the template this programme came from, and
+     * what changed between the adopted version and it.
+     *
+     * @param array<string, mixed> $p  the programme
+     * @return array{template_id:int, version:int, changes: list<array<string, mixed>>}|null
+     */
+    public static function updateInfo(int $companyId, array $p): ?array
+    {
+        if ((int) $p['template_id'] === 0 || empty($p['template_code'])) {
+            return null;
+        }
+        $st = Database::connection()->prepare(
+            "SELECT id, version FROM oh_rule_templates WHERE code = :code AND status = 'published' AND version > :ver ORDER BY version DESC LIMIT 1"
+        );
+        $st->execute(['code' => $p['template_code'], 'ver' => (int) $p['template_version']]);
+        $new = $st->fetch();
+        if (!$new) {
+            return null;
+        }
+        $key = static fn (array $i): string => $i['exam_type_id'] . '|' . $i['category'];
+        $old = [];
+        foreach (self::templateItems((int) $p['template_id']) as $i) {
+            $old[$key($i)] = $i;
+        }
+        $mine = [];
+        foreach (self::items($companyId, (int) $p['id']) as $i) {
+            $mine[$key($i)] = $i;
+        }
+        $changes = [];
+        foreach (self::templateItems((int) $new['id']) as $n) {
+            $k = $key($n);
+            $o = $old[$k] ?? null;
+            if ($o === null) {
+                $changes[] = ['key' => $k, 'type' => 'added', 'new' => $n, 'old' => null, 'mine' => $mine[$k] ?? null];
+            } elseif ((int) $o['frequency_months'] !== (int) $n['frequency_months'] || $o['requirement'] !== $n['requirement']) {
+                $changes[] = ['key' => $k, 'type' => 'changed', 'new' => $n, 'old' => $o, 'mine' => $mine[$k] ?? null];
+            }
+            unset($old[$k]);
+        }
+        foreach ($old as $k => $o) {
+            $changes[] = ['key' => $k, 'type' => 'removed', 'new' => null, 'old' => $o, 'mine' => $mine[$k] ?? null];
+        }
+
+        return ['template_id' => (int) $new['id'], 'version' => (int) $new['version'], 'changes' => $changes];
+    }
+
+    /**
+     * Move the programme to the newer template version, applying only the
+     * changes the company ticked. Afterwards:
+     *  - items still in the template are re-linked and take its Mandatory /
+     *    Recommended flag; a Mandatory periodic item looser than the template
+     *    is tightened to the template's frequency;
+     *  - items the template dropped but the company kept become the company's own.
+     *
+     * @param list<string> $accept  change keys ("exam|category") to apply
+     * @return array{ok: bool, error?: string}
+     */
+    public static function acceptUpdate(int $companyId, int $actorId, int $programmeId, int $templateId, array $accept): array
+    {
+        $p = self::find($companyId, $programmeId);
+        if ($p === null) {
+            return ['ok' => false, 'error' => 'Programme not found.'];
+        }
+        $info = self::updateInfo($companyId, $p);
+        if ($info === null || $info['template_id'] !== $templateId) {
+            return ['ok' => false, 'error' => 'This update is no longer current. Please review it again.'];
+        }
+        $accept = array_flip(array_map('strval', $accept));
+        $pdo = Database::connection();
+        $now = LocalDate::nowUtc();
+        $applied = [];
+        $pdo->beginTransaction();
+        try {
+            foreach ($info['changes'] as $c) {
+                if (!isset($accept[$c['key']])) {
+                    continue;
+                }
+                $mine = $c['mine'];
+                if ($c['type'] === 'added') {
+                    if ($mine === null) {
+                        $pdo->prepare(
+                            'INSERT INTO corp_programme_items (company_id, programme_id, exam_type_id, category, frequency_months, requirement, template_item_id, created_at, updated_at)
+                             VALUES (:cid, :pid, :ex, :cat, :freq, :req, :tiid, :cr, :up)'
+                        )->execute(['cid' => $companyId, 'pid' => $programmeId, 'ex' => (int) $c['new']['exam_type_id'], 'cat' => $c['new']['category'],
+                            'freq' => $c['new']['frequency_months'], 'req' => $c['new']['requirement'], 'tiid' => (int) $c['new']['id'], 'cr' => $now, 'up' => $now]);
+                    } else {
+                        $pdo->prepare(
+                            'UPDATE corp_programme_items SET is_removed = 0, removed_reason = NULL, removed_by = NULL, removed_at = NULL, frequency_months = :freq, updated_at = :up
+                              WHERE id = :id AND company_id = :cid'
+                        )->execute(['freq' => $c['new']['frequency_months'], 'up' => $now, 'id' => (int) $mine['id'], 'cid' => $companyId]);
+                    }
+                } elseif ($c['type'] === 'removed' && $mine !== null && (int) $mine['is_removed'] === 0) {
+                    $pdo->prepare(
+                        'UPDATE corp_programme_items SET is_removed = 1, removed_reason = :r, removed_by = :by, removed_at = :at, updated_at = :up WHERE id = :id AND company_id = :cid'
+                    )->execute(['r' => 'Removed from the eClinicPro template (v' . $info['version'] . ')', 'by' => $actorId, 'at' => $now, 'up' => $now, 'id' => (int) $mine['id'], 'cid' => $companyId]);
+                } elseif ($c['type'] === 'changed' && $mine !== null) {
+                    $pdo->prepare('UPDATE corp_programme_items SET frequency_months = :freq, updated_at = :up WHERE id = :id AND company_id = :cid')
+                        ->execute(['freq' => $c['new']['frequency_months'], 'up' => $now, 'id' => (int) $mine['id'], 'cid' => $companyId]);
+                }
+                $applied[] = $c['key'];
+            }
+
+            // Re-link everything to the new version.
+            $newItems = [];
+            foreach (self::templateItems($templateId) as $n) {
+                $newItems[$n['exam_type_id'] . '|' . $n['category']] = $n;
+            }
+            foreach (self::items($companyId, $programmeId) as $i) {
+                $k = $i['exam_type_id'] . '|' . $i['category'];
+                $n = $newItems[$k] ?? null;
+                if ($n !== null && ((int) $i['template_item_id'] > 0 || isset($accept[$k]))) {
+                    $freq = $i['frequency_months'];
+                    if ($n['requirement'] === 'mandatory' && $i['category'] === 'periodic' && $n['frequency_months'] !== null && (int) $freq > (int) $n['frequency_months']) {
+                        $freq = (int) $n['frequency_months'];
+                    }
+                    $pdo->prepare('UPDATE corp_programme_items SET template_item_id = :tiid, requirement = :req, frequency_months = :freq, updated_at = :up WHERE id = :id AND company_id = :cid')
+                        ->execute(['tiid' => (int) $n['id'], 'req' => $n['requirement'], 'freq' => $freq, 'up' => $now, 'id' => (int) $i['id'], 'cid' => $companyId]);
+                } elseif ($n === null && (int) $i['template_item_id'] > 0) {
+                    $pdo->prepare("UPDATE corp_programme_items SET template_item_id = 0, requirement = 'company', updated_at = :up WHERE id = :id AND company_id = :cid")
+                        ->execute(['up' => $now, 'id' => (int) $i['id'], 'cid' => $companyId]);
+                }
+            }
+            $pdo->prepare('UPDATE corp_programmes SET template_id = :tid, template_version = :ver, updated_at = :up WHERE id = :id AND company_id = :cid')
+                ->execute(['tid' => $templateId, 'ver' => $info['version'], 'up' => $now, 'id' => $programmeId, 'cid' => $companyId]);
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('[ProgrammeService] acceptUpdate: ' . $e->getMessage());
+
+            return ['ok' => false, 'error' => 'Could not update the programme. Please try again.'];
+        }
+        CorpAudit::log($companyId, 'corp_user', $actorId, 'programme_template_updated', 'corp_programme', $programmeId,
+            ['from' => (int) $p['template_version'], 'to' => $info['version'], 'applied' => $applied, 'skipped' => count($info['changes']) - count($applied)]);
+
+        return ['ok' => true];
+    }
+
+    // ------------------------------------------------------------------
 
     /** @return array<string, mixed>|null */
     private static function item(int $companyId, int $programmeId, int $itemId): ?array

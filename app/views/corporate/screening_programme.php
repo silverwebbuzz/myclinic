@@ -42,6 +42,57 @@ ob_start();
     <div class="mt-4 rounded-[10px] border border-wn/20 bg-wnb px-4 py-3 text-[13px] text-wn">This programme came from a SAMPLE template made for testing. Have the checks reviewed by an occupational health doctor before relying on them.</div>
 <?php endif; ?>
 
+<?php if (($update ?? null) !== null): ?>
+    <section class="mt-4 rounded-[10px] border border-ac/30 bg-acs p-5">
+        <h2 class="text-[15px] font-semibold">Update available: version <?= (int) $update['version'] ?></h2>
+        <p class="mt-1 text-[13px] text-tx2">eClinicPro changed this template since you adopted v<?= (int) $p['template_version'] ?>. Nothing changes until you accept. Tick what you want to apply; Mandatory / Recommended labels always follow the new version, and a Mandatory check that is now required more often is tightened to the new frequency.</p>
+        <?php
+        $examNames = array_column($examTypes, 'name', 'id');
+        $desc = static function (?array $i) use ($examNames): string {
+            if ($i === null) {
+                return '';
+            }
+
+            return ($i['frequency_months'] ? 'every ' . (int) $i['frequency_months'] . ' months · ' : '') . ucfirst((string) $i['requirement']);
+        };
+        ?>
+        <form method="post" action="/company/screening/programmes/<?= (int) $p['id'] ?>/update" class="mt-3">
+            <?= $csrfField ?>
+            <input type="hidden" name="template_id" value="<?= (int) $update['template_id'] ?>">
+            <ul class="space-y-2">
+                <?php foreach ($update['changes'] as $c): $i = $c['new'] ?? $c['old']; $mine = $c['mine']; $mineActive = $mine !== null && (int) $mine['is_removed'] === 0;
+                    $name = ($examNames[(int) $i['exam_type_id']] ?? ($i['exam_name'] ?? 'Check')) . ' · ' . strtolower(ProgrammeService::CATEGORIES[$i['category']] ?? $i['category']);
+                    $selectable = match ($c['type']) { 'added' => !$mineActive, 'removed' => $mineActive, default => $mineActive };
+                    ?>
+                    <li class="flex items-start gap-3 rounded-[7px] bg-sf px-3 py-2 text-[13px] ring-1 ring-ln">
+                        <?php if ($canCustomise && $selectable): ?>
+                            <input type="checkbox" name="accept[]" value="<?= $e($c['key']) ?>" checked class="mt-0.5 rounded border-ln" aria-label="Apply">
+                        <?php else: ?><span class="mt-0.5 inline-block w-[13px]"></span><?php endif; ?>
+                        <div class="min-w-0">
+                            <?php if ($c['type'] === 'added'): ?>
+                                <span class="rounded bg-okb px-1.5 text-[11px] font-semibold text-ok">New</span> <?= $e($name) ?> <span class="text-tx3">· <?= $e($desc($c['new'])) ?></span>
+                                <?php if ($mineActive): ?><div class="text-tx3">You already have this check.</div><?php endif; ?>
+                            <?php elseif ($c['type'] === 'removed'): ?>
+                                <span class="rounded bg-sf2 px-1.5 text-[11px] font-semibold text-tx2 ring-1 ring-ln">Dropped</span> <?= $e($name) ?>
+                                <div class="text-tx3"><?= $mineActive ? 'Tick to remove it from your programme; leave unticked to keep it as your own check.' : 'Not in your programme.' ?></div>
+                            <?php else: ?>
+                                <span class="rounded bg-wnb px-1.5 text-[11px] font-semibold text-wn">Changed</span> <?= $e($name) ?>
+                                <span class="text-tx3">· was <?= $e($desc($c['old'])) ?> → now <?= $e($desc($c['new'])) ?></span>
+                                <?php if ($mineActive): ?><div class="text-tx3">Tick to use the new frequency (you have <?= $mine['frequency_months'] ? 'every ' . (int) $mine['frequency_months'] . ' months' : 'it' ?>).</div><?php else: ?><div class="text-tx3">Not active in your programme.</div><?php endif; ?>
+                            <?php endif; ?>
+                        </div>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+            <?php if ($canCustomise): ?>
+                <button class="<?= $btn ?> mt-3 h-9 bg-ac px-4 text-white hover:opacity-90">Update to version <?= (int) $update['version'] ?></button>
+            <?php else: ?>
+                <p class="mt-3 text-[13px] text-tx3">Someone who can customise programmes needs to review this.</p>
+            <?php endif; ?>
+        </form>
+    </section>
+<?php endif; ?>
+
 <?php if ($canCustomise): ?>
     <section x-data="{ open: false }" @toggle-settings.window="open = !open" x-show="open" x-cloak class="mt-4 rounded-[10px] border border-ln bg-sf p-5">
         <form method="post" action="/company/screening/programmes/<?= (int) $p['id'] ?>/settings" class="grid gap-4 sm:grid-cols-2">

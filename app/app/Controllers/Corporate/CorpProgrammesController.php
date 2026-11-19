@@ -111,6 +111,7 @@ final class CorpProgrammesController
             'items' => ProgrammeService::items($cid, (int) $id),
             'assignments' => ProgrammeService::assignments($cid, (int) $id),
             'covered' => ProgrammeService::coveredCount($cid, (int) $id),
+            'update' => ProgrammeService::updateInfo($cid, $p),
             'examTypes' => ProgrammeService::examTypes(),
             'branches' => StructureService::branches($cid, true),
             'departments' => StructureService::departments($cid, true),
@@ -124,6 +125,14 @@ final class CorpProgrammesController
     public function settings(Request $request, string $id): Response
     {
         return $this->act('rules.customise', (int) $id, fn (int $cid, int $uid) => ProgrammeService::updateSettings($cid, $uid, (int) $id, $request->post), 'Saved.');
+    }
+
+    public function acceptUpdate(Request $request, string $id): Response
+    {
+        $accept = $request->post['accept'] ?? [];
+
+        return $this->act('rules.customise', (int) $id, fn (int $cid, int $uid) => ProgrammeService::acceptUpdate($cid, $uid, (int) $id,
+            (int) ($request->post['template_id'] ?? 0), is_array($accept) ? array_map('strval', $accept) : []), 'Programme updated to the new template version.');
     }
 
     public function addItem(Request $request, string $id): Response
