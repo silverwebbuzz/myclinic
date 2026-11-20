@@ -107,7 +107,7 @@ ob_start();
                                     <?php endif; ?>
                                 <?php else: ?>
                                     <div class="<?= $d < 0 ? 'font-medium text-er' : ($d <= S::SOON_DAYS ? 'text-wn' : '') ?>">Due <?= $e($loc->date($r['due_on'])) ?></div>
-                                    <div class="text-tx3"><?= $d < 0 ? (-$d) . ' day' . (-$d === 1 ? '' : 's') . ' overdue' : ($d === 0 ? 'today' : 'in ' . $d . ' day' . ($d === 1 ? '' : 's')) ?><?= $r['status'] === 'scheduled' ? ' · booked' : '' ?></div>
+                                    <div class="text-tx3"><?= $d < 0 ? (-$d) . ' day' . (-$d === 1 ? '' : 's') . ' overdue' : ($d === 0 ? 'today' : 'in ' . $d . ' day' . ($d === 1 ? '' : 's')) ?><?= $r['status'] === 'scheduled' ? ' · booked' : '' ?><?= !empty($r['report_received_at']) && !$closed ? ' · <span class="text-in">report received</span>' : '' ?></div>
                                 <?php endif; ?>
                             </div>
                             <div class="flex gap-2 md:justify-end">

@@ -314,6 +314,7 @@ ob_start();
                                         <?php if ($open): ?>
                                             <div class="<?= $late ? 'font-medium text-er' : 'text-tx2' ?>"><?= $late ? 'Overdue' : 'Due' ?> <?= $e($loc->date($sc['due_on'])) ?></div>
                                             <?php if ($sc['status'] === 'scheduled'): ?><div class="text-tx3">booked</div><?php endif; ?>
+                                            <?php if (!empty($sc['report_received_at'])): ?><div class="text-in">report received</div><?php endif; ?>
                                         <?php elseif ($sc['status'] === 'completed'): ?>
                                             <div class="text-ok">Done <?= $e($loc->date($sc['completed_on'])) ?></div>
                                         <?php else: ?>

@@ -54,6 +54,29 @@ final class OccExamController
         return $cert === null ? Response::html('Not found', 404) : CertificatePdfService::response($cert);
     }
 
+    /** 1D-lite: clinic staff attach a test report to a lab / X-ray check on this booking. */
+    public function uploadReport(Request $request, string $id): Response
+    {
+        [$clinicId, $visit] = $this->visit((int) $id);
+        if ($visit === null) {
+            return Response::html('Visit not found', 404);
+        }
+        $file = isset($_FILES['file']) && is_array($_FILES['file']) ? $_FILES['file'] : null;
+        $res = \App\Services\OccHealth\CaseReportService::clinicUpload($clinicId, (int) (RequestContext::user()['id'] ?? 0), $visit,
+            (int) ($request->post['case_id'] ?? 0), $request->post, $file);
+        SessionFlash::put($res['ok'] ? 'occ_ok' : 'occ_err', $res['ok'] ? 'Report attached. The employer is told only that a report was received.' : ($res['error'] ?? 'Upload failed.'));
+
+        return Response::redirect('/visits/' . (int) $id . '#occupational');
+    }
+
+    public function report(Request $request, string $id, string $reportId): Response
+    {
+        [$clinicId, $visit] = $this->visit((int) $id);
+
+        return $visit === null ? Response::html('Not found', 404)
+            : \App\Services\OccHealth\CaseReportService::streamForVisit($clinicId, $visit, (int) (RequestContext::user()['id'] ?? 0), (int) $reportId);
+    }
+
     /** The certificate, only if it belongs to the corporate booking behind this visit. @return array<string, mixed>|null */
     private function certOfVisit(int $clinicId, ?array $visit, int $certId): ?array
     {

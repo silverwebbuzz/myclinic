@@ -33,4 +33,5 @@ fetch_doctor/jobs/
 storage/corporate_docs/
 storage/occ_credentials/
 storage/corporate_certs/
+storage/occ_reports/
 storage/corporate_imports/

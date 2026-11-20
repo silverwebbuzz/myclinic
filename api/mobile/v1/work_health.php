@@ -17,6 +17,9 @@
 // valid_to, review_by, status valid|revoked, shared_with_employer, clinic,
 // has_pdf, verify_token).
 //   GET  ?action=certificate&id=N                  (Bearer) → the PDF
+//   POST ?action=upload_report (multipart: case_id, file, lab_name?, report_date?, note?) (Bearer)
+//        → the report goes to the examining doctor + the user's Lab reports vault, never the employer.
+// Items also carry reports_needed[] (case_id, check, kind, due_on, reports_uploaded).
 // =====================================================================
 
 declare(strict_types=1);
@@ -27,6 +30,17 @@ require_once __DIR__ . '/../../../partials/work_health.php';
 $action = $_GET['action'] ?? 'list';
 
 switch ($action) {
+    case 'upload_report': {
+        // POST multipart ?action=upload_report: case_id, file, lab_name?, report_date?, note? (Bearer)
+        ecp_m_require_method('POST');
+        $me = ecp_m_require_patient();
+        $res = ecp_wh_report_upload((int) $me['id'], (int) ($_POST['case_id'] ?? 0), $_POST, $_FILES['file'] ?? null);
+        if (!$res['ok']) {
+            ecp_m_err('upload_failed', 422, ['message' => (string) ($res['error'] ?? 'Upload failed.')]);
+        }
+        ecp_m_ok(['uploaded' => true]);
+        break;
+    }
     case 'certificate': {
         // GET ?action=certificate&id=N (Bearer) → application/pdf (own certificates only)
         ecp_m_require_method('GET');

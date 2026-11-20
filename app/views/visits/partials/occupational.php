@@ -109,6 +109,41 @@ $oForm = static function (bool $correct) use ($occExam, $oh, $oIn, $oCsrf, $oVid
         <p class="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900"><?= $oh($oSign['error']) ?></p>
     <?php endif; ?>
 
+    <?php $oLab = array_values(array_filter($occExam['cases'], static fn ($c) => in_array($c['kind'], ['lab_test', 'imaging'], true))); ?>
+    <?php if ($oLab !== []): ?>
+        <div class="mt-3 rounded-lg border border-slate-200 p-3" x-data="{ add: false }">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="text-sm font-semibold text-slate-800">Test reports <span class="font-normal text-slate-500">(from the employee or your clinic; the employer never sees them)</span></div>
+                <?php if (in_array($ob['status'], ['booked', 'attended'], true)): ?><button type="button" @click="add = !add" class="ui-btn ui-btn-secondary ui-btn-sm">Attach a report</button><?php endif; ?>
+            </div>
+            <ul class="mt-2 space-y-1 text-sm">
+                <?php foreach ($oLab as $oLc): $oReps = $occExam['reports'][(int) $oLc['id']] ?? []; ?>
+                    <li class="flex flex-wrap items-baseline gap-x-2">
+                        <span class="font-medium text-slate-800"><?= $oh($oLc['exam_name']) ?>:</span>
+                        <?php if ($oReps === []): ?>
+                            <span class="text-amber-700">no report yet</span>
+                        <?php else: foreach ($oReps as $oRp): ?>
+                            <a target="_blank" class="text-teal-700 underline" href="/visits/<?= $oVid ?>/occupational/report/<?= (int) $oRp['id'] ?>">
+                                <?= $oh($oRp['lab_name'] ?: ($oRp['original_name'] ?: 'Report')) ?><?= $oRp['report_date'] ? ' · ' . $oh($od((string) $oRp['report_date'])) : '' ?></a>
+                            <span class="text-xs text-slate-500">(<?= $oRp['uploaded_by'] === 'employee' ? 'from the employee' : 'added by clinic' ?>)</span>
+                        <?php endforeach; endif; ?>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+            <form x-show="add" x-cloak method="post" action="/visits/<?= $oVid ?>/occupational/report" enctype="multipart/form-data" class="mt-3 grid gap-2 sm:grid-cols-2">
+                <?= $oCsrf ?>
+                <label class="text-xs text-slate-600">Check<select name="case_id" class="<?= $oIn ?>" required>
+                    <?php foreach ($oLab as $oLc): if (!in_array($oLc['status'], ['scheduled', 'not_scheduled'], true)) { continue; } ?><option value="<?= (int) $oLc['id'] ?>"><?= $oh($oLc['exam_name']) ?></option><?php endforeach; ?>
+                </select></label>
+                <label class="text-xs text-slate-600">Report file (PDF or photo)<input type="file" name="file" required accept=".pdf,.jpg,.jpeg,.png,.webp" class="mt-1 block w-full text-sm"></label>
+                <label class="text-xs text-slate-600">Lab <span class="text-slate-400">(optional)</span><input name="lab_name" maxlength="160" class="<?= $oIn ?>"></label>
+                <label class="text-xs text-slate-600">Report date <span class="text-slate-400">(optional)</span><input type="date" name="report_date" max="<?= $oh($occExam['today']) ?>" class="<?= $oIn ?>"></label>
+                <div class="sm:col-span-2"><button class="ui-btn ui-btn-primary ui-btn-sm">Attach</button>
+                    <span class="ml-2 text-xs text-slate-500">Also saved in the employee's Lab reports if they use eClinicPro.</span></div>
+            </form>
+        </div>
+    <?php endif; ?>
+
     <?php if ($oCur !== null): $oRestr = array_map(static fn ($k) => OccExamService::RESTRICTIONS[$k] ?? $k, json_decode((string) ($oCur['restrictions_json'] ?? '[]'), true) ?: []); ?>
         <div class="mt-3 rounded-lg bg-slate-50 p-3" x-data="{ fix: false, rev: false }">
             <div class="flex flex-wrap items-start justify-between gap-2">

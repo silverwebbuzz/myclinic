@@ -80,6 +80,26 @@ $whTypes = ['contractor' => 'Contractor', 'temporary' => 'Temporary', 'intern' =
         <?php else: ?>
         <?php if (empty($w['certificates'])): ?><div class="wh-empty">No health check booked right now. When your employer books one, the clinic, date and time appear here, and afterwards your fitness certificate.</div><?php endif; ?>
         <?php endif; ?>
+        <?php if (!empty($w['reports_needed'])): ?>
+          <div class="wh-book-title">Test reports for your checks</div>
+          <p class="wh-small" style="margin:0 0 6px">Had these tests done at any lab? Upload the report here. Only the examining doctor sees it (and it's saved in your Lab reports); your employer is told just that a report was received.</p>
+          <?php foreach ($w['reports_needed'] as $rn): ?>
+            <form class="wh-rep" onsubmit="return whUploadReport(this)" enctype="multipart/form-data">
+              <input type="hidden" name="case_id" value="<?= (int) $rn['id'] ?>">
+              <div class="wh-head" style="margin-bottom:6px">
+                <div><strong><?= $whE($rn['exam_name']) ?></strong><div class="wh-sub">Due <?= $whE($whDay((string) $rn['due_on'])) ?></div></div>
+                <?php if ((int) $rn['reports'] > 0): ?><span class="wh-ok"><?= (int) $rn['reports'] ?> report<?= (int) $rn['reports'] === 1 ? '' : 's' ?> received</span><?php endif; ?>
+              </div>
+              <div class="wh-rep-grid">
+                <input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png,.webp" required>
+                <input type="text" name="lab_name" maxlength="160" placeholder="Lab name (optional)">
+                <input type="date" name="report_date" max="<?= $whE(date('Y-m-d')) ?>" title="Report date">
+                <button type="submit" class="btn-mini primary"><?= (int) $rn['reports'] > 0 ? 'Upload another' : 'Upload report' ?></button>
+              </div>
+              <p class="wh-err wh-rep-msg" style="margin:6px 0 0"></p>
+            </form>
+          <?php endforeach; ?>
+        <?php endif; ?>
         <?php if (!empty($w['certificates'])): ?>
           <div class="wh-book-title">Fitness certificates</div>
           <?php foreach ($w['certificates'] as $fc): $fcR = array_map(static fn ($k) => ECP_WH_RESTRICTIONS[$k] ?? $k, json_decode((string) ($fc['restrictions_json'] ?? '[]'), true) ?: []);
@@ -106,6 +126,18 @@ $whTypes = ['contractor' => 'Contractor', 'temporary' => 'Temporary', 'intern' =
   <?php endforeach; ?>
   </div>
 </div>
+<script>
+function whUploadReport(form) {
+  const msg = form.querySelector('.wh-rep-msg');
+  const btn = form.querySelector('button[type=submit]');
+  msg.textContent = ''; btn.disabled = true;
+  fetch('/api/work_health_report.php', { method: 'POST', body: new FormData(form), credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
+    .then(r => r.json())
+    .then(j => { if (j.ok) { location.href = '/patient?tab=work'; } else { msg.textContent = j.error === 'login_required' ? 'Please sign in again.' : (j.error || 'Upload failed.'); btn.disabled = false; } })
+    .catch(() => { msg.textContent = 'Upload failed. Please try again.'; btn.disabled = false; });
+  return false;
+}
+</script>
 <style>
   .wh-list { display: grid; gap: 14px; }
   .wh-card { border: 1px solid #e4e7ec; border-radius: 12px; padding: 16px 18px; background: #fff; }
@@ -127,6 +159,11 @@ $whTypes = ['contractor' => 'Contractor', 'temporary' => 'Temporary', 'intern' =
   .wh-book { border: 1px solid #c7d2fe; background: #eef2ff; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; font-size: 14px; }
   .wh-book-when { font-weight: 600; color: #3730a3; margin-bottom: 2px; }
   .wh-book a { color: inherit; }
+  .wh-rep { border: 1px solid #e4e7ec; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; background: #f8fafc; }
+  .wh-rep-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.5fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+  .wh-rep-grid input[type=text], .wh-rep-grid input[type=date] { border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 8px; font-size: 14px; min-width: 0; }
+  .wh-rep-grid input[type=file] { font-size: 13px; min-width: 0; }
+  @media (max-width: 640px) { .wh-rep-grid { grid-template-columns: 1fr; } }
   .wh-cert { border: 1px solid #e4e7ec; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; background: #fff; }
   .wh-cert-old { opacity: .65; }
   .wh-cert-out { font-weight: 700; font-size: 15px; }

@@ -12,7 +12,8 @@ use PHPUnit\Framework\TestCase;
  * The employer side (company portal services, controllers and views) may
  * read fitness OUTCOMES, restrictions, validity and attendance, never
  * clinical data. This static test fails the build if company code:
- *   1. queries a clinical table (visits, prescriptions, vitals, charts, …);
+ *   1. queries a clinical table (visits, prescriptions, vitals, charts,
+ *      test reports (occ_case_reports), …);
  *   2. reads corp_fitness_certificates with * (which would pull the
  *      clinic-side visit link) or mentions visit_id at all.
  * Clinic-side code lives in Services/OccHealth and is not scanned.
@@ -28,7 +29,7 @@ final class CorpFirewallGuardTest extends TestCase
     private const CLINICAL_TABLES = [
         'visits', 'prescriptions', 'vitals', 'patients', 'patient_documents', 'patient_prescriptions', 'patient_lab_reports',
         'patient_immunizations', 'lab_orders', 'lab_order_items', 'invoices', 'invoice_items', 'diet_plans', 'follow_ups',
-        'visit_symptoms', 'occ_doctor_credentials',
+        'visit_symptoms', 'occ_doctor_credentials', 'occ_case_reports',
     ];
 
     public function testCompanyCodeNeverQueriesClinicalTables(): void
