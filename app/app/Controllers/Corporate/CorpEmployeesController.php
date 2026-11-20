@@ -227,6 +227,13 @@ final class CorpEmployeesController
             'screening' => $emp !== null && CorpAuth::can('screening.view_status') ? $this->screeningFor($cid, (int) $emp['id']) : null,
             'bookings' => $emp !== null && CorpAuth::can('bookings.manage') ? $this->bookingsFor($cid, (int) $emp['id']) : null,
             'certificates' => $emp !== null && CorpAuth::can('screening.view_status') ? $this->certificatesFor($cid, (int) $emp['id']) : null,
+            'incidentData' => $emp !== null && CorpAuth::can('incidents.manage') ? (static function () use ($cid, $emp) {
+                try {
+                    return \App\Services\Corporate\IncidentService::forEmployee($cid, (int) $emp['id']);
+                } catch (\Throwable $e) {
+                    return null;   // 2B patch not run yet
+                }
+            })() : null,
             'branches' => $branches,
             'departments' => $keep(StructureService::departments($cid), 'department_id'),
             'jobRoles' => $keep(StructureService::jobRoles($cid), 'job_role_id'),

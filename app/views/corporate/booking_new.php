@@ -54,7 +54,7 @@ ob_start();
             <?php foreach ($cases as $c): $overdue = (string) $c['due_on'] < $today; ?>
                 <li><label class="flex items-start gap-2">
                     <input type="checkbox" name="case_ids[]" value="<?= (int) $c['id'] ?>" x-model.number="selected" class="mt-0.5">
-                    <span class="min-w-0"><?= $e($c['exam_name']) ?> <span class="text-tx3">· <?= $e(ProgrammeService::CATEGORIES[$c['category']] ?? $c['category']) ?></span>
+                    <span class="min-w-0"><?= $e($c['exam_name']) ?> <span class="text-tx3">· <?= $e(\App\Services\Corporate\ScreeningCaseService::CATEGORIES[$c['category']] ?? $c['category']) ?></span>
                         <span class="block text-[12px] <?= $overdue ? 'text-er' : 'text-tx3' ?>"><?= $overdue ? 'Overdue since ' : 'Due ' ?><?= $e($loc->date((string) $c['due_on'])) ?></span></span>
                 </label></li>
             <?php endforeach; ?>

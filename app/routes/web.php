@@ -964,6 +964,12 @@ return static function (RouteRegistrar $router): void {
         $company->post('/employees/{id}/rehire', [\App\Controllers\Corporate\CorpEmployeesController::class, 'rehire']);
         $company->post('/employees/{id}/reveal-id', [\App\Controllers\Corporate\CorpEmployeesController::class, 'revealId']);
         $company->post('/employees/{id}/invite', [\App\Controllers\Corporate\CorpEmployeesController::class, 'invite']);
+        // Phase 2B: absences, incidents, return-to-work / post-incident checks
+        $company->post('/employees/{id}/absences', [\App\Controllers\Corporate\CorpIncidentsController::class, 'storeAbsence']);
+        $company->post('/absences/{id}/remove', [\App\Controllers\Corporate\CorpIncidentsController::class, 'removeAbsence']);
+        $company->get('/incidents', [\App\Controllers\Corporate\CorpIncidentsController::class, 'index']);
+        $company->post('/incidents', [\App\Controllers\Corporate\CorpIncidentsController::class, 'store']);
+        $company->post('/incidents/{id}/{action}', [\App\Controllers\Corporate\CorpIncidentsController::class, 'status']);
 
         // Plan & trial (chunk 0.6) — also the page an expired company is sent to
         $company->get('/billing', [\App\Controllers\Corporate\CorpBillingController::class, 'index']);

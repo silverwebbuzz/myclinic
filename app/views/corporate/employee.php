@@ -341,6 +341,59 @@ ob_start();
                 </section>
             <?php endif; ?>
 
+            <?php if (($incidentData ?? null) !== null): $IS = \App\Services\Corporate\IncidentService::class;
+                $caseLbl = ['not_scheduled' => 'return-to-work check due', 'scheduled' => 'check booked', 'completed' => 'check done', 'cancelled' => 'check cancelled', 'waived' => 'check waived']; ?>
+                <section id="incidents" class="rounded-[10px] border border-ln bg-sf p-5" x-data="{ form: '' }">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <h2 class="text-[15px] font-semibold">Absences &amp; incidents</h2>
+                        <?php if ($emp['status'] !== 'terminated'): ?>
+                            <div class="flex gap-3 text-[13px]">
+                                <button type="button" @click="form = form === 'a' ? '' : 'a'" class="text-ac hover:underline">Record absence</button>
+                                <button type="button" @click="form = form === 'i' ? '' : 'i'" class="text-ac hover:underline">Record incident</button>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                    <form x-show="form === 'a'" x-cloak method="post" action="/company/employees/<?= (int) $emp['id'] ?>/absences" class="mt-3 grid gap-2 rounded-[7px] border border-ln bg-sf2 p-3 text-[13px] sm:grid-cols-2">
+                        <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+                        <label class="text-[12px] text-tx3">First day off<input type="date" name="from_on" required class="mt-1 w-full rounded-[7px] border border-ln bg-sf px-2 py-1.5 text-tx"></label>
+                        <label class="text-[12px] text-tx3">Back at work on <span class="text-tx3">(if known)</span><input type="date" name="to_on" class="mt-1 w-full rounded-[7px] border border-ln bg-sf px-2 py-1.5 text-tx"></label>
+                        <label class="text-[12px] text-tx3">Reason<select name="reason_category" class="mt-1 w-full rounded-[7px] border border-ln bg-sf px-2 py-1.5 text-tx">
+                            <?php foreach ($IS::REASONS as $k => $l): ?><option value="<?= $e($k) ?>"><?= $e($l) ?></option><?php endforeach; ?></select></label>
+                        <label class="text-[12px] text-tx3">Note <span class="text-tx3">(no diagnosis)</span><input name="note" maxlength="255" class="mt-1 w-full rounded-[7px] border border-ln bg-sf px-2 py-1.5 text-tx"></label>
+                        <label class="flex items-center gap-2 sm:col-span-2"><input type="checkbox" name="needs_rtw" value="1" checked> Needs a return-to-work fitness check (due on the return date)</label>
+                        <div class="sm:col-span-2"><button class="inline-flex h-8 items-center rounded-[7px] bg-ac px-3 text-[13px] font-medium text-white hover:opacity-90">Save absence</button></div>
+                    </form>
+                    <form x-show="form === 'i'" x-cloak method="post" action="/company/incidents" class="mt-3 grid gap-2 rounded-[7px] border border-ln bg-sf2 p-3 text-[13px] sm:grid-cols-2">
+                        <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+                        <input type="hidden" name="employment_id" value="<?= (int) $emp['id'] ?>">
+                        <label class="text-[12px] text-tx3">Date<input type="date" name="occurred_on" required max="<?= $e($today) ?>" value="<?= $e($today) ?>" class="mt-1 w-full rounded-[7px] border border-ln bg-sf px-2 py-1.5 text-tx"></label>
+                        <label class="text-[12px] text-tx3">Type<select name="type" class="mt-1 w-full rounded-[7px] border border-ln bg-sf px-2 py-1.5 text-tx">
+                            <?php foreach ($IS::TYPES as $k => $l): ?><option value="<?= $e($k) ?>"><?= $e($l) ?></option><?php endforeach; ?></select></label>
+                        <label class="text-[12px] text-tx3 sm:col-span-2">What happened <span class="text-tx3">(no medical details)</span><input name="summary" required minlength="10" maxlength="1000" class="mt-1 w-full rounded-[7px] border border-ln bg-sf px-2 py-1.5 text-tx"></label>
+                        <label class="text-[12px] text-tx3">Days lost<input type="number" name="days_lost" min="0" max="999" value="0" class="mt-1 w-full rounded-[7px] border border-ln bg-sf px-2 py-1.5 text-tx"></label>
+                        <label class="flex items-center gap-2 self-end pb-1.5"><input type="checkbox" name="needs_check" value="1" checked> Needs a post-incident check</label>
+                        <div class="sm:col-span-2"><button class="inline-flex h-8 items-center rounded-[7px] bg-ac px-3 text-[13px] font-medium text-white hover:opacity-90">Save incident</button></div>
+                    </form>
+                    <?php if ($incidentData['absences'] === [] && $incidentData['incidents'] === []): ?>
+                        <p class="mt-2 text-tx3">None recorded.</p>
+                    <?php else: ?>
+                        <ul class="mt-2 divide-y divide-ln2 text-[13px]">
+                            <?php foreach ($incidentData['absences'] as $ab): ?>
+                                <li class="flex items-start justify-between gap-3 py-2">
+                                    <div class="min-w-0"><div>Absence · <?= $e($IS::REASONS[$ab['reason_category']] ?? $ab['reason_category']) ?></div>
+                                        <div class="text-[12px] text-tx3"><?= $e($loc->date((string) $ab['from_on'])) ?> – <?= $ab['to_on'] ? $e($loc->date((string) $ab['to_on'])) : 'return date not set' ?><?= !empty($ab['case_status']) ? ' · ' . $e($caseLbl[$ab['case_status']] ?? '') : '' ?></div></div>
+                                    <form method="post" action="/company/absences/<?= (int) $ab['id'] ?>/remove" onsubmit="return confirm('Remove this absence?')"><input type="hidden" name="_csrf" value="<?= $e($csrf) ?>"><input type="hidden" name="employment_id" value="<?= (int) $emp['id'] ?>"><button class="text-[12px] text-er hover:underline">Remove</button></form>
+                                </li>
+                            <?php endforeach; ?>
+                            <?php foreach ($incidentData['incidents'] as $in): ?>
+                                <li class="py-2"><div>Incident · <?= $e($IS::TYPES[$in['type']] ?? $in['type']) ?> <span class="font-mono text-[11px] text-tx3"><?= $e($in['ref']) ?></span></div>
+                                    <div class="text-[12px] text-tx3"><?= $e($loc->date((string) $in['occurred_on'])) ?><?= (int) $in['days_lost'] > 0 ? ' · ' . (int) $in['days_lost'] . ' days lost' : '' ?><?= !empty($in['case_status']) ? ' · ' . $e(str_replace('return-to-work', 'post-incident', $caseLbl[$in['case_status']] ?? '')) : '' ?><?= $in['status'] === 'closed' ? ' · closed' : '' ?></div></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
+                </section>
+            <?php endif; ?>
+
             <section class="rounded-[10px] border border-ln bg-sf p-5">
                 <h2 class="text-[15px] font-semibold">History</h2>
                 <?php if ($events === []): ?>
