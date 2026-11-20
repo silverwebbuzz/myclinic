@@ -914,6 +914,9 @@ return static function (RouteRegistrar $router): void {
         $company->post('/screening/programmes/{id}/items/{itemId}/frequency', [\App\Controllers\Corporate\CorpProgrammesController::class, 'frequency']);
         $company->post('/screening/programmes/{id}/assignments', [\App\Controllers\Corporate\CorpProgrammesController::class, 'assign']);
         $company->post('/screening/programmes/{id}/assignments/{assignmentId}/remove', [\App\Controllers\Corporate\CorpProgrammesController::class, 'unassign']);
+        // Phase 1E: reports
+        $company->get('/reports', [\App\Controllers\Corporate\CorpReportsController::class, 'index']);
+        $company->get('/reports/export', [\App\Controllers\Corporate\CorpReportsController::class, 'export']);
         // Phase 1C: fitness certificates (outcome only, with consent)
         $company->get('/certificates', [\App\Controllers\Corporate\CorpCertificatesController::class, 'index']);
         $company->get('/certificates/{id}/pdf', [\App\Controllers\Corporate\CorpCertificatesController::class, 'pdf']);

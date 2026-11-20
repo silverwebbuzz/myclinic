@@ -74,6 +74,7 @@ final class CorpActivityController
         'provider_branches_changed' => 'Changed the branches a clinic serves', 'provider_rate_saved' => 'Saved an agreed clinic price', 'provider_rate_removed' => 'Removed an agreed clinic price',
         'booking_created' => 'Booked a health check', 'booking_moved' => 'Moved a booking', 'booking_cancelled' => 'Cancelled a booking',
         'booking_cancelled_by_clinic' => 'Cancelled the booking', 'booking_no_show' => 'Marked a booking as did not attend',
+        'report_exported' => 'Exported a report',
         'report_received' => 'Test report received (seen by the doctor only)',
         'certificate_issued' => 'Issued a fitness certificate', 'certificate_replaced' => 'Issued a corrected fitness certificate',
         'certificate_revoked' => 'Revoked a fitness certificate', 'certificate_downloaded' => 'Downloaded a fitness certificate',

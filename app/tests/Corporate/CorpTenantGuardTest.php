@@ -39,6 +39,8 @@ final class CorpTenantGuardTest extends TestCase
         'corp_programmes', 'corp_programme_items', 'corp_programme_assignments', 'corp_screening_cases', 'corp_case_events',
         // Phase 1C
         'corp_provider_links', 'corp_rate_items', 'corp_bookings', 'corp_fitness_certificates',
+        // Phase 1E
+        'corp_reminder_settings', 'corp_reminder_log', 'corp_provider_statements', 'corp_statement_lines',
     ];
 
     private const SCOPE_MARKERS = [
