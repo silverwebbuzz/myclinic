@@ -44,11 +44,12 @@ ob_start();
         <h1 class="text-[20px] font-semibold tracking-[-.015em]">Reports</h1>
         <p class="mt-0.5 text-tx3">Screening compliance across your workforce. Administrative data only: no medical details.</p>
     </div>
-    <?php if ($canExport): ?>
-        <div class="flex gap-2">
-            <?php foreach (\App\Services\Corporate\ReportExportService::FORMATS as $fmt => $label): ?>
+    <?php if ($canExport || \App\Services\Corporate\CorpAuth::can('billing.view')): ?>
+        <div class="flex flex-wrap gap-2">
+            <?php if (\App\Services\Corporate\CorpAuth::can('billing.view')): ?><a href="/company/reports/spend" class="<?= $btn ?> border border-ln bg-sf hover:bg-sf2">Spend</a><?php endif; ?>
+            <?php if ($canExport): foreach (\App\Services\Corporate\ReportExportService::FORMATS as $fmt => $label): ?>
                 <a href="/company/reports/export<?= $e($qs(['format' => $fmt])) ?>" class="<?= $btn ?> border border-ln bg-sf hover:bg-sf2"><?= $e($label) ?></a>
-            <?php endforeach; ?>
+            <?php endforeach; endif; ?>
         </div>
     <?php endif; ?>
 </div>

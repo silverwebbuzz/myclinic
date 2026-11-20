@@ -147,6 +147,9 @@ return static function (RouteRegistrar $router): void {
         $app->post('/settings/corporate/links/{id}/end', [\App\Controllers\ClinicCorporateController::class, 'end']);
         $app->post('/settings/corporate/credentials', [\App\Controllers\ClinicCorporateController::class, 'saveCredential']);
         $app->get('/settings/corporate/credentials/{id}/file', [\App\Controllers\ClinicCorporateController::class, 'credentialFile']);
+        $app->post('/settings/corporate/statements', [\App\Controllers\ClinicCorporateController::class, 'generateStatement']);
+        $app->post('/settings/corporate/statements/{id}/{action}', [\App\Controllers\ClinicCorporateController::class, 'statementAction']);
+        $app->get('/settings/corporate/statements/{id}/pdf', [\App\Controllers\ClinicCorporateController::class, 'statementPdf']);
         $app->get('/settings/team', [TeamSettingsController::class, 'index']);
         $app->post('/settings/team/invite', [TeamSettingsController::class, 'inviteStaff']);
         $app->post('/settings/team/create', [TeamSettingsController::class, 'createStaffAccount']);
@@ -914,9 +917,14 @@ return static function (RouteRegistrar $router): void {
         $company->post('/screening/programmes/{id}/items/{itemId}/frequency', [\App\Controllers\Corporate\CorpProgrammesController::class, 'frequency']);
         $company->post('/screening/programmes/{id}/assignments', [\App\Controllers\Corporate\CorpProgrammesController::class, 'assign']);
         $company->post('/screening/programmes/{id}/assignments/{assignmentId}/remove', [\App\Controllers\Corporate\CorpProgrammesController::class, 'unassign']);
+        $company->get('/settings/reminders', [\App\Controllers\Corporate\CorpReminderSettingsController::class, 'index']);
+        $company->post('/settings/reminders', [\App\Controllers\Corporate\CorpReminderSettingsController::class, 'save']);
         // Phase 1E: reports
         $company->get('/reports', [\App\Controllers\Corporate\CorpReportsController::class, 'index']);
         $company->get('/reports/export', [\App\Controllers\Corporate\CorpReportsController::class, 'export']);
+        $company->get('/reports/spend', [\App\Controllers\Corporate\CorpSpendController::class, 'index']);
+        $company->get('/reports/spend/{id}/pdf', [\App\Controllers\Corporate\CorpSpendController::class, 'pdf']);
+        $company->post('/reports/spend/{id}/dispute', [\App\Controllers\Corporate\CorpSpendController::class, 'dispute']);
         // Phase 1C: fitness certificates (outcome only, with consent)
         $company->get('/certificates', [\App\Controllers\Corporate\CorpCertificatesController::class, 'index']);
         $company->get('/certificates/{id}/pdf', [\App\Controllers\Corporate\CorpCertificatesController::class, 'pdf']);

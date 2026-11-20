@@ -46,6 +46,7 @@ $navGroups = [
     'Company' => [
         ['/company/profile', 'Company profile', true, 'company.view'],
         ['/company/users', 'Users & roles', true, 'users.view'],
+        ['/company/settings/reminders', 'Reminders', true, 'company.edit'],
         ['/company/activity', 'Activity log', true, 'audit.view'],
     ],
     'Account' => [

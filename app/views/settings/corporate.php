@@ -89,6 +89,50 @@ $countryNames = array_column($countries, 'name', 'code');
         <?php endif; ?>
     </div>
 
+    <?php $stCompanies = array_values(array_filter($links, static fn ($l) => in_array($l['status'], ['active', 'ended'], true)));
+          $stPill = ['draft' => 'bg-slate-100 text-slate-700', 'sent' => 'bg-blue-50 text-blue-800', 'paid' => 'bg-emerald-50 text-emerald-800', 'disputed' => 'bg-red-50 text-red-800', 'void' => 'bg-slate-100 text-slate-400']; ?>
+    <?php if ($stCompanies !== []): ?>
+    <div class="ui-card ui-card-pad" id="statements">
+        <h2 class="font-semibold text-slate-900">Statements</h2>
+        <p class="mt-1 text-sm text-slate-600">A monthly record of the checks you completed for a company, at the prices they agreed. Send it, then mark it paid when they pay you. eClinicPro doesn't handle the money.</p>
+        <form method="post" action="/settings/corporate/statements" class="mt-3 flex flex-wrap items-end gap-2">
+            <?= $csrfField ?>
+            <label class="text-xs text-slate-600">Company<select name="company_id" class="<?= $in ?>">
+                <?php foreach ($stCompanies as $l): ?><option value="<?= (int) $l['company_id'] ?>"><?= $h($coName($l)) ?></option><?php endforeach; ?></select></label>
+            <label class="text-xs text-slate-600">Month<select name="month" class="<?= $in ?>">
+                <?php for ($i = 0; $i < 6; $i++): $m = date('Y-m', strtotime(date('Y-m-01') . ' -' . $i . ' months')); ?><option value="<?= $m ?>"><?= date('M Y', strtotime($m . '-01')) ?></option><?php endfor; ?></select></label>
+            <button class="ui-btn ui-btn-primary">Create statement</button>
+        </form>
+        <?php if ($statements !== []): ?>
+            <div class="mt-4 overflow-x-auto">
+                <table class="w-full min-w-[640px] text-sm">
+                    <thead class="text-left text-xs text-slate-500"><tr><th class="py-2 pr-3 font-medium">Statement</th><th class="py-2 pr-3 font-medium">Company</th><th class="py-2 pr-3 font-medium">Period</th>
+                        <th class="py-2 pr-3 text-right font-medium">Total</th><th class="py-2 pr-3 font-medium">Status</th><th class="py-2"></th></tr></thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <?php foreach ($statements as $st): ?>
+                            <tr class="<?= $st['status'] === 'void' ? 'opacity-60' : '' ?>">
+                                <td class="py-2 pr-3 font-mono text-xs"><?= $h($st['statement_no']) ?></td>
+                                <td class="py-2 pr-3"><?= $h($st['company_name']) ?></td>
+                                <td class="py-2 pr-3"><?= $h(date('M Y', strtotime((string) $st['period_from']))) ?></td>
+                                <td class="py-2 pr-3 text-right tabular-nums"><?= $h($st['currency_code']) ?> <?= number_format((float) $st['total'], 2) ?> <span class="text-xs text-slate-400">(<?= (int) $st['lines_count'] ?>)</span></td>
+                                <td class="py-2 pr-3"><span class="rounded-full px-2 py-0.5 text-xs font-medium <?= $stPill[$st['status']] ?? '' ?>"><?= $h(ucfirst($st['status'])) ?></span>
+                                    <?php if ($st['status'] === 'disputed' && !empty($st['dispute_note'])): ?><div class="text-xs text-red-700">"<?= $h($st['dispute_note']) ?>"</div><?php endif; ?></td>
+                                <td class="py-2 text-right whitespace-nowrap">
+                                    <?php if (!empty($st['pdf_path'])): ?><a target="_blank" href="/settings/corporate/statements/<?= (int) $st['id'] ?>/pdf" class="text-teal-700 underline">PDF</a><?php endif; ?>
+                                    <?php foreach (['send' => ['draft'], 'paid' => ['sent', 'disputed'], 'void' => ['draft']] as $act => $from): if (!in_array($st['status'], $from, true)) { continue; } ?>
+                                        <form method="post" action="/settings/corporate/statements/<?= (int) $st['id'] ?>/<?= $act ?>" class="inline" <?= $act === 'void' ? 'onsubmit="return confirm(\'Void this draft?\')"' : '' ?>>
+                                            <?= $csrfField ?><button class="ml-2 text-sm <?= $act === 'void' ? 'text-red-600' : 'text-teal-700' ?> underline"><?= ['send' => 'Mark sent', 'paid' => 'Mark paid', 'void' => 'Void'][$act] ?></button></form>
+                                    <?php endforeach; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
     <div class="ui-card ui-card-pad" id="doctors" x-data="{ edit: null }">
         <h2 class="font-semibold text-slate-900">Doctors' registration</h2>
         <p class="mt-1 text-sm text-slate-600">Each doctor who signs fitness certificates needs a medical registration that eClinicPro has verified. It's printed on every certificate. An expired registration stops signing until it's renewed here.</p>

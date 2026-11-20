@@ -30,6 +30,7 @@ final class ClinicCorporateController
             'enabled' => ClinicCorporateService::enabled($clinicId),
             'links' => ClinicCorporateService::links($clinicId),
             'doctors' => ClinicCorporateService::doctors($clinicId),
+            'statements' => \App\Services\OccHealth\StatementService::forClinic($clinicId),
             'clinicCountry' => (string) ($clinic['country_code'] ?? 'IN'),
             'countries' => \App\Support\Locale\CountryRepo::allCountries(),
             'flashOk' => SessionFlash::pull('clinic_corp_ok'),
@@ -68,6 +69,30 @@ final class ClinicCorporateController
         $c = $clinicId !== null ? ClinicCorporateService::credential($clinicId, (int) $id) : null;
 
         return $c === null ? Response::html('Not found', 404) : ClinicCorporateService::fileResponse($c);
+    }
+
+    public function generateStatement(Request $request): Response
+    {
+        return $this->act(static fn (int $clinicId, int $userId) => \App\Services\OccHealth\StatementService::generate($clinicId, $userId,
+            (int) ($request->post['company_id'] ?? 0), (string) ($request->post['month'] ?? '')), 'Draft statement created. Check it, then mark it sent.', '#statements');
+    }
+
+    public function statementAction(Request $request, string $id, string $action): Response
+    {
+        if (!in_array($action, ['send', 'paid', 'void'], true)) {
+            return Response::html('Not found', 404);
+        }
+
+        return $this->act(static fn (int $clinicId, int $userId) => \App\Services\OccHealth\StatementService::act($clinicId, $userId, (int) $id, $action),
+            ['send' => 'Marked as sent; the company was emailed.', 'paid' => 'Marked as paid.', 'void' => 'Draft voided; its checks can go on a new statement.'][$action], '#statements');
+    }
+
+    public function statementPdf(Request $request, string $id): Response
+    {
+        $clinicId = RequestContext::clinicId();
+        $s = $clinicId !== null ? \App\Services\OccHealth\StatementService::find($clinicId, (int) $id) : null;
+
+        return $s === null ? Response::html('Not found', 404) : \App\Services\OccHealth\StatementService::pdfResponse($s);
     }
 
     /** @param callable(int, int): array{ok: bool, error?: string} $fn */
