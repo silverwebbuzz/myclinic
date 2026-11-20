@@ -461,6 +461,14 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/corporate/templates/{id}/new-version', [\App\Controllers\CorporateTemplatesAdminController::class, 'newVersion']);
         $admin->post('/corporate/templates/{id}/retire', [\App\Controllers\CorporateTemplatesAdminController::class, 'retire']);
         $admin->post('/corporate/templates/{id}/delete', [\App\Controllers\CorporateTemplatesAdminController::class, 'deleteDraft']);
+        $admin->get('/corporate/questionnaires', [\App\Controllers\CorporateQuestionnairesAdminController::class, 'index']);
+        $admin->get('/corporate/questionnaires/{id}', [\App\Controllers\CorporateQuestionnairesAdminController::class, 'show']);
+        $admin->post('/corporate/questionnaires/{id}', [\App\Controllers\CorporateQuestionnairesAdminController::class, 'save']);
+        $admin->post('/corporate/questionnaires/{id}/items', [\App\Controllers\CorporateQuestionnairesAdminController::class, 'saveItem']);
+        $admin->post('/corporate/questionnaires/{id}/items/{itemId}/remove', [\App\Controllers\CorporateQuestionnairesAdminController::class, 'removeItem']);
+        $admin->post('/corporate/questionnaires/{id}/publish', [\App\Controllers\CorporateQuestionnairesAdminController::class, 'publish']);
+        $admin->post('/corporate/questionnaires/{id}/new-version', [\App\Controllers\CorporateQuestionnairesAdminController::class, 'newVersion']);
+        $admin->post('/corporate/questionnaires/{id}/delete', [\App\Controllers\CorporateQuestionnairesAdminController::class, 'deleteDraft']);
         $admin->get('/corporate/providers', [\App\Controllers\CorporateProvidersAdminController::class, 'index']);
         $admin->post('/corporate/providers/{id}/toggle', [\App\Controllers\CorporateProvidersAdminController::class, 'toggle']);
         $admin->post('/corporate/credentials/{id}/review', [\App\Controllers\CorporateProvidersAdminController::class, 'review']);
