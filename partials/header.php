@@ -90,8 +90,8 @@ $ecpPatientJson = $ecpPatient
     <?php endif; ?>
     <meta name="theme-color" content="#0F9B6E" />
     <meta name="google-adsense-account" content="ca-pub-3947971704697505">
-    <!-- FlexOffers publisher site verification (affiliate programme) -->
-    <meta name="fo-verify" content="e58b091c-eb16-4942-b192-edb1e1c73347" />
+    <!-- Mitgo (Admitad) publisher site verification (affiliate programme) -->
+    <meta name="mitgo-verification" content="b8370b47-60cf-4e62-9b3f-910793b4995b" />
     <title><?= e($pageTitle) ?></title>
 
     <!-- Canonical -->
