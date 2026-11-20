@@ -141,6 +141,7 @@ $presenceSub = $presenceSub ?? 'Find doctors & clinics across these cities';
                     <?php /* <li><a href="/lab">Lab Tests</a></li> */ ?>
                     <li><a href="/health-insurance">Health Insurance</a></li>
                     <li><a href="/clinic-management-software">For doctors</a></li>
+                    <li><a href="/corporate">For companies</a></li>
                     <li><a href="/product-tour">Product tour</a></li>
                     <li><a href="/pricing">Pricing</a></li>
                 </ul>
