@@ -73,7 +73,7 @@ require __DIR__ . '/_header.php';
   <?php endif; ?>
 
   <!-- Shop by need -->
-  <?php if ($tiles): ?>
+  <?php /* if ($tiles): ?>
   <section id="shop-by-need" class="st-section" style="scroll-margin-top:120px">
     <div class="st-wrap">
       <div class="st-head">
@@ -94,7 +94,7 @@ require __DIR__ . '/_header.php';
       </div>
     </div>
   </section>
-  <?php endif; ?>
+  <?php endif; */ ?>
 
   <!-- Featured products -->
   <section class="st-section is-cream">
