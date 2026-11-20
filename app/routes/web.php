@@ -965,6 +965,13 @@ return static function (RouteRegistrar $router): void {
         $company->post('/employees/{id}/rehire', [\App\Controllers\Corporate\CorpEmployeesController::class, 'rehire']);
         $company->post('/employees/{id}/reveal-id', [\App\Controllers\Corporate\CorpEmployeesController::class, 'revealId']);
         $company->post('/employees/{id}/invite', [\App\Controllers\Corporate\CorpEmployeesController::class, 'invite']);
+        // Phase 2E: risk register
+        $company->get('/risks', [\App\Controllers\Corporate\CorpRisksController::class, 'index']);
+        $company->get('/risks/new', [\App\Controllers\Corporate\CorpRisksController::class, 'form']);
+        $company->get('/risks/export', [\App\Controllers\Corporate\CorpRisksController::class, 'export']);
+        $company->post('/risks', [\App\Controllers\Corporate\CorpRisksController::class, 'save']);
+        $company->get('/risks/{id}', [\App\Controllers\Corporate\CorpRisksController::class, 'edit']);
+        $company->post('/risks/{id}', [\App\Controllers\Corporate\CorpRisksController::class, 'update']);
         // Phase 2B: absences, incidents, return-to-work / post-incident checks
         $company->post('/employees/{id}/absences', [\App\Controllers\Corporate\CorpIncidentsController::class, 'storeAbsence']);
         $company->post('/absences/{id}/remove', [\App\Controllers\Corporate\CorpIncidentsController::class, 'removeAbsence']);
