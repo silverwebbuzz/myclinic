@@ -55,6 +55,20 @@ ob_start();
         <a href="/company/screening" class="rounded-[10px] border border-ln bg-sf px-4 py-3 hover:bg-sf2"><div class="text-[12px] text-tx3">People up to date</div><div class="mt-0.5 text-[22px] font-semibold"><?= (int) $screening['up_to_date_pct'] ?>%</div><div class="text-[12px] text-tx3"><?= number_format((int) $screening['people_ok']) ?> of <?= number_format((int) $screening['people']) ?></div></a>
     </div>
 <?php endif; ?>
+<?php $ex = $extras ?? ['bookings' => null, 'expiring' => null]; $canReports = \App\Services\Corporate\CorpAuth::can('reports.view'); ?>
+<?php if (($screening ?? null) !== null && $screening['people'] > 0 && ($ex['bookings'] !== null || $ex['expiring'] !== null || $canReports)): ?>
+    <div class="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <?php if ($ex['bookings'] !== null): ?>
+            <a href="/company/bookings" class="rounded-[10px] border border-ln bg-sf px-4 py-3 hover:bg-sf2"><div class="text-[12px] text-tx3">Upcoming bookings</div><div class="mt-0.5 text-[22px] font-semibold text-in"><?= number_format((int) $ex['bookings']) ?></div></a>
+        <?php endif; ?>
+        <?php if ($ex['expiring'] !== null): ?>
+            <a href="/company/certificates?view=expiring" class="rounded-[10px] border border-ln bg-sf px-4 py-3 hover:bg-sf2"><div class="text-[12px] text-tx3">Certificates expiring in 60 days</div><div class="mt-0.5 text-[22px] font-semibold <?= $ex['expiring'] > 0 ? 'text-wn' : 'text-tx2' ?>"><?= number_format((int) $ex['expiring']) ?></div></a>
+        <?php endif; ?>
+        <?php if ($canReports): ?>
+            <a href="/company/reports" class="col-span-2 flex items-center justify-between rounded-[10px] border border-ln bg-sf px-4 py-3 hover:bg-sf2"><div><div class="text-[12px] text-tx3">Compliance by branch, department or job</div><div class="mt-0.5 font-semibold">Open reports →</div></div></a>
+        <?php endif; ?>
+    </div>
+<?php endif; ?>
 
 <div class="mt-4 grid gap-4 lg:grid-cols-3">
     <section class="rounded-[10px] border border-ln bg-sf p-5 lg:col-span-2">
@@ -107,11 +121,22 @@ ob_start();
     </div>
 </div>
 
+<?php if ($status === 'pending'): ?>
 <section class="mt-4 rounded-[10px] border border-dashed border-ln bg-sf p-5">
-    <h2 class="text-[15px] font-semibold">Coming next</h2>
-    <p class="mt-1 text-tx2"><?= $status === 'pending' ? 'Once your company is approved you\'ll be able to set up your workforce and screening programmes. Next, you\'ll' : 'Soon you\'ll be able to' ?>
-        book examinations with partner clinics and labs, and receive fitness certificates (the outcome only; medical results stay with the doctor).</p>
+    <h2 class="text-[15px] font-semibold">After approval</h2>
+    <p class="mt-1 text-tx2">Once your company is approved you can add your workforce, adopt screening programmes, add clinics, book health checks and receive fitness certificates (the outcome only; medical results stay with the doctor).</p>
 </section>
+<?php else: ?>
+<section class="mt-4 rounded-[10px] border border-ln bg-sf p-5">
+    <h2 class="text-[15px] font-semibold">Shortcuts</h2>
+    <div class="mt-2 flex flex-wrap gap-2 text-[13px]">
+        <?php foreach ([['/company/screening?bucket=overdue', 'Overdue checks', 'screening.view_status'], ['/company/bookings', 'Bookings', 'bookings.manage'], ['/company/certificates', 'Certificates', 'screening.view_status'],
+                        ['/company/providers', 'Clinics', 'providers.manage'], ['/company/reports', 'Reports', 'reports.view'], ['/company/settings/reminders', 'Reminders', 'company.edit']] as [$href, $label, $perm]): ?>
+            <?php if (\App\Services\Corporate\CorpAuth::can($perm)): ?><a href="<?= $e($href) ?>" class="rounded-[7px] border border-ln px-3 py-1.5 hover:bg-sf2"><?= $e($label) ?></a><?php endif; ?>
+        <?php endforeach; ?>
+    </div>
+</section>
+<?php endif; ?>
 <?php
 $content = ob_get_clean();
 require __DIR__ . '/_layout.php';

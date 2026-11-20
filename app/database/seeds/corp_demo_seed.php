@@ -436,7 +436,7 @@ $seedScreening = static function (int $companyId, array $c, string $tz) use ($pd
  *
  * @param list<array{0:int,1:array,2:string}> $made
  */
-$seedClinic = static function (array $made, string $password, array &$logins) use ($pdo, $one, $base): void {
+$seedClinic = static function (array $made, string $password, array &$logins) use ($pdo, $one, $base, $hasTable): void {
     if ((int) ($one("SELECT COUNT(*) FROM tenants WHERE slug = :s", ['s' => 'demo-occ-health']) ?: 0) > 0) {
         echo "  Demo clinic already exists (run --purge to recreate).\n";
 
@@ -571,7 +571,17 @@ $seedClinic = static function (array $made, string $password, array &$logins) us
                     'Demo: issued for the wrong date, will be reissued');
             }
         }
-        echo "  {$c['trade']}: clinic linked" . ($branchIds !== null ? ' (Mumbai yard only)' : '') . ", {$signed} certificates today (1 not shared, 1 revoked), {$upcoming} upcoming bookings\n";
+        // 1E-3: this month's statement from the demo clinic (Demo Infra: sent; Gulf Marine: left as a draft). No emails.
+        $stmtNote = '';
+        if ($signed > 0 && $hasTable('corp_provider_statements')) {
+            $stRes = \App\Services\OccHealth\StatementService::generate($clinicId, $doctorId, $companyId, substr($today, 0, 7));
+            if ($stRes['ok'] && $c['cc'] === 'IN') {
+                $pdo->prepare("UPDATE corp_provider_statements SET status = 'sent', sent_at = :at, updated_at = :up WHERE id = :id AND company_id = :cid")
+                    ->execute(['at' => $now, 'up' => $now, 'id' => (int) $stRes['id'], 'cid' => $companyId]);
+            }
+            $stmtNote = $stRes['ok'] ? ', 1 statement (' . ($c['cc'] === 'IN' ? 'sent' : 'draft') . ')' : '';
+        }
+        echo "  {$c['trade']}: clinic linked" . ($branchIds !== null ? ' (Mumbai yard only)' : '') . ", {$signed} certificates today (1 not shared, 1 revoked), {$upcoming} upcoming bookings{$stmtNote}\n";
     }
 };
 

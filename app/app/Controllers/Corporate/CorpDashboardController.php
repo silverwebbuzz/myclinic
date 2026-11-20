@@ -73,6 +73,7 @@ final class CorpDashboardController
             'trialDaysLeft' => $trialDaysLeft,
             'checklist' => $checklist,
             'screening' => $this->screeningTiles((int) $company['id'], (string) ($company['timezone'] ?? 'UTC')),
+            'extras' => $this->extraTiles((int) $company['id'], (string) ($company['timezone'] ?? 'UTC')),
             'welcome' => !empty($request->query['welcome']),
             'flashOk' => SessionFlash::pull('corp_ok'),
             'flashErr' => SessionFlash::pull('corp_err'),
@@ -91,6 +92,30 @@ final class CorpDashboardController
         }
 
         return Response::redirect('/company/dashboard');
+    }
+
+    /**
+     * Phase 1C/1E tiles: upcoming bookings, certificates expiring. A value is null when the user may not see it
+     * or the patch isn't run yet.
+     *
+     * @return array{bookings: ?int, expiring: ?int}
+     */
+    private function extraTiles(int $companyId, string $tz): array
+    {
+        $out = ['bookings' => null, 'expiring' => null];
+        $today = \App\Support\Locale\LocalDate::today($tz);
+        try {
+            if (CorpAuth::can('bookings.manage')) {
+                $out['bookings'] = \App\Services\Corporate\BookingService::search($companyId, ['view' => 'upcoming'], CorpAuth::branchScope('bookings.manage'))['total'];
+            }
+            if (CorpAuth::can('screening.view_status')) {
+                $out['expiring'] = \App\Services\Corporate\CertificateService::search($companyId, ['view' => 'expiring'], CorpAuth::branchScope('screening.view_status'), $today)['counts']['expiring'] ?? 0;
+            }
+        } catch (\Throwable $e) {
+            // 1C tables not there yet
+        }
+
+        return $out;
     }
 
     /** @return array<string, int|null>|null null = no permission, or 1B tables not there yet */
