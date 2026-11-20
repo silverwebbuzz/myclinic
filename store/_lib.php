@@ -141,6 +141,20 @@ function store_img(?string $path): ?string
     return str_starts_with($path, 'http') ? $path : ecp_portal_url($path);
 }
 
+/** Outbound link for an affiliate product (counts the click, then redirects). */
+function store_go_url(int $productId): string
+{
+    return store_url('go/' . $productId);
+}
+
+/** "Buy on Amazon" / "Buy now". */
+function store_buy_label(array $p): string
+{
+    $m = trim((string) ($p['affiliate_merchant'] ?? ''));
+
+    return $m !== '' ? 'Buy on ' . $m : 'Buy now';
+}
+
 function store_url(string $path = ''): string
 {
     return '/store' . ($path === '' ? '/' : '/' . ltrim($path, '/'));
@@ -296,7 +310,7 @@ function store_visible_sql(): string
 function store_card_cols(): string
 {
     return "p.id, p.slug, p.name, p.min_price_paise, p.in_stock, p.rating_avg, p.rating_count, p.is_featured,
-            p.category_id, pc.no_promotion,
+            p.category_id, pc.no_promotion, p.affiliate_url, p.affiliate_merchant,
             b.name AS brand_name, v.display_name AS vendor_name, v.slug AS vendor_slug,
             (SELECT i.path FROM store_product_images i WHERE i.product_id = p.id ORDER BY i.sort_order, i.id LIMIT 1) AS cover,
             (SELECT sv.mrp_paise FROM store_product_variants sv WHERE sv.product_id = p.id AND sv.is_active = 1
@@ -513,7 +527,7 @@ function store_seller(string $slug): ?array
     }
     try {
         $st = $db->prepare(
-            "SELECT v.id, v.slug, v.display_name, v.description, v.logo_path, v.banner_path, v.rating_avg, v.rating_count,
+            "SELECT v.id, v.slug, v.display_name, v.description, v.logo_path, v.banner_path, v.rating_avg, v.rating_count, v.vendor_type,
                     v.handling_days, v.default_return_window_days, v.approved_at,
                     (SELECT CONCAT(a.city, ', ', a.state) FROM store_vendor_addresses a
                       WHERE a.vendor_id = v.id AND a.type = 'pickup' AND a.is_active = 1 ORDER BY a.is_default DESC, a.id DESC LIMIT 1) AS location

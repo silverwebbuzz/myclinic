@@ -328,13 +328,17 @@ switch ($action) {
             'returnable' => $returnDays > 0,
             'return_window_days' => $returnDays,
             'return_window_hours' => $returnHours,
-            'facts' => [
+            'facts' => !empty($p['affiliate_url']) ? [
+                'Sold and delivered by ' . (trim((string) ($p['affiliate_merchant'] ?? '')) ?: 'the partner website') . '. The price there may differ from the one shown here.',
+                'Payment, delivery and returns follow the partner website\'s policy.',
+            ] : [
                 'Usually dispatched within ' . $handling . ' day' . ($handling > 1 ? 's' : '') . '. Delivery across India.',
                 $returnHours > 0 ? 'Report a damaged, wrong or defective item within ' . store_return_window_label() . ' of delivery for a return.' : 'This product is not returnable.',
                 'Genuine product from a verified seller' . (!empty($p['license_number']) ? '. Licence no. ' . $p['license_number'] : '') . '.',
             ],
             'tax_note' => 'Inclusive of all taxes',
             'web_url' => ecp_site_url('/store/p/' . $p['slug']),   // for the share sheet
+            'affiliate' => ecp_ms_affiliate($p),                  // non-null: no cart, open url externally
         ],
             'reviews' => array_map('ecp_ms_review', store_reviews((int) $p['id'], 5)),
             'related' => ecp_ms_cards($related),

@@ -200,7 +200,8 @@ final class HsnService
         }
         $sql = "SELECT p.id, p.name, p.hsn_code, p.gst_bp, p.status, p.vendor_id, v.display_name AS vendor_name
                   FROM store_products p JOIN store_vendors v ON v.id = p.vendor_id
-                 WHERE p.deleted_at IS NULL AND p.status NOT IN ('archived')" . ($vendorId !== null ? ' AND p.vendor_id = :v' : '') . ' ORDER BY p.id';
+                 WHERE p.deleted_at IS NULL AND p.status NOT IN ('archived')
+                   AND p.affiliate_url IS NULL" . ($vendorId !== null ? ' AND p.vendor_id = :v' : '') . ' ORDER BY p.id';
         $st = Database::connection()->prepare($sql);
         $st->execute($vendorId !== null ? ['v' => $vendorId] : []);
         $out = [];

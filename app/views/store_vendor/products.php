@@ -63,7 +63,11 @@ ob_start();
                         </span>
                         <span class="min-w-0 flex-1">
                             <span class="block truncate font-medium"><?= $e($p['name']) ?></span>
-                            <span class="block text-xs text-tx3"><?= $e($p['category_name'] ?? '') ?> · <?= (int) $p['variant_count'] ?> variant(s) · stock <?= (int) $p['total_stock'] ?></span>
+                            <?php if (!empty($p['affiliate_url'])): ?>
+                                <span class="block text-xs text-tx3"><?= $e($p['category_name'] ?? '') ?> · Affiliate<?= !empty($p['affiliate_merchant']) ? ' · ' . $e($p['affiliate_merchant']) : '' ?><?= (int) $p['total_stock'] > 0 ? '' : ' · marked out of stock' ?></span>
+                            <?php else: ?>
+                                <span class="block text-xs text-tx3"><?= $e($p['category_name'] ?? '') ?> · <?= (int) $p['variant_count'] ?> variant(s) · stock <?= (int) $p['total_stock'] ?></span>
+                            <?php endif; ?>
                             <?php if (in_array($p['status'], ['rejected', 'disabled'], true) && !empty($p['review_note'])): ?>
                                 <span class="block text-xs text-red-700"><?= $e($p['review_note']) ?></span>
                             <?php endif; ?>

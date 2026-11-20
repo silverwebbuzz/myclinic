@@ -300,6 +300,180 @@ final class ProductService
         return ['ok' => true, 'id' => $productId, 'sent_to_review' => $sentToReview];
     }
 
+    // ------------------------------------------------------------------
+    // Affiliate products (seller with vendor_type = 'affiliate')
+    //   Bought on the partner's site via /store/go/{id}; never in the cart.
+    //   One hidden variant carries the price so listing / sort / filters
+    //   work unchanged. No HSN, GST, stock, courier or returns.
+    // ------------------------------------------------------------------
+
+    public static function isAffiliateVendor(array $vendor): bool
+    {
+        return ($vendor['vendor_type'] ?? 'marketplace') === 'affiliate';
+    }
+
+    /** Licences don't apply (we don't sell it), but blocked / Rx categories stay closed. */
+    public static function affiliateBlockReason(array $category): ?string
+    {
+        if (($category['regulatory_class'] ?? '') === 'drug_restricted') {
+            return 'Medicines can\'t be listed as affiliate products. Choose another category.';
+        }
+        $doc = (string) ($category['required_vendor_doc'] ?? '');
+
+        return CatalogService::listingBlockReason($category, $doc !== '' ? [$doc => 'affiliate'] : []);
+    }
+
+    /** Only http(s) links to a real host; returns the cleaned URL or null. */
+    public static function cleanAffiliateUrl(string $raw): ?string
+    {
+        $url = trim($raw);
+        if ($url === '' || mb_strlen($url) > 1000 || preg_match('/\s/', $url)) {
+            return null;
+        }
+        $parts = parse_url($url);
+        if (!is_array($parts) || !in_array(strtolower($parts['scheme'] ?? ''), ['http', 'https'], true)
+            || empty($parts['host']) || !str_contains((string) $parts['host'], '.')) {
+            return null;
+        }
+
+        return $url;
+    }
+
+    /**
+     * Create / update an affiliate product from the short seller form.
+     *
+     * @param array<string, mixed> $vendor
+     * @param array<string, mixed>|null $existing
+     * @param array<string, mixed> $in POST
+     * @return array{ok: bool, error?: string, id?: int}
+     */
+    public static function saveAffiliate(array $vendor, ?array $existing, array $in): array
+    {
+        $vendorId = (int) $vendor['id'];
+        if (!self::isAffiliateVendor($vendor) || ($vendor['status'] ?? '') !== 'approved') {
+            return ['ok' => false, 'error' => 'Affiliate products can be added once this seller is approved as an affiliate seller.'];
+        }
+        if ($existing !== null && $existing['status'] === 'disabled') {
+            return ['ok' => false, 'error' => 'This product was disabled by the eClinicPro team and can\'t be edited.'];
+        }
+
+        $name = trim(preg_replace('/\s+/', ' ', (string) ($in['name'] ?? '')) ?? '');
+        if (mb_strlen($name) < 3) {
+            return ['ok' => false, 'error' => 'Product title is required (at least 3 characters).'];
+        }
+        $categoryId = (int) ($in['category_id'] ?? 0);
+        $category = $categoryId > 0 ? CatalogService::category($categoryId) : null;
+        if ($category === null) {
+            return ['ok' => false, 'error' => 'Choose a category.'];
+        }
+        $why = self::affiliateBlockReason($category);
+        if ($why !== null) {
+            return ['ok' => false, 'error' => $why];
+        }
+
+        $brandId = (int) ($in['brand_id'] ?? 0);
+        if (trim((string) ($in['brand_new'] ?? '')) !== '') {
+            $brandId = (int) CatalogService::brandIdFor((string) $in['brand_new']);
+        } elseif ($brandId > 0 && QueryBuilder::table('store_brands')->where('id', '=', $brandId)->first() === null) {
+            $brandId = 0;
+        }
+
+        $url = self::cleanAffiliateUrl((string) ($in['affiliate_url'] ?? ''));
+        if ($url === null) {
+            return ['ok' => false, 'error' => 'Paste the full affiliate link, starting with https://'];
+        }
+        $merchant = mb_substr(trim(preg_replace('/\s+/', ' ', (string) ($in['affiliate_merchant'] ?? '')) ?? ''), 0, 80);
+
+        $price = self::toPaise((string) ($in['price'] ?? ''));
+        if ($price === null || $price <= 0) {
+            return ['ok' => false, 'error' => 'Enter the price shown on the partner site.'];
+        }
+        $mrpRaw = trim((string) ($in['mrp'] ?? ''));
+        $mrp = $mrpRaw === '' ? $price : self::toPaise($mrpRaw);
+        if ($mrp === null || $mrp < $price) {
+            return ['ok' => false, 'error' => 'MRP must be blank or at least the price.'];
+        }
+        $available = !empty($in['available']);
+
+        $data = [
+            'name' => mb_substr($name, 0, 255),
+            'category_id' => $categoryId,
+            'brand_id' => $brandId > 0 ? $brandId : null,
+            'short_desc' => mb_substr(trim((string) ($in['short_desc'] ?? '')), 0, 500) ?: null,
+            'affiliate_url' => $url,
+            'affiliate_merchant' => $merchant !== '' ? $merchant : null,
+            'is_returnable' => 0,
+            'has_expiry' => 0,
+        ];
+
+        $pdo = Database::connection();
+        $pdo->beginTransaction();
+        try {
+            if ($existing === null) {
+                $data['vendor_id'] = $vendorId;
+                $data['slug'] = self::uniqueSlug($name);
+                $data['status'] = 'draft';
+                $data['regulatory_class'] = (string) $category['regulatory_class'];
+                $productId = QueryBuilder::table('store_products')->insert($data);
+            } else {
+                $productId = (int) $existing['id'];
+                if ((int) $existing['category_id'] !== $categoryId) {
+                    $data['regulatory_class'] = (string) $category['regulatory_class'];
+                }
+                QueryBuilder::table('store_products')->where('id', '=', $productId)->update($data);
+            }
+
+            $pdo->prepare('DELETE FROM store_product_categories WHERE product_id = :p')->execute(['p' => $productId]);
+            $pdo->prepare('INSERT INTO store_product_categories (product_id, category_id, is_primary) VALUES (:p, :c, 1)')
+                ->execute(['p' => $productId, 'c' => $categoryId]);
+
+            // The one hidden variant: price + "available" (stock 1 / 0).
+            $fields = ['mrp_paise' => $mrp, 'price_paise' => $price, 'stock_qty' => $available ? 1 : 0,
+                'low_stock_threshold' => 0, 'is_active' => 1];
+            $st = $pdo->prepare('SELECT id FROM store_product_variants WHERE product_id = :p ORDER BY is_active DESC, id LIMIT 1');
+            $st->execute(['p' => $productId]);
+            $variantId = (int) ($st->fetchColumn() ?: 0);
+            if ($variantId > 0) {
+                QueryBuilder::table('store_product_variants')->where('id', '=', $variantId)->update($fields);
+                $pdo->prepare('UPDATE store_product_variants SET is_active = 0 WHERE product_id = :p AND id <> :v')
+                    ->execute(['p' => $productId, 'v' => $variantId]);
+            } else {
+                QueryBuilder::table('store_product_variants')->insert($fields + [
+                    'product_id' => $productId, 'vendor_id' => $vendorId, 'sku' => 'AFF-' . $productId,
+                ]);
+            }
+
+            self::refreshDenormalized($productId);
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            error_log('[ProductService::saveAffiliate] ' . $e->getMessage());
+
+            return ['ok' => false, 'error' => 'Could not save the product. Please try again.'];
+        }
+
+        StoreAudit::log($existing === null ? 'product.create' : 'product.update', 'product', $productId, $existing, $data);
+
+        return ['ok' => true, 'id' => $productId];
+    }
+
+    /** @return array{days30: int, total: int} */
+    public static function affiliateClicks(int $productId): array
+    {
+        try {
+            $st = Database::connection()->prepare(
+                'SELECT COUNT(*) AS total, COALESCE(SUM(created_at >= NOW() - INTERVAL 30 DAY), 0) AS days30
+                   FROM store_affiliate_clicks WHERE product_id = :p'
+            );
+            $st->execute(['p' => $productId]);
+            $r = $st->fetch() ?: [];
+
+            return ['days30' => (int) ($r['days30'] ?? 0), 'total' => (int) ($r['total'] ?? 0)];
+        } catch (\Throwable) {
+            return ['days30' => 0, 'total' => 0];
+        }
+    }
+
     /**
      * @param array<int|string, mixed> $rows
      * @return array{rows?: list<array<string, mixed>>, error?: string}
@@ -537,7 +711,7 @@ final class ProductService
 
     private static function reviewAfterMediaChange(array $product): void
     {
-        if ($product['status'] !== 'live') {
+        if ($product['status'] !== 'live' || !empty($product['affiliate_url'])) {
             return;
         }
         $cat = CatalogService::category((int) $product['category_id']);
@@ -559,6 +733,21 @@ final class ProductService
     public static function submitProblems(array $vendor, array $loaded): array
     {
         $problems = [];
+        if (!empty($loaded['affiliate_url']) || self::isAffiliateVendor($vendor)) {
+            if (!$loaded['images']) {
+                $problems[] = 'Add at least one product photo.';
+            }
+            if (empty($loaded['affiliate_url'])) {
+                $problems[] = 'Add the affiliate link.';
+            }
+            $cat = CatalogService::category((int) $loaded['category_id']);
+            $why = $cat === null ? 'Choose a category.' : self::affiliateBlockReason($cat);
+            if ($why !== null) {
+                $problems[] = $why;
+            }
+
+            return $problems;
+        }
         $active = array_filter($loaded['variants'], static fn ($v) => (int) $v['is_active'] === 1);
         if (!$active) {
             $problems[] = 'Add at least one active variant.';
@@ -605,7 +794,8 @@ final class ProductService
             return ['ok' => false, 'error' => implode(' ', $problems)];
         }
         $cat = CatalogService::category((int) $product['category_id']);
-        $goLive = $cat !== null && !self::needsReview($cat);
+        // Affiliate products belong to eClinicPro's own affiliate seller: no review queue.
+        $goLive = $cat !== null && (self::isAffiliateVendor($vendor) || !self::needsReview($cat));
         $upd = $goLive
             ? ['status' => 'live', 'review_note' => null, 'published_at' => $product['published_at'] ?? date('Y-m-d H:i:s')]
             : ['status' => 'pending_review', 'review_note' => null];

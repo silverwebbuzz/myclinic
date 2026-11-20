@@ -170,6 +170,12 @@ body.st-body { overflow-x: hidden; }
 .st-price s { font-size: 13px; color: #8b94a1; }
 .st-price .st-off { font-size: 12.5px; font-weight: 600; color: var(--st-accent); }
 .st-rating { font-size: 12.5px; color: var(--st-ink-2); }
+/* Affiliate card: buy on the partner's site (opens in a new tab). */
+.st-card-buy { margin-top: 10px; width: 100%; padding: 0 12px; font-size: 13.5px; gap: 6px; }
+.st-card-buy:hover { gap: 6px; }
+.st-card-buy-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-card-aff { margin-top: 4px; font-size: 11px; color: var(--st-mute); text-align: center; }
+.st-trust-aff { margin-top: 4px; margin-bottom: 0; font-size: 11.5px; color: var(--st-mute); }
 .st-rating b { color: var(--st-green-700); }
 
 /* ---------- Listing page ---------- */

@@ -129,6 +129,16 @@ final class StoreAdminController
         return Response::redirect('/admin/store/vendors/' . (int) $id);
     }
 
+    public function vendorType(Request $request, string $id): Response
+    {
+        $result = VendorService::adminSetType((int) $id, (string) ($request->post['vendor_type'] ?? ''));
+        $this->flash($result, ($request->post['vendor_type'] ?? '') === 'affiliate'
+            ? 'This is now an affiliate seller: products are bought on partner websites. Approve the seller, then add products from the seller panel.'
+            : 'This is now a normal marketplace seller.');
+
+        return Response::redirect('/admin/store/vendors/' . (int) $id);
+    }
+
     public function toggleFeatured(Request $request, string $id): Response
     {
         VendorService::adminToggleFeatured((int) $id);

@@ -9,6 +9,8 @@
     <a href="/sell-on-eclinicpro" class="st-trust-sell">Sell on eClinicPro Store →</a>
   </div>
   <p class="st-wrap st-trust-note">Products are sold by independent sellers. Not a substitute for medical advice: consult your doctor before starting any supplement.</p>
+  <!-- Affiliate disclosure (ASCI / Consumer Protection (E-Commerce) Rules): keep on every store page. -->
+  <p class="st-wrap st-trust-aff">Some products marked "Ad · affiliate link" are sold on partner websites. We may earn a commission when you buy through these links, at no extra cost to you. Price, delivery and returns for those orders are handled by the partner website.</p>
 </section>
 </div><!-- /.st-page -->
 

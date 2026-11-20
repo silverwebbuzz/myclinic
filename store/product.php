@@ -12,6 +12,11 @@ $p = $slug !== '' ? store_product($slug) : null;
 if ($p === null) {
     store_not_found();
 }
+// Affiliate product: there is no page here; the partner's site is the product page.
+if (!empty($p['affiliate_url'])) {
+    header('Location: ' . store_go_url((int) $p['id']), true, 302);
+    exit;
+}
 
 $variants = $p['variants'];
 $images = array_map(static fn ($i) => store_img($i['path']), $p['images']);
