@@ -67,6 +67,41 @@ final class CorpBookingsController
         ]);
     }
 
+    /** Phase 2C-1: book many people at once. */
+    public function group(Request $request): Response
+    {
+        if ($deny = CorpAuth::guard(self::PERM)) {
+            return $deny;
+        }
+        $cid = $this->cid();
+        $f = ['branch' => (int) ($request->query['branch'] ?? 0), 'due' => in_array($request->query['due'] ?? '', ['overdue', '30', 'all'], true) ? (string) $request->query['due'] : 'overdue'];
+
+        return $this->render('corporate/booking_group', [
+            'f' => $f,
+            'people' => BookingService::groupCandidates($cid, $f, $this->scope(), CorpContext::locale()->today()),
+            'clinics' => BookingService::clinicsFor($cid, $f['branch'] > 0 ? $f['branch'] : null),
+            'branches' => \App\Services\Corporate\StructureService::branches($cid, true, $this->scope()),
+            'result' => SessionFlash::pull('corp_group_result'),
+        ]);
+    }
+
+    public function groupStore(Request $request): Response
+    {
+        if ($deny = CorpAuth::guard(self::PERM)) {
+            return $deny;
+        }
+        $ids = $request->post['employment_ids'] ?? [];
+        $res = BookingService::bookGroup($this->cid(), $this->uid(), is_array($ids) ? array_map('intval', $ids) : [],
+            (int) ($request->post['clinic_id'] ?? 0), (int) ($request->post['doctor_id'] ?? 0), (string) ($request->post['slot'] ?? ''), $this->scope());
+        $back = '/company/bookings/group?' . http_build_query(['branch' => (int) ($request->post['branch'] ?? 0) ?: null, 'due' => (string) ($request->post['due'] ?? 'overdue')]);
+        if (!$res['ok']) {
+            return $this->back($back, $res, '');
+        }
+        SessionFlash::put('corp_group_result', ['booked' => $res['booked'], 'skipped' => $res['skipped']]);
+
+        return Response::redirect($back);
+    }
+
     /** JSON: free slots for clinic + doctor + date. */
     public function slots(Request $request): Response
     {

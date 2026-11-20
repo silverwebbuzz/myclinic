@@ -933,6 +933,8 @@ return static function (RouteRegistrar $router): void {
         $company->get('/bookings', [\App\Controllers\Corporate\CorpBookingsController::class, 'index']);
         $company->get('/bookings/new', [\App\Controllers\Corporate\CorpBookingsController::class, 'create']);
         $company->get('/bookings/slots', [\App\Controllers\Corporate\CorpBookingsController::class, 'slots']);
+        $company->get('/bookings/group', [\App\Controllers\Corporate\CorpBookingsController::class, 'group']);
+        $company->post('/bookings/group', [\App\Controllers\Corporate\CorpBookingsController::class, 'groupStore']);
         $company->post('/bookings', [\App\Controllers\Corporate\CorpBookingsController::class, 'store']);
         $company->post('/bookings/{id}/cancel', [\App\Controllers\Corporate\CorpBookingsController::class, 'cancel']);
         // Phase 1C: clinic network + agreed prices

@@ -22,7 +22,10 @@ ob_start();
         <h1 class="text-[20px] font-semibold tracking-[-.015em]">Bookings</h1>
         <p class="mt-0.5 text-tx3">Health checks booked at your clinics. To book, open the due list or an employee and click <b>Book</b>.</p>
     </div>
-    <a href="/company/screening?bucket=overdue" class="<?= $btn ?> bg-ac text-white hover:opacity-90">Book from due checks</a>
+    <div class="flex flex-wrap gap-2">
+        <a href="/company/bookings/group" class="<?= $btn ?> border border-ln bg-sf hover:bg-sf2">Group booking</a>
+        <a href="/company/screening?bucket=overdue" class="<?= $btn ?> bg-ac text-white hover:opacity-90">Book from due checks</a>
+    </div>
 </div>
 <div class="mt-4 flex flex-wrap items-center gap-3">
     <nav class="flex gap-1 rounded-[9px] bg-sf2 p-1 ring-1 ring-ln">

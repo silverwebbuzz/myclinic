@@ -238,6 +238,123 @@ final class BookingService
     }
 
     // ------------------------------------------------------------------
+    // Group booking (Phase 2C-1): many people into one doctor's free slots
+    // ------------------------------------------------------------------
+
+    public const GROUP_MAX = 40;
+
+    /**
+     * Active employees with open, not-booked checks, one row each (for the group booking list).
+     *
+     * @param array{branch?: int, due?: string} $f due = overdue | 30 | all
+     * @param list<int>|null $scope
+     * @return list<array<string, mixed>> id, full_name, employee_no, branch_id, branch_name, job_title, checks, earliest_due
+     */
+    public static function groupCandidates(int $companyId, array $f, ?array $scope, string $today): array
+    {
+        $where = ["e.company_id = :cid", "e.status = 'active'", "c.status = 'not_scheduled'"];
+        $params = ['cid' => $companyId];
+        $due = (string) ($f['due'] ?? 'overdue');
+        if ($due === 'overdue') {
+            $where[] = 'c.due_on < :t';
+            $params['t'] = $today;
+        } elseif ($due === '30') {
+            $where[] = 'c.due_on <= :t';
+            $params['t'] = LocalDate::addDays($today, 30);
+        }
+        if (!empty($f['branch'])) {
+            $where[] = 'e.branch_id = :br';
+            $params['br'] = (int) $f['branch'];
+        }
+        if ($scope !== null) {
+            if ($scope === []) {
+                return [];
+            }
+            $in = [];
+            foreach (array_values($scope) as $k => $bid) {
+                $in[] = ':sb' . $k;
+                $params['sb' . $k] = $bid;
+            }
+            $where[] = 'e.branch_id IN (' . implode(',', $in) . ')';
+        }
+        $st = Database::connection()->prepare(
+            "SELECT e.id, e.full_name, e.employee_no, e.branch_id, b.name AS branch_name, j.title AS job_title,
+                    COUNT(c.id) AS checks, MIN(c.due_on) AS earliest_due,
+                    GROUP_CONCAT(et.name ORDER BY c.due_on SEPARATOR ', ') AS check_names
+               FROM corp_employments e
+               JOIN corp_screening_cases c ON c.company_id = e.company_id AND c.employment_id = e.id
+               JOIN oh_exam_types et ON et.id = c.exam_type_id
+               LEFT JOIN corp_branches b ON b.id = e.branch_id AND b.company_id = e.company_id
+               LEFT JOIN corp_job_roles j ON j.id = e.job_role_id AND j.company_id = e.company_id
+              WHERE " . implode(' AND ', $where) . '
+              GROUP BY e.id, e.full_name, e.employee_no, e.branch_id, b.name, j.title
+              ORDER BY earliest_due, e.full_name
+              LIMIT 300'
+        );
+        $st->execute($params);
+
+        return $st->fetchAll();
+    }
+
+    /**
+     * Book each person (all their open checks) into the next free slot of one doctor on one day,
+     * starting from $startAt. People who don't fit, or whose branch the clinic doesn't serve, are reported back.
+     *
+     * @param list<int> $employmentIds
+     * @param list<int>|null $scope
+     * @return array{ok: bool, error?: string, booked?: list<array{name:string, at:string}>, skipped?: list<array{name:string, why:string}>}
+     */
+    public static function bookGroup(int $companyId, int $userId, array $employmentIds, int $clinicId, int $doctorId, string $startAt, ?array $scope): array
+    {
+        $employmentIds = array_slice(array_values(array_unique(array_filter(array_map('intval', $employmentIds)))), 0, self::GROUP_MAX);
+        if ($employmentIds === []) {
+            return ['ok' => false, 'error' => 'Tick the people to book.'];
+        }
+        $date = substr($startAt, 0, 10);
+        $free = self::slots($companyId, $clinicId, $doctorId, $date);
+        if (!$free['ok']) {
+            return ['ok' => false, 'error' => $free['error'] ?? 'Could not load the clinic\'s times.'];
+        }
+        $queue = array_values(array_filter(array_column($free['slots'], 'datetime'), static fn ($dt) => $dt >= $startAt));
+        if ($queue === []) {
+            return ['ok' => false, 'error' => 'No free time from the chosen start on that day.'];
+        }
+        $booked = [];
+        $skipped = [];
+        foreach ($employmentIds as $eid) {
+            $emp = EmployeeService::find($companyId, $eid, $scope);
+            $name = $emp !== null ? (string) $emp['full_name'] : 'Employee #' . $eid;
+            $caseIds = array_map(static fn ($c) => (int) $c['id'], self::openCases($companyId, $eid));
+            if ($emp === null || $caseIds === []) {
+                $skipped[] = ['name' => $name, 'why' => 'nothing to book'];
+                continue;
+            }
+            $done = false;
+            $why = 'no free slot left that day';
+            while ($queue !== []) {
+                $slot = array_shift($queue);
+                $res = self::book($companyId, $userId, $eid, $caseIds, $clinicId, $doctorId, $slot, $scope);
+                if ($res['ok']) {
+                    $booked[] = ['name' => $name, 'at' => $slot];
+                    $done = true;
+                    break;
+                }
+                $why = (string) ($res['error'] ?? 'could not book');
+                if (!str_contains($why, 'just taken') && !str_contains($why, 'slot')) {
+                    array_unshift($queue, $slot);   // not a slot problem (e.g. branch not served): keep the slot for the next person
+                    break;
+                }
+            }
+            if (!$done) {
+                $skipped[] = ['name' => $name, 'why' => $why];
+            }
+        }
+        CorpAudit::log($companyId, 'corp_user', $userId, 'group_booking', 'company', $companyId, ['booked' => count($booked), 'skipped' => count($skipped), 'date' => $date]);
+
+        return ['ok' => true, 'booked' => $booked, 'skipped' => $skipped];
+    }
+
+    // ------------------------------------------------------------------
     // Following the clinic (C6): cancelled / no-show / completed at the clinic
     // ------------------------------------------------------------------
 
