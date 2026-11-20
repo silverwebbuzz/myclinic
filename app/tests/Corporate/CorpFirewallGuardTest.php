@@ -29,7 +29,7 @@ final class CorpFirewallGuardTest extends TestCase
     private const CLINICAL_TABLES = [
         'visits', 'prescriptions', 'vitals', 'patients', 'patient_documents', 'patient_prescriptions', 'patient_lab_reports',
         'patient_immunizations', 'lab_orders', 'lab_order_items', 'invoices', 'invoice_items', 'diet_plans', 'follow_ups',
-        'visit_symptoms', 'occ_doctor_credentials', 'occ_case_reports',
+        'visit_symptoms', 'occ_doctor_credentials', 'occ_case_reports', 'occ_questionnaire_responses',
     ];
 
     public function testCompanyCodeNeverQueriesClinicalTables(): void

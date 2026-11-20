@@ -19,6 +19,8 @@
 //   GET  ?action=certificate&id=N                  (Bearer) → the PDF
 //   POST ?action=upload_report (multipart: case_id, file, lab_name?, report_date?, note?) (Bearer)
 //        → the report goes to the examining doctor + the user's Lab reports vault, never the employer.
+//   GET  ?action=questionnaire&booking=N / POST ?action=submit_questionnaire {booking_id, answers} (Bearer)
+//        → pre-exam health questionnaire; answers go to the examining doctor only.
 // Items also carry reports_needed[] (case_id, check, kind, due_on, reports_uploaded).
 // =====================================================================
 
@@ -39,6 +41,32 @@ switch ($action) {
             ecp_m_err('upload_failed', 422, ['message' => (string) ($res['error'] ?? 'Upload failed.')]);
         }
         ecp_m_ok(['uploaded' => true]);
+        break;
+    }
+    case 'questionnaire': {
+        // GET ?action=questionnaire&booking=N (Bearer) → { questionnaire: {name, intro, items[]}, answers }
+        ecp_m_require_method('GET');
+        $me = ecp_m_require_patient();
+        $b = ecp_wh_q_booking((int) $me['id'], (int) ($_GET['booking'] ?? 0));
+        $q = ecp_wh_questionnaire();
+        if ($b === null || $q === null) {
+            ecp_m_err('not_available', 404);
+        }
+        ecp_m_ok(['questionnaire' => ['name' => $q['name'], 'intro' => $q['intro'], 'items' => array_map(static fn ($i) => [
+            'code' => $i['code'], 'section' => $i['section'], 'type' => $i['type'], 'text' => $i['text'], 'options' => $i['options'],
+            'detail_prompt' => $i['detail_prompt'], 'required' => (int) $i['required'] === 1], $q['items'])], 'answers' => $b['answers']]);
+        break;
+    }
+    case 'submit_questionnaire': {
+        // POST JSON ?action=submit_questionnaire { booking_id, answers: { code: { v, d } } } (Bearer)
+        ecp_m_require_method('POST');
+        $me = ecp_m_require_patient();
+        $in = ecp_m_input();
+        $res = ecp_wh_q_save((int) $me['id'], (int) ($in['booking_id'] ?? 0), is_array($in['answers'] ?? null) ? $in['answers'] : []);
+        if (!$res['ok']) {
+            ecp_m_err('invalid', 422, ['message' => (string) ($res['error'] ?? 'Could not save.')]);
+        }
+        ecp_m_ok(['saved' => true]);
         break;
     }
     case 'certificate': {

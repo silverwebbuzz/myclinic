@@ -109,6 +109,58 @@ $oForm = static function (bool $correct) use ($occExam, $oh, $oIn, $oCsrf, $oVid
         <p class="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900"><?= $oh($oSign['error']) ?></p>
     <?php endif; ?>
 
+    <?php $oQ = $occExam['questionnaire'] ?? null; $oQr = $occExam['q_response'] ?? null; ?>
+    <?php if ($oQ !== null): $oAns = $oQr['answers'] ?? []; ?>
+        <div class="mt-3 rounded-lg border p-3 <?= $oQr !== null && (int) $oQr['has_yes'] === 1 ? 'border-amber-300 bg-amber-50/40' : 'border-slate-200' ?>" x-data="{ fill: <?= $oQr === null ? 'false' : 'false' ?> }">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="text-sm font-semibold text-slate-800"><?= $oh($oQ['name']) ?>
+                    <?php if ((int) $oQ['is_sample'] === 1): ?><span class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-800">Sample</span><?php endif; ?>
+                    <span class="font-normal text-slate-500">
+                        <?= $oQr === null ? '· not filled yet' : '· filled by ' . ($oQr['submitted_by'] === 'employee' ? 'the employee' : 'the clinic') . ' on ' . $oh($od(substr((string) $oQr['updated_at'], 0, 10))) ?>
+                    </span></div>
+                <?php if (in_array($ob['status'], ['booked', 'attended'], true)): ?>
+                    <button type="button" @click="fill = !fill" class="ui-btn ui-btn-secondary ui-btn-sm"><?= $oQr === null ? 'Fill with the employee' : 'Correct answers' ?></button>
+                <?php endif; ?>
+            </div>
+            <?php if ($oQr !== null): ?>
+                <dl class="mt-2 grid gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
+                    <?php foreach ($oAns as $oA): $oYes = $oA['v'] === 'yes'; ?>
+                        <div class="<?= $oYes ? 'text-amber-900' : 'text-slate-600' ?>">
+                            <dt class="inline"><?= $oh($oA['q']) ?></dt>
+                            <dd class="inline font-semibold"><?= $oh($oA['v'] === 'yes' ? 'Yes' : ($oA['v'] === 'no' ? 'No' : ($oA['v'] !== '' ? $oA['v'] : '—'))) ?></dd>
+                            <?php if ($oA['d'] !== ''): ?><dd class="text-xs text-amber-900">“<?= $oh($oA['d']) ?>”</dd><?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </dl>
+            <?php else: ?>
+                <p class="mt-1 text-xs text-slate-500">Employees with an eClinicPro account can fill it before the visit. Otherwise go through it with them here.</p>
+            <?php endif; ?>
+            <form x-show="fill" x-cloak method="post" action="/visits/<?= $oVid ?>/occupational/questionnaire" class="mt-3 space-y-3 border-t border-slate-200 pt-3">
+                <?= $oCsrf ?>
+                <?php $oSec = ''; foreach ($oQ['items'] as $oIt): $oCode = (string) $oIt['code']; $oPrev = $oAns[$oCode] ?? ['v' => '', 'd' => '']; ?>
+                    <?php if ($oIt['section'] !== $oSec): $oSec = (string) $oIt['section']; ?><div class="pt-1 text-xs font-semibold uppercase tracking-wide text-slate-500"><?= $oh($oSec) ?></div><?php endif; ?>
+                    <div x-data="{ v: '<?= $oh($oPrev['v']) ?>' }" class="text-sm">
+                        <div class="text-slate-800"><?= $oh($oIt['text']) ?><?= (int) $oIt['required'] === 1 ? '' : ' <span class="text-xs text-slate-400">(optional)</span>' ?></div>
+                        <?php if ($oIt['type'] === 'yes_no'): ?>
+                            <label class="mr-4 inline-flex items-center gap-1"><input type="radio" name="q[<?= $oh($oCode) ?>][v]" value="yes" x-model="v"> Yes</label>
+                            <label class="inline-flex items-center gap-1"><input type="radio" name="q[<?= $oh($oCode) ?>][v]" value="no" x-model="v"> No</label>
+                            <?php if (!empty($oIt['detail_prompt'])): ?>
+                                <input x-show="v === 'yes'" x-cloak name="q[<?= $oh($oCode) ?>][d]" maxlength="500" value="<?= $oh($oPrev['d']) ?>" placeholder="<?= $oh($oIt['detail_prompt']) ?>" class="<?= $oIn ?>">
+                            <?php endif; ?>
+                        <?php elseif ($oIt['type'] === 'choice'): ?>
+                            <?php foreach ($oIt['options'] as $oOpt): ?>
+                                <label class="mr-4 inline-flex items-center gap-1"><input type="radio" name="q[<?= $oh($oCode) ?>][v]" value="<?= $oh($oOpt) ?>" <?= $oPrev['v'] === $oOpt ? 'checked' : '' ?>> <?= $oh($oOpt) ?></label>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <textarea name="q[<?= $oh($oCode) ?>][v]" rows="2" maxlength="1000" class="<?= $oIn ?>"><?= $oh($oPrev['v']) ?></textarea>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+                <button class="ui-btn ui-btn-primary ui-btn-sm">Save questionnaire</button>
+            </form>
+        </div>
+    <?php endif; ?>
+
     <?php $oLab = array_values(array_filter($occExam['cases'], static fn ($c) => in_array($c['kind'], ['lab_test', 'imaging'], true))); ?>
     <?php if ($oLab !== []): ?>
         <div class="mt-3 rounded-lg border border-slate-200 p-3" x-data="{ add: false }">

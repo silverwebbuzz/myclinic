@@ -118,7 +118,7 @@ if ($purge) {
     if ($customRoles !== []) {
         $pdo->exec('DELETE FROM corp_role_permissions WHERE role_id IN (' . implode(',', $customRoles) . ')');
     }
-    foreach (['corp_statement_lines', 'corp_provider_statements', 'corp_reminder_log', 'corp_reminder_settings', 'occ_case_reports', 'corp_fitness_certificates', 'corp_bookings', 'corp_rate_items', 'corp_provider_links', 'corp_case_events', 'corp_screening_cases', 'corp_programme_assignments', 'corp_programme_items', 'corp_programmes',
+    foreach (['occ_questionnaire_responses', 'corp_absences', 'corp_incidents', 'corp_statement_lines', 'corp_provider_statements', 'corp_reminder_log', 'corp_reminder_settings', 'occ_case_reports', 'corp_fitness_certificates', 'corp_bookings', 'corp_rate_items', 'corp_provider_links', 'corp_case_events', 'corp_screening_cases', 'corp_programme_assignments', 'corp_programme_items', 'corp_programmes',
               'corp_sessions', 'corp_user_roles', 'corp_invitations', 'corp_audit_log', 'corp_company_documents', 'corp_users', 'corp_roles',
               'corp_employment_events', 'corp_employee_import_rows', 'corp_employee_imports', 'corp_employments',
               'corp_branches', 'corp_departments', 'corp_job_roles'] as $t) {

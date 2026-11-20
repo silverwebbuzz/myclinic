@@ -81,6 +81,9 @@ final class OccExamService
             'default_review_by' => LocalDate::addDays($today, 30),
             'can_sign' => ClinicCorporateService::canSign($clinicId, $userId, $today),
             'visit_id' => (int) $visit['id'],
+            // 2D: pre-exam questionnaire (published one) + this booking's answers (clinical)
+            'questionnaire' => QuestionnaireService::active(),
+            'q_response' => QuestionnaireService::forBooking((int) $booking['company_id'], (int) $booking['id']),
             // 1D-lite: test reports for the lab / X-ray checks, grouped by case id
             'reports' => CaseReportService::forCases((int) $booking['company_id'],
                 array_map(static fn ($c) => (int) $c['id'], array_filter($cases, static fn ($c) => in_array($c['kind'], ['lab_test', 'imaging'], true)))),

@@ -54,6 +54,20 @@ final class OccExamController
         return $cert === null ? Response::html('Not found', 404) : CertificatePdfService::response($cert);
     }
 
+    /** 2D: the clinic fills / corrects the pre-exam questionnaire with the employee. */
+    public function questionnaire(Request $request, string $id): Response
+    {
+        [$clinicId, $visit] = $this->visit((int) $id);
+        if ($visit === null) {
+            return Response::html('Visit not found', 404);
+        }
+        $q = $request->post['q'] ?? [];
+        $res = \App\Services\OccHealth\QuestionnaireService::clinicSave($clinicId, (int) (RequestContext::user()['id'] ?? 0), $visit, is_array($q) ? $q : []);
+        SessionFlash::put($res['ok'] ? 'occ_ok' : 'occ_err', $res['ok'] ? 'Questionnaire saved. The employer only sees that it was done.' : ($res['error'] ?? 'Could not save.'));
+
+        return Response::redirect('/visits/' . (int) $id . '#occupational');
+    }
+
     /** 1D-lite: clinic staff attach a test report to a lab / X-ray check on this booking. */
     public function uploadReport(Request $request, string $id): Response
     {

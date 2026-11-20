@@ -74,6 +74,7 @@ final class CorpActivityController
         'provider_branches_changed' => 'Changed the branches a clinic serves', 'provider_rate_saved' => 'Saved an agreed clinic price', 'provider_rate_removed' => 'Removed an agreed clinic price',
         'booking_created' => 'Booked a health check', 'booking_moved' => 'Moved a booking', 'booking_cancelled' => 'Cancelled a booking',
         'booking_cancelled_by_clinic' => 'Cancelled the booking', 'booking_no_show' => 'Marked a booking as did not attend',
+        'questionnaire_done' => 'Health questionnaire done (answers seen by the doctor only)',
         'absence_recorded' => 'Recorded an absence', 'absence_removed' => 'Removed an absence', 'incident_recorded' => 'Recorded a work incident',
         'incident_closed' => 'Closed an incident', 'incident_open' => 'Reopened an incident', 'incident_removed' => 'Removed an incident',
         'statement_sent' => 'Sent a statement', 'statement_paid' => 'Marked a statement paid', 'statement_disputed' => 'Disputed a clinic statement',

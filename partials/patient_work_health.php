@@ -74,6 +74,13 @@ $whTypes = ['contractor' => 'Contractor', 'temporary' => 'Temporary', 'intern' =
               <div><strong><?= $whE($bk['clinic_name']) ?></strong><?= !empty($bk['clinic_phone']) ? ' · <a href="tel:' . $whE(preg_replace('/[^0-9+]/', '', (string) $bk['clinic_phone'])) . '">' . $whE($bk['clinic_phone']) . '</a>' : '' ?></div>
               <?php if (!empty($bk['clinic_address'])): ?><div class="wh-sub"><?= $whE($bk['clinic_address']) ?></div><?php endif; ?>
               <?php if (!empty($bk['checks'])): ?><div class="wh-sub">Checks: <?= $whE($bk['checks']) ?></div><?php endif; ?>
+              <div class="wh-sub" style="margin-top:6px">
+                <?php if (!empty($bk['questionnaire_done_at'])): ?>
+                  ✓ Health questionnaire done · <a href="/work-health-questionnaire?booking=<?= (int) $bk['id'] ?>">change answers</a>
+                <?php else: ?>
+                  <a class="btn-mini primary" href="/work-health-questionnaire?booking=<?= (int) $bk['id'] ?>">Fill your health questionnaire (5 min)</a>
+                <?php endif; ?>
+              </div>
             </div>
           <?php endforeach; ?>
           <p class="wh-small">Bring a photo ID. To change the time, ask your HR team.</p>

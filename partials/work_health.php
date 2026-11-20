@@ -215,6 +215,137 @@ function ecp_wh_mark_report_received(int $companyId, int $caseId, string $actorT
         'd' => json_encode(['exam' => $examName]), 'at' => $now]);
 }
 
+/**
+ * Phase 2D: the published pre-exam questionnaire with its items (null if none / patch not run).
+ *
+ * @return array{id:int, name:string, intro:?string, items: list<array<string, mixed>>}|null
+ */
+function ecp_wh_questionnaire(): ?array
+{
+    $db = ecp_db();
+    if (!$db) {
+        return null;
+    }
+    try {
+        $q = $db->query("SELECT id, name, intro FROM oh_questionnaires WHERE status = 'published' ORDER BY code = 'PRE-EXAM' DESC, version DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+        if (!$q) {
+            return null;
+        }
+        $st = $db->prepare('SELECT code, section, type, text, options_json, detail_prompt, required FROM oh_questionnaire_items WHERE questionnaire_id = :q ORDER BY sort_order, id');
+        $st->execute(['q' => (int) $q['id']]);
+        $items = $st->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($items as &$i) {
+            $i['options'] = json_decode((string) ($i['options_json'] ?? '[]'), true) ?: [];
+        }
+
+        return ['id' => (int) $q['id'], 'name' => (string) $q['name'], 'intro' => $q['intro'], 'items' => $items];
+    } catch (Throwable $e) {
+        return null;
+    }
+}
+
+/**
+ * One of the person's own upcoming bookings (confirmed link) + its saved answers, or null.
+ *
+ * @return array<string, mixed>|null
+ */
+function ecp_wh_q_booking(int $identityId, int $bookingId): ?array
+{
+    $db = ecp_db();
+    if (!$db || $identityId <= 0 || $bookingId <= 0) {
+        return null;
+    }
+    try {
+        $st = $db->prepare(
+            "SELECT b.id, b.company_id, b.employment_id, b.scheduled_at, t.name AS clinic_name, COALESCE(NULLIF(c.trade_name, ''), c.legal_name) AS company_name
+               FROM corp_bookings b
+               JOIN corp_employments e ON e.id = b.employment_id AND e.company_id = b.company_id
+               JOIN corp_companies c ON c.id = b.company_id
+               JOIN tenants t ON t.id = b.clinic_id
+              WHERE b.id = :id AND e.identity_id = :iid AND e.link_status = 'confirmed' AND b.status = 'booked' LIMIT 1"
+        );
+        $st->execute(['id' => $bookingId, 'iid' => $identityId]);
+        $b = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$b) {
+            return null;
+        }
+        $r = $db->prepare('SELECT answers_json FROM occ_questionnaire_responses WHERE company_id = :cid AND booking_id = :b LIMIT 1');
+        $r->execute(['cid' => (int) $b['company_id'], 'b' => $bookingId]);
+        $b['answers'] = json_decode((string) ($r->fetchColumn() ?: '[]'), true) ?: [];
+
+        return $b;
+    } catch (Throwable $e) {
+        return null;
+    }
+}
+
+/**
+ * Same rules as App\Services\OccHealth\QuestionnaireService::normalize (keep in step).
+ *
+ * @return array{answers: array<string, array<string, string>>, error: ?string, has_yes: bool}
+ */
+function ecp_wh_q_normalize(array $q, array $posted): array
+{
+    $answers = [];
+    $hasYes = false;
+    foreach ($q['items'] as $it) {
+        $code = (string) $it['code'];
+        $v = trim((string) ($posted[$code]['v'] ?? ''));
+        $d = mb_substr(trim((string) ($posted[$code]['d'] ?? '')), 0, 500);
+        if ($it['type'] === 'yes_no' && !in_array($v, ['yes', 'no'], true)) {
+            $v = '';
+        }
+        if ($it['type'] === 'choice' && !in_array($v, $it['options'], true)) {
+            $v = '';
+        }
+        if ($it['type'] === 'text') {
+            $v = mb_substr($v, 0, 1000);
+        }
+        if ($v === '' && (int) $it['required'] === 1) {
+            return ['answers' => [], 'error' => 'Please answer: "' . $it['text'] . '"', 'has_yes' => false];
+        }
+        if ($it['type'] !== 'yes_no' || $v !== 'yes') {
+            $d = '';
+        } else {
+            $hasYes = true;
+        }
+        $answers[$code] = ['q' => (string) $it['text'], 's' => (string) $it['section'], 'v' => $v, 'd' => $d];
+    }
+
+    return ['answers' => $answers, 'error' => null, 'has_yes' => $hasYes];
+}
+
+/** The employee submits (or updates) their questionnaire for one booking. @return array{ok: bool, error?: string} */
+function ecp_wh_q_save(int $identityId, int $bookingId, array $posted): array
+{
+    $b = ecp_wh_q_booking($identityId, $bookingId);
+    $q = ecp_wh_questionnaire();
+    if ($b === null || $q === null) {
+        return ['ok' => false, 'error' => 'This booking is not open for a questionnaire any more.'];
+    }
+    $n = ecp_wh_q_normalize($q, $posted);
+    if ($n['error'] !== null) {
+        return ['ok' => false, 'error' => $n['error']];
+    }
+    $db = ecp_db();
+    $now = gmdate('Y-m-d H:i:s');
+    $db->prepare(
+        "INSERT INTO occ_questionnaire_responses (company_id, employment_id, booking_id, questionnaire_id, answers_json, has_yes, submitted_by, submitter_id, submitted_at, updated_at)
+         VALUES (:cid, :eid, :b, :q, :a, :y, 'employee', :iid, :at, :up)
+         ON DUPLICATE KEY UPDATE questionnaire_id = VALUES(questionnaire_id), answers_json = VALUES(answers_json), has_yes = VALUES(has_yes),
+                                 submitted_by = VALUES(submitted_by), submitter_id = VALUES(submitter_id), updated_at = VALUES(updated_at)"
+    )->execute(['cid' => (int) $b['company_id'], 'eid' => (int) $b['employment_id'], 'b' => $bookingId, 'q' => (int) $q['id'],
+        'a' => json_encode($n['answers'], JSON_UNESCAPED_UNICODE), 'y' => $n['has_yes'] ? 1 : 0, 'iid' => $identityId, 'at' => $now, 'up' => $now]);
+    $db->prepare('UPDATE corp_bookings SET questionnaire_done_at = COALESCE(questionnaire_done_at, :at) WHERE id = :id AND company_id = :cid')
+       ->execute(['at' => $now, 'id' => $bookingId, 'cid' => (int) $b['company_id']]);
+    $db->prepare(
+        "INSERT INTO corp_audit_log (company_id, actor_type, actor_id, action, entity_type, entity_id, details, created_at)
+         VALUES (:cid, 'employee', :iid, 'questionnaire_done', 'corp_booking', :b, NULL, :at)"
+    )->execute(['cid' => (int) $b['company_id'], 'iid' => $identityId, 'b' => $bookingId, 'at' => $now]);
+
+    return ['ok' => true];
+}
+
 /** Outcome labels (same as App\Services\OccHealth\OccExamService). */
 const ECP_WH_OUTCOMES = ['fit' => 'Fit', 'fit_restricted' => 'Fit with restrictions', 'temp_unfit' => 'Temporarily unfit',
     'unfit' => 'Unfit', 'further_assessment' => 'Further assessment required'];
@@ -309,7 +440,7 @@ function ecp_wh_bookings(int $identityId): array
     }
     try {
         $st = $db->prepare(
-            "SELECT b.id, b.employment_id, b.scheduled_at, t.name AS clinic_name, t.address AS clinic_address, t.phone AS clinic_phone,
+            "SELECT b.id, b.employment_id, b.scheduled_at, b.questionnaire_done_at, t.name AS clinic_name, t.address AS clinic_address, t.phone AS clinic_phone,
                     (SELECT GROUP_CONCAT(et.name ORDER BY et.sort_order SEPARATOR ', ') FROM corp_screening_cases c JOIN oh_exam_types et ON et.id = c.exam_type_id
                       WHERE c.company_id = b.company_id AND c.booking_id = b.id) AS checks
                FROM corp_bookings b
@@ -443,6 +574,8 @@ function ecp_wh_shape(array $r): array
             'phone' => $b['clinic_phone'] !== null ? (string) $b['clinic_phone'] : null,
             'at_local' => (string) $b['scheduled_at'],          // clinic's local time, Y-m-d H:i:s
             'checks' => $b['checks'] !== null ? (string) $b['checks'] : '',
+            'booking_id' => (int) $b['id'],
+            'questionnaire_done' => !empty($b['questionnaire_done_at']),
         ], $r['bookings'] ?? []),
         'reports_needed' => array_map(static fn (array $c): array => [
             'case_id' => (int) $c['id'],

@@ -56,6 +56,7 @@ ob_start();
                         <div class="text-[13px]">
                             <div class="font-medium"><?= $e(date('d M Y', strtotime((string) $b['scheduled_at']))) ?></div>
                             <div class="text-tx3"><?= $e(date('h:i A', strtotime((string) $b['scheduled_at']))) ?> clinic time</div>
+                            <?php if (!empty($b['questionnaire_done_at'])): ?><div class="text-[12px] text-ok">Questionnaire done</div><?php endif; ?>
                         </div>
                         <div class="flex flex-wrap items-center gap-2 md:justify-end">
                             <span class="rounded-full px-2 py-0.5 text-[12px] font-medium <?= $pill[$b['status']] ?>"><?= $e(BookingService::STATUSES[$b['status']]) ?></span>
