@@ -445,6 +445,17 @@ require __DIR__ . '/partials/header.php';
     </div>
 </section> -->
 
+<section class="ZanduBanner" aria-label="Zandu Care and Kama Ayurveda">
+  <img src="\assets\img\hero\ZKfinal.webp"
+       alt="ZanduCare: Ayurvedic Care for a Healthier, Happier You. Kama Ayurveda: Pure Ayurvedic Beauty and Wellness for Radiant Skin and Healthy You.">
+
+  <a class="zandu-hit zandu-btn" href="https://tjzuh.com/g/kuf1h0omej8a1ad3ccfe8e0c33410e/" aria-label="Explore ZanduCare" target="_blank"></a>
+  <a class="kama-hit kama-btn" href="https://tjzuh.com/g/yqewe0ii4c8a1ad3ccfe238bfeb32d/" aria-label="Discover Kama Ayurveda" target="_blank"></a>
+
+  <h2 class="ZanduSr">Zandu Care: Ayurvedic Care for a Healthier, Happier You. Boost Immunity, Reduce Stress, Increase Energy.</h2>
+  <h2 class="KamaSr">Kama Ayurveda: Pure Ayurvedic Beauty and Wellness for Radiant Skin and Healthy You.</h2>
+</section>
+
 <section class="section">
     <div class="wrap">
         <!-- dot grid decoration -->

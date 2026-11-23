@@ -30,12 +30,13 @@ function db(): ?PDO {
         }
     }
     $host = $env['DB_HOST'] ?? '127.0.0.1';
+    $port = !empty($env['DB_PORT']) ? (string) $env['DB_PORT'] : '3306';
     $name = $env['DB_DATABASE'] ?? '';
     $user = $env['DB_USERNAME'] ?? '';
     $pass = $env['DB_PASSWORD'] ?? '';
     if ($name === '' || $user === '') return null;
     try {
-        $pdo = new PDO("mysql:host={$host};dbname={$name};charset=utf8mb4", $user, $pass, [
+        $pdo = new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4", $user, $pass, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_EMULATE_PREPARES => false,
         ]);
