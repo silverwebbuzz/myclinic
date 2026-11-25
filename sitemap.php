@@ -55,6 +55,7 @@ $marketing = [
     ['/privacy-policy',    0.3, 'yearly'],
     ['/terms',             0.3, 'yearly'],
     ['/refund-policy',     0.3, 'yearly'],
+    ['/affiliate-disclosure', 0.3, 'yearly'],
     // Specialty landing pages (marketing — distinct from /find-a-doctor SEO city pages)
     ['/gps',               0.7, 'monthly'],
     ['/dentists',          0.7, 'monthly'],
