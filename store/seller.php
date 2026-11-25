@@ -39,8 +39,15 @@ require __DIR__ . '/_header.php';
         <?php if (!empty($seller['logo_path'])): ?><img src="<?= e((string) store_img($seller['logo_path'])) ?>" alt=""><?php else: ?><?= e(mb_strtoupper(mb_substr((string) $seller['display_name'], 0, 1))) ?><?php endif; ?>
       </span>
       <div>
-        <span class="st-eyebrow" style="margin-bottom:4px">Verified seller</span>
+        <?php $sellerAff = ($seller['vendor_type'] ?? '') === 'affiliate'; ?>
+        <span class="st-eyebrow" style="margin-bottom:4px"><?= $sellerAff ? 'Curated picks' : 'Verified seller' ?></span>
         <h1 class="st-h2"><?= e($seller['display_name']) ?></h1>
+        <?php if ($sellerAff): ?>
+        <div class="st-seller-meta">
+          <span>Products hand-picked by eClinicPro, bought on the brand's or partner's website</span>
+          <span>We may earn a commission on these links, at no extra cost to you</span>
+        </div>
+        <?php else: ?>
         <div class="st-seller-meta">
           <?php if ((int) $seller['rating_count'] > 0): ?><span>★ <?= e(number_format((float) $seller['rating_avg'], 1)) ?> (<?= (int) $seller['rating_count'] ?> ratings)</span><?php endif; ?>
           <?php if (!empty($seller['location'])): ?><span>Ships from <?= e($seller['location']) ?></span><?php endif; ?>
@@ -48,6 +55,7 @@ require __DIR__ . '/_header.php';
           <span><?= store_return_window_hours() > 0 ? store_return_window_label() . ' returns on damaged, wrong or defective items' : 'No returns' ?></span>
           <?php if (!empty($seller['approved_at'])): ?><span>Selling since <?= e(date('M Y', (int) strtotime((string) $seller['approved_at']))) ?></span><?php endif; ?>
         </div>
+        <?php endif; ?>
       </div>
     </div>
     <?php if (!empty($seller['description'])): ?><p class="st-lede" style="max-width:760px;white-space:pre-line"><?= e($seller['description']) ?></p><?php endif; ?>

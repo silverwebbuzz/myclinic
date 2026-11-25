@@ -445,6 +445,17 @@ require __DIR__ . '/partials/header.php';
     </div>
 </section> -->
 
+<section class="ZanduBanner" aria-label="Zandu Care and Kama Ayurveda">
+  <img src="\assets\img\hero\ZKfinal.webp"
+       alt="ZanduCare: Ayurvedic Care for a Healthier, Happier You. Kama Ayurveda: Pure Ayurvedic Beauty and Wellness for Radiant Skin and Healthy You.">
+
+  <a class="zandu-hit zandu-btn" href="https://tjzuh.com/g/kuf1h0omej8a1ad3ccfe8e0c33410e/" aria-label="Explore ZanduCare" target="_blank"></a>
+  <a class="kama-hit kama-btn" href="https://tjzuh.com/g/yqewe0ii4c8a1ad3ccfe238bfeb32d/" aria-label="Discover Kama Ayurveda" target="_blank"></a>
+
+  <h2 class="ZanduSr">Zandu Care: Ayurvedic Care for a Healthier, Happier You. Boost Immunity, Reduce Stress, Increase Energy.</h2>
+  <h2 class="KamaSr">Kama Ayurveda: Pure Ayurvedic Beauty and Wellness for Radiant Skin and Healthy You.</h2>
+</section>
+
 <section class="section">
     <div class="wrap">
         <!-- dot grid decoration -->
@@ -618,7 +629,7 @@ require __DIR__ . '/partials/header.php';
                     <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg">Start your clinic — free →</a>
                     <a href="/product-tour" class="btn btn-ghost-light btn-lg">See a 2-min walkthrough</a>
                 </div>
-                <p class="hp-doc-fine"><?= ecp_trial_offer_active() ? '🪔 Diwali Offer: free till 31 Dec 2026' : '30-day free trial' ?> · No credit card · Your data stays yours.</p>
+                <p class="hp-doc-fine"><?= ecp_trial_offer_active() ? '🎄 Christmas Offer: free till 15 Jan 2027' : '30-day free trial' ?> · No credit card · Your data stays yours.</p>
 
                 <div class="hp-feat-grid">
                     <?php foreach (
@@ -782,13 +793,13 @@ require __DIR__ . '/partials/header.php';
             <div class="hero-eyebroww">All-in-one Clinic Management Software</div>
             <?php if (ecp_trial_offer_active()): ?>
                 <div style="display:inline-flex;align-items:center;gap:8px;margin:0 auto 14px;padding:7px 16px;border-radius:999px;background:linear-gradient(90deg,#fff4dc,#ffe7c2);border:1px solid #f5c26b;color:#8a4b00;font-size:13px;font-weight:700;">
-                    🪔 Diwali Offer — Free till 31 Dec 2026
+                    🎄 Christmas Offer — Free till 15 Jan 2027
                 </div>
             <?php endif; ?>
             <h2 class="hero-titlee">One plan. Everything to run<br>your clinic.</h2>
             <p class="hero-subb">No tiers, no per-seat games, no surprise upsells.<br>
                 <?php if (ecp_trial_offer_active()): ?>
-                    Sign up today and use everything <strong>free till 31 Dec 2026</strong> — <strong>no card.</strong>
+                    Sign up today and use everything <strong>free till 15 Jan 2027</strong> — <strong>no card.</strong>
                 <?php else: ?>
                     Try free for <strong>30 days</strong> — <strong>no card.</strong>
                 <?php endif; ?></p>
@@ -1083,7 +1094,7 @@ $faqPatients = [
     ['Which cities and specialties are covered?', 'We\'re live across India with 50+ specialties — from general physicians and dentists to homeopaths, dermatologists, physiotherapists and more.'],
 ];
 $faqDoctors = [
-    ['What does it cost?', 'One monthly plan: ' . ecp_plan_price_label() . ' (GST added at checkout). Everything to run a clinic is included, with a ' . (ecp_trial_offer_active() ? 'free trial till 31 Dec 2026 (Diwali Offer)' : '30-day free trial') . ' and no card required.'],
+    ['What does it cost?', 'One monthly plan: ' . ecp_plan_price_label() . ' (GST added at checkout). Everything to run a clinic is included, with a ' . (ecp_trial_offer_active() ? 'free trial till 15 Jan 2027 (Christmas Offer)' : '30-day free trial') . ' and no card required.'],
     ['Is WhatsApp/SMS an extra add-on?', 'No. WhatsApp-first messaging with SMS fallback — confirmations, reminders, prescription delivery and follow-up nudges — is built into every plan at no extra cost.'],
     ['Will patients actually find me?', 'Yes. Your public profile on eclinicpro.com\'s directory is included, so patients searching your city and specialty can discover and book you directly.'],
     ['Is my clinic and patient data secure?', 'Records are encrypted at rest and in transit, with per-clinic isolation and audit logging. You can export everything as PDF or JSON anytime.'],

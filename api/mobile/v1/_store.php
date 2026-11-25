@@ -105,6 +105,25 @@ function ecp_ms_card(array $p): array
         'rating_avg' => (int) ($p['rating_count'] ?? 0) > 0 ? round((float) $p['rating_avg'], 1) : null,
         'rating_count' => (int) ($p['rating_count'] ?? 0),
         'wishlisted' => isset(store_wishlist_ids()[(int) $p['id']]),
+        // Non-null = affiliate product: show `label` + `disclosure` instead of Add to cart,
+        // and open `url` in the external browser (the cart API refuses these products).
+        'affiliate' => ecp_ms_affiliate($p),
+    ];
+}
+
+/** @return array{url: string, label: string, merchant: ?string, disclosure: string}|null */
+function ecp_ms_affiliate(array $p): ?array
+{
+    if (empty($p['affiliate_url'])) {
+        return null;
+    }
+    $m = trim((string) ($p['affiliate_merchant'] ?? ''));
+
+    return [
+        'url' => ecp_site_url(store_go_url((int) $p['id']) . '?src=app'),
+        'label' => store_buy_label($p),
+        'merchant' => $m !== '' ? $m : null,
+        'disclosure' => 'Ad · affiliate link. We may earn a commission when you buy through this link, at no extra cost to you.',
     ];
 }
 

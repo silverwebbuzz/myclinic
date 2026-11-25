@@ -3,8 +3,8 @@
 // pricing.php — standalone Software Pricing page, served at /pricing.
 //
 // One plan only: Standard at ₹999/month + GST, billed monthly. Signup is
-// free: phone → code → details, then a free trial (Diwali Offer: till
-// 31 Dec 2026, else 30 days). Renewal is paid from the doctor panel.
+// free: phone → code → details, then a free trial (Christmas Offer: till
+// 15 Jan 2027, else 30 days). Renewal is paid from the doctor panel.
 //
 // Name and monthly price come from the app admin (/admin/plans → 'standard')
 // via ecp_standard_plan() — the same row checkout charges from.
@@ -24,7 +24,7 @@ $metaDesc  = 'Simple, transparent pricing for eClinicPro clinic management softw
 
 $signupUrl = ecp_portal_url('/register');
 $offer = ecp_trial_offer_active();
-$trialText = $offer ? 'free till 31 Dec 2026' : 'free for 30 days';
+$trialText = $offer ? 'free till 15 Jan 2027' : 'free for 30 days';
 
 $inr = static fn (float $n, int $dec = 0): string => '₹' . number_format($n, $dec);
 
@@ -58,7 +58,7 @@ $steps = [
 
 $faqs = [
     ['Is there a free trial?', $offer
-        ? 'Yes — our Diwali Offer: sign up today and use every feature free till 31 Dec 2026. No card or payment is needed to start. After that it is ' . $priceLabel . ' + GST, renewed from your panel.'
+        ? 'Yes — our Christmas Offer: sign up today and use every feature free till 15 Jan 2027. No card or payment is needed to start. After that it is ' . $priceLabel . ' + GST, renewed from your panel.'
         : 'Yes — every new clinic gets a 30-day free trial with every feature. No card or payment is needed to start.'],
     ['What happens when the free trial ends?', 'We remind you a few days before. Go to Subscription in your doctor panel and pay ' . $priceLabel . ' + GST to keep going — your data and settings stay exactly as they are. Have a discount code? Apply it there before paying.'],
     ['What does the price include?', 'Everything listed on this page: every module, unlimited patients, unlimited staff users, updates and support. The only extras are the optional add-ons.'],
@@ -360,13 +360,13 @@ require __DIR__ . '/partials/header.php';
             feature, every specialty and unlimited staff — no long contract.
         </p>
         <?php if ($offer): ?>
-            <p class="pr-offer">🪔 <b>Diwali Offer</b> — sign up today, free till <b>31 Dec 2026</b>. No card needed.</p>
+            <p class="pr-offer">🎄 <b>Christmas Offer</b> — sign up today, free till <b>15 Jan 2027</b>. No card needed.</p>
         <?php endif; ?>
         <div class="pr-trust">
             <span>Unlimited patients</span>
             <span>Unlimited staff users</span>
             <span>GST invoice included</span>
-            <span><?= $offer ? 'Free till 31 Dec 2026' : '30-day free trial' ?></span>
+            <span><?= $offer ? 'Free till 15 Jan 2027' : '30-day free trial' ?></span>
             <span>No card to start</span>
         </div>
     </div>

@@ -258,6 +258,13 @@ ob_start();
         </section>
     <?php endif; ?>
 
+<?php elseif (($vendor['vendor_type'] ?? '') === 'affiliate' && $status !== 'approved'): ?>
+    <!-- Affiliate seller (eClinicPro Picks): no KYC / bank / pickup setup; admin approves directly. -->
+    <div class="flex items-start gap-3 rounded-[10px] border border-wn/20 bg-wnb px-4 py-3 text-wn">
+        <span class="grid h-7 w-7 flex-none place-items-center rounded-md bg-sf text-xs">◷</span>
+        <div><div class="font-semibold">Affiliate seller: waiting for approval</div>
+            <div class="text-[13px]">An eClinicPro admin approves this account from Admin → Store → Sellers. After that, add affiliate products under Products.</div></div>
+    </div>
 <?php else: ?>
     <?php if ($status === 'pending_review'): ?>
         <div class="flex items-start gap-3 rounded-[10px] border border-wn/20 bg-wnb px-4 py-3 text-wn">

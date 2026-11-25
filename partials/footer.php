@@ -24,7 +24,7 @@ $clinicCount = ecp_active_clinic_count();
             </p>
             <div class="hero-ctas">
                 <a href="<?= e(ecp_portal_url('/register')) ?>" class="btn btn-primary btn-lg">
-                    <?= ecp_trial_offer_active() ? 'Start free — till 31 Dec 2026' : 'Start 30-day free trial' ?>
+                    <?= ecp_trial_offer_active() ? 'Start free — till 15 Jan 2027' : 'Start 30-day free trial' ?>
                 </a>
                 <a href="/book-a-demo" class="btn btn-ghost-dark btn-lg">
                     Schedule a 15-min demo →
@@ -141,6 +141,7 @@ $presenceSub = $presenceSub ?? 'Find doctors & clinics across these cities';
                     <?php /* <li><a href="/lab">Lab Tests</a></li> */ ?>
                     <li><a href="/health-insurance">Health Insurance</a></li>
                     <li><a href="/clinic-management-software">For doctors</a></li>
+                    <li><a href="/corporate">For companies</a></li>
                     <li><a href="/product-tour">Product tour</a></li>
                     <li><a href="/pricing">Pricing</a></li>
                 </ul>

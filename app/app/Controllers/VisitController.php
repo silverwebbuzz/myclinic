@@ -177,6 +177,10 @@ final class VisitController
         $viewData['followUpReasons'] = self::fetchFollowUpReasons($clinicId);
         $viewData['pendingFollowUp'] = self::fetchPendingFollowUp($clinicId, (int) ($visit['patient_id'] ?? 0));
         $viewData['voiceLang'] = self::fetchVoiceLang($clinicId);
+        // Workforce Health: employer-booked visit → Occupational exam panel (null otherwise)
+        $viewData['occExam'] = \App\Services\OccHealth\OccExamService::forVisit($clinicId, $visit, (int) (RequestContext::user()['id'] ?? 0));
+        $viewData['occOk'] = $viewData['occExam'] !== null ? \App\Support\SessionFlash::pull('occ_ok') : null;
+        $viewData['occErr'] = $viewData['occExam'] !== null ? \App\Support\SessionFlash::pull('occ_err') : null;
 
         return Response::html(Layout::page('visits/show_v2', $viewData, 'Consultation'));
     }

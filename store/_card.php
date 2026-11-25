@@ -8,11 +8,13 @@ $cardPrice = (int) $p['min_price_paise'];
 $cardMrp = (int) ($p['mrp_paise'] ?? 0);
 $cardOff = store_off_pct($cardMrp, $cardPrice);
 $cardImg = store_img($p['cover'] ?? null);
-$cardUrl = store_url('p/' . $p['slug']);
+$cardAff = !empty($p['affiliate_url']);   // bought on the partner's site via /store/go/{id}
+$cardUrl = $cardAff ? store_go_url((int) $p['id']) : store_url('p/' . $p['slug']);
+$cardOut = $cardAff ? ' target="_blank" rel="sponsored nofollow noopener"' : '';
 $cardOn = isset($cardWish[(int) $p['id']]);
 ?>
 <article class="st-card">
-  <a href="<?= e($cardUrl) ?>" class="st-card-img" tabindex="-1" aria-hidden="true">
+  <a href="<?= e($cardUrl) ?>"<?= $cardOut ?> class="st-card-img" tabindex="-1" aria-hidden="true">
     <?php if ($cardImg): ?>
       <img src="<?= e($cardImg) ?>" alt="" loading="lazy" decoding="async">
     <?php else: ?>
@@ -27,8 +29,12 @@ $cardOn = isset($cardWish[(int) $p['id']]);
   </button>
   <div class="st-card-body">
     <?php if (!empty($p['brand_name'])): ?><span class="st-card-brand"><?= e($p['brand_name']) ?></span><?php endif; ?>
-    <a href="<?= e($cardUrl) ?>" class="st-card-name"><?= e($p['name']) ?></a>
-    <span class="st-card-seller">by <a href="<?= e(store_url('seller/' . $p['vendor_slug'])) ?>"><?= e($p['vendor_name']) ?></a></span>
+    <a href="<?= e($cardUrl) ?>"<?= $cardOut ?> class="st-card-name"><?= e($p['name']) ?></a>
+    <?php if ($cardAff): ?>
+      <span class="st-card-seller">Sold on <?= e(trim((string) ($p['affiliate_merchant'] ?? '')) ?: 'partner site') ?></span>
+    <?php else: ?>
+      <span class="st-card-seller">by <a href="<?= e(store_url('seller/' . $p['vendor_slug'])) ?>"><?= e($p['vendor_name']) ?></a></span>
+    <?php endif; ?>
     <?php if ((int) ($p['rating_count'] ?? 0) > 0): ?>
       <span class="st-rating"><b>★ <?= e(number_format((float) $p['rating_avg'], 1)) ?></b> (<?= (int) $p['rating_count'] ?>)</span>
     <?php endif; ?>
@@ -37,5 +43,9 @@ $cardOn = isset($cardWish[(int) $p['id']]);
       <b><?= e(store_rupees($cardPrice)) ?></b>
       <?php if ($cardOff > 0): ?><s><?= e(store_rupees($cardMrp)) ?></s><?php if (empty($p['no_promotion'])): ?><span class="st-off"><?= $cardOff ?>% off</span><?php endif; ?><?php endif; ?>
     </div>
+    <?php if ($cardAff): ?>
+      <a href="<?= e($cardUrl) ?>"<?= $cardOut ?> class="st-btn st-btn-ghost st-btn-sm st-card-buy"><span class="st-card-buy-t"><?= e(store_buy_label($p)) ?></span> <span aria-hidden="true">↗</span></a>
+      <span class="st-card-aff">Ad · affiliate link · price may vary</span>
+    <?php endif; ?>
   </div>
 </article>

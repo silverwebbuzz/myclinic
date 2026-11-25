@@ -27,6 +27,10 @@ $actions = [
     'reactivate' => ['Reactivate', 'bg-emerald-600 hover:bg-emerald-700', ['suspended'], false],
     'close' => ['Close account', 'bg-slate-600 hover:bg-slate-700', ['draft', 'pending_review', 'approved', 'rejected', 'suspended'], true],
 ];
+$isAffiliate = ($vendor['vendor_type'] ?? 'marketplace') === 'affiliate';
+if ($isAffiliate) {
+    $actions['approve'][2][] = 'draft';   // affiliate seller: no KYC to submit (VendorService::adminSetStatus)
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -91,6 +95,25 @@ $actions = [
                 <?php endif; ?>
             <?php endforeach; ?>
         </form>
+    </section>
+
+    <!-- Seller type: marketplace (we sell + ship) or affiliate (bought on partner sites) -->
+    <section class="rounded-xl border bg-white p-5 shadow-sm">
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 class="font-semibold">Seller type</h2>
+            <span class="rounded px-2 py-0.5 text-xs font-medium <?= $isAffiliate ? 'bg-violet-100 text-violet-800' : 'bg-slate-100 text-slate-700' ?>">
+                <?= $isAffiliate ? 'Affiliate seller' : 'Marketplace seller' ?></span>
+        </div>
+        <form method="post" action="/admin/store/vendors/<?= $vid ?>/type" class="mt-3 flex flex-wrap items-center gap-4 text-sm">
+            <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
+            <label class="flex items-center gap-2"><input type="radio" name="vendor_type" value="marketplace" <?= $isAffiliate ? '' : 'checked' ?>> Marketplace: sells and ships through the eClinicPro cart</label>
+            <label class="flex items-center gap-2"><input type="radio" name="vendor_type" value="affiliate" <?= $isAffiliate ? 'checked' : '' ?>> Affiliate: products link to partner websites (we earn commission)</label>
+            <button class="rounded bg-slate-800 px-4 py-1.5 font-medium text-white hover:bg-slate-700">Save type</button>
+        </form>
+        <p class="mt-2 text-xs text-slate-500">
+            Affiliate sellers get a short product form (title, photo, price, link). No cart, orders, payouts, GST invoices, KYC or bank details, and they can be approved straight from draft.
+            The type can only be changed before the seller's first product.
+        </p>
     </section>
 
     <!-- Commission agreed with this seller -->

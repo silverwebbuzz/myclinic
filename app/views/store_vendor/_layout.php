@@ -53,6 +53,15 @@ $navGroups = [
         ['/vendor/terms', 'Rules & terms', false, $termsPending ? 1 : 0],
     ],
 ];
+// Affiliate seller (eClinicPro Picks): customers buy on partner sites, so
+// orders / returns / money / pickup / bank / KYC pages don't apply.
+if (($vendor['vendor_type'] ?? 'marketplace') === 'affiliate') {
+    $navGroups = [
+        'Overview' => [['/vendor/dashboard', 'Dashboard', false, 0]],
+        'Sell' => [['/vendor/products', 'Affiliate products', true, 0]],
+        'Account' => [['/vendor/profile', 'Seller profile', false, 0]],
+    ];
+}
 // Current item: exact match, else the longest parent path (/vendor/orders/12 → Orders).
 $crumbs = [];
 $activeHref = null;

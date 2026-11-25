@@ -2198,7 +2198,7 @@ require __DIR__ . '/partials/header.php';
     h4,
     h5,
     h6 {
-        font-family: "Georgia", serif;
+        font-family: 'Inter', sans-serif;
         font-weight: 700;
         line-height: 1.1;
         margin-block: 1.25rem;
@@ -2309,7 +2309,7 @@ require __DIR__ . '/partials/header.php';
     /* ── Optional heading ── */
     .slider-title {
         text-align: center;
-        font-family: "Georgia", serif;
+        font-family: 'Inter', sans-serif;
         font-size: clamp(1.728rem, 1.3448rem + 1.703vw, 2.6647rem);
         font-weight: 700;
         color: rgba(255, 255, 255, 0.9);

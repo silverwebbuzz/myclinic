@@ -140,6 +140,16 @@ return static function (RouteRegistrar $router): void {
         $app->post('/settings/test-razorpay', [ClinicSettingsController::class, 'testRazorpay']);
         $app->post('/settings/leaves', [ClinicSettingsController::class, 'saveLeave']);
         $app->post('/settings/leaves/{id}/remove', [ClinicSettingsController::class, 'removeLeave']);
+        // Workforce Health: clinic side (admin-only via RoleAccessService)
+        $app->get('/settings/corporate', [\App\Controllers\ClinicCorporateController::class, 'index']);
+        $app->post('/settings/corporate/links/{id}/accept', [\App\Controllers\ClinicCorporateController::class, 'accept']);
+        $app->post('/settings/corporate/links/{id}/decline', [\App\Controllers\ClinicCorporateController::class, 'decline']);
+        $app->post('/settings/corporate/links/{id}/end', [\App\Controllers\ClinicCorporateController::class, 'end']);
+        $app->post('/settings/corporate/credentials', [\App\Controllers\ClinicCorporateController::class, 'saveCredential']);
+        $app->get('/settings/corporate/credentials/{id}/file', [\App\Controllers\ClinicCorporateController::class, 'credentialFile']);
+        $app->post('/settings/corporate/statements', [\App\Controllers\ClinicCorporateController::class, 'generateStatement']);
+        $app->post('/settings/corporate/statements/{id}/{action}', [\App\Controllers\ClinicCorporateController::class, 'statementAction']);
+        $app->get('/settings/corporate/statements/{id}/pdf', [\App\Controllers\ClinicCorporateController::class, 'statementPdf']);
         $app->get('/settings/team', [TeamSettingsController::class, 'index']);
         $app->post('/settings/team/invite', [TeamSettingsController::class, 'inviteStaff']);
         $app->post('/settings/team/create', [TeamSettingsController::class, 'createStaffAccount']);
@@ -211,6 +221,13 @@ return static function (RouteRegistrar $router): void {
         $app->post('/visits/{id}/diet', [VisitController::class, 'saveDiet']);
         $app->post('/visits/{id}/diet/share', [VisitController::class, 'shareDiet']);
         $app->post('/visits/{id}/send-rx', [VisitController::class, 'sendRxWhatsApp']);
+        // Workforce Health: occupational exam + fitness certificate on a corporate visit
+        $app->post('/visits/{id}/occupational/sign', [\App\Controllers\OccExamController::class, 'sign']);
+        $app->post('/visits/{id}/occupational/report', [\App\Controllers\OccExamController::class, 'uploadReport']);
+        $app->post('/visits/{id}/occupational/questionnaire', [\App\Controllers\OccExamController::class, 'questionnaire']);
+        $app->get('/visits/{id}/occupational/report/{reportId}', [\App\Controllers\OccExamController::class, 'report']);
+        $app->post('/visits/{id}/occupational/{certId}/revoke', [\App\Controllers\OccExamController::class, 'revoke']);
+        $app->get('/visits/{id}/occupational/{certId}/pdf', [\App\Controllers\OccExamController::class, 'pdf']);
 
         $app->get('/settings/profile', [SettingsController::class, 'showProfile']);
         $app->post('/settings/profile', [SettingsController::class, 'updateProfile']);
@@ -363,6 +380,11 @@ return static function (RouteRegistrar $router): void {
     $router->get('/impersonate/exit', [ImpersonateController::class, 'exit']);
     $router->get('/impersonate/{token}', [ImpersonateController::class, 'enter']);
 
+    // Workforce Health: public fitness-certificate check (QR on the PDF). No login; rate-limited.
+    $router->group(['middleware' => ['rate']], static function (GroupedRouteRegistrar $verify): void {
+        $verify->get('/verify/{token}', [\App\Controllers\CertificateVerifyController::class, 'show']);
+    });
+
     $router->group(['middleware' => ['rate']], static function (GroupedRouteRegistrar $docs): void {
         $docs->get('/docs', [DocsController::class, 'index']);
         $docs->get('/docs/openapi.json', [DocsController::class, 'openapi']);
@@ -405,6 +427,55 @@ return static function (RouteRegistrar $router): void {
     ], static function (GroupedRouteRegistrar $admin): void {
         $admin->get('/dashboard', [SuperAdminController::class, 'dashboard']);
         $admin->get('/clinics', [SuperAdminController::class, 'clinics']);
+
+        // Workforce Health (corporate) — companies, countries, settings. Design: document/workforce-health-phase0-design.md
+        $admin->get('/corporate', static fn () => \App\Http\Response::redirect('/admin/corporate/companies'));
+        $admin->get('/corporate/companies', [\App\Controllers\CorporateAdminController::class, 'companies']);
+        $admin->get('/corporate/companies/{id}', [\App\Controllers\CorporateAdminController::class, 'company']);
+        $admin->post('/corporate/companies/{id}/approve', [\App\Controllers\CorporateAdminController::class, 'approve']);
+        $admin->post('/corporate/companies/{id}/reject', [\App\Controllers\CorporateAdminController::class, 'reject']);
+        $admin->post('/corporate/companies/{id}/suspend', [\App\Controllers\CorporateAdminController::class, 'suspend']);
+        $admin->post('/corporate/companies/{id}/reactivate', [\App\Controllers\CorporateAdminController::class, 'reactivate']);
+        $admin->post('/corporate/companies/{id}/extend-trial', [\App\Controllers\CorporateAdminController::class, 'extendTrial']);
+        $admin->post('/corporate/companies/{id}/plan', [\App\Controllers\CorporateAdminController::class, 'setPlan']);
+        $admin->get('/corporate/companies/{id}/documents/{docId}', [\App\Controllers\CorporateAdminController::class, 'document']);
+        $admin->post('/corporate/companies/{id}/documents/{docId}/review', [\App\Controllers\CorporateAdminController::class, 'reviewDocument']);
+        $admin->post('/corporate/companies/{id}/users/{userId}/reset-mfa', [\App\Controllers\CorporateAdminController::class, 'resetUserMfa']);
+        $admin->get('/corporate/geo', [\App\Controllers\CorporateAdminController::class, 'geo']);
+        $admin->get('/corporate/geo/countries/{code}', [\App\Controllers\CorporateAdminController::class, 'country']);
+        $admin->post('/corporate/geo/countries/{code}', [\App\Controllers\CorporateAdminController::class, 'saveCountry']);
+        $admin->post('/corporate/geo/countries/{code}/regions', [\App\Controllers\CorporateAdminController::class, 'addRegion']);
+        $admin->post('/corporate/geo/regions/{id}/toggle', [\App\Controllers\CorporateAdminController::class, 'toggleRegion']);
+        $admin->post('/corporate/geo/industries', [\App\Controllers\CorporateAdminController::class, 'addIndustry']);
+        $admin->post('/corporate/geo/industries/{id}/toggle', [\App\Controllers\CorporateAdminController::class, 'toggleIndustry']);
+        $admin->get('/corporate/exam-types', [\App\Controllers\CorporateTemplatesAdminController::class, 'examTypes']);
+        $admin->post('/corporate/exam-types', [\App\Controllers\CorporateTemplatesAdminController::class, 'saveExamType']);
+        $admin->post('/corporate/exam-types/{id}/toggle', [\App\Controllers\CorporateTemplatesAdminController::class, 'toggleExamType']);
+        $admin->get('/corporate/templates', [\App\Controllers\CorporateTemplatesAdminController::class, 'templates']);
+        $admin->post('/corporate/templates', [\App\Controllers\CorporateTemplatesAdminController::class, 'createTemplate']);
+        $admin->get('/corporate/templates/{id}', [\App\Controllers\CorporateTemplatesAdminController::class, 'template']);
+        $admin->post('/corporate/templates/{id}', [\App\Controllers\CorporateTemplatesAdminController::class, 'saveTemplate']);
+        $admin->post('/corporate/templates/{id}/items', [\App\Controllers\CorporateTemplatesAdminController::class, 'saveItem']);
+        $admin->post('/corporate/templates/{id}/items/{itemId}/remove', [\App\Controllers\CorporateTemplatesAdminController::class, 'removeItem']);
+        $admin->post('/corporate/templates/{id}/publish', [\App\Controllers\CorporateTemplatesAdminController::class, 'publish']);
+        $admin->post('/corporate/templates/{id}/new-version', [\App\Controllers\CorporateTemplatesAdminController::class, 'newVersion']);
+        $admin->post('/corporate/templates/{id}/retire', [\App\Controllers\CorporateTemplatesAdminController::class, 'retire']);
+        $admin->post('/corporate/templates/{id}/delete', [\App\Controllers\CorporateTemplatesAdminController::class, 'deleteDraft']);
+        $admin->get('/corporate/questionnaires', [\App\Controllers\CorporateQuestionnairesAdminController::class, 'index']);
+        $admin->get('/corporate/questionnaires/{id}', [\App\Controllers\CorporateQuestionnairesAdminController::class, 'show']);
+        $admin->post('/corporate/questionnaires/{id}', [\App\Controllers\CorporateQuestionnairesAdminController::class, 'save']);
+        $admin->post('/corporate/questionnaires/{id}/items', [\App\Controllers\CorporateQuestionnairesAdminController::class, 'saveItem']);
+        $admin->post('/corporate/questionnaires/{id}/items/{itemId}/remove', [\App\Controllers\CorporateQuestionnairesAdminController::class, 'removeItem']);
+        $admin->post('/corporate/questionnaires/{id}/publish', [\App\Controllers\CorporateQuestionnairesAdminController::class, 'publish']);
+        $admin->post('/corporate/questionnaires/{id}/new-version', [\App\Controllers\CorporateQuestionnairesAdminController::class, 'newVersion']);
+        $admin->post('/corporate/questionnaires/{id}/delete', [\App\Controllers\CorporateQuestionnairesAdminController::class, 'deleteDraft']);
+        $admin->get('/corporate/providers', [\App\Controllers\CorporateProvidersAdminController::class, 'index']);
+        $admin->post('/corporate/providers/{id}/toggle', [\App\Controllers\CorporateProvidersAdminController::class, 'toggle']);
+        $admin->post('/corporate/credentials/{id}/review', [\App\Controllers\CorporateProvidersAdminController::class, 'review']);
+        $admin->get('/corporate/credentials/{id}/file', [\App\Controllers\CorporateProvidersAdminController::class, 'file']);
+        $admin->get('/corporate/settings', [\App\Controllers\CorporateAdminController::class, 'settings']);
+        $admin->post('/corporate/settings', [\App\Controllers\CorporateAdminController::class, 'saveSettings']);
+        $admin->post('/corporate/settings/admins/{id}', [\App\Controllers\CorporateAdminController::class, 'saveAdminRole']);
         $admin->get('/patients', [SuperAdminController::class, 'patients']);
         $admin->get('/patients/{id}', [SuperAdminController::class, 'patientDetail']);
         $admin->get('/signups', [SuperAdminController::class, 'signups']);
@@ -552,6 +623,11 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/outreach/export', [\App\Controllers\OutreachAdminController::class, 'exportCsv']);
         $admin->post('/outreach/status', [\App\Controllers\OutreachAdminController::class, 'saveStatus']);
 
+        // Directory listings — hide / show public directory_doctors rows.
+        $admin->get('/directory', [\App\Controllers\DirectoryAdminController::class, 'index']);
+        $admin->post('/directory/{id}/hide', [\App\Controllers\DirectoryAdminController::class, 'hide']);
+        $admin->post('/directory/{id}/show', [\App\Controllers\DirectoryAdminController::class, 'show']);
+
         // Marketing — doctor list + manual WhatsApp drafts (never sends).
         $admin->get('/marketing', [\App\Controllers\MarketingAdminController::class, 'index']);
         $admin->post('/marketing/sent', [\App\Controllers\MarketingAdminController::class, 'markSent']);
@@ -616,6 +692,7 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/store/vendors/{id}/status', [StoreAdminController::class, 'vendorStatus']);
         $admin->post('/store/vendors/{id}/reset-password', [StoreAdminController::class, 'resetPassword']);
         $admin->post('/store/vendors/{id}/feature', [StoreAdminController::class, 'toggleFeatured']);
+        $admin->post('/store/vendors/{id}/type', [StoreAdminController::class, 'vendorType']);
         $admin->post('/store/vendors/{id}/commission', [StoreAdminController::class, 'vendorCommission']);
         $admin->get('/store/documents/{id}/file', [StoreAdminController::class, 'documentFile']);
         $admin->post('/store/documents/{id}/review', [StoreAdminController::class, 'reviewDocument']);
@@ -758,6 +835,163 @@ return static function (RouteRegistrar $router): void {
         $vendor->get('/payouts', [\App\Controllers\VendorPayoutController::class, 'index']);
         $vendor->post('/payouts/request', [\App\Controllers\VendorPayoutController::class, 'request']);
         $vendor->get('/payouts/{id}/statement', [\App\Controllers\VendorPayoutController::class, 'statement']);
+    });
+
+    // Workforce Health — company (employer) portal. Own guard (mc_corp_token, path /company),
+    // separate from clinic users, admins, partners and sellers. Design: document/workforce-health-phase0-design.md
+    $router->get('/company', static fn () => \App\Http\Response::redirect('/company/dashboard'));
+    $router->group([
+        'prefix' => '/company',
+        'middleware' => ['rate', 'csrf', 'corp'],
+    ], static function (GroupedRouteRegistrar $company): void {
+        // Public (CorpAuthMiddleware lets exactly these paths through)
+        $company->get('/login', [\App\Controllers\Corporate\CorpAuthController::class, 'showLogin']);
+        $company->post('/login', [\App\Controllers\Corporate\CorpAuthController::class, 'login']);
+        $company->get('/register', [\App\Controllers\Corporate\CorpAuthController::class, 'showRegister']);
+        $company->post('/register', [\App\Controllers\Corporate\CorpAuthController::class, 'register']);
+        $company->get('/forgot-password', [\App\Controllers\Corporate\CorpAuthController::class, 'showForgot']);
+        $company->post('/forgot-password', [\App\Controllers\Corporate\CorpAuthController::class, 'forgot']);
+        $company->get('/reset-password', [\App\Controllers\Corporate\CorpAuthController::class, 'showReset']);
+        $company->post('/reset-password', [\App\Controllers\Corporate\CorpAuthController::class, 'reset']);
+        $company->get('/verify-email', [\App\Controllers\Corporate\CorpAuthController::class, 'verifyEmail']);
+
+        // Signed in
+        $company->post('/logout', [\App\Controllers\Corporate\CorpAuthController::class, 'logout']);
+        $company->get('/dashboard', [\App\Controllers\Corporate\CorpDashboardController::class, 'index']);
+        $company->post('/verify-email/resend', [\App\Controllers\Corporate\CorpDashboardController::class, 'resendVerification']);
+
+        // Two-step sign-in + security page (chunk 0.3)
+        $company->get('/mfa/setup', [\App\Controllers\Corporate\CorpSecurityController::class, 'showSetup']);
+        $company->post('/mfa/setup', [\App\Controllers\Corporate\CorpSecurityController::class, 'confirmSetup']);
+        $company->get('/mfa/verify', [\App\Controllers\Corporate\CorpSecurityController::class, 'showVerify']);
+        $company->post('/mfa/verify', [\App\Controllers\Corporate\CorpSecurityController::class, 'verify']);
+        $company->get('/security', [\App\Controllers\Corporate\CorpSecurityController::class, 'index']);
+        $company->post('/security/password', [\App\Controllers\Corporate\CorpSecurityController::class, 'changePassword']);
+        $company->post('/security/timezone', [\App\Controllers\Corporate\CorpSecurityController::class, 'saveTimezone']);
+        $company->post('/security/sessions/revoke-others', [\App\Controllers\Corporate\CorpSecurityController::class, 'revokeOthers']);
+        $company->post('/security/sessions/{id}/revoke', [\App\Controllers\Corporate\CorpSecurityController::class, 'revokeSession']);
+        $company->post('/security/mfa/recovery-codes', [\App\Controllers\Corporate\CorpSecurityController::class, 'regenerateCodes']);
+        $company->post('/security/mfa/disable', [\App\Controllers\Corporate\CorpSecurityController::class, 'disableMfa']);
+
+        // Users, invitations, roles, activity log (chunk 0.4). "new" before {id}.
+        $company->get('/invite', [\App\Controllers\Corporate\CorpUsersController::class, 'showAccept']);
+        $company->post('/invite', [\App\Controllers\Corporate\CorpUsersController::class, 'accept']);
+        $company->get('/users', [\App\Controllers\Corporate\CorpUsersController::class, 'index']);
+        $company->post('/users/invite', [\App\Controllers\Corporate\CorpUsersController::class, 'invite']);
+        $company->post('/users/invites/{id}/resend', [\App\Controllers\Corporate\CorpUsersController::class, 'resendInvite']);
+        $company->post('/users/invites/{id}/revoke', [\App\Controllers\Corporate\CorpUsersController::class, 'revokeInvite']);
+        $company->post('/users/{id}/roles', [\App\Controllers\Corporate\CorpUsersController::class, 'updateRoles']);
+        $company->post('/users/{id}/disable', [\App\Controllers\Corporate\CorpUsersController::class, 'disable']);
+        $company->post('/users/{id}/enable', [\App\Controllers\Corporate\CorpUsersController::class, 'enable']);
+        $company->post('/users/{id}/reset-mfa', [\App\Controllers\Corporate\CorpUsersController::class, 'resetMfa']);
+        $company->get('/roles', [\App\Controllers\Corporate\CorpRolesController::class, 'index']);
+        $company->get('/roles/new', [\App\Controllers\Corporate\CorpRolesController::class, 'create']);
+        $company->post('/roles', [\App\Controllers\Corporate\CorpRolesController::class, 'save']);
+        $company->get('/roles/{id}', [\App\Controllers\Corporate\CorpRolesController::class, 'edit']);
+        $company->post('/roles/{id}/delete', [\App\Controllers\Corporate\CorpRolesController::class, 'delete']);
+        $company->get('/activity', [\App\Controllers\Corporate\CorpActivityController::class, 'index']);
+
+        // Company profile + registration documents (chunk 0.5)
+        $company->get('/profile', [\App\Controllers\Corporate\CorpCompanyController::class, 'show']);
+        $company->post('/profile', [\App\Controllers\Corporate\CorpCompanyController::class, 'save']);
+        $company->post('/documents', [\App\Controllers\Corporate\CorpCompanyController::class, 'upload']);
+        $company->get('/documents/{id}', [\App\Controllers\Corporate\CorpCompanyController::class, 'file']);
+        $company->post('/documents/{id}/delete', [\App\Controllers\Corporate\CorpCompanyController::class, 'delete']);
+
+        // Workforce structure (Phase 1A-1)
+        $company->get('/branches', [\App\Controllers\Corporate\CorpStructureController::class, 'branches']);
+        $company->post('/branches', [\App\Controllers\Corporate\CorpStructureController::class, 'saveBranch']);
+        $company->post('/branches/{id}/toggle', [\App\Controllers\Corporate\CorpStructureController::class, 'toggleBranch']);
+        $company->get('/departments', [\App\Controllers\Corporate\CorpStructureController::class, 'departments']);
+        $company->post('/departments', [\App\Controllers\Corporate\CorpStructureController::class, 'saveDepartment']);
+        $company->post('/departments/{id}/toggle', [\App\Controllers\Corporate\CorpStructureController::class, 'toggleDepartment']);
+        $company->get('/job-roles', [\App\Controllers\Corporate\CorpStructureController::class, 'jobRoles']);
+        $company->post('/job-roles', [\App\Controllers\Corporate\CorpStructureController::class, 'saveJobRole']);
+        $company->post('/job-roles/{id}/toggle', [\App\Controllers\Corporate\CorpStructureController::class, 'toggleJobRole']);
+        // Employees (Phase 1A-2). Static paths before /{id}: the first match wins.
+        // Screening due checks (Phase 1B-3)
+        $company->get('/screening', [\App\Controllers\Corporate\CorpScreeningController::class, 'index']);
+        $company->get('/screening/export', [\App\Controllers\Corporate\CorpScreeningController::class, 'export']);
+        $company->post('/screening/cases/{id}/done', [\App\Controllers\Corporate\CorpScreeningController::class, 'doneElsewhere']);
+        $company->post('/screening/cases/{id}/waive', [\App\Controllers\Corporate\CorpScreeningController::class, 'waive']);
+        // Screening programmes (Phase 1B-1)
+        $company->get('/screening/library', [\App\Controllers\Corporate\CorpProgrammesController::class, 'library']);
+        $company->post('/screening/library/{templateId}/adopt', [\App\Controllers\Corporate\CorpProgrammesController::class, 'adopt']);
+        $company->get('/screening/programmes', [\App\Controllers\Corporate\CorpProgrammesController::class, 'index']);
+        $company->post('/screening/programmes', [\App\Controllers\Corporate\CorpProgrammesController::class, 'create']);
+        $company->get('/screening/programmes/{id}', [\App\Controllers\Corporate\CorpProgrammesController::class, 'show']);
+        $company->post('/screening/programmes/{id}/settings', [\App\Controllers\Corporate\CorpProgrammesController::class, 'settings']);
+        $company->post('/screening/programmes/{id}/update', [\App\Controllers\Corporate\CorpProgrammesController::class, 'acceptUpdate']);
+        $company->post('/screening/programmes/{id}/items', [\App\Controllers\Corporate\CorpProgrammesController::class, 'addItem']);
+        $company->post('/screening/programmes/{id}/items/{itemId}/remove', [\App\Controllers\Corporate\CorpProgrammesController::class, 'removeItem']);
+        $company->post('/screening/programmes/{id}/items/{itemId}/frequency', [\App\Controllers\Corporate\CorpProgrammesController::class, 'frequency']);
+        $company->post('/screening/programmes/{id}/assignments', [\App\Controllers\Corporate\CorpProgrammesController::class, 'assign']);
+        $company->post('/screening/programmes/{id}/assignments/{assignmentId}/remove', [\App\Controllers\Corporate\CorpProgrammesController::class, 'unassign']);
+        $company->get('/settings/reminders', [\App\Controllers\Corporate\CorpReminderSettingsController::class, 'index']);
+        $company->post('/settings/reminders', [\App\Controllers\Corporate\CorpReminderSettingsController::class, 'save']);
+        // Phase 1E: reports
+        $company->get('/reports', [\App\Controllers\Corporate\CorpReportsController::class, 'index']);
+        $company->get('/reports/export', [\App\Controllers\Corporate\CorpReportsController::class, 'export']);
+        $company->get('/reports/spend', [\App\Controllers\Corporate\CorpSpendController::class, 'index']);
+        $company->get('/reports/spend/{id}/pdf', [\App\Controllers\Corporate\CorpSpendController::class, 'pdf']);
+        $company->post('/reports/spend/{id}/dispute', [\App\Controllers\Corporate\CorpSpendController::class, 'dispute']);
+        // Phase 1C: fitness certificates (outcome only, with consent)
+        $company->get('/certificates', [\App\Controllers\Corporate\CorpCertificatesController::class, 'index']);
+        $company->get('/certificates/{id}/pdf', [\App\Controllers\Corporate\CorpCertificatesController::class, 'pdf']);
+        // Phase 1C: bookings
+        $company->get('/bookings', [\App\Controllers\Corporate\CorpBookingsController::class, 'index']);
+        $company->get('/bookings/new', [\App\Controllers\Corporate\CorpBookingsController::class, 'create']);
+        $company->get('/bookings/slots', [\App\Controllers\Corporate\CorpBookingsController::class, 'slots']);
+        $company->get('/bookings/group', [\App\Controllers\Corporate\CorpBookingsController::class, 'group']);
+        $company->post('/bookings/group', [\App\Controllers\Corporate\CorpBookingsController::class, 'groupStore']);
+        $company->post('/bookings', [\App\Controllers\Corporate\CorpBookingsController::class, 'store']);
+        $company->post('/bookings/{id}/cancel', [\App\Controllers\Corporate\CorpBookingsController::class, 'cancel']);
+        // Phase 1C: clinic network + agreed prices
+        $company->get('/providers', [\App\Controllers\Corporate\CorpProvidersController::class, 'index']);
+        $company->post('/providers/request', [\App\Controllers\Corporate\CorpProvidersController::class, 'request']);
+        $company->get('/providers/{id}', [\App\Controllers\Corporate\CorpProvidersController::class, 'show']);
+        $company->post('/providers/{id}/branches', [\App\Controllers\Corporate\CorpProvidersController::class, 'branches']);
+        $company->post('/providers/{id}/end', [\App\Controllers\Corporate\CorpProvidersController::class, 'end']);
+        $company->post('/providers/{id}/rates', [\App\Controllers\Corporate\CorpProvidersController::class, 'saveRate']);
+        $company->post('/providers/{id}/rates/{rateId}/remove', [\App\Controllers\Corporate\CorpProvidersController::class, 'removeRate']);
+        $company->get('/employees', [\App\Controllers\Corporate\CorpEmployeesController::class, 'index']);
+        $company->get('/employees/new', [\App\Controllers\Corporate\CorpEmployeesController::class, 'create']);
+        $company->get('/employees/export', [\App\Controllers\Corporate\CorpEmployeesController::class, 'export']);
+        $company->post('/employees/invite-all', [\App\Controllers\Corporate\CorpEmployeesController::class, 'inviteAll']);
+        $company->get('/employees/import', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'index']);
+        $company->get('/employees/import/template', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'template']);
+        $company->post('/employees/import', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'upload']);
+        $company->get('/employees/import/{id}', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'show']);
+        $company->get('/employees/import/{id}/errors', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'errors']);
+        $company->post('/employees/import/{id}/check', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'check']);
+        $company->post('/employees/import/{id}/remap', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'remap']);
+        $company->post('/employees/import/{id}/commit', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'commit']);
+        $company->post('/employees/import/{id}/cancel', [\App\Controllers\Corporate\CorpEmployeeImportController::class, 'cancel']);
+        $company->post('/employees', [\App\Controllers\Corporate\CorpEmployeesController::class, 'store']);
+        $company->get('/employees/{id}', [\App\Controllers\Corporate\CorpEmployeesController::class, 'show']);
+        $company->post('/employees/{id}', [\App\Controllers\Corporate\CorpEmployeesController::class, 'update']);
+        $company->post('/employees/{id}/leave', [\App\Controllers\Corporate\CorpEmployeesController::class, 'leave']);
+        $company->post('/employees/{id}/return', [\App\Controllers\Corporate\CorpEmployeesController::class, 'returned']);
+        $company->post('/employees/{id}/terminate', [\App\Controllers\Corporate\CorpEmployeesController::class, 'terminate']);
+        $company->post('/employees/{id}/rehire', [\App\Controllers\Corporate\CorpEmployeesController::class, 'rehire']);
+        $company->post('/employees/{id}/reveal-id', [\App\Controllers\Corporate\CorpEmployeesController::class, 'revealId']);
+        $company->post('/employees/{id}/invite', [\App\Controllers\Corporate\CorpEmployeesController::class, 'invite']);
+        // Phase 2E: risk register
+        $company->get('/risks', [\App\Controllers\Corporate\CorpRisksController::class, 'index']);
+        $company->get('/risks/new', [\App\Controllers\Corporate\CorpRisksController::class, 'form']);
+        $company->get('/risks/export', [\App\Controllers\Corporate\CorpRisksController::class, 'export']);
+        $company->post('/risks', [\App\Controllers\Corporate\CorpRisksController::class, 'save']);
+        $company->get('/risks/{id}', [\App\Controllers\Corporate\CorpRisksController::class, 'edit']);
+        $company->post('/risks/{id}', [\App\Controllers\Corporate\CorpRisksController::class, 'update']);
+        // Phase 2B: absences, incidents, return-to-work / post-incident checks
+        $company->post('/employees/{id}/absences', [\App\Controllers\Corporate\CorpIncidentsController::class, 'storeAbsence']);
+        $company->post('/absences/{id}/remove', [\App\Controllers\Corporate\CorpIncidentsController::class, 'removeAbsence']);
+        $company->get('/incidents', [\App\Controllers\Corporate\CorpIncidentsController::class, 'index']);
+        $company->post('/incidents', [\App\Controllers\Corporate\CorpIncidentsController::class, 'store']);
+        $company->post('/incidents/{id}/{action}', [\App\Controllers\Corporate\CorpIncidentsController::class, 'status']);
+
+        // Plan & trial (chunk 0.6) — also the page an expired company is sent to
+        $company->get('/billing', [\App\Controllers\Corporate\CorpBillingController::class, 'index']);
     });
 
     // Partner program — public auth pages + guarded partner dashboard.

@@ -1218,7 +1218,7 @@ final class StoreNotifier
         $muted = '#64748b';
         $line = '#e2e8f0';
         $green = '#047857';
-        $font = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+        $font = "Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
         $p = static fn (string $s): string => '<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:' . $ink . ';">' . nl2br($h($s)) . '</p>';
         $audience = (string) ($e['audience'] ?? 'customer');
 

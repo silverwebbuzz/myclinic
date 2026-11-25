@@ -30,12 +30,13 @@ function db(): ?PDO {
         }
     }
     $host = $env['DB_HOST'] ?? '127.0.0.1';
+    $port = !empty($env['DB_PORT']) ? (string) $env['DB_PORT'] : '3306';
     $name = $env['DB_DATABASE'] ?? '';
     $user = $env['DB_USERNAME'] ?? '';
     $pass = $env['DB_PASSWORD'] ?? '';
     if ($name === '' || $user === '') return null;
     try {
-        $pdo = new PDO("mysql:host={$host};dbname={$name};charset=utf8mb4", $user, $pass, [
+        $pdo = new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4", $user, $pass, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_EMULATE_PREPARES => false,
         ]);
@@ -117,10 +118,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['files'])) {
             photo_reference = VALUES(photo_reference),
             photo_references = VALUES(photo_references),
             quality_score = VALUES(quality_score),
-            -- Don't overwrite is_active if a human deactivated this row.
-            -- Only re-activate when we see fresh OPERATIONAL data.
-            is_active = IF(VALUES(status) = 'OPERATIONAL', 1, 0),
-            dropped_reason = VALUES(dropped_reason),
+            -- Rows hidden from /admin/directory (dropped_reason = 'admin_hidden')
+            -- stay hidden. Otherwise active only on fresh OPERATIONAL data.
+            -- is_active is assigned first, so it still sees the OLD dropped_reason.
+            is_active = IF(dropped_reason = 'admin_hidden', 0, IF(VALUES(status) = 'OPERATIONAL', 1, 0)),
+            dropped_reason = IF(dropped_reason = 'admin_hidden', dropped_reason, VALUES(dropped_reason)),
             refreshed_at = NOW()";
     $stmt = $pdo->prepare($sql);
 
@@ -285,14 +287,14 @@ if ($dbReady) {
 }
 ?><!doctype html>
 <html lang="en">
-<head>
+<head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Import Doctors to DB — eClinicPro</title>
 <style>
 :root { --teal: #0F9B6E; --line: rgba(0,0,0,0.08); --bg: #f8fafc; --mute: #64748b; --ink: #0f172a; }
 * { box-sizing: border-box; }
-body { font: 14px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--ink); }
+body { font: 14px/1.5 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; background: var(--bg); color: var(--ink); }
 .wrap { max-width: 880px; margin: 0 auto; padding: 32px 20px 80px; }
 h1 { font-size: 24px; font-weight: 600; margin: 0 0 8px; }
 .lede { color: var(--mute); margin: 0 0 24px; }

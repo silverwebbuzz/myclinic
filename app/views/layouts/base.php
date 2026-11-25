@@ -32,7 +32,7 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap" rel="stylesheet">
     <link rel="icon" type="image/svg+xml" href="https://eclinicpro.com/assets/img/logos/favicon.svg">
     <link rel="icon" type="image/png" sizes="64x64" href="https://eclinicpro.com/assets/img/logos/favicon.png">
     <link rel="apple-touch-icon" href="https://eclinicpro.com/assets/img/logos/apple-touch-icon.png">
@@ -228,6 +228,12 @@
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/settings/team') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
                     <?= ui_icon('staff', 18, 'shrink-0') ?><span>Team</span>
                 </a>
+                <?php if (!empty($clinic['corporate_enabled'])): ?>
+                <a href="/settings/corporate"
+                   class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/settings/corporate') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
+                    <?= ui_icon('clinic', 18, 'shrink-0') ?><span>Corporate work</span>
+                </a>
+                <?php endif; ?>
                 <a href="/leaves"
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/leaves') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
                     <?= ui_icon('appointments', 18, 'shrink-0') ?><span>Leaves</span>

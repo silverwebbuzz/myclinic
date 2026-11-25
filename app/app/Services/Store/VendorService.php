@@ -747,6 +747,10 @@ final class VendorService
         if (!isset($map[$action])) {
             return ['ok' => false, 'error' => 'Unknown action.'];
         }
+        if (($vendor['vendor_type'] ?? '') === 'affiliate') {
+            // eClinicPro's own affiliate seller: no KYC / bank / pickup to submit, so approve from draft.
+            $map['approve'][0][] = 'draft';
+        }
         [$allowedFrom, $to] = $map[$action];
         if (!in_array($from, $allowedFrom, true)) {
             return ['ok' => false, 'error' => "Can't $action a seller who is " . str_replace('_', ' ', $from) . '.'];
@@ -841,6 +845,36 @@ final class VendorService
         StoreAudit::log('vendor_user.password_reset', 'vendor_user', (int) $owner['id']);
 
         return ['ok' => true, 'password' => $temp];
+    }
+
+    /**
+     * Marketplace seller ↔ affiliate seller. Only allowed while the seller has
+     * no products, so a product never changes how it is bought.
+     *
+     * @return array{ok: bool, error?: string}
+     */
+    public static function adminSetType(int $vendorId, string $type): array
+    {
+        $vendor = self::find($vendorId);
+        if ($vendor === null) {
+            return ['ok' => false, 'error' => 'Seller not found.'];
+        }
+        if (!in_array($type, ['marketplace', 'affiliate'], true)) {
+            return ['ok' => false, 'error' => 'Unknown seller type.'];
+        }
+        $from = (string) ($vendor['vendor_type'] ?? 'marketplace');
+        if ($from === $type) {
+            return ['ok' => true];
+        }
+        $st = Database::connection()->prepare('SELECT COUNT(*) FROM store_products WHERE vendor_id = :v AND deleted_at IS NULL');
+        $st->execute(['v' => $vendorId]);
+        if ((int) $st->fetchColumn() > 0) {
+            return ['ok' => false, 'error' => 'This seller already has products. The type can only be changed before the first product is added.'];
+        }
+        QueryBuilder::table('store_vendors')->where('id', '=', $vendorId)->update(['vendor_type' => $type]);
+        StoreAudit::log('vendor.set_type', 'vendor', $vendorId, ['vendor_type' => $from], ['vendor_type' => $type]);
+
+        return ['ok' => true];
     }
 
     public static function adminToggleFeatured(int $vendorId): void

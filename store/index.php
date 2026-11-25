@@ -23,6 +23,13 @@ $banners = store_home_banners();
 $sellers = store_home_sellers();
 $brands = store_home_brands();
 
+// Section background alternator: guarantees strict odd/even alternating colors
+// across all visible sections regardless of which sections are enabled or have data.
+$secIndex = 0;
+$secBg = static function () use (&$secIndex): string {
+    return (++$secIndex % 2 === 1) ? 'is-cream is-odd' : 'is-even';
+};
+
 $storeTitle = 'eClinicPro Store: Health, Wellness & Everyday Care';
 $storeDesc = 'Trusted health, wellness and everyday essentials from verified sellers: supplements, health devices, mother & baby, personal care and more.';
 $storeCanonical = '/store/';
@@ -73,8 +80,8 @@ require __DIR__ . '/_header.php';
   <?php endif; ?>
 
   <!-- Shop by need -->
-  <?php if ($tiles): ?>
-  <section id="shop-by-need" class="st-section" style="scroll-margin-top:120px">
+  <?php /* if ($tiles): ?>
+  <section id="shop-by-need" class="st-section <?= $secBg() ?>" style="scroll-margin-top:120px">
     <div class="st-wrap">
       <div class="st-head">
         <div>
@@ -94,10 +101,10 @@ require __DIR__ . '/_header.php';
       </div>
     </div>
   </section>
-  <?php endif; ?>
+  <?php endif; */ ?>
 
   <!-- Featured products -->
-  <section class="st-section is-cream">
+  <section class="st-section <?= $secBg() ?>">
     <div class="st-wrap">
       <div class="st-head">
         <div>
@@ -120,7 +127,7 @@ require __DIR__ . '/_header.php';
 
   <!-- Health goals -->
   <?php if ($goals): ?>
-  <section class="st-section">
+  <section class="st-section <?= $secBg() ?>">
     <div class="st-wrap">
       <div class="st-head">
         <div>
@@ -139,7 +146,7 @@ require __DIR__ . '/_header.php';
 
   <!-- New arrivals -->
   <?php if ($newest): ?>
-  <section class="st-section is-cream">
+  <section class="st-section <?= $secBg() ?>">
     <div class="st-wrap">
       <div class="st-head"><div><span class="st-eyebrow">Just in</span><h2 class="st-h2">New <em>arrivals</em></h2></div></div>
       <div class="st-grid">
@@ -151,7 +158,7 @@ require __DIR__ . '/_header.php';
 
   <!-- Sellers -->
   <?php if ($sellers): ?>
-  <section class="st-section">
+  <section class="st-section <?= $secBg() ?>">
     <div class="st-wrap">
       <div class="st-head"><div><span class="st-eyebrow">Verified sellers</span><h2 class="st-h2">Shop by <em>store</em></h2></div></div>
       <div class="st-tiles">
@@ -171,7 +178,7 @@ require __DIR__ . '/_header.php';
 
   <!-- Brands -->
   <?php if ($brands): ?>
-  <section class="st-section is-cream" style="padding-top:48px;padding-bottom:48px">
+  <section class="st-section <?= $secBg() ?>" style="padding-top:48px;padding-bottom:48px">
     <div class="st-wrap">
       <div class="st-head" style="margin-bottom:20px"><div><span class="st-eyebrow">Trusted names</span><h2 class="st-h2" style="font-size:34px">Shop by <em>brand</em></h2></div></div>
       <div class="st-chips">
@@ -182,7 +189,7 @@ require __DIR__ . '/_header.php';
   <?php endif; ?>
 
   <!-- Why us -->
-  <section class="st-section">
+  <section class="st-section <?= $secBg() ?>">
     <div class="st-wrap">
       <div class="st-head"><div><span class="st-eyebrow">Why eClinicPro Store</span><h2 class="st-h2">Built by a <em>healthcare</em> company</h2></div></div>
       <div class="st-why">
@@ -195,7 +202,7 @@ require __DIR__ . '/_header.php';
   </section>
 
   <!-- Sell band -->
-  <section class="st-section" style="padding-top:0">
+  <section class="st-section <?= $secBg() ?>" style="padding-top:clamp(24px, 3vw, 40px)">
     <div class="st-wrap">
       <div class="st-band">
         <div>

@@ -231,6 +231,9 @@ final class AppointmentService
                 $at = (string) ($update['scheduled_at'] ?? $existing['scheduled_at']);
                 SlotService::invalidateForAppointment($clinicId, $doc, $at);
             }
+            if (($existing['source'] ?? '') === 'corporate') {
+                \App\Services\Corporate\BookingService::safeSyncFromAppointment($id);   // new time / doctor / status reaches the company
+            }
         }
 
         return self::findDetailed($clinicId, $id) ?? [];
@@ -258,6 +261,9 @@ final class AppointmentService
         }
 
         EventBus::fire('appointment.cancelled', ['appointment_id' => $id], 'appointments', $id);
+        if (($existing['source'] ?? '') === 'corporate') {
+            \App\Services\Corporate\BookingService::safeSyncFromAppointment($id);   // Workforce Health booking follows
+        }
 
         return self::findDetailed($clinicId, $id) ?? [];
     }
@@ -325,6 +331,9 @@ final class AppointmentService
         }
 
         DashboardService::invalidateStats($clinicId);
+        if (($existing['source'] ?? '') === 'corporate' && in_array($status, ['cancelled', 'no_show', 'completed'], true)) {
+            \App\Services\Corporate\BookingService::safeSyncFromAppointment($id);   // Workforce Health booking follows
+        }
 
         return self::findDetailed($clinicId, $id) ?? [];
     }

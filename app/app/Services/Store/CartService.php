@@ -74,7 +74,7 @@ final class CartService
             "SELECT ci.id AS item_id, ci.qty, ci.price_seen_paise,
                     sv.id AS variant_id, sv.sku, sv.title AS variant_title, sv.mrp_paise, sv.price_paise,
                     sv.stock_qty, sv.reserved_qty, sv.is_active AS variant_active, sv.weight_g,
-                    p.id AS product_id, p.slug, p.name, p.status AS product_status, p.deleted_at, p.gst_bp, p.hsn_code,
+                    p.id AS product_id, p.slug, p.name, p.status AS product_status, p.deleted_at, p.gst_bp, p.hsn_code, p.affiliate_url,
                     p.category_id, pc.parent_id AS dept_id, pc.is_active AS cat_active, pc.listing_mode, pc.no_promotion,
                     v.id AS vendor_id, v.display_name AS vendor_name, v.slug AS vendor_slug, v.status AS vendor_status,
                     (SELECT i.path FROM store_product_images i WHERE i.product_id = p.id ORDER BY i.sort_order, i.id LIMIT 1) AS cover
@@ -106,10 +106,14 @@ final class CartService
         return $rows;
     }
 
-    /** Same visibility rule as the storefront (store/_lib.php store_visible_sql()). */
+    /**
+     * Same visibility rule as the storefront (store/_lib.php store_visible_sql()),
+     * minus affiliate products: those are bought on the partner's site, never here.
+     */
     public static function sellable(array $r): bool
     {
         return ($r['product_status'] ?? '') === 'live'
+            && empty($r['affiliate_url'])
             && empty($r['deleted_at'])
             && ($r['vendor_status'] ?? '') === 'approved'
             && (int) ($r['variant_active'] ?? 0) === 1
@@ -122,6 +126,9 @@ final class CartService
     {
         $qty = max(1, min(self::MAX_QTY_PER_LINE, $qty));
         $row = self::variantRow($variantId);
+        if ($row !== null && !empty($row['affiliate_url'])) {
+            return ['ok' => false, 'error' => 'This product is sold on the partner\'s website. Tap "Buy" to open it.'];
+        }
         if ($row === null || !self::sellable($row)) {
             return ['ok' => false, 'error' => 'This product is not available right now.'];
         }
@@ -230,7 +237,7 @@ final class CartService
     {
         $st = Database::connection()->prepare(
             'SELECT sv.id, sv.price_paise, sv.stock_qty, sv.reserved_qty, sv.is_active AS variant_active,
-                    p.status AS product_status, p.deleted_at, v.status AS vendor_status,
+                    p.status AS product_status, p.deleted_at, p.affiliate_url, v.status AS vendor_status,
                     pc.is_active AS cat_active, pc.listing_mode
                FROM store_product_variants sv
                JOIN store_products p ON p.id = sv.product_id

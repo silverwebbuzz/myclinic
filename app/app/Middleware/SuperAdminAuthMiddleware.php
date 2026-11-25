@@ -7,6 +7,7 @@ namespace App\Middleware;
 use App\Core\RequestContext;
 use App\Http\Request;
 use App\Http\Response;
+use App\Services\Corporate\PlatformAdminScope;
 use App\Services\SuperAdminAuthService;
 use App\Services\SuperAdminJwtService;
 
@@ -43,6 +44,13 @@ final class SuperAdminAuthMiddleware implements MiddlewareInterface
         }
 
         RequestContext::setSuperAdmin($admin);
+
+        // Non-super team roles (country admin, billing, support) only reach the
+        // Workforce Health screens. Admins created before the role column keep 'super'.
+        $path = parse_url($request->uri, PHP_URL_PATH) ?: $request->uri;
+        if (!PlatformAdminScope::allowsPath($admin, $path)) {
+            return Response::redirect('/admin/corporate/companies');
+        }
 
         return $next();
     }

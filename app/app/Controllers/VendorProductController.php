@@ -58,11 +58,16 @@ final class VendorProductController
 
     public function store(Request $request): Response
     {
-        $result = ProductService::saveFromVendor($this->vendor(), null, $request->post);
+        $affiliate = ProductService::isAffiliateVendor($this->vendor());
+        $result = $affiliate
+            ? ProductService::saveAffiliate($this->vendor(), null, $request->post)
+            : ProductService::saveFromVendor($this->vendor(), null, $request->post);
         if (!$result['ok']) {
             return $this->renderForm(null, $request->post, $result['error'] ?? 'Could not save.');
         }
-        SessionFlash::put('store_ok', 'Draft saved. Now add photos, then submit for review.');
+        SessionFlash::put('store_ok', $affiliate
+            ? 'Draft saved. Now add a photo, then publish.'
+            : 'Draft saved. Now add photos, then submit for review.');
 
         return Response::redirect('/vendor/products/' . (int) $result['id'] . '#photos');
     }
@@ -80,7 +85,9 @@ final class VendorProductController
         if ($product === null) {
             return $this->notFound();
         }
-        $result = ProductService::saveFromVendor($this->vendor(), $product, $request->post);
+        $result = ProductService::isAffiliateVendor($this->vendor())
+            ? ProductService::saveAffiliate($this->vendor(), $product, $request->post)
+            : ProductService::saveFromVendor($this->vendor(), $product, $request->post);
         if (!$result['ok']) {
             return $this->renderForm(ProductService::load((int) $product['id']), $request->post, $result['error'] ?? 'Could not save.');
         }
@@ -173,6 +180,9 @@ final class VendorProductController
     private function renderForm(?array $product, array $old, ?string $error = null): Response
     {
         $vendor = $this->vendor();
+        if (ProductService::isAffiliateVendor($vendor)) {
+            return $this->renderAffiliateForm($product, $old, $error);
+        }
         $licences = CatalogService::vendorLicences((int) $vendor['id']);
         $tree = CatalogService::tree();
         // Pre-compute which subcategories this seller may pick, and why not.
@@ -199,6 +209,29 @@ final class VendorProductController
             'hsnList' => \App\Services\Store\HsnService::forForm(),
             'feeConfig' => \App\Services\Store\SellerFeeService::config(),
             'defaultCommission' => \App\Services\Store\CommissionService::resolve((int) $vendor['id'], 0, 0, $productId),
+        ]);
+    }
+
+    /** Short form for an affiliate seller: title, photo, price, link. */
+    private function renderAffiliateForm(?array $product, array $old, ?string $error): Response
+    {
+        $tree = CatalogService::tree();
+        foreach ($tree as &$dept) {
+            foreach ($dept['subs'] as &$sub) {
+                $sub['block_reason'] = ProductService::affiliateBlockReason($sub);
+            }
+            unset($sub);
+        }
+        unset($dept);
+
+        return $this->render('store_vendor/affiliate_form', [
+            'product' => $product,
+            'old' => $old,
+            'formError' => $error,
+            'tree' => $tree,
+            'brands' => CatalogService::brands(),
+            'problems' => $product !== null ? ProductService::submitProblems($this->vendor(), $product) : [],
+            'clicks' => $product !== null ? ProductService::affiliateClicks((int) $product['id']) : null,
         ]);
     }
 

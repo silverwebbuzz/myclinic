@@ -36,10 +36,19 @@ $navGroups = [
         ['/admin/patients', 'Patients', 'M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M12 3a4 4 0 100 8 4 4 0 000-8z'],
         ['/admin/signups', 'Online Signups', 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 3a4 4 0 100 8 4 4 0 000-8zM19 8v6M22 11h-6'],
         ['/admin/payments', 'Payments', 'M1 4h22v16H1zM1 10h22M5 15h4'],
+        ['/admin/directory', 'Directory listings', 'M4 6h16M4 12h16M4 18h16M8 6v12'],
         ['/admin/claims', 'Claims', 'M9 12l2 2 4-4M7 3h10l2 4v13H5V7z', (int) ($pendingClaimCount ?? 0)],
         ['/admin/leads', 'Leads', 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100 8 4 4 0 000-8z'],
         ['/admin/outreach', 'Outreach', 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
         ['/admin/wordpress-doctors', 'Blog access', 'M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z'],
+    ],
+    'Workforce Health' => [
+        ['/admin/corporate/companies', 'Companies', 'M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M9 17h1M14 9h1M14 13h1M14 17h1', \App\Services\Corporate\CorpAdminService::pendingCount()],
+        ['/admin/corporate/templates', 'Screening templates', 'M9 5h10M9 12h10M9 19h10M5 5h.01M5 12h.01M5 19h.01'],
+        ['/admin/corporate/questionnaires', 'Questionnaires', 'M9 12h6M9 16h6M8 3h8l3 3v15H5V3h3zM9 8h3'],
+        ['/admin/corporate/providers', 'Clinics & doctors', 'M3 21h18M6 21V5h12v16M10 9h4M12 7v4', \App\Services\OccHealth\ProviderAdminService::pendingCount()],
+        ['/admin/corporate/geo', 'Countries & industries', 'M12 2a10 10 0 100 20 10 10 0 000-20zM2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20'],
+        ['/admin/corporate/settings', 'Settings & team', 'M12 15a3 3 0 100-6 3 3 0 000 6zM4 12h2M18 12h2M12 4v2M12 18v2'],
     ],
     'Marketing' => [
         ['/admin/marketing', 'Doctor list', 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2zM8 9h8M8 13h5'],
@@ -129,6 +138,12 @@ if ($inStore) {
     $navGroups['Overview'][] = ['/admin/store/dashboard', 'Store (marketplace)', 'M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6', $storePending];
 }
 
+// Non-super team roles (country admin / billing / support) only see Workforce Health.
+if (!\App\Services\Corporate\PlatformAdminScope::isSuper(\App\Core\RequestContext::superAdmin())) {
+    $wh = array_values(array_filter($navGroups['Workforce Health'] ?? [], static fn ($i) => $i[0] !== '/admin/corporate/settings'));
+    $navGroups = ['Workforce Health' => $wh];
+}
+
 // Current item: exact match, else the longest parent path (/admin/store/orders/12 → Orders).
 $activeHref = null;
 $crumbs = [];
@@ -169,7 +184,7 @@ if (!defined('ECP_ADMIN_ALPINE_LOADED')) {
 <?php if (!defined('ECP_ADMIN_SKIN_EMITTED')): define('ECP_ADMIN_SKIN_EMITTED', true); ?>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
     /* ============================================================
        Admin skin — same console look as the seller portal

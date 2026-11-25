@@ -85,6 +85,7 @@ function ecp_db(): ?PDO
     }
 
     $host = $env['DB_HOST'] ?? '127.0.0.1';
+    $port = !empty($env['DB_PORT']) ? (string) $env['DB_PORT'] : '3306';
     $name = $env['DB_DATABASE'] ?? '';
     $user = $env['DB_USERNAME'] ?? '';
     $pass = $env['DB_PASSWORD'] ?? '';
@@ -100,7 +101,7 @@ function ecp_db(): ?PDO
         }
 
         $pdo = new PDO(
-            "mysql:host={$host};dbname={$name};charset=utf8mb4",
+            "mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4",
             $user,
             $pass,
             [
