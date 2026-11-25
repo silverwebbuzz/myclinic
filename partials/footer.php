@@ -175,6 +175,7 @@ $presenceSub = $presenceSub ?? 'Find doctors & clinics across these cities';
                     <li><a href="#">About</a></li>
                     <li><a href="#">Careers</a></li>
                     <li><a href="#">Press kit</a></li>
+                    <li><a href="/affiliate-disclosure">Affiliate Disclosure</a></li>
                     <li><a href="/contact">Contact</a></li>
                 </ul>
             </div>
@@ -185,6 +186,7 @@ $presenceSub = $presenceSub ?? 'Find doctors & clinics across these cities';
                 <a href="/privacy-policy">Privacy</a>
                 <a href="/terms">Terms</a>
                 <a href="/refund-policy">Refunds</a>
+                <a href="/affiliate-disclosure">Affiliate Disclosure</a>
                 <a href="/privacy-policy#grievance">Grievance</a>
                 <a href="/security">Security</a>
             </div>

@@ -29,3 +29,4 @@ City pages follow the pattern https://eclinicpro.com/find-a-doctor/{city} (for e
 - [Terms of service](https://eclinicpro.com/terms)
 - [Privacy policy](https://eclinicpro.com/privacy-policy)
 - [Refund and cancellation policy](https://eclinicpro.com/refund-policy)
+- [Affiliate disclosure](https://eclinicpro.com/affiliate-disclosure)
