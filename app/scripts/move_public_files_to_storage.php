@@ -94,6 +94,19 @@ $move('Patient photos', 'patients', 'photo_path', '/uploads/patients/',
     static fn (array $r): string => 'storage/patients/' . (int) $r['clinic_id'] . '/' . basename((string) $r['p']));
 
 // Orphans: anything still left in those public folders belongs to no row.
+// Safety net: never delete a file some row still points at (any spelling,
+// with or without the leading slash).
+$referenced = [];
+foreach ([['visits', 'rx_pdf_path'], ['invoices', 'pdf_path'], ['diet_plans', 'pdf_path'], ['patients', 'photo_path']] as [$t, $c]) {
+    try {
+        foreach ($pdo->query("SELECT {$c} FROM {$t} WHERE {$c} LIKE '%uploads/%'")->fetchAll(PDO::FETCH_COLUMN) as $p) {
+            $referenced['public/' . ltrim(preg_replace('#^.*?(uploads/)#', '$1', (string) $p), '/')] = true;
+        }
+    } catch (\Throwable $e) {
+        echo "  ! cannot read {$t}.{$c}: " . $e->getMessage() . " — not deleting anything\n";
+        exit(1);
+    }
+}
 echo "\n== Leftover public files\n";
 $deleted = 0;
 // Slips aren't stored in the DB (regenerated on each download), so old
@@ -109,7 +122,12 @@ foreach (['rx', 'prescriptions', 'invoices', 'diet', 'patients', 'slips'] as $di
     );
     foreach ($it as $f) {
         if ($f->isFile()) {
-            echo "  delete " . substr($f->getPathname(), strlen($base) + 1) . "\n";
+            $relPath = substr($f->getPathname(), strlen($base) + 1);
+            if (isset($referenced[$relPath])) {
+                echo "  keep (still referenced) {$relPath}\n";
+                continue;
+            }
+            echo "  delete " . $relPath . "\n";
             if ($apply && @unlink($f->getPathname())) {
                 $deleted++;
             }
