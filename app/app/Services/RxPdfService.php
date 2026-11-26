@@ -4,9 +4,16 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use Mpdf\Mpdf;
-use Mpdf\Output\Destination;
-
+/**
+ * The visit's prescription PDF for the patient portal (visits.rx_pdf_path).
+ *
+ * Written to PRIVATE storage (app/storage/prescriptions/...), never to the
+ * public webroot: prescriptions are medical records, and the old
+ * /uploads/rx/{clinic}/visit-{id}.pdf files were guessable and served to
+ * anyone without login. The returned path is relative to the app root
+ * ("storage/..."); PortalController streams it after checking the patient's
+ * signed download token.
+ */
 final class RxPdfService
 {
     /**
@@ -14,64 +21,22 @@ final class RxPdfService
      * @param array<string, mixed> $patient
      * @param array<string, mixed> $clinic
      * @param list<array<string, mixed>> $prescriptions
+     * @return string path relative to the app root, e.g. storage/prescriptions/12/rx-345-a5.pdf
      */
     public static function generate(array $visit, array $patient, array $clinic, array $prescriptions): string
     {
-        $dir = dirname(__DIR__, 2) . '/public/uploads/rx/' . (int) $clinic['id'];
-        if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
-        }
+        $abs = PrescriptionPdfService::generate($visit, $patient, $clinic, $prescriptions, 'A5');
+        $root = dirname(__DIR__, 2) . '/';
 
-        $path = $dir . '/visit-' . (int) $visit['id'] . '.pdf';
-        $rel = '/uploads/rx/' . (int) $clinic['id'] . '/visit-' . (int) $visit['id'] . '.pdf';
+        return str_starts_with($abs, $root) ? substr($abs, strlen($root)) : $abs;
+    }
 
-        // Same pad the doctor prints (findings, diagnosis, vitals, medicines),
-        // so the patient's WhatsApp copy matches the paper one. Falls back to
-        // the plain layout below if that render fails.
-        if (class_exists(Mpdf::class)) {
-            try {
-                $full = PrescriptionPdfService::generate($visit, $patient, $clinic, $prescriptions, 'A5');
-                if (is_file($full) && @copy($full, $path)) {
-                    return $rel;
-                }
-            } catch (\Throwable $e) {
-                error_log('[RxPdfService] full layout failed, using plain: ' . $e->getMessage());
-            }
-        }
-
-        $html = '<div style="font-family:sans-serif;padding:16px;">'
-            . '<h2>' . htmlspecialchars((string) $clinic['name']) . '</h2>'
-            . '<p><strong>Patient:</strong> ' . htmlspecialchars((string) $patient['name'])
-            . ' · UHID: ' . htmlspecialchars((string) $patient['uhid']) . '</p>'
-            . '<p><strong>Date:</strong> ' . htmlspecialchars(date('d M Y', strtotime($visit['visited_at'] ?? 'now'))) . '</p>'
-            . '<p><strong>Diagnosis:</strong> ' . htmlspecialchars((string) ($visit['diagnosis'] ?? '—')) . '</p>'
-            . '<hr><h3>Prescription</h3><table width="100%" cellpadding="6" style="border-collapse:collapse;font-size:11pt;">'
-            . '<tr style="background:#f1f5f9;"><th align="left">Medicine</th><th>Dose</th><th>Freq</th><th>Days</th></tr>';
-
-        foreach ($prescriptions as $rx) {
-            $name = $rx['drug']['name'] ?? $rx['remedy']['name'] ?? $rx['dosage'] ?? '—';
-            if (!empty($rx['potency'])) {
-                $name .= ' ' . $rx['potency'];
-            }
-            $html .= '<tr><td>' . htmlspecialchars((string) $name) . '</td>'
-                . '<td>' . htmlspecialchars((string) ($rx['dosage'] ?? '—')) . '</td>'
-                . '<td>' . htmlspecialchars((string) ($rx['frequency'] ?? '—')) . '</td>'
-                . '<td>' . htmlspecialchars((string) ($rx['duration_days'] ?? '—')) . '</td></tr>';
-            if (!empty($rx['instructions'])) {
-                $html .= '<tr><td colspan="4" style="font-size:9pt;color:#64748b;">' . htmlspecialchars($rx['instructions']) . '</td></tr>';
-            }
-        }
-
-        $html .= '</table></div>';
-
-        if (class_exists(Mpdf::class)) {
-            $mpdf = new Mpdf(['format' => 'A5']);
-            $mpdf->WriteHTML($html);
-            $mpdf->Output($path, Destination::FILE);
-        } else {
-            file_put_contents($path, strip_tags($html));
-        }
-
-        return $rel;
+    /**
+     * Absolute file path for a stored rx_pdf_path: new private "storage/..."
+     * paths, or legacy "/uploads/..." paths under public/.
+     */
+    public static function absolutePath(string $stored): string
+    {
+        return \App\Support\PrivateFile::abs($stored);
     }
 }

@@ -53,7 +53,17 @@ final class NotificationProcessor
         // NOR a WhatsApp→SMS downgrade can slip past it. OTP does not route here.
         if (in_array($channel, ['whatsapp', 'sms'], true) && MessagingConsent::isOptedOut($to, $channel)) {
             self::markSkipped($id, 'recipient opted out');
+            if ($template === RxWhatsAppService::TEMPLATE) {
+                RxWhatsAppService::releaseForNotification($clinicId, $payload, $id, 'recipient opted out');
+            }
             return false;
+        }
+
+        // Prescription on WhatsApp: paid for from the clinic's own Rx allowance
+        // (reserved when queued), so it skips the general quota/rules/quiet
+        // hours, never falls back to SMS, and is refunded if it doesn't go out.
+        if ($channel === 'whatsapp' && $template === RxWhatsAppService::TEMPLATE) {
+            return self::processRxWhatsApp($id, $row, $to, $payload, $clinicId);
         }
 
         // Opt-in gate for platform/marketing-origin WhatsApp (clinic_id 0 — the
@@ -178,6 +188,52 @@ final class NotificationProcessor
         } catch (\Throwable $e) {
             self::markFailed($id, $e->getMessage());
 
+            return false;
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @param array<string, mixed> $payload
+     */
+    private static function processRxWhatsApp(int $id, array $row, string $to, array $payload, int $clinicId): bool
+    {
+        $release = static function (string $why) use ($clinicId, $payload, $id): void {
+            RxWhatsAppService::releaseForNotification($clinicId, $payload, $id, $why);
+        };
+
+        try {
+            if (!\App\Support\MessagingSettings::enabled()) {
+                self::markSkipped($id, 'messaging disabled');
+                $release('messaging disabled');
+                return false;
+            }
+            if (self::knownNoWhatsApp($to)) {
+                self::markSkipped($id, 'number not on WhatsApp');
+                $release('number not on WhatsApp');
+                return false;
+            }
+
+            $result = WhatsAppService::send($to, RxWhatsAppService::TEMPLATE, $payload);
+            if (!$result['ok']) {
+                self::markFailed($id, $result['message']);
+                $release('send failed: ' . $result['message']);
+                return false;
+            }
+
+            QueryBuilder::table('notifications')
+                ->where('id', '=', $id)
+                ->update([
+                    'status' => 'sent',
+                    'sent_at' => date('Y-m-d H:i:s'),
+                    'provider_message_id' => $result['wamid'] ?? null,
+                    'delivery_status' => 'sent',
+                    'attempts' => (int) ($row['attempts'] ?? 0) + 1,
+                ]);
+            return true;
+        } catch (\Throwable $e) {
+            self::markFailed($id, $e->getMessage());
+            $release('error: ' . $e->getMessage());
             return false;
         }
     }

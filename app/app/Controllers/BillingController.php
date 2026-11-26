@@ -83,11 +83,12 @@ final class BillingController
             $patient = \App\Services\PatientService::find($clinicId, (int) $invoice['patient_id']) ?? [];
             $clinic = \App\Core\QueryBuilder::table('tenants')->where('id', '=', $clinicId)->first() ?? [];
             $rel = \App\Services\InvoicePdfService::generate($invoice, $patient, $clinic);
-            $absolute = dirname(__DIR__, 2) . '/public' . $rel;
+            $absolute = \App\Support\PrivateFile::abs($rel);
             if (!is_file($absolute)) {
                 return Response::redirect('/billing/' . $id . '?error=' . urlencode('PDF could not be generated'));
             }
-            return Response::download($absolute, 'invoice-' . $invoice['invoice_number'] . '.pdf');
+            return Response::download($absolute, 'invoice-' . $invoice['invoice_number'] . '.pdf')
+                ->withHeader('Content-Type', 'application/pdf');
         } catch (\Throwable $e) {
             error_log('[invoice download] ' . $e->getMessage());
             return Response::redirect('/billing/' . $id . '?error=' . urlencode('Could not generate PDF: ' . $e->getMessage()));

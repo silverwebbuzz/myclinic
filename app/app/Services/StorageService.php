@@ -44,9 +44,12 @@ final class StorageService
             return null;
         }
 
-        $dir = dirname(__DIR__, 2) . '/public/uploads/patients/' . $clinicId;
-        if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
+        // Private storage: shown only through the logged-in, clinic-scoped
+        // /patients/{id}/photo route (PatientController::photo).
+        try {
+            [$dir, $relDir] = \App\Support\PrivateFile::dir('patients/' . $clinicId);
+        } catch (\Throwable $e) {
+            return null;
         }
 
         $filename = UploadValidator::uuidFilename($ext);
@@ -55,6 +58,6 @@ final class StorageService
             return null;
         }
 
-        return '/uploads/patients/' . $clinicId . '/' . $filename;
+        return $relDir . '/' . $filename;
     }
 }

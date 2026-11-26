@@ -10,7 +10,11 @@ use Mpdf\Output\Destination;
 final class AppointmentSlipService
 {
     /**
-     * Renders the appointment slip PDF and returns its public URL path.
+     * Renders the appointment slip PDF and returns its ABSOLUTE path in
+     * private storage (storage/slips/{clinic}/appt-{id}.pdf, overwritten on
+     * each render). The slip shows the patient's name/UHID, so it is never
+     * written to the public webroot; AppointmentController::slip streams it to
+     * logged-in clinic staff.
      *
      * Never throws: the slip is a nice-to-have after booking — a PDF problem
      * (mPDF temp dir not writable on shared hosting, missing package) must not
@@ -21,15 +25,8 @@ final class AppointmentSlipService
     public static function generate(array $appointment, array $clinic): ?string
     {
         try {
-            $dir = dirname(__DIR__, 2) . '/public/uploads/slips/' . (int) $clinic['id'];
-            if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
-                return null;
-            }
-
-            // Random token so slip URLs aren't enumerable (appt ids are sequential).
-            $file = 'appt-' . (int) $appointment['id'] . '-' . bin2hex(random_bytes(6)) . '.pdf';
-            $path = $dir . '/' . $file;
-            $rel = '/uploads/slips/' . (int) $clinic['id'] . '/' . $file;
+            [$dir] = \App\Support\PrivateFile::dir('slips/' . (int) $clinic['id']);
+            $path = $dir . '/appt-' . (int) $appointment['id'] . '.pdf';
 
             $html = '<div style="font-family:sans-serif;padding:12px;">'
                 . '<h2>' . htmlspecialchars((string) $clinic['name']) . '</h2>'
@@ -45,7 +42,7 @@ final class AppointmentSlipService
             if (!class_exists(Mpdf::class)) {
                 file_put_contents($path, strip_tags($html));
 
-                return $rel;
+                return $path;
             }
 
             // mPDF's default temp dir lives inside vendor/ and is not writable
@@ -60,7 +57,7 @@ final class AppointmentSlipService
             $mpdf->WriteHTML($html);
             $mpdf->Output($path, Destination::FILE);
 
-            return $rel;
+            return $path;
         } catch (\Throwable $e) {
             error_log('[AppointmentSlipService] slip failed for appt '
                 . (int) ($appointment['id'] ?? 0) . ': ' . $e->getMessage());

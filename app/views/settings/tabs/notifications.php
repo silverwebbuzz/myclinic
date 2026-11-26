@@ -12,12 +12,13 @@
                 $toggles = [
                     'appointment_reminder_24h' => ['Appointment reminder (24h before)', 'Sent one day before the visit'],
                     'appointment_reminder_1h'  => ['Appointment reminder (1h before)', 'A final nudge an hour before'],
-                    'rx_delivery'              => ['Prescription delivery', 'Send the Rx to the patient on WhatsApp'],
+                    'rx_delivery'              => ['Prescription on WhatsApp as the main button', 'On: "Complete & send WhatsApp" is the highlighted button when finishing a visit. Off: "Complete visit" is highlighted. Doctors can still choose either button on every visit.'],
                     'follow_up_reminder'       => ['Follow-up reminder', 'Remind patients of their follow-up date'],
                 ];
                 foreach ($toggles as $key => [$label, $desc]):
                 ?>
-                <?= ui_toggle($key, '1', !empty($prefs[$key]), ['label' => $label, 'sub' => $desc]) ?>
+                <?php $on = $key === 'rx_delivery' ? (!is_array($prefs ?? null) || !array_key_exists('rx_delivery', $prefs) || !empty($prefs['rx_delivery'])) : !empty($prefs[$key]); ?>
+                <?= ui_toggle($key, '1', $on, ['label' => $label, 'sub' => $desc]) ?>
                 <?php endforeach; ?>
             </div>
         </div>

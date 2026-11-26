@@ -146,7 +146,7 @@ $editable = !in_array($status, ['paid', 'refunded'], true);
         ✓ Paid in full<?= !empty($invoice['paid_at']) ? ' on ' . htmlspecialchars(date('d M Y, h:i A', strtotime((string) $invoice['paid_at']))) : '' ?>
         <?php if (!empty($invoice['payment_mode'])): ?> · <span class="uppercase"><?= htmlspecialchars((string) $invoice['payment_mode']) ?></span><?php endif; ?>
         <?php if (!empty($invoice['pdf_path'])): ?>
-        · <a href="<?= htmlspecialchars($invoice['pdf_path']) ?>" target="_blank" class="underline">Download PDF</a>
+        · <a href="/billing/<?= (int) $invoice['id'] ?>/pdf" target="_blank" class="underline">Download PDF</a>
         <?php endif; ?>
     </p>
     <?php endif; ?>

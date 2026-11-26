@@ -117,7 +117,7 @@ final class TenantDeletionService
             self::rmTree($patientDir);
         }
 
-        foreach (['prescriptions', 'saas_invoices', 'exports'] as $subdir) {
+        foreach (['prescriptions', 'saas_invoices', 'exports', 'invoices', 'diet', 'patients', 'slips'] as $subdir) {
             $dir = $base . '/storage/' . $subdir . '/' . $clinicId;
             if (is_dir($dir)) {
                 self::rmTree($dir);

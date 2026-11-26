@@ -12,7 +12,7 @@
  *   $chronic     — list<string> chronic conditions, decoded already
  *   $compact     — bool, renders the slim sticky variant
  */
-$photoUrl = !empty($patient['photo_path']) ? '/' . ltrim((string) $patient['photo_path'], '/') : null;
+$photoUrl = !empty($patient['photo_path']) ? '/patients/' . (int) $patient['id'] . '/photo?v=' . substr(md5((string) $patient['photo_path']), 0, 8) : null;
 $allergies = $allergies ?? [];
 $chronic = $chronic ?? [];
 $compact = !empty($compact);

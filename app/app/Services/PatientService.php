@@ -339,6 +339,8 @@ final class PatientService
             $path = StorageService::storePatientPhoto($clinicId, $patientId, $photoFile);
             if ($path !== null) {
                 $data['photo_path'] = $path;
+                // Replaced: remove the old photo file.
+                \App\Support\PrivateFile::delete($existing['photo_path'] ?? null);
             }
         }
 

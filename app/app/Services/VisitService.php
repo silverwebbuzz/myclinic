@@ -551,7 +551,12 @@ final class VisitService
     }
 
     /** @return array<string, mixed> */
-    public static function complete(int $clinicId, int $visitId): array
+    /**
+     * @param bool $sendWhatsApp the doctor chose "Complete & send WhatsApp":
+     *   the prescription goes to the patient's WhatsApp, charged to the
+     *   clinic's allowance. Never sent implicitly.
+     */
+    public static function complete(int $clinicId, int $visitId, bool $sendWhatsApp = false): array
     {
         $visit = self::findDetailed($clinicId, $visitId);
         if ($visit === null) {
@@ -587,38 +592,15 @@ final class VisitService
                     ->where('id', '=', $visitId)
                     ->update(['rx_pdf_path' => $rxPath]);
 
-                $config = OnboardingService::specialtyConfig($clinicId) ?? [];
-                $prefs = $config['notification_prefs'] ?? null;
-                if (is_string($prefs)) {
-                    $prefs = json_decode($prefs, true);
-                }
-                if (is_array($prefs) && ($prefs['rx_delivery'] ?? true)) {
-                    $rxUrl = $rxPath;
-                    if ($rxUrl !== null && $rxUrl !== '' && str_starts_with($rxUrl, '/')) {
-                        $rxUrl = rtrim($_ENV['APP_URL'] ?? '', '/') . $rxUrl;
+                // Only when the doctor chose "Complete & send WhatsApp". The
+                // result is flashed so the dashboard can say what happened.
+                if ($sendWhatsApp) {
+                    $userId = (int) (\App\Core\RequestContext::user()['id'] ?? 0) ?: null;
+                    $rxResult = RxWhatsAppService::sendForVisit($clinicId, $visitId, 'manual', $userId);
+                    \App\Support\SessionFlash::put('rx_wa_result', $rxResult);
+                    if (!$rxResult['ok']) {
+                        RxWhatsAppService::emailOnly($clinicId, $visitId);
                     }
-                    $rxPayload = [
-                        'patient_name' => $patient['name'],
-                        'clinic_name' => $clinic['name'],
-                        'rx_url' => $rxUrl,
-                    ];
-                    $deliverAt = date('Y-m-d H:i:s', time() + 120);
-                    NotificationService::queueWhatsApp(
-                        $clinicId,
-                        (int) $patient['id'],
-                        (string) $patient['phone'],
-                        'rx_delivery',
-                        $rxPayload,
-                        $deliverAt,
-                    );
-                    NotificationService::queueEmail(
-                        $clinicId,
-                        (int) $patient['id'],
-                        $patient['email'] ?? null,
-                        'rx_delivery',
-                        $rxPayload,
-                        $deliverAt,
-                    );
                 }
             } catch (\Throwable $e) {
                 error_log('[visit.complete] PDF/notify failed for visit ' . $visitId . ': ' . $e->getMessage());

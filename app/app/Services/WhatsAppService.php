@@ -137,7 +137,26 @@ final class WhatsAppService
             WaTemplateService::params($template, $payload),
         );
 
-        return $params === [] ? [] : [['type' => 'body', 'parameters' => $params]];
+        $components = [];
+        // Templates with a DOCUMENT header (e.g. the prescription PDF): Meta
+        // downloads the file from this URL when it sends the message.
+        if (!empty($payload['header_document_url'])) {
+            $components[] = [
+                'type' => 'header',
+                'parameters' => [[
+                    'type' => 'document',
+                    'document' => [
+                        'link' => (string) $payload['header_document_url'],
+                        'filename' => (string) ($payload['header_document_filename'] ?? 'document.pdf'),
+                    ],
+                ]],
+            ];
+        }
+        if ($params !== []) {
+            $components[] = ['type' => 'body', 'parameters' => $params];
+        }
+
+        return $components;
     }
 
     /**

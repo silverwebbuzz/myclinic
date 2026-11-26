@@ -17,6 +17,12 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
 RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
 
+# -------- Patient documents: never served directly --------
+# Prescriptions, invoices, diet plans, patient photos and appointment slips are medical/personal
+# records. They're streamed by PHP after an access check: signed links
+# (/rx/..., /d/...), portal downloads, or logged-in clinic routes.
+RewriteRule ^uploads/(rx|prescriptions|invoices|diet|patients|slips|discharge)/ - [F,L]
+
 # -------- Front controller: route everything through index.php --------
 # Real files on disk (e.g. /uploads/qr/12/45.png) are served as-is.
 RewriteCond %{REQUEST_FILENAME} !-f

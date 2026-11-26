@@ -16,24 +16,13 @@ final class InvoicePdfService
      */
     public static function generate(array $invoice, array $patient, array $clinic): string
     {
-        $dir = dirname(__DIR__, 2) . '/public/uploads/invoices/' . (int) $clinic['id'];
-        if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
-        }
-
-        // The file must stay publicly reachable (WhatsApp sends the link to
-        // the patient), but inv-{id}.pdf was enumerable. Embed a random token;
-        // reuse the existing one so links already sent keep working.
-        $token = null;
-        if (!empty($invoice['pdf_path'])
-            && preg_match('/inv-\d+-([a-f0-9]{16})\.pdf$/', (string) $invoice['pdf_path'], $m) === 1) {
-            $token = $m[1];
-        }
-        $token ??= bin2hex(random_bytes(8));
-
-        $filename = 'inv-' . (int) $invoice['id'] . '-' . $token . '.pdf';
+        // Private storage, never the public webroot: patients get the PDF
+        // through a signed, expiring link (DocumentLinkService), the clinic
+        // through the logged-in /billing/{id}/pdf route.
+        [$dir, $relDir] = \App\Support\PrivateFile::dir('invoices/' . (int) $clinic['id']);
+        $filename = 'inv-' . (int) $invoice['id'] . '.pdf';
         $path = $dir . '/' . $filename;
-        $rel = '/uploads/invoices/' . (int) $clinic['id'] . '/' . $filename;
+        $rel = $relDir . '/' . $filename;
 
         $items = $invoice['items'] ?? InvoiceService::items((int) $invoice['id']);
 

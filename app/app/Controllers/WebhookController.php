@@ -81,6 +81,15 @@ final class WebhookController
             return $ok ? Response::json(['received' => true]) : Response::json(['error' => 'Invalid signature'], 400);
         }
 
+        // WhatsApp prescription packs: same account + URL. Route them before the
+        // subscription handler, which would otherwise treat the payment as a
+        // plan renewal.
+        if (is_array($event) && \App\Services\RxWhatsAppPackService::isPackEvent($event)) {
+            $ok = \App\Services\RxWhatsAppPackService::handleWebhook($payload, $signature);
+
+            return $ok ? Response::json(['received' => true]) : Response::json(['error' => 'Invalid signature'], 400);
+        }
+
         if (!BillingGatewayService::handleRazorpayWebhook($payload, $signature)) {
             return Response::json(['error' => 'Invalid signature'], 400);
         }

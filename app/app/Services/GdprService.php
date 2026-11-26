@@ -64,6 +64,9 @@ final class GdprService
             return false;
         }
 
+        // The photo is personal data: delete the file, not just the reference.
+        \App\Support\PrivateFile::delete($patient['photo_path'] ?? null);
+
         $label = 'Anonymized #' . $patientId;
         QueryBuilder::table('patients')
             ->forClinic($clinicId)

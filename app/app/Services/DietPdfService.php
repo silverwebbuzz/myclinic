@@ -12,13 +12,12 @@ final class DietPdfService
     /** @param array<string, mixed> $plan @param array<string, mixed> $patient @param array<string, mixed> $clinic */
     public static function generate(array $plan, array $patient, array $clinic): string
     {
-        $dir = dirname(__DIR__, 2) . '/public/uploads/diet/' . (int) $clinic['id'];
-        if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
-        }
+        // Private storage (see InvoicePdfService): patients open it via a
+        // signed link, the clinic via the logged-in visit route.
+        [$dir, $relDir] = \App\Support\PrivateFile::dir('diet/' . (int) $clinic['id']);
 
         $path = $dir . '/diet-' . (int) $plan['id'] . '.pdf';
-        $rel = '/uploads/diet/' . (int) $clinic['id'] . '/diet-' . (int) $plan['id'] . '.pdf';
+        $rel = $relDir . '/diet-' . (int) $plan['id'] . '.pdf';
 
         $html = '<h2>' . htmlspecialchars((string) $clinic['name']) . ' — Diet plan</h2>'
             . '<p><strong>Patient:</strong> ' . htmlspecialchars((string) $patient['name']) . '</p>'

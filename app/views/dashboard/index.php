@@ -28,9 +28,18 @@
     <?php endif; ?>
 
     <?php if (!empty($_GET['visit_completed'])): ?>
+    <?php $rxWaDone = \App\Support\SessionFlash::pull('rx_wa_result'); ?>
     <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-        ✓ Visit completed successfully.
+        ✓ Visit completed successfully.<?php if (is_array($rxWaDone) && !empty($rxWaDone['ok'])): ?> Prescription is being sent to the patient's WhatsApp.<?php endif; ?>
     </div>
+    <?php if (is_array($rxWaDone) && empty($rxWaDone['ok'])): ?>
+    <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        Prescription was not sent on WhatsApp: <?= htmlspecialchars((string) ($rxWaDone['message'] ?? '')) ?>
+        <?php if (($rxWaDone['code'] ?? '') === 'no_allowance'): ?>
+        <a href="/prescriptions/whatsapp" class="font-semibold underline">Buy more messages</a>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
     <?php endif; ?>
 
     <?php if (!empty($_GET['error'])): ?>

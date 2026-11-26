@@ -398,15 +398,21 @@ final class AppointmentController
         if (!empty($request->query['booked'])) {
             return Response::html(Layout::page('appointments/booked', [
                 'appointment' => $appointment,
-                'slipUrl' => $path,
+                // The slip is private: link back to this logged-in route.
+                'slipUrl' => $path !== null ? '/appointments/' . (int) $appointment['id'] . '/slip' : null,
             ], 'Appointment booked'));
         }
 
-        if ($path === null) {
+        if ($path === null || !is_file($path)) {
             return Response::redirect('/appointments?error=' . urlencode('Slip PDF could not be generated.'));
         }
 
-        return Response::redirect($path);
+        $name = 'appointment-slip-' . (int) $appointment['id'] . '.pdf';
+
+        return Response::download($path, $name)
+            ->withHeader('Content-Type', 'application/pdf')
+            ->withHeader('Content-Disposition', 'inline; filename="' . $name . '"')
+            ->withHeader('Cache-Control', 'private, no-store');
     }
 
     /**

@@ -240,63 +240,38 @@ final class VisitController
             return Response::redirect($back . '?rx_error=' . urlencode('Visit not found.'));
         }
 
-        $patient = PatientService::find($clinicId, (int) $visit['patient_id']);
-        $clinic = RequestContext::clinic() ?? [];
-        $phone = preg_replace('/[^0-9]/', '', (string) ($patient['phone'] ?? '')) ?? '';
-        if ($patient === null || strlen($phone) < 7) {
-            return Response::redirect($back . '?rx_error=' . urlencode('This patient has no WhatsApp number on file.'));
-        }
-
-        $prescriptions = PrescriptionService::forVisit($clinicId, $visitId);
-        if ($prescriptions === []) {
-            return Response::redirect($back . '?rx_error=' . urlencode('No medicines on this visit yet.'));
-        }
-
-        // Regenerate rather than trust a stale file — the doctor may have
-        // edited the prescription since the PDF was written.
-        try {
-            $visit['diagnosis'] = $visit['diagnosis'] ?? '';
-            $rxPath = \App\Services\RxPdfService::generate($visit, $patient, $clinic, $prescriptions);
-            QueryBuilder::table('visits')
-                ->forClinic($clinicId)
-                ->where('id', '=', $visitId)
-                ->update(['rx_pdf_path' => $rxPath]);
-        } catch (\Throwable $e) {
-            return Response::redirect($back . '?rx_error=' . urlencode('Could not build the prescription PDF.'));
-        }
-
-        $rxUrl = $rxPath;
-        if ($rxUrl !== '' && str_starts_with($rxUrl, '/')) {
-            $rxUrl = rtrim($_ENV['APP_URL'] ?? '', '/') . $rxUrl;
-        }
-        $payload = [
-            'patient_name' => $patient['name'] ?? '',
-            'clinic_name' => $clinic['name'] ?? '',
-            'rx_url' => $rxUrl,
-        ];
-
-        \App\Services\NotificationService::queueWhatsApp(
-            $clinicId,
-            (int) $patient['id'],
-            (string) $patient['phone'],
-            'rx_delivery',
-            $payload,
-            date('Y-m-d H:i:s'),
-        );
-        if (!empty($patient['email'])) {
-            \App\Services\NotificationService::queueEmail(
-                $clinicId,
-                (int) $patient['id'],
-                (string) $patient['email'],
-                'rx_delivery',
-                $payload,
-                date('Y-m-d H:i:s'),
-            );
+        // Charged to the clinic's WhatsApp prescription allowance (free monthly
+        // first, then purchased). The button states the patient agreed.
+        $userId = (int) (RequestContext::user()['id'] ?? 0) ?: null;
+        $result = \App\Services\RxWhatsAppService::sendForVisit($clinicId, $visitId, 'manual', $userId);
+        if (!$result['ok']) {
+            return Response::redirect($back . '?rx_error=' . urlencode($result['message']) . '&rx_code=' . urlencode($result['code']));
         }
 
         AuditService::log($request, 'INSERT', 'notifications', $visitId);
 
         return Response::redirect($back . '?rx_sent=1');
+    }
+
+    /** GET /visits/{id}/diet/{planId}/pdf — the clinic's own view of a shared diet plan PDF. */
+    public function dietPdf(Request $request, string $id, string $planId): Response
+    {
+        if ($denied = $this->requireModule()) {
+            return $denied;
+        }
+        $clinicId = (int) RequestContext::clinicId();
+        $plan = \App\Services\DietService::find($clinicId, (int) $planId);
+        if ($plan === null || empty($plan['pdf_path'])) {
+            return Response::html('Diet plan PDF not found', 404);
+        }
+        $abs = \App\Support\PrivateFile::abs((string) $plan['pdf_path']);
+        if (!is_file($abs)) {
+            return Response::html('Diet plan PDF not found', 404);
+        }
+
+        return Response::download($abs, 'diet-plan-' . (int) $plan['id'] . '.pdf')
+            ->withHeader('Content-Type', 'application/pdf')
+            ->withHeader('Content-Disposition', 'inline; filename="diet-plan-' . (int) $plan['id'] . '.pdf"');
     }
 
     public function complete(Request $request, string $id): Response
@@ -323,7 +298,7 @@ final class VisitController
             }
         }
 
-        VisitService::complete($clinicId, $visitId);
+        VisitService::complete($clinicId, $visitId, ($request->post['send_whatsapp'] ?? '0') === '1');
         AuditService::log($request, 'UPDATE', 'visits', $visitId);
 
         // Optionally push the prescription to the patient's eClinicPro panel.

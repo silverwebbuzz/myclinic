@@ -424,4 +424,33 @@ final class PatientController
             'specialty_data' => $spec,
         ]);
     }
+
+    /**
+     * GET /patients/{id}/photo — the patient's photo, from private storage.
+     * Logged-in clinic staff only, scoped to the clinic.
+     */
+    public function photo(Request $request, string $id): Response
+    {
+        $clinicId = (int) RequestContext::clinicId();
+        $patient = PatientService::find($clinicId, (int) $id);
+        $stored = (string) ($patient['photo_path'] ?? '');
+        if ($stored === '') {
+            return Response::html('Not found', 404);
+        }
+        $abs = \App\Support\PrivateFile::abs($stored);
+        if (!is_file($abs)) {
+            return Response::html('Not found', 404);
+        }
+        $mime = match (strtolower(pathinfo($abs, PATHINFO_EXTENSION))) {
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            default => 'image/jpeg',
+        };
+
+        return Response::download($abs, 'photo.' . pathinfo($abs, PATHINFO_EXTENSION))
+            ->withHeader('Content-Type', $mime)
+            ->withHeader('Content-Disposition', 'inline')
+            ->withHeader('Cache-Control', 'private, max-age=86400')
+            ->withHeader('X-Content-Type-Options', 'nosniff');
+    }
 }

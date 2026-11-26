@@ -38,6 +38,7 @@ final class SaasInvoiceService
         string $gateway,
         string $gatewayOrderId,
         ?int $termMonths = null,
+        ?string $itemDescription = null,
     ): int {
         if (!Database::ping()) {
             return 0;
@@ -79,12 +80,18 @@ final class SaasInvoiceService
                 'status' => 'pending',
             ];
 
+            $gst = [
+                'base_amount' => $base,
+                'tax_amount' => $tax,
+                'tax_percent' => $taxPct,
+            ];
+            // Non-plan purchases (e.g. WhatsApp prescription packs) print their
+            // own line description on the tax invoice.
+            if ($itemDescription !== null && $itemDescription !== '') {
+                $gst['item_description'] = mb_substr($itemDescription, 0, 255);
+            }
             try {
-                $id = QueryBuilder::table('saas_invoices')->insert(array_merge($row, [
-                    'base_amount' => $base,
-                    'tax_amount' => $tax,
-                    'tax_percent' => $taxPct,
-                ]));
+                $id = QueryBuilder::table('saas_invoices')->insert(array_merge($row, $gst));
             } catch (\Throwable $e) {
                 // GST columns missing (pre-027) — store the gross only.
                 $id = QueryBuilder::table('saas_invoices')->insert($row);
@@ -187,6 +194,7 @@ final class SaasInvoiceService
                     'clinic_name' => $clinic['name'] ?? 'your clinic',
                     'invoice_no' => $invoice['invoice_no'] ?? '',
                     'plan_id' => $invoice['plan_id'] ?? '',
+                    'item' => $invoice['item_description'] ?? '',
                     'amount' => $invoice['amount'] ?? $invoice['total_usd'] ?? 0,
                     'currency' => $invoice['currency'] ?? 'INR',
                     'pdf_url' => $pdfPath,

@@ -207,7 +207,7 @@ final class MailService
             'rx_delivery' => [
                 'patient_name' => 'Test Patient',
                 'clinic_name' => 'Test Clinic',
-                'rx_url' => rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/') . '/uploads/rx/test.pdf',
+                'rx_url' => rtrim($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com', '/') . '/rx/sample',
             ],
             'invoice_paid' => [
                 'patient_name' => 'Test Patient',
@@ -604,8 +604,10 @@ final class MailService
                 . (!empty($payload['pdf_url']) ? "Receipt: " . $payload['pdf_url'] . "\n\n" : '')
                 . "Thank you.",
             'subscription_invoice' => "Hello " . ($payload['clinic_name'] ?? '') . ",\n\n"
-                . "Thank you for subscribing to eClinicPro "
-                . ucfirst((string) ($payload['plan_id'] ?? '')) . ".\n\n"
+                . (!empty($payload['item'])
+                    ? "Thank you for your purchase: " . $payload['item'] . ".\n\n"
+                    : "Thank you for subscribing to eClinicPro "
+                        . ucfirst((string) ($payload['plan_id'] ?? '')) . ".\n\n")
                 . "Invoice " . ($payload['invoice_no'] ?? '') . " — "
                 . ($payload['currency'] ?? 'INR') . ' ' . ($payload['amount'] ?? '')
                 . " (tax invoice available in Settings → Subscription).\n\n"

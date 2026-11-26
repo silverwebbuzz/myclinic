@@ -37,7 +37,10 @@ $waLink = static function (array $visit) use ($formatLine): ?string {
 <div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <h2 class="ui-section-title">Prescriptions</h2>
-        <p class="text-sm text-slate-500"><?= (int) $total ?> visit<?= $total === 1 ? '' : 's' ?> with prescriptions</p>
+        <div class="flex items-center gap-3">
+            <p class="text-sm text-slate-500"><?= (int) $total ?> visit<?= $total === 1 ? '' : 's' ?> with prescriptions</p>
+            <a href="/prescriptions/whatsapp" class="ui-btn ui-btn-secondary ui-btn-sm">WhatsApp prescriptions</a>
+        </div>
     </div>
 
     <?php if (!empty($_GET['error'])): ?>

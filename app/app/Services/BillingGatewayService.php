@@ -346,6 +346,11 @@ final class BillingGatewayService
             return false;
         }
 
+        // A WhatsApp-pack order must never activate/extend a plan.
+        if (RxWhatsAppPackService::isPackNotes((array) ($order['notes'] ?? []))) {
+            return RxWhatsAppPackService::verifyOrder($orderId);
+        }
+
         // Find the captured payment id (for the invoice + commission reference).
         $paymentId = null;
         $payments = self::razorpayGet('/orders/' . rawurlencode($orderId) . '/payments', $key, $secret);
@@ -470,19 +475,24 @@ final class BillingGatewayService
      */
     public static function handleRazorpayWebhook(string $payload, ?string $signature): bool
     {
-        // Webhook secret is set separately in the Razorpay dashboard; fall back
-        // to the key secret if a dedicated one isn't configured.
-        $secret = ($_ENV['RAZORPAY_WEBHOOK_SECRET'] ?? '') !== ''
-            ? $_ENV['RAZORPAY_WEBHOOK_SECRET']
-            : ($_ENV['RAZORPAY_KEY_SECRET'] ?? '');
-
-        if ($secret !== '' && $signature !== null) {
-            $expected = hash_hmac('sha256', $payload, $secret);
-            if (!hash_equals($expected, (string) $signature)) {
-                error_log('[Razorpay] webhook signature mismatch');
-
-                return false;
+        // The signature is ALWAYS required. Previously a missing
+        // X-Razorpay-Signature header (or no secret configured) skipped the
+        // check, so a forged "paid" body could activate a plan through
+        // activateFromWebhookOrder(). Accept any of our configured secrets
+        // (dedicated webhook secret, key secret, test/live variants).
+        $valid = false;
+        if ($signature !== null && $signature !== '') {
+            foreach (self::webhookSecrets() as $secret) {
+                if (hash_equals(hash_hmac('sha256', $payload, $secret), (string) $signature)) {
+                    $valid = true;
+                    break;
+                }
             }
+        }
+        if (!$valid) {
+            error_log('[Razorpay] webhook signature missing/invalid — ignored');
+
+            return false;
         }
 
         $event = json_decode($payload, true);
@@ -516,6 +526,18 @@ final class BillingGatewayService
         return true;
     }
 
+    /** @return list<string> */
+    private static function webhookSecrets(): array
+    {
+        $all = [];
+        foreach (['RAZORPAY_WEBHOOK_SECRET', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_LIVE_WEBHOOK_SECRET', 'RAZORPAY_LIVE_KEY_SECRET',
+            'RAZORPAY_TEST_WEBHOOK_SECRET', 'RAZORPAY_TEST_KEY_SECRET'] as $var) {
+            $all[] = (string) ($_ENV[$var] ?? '');
+        }
+
+        return array_values(array_unique(array_filter($all, static fn ($v) => $v !== '')));
+    }
+
     /**
      * Last-resort activation straight from the webhook body when the API
      * re-verify is unavailable (e.g. keys missing in a webhook-only context).
@@ -532,6 +554,10 @@ final class BillingGatewayService
             'amount' => $paymentEntity['amount'] ?? ($event['payload']['order']['entity']['amount'] ?? 0),
             'receipt' => $event['payload']['order']['entity']['receipt'] ?? '',
         ];
+
+        if (RxWhatsAppPackService::isPackNotes((array) ($order['notes'] ?? []))) {
+            return false; // packs are credited only after an API re-check
+        }
 
         [$clinicId, $plan, $termMonths] = self::clinicAndPlanFromOrder($order, $orderId);
         if ($clinicId <= 0) {

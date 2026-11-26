@@ -137,6 +137,13 @@ final class MessagingAdminController
                 'vars' => ['{{1}}' => 'Patient name', '{{2}}' => 'Clinic name', '{{3}}' => 'Prescription URL'],
                 'cap' => 'Counts against the clinic\'s monthly quota + the matching rule.',
             ],
+            'rx_whatsapp_doc' => [
+                'title' => 'Prescription PDF on WhatsApp → patient (on behalf of the doctor)',
+                'trigger' => 'The doctor clicks "Complete & send WhatsApp" on a visit, or "Send on WhatsApp" / "Send again" on a completed visit. Meta template must have a DOCUMENT header; the PDF is attached from the secure /rx/ link.',
+                'to' => 'The patient (joined-clinic chart)',
+                'vars' => ['{{1}}' => 'Patient name', '{{2}}' => 'Doctor name (without "Dr.")', '{{3}}' => 'Clinic name', '{{4}}' => 'Visit date', '{{5}}' => 'Clinic phone'],
+                'cap' => 'Uses the clinic\'s WhatsApp prescription allowance (free per month + purchased packs), NOT the general quota. See Rx WhatsApp. Never falls back to SMS.',
+            ],
             'diet_plan_shared' => [
                 'title' => 'Diet plan shared → patient',
                 'trigger' => 'A joined clinic shares a diet plan with the patient.',
@@ -192,7 +199,7 @@ final class MessagingAdminController
                 'title' => 'Joined-clinic patient care',
                 'desc' => 'Messages a paying/joined clinic sends to its own patients. These consume the clinic\'s monthly quota.',
                 'color' => 'text-slate-700',
-                'keys' => ['prescription_ready', 'rx_delivery', 'diet_plan_shared', 'follow_up_reminder'],
+                'keys' => ['rx_whatsapp_doc', 'prescription_ready', 'rx_delivery', 'diet_plan_shared', 'follow_up_reminder'],
             ],
             [
                 'title' => 'Doctor onboarding',

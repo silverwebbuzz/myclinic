@@ -148,11 +148,35 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
     if (strlen($waPhone) === 10) {
         $waPhone = '91' . $waPhone; // bare Indian mobile — add country code
     }
-    $waText = 'Prescription for ' . ($patient['name'] ?? '')
-        . ' (' . date('d M Y', strtotime((string) ($visit['visited_at'] ?? 'now'))) . ")\n"
-        . implode("\n", $rxSummaryLines)
-        . "\n— " . ($visit['doctor_name'] ?? '');
-    $waHref = 'https://wa.me/' . $waPhone . '?text=' . rawurlencode($waText);
+
+    // WhatsApp prescription allowance (free monthly + purchased) for the
+    // completed-visit card. Wrapped: the page must render even pre-patch.
+    $rxWa = null;          // completed-visit card (resend)
+    $rxWaLast = null;
+    $rxWaFlash = null;
+    $rxWaComplete = null;  // editable visit: "Complete & send WhatsApp" option
+    $rxWaDefault = true;   // clinic setting: which Complete button is the main one
+    try {
+        $rxClinicId = (int) \App\Core\RequestContext::clinicId();
+        $rxStatus = \App\Services\RxWhatsAppService::status($rxClinicId);
+        $rxLive = !empty($rxStatus['ready']) && !empty($rxStatus['enabled']);
+        if ($rxLive && !$editable && $rxSummaryLines !== [] && $waPhone !== '') {
+            $rxWa = $rxStatus;
+            $rxWaLast = \App\Services\RxWhatsAppService::lastSendForVisit($rxClinicId, (int) $visitId);
+        }
+        if ($rxLive && $editable) {
+            $rxWaComplete = $rxStatus;
+            $rxCfg = \App\Services\OnboardingService::specialtyConfig($rxClinicId) ?? [];
+            $rxPrefs = $rxCfg['notification_prefs'] ?? null;
+            if (is_string($rxPrefs)) {
+                $rxPrefs = json_decode($rxPrefs, true);
+            }
+            $rxWaDefault = !is_array($rxPrefs) || !array_key_exists('rx_delivery', $rxPrefs) || !empty($rxPrefs['rx_delivery']);
+        }
+    } catch (\Throwable $e) {
+        $rxWa = null;
+        $rxWaComplete = null;
+    }
     ?>
     <?php if (!empty($_GET['rx_sent'])): ?>
     <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
@@ -179,17 +203,6 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                  even when no medicine was prescribed. -->
             <a href="/prescriptions/<?= $visitId ?>/pdf" target="_blank" class="ui-btn ui-btn-primary ui-btn-sm">Print prescription (A5)</a>
             <a href="/prescriptions/<?= $visitId ?>/pdf?paper=a4" target="_blank" class="ui-btn ui-btn-secondary ui-btn-sm">A4</a>
-            <?php if ($rxSummaryLines !== []): ?>
-            <?php if ($waPhone !== ''): ?>
-            <!-- Sends from the clinic's WhatsApp number via the notification
-                 queue (same rx_delivery message the app sends on completion). -->
-            <form method="post" action="/visits/<?= $visitId ?>/send-rx" class="inline">
-                <input type="hidden" name="_csrf" value="<?= htmlspecialchars($csrf) ?>">
-                <button type="submit" class="ui-btn ui-btn-primary ui-btn-sm">Send to patient's WhatsApp</button>
-            </form>
-            <a href="<?= htmlspecialchars($waHref) ?>" target="_blank" rel="noopener" class="ui-btn ui-btn-secondary ui-btn-sm">Open in my WhatsApp</a>
-            <?php endif; ?>
-            <?php endif; ?>
             <a href="/appointments/new?patient_id=<?= (int) $patient['id'] ?>" class="ui-btn ui-btn-secondary ui-btn-sm">Book follow-up</a>
             <?php if (!empty($visitInvoice)): ?>
             <a href="/billing/<?= (int) $visitInvoice['id'] ?>" class="text-sm font-medium text-brand hover:underline">
@@ -199,6 +212,8 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
         </div>
     </div>
     <?php endif; ?>
+
+    <?php if ($rxWa !== null) { require __DIR__ . '/partials/rx_whatsapp_card.php'; } ?>
 
     <?php if (!empty($occExam)) { require __DIR__ . '/partials/occupational.php'; } ?>
 
@@ -973,9 +988,42 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                 <span>Share this prescription to the patient's eClinicPro app</span>
                             </label>
                         <?php endif; ?>
-                        <button type="submit" class="ui-btn ui-btn-primary">
-                            Complete visit
-                        </button>
+                        <input type="hidden" name="send_whatsapp" value="0">
+                        <!-- Print opens the prescription in a new tab right after saving,
+                             before the visit is locked. Remembered on this computer. -->
+                        <label class="flex items-center gap-2 text-xs text-slate-600">
+                            <input type="checkbox" x-model="printOnComplete"
+                                   @change="try { localStorage.setItem('ecp_print_on_complete', printOnComplete ? '1' : '0') } catch (e) {}"
+                                   class="rounded border-slate-300 text-brand focus:ring-brand">
+                            <span>Also print the prescription on completing</span>
+                        </label>
+                        <?php
+                        $rxWaCan = $rxWaComplete !== null && $waPhone !== '' && (int) $rxWaComplete['total_left'] > 0;
+                        $rxWaMain = $rxWaCan && $rxWaDefault;
+                        ?>
+                        <div class="flex flex-wrap justify-end gap-2">
+                            <button type="submit" data-wa="0" class="ui-btn <?= $rxWaMain ? 'ui-btn-secondary' : 'ui-btn-primary' ?>">
+                                Complete visit
+                            </button>
+                            <?php if ($rxWaCan): ?>
+                            <button type="submit" data-wa="1"
+                                    x-show="(prescriptions || []).some(p => p.drug_id || p.remedy_id || p.drug_name)"
+                                    class="ui-btn <?= $rxWaMain ? 'ui-btn-primary' : 'ui-btn-secondary' ?>">
+                                Complete &amp; send WhatsApp
+                            </button>
+                            <?php endif; ?>
+                        </div>
+                        <?php if ($rxWaComplete !== null): ?>
+                        <p class="text-xs text-slate-400">
+                            <?php if ($waPhone === ''): ?>
+                                No mobile number for this patient, so WhatsApp isn't available.
+                            <?php elseif ((int) $rxWaComplete['total_left'] > 0): ?>
+                                WhatsApp: <?= (int) $rxWaComplete['total_left'] ?> left this month. Send only if the patient agreed.
+                            <?php else: ?>
+                                No WhatsApp prescriptions left this month. <a href="/prescriptions/whatsapp" class="text-brand hover:underline">Buy more</a>
+                            <?php endif; ?>
+                        </p>
+                        <?php endif; ?>
                     </form>
                 <?php endif; ?>
             </div>
@@ -1374,6 +1422,7 @@ function visitScreenV2(cfg) {
         chargesStatus: 'idle',
         chargesLabel: '',
         _completing: false,           // re-entrancy guard for confirmComplete
+        printOnComplete: (() => { try { return localStorage.getItem('ecp_print_on_complete') === '1'; } catch (e) { return false; } })(),
         prescriptionsCleared: false,  // set when doctor deliberately removes all meds
 
         // Call on any user edit so manual save / complete knows there's something to persist.
@@ -1487,10 +1536,30 @@ function visitScreenV2(cfg) {
             // Grab the form NOW: currentTarget is only valid during dispatch,
             // and the confirm dialog below awaits.
             const form = ev.currentTarget || ev.target;
+            // Which button: "Complete visit" or "Complete & send WhatsApp".
+            // form.submit() below doesn't carry the clicked button, so copy it.
+            const sendWa = !!(ev.submitter && ev.submitter.dataset && ev.submitter.dataset.wa === '1');
             if (this._completing) return;             // guard against double-submit
-            if (!await uiConfirm('The visit will be locked read-only once completed.', {
-                title: 'Complete this visit?', confirmLabel: 'Complete visit',
+            const doPrint = !!this.printOnComplete;
+            const what = [sendWa ? 'the prescription will be sent to the patient\'s WhatsApp' : '',
+                          doPrint ? 'the prescription will open for printing' : ''].filter(Boolean).join(', and ');
+            if (!await uiConfirm('The visit will be locked read-only once completed' + (what ? ', and ' + what : '') + '.', {
+                title: 'Complete this visit?',
+                confirmLabel: sendWa ? 'Complete & send WhatsApp' : 'Complete visit',
             })) return;
+
+            // Open the print tab NOW, inside the click, so popup blockers allow
+            // it; it's pointed at the PDF once everything is saved.
+            let printWin = null;
+            if (doPrint) {
+                printWin = window.open('', '_blank');
+                if (printWin) {
+                    try { printWin.opener = null; printWin.document.title = 'Preparing prescription…'; } catch (e) {}
+                }
+            }
+            const closePrint = () => { if (printWin) { try { printWin.close(); } catch (e) {} } };
+            const waInput = form.querySelector('[name="send_whatsapp"]');
+            if (waInput) waInput.value = sendWa ? '1' : '0';
 
             this._completing = true;
             try {
@@ -1506,6 +1575,7 @@ function visitScreenV2(cfg) {
                               '.\n\nThe visit was NOT completed so your data is safe.',
                               { title: 'Visit not completed', danger: true });
                         this._completing = false;
+                        closePrint();
                         return;
                     }
                 }
@@ -1516,6 +1586,7 @@ function visitScreenV2(cfg) {
                           '.\n\nThe visit was NOT completed so your data is safe. ' +
                           'Fix the issue and try again.', { title: 'Visit not completed', danger: true });
                     this._completing = false;
+                    closePrint();
                     return;
                 }
                 // Attach a full snapshot for the server-side complete handler
@@ -1524,10 +1595,15 @@ function visitScreenV2(cfg) {
                 if (payloadInput) {
                     payloadInput.value = JSON.stringify(this.payload());
                 }
+                // Everything is saved: the PDF now matches the screen.
+                if (printWin) {
+                    printWin.location.href = '/prescriptions/' + this.visitId + '/pdf';
+                }
                 // Save confirmed persisted — now it is safe to lock the visit.
                 form.submit();
             } catch (e) {
                 this._completing = false;
+                closePrint();
                 uiAlert('Unexpected error before completing the visit. It was NOT completed — your data is safe. Please try again.', { title: 'Visit not completed', danger: true });
             }
         },

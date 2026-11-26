@@ -1,5 +1,5 @@
 <?php
-$photoUrl = !empty($patient['photo_path']) ? '/' . ltrim($patient['photo_path'], '/') : null;
+$photoUrl = !empty($patient['photo_path']) ? '/patients/' . (int) $patient['id'] . '/photo?v=' . substr(md5((string) $patient['photo_path']), 0, 8) : null;
 ?>
 <div class="space-y-6">
     <?php if (!empty($created)): ?>

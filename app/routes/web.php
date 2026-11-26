@@ -93,6 +93,11 @@ return static function (RouteRegistrar $router): void {
     $router->get('/api/check-username', [AuthController::class, 'checkUsername']);
 
     $router->post('/webhooks/razorpay', [WebhookController::class, 'razorpay']);
+    // Patient's secure prescription link (WhatsApp/email). No login: the token
+    // is signed + expires in 30 days. Meta also fetches the PDF from here.
+    $router->get('/rx/{token}', [\App\Controllers\RxShareController::class, 'show']);
+    // Patient's signed invoice / diet-plan link (WhatsApp/email). No login.
+    $router->get('/d/{type}/{token}', [\App\Controllers\DocumentLinkController::class, 'show']);
     // Shiprocket tracking. The URL avoids the words "shiprocket"/"sr", which Shiprocket rejects in webhook URLs (VERIFY).
     $router->post('/webhooks/store-tracking', [WebhookController::class, 'storeTracking']);
     // Meta WhatsApp: GET = verify handshake, POST = delivery/inbound events.
@@ -105,6 +110,9 @@ return static function (RouteRegistrar $router): void {
         $app->post('/dashboard/checklist/dismiss', [DashboardController::class, 'dismissChecklist']);
 
         $app->get('/prescriptions', [PrescriptionController::class, 'index']);
+        $app->get('/prescriptions/whatsapp', [\App\Controllers\RxWhatsAppController::class, 'index']);
+        $app->post('/prescriptions/whatsapp/buy', [\App\Controllers\RxWhatsAppController::class, 'buy']);
+        $app->get('/prescriptions/whatsapp/return', [\App\Controllers\RxWhatsAppController::class, 'paymentReturn']);
         $app->get('/prescriptions/{visitId}/pdf', [PrescriptionController::class, 'downloadPdf']);
         $app->get('/vitals', [VitalsController::class, 'index']);
 
@@ -220,6 +228,7 @@ return static function (RouteRegistrar $router): void {
         $app->post('/visits/{id}/unlock', [VisitController::class, 'unlock']);
         $app->post('/visits/{id}/diet', [VisitController::class, 'saveDiet']);
         $app->post('/visits/{id}/diet/share', [VisitController::class, 'shareDiet']);
+        $app->get('/visits/{id}/diet/{planId}/pdf', [VisitController::class, 'dietPdf']);
         $app->post('/visits/{id}/send-rx', [VisitController::class, 'sendRxWhatsApp']);
         // Workforce Health: occupational exam + fitness certificate on a corporate visit
         $app->post('/visits/{id}/occupational/sign', [\App\Controllers\OccExamController::class, 'sign']);
@@ -276,6 +285,7 @@ return static function (RouteRegistrar $router): void {
         $app->get('/patients', [PatientController::class, 'index']);
         $app->get('/patients/new', [PatientController::class, 'create']);
         $app->post('/patients/new', [PatientController::class, 'store']);
+        $app->get('/patients/{id}/photo', [PatientController::class, 'photo']);
         $app->get('/patients/{id}', [PatientController::class, 'show']);
         $app->get('/patients/{id}/edit', [PatientController::class, 'edit']);
         $app->post('/patients/{id}', [PatientController::class, 'update']);
@@ -531,6 +541,9 @@ return static function (RouteRegistrar $router): void {
 
         // WhatsApp/SMS messaging control centre
         $admin->get('/messaging', [MessagingAdminController::class, 'index']);
+        $admin->get('/rx-whatsapp', [\App\Controllers\RxWhatsAppAdminController::class, 'index']);
+        $admin->post('/rx-whatsapp/settings', [\App\Controllers\RxWhatsAppAdminController::class, 'saveSettings']);
+        $admin->post('/rx-whatsapp/clinic/{id}', [\App\Controllers\RxWhatsAppAdminController::class, 'saveClinic']);
         $admin->post('/messaging/connection', [MessagingAdminController::class, 'saveConnection']);
         $admin->post('/messaging/template/{id}', [MessagingAdminController::class, 'saveTemplate']);
         $admin->post('/messaging/rule/{id}', [MessagingAdminController::class, 'saveRule']);

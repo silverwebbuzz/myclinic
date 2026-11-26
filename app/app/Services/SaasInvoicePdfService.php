@@ -101,8 +101,10 @@ final class SaasInvoicePdfService
             . '<th style="padding:8px;">Description</th><th style="padding:8px;text-align:right;">Amount</th>'
             . '</tr></thead><tbody>'
             . '<tr><td style="padding:8px;border-bottom:1px solid #e2e8f0;">'
-            . 'eClinicPro <strong>' . $e($planLabel) . '</strong> plan'
-            . ($cycle !== '' ? ' — ' . $e($cycle) . ' subscription' : '') . $period
+            . (!empty($invoice['item_description'])
+                ? $e($invoice['item_description'])
+                : 'eClinicPro <strong>' . $e($planLabel) . '</strong> plan'
+                    . ($cycle !== '' ? ' — ' . $e($cycle) . ' subscription' : '') . $period)
             . '</td>'
             . '<td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;">' . $symbol . number_format($base, 2) . '</td></tr>'
             . '</tbody></table>'

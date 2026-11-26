@@ -150,7 +150,7 @@ $rzpDash = 'https://dashboard.razorpay.com/app/payments/';
                             </div>
                         </td>
                         <td class="px-4 py-3">
-                            <div><?= htmlspecialchars(ucfirst((string) ($r['plan_id'] ?? ''))) ?> · <?= htmlspecialchars((string) ($r['billing_cycle'] ?? '')) ?></div>
+                            <div><?php if (!empty($r['item_description'])): ?><?= htmlspecialchars((string) $r['item_description']) ?><?php else: ?><?= htmlspecialchars(ucfirst((string) ($r['plan_id'] ?? ''))) ?> · <?= htmlspecialchars((string) ($r['billing_cycle'] ?? '')) ?><?php endif; ?></div>
                             <?php if (!empty($r['period_start'])): ?>
                             <div class="text-xs text-slate-500">
                                 <?= date('d M Y', strtotime((string) $r['period_start'])) ?> → <?= !empty($r['period_end']) ? date('d M Y', strtotime((string) $r['period_end'])) : '—' ?>

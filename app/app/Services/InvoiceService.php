@@ -570,10 +570,8 @@ final class InvoiceService
                 ->where('id', '=', $invoiceId)
                 ->update(['pdf_path' => $pdfPath]);
 
-            $pdfUrl = $pdfPath;
-            if ($pdfUrl !== '' && str_starts_with($pdfUrl, '/')) {
-                $pdfUrl = rtrim($_ENV['APP_URL'] ?? '', '/') . $pdfUrl;
-            }
+            // Signed, expiring link for the patient (the file is private).
+            $pdfUrl = DocumentLinkService::url('invoice', $clinicId, $invoiceId);
 
             $paidPayload = [
                 'patient_name' => $patient['name'],

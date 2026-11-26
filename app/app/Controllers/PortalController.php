@@ -109,7 +109,9 @@ final class PortalController
             return Response::html('Download link expired or invalid', 404);
         }
 
-        $path = dirname(__DIR__, 2) . '/public' . $file['path'];
+        // Files live in private storage ("storage/..."); older rows may
+        // still hold public "/uploads/..." paths until the move script runs.
+        $path = \App\Support\PrivateFile::abs((string) $file['path']);
         if (!is_file($path)) {
             return Response::html('File not found', 404);
         }

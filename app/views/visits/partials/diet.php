@@ -46,7 +46,7 @@ $week = is_array($plan['plan_json'] ?? null) ? $plan['plan_json'] : ($defaultDie
         <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-white text-sm">Share PDF + WhatsApp</button>
     </form>
     <?php if (!empty($plan['pdf_path'])): ?>
-    <a href="<?= htmlspecialchars($plan['pdf_path']) ?>" target="_blank" class="text-sm text-emerald-600">View diet PDF</a>
+    <a href="/visits/<?= (int) $visit['id'] ?>/diet/<?= (int) $plan['id'] ?>/pdf" target="_blank" class="text-sm text-emerald-600">View diet PDF</a>
     <?php endif; ?>
     <?php endif; ?>
 </section>

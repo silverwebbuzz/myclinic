@@ -91,6 +91,13 @@ final class WhatsAppWebhookService
             if ($notWhatsApp) {
                 self::cacheWhatsApp($to, 'no');
             }
+            // Prescription on WhatsApp: Meta couldn't deliver it → give the
+            // message back to the clinic's allowance. No SMS fallback for it.
+            if (($row['template'] ?? '') === RxWhatsAppService::TEMPLATE) {
+                $payload = json_decode((string) ($row['payload'] ?? '{}'), true) ?: [];
+                RxWhatsAppService::releaseForNotification((int) $row['clinic_id'], $payload, (int) $row['id'], 'Meta delivery failed (code ' . $code . ')');
+                return;
+            }
             // Webhook-driven SMS fallback (only once; SMS rows never re-fall-back).
             if (empty($row['fallback_of']) && ($row['channel'] ?? '') === 'whatsapp') {
                 self::enqueueSmsFallback($row);
