@@ -31,7 +31,7 @@ $heroBody = $hv['body'] ?? [
 ];
 $heroBar = $spec['heroBar'] ?? [
     ['patients', 'Patient Management', 'Store and manage complete patient history securely.'],
-    ['calendar', 'Appointment Scheduling', 'Manage appointments, reminders & follow-ups easily.'],
+    ['calendar', 'Appointment Scheduling', 'Manage appointments and follow-ups easily.'],
     ['rx', 'Prescriptions', 'Create, save & print prescriptions quickly.'],
     ['billing', 'Billing & Invoices', 'Generate invoices, track payments & due.'],
     ['medicine', 'Medicine Management', 'Maintain medicine stock, inventory & alerts.'],
@@ -72,8 +72,8 @@ $kfTitleBrand = $kf['titleBrand'] ?? 'EClinicPro';
 $kfTitleSuffix = $kf['titleSuffix'] ?? $labelSingular . ' Software';
 $kfSub = $kf['sub'] ?? 'Everything you need to manage your clinic efficiently and focus on what matters most – your patients.';
 $kfCards = $kf['cards'] ?? [
-    ['icon' => 'patient', 'title' => 'Patient Management', 'items' => ['Complete digital patient records', 'Follow-up reminders', 'Medical history tracking', 'Secure cloud storage'], 'mock' => 'patient'],
-    ['icon' => 'calendar', 'title' => 'Appointment Management', 'items' => ['Online and offline booking', 'Queue management', 'Automated reminders', 'Daily schedule overview'], 'mock' => 'calendar'],
+    ['icon' => 'patient', 'title' => 'Patient Management', 'items' => ['Complete digital patient records', 'Follow-up tracking', 'Medical history tracking', 'Secure cloud storage'], 'mock' => 'patient'],
+    ['icon' => 'calendar', 'title' => 'Appointment Management', 'items' => ['Online and offline booking', 'Queue management', 'Follow-up & overdue tracking', 'Daily schedule overview'], 'mock' => 'calendar'],
     ['icon' => 'rx', 'title' => 'Prescription Management', 'items' => ['Digital prescriptions', 'Print and share easily', 'Save frequently used medicines'], 'mock' => 'rx'],
     ['icon' => 'billing', 'title' => 'Billing and Invoice Management', 'items' => ['Professional invoices', 'Track paid & due', 'Download and email invoices'], 'mock' => 'billing'],
     ['icon' => 'medicine', 'title' => 'Medicine and Inventory Management', 'items' => ['Stock management', 'Low stock alerts', 'Expiry date tracking'], 'mock' => 'medicine'],
@@ -140,11 +140,11 @@ $cmpDigitalTitle = $cmp['digitalTitle'] ?? 'EClinicPro';
 $cmpDigitalSub = $cmp['digitalSub'] ?? 'Smart, automated and efficient clinic management.';
 $cmpDigitalItems = $cmp['digitalItems'] ?? [
     'Digital, secure, and easy-to-access patient records.',
-    'Smart reminders for appointments.',
+    'Every appointment on one calendar.',
     'Instant prescription creation and access.',
     'Professional invoice generation and payment tracking.',
     'Real-time medicine stock and expiry tracking.',
-    'Automated follow-up reminders.',
+    'Follow-up tracking with overdue flags.',
     'Instant daily, weekly, and monthly reports.',
     'Seamless multi-clinic and user management.',
 ];

@@ -30,7 +30,7 @@ $inr = static fn (float $n, int $dec = 0): string => '₹' . number_format($n, $
 
 $included = [
     ['🗂️', 'Patient records', 'Visits, history, allergies, attachments — searchable in a second.'],
-    ['💊', 'E-prescriptions', 'Print or send on WhatsApp. Drug database with smart dosing.'],
+    ['💊', 'Prescriptions + 100 on WhatsApp', 'A professional Rx pad with findings and diagnosis. Print it, or send it on WhatsApp: 100 a month included.'],
     ['📅', 'Appointments & queue', 'Online booking, walk-ins and a live token queue.'],
     ['🧾', 'Billing & GST invoices', 'Invoices, receipts, payments and Tally-ready exports.'],
     ['🩺', 'Vitals & follow-ups', 'Diagnosis, vitals charts and automatic follow-up tracking.'],
@@ -38,13 +38,12 @@ $included = [
     ['🎥', 'Teleconsultation', 'Video consults built in — no extra app for patients.'],
     ['🌐', 'Public doctor profile', 'Get found and booked on eclinicpro.com.'],
     ['📊', 'Reports & analytics', 'Daily collections, visits and patient trends.'],
-    ['👥', 'Unlimited staff & patients', 'Add doctors, nurses and receptionists at no extra cost.'],
+    ['👥', 'Unlimited staff & patients', 'Add a receptionist in seconds: name and mobile number, no email needed.'],
     ['🔒', 'Secure & backed up', 'Encrypted data, role-based access and full audit log.'],
     ['🤝', 'Free onboarding help', 'We help you set up and import your existing data.'],
 ];
 
 $addons = [
-    ['/assets/img/icon/whatsapp-summaries.png', 'Patient Connect', 'WhatsApp automation: appointment reminders, prescription delivery and follow-up nudges. Cuts no-shows in half.', '+₹499 / month'],
     ['/assets/img/icon/clinic-network.png', 'Clinic Network', 'Add an extra branch under one account. Shared patient records, separate queues per branch.', '+₹999 / month per branch'],
 ];
 
@@ -66,6 +65,7 @@ $faqs = [
     ['How do I pay?', 'Payment is handled by Razorpay. You can pay with UPI, debit or credit card, net banking or wallets.'],
     ['When can I start using it?', 'Immediately. As soon as you sign up your account is active and you can set up your clinic — no payment needed to start.'],
     ['How does monthly billing work?', 'You pay ' . $priceLabel . ' + GST for one month at a time. We remind you before the month ends and you renew from Subscription in your doctor panel in a couple of clicks. No long contract, and your data is never deleted.'],
+    ['How many prescriptions can I send on WhatsApp?', 'Every plan includes 100 WhatsApp prescriptions a month for your clinic. The count resets on the 1st. If you need more, buy a top-up pack from WhatsApp prescriptions in your doctor panel. Packs never expire, are used after your free 100, and come with a GST invoice. Messages that can\'t be delivered are not counted.'],
     ['Can I add more doctors or staff later?', 'Yes. Staff users are unlimited on every plan. Only extra clinic branches are charged, through the Clinic Network add-on.'],
 ];
 
@@ -399,6 +399,7 @@ require __DIR__ . '/partials/header.php';
                     <li>Patient Records</li>
                     <li>Appointments &amp; walk-in queue</li>
                     <li>Prescriptions &amp; Pharmacy</li>
+                    <li><strong>100 WhatsApp prescriptions / month</strong></li>
                     <li>Billing &amp; invoicing (GST-ready)</li>
                     <li>Vitals, diagnosis, follow-up tracking</li>
                     <li>Daily reports &amp; analytics</li>

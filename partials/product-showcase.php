@@ -54,7 +54,7 @@ $ecpScreens = [
             'Search by name, phone or UHID — or add a new patient inline',
             'Only genuinely free slots are offered',
             'Pre-booked, walk-in, follow-up or online visit types',
-            'WhatsApp / SMS confirmation and reminders sent automatically',
+            'The appointment lands on the calendar and the day’s queue instantly',
         ],
     ],
     [

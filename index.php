@@ -634,11 +634,11 @@ require __DIR__ . '/partials/header.php';
                 <div class="hp-feat-grid">
                     <?php foreach (
                         [
-                            ['<img src="/assets/img/icon/online-booking-page.png" alt="Online bookings">', 'Online bookings', 'Patients book from your public profile. WhatsApp confirmations and reminders included.'],
+                            ['<img src="/assets/img/icon/online-booking-page.png" alt="Online bookings">', 'Online bookings', 'Patients book from your public profile and the request lands straight in your panel.'],
                             ['<img src="/assets/img/icon/structured-visit-notes.png" alt="Patient records">', 'Patient records', 'Encrypted records, history and contact info — always one search away.'],
-                            ['<img src="/assets/img/icon/prescriptionl.svg" alt="Prescriptions">', 'Prescriptions', 'Signed digital Rx, delivered to the patient on WhatsApp before they leave.'],
-                            ['<img src="/assets/img/icon/invoicing.png" alt="Billing & invoices">', 'Billing & invoices', 'Clean, GST-ready invoices in seconds. WhatsApp delivery.'],
-                            ['<img src="/assets/img/icon/refill-requests.svg" alt="Follow-ups">', 'Follow-ups', 'Never lose a follow-up. Automatic reminders, overdue tracking, a calm queue.'],
+                            ['<img src="/assets/img/icon/prescriptionl.svg" alt="Prescriptions">', 'Prescriptions', 'A professional Rx pad with findings and diagnosis. Print it, send it on WhatsApp, or both.'],
+                            ['<img src="/assets/img/icon/invoicing.png" alt="Billing & invoices">', 'Billing & invoices', 'Clean, GST-ready invoices in seconds. Print or download as PDF.'],
+                            ['<img src="/assets/img/icon/refill-requests.svg" alt="Follow-ups">', 'Follow-ups', 'Never lose a follow-up. Due and overdue patients in one list, a calm queue.'],
                             ['<img src="/assets/img/icon/vitals-trend-charts.png" alt="Reports">', 'Reports', 'Revenue, top diagnoses, patient retention. Numbers that matter, nothing else.'],
                         ] as [$ic, $t, $d]
                     ): ?>
@@ -730,56 +730,51 @@ require __DIR__ . '/partials/header.php';
     </div>
 </section>
 
-<!-- ============ WHATSAPP / SMS OVERVIEW ============ -->
+<!-- ============ WHATSAPP PRESCRIPTIONS (100/month included) ============ -->
 <section class="hp-wa">
     <div class="wrap">
         <div class="hp-wa-grid">
             <div class="reveal">
-                <!-- WhatsApp chat mock -->
+                <!-- WhatsApp chat mock: mirrors the real approved template
+                     (document header + body) the patient receives. -->
                 <div class="hp-wa-chat">
                     <div class="hp-wa-bubble in">
-                        <div class="hp-wa-clinic">Sunrise Clinic</div>
-                        <div>Hi Riya — your appointment with Dr. Sharma is confirmed for tomorrow 11 AM. Reply 1 to confirm.</div>
-                        <div class="hp-wa-time">9:47</div>
-                    </div>
-                    <div class="hp-wa-bubble in">
+                        <div class="hp-wa-clinic">eClinicPro</div>
                         <div class="hp-wa-file">
                             <span class="hp-wa-pdf">PDF</span>
                             <div>
-                                <div class="hp-wa-fname">Rx_Riya_28May.pdf</div>
-                                <div class="hp-wa-fmeta">2 medicines · Dr. A. Sharma</div>
+                                <div class="hp-wa-fname">Prescription-28-May-2026.pdf</div>
+                                <div class="hp-wa-fmeta">Findings · Diagnosis · 3 medicines</div>
                             </div>
                         </div>
-                        <div class="hp-wa-time">9:48</div>
+                        <div style="margin-top:8px;">Hello Riya,<br>Your prescription from Dr. A. Sharma at Sunrise Clinic, dated 28 May 2026, is attached.<br>Please take your medicines as advised. Get well soon!</div>
+                        <div class="hp-wa-time">11:42</div>
                     </div>
-                    <div class="hp-wa-bubble out">
-                        <div>Confirmed, thank you doctor 🙏</div>
-                        <div class="hp-wa-time">9:49 ✓✓</div>
-                    </div>
-                    <div class="hp-wa-toast">✓ Sent automatically · SMS fallback if no WhatsApp</div>
+                    <div class="hp-wa-toast">✓ Sent from the visit screen · 87 of 100 left this month</div>
                 </div>
             </div>
             <div class="hp-wa-copy reveal">
-                <span class="eyebrow">Included in your plan</span>
-                <h2 class="h-section">WhatsApp first. SMS as backup. Never a missed message.</h2>
+                <span class="eyebrow">New · Included in your plan</span>
+                <h2 class="h-section">100 WhatsApp prescriptions every month. Included.</h2>
                 <p class="hp-sub">
-                    Appointment confirmations, reminders, prescription delivery and
-                    follow-up nudges go out on WhatsApp automatically. No WhatsApp on
-                    that number? We fall back to SMS — so the message always lands.
+                    Finish the visit and the prescription PDF lands on your patient's
+                    WhatsApp, with your name and your clinic on it. Patient doesn't use
+                    WhatsApp? Print it instead, or do both, in the same click.
                 </p>
                 <ul class="hp-wa-list">
                     <?php foreach (
                         [
-                            'Booking confirmations & reminders that cut no-shows',
-                            'Signed prescriptions delivered as a PDF',
-                            'Follow-up nudges, sent at sensible hours only',
-                            'Smart cost controls — daily/monthly caps you set',
+                            '100 WhatsApp prescriptions a month, included in your plan',
+                            '“Complete & send WhatsApp”, print, or both: one click at the end of the visit',
+                            'A professional prescription pad: examination findings, diagnosis, vitals and medicines',
+                            'See when it’s delivered and read; undelivered messages aren’t counted',
+                            'Need more? Top up from your panel. Packs never expire and come with a GST invoice',
                         ] as $f
                     ): ?>
                         <li><span class="tick">✓</span><?= e($f) ?></li>
                     <?php endforeach; ?>
                 </ul>
-                <p class="hp-doc-fine">WhatsApp + SMS messaging is <strong>built into every plan</strong> — no extra add-on, no surprise bill.</p>
+                <p class="hp-doc-fine" style="color:#64748b;">Sent from eClinicPro’s official WhatsApp Business number. Patients can reply STOP anytime, and we honour it.</p>
             </div>
         </div>
     </div>
@@ -839,8 +834,8 @@ require __DIR__ . '/partials/header.php';
                     </svg>
                 </div>
                 <div>
-                    <div class="pill-title">WhatsApp Alerts</div>
-                    <div class="pill-sub">Automated reminders &amp; follow-ups</div>
+                    <div class="pill-title">WhatsApp Prescriptions</div>
+                    <div class="pill-sub">100 a month, included in your plan</div>
                 </div>
             </div>
             <div class="pill">
@@ -975,8 +970,8 @@ require __DIR__ . '/partials/header.php';
                         </svg>
                     </div>
                     <div>
-                        <div class="right-title">WhatsApp Reminders</div>
-                        <div class="right-desc">Automated alerts reduce no-shows</div>
+                        <div class="right-title">WhatsApp Prescriptions</div>
+                        <div class="right-desc">Prescription PDF to the patient, 100 a month</div>
                     </div>
                 </div>
 
@@ -1033,7 +1028,7 @@ require __DIR__ . '/partials/header.php';
                             <div class="feat-check"><svg viewBox="0 0 12 12">
                                     <polyline points="2,6 5,9 10,3" />
                                 </svg></div>
-                            <span class="feat-txt">WhatsApp + SMS messaging built in</span>
+                            <span class="feat-txt">100 WhatsApp prescriptions / month included</span>
                         </div>
                         <div class="feat-item">
                             <div class="feat-check"><svg viewBox="0 0 12 12">
@@ -1095,7 +1090,8 @@ $faqPatients = [
 ];
 $faqDoctors = [
     ['What does it cost?', 'One monthly plan: ' . ecp_plan_price_label() . ' (GST added at checkout). Everything to run a clinic is included, with a ' . (ecp_trial_offer_active() ? 'free trial till 15 Jan 2027 (Christmas Offer)' : '30-day free trial') . ' and no card required.'],
-    ['Is WhatsApp/SMS an extra add-on?', 'No. WhatsApp-first messaging with SMS fallback — confirmations, reminders, prescription delivery and follow-up nudges — is built into every plan at no extra cost.'],
+    ['Can I send prescriptions on WhatsApp?', 'Yes. Every plan includes 100 WhatsApp prescriptions a month. When you finish a visit, click “Complete & send WhatsApp” and the patient gets the prescription PDF with your name and clinic on it. Need more in a busy month? Buy a top-up pack from your panel. Packs never expire and come with a GST invoice.'],
+    ['What if my patient doesn\'t use WhatsApp?', 'Just print it. Tick “Also print” and click “Complete visit”. The prescription opens ready to print, with examination findings, diagnosis, vitals and medicines on a clean, professional pad. You can also print and send on WhatsApp together.'],
     ['Will patients actually find me?', 'Yes. Your public profile on eclinicpro.com\'s directory is included, so patients searching your city and specialty can discover and book you directly.'],
     ['Is my clinic and patient data secure?', 'Records are encrypted at rest and in transit, with per-clinic isolation and audit logging. You can export everything as PDF or JSON anytime.'],
     ['Can I claim a profile that\'s already listed?', 'Yes. If your clinic is already in the directory, claim it from your profile page — once verified you control your listing, availability and bookings.'],

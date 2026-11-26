@@ -141,7 +141,7 @@ $hsJsBust = @filemtime(__DIR__ . '/../assets/js/hero-slider.js') ?: time();
                     </div>
                     <div class="hh-feature hh-f1" style="--a:258deg;--r:.6" data-feature="Book Appointment" data-icon="calendar" data-sub="Choose your doctor<br>and time slot"></div>
                     <div class="hh-feature hh-f2" style="--a:322deg;--r:.53" data-feature="Doctor Availability" data-icon="stethoscope" data-sub="Real-time availability<br>& instant booking"></div>
-                    <div class="hh-feature hh-f3" style="--a:358deg;--r:.47" data-feature="Prescriptions" data-icon="pill" data-sub="Digital prescriptions<br>& medicine reminders"></div>
+                    <div class="hh-feature hh-f3" style="--a:358deg;--r:.47" data-feature="Prescriptions" data-icon="pill" data-sub="Digital prescriptions<br>on WhatsApp &amp; print"></div>
                     <div class="hh-feature hh-f4" style="--a:49deg;--r:.45" data-feature="Secure Payments" data-icon="wallet" data-sub="Multiple payment options<br>& transparent fees"></div>
                     <div class="phone-image">
 

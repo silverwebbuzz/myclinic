@@ -5,7 +5,7 @@
 require_once __DIR__ . '/partials/helpers.php';
 
 $pageTitle = 'Customer Stories — eClinicPro';
-$metaDesc = 'Four clinics, four specialties, four countries. The hard numbers and human stories behind clinics that switched to eClinicPro.';
+$metaDesc = 'Two clinics, two specialties. The hard numbers and human stories behind clinics that switched to eClinicPro.';
 $activePage = '';
 
 $stories = [
@@ -28,24 +28,6 @@ $stories = [
         'initials' => 'AS',
     ],
     [
-        'id' => 'whitfield',
-        'name' => 'Whitfield Dental',
-        'person' => 'Dr. James Whitfield · Dentist',
-        'location' => 'Toronto, Canada',
-        'yrs' => 'Customer since 2024',
-        'quote' => 'My recall rate went from 38% to 71% in the first quarter. That single number paid for the software for the next decade.',
-        'metrics' => [['+71%', 'Recall rate'], ['+30%', 'Plan acceptance'], ['$87k', 'Annual revenue lift']],
-        'body' => [
-            "Whitfield Dental is a two-chair practice in Toronto's east end. Dr. James Whitfield ran it on Excel and a wall calendar for 14 years. The pain wasn't billing or charting — it was recall.",
-            "\"People in Toronto don't think about their teeth until something hurts. We'd lose track of follow-ups for six months, a year. Then they'd come back with a root canal we could have caught at a routine cleaning.\"",
-            "After migrating to eClinicPro, every visit ends with a recall scheduled and tagged: 6-month cleaning, 3-month perio, annual whitening. WhatsApp reminders go out automatically — 30 days before, 7 days before, and the morning of.",
-            "But the bigger win was treatment plan acceptance. \"The quote PDF is so clean. Three procedures, total, materials, time. My patients used to ignore the email. Now they accept on their phone before they leave the parking lot.\"",
-        ],
-        'modules' => ['Dental charting', 'Skin imaging', 'Digital Rx', 'Billing & insurance', 'Analytics'],
-        'tint' => 'linear-gradient(135deg, #E8F1FC, #3B8EE8)',
-        'initials' => 'JW',
-    ],
-    [
         'id' => 'priya',
         'name' => 'Dr. Priya Iyer Homeopathy',
         'person' => 'Dr. Priya Iyer · Homeopath',
@@ -63,24 +45,6 @@ $stories = [
         'tint' => 'linear-gradient(135deg, #F0E0F8, #BF5AF2)',
         'initials' => 'PI',
     ],
-    [
-        'id' => 'pediacare',
-        'name' => 'PediaCare Clinic',
-        'person' => 'Dr. Amara Okonkwo · Pediatrician',
-        'location' => 'Lagos, Nigeria',
-        'yrs' => 'Customer since 2024',
-        'quote' => "Parents finally trust the schedule. Our on-time vaccination rate jumped from 64% to 91% in six months — and our work-life balance came back.",
-        'metrics' => [['+27pp', 'On-time vaccine rate'], ['4,200', 'Active patients'], ['12', 'Languages used']],
-        'body' => [
-            "PediaCare in Lagos serves 4,200 active patients across three associate pediatricians. The vaccination schedule was the chronic headache: paper cards lost, WhatsApp reminders forgotten, parents calling the clinic to ask \"is something due?\"",
-            "Dr. Amara Okonkwo had tried building a spreadsheet automation. \"It worked for three months and then I had a child whose mother said the system had her on the wrong schedule. That was the day we moved to eClinicPro.\"",
-            "The country-specific vaccine schedule, paired with WhatsApp reminders 30 days before each dose, lifted on-time rates from 64% to 91%. Parent satisfaction (measured by post-visit NPS) jumped too.",
-            "The weight-based dosing assistant became unexpectedly valuable. \"My junior associates were occasionally off on dosing — pediatric ranges are tight. Now the system calculates from the latest weight. We've had zero dosing errors flagged in 14 months.\"",
-        ],
-        'modules' => ['Growth charts', 'Weight-based dosing', 'Vaccine scheduler', 'WhatsApp summary', 'Patient records'],
-        'tint' => 'linear-gradient(135deg, #FFF0E0, #FF9F0A)',
-        'initials' => 'AO',
-    ],
 ];
 
 require __DIR__ . '/partials/header.php';
@@ -92,7 +56,7 @@ require __DIR__ . '/partials/header.php';
         <span class="eyebrow" style="display: block; margin-bottom: 16px;">Customer stories</span>
         <h1 class="h-display" style="font-size: clamp(40px, 5.5vw, 60px); letter-spacing: -1.3px;">Clinics that switched. And never looked back.</h1>
         <p class="lede" style="font-size: 19px; margin-top: 22px; max-width: 640px; margin-left: auto; margin-right: auto;">
-            Four clinics, four specialties, four countries. The hard numbers and the human stories behind them.
+            Two clinics, two specialties. The hard numbers and the human stories behind them.
         </p>
     </div>
 </section>
@@ -172,7 +136,7 @@ require __DIR__ . '/partials/header.php';
         </div>
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 900px; margin: 0 auto;" class="logo-grid">
             <?php foreach ([
-                'Sunrise Family · IN', 'Whitfield Dental · CA', 'PediaCare · NG', 'Iyer Homeopathy · IN',
+                'Sunrise Family · IN', 'Iyer Homeopathy · IN',
                 'Skin & Co · ES', 'Hill Family · AU', 'Bright Smiles · AE', 'Riverside Physio · UK',
                 'Northside Derma · US', 'Sato Clinic · JP', 'Vega Pediatrics · CO', 'Patel Wellness · UK',
             ] as $c): ?>

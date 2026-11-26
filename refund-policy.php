@@ -50,7 +50,7 @@ require __DIR__ . '/partials/header.php';
             <li>eClinicPro is billed as a single <strong>monthly plan</strong> (currently <?= e(ecp_plan_price_label()) ?>).</li>
             <li>Prices are exclusive of taxes; <strong>GST (currently 18%) is added at checkout</strong>.</li>
             <li>Payments are processed in INR through our payment gateway (Razorpay).</li>
-            <li>Optional add-ons (e.g., Patient Connect, Clinic Network) are billed monthly and can be cancelled at any time.</li>
+            <li>Optional add-ons (e.g., Clinic Network) are billed monthly and can be cancelled at any time.</li>
         </ul>
 
         <h2>3. Refunds</h2>
