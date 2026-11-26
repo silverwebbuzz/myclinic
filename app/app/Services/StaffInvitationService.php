@@ -154,8 +154,8 @@ final class StaffInvitationService
         }
     }
 
-    /** @return array{user_id: int, username: string, password: string, name: string, phone: ?string} */
-    public static function createAccount(int $clinicId, string $name, ?string $loginId, string $role): array
+    /** @return array{user_id: int, username: string, password: string, name: string, phone: ?string, role: string, must_change: bool} */
+    public static function createAccount(int $clinicId, string $name, ?string $loginId, string $role, ?string $password = null): array
     {
         if (!SeatService::canAddStaff($clinicId)) {
             throw new \RuntimeException('Seat limit reached. Upgrade your plan or purchase extra seats.');
@@ -170,7 +170,18 @@ final class StaffInvitationService
         $resolved = self::resolveLoginId($loginId, $name);
         $finalUsername = $resolved['username'];
         $phone = $resolved['phone'];
-        $password = self::generateTempPassword();
+        // The doctor may set the password themselves (quick "Add receptionist"
+        // card) — then staff can log straight in. Otherwise a temporary one is
+        // generated and must be changed on first login.
+        $password = $password !== null ? trim($password) : '';
+        $chosenByOwner = $password !== '';
+        if ($chosenByOwner) {
+            if (strlen($password) < 8 || !preg_match('/[A-Z]/', $password) || !preg_match('/[0-9]/', $password)) {
+                throw new \RuntimeException('Password must be at least 8 characters with one capital letter and one number.');
+            }
+        } else {
+            $password = self::generateTempPassword();
+        }
 
         $userId = QueryBuilder::table('users')->insert([
             'clinic_id' => $clinicId,
@@ -181,11 +192,13 @@ final class StaffInvitationService
             'password_hash' => password_hash($password, PASSWORD_BCRYPT),
             'role' => $role,
             'is_active' => 1,
-            'must_change_password' => 1,
+            'must_change_password' => $chosenByOwner ? 0 : 1,
         ]);
 
         return [
             'user_id' => $userId,
+            'role' => $role,
+            'must_change' => !$chosenByOwner,
             'username' => $finalUsername,
             'password' => $password,
             'name' => $name,

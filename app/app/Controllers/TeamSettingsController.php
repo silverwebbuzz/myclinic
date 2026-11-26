@@ -74,12 +74,17 @@ final class TeamSettingsController
                 trim((string) ($request->post['name'] ?? '')),
                 trim((string) ($request->post['login_id'] ?? '')) ?: null,
                 (string) ($request->post['role'] ?? 'receptionist'),
+                (string) ($request->post['password'] ?? '') ?: null,
             );
             AuditService::log($request, 'INSERT', 'users', (int) $result['user_id']);
             SessionFlash::put('staff_password_flash', [
                 'user_id' => (int) $result['user_id'],
                 'username' => $result['username'],
                 'password' => $result['password'],
+                'name' => $result['name'],
+                'role' => $result['role'],
+                'must_change' => $result['must_change'],
+                'created' => true,
             ]);
 
             return Response::redirect('/settings/team?message=created');

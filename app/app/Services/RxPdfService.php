@@ -25,6 +25,20 @@ final class RxPdfService
         $path = $dir . '/visit-' . (int) $visit['id'] . '.pdf';
         $rel = '/uploads/rx/' . (int) $clinic['id'] . '/visit-' . (int) $visit['id'] . '.pdf';
 
+        // Same pad the doctor prints (findings, diagnosis, vitals, medicines),
+        // so the patient's WhatsApp copy matches the paper one. Falls back to
+        // the plain layout below if that render fails.
+        if (class_exists(Mpdf::class)) {
+            try {
+                $full = PrescriptionPdfService::generate($visit, $patient, $clinic, $prescriptions, 'A5');
+                if (is_file($full) && @copy($full, $path)) {
+                    return $rel;
+                }
+            } catch (\Throwable $e) {
+                error_log('[RxPdfService] full layout failed, using plain: ' . $e->getMessage());
+            }
+        }
+
         $html = '<div style="font-family:sans-serif;padding:16px;">'
             . '<h2>' . htmlspecialchars((string) $clinic['name']) . '</h2>'
             . '<p><strong>Patient:</strong> ' . htmlspecialchars((string) $patient['name'])

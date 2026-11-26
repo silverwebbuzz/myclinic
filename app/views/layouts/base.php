@@ -203,7 +203,10 @@
                     <?= ui_icon('bell', 18, 'shrink-0') ?><span>Follow-ups</span>
                 </a>
                 <?php endif; ?>
-                <?php if (\App\Services\RoleAccessService::canManageOwnSchedule($user ?? []) || \App\Services\RoleAccessService::isClinicAdmin($user ?? [])): ?>
+                <?php /* Blogs link hidden for now (doctor feedback, 2026-11-26). The /blogs
+                         route still works; flip false → the original role check to restore:
+                         canManageOwnSchedule($user) || isClinicAdmin($user) */ ?>
+                <?php if (false): ?>
                 <a href="/blogs"
                    class="relative flex items-center gap-3 rounded-lg px-3 py-2 transition <?= $isActive('/blogs') ? 'nav-item-active' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' ?>">
                     <?= ui_icon('emr', 18, 'shrink-0') ?><span>Blogs</span>

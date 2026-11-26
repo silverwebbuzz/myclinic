@@ -175,9 +175,11 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
     <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
         <p class="text-sm font-medium text-emerald-800">✓ Visit completed.</p>
         <div class="flex flex-wrap gap-2">
-            <?php if ($rxSummaryLines !== []): ?>
+            <!-- Print is always offered: the pad carries findings + diagnosis
+                 even when no medicine was prescribed. -->
             <a href="/prescriptions/<?= $visitId ?>/pdf" target="_blank" class="ui-btn ui-btn-primary ui-btn-sm">Print prescription (A5)</a>
             <a href="/prescriptions/<?= $visitId ?>/pdf?paper=a4" target="_blank" class="ui-btn ui-btn-secondary ui-btn-sm">A4</a>
+            <?php if ($rxSummaryLines !== []): ?>
             <?php if ($waPhone !== ''): ?>
             <!-- Sends from the clinic's WhatsApp number via the notification
                  queue (same rx_delivery message the app sends on completion). -->
@@ -269,7 +271,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
 
             <!-- ---- SYMPTOMS — chip picker with autocomplete (Phase 3) ---- -->
             <div x-data="symptomPicker()" class="rounded-lg border border-slate-200 bg-white p-3">
-                <label class="ui-group-label">Symptoms</label>
+                <label class="ui-group-label">Examination Finding</label>
 
                 <!-- Selected chips -->
                 <div class="mt-1.5 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2 py-1.5
@@ -288,7 +290,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                            @focus="search()"
                            @keydown.enter.prevent="addCurrentOrFirst()"
                            @keydown.backspace="if (!query) removeSymptom(symptoms.length - 1)"
-                           placeholder="Type a symptom and press Enter"
+                           placeholder="Type a finding and press Enter"
                            class="flex-1 min-w-[180px] border-0 bg-transparent p-0.5 text-sm focus:outline-none focus:ring-0">
                 </div>
 
@@ -359,14 +361,14 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                     <span x-text="s.label"></span>
                                 </button>
                             </template>
-                            <p x-show="!catLoading && catSymptoms.length === 0" class="text-xs text-slate-400">No symptoms in this system.</p>
+                            <p x-show="!catLoading && catSymptoms.length === 0" class="text-xs text-slate-400">No findings in this system.</p>
                         </div>
                     </div>
                 </div>
 
             </div>
 
-            <!-- ---- DIAGNOSIS + ICD-10 — reads straight after the symptoms ---- -->
+            <!-- ---- DIAGNOSIS + ICD-10 — reads straight after the examination findings ---- -->
             <details class="rounded-lg border border-slate-200 bg-slate-50/50">
                 <summary class="cursor-pointer select-none px-4 py-2 text-sm font-semibold text-slate-700">
                     Diagnosis <span class="font-normal text-slate-400">— optional</span>
@@ -947,10 +949,14 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                         Save draft
                     </button>
                     <button type="button" @click="printRx()"
-                            x-show="(prescriptions || []).some(p => p.drug_id || p.remedy_id || p.drug_name)"
                             class="ui-btn ui-btn-secondary"
-                            title="Saves the draft first, then opens the A5 print preview">
-                        Print preview
+                            title="Saves the draft first, then opens the prescription (A5) ready to print">
+                        Print prescription
+                    </button>
+                    <button type="button" @click="printRx('a4')"
+                            class="ui-btn ui-btn-secondary ui-btn-sm"
+                            title="Full-page A4 prescription">
+                        A4
                     </button>
                 </div>
                 <?php if ($editable): ?>
@@ -1258,7 +1264,7 @@ $ghostModules = array_values(array_filter($optionalModules, static fn ($m) => !i
                                 <div>
                                     <template x-if="peek.symptoms && peek.symptoms.length">
                                         <div class="mb-2">
-                                            <div class="text-[11px] font-semibold uppercase text-slate-400">Symptoms</div>
+                                            <div class="text-[11px] font-semibold uppercase text-slate-400">Examination Finding</div>
                                             <div class="mt-1 flex flex-wrap gap-1">
                                                 <template x-for="s in peek.symptoms" :key="s">
                                                     <span class="rounded-full bg-brand-light px-2.5 py-1 text-sm text-brand" x-text="s"></span>
@@ -1867,11 +1873,16 @@ function visitScreenV2(cfg) {
 
         // One-click print preview: flush the draft so the PDF reflects what's
         // on screen, then open the A5 preview in a new tab.
+        // Opens the tab synchronously (so popup blockers allow it), saves
+        // everything — findings, diagnosis, medicines — then points the tab
+        // at the PDF so it always matches what's on screen.
         async printRx(paper) {
-            if (this.editable && this.dirty) {
-                try { await this.save(); } catch (e) { /* preview still opens */ }
+            const url = '/prescriptions/' + this.visitId + '/pdf' + (paper === 'a4' ? '?paper=a4' : '');
+            const w = window.open('', '_blank');
+            if (this.editable) {
+                try { await this.save(true); } catch (e) { /* print still opens */ }
             }
-            window.open('/prescriptions/' + this.visitId + '/pdf' + (paper === 'a4' ? '?paper=a4' : ''), '_blank', 'noopener');
+            if (w) { w.opener = null; w.location.href = url; } else { window.open(url, '_blank', 'noopener'); }
         },
 
         addRxLine() {

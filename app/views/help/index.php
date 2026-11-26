@@ -16,7 +16,7 @@ $has = static fn (string $m) => in_array($m, $visibleModules ?? [], true);
                     <a href="#dashboard" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-brand">Dashboard</a>
                     <?php if ($isClinical): ?>
                     <a href="#visit" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-brand">Patient visit screen</a>
-                    <a href="#symptoms" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-brand">Symptoms</a>
+                    <a href="#symptoms" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-brand">Examination Finding</a>
                     <a href="#prescription" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-brand">Prescription</a>
                     <a href="#followups" class="block rounded px-2 py-1 text-slate-600 hover:bg-slate-50 hover:text-brand">Follow-ups</a>
                     <?php if ($has('diet')): ?>
@@ -90,7 +90,7 @@ $has = static fn (string $m) => in_array($m, $visibleModules ?? [], true);
                 <h2 class="ui-section-title text-[17px]">Patient visit screen</h2>
                 <p class="mt-2 text-sm text-slate-600">
                     One screen, no tabs. The four core sections are always visible:
-                    <strong>Symptoms, Diagnosis, Prescription, Notes</strong>. Optional sections
+                    <strong>Examination Finding, Diagnosis, Prescription, Notes</strong>. Optional sections
                     (<?php
                         $opt = [];
                         if ($has('vitals')) $opt[] = 'Vitals';
@@ -102,17 +102,17 @@ $has = static fn (string $m) => in_array($m, $visibleModules ?? [], true);
                 </p>
                 <div class="mt-3 flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-900">
                     <span class="mt-0.5 shrink-0 text-amber-600"><?= ui_icon('help', 14) ?></span>
-                    <span><strong>Same as last visit</strong> copies the prior visit's symptoms and
+                    <span><strong>Same as last visit</strong> copies the prior visit's examination findings and
                     prescription into the current draft — perfect for follow-ups.</span>
                 </div>
             </section>
 
             <section id="symptoms" class="scroll-mt-4 ui-card p-6">
-                <h2 class="ui-section-title text-[17px]">Symptoms</h2>
+                <h2 class="ui-section-title text-[17px]">Examination Finding</h2>
                 <p class="mt-2 text-sm text-slate-600">
                     Type to search; matches appear ranked for your specialty. Press <strong>Enter</strong>
-                    to add the top match as a chip. If a symptom isn't in the list, type it and choose
-                    <em>"Add as custom"</em>. Your custom symptoms are remembered for next time.
+                    to add the top match as a chip. If a finding isn't in the list, type it and choose
+                    <em>"Add as custom"</em>. Your custom findings are remembered for next time.
                 </p>
             </section>
 
