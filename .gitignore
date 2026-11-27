@@ -36,3 +36,7 @@ storage/corporate_certs/
 storage/occ_reports/
 storage/corporate_statements/
 storage/corporate_imports/
+
+# Generated daily on the server by app/workers/sitemap_build.php
+/sitemap.xml
+/sitemap.xml.tmp
