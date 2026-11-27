@@ -31,63 +31,70 @@ $navGroups = [
     'Overview' => [
         ['/admin/dashboard', 'Dashboard', 'M3 12l9-9 9 9M5 10v10h14V10'],
     ],
-    'Clinics & Users' => [
-        ['/admin/clinics', 'Clinics', 'M3 21V8l9-5 9 5v13M9 21v-6h6v6'],
-        ['/admin/patients', 'Patients', 'M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M12 3a4 4 0 100 8 4 4 0 000-8z'],
-        ['/admin/signups', 'Online Signups', 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 3a4 4 0 100 8 4 4 0 000-8zM19 8v6M22 11h-6'],
-        ['/admin/payments', 'Payments', 'M1 4h22v16H1zM1 10h22M5 15h4'],
-        ['/admin/directory', 'Directory listings', 'M4 6h16M4 12h16M4 18h16M8 6v12'],
-        ['/admin/claims', 'Claims', 'M9 12l2 2 4-4M7 3h10l2 4v13H5V7z', (int) ($pendingClaimCount ?? 0)],
-        ['/admin/leads', 'Leads', 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100 8 4 4 0 000-8z'],
-        ['/admin/outreach', 'Outreach', 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
-        ['/admin/wordpress-doctors', 'Blog access', 'M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z'],
+    'Clinics & doctors' => [
+        ['/admin/clinics', 'Clinics', 'M3 21V8l9-5 9 5v13M9 21v-6h6v6', 0, 'tenants subscribers'],
+        ['/admin/directory', 'Directory listings', 'M4 6h16M4 12h16M4 18h16M8 6v12', 0, 'find a doctor hide show'],
+        ['/admin/claims', 'Profile claims', 'M9 12l2 2 4-4M7 3h10l2 4v13H5V7z', (int) ($pendingClaimCount ?? 0), 'claim listing'],
+        ['/admin/leads', 'Booking leads', 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100 8 4 4 0 000-8z', 0, 'enquiries appointments non-joined'],
+        ['/admin/reviews', 'Doctor reviews', 'M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z', 0, 'ratings moderation'],
+    ],
+    'Patients' => [
+        ['/admin/patients', 'Patients', 'M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M12 3a4 4 0 100 8 4 4 0 000-8z', 0, 'charts'],
+        ['/admin/signups', 'Online signups', 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 3a4 4 0 100 8 4 4 0 000-8zM19 8v6M22 11h-6', 0, 'identities accounts otp'],
+        ['/admin/misc', 'Booking limits', 'M4 7h16M4 12h16M4 17h10', 0, 'misc daily appointments per day'],
+    ],
+    'Plans & billing' => [
+        ['/admin/plans', 'Plans', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2', 0, 'pricing subscription'],
+        ['/admin/discounts', 'Plan discounts', 'M9 14l6-6M9.5 8.5h.01M14.5 13.5h.01M5 3h14a2 2 0 012 2v14l-3-2-3 2-3-2-3 2-3-2-3 2V5a2 2 0 012-2z', 0, 'coupon offer'],
+        ['/admin/payments', 'Payments', 'M1 4h22v16H1zM1 10h22M5 15h4', 0, 'transactions razorpay invoices'],
+        ['/admin/payment-gateway', 'Payment gateway', 'M1 4h22v16H1zM1 10h22', 0, 'razorpay keys sandbox'],
+    ],
+    'WhatsApp & SMS' => [
+        ['/admin/messaging', 'WhatsApp & SMS setup', 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z', 0, 'messaging meta msg91 templates webhook api keys'],
+        ['/admin/rx-whatsapp', 'Rx WhatsApp packs', 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M9 15l2 2 4-4', 0, 'prescription allowance'],
+        ['/admin/lead-settings', 'Lead SMS alerts', 'M22 16.92v3a2 2 0 01-2.18 2A19.8 19.8 0 013 4.18 2 2 0 015 2h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L9 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z', 0, 'doctor alert cap text'],
+    ],
+    'Email' => [
+        ['/admin/email', 'Email setup (SMTP)', 'M4 4h16v16H4zM4 8l8 5 8-5', 0, 'mail smtp mailbox sender'],
+        ['/admin/email-templates', 'Email templates', 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h4', 0, 'mail'],
+    ],
+    'Doctor outreach' => [
+        ['/admin/outreach', 'Outreach worklist', 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', 0, 'campaign export csv'],
+        ['/admin/marketing', 'Doctor list', 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2zM8 9h8M8 13h5', 0, 'marketing whatsapp drafts'],
+        ['/admin/marketing/templates', 'Outreach messages', 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h4', 0, 'marketing message templates whatsapp drafts'],
+    ],
+    'Lab tests' => [
+        ['/admin/lab/orders', 'Bookings', 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11', 0, 'thyrocare orders'],
+        ['/admin/lab/products', 'Tests & packages', 'M9 3h6v2l-1 1v4.586l4.707 4.707A2 2 0 0117.293 19H6.707a2 2 0 01-1.414-3.707L10 10.586V6L9 5V3z', 0, 'thyrocare catalog'],
+        ['/admin/lab/categories', 'Categories', 'M4 6h16M4 10h16M4 14h10M4 18h10', 0, 'lab'],
+        ['/admin/lab/coupons', 'Discount coupons', 'M9 5H7a2 2 0 00-2 2v3a2 2 0 010 4v3a2 2 0 002 2h2M9 5h8a2 2 0 012 2v3a2 2 0 000 4v3a2 2 0 01-2 2H9M9 5v14', 0, 'lab'],
+    ],
+    'Content & SEO' => [
+        ['/admin/specialties', 'Specialties', 'M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.29 1.51 4.04 3 5.5l7 7 7-7z'],
+        ['/admin/locations', 'States & cities', 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1112 6.5a2.5 2.5 0 010 5z', 0, 'locations'],
+        ['/admin/symptom-promotions', 'Symptom pages', 'M22 12h-4l-3 9L9 3l-3 9H2', 0, 'symptoms promotions'],
+        ['/admin/rx-templates', 'Rx templates', 'M9 2h6v4H9zM4 6h16v16H4zM8 12h8M8 16h5', 0, 'prescription master'],
+        ['/admin/health-tips', 'Health Tips review', 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11', $healthTipsPending, 'recipes exercises queue'],
+        ['/admin/health-tips/contributors', 'Health Tips contributors', 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 3a4 4 0 100 8 4 4 0 000-8zM20 8v6M23 11h-6', 0, 'creators'],
+        ['/admin/wordpress-doctors', 'Blog access', 'M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z', 0, 'wordpress doctors'],
+        ['/admin/wordpress-settings', 'Blog (WordPress) setup', 'M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z', 0, 'wordpress'],
+    ],
+    'Partners' => [
+        ['/admin/partners', 'Partners', 'M17 21v-2a4 4 0 00-3-3.87M9 21v-2a4 4 0 013-3.87M12 7a4 4 0 100 8 4 4 0 000-8z', 0, 'affiliates growth'],
+        ['/admin/partner-payouts', 'Partner payouts', 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6', 0, 'commission'],
     ],
     'Workforce Health' => [
-        ['/admin/corporate/companies', 'Companies', 'M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M9 17h1M14 9h1M14 13h1M14 17h1', \App\Services\Corporate\CorpAdminService::pendingCount()],
-        ['/admin/corporate/templates', 'Screening templates', 'M9 5h10M9 12h10M9 19h10M5 5h.01M5 12h.01M5 19h.01'],
-        ['/admin/corporate/questionnaires', 'Questionnaires', 'M9 12h6M9 16h6M8 3h8l3 3v15H5V3h3zM9 8h3'],
-        ['/admin/corporate/providers', 'Clinics & doctors', 'M3 21h18M6 21V5h12v16M10 9h4M12 7v4', \App\Services\OccHealth\ProviderAdminService::pendingCount()],
-        ['/admin/corporate/geo', 'Countries & industries', 'M12 2a10 10 0 100 20 10 10 0 000-20zM2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20'],
-        ['/admin/corporate/settings', 'Settings & team', 'M12 15a3 3 0 100-6 3 3 0 000 6zM4 12h2M18 12h2M12 4v2M12 18v2'],
-    ],
-    'Marketing' => [
-        ['/admin/marketing', 'Doctor list', 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2zM8 9h8M8 13h5'],
-        ['/admin/marketing/templates', 'Message templates', 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h4'],
-    ],
-    'Catalog' => [
-        ['/admin/plans', 'Plans', 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2'],
-        ['/admin/discounts', 'Plan Discounts', 'M9 14l6-6M9.5 8.5h.01M14.5 13.5h.01M5 3h14a2 2 0 012 2v14l-3-2-3 2-3-2-3 2-3-2-3 2V5a2 2 0 012-2z'],
-        ['/admin/specialties', 'Specialties', 'M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.29 1.51 4.04 3 5.5l7 7 7-7z'],
-        ['/admin/locations', 'States & Cities', 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1112 6.5a2.5 2.5 0 010 5z'],
-        ['/admin/rx-templates', 'Rx Templates', 'M9 2h6v4H9zM4 6h16v16H4zM8 12h8M8 16h5'],
-    ],
-    'Lab Tests' => [
-        ['/admin/lab/orders', 'Bookings', 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11'],
-        ['/admin/lab/products', 'Tests & Packages', 'M9 3h6v2l-1 1v4.586l4.707 4.707A2 2 0 0117.293 19H6.707a2 2 0 01-1.414-3.707L10 10.586V6L9 5V3z'],
-        ['/admin/lab/categories', 'Categories', 'M4 6h16M4 10h16M4 14h10M4 18h10'],
-        ['/admin/lab/coupons', 'Discount Coupons', 'M9 5H7a2 2 0 00-2 2v3a2 2 0 010 4v3a2 2 0 002 2h2M9 5h8a2 2 0 012 2v3a2 2 0 000 4v3a2 2 0 01-2 2H9M9 5v14'],
-    ],
-    'Health Tips' => [
-        ['/admin/health-tips', 'Review queue', 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11', $healthTipsPending],
-        ['/admin/health-tips/contributors', 'Contributors', 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 3a4 4 0 100 8 4 4 0 000-8zM20 8v6M23 11h-6'],
-    ],
-    'Growth' => [
-        ['/admin/partners', 'Partners', 'M17 21v-2a4 4 0 00-3-3.87M9 21v-2a4 4 0 013-3.87M12 7a4 4 0 100 8 4 4 0 000-8z'],
-        ['/admin/partner-payouts', 'Payouts', 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6'],
-        ['/admin/reviews', 'Reviews', 'M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z'],
-        ['/admin/symptom-promotions', 'Symptoms', 'M22 12h-4l-3 9L9 3l-3 9H2'],
+        ['/admin/corporate/companies', 'Companies', 'M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M9 17h1M14 9h1M14 13h1M14 17h1', \App\Services\Corporate\CorpAdminService::pendingCount(), 'corporate'],
+        ['/admin/corporate/templates', 'Screening templates', 'M9 5h10M9 12h10M9 19h10M5 5h.01M5 12h.01M5 19h.01', 0, 'corporate'],
+        ['/admin/corporate/questionnaires', 'Questionnaires', 'M9 12h6M9 16h6M8 3h8l3 3v15H5V3h3zM9 8h3', 0, 'corporate'],
+        ['/admin/corporate/providers', 'Clinics & doctors', 'M3 21h18M6 21V5h12v16M10 9h4M12 7v4', \App\Services\OccHealth\ProviderAdminService::pendingCount(), 'corporate providers'],
+        ['/admin/corporate/geo', 'Countries & industries', 'M12 2a10 10 0 100 20 10 10 0 000-20zM2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20', 0, 'corporate'],
+        ['/admin/corporate/settings', 'Settings & team', 'M12 15a3 3 0 100-6 3 3 0 000 6zM4 12h2M18 12h2M12 4v2M12 18v2', 0, 'corporate'],
     ],
     'System' => [
-        ['/admin/feature-flags', 'Feature Flags', 'M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7'],
-        ['/admin/misc', 'Misc', 'M4 7h16M4 12h16M4 17h10'],
-        ['/admin/app-versions', 'App Versions', 'M7 2h10a2 2 0 012 2v16a2 2 0 01-2 2H7a2 2 0 01-2-2V4a2 2 0 012-2zM11 18h2'],
-        ['/admin/recaptcha', 'reCAPTCHA', 'M12 2a10 10 0 100 20 10 10 0 000-20zm1 14h-2v-2h2v2zm2.07-7.75l-.9.92A3.49 3.49 0 0013 12h-2v-.5c0-.83.34-1.58.88-2.12l1.24-1.26a1.99 1.99 0 10-3.4-1.41H7.72a4 4 0 117.35 2.54z'],
-        ['/admin/messaging', 'Messaging', 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z'],
-        ['/admin/rx-whatsapp', 'Rx WhatsApp', 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M9 15l2 2 4-4'],
-        ['/admin/email', 'Email', 'M4 4h16v16H4zM4 8l8 5 8-5'],
-        ['/admin/email-templates', 'Email Templates', 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h4'],
-        ['/admin/payment-gateway', 'Payment Gateway', 'M1 4h22v16H1zM1 10h22'],
-        ['/admin/wordpress-settings', 'WordPress', 'M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z'],
+        ['/admin/feature-flags', 'Feature flags', 'M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7', 0, 'toggles'],
+        ['/admin/app-versions', 'Mobile app versions', 'M7 2h10a2 2 0 012 2v16a2 2 0 01-2 2H7a2 2 0 01-2-2V4a2 2 0 012-2zM11 18h2', 0, 'flutter android ios force update'],
+        ['/admin/recaptcha', 'reCAPTCHA', 'M12 2a10 10 0 100 20 10 10 0 000-20zm1 14h-2v-2h2v2zm2.07-7.75l-.9.92A3.49 3.49 0 0013 12h-2v-.5c0-.83.34-1.58.88-2.12l1.24-1.26a1.99 1.99 0 10-3.4-1.41H7.72a4 4 0 117.35 2.54z', 0, 'captcha spam bots'],
     ],
 ];
 
@@ -135,12 +142,11 @@ if ($inStore) {
             ['/admin/store/settings', 'Store settings', 'M12 15a3 3 0 100-6 3 3 0 000 6zM4 12h2M18 12h2M12 4v2M12 18v2'],
         ],
     ];
-} else {
-    $navGroups['Overview'][] = ['/admin/store/dashboard', 'Store (marketplace)', 'M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6', $storePending];
 }
 
 // Non-super team roles (country admin / billing / support) only see Workforce Health.
-if (!\App\Services\Corporate\PlatformAdminScope::isSuper(\App\Core\RequestContext::superAdmin())) {
+$isSuperAdmin = \App\Services\Corporate\PlatformAdminScope::isSuper(\App\Core\RequestContext::superAdmin());
+if (!$isSuperAdmin) {
     $wh = array_values(array_filter($navGroups['Workforce Health'] ?? [], static fn ($i) => $i[0] !== '/admin/corporate/settings'));
     $navGroups = ['Workforce Health' => $wh];
 }
@@ -158,6 +164,7 @@ foreach ($navGroups as $group => $items) {
     }
 }
 $crumbs = array_merge([$inStore ? 'Store admin' : 'Admin'], $crumbs);
+$activeGroup = $crumbs[1] ?? null;
 $sa = \App\Core\RequestContext::superAdmin() ?? [];
 $adminName = trim((string) ($sa['name'] ?? '')) ?: 'Super admin';
 $adminEmail = (string) ($sa['email'] ?? '');
@@ -486,19 +493,26 @@ if (!defined('ECP_ADMIN_ALPINE_LOADED')) {
         </div>
     </div>
 
-    <nav class="flex-1 overflow-y-auto px-2.5 pb-4 pt-2">
-        <?php if ($inStore): ?>
-            <a href="/admin/dashboard" class="mt-2 flex h-8 items-center gap-2 rounded-[7px] px-2.5 text-[12.5px] font-medium text-[#8391A8] hover:bg-white/5 hover:text-white">
-                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-                Back to main admin
-            </a>
-        <?php endif; ?>
-        <?php foreach ($navGroups as $group => $items): ?>
-            <div class="mt-3">
-                <div class="px-2.5 pb-1.5 text-[10.5px] font-semibold uppercase tracking-[.06em] text-[#6B778C]"><?= htmlspecialchars($group) ?></div>
+    <div class="flex-none px-2.5 pt-2.5">
+        <label class="relative block">
+            <svg class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B778C]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input type="search" id="adm-nav-q" placeholder="Find a menu… (e.g. email)" autocomplete="off" aria-label="Find a menu"
+                   class="!h-8 !w-full !rounded-[7px] !border !border-white/10 !bg-white/5 !py-0 !pl-8 !pr-2 !text-[12.5px] !text-white placeholder:text-[#6B778C] focus:!border-[#059669] focus:!shadow-none">
+        </label>
+    </div>
+
+    <nav class="flex-1 overflow-y-auto px-2.5 pb-4 pt-1" id="adm-nav">
+        <?php foreach ($navGroups as $group => $items): $gid = strtolower(preg_replace('/[^a-z0-9]+/i', '-', ($inStore ? 'store-' : '') . $group)); $gBadge = array_sum(array_map(static fn ($i) => (int) ($i[3] ?? 0), $items)); ?>
+            <details class="adm-ng mt-1.5" data-g="<?= htmlspecialchars($gid) ?>" <?= ($group === $activeGroup || count($items) === 1) ? 'open data-active="1"' : '' ?>>
+                <summary class="flex h-7 cursor-pointer list-none items-center gap-1.5 rounded-md px-2.5 text-[10.5px] font-semibold uppercase tracking-[.06em] text-[#6B778C] hover:text-[#C8D1DF]">
+                    <svg class="adm-ng-chev h-3 w-3 flex-none transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg>
+                    <span class="flex-1 truncate"><?= htmlspecialchars($group) ?></span>
+                    <?php if ($gBadge > 0): ?><span class="adm-ng-badge grid h-4 min-w-[16px] place-items-center rounded-full bg-[#059669] px-1 text-[10px] font-semibold normal-case tracking-normal text-white"><?= $gBadge ?></span><?php endif; ?>
+                </summary>
                 <?php foreach ($items as $item): ?>
                     <?php [$href, $label] = $item; $badge = (int) ($item[3] ?? 0); $active = $href === $activeHref; ?>
-                    <a href="<?= htmlspecialchars($href) ?>" class="flex h-8 w-full items-center gap-2.5 rounded-[7px] px-2.5 text-[13px] <?= $active ? 'bg-white/[.08] font-semibold text-white' : 'font-medium text-[#C8D1DF] hover:bg-white/5' ?>">
+                    <a href="<?= htmlspecialchars($href) ?>" data-k="<?= htmlspecialchars(strtolower($group . ' ' . $label . ' ' . ($item[4] ?? ''))) ?>"
+                       class="adm-ni flex h-8 w-full items-center gap-2.5 rounded-[7px] px-2.5 text-[13px] <?= $active ? 'bg-white/[.08] font-semibold text-white' : 'font-medium text-[#C8D1DF] hover:bg-white/5' ?>">
                         <span class="h-1.5 w-1.5 flex-none rounded-[2px] <?= $active ? 'bg-[#059669]' : 'bg-white/30' ?>"></span>
                         <span class="flex-1 truncate"><?= htmlspecialchars($label) ?></span>
                         <?php if ($badge > 0): ?>
@@ -506,9 +520,55 @@ if (!defined('ECP_ADMIN_ALPINE_LOADED')) {
                         <?php endif; ?>
                     </a>
                 <?php endforeach; ?>
-            </div>
+            </details>
         <?php endforeach; ?>
+        <p id="adm-nav-none" class="hidden px-2.5 py-3 text-[12px] text-[#6B778C]">No menu matches.</p>
     </nav>
+    <style>
+        .adm-ng > summary::-webkit-details-marker { display: none; }
+        .adm-ng[open] > summary .adm-ng-chev { transform: rotate(90deg); }
+        .adm-ng[open] > summary .adm-ng-badge { display: none; }
+    </style>
+    <script>
+    (function () {
+        // Remember which groups the admin opened/closed; the active page's group always opens.
+        const KEY = 'admNavOpen';
+        let saved = {};
+        try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) {}
+        const groups = [...document.querySelectorAll('#adm-nav .adm-ng')];
+        groups.forEach((d) => {
+            if (!d.dataset.active && saved[d.dataset.g] !== undefined) { d.open = !!saved[d.dataset.g]; }
+            d.addEventListener('toggle', () => {
+                if (document.getElementById('adm-nav-q').value) { return; }
+                saved[d.dataset.g] = d.open;
+                try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) {}
+            });
+        });
+        const act = document.querySelector('#adm-nav a.font-semibold');
+        if (act) { act.scrollIntoView({ block: 'nearest' }); }
+
+        // Menu finder: matches group name, label and keywords ("whatsapp", "smtp"…).
+        const q = document.getElementById('adm-nav-q');
+        const none = document.getElementById('adm-nav-none');
+        const before = new Map(groups.map((d) => [d, d.open]));
+        q.addEventListener('input', () => {
+            const t = q.value.trim().toLowerCase();
+            let any = false;
+            groups.forEach((d) => {
+                if (!t) { d.hidden = false; d.open = before.get(d); d.querySelectorAll('.adm-ni').forEach((a) => { a.hidden = false; }); return; }
+                let hit = false;
+                d.querySelectorAll('.adm-ni').forEach((a) => { const ok = a.dataset.k.includes(t); a.hidden = !ok; hit = hit || ok; });
+                d.hidden = !hit; if (hit) { d.open = true; any = true; }
+            });
+            none.classList.toggle('hidden', !t || any);
+        });
+        q.addEventListener('focus', () => { groups.forEach((d) => before.set(d, d.open)); });
+        q.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { const a = document.querySelector('#adm-nav .adm-ng:not([hidden]) .adm-ni:not([hidden])'); if (a) { location.href = a.href; } }
+            if (e.key === 'Escape') { q.value = ''; q.dispatchEvent(new Event('input')); q.blur(); }
+        });
+    })();
+    </script>
 
     <div class="flex flex-none items-center gap-2.5 border-t border-white/5 px-3.5 py-3">
         <div class="grid h-[30px] w-[30px] flex-none place-items-center rounded-full bg-[#1E293B] text-[11.5px] font-semibold text-[#E2E8F0]"><?= htmlspecialchars($adminInitials) ?></div>
@@ -542,6 +602,19 @@ if (!defined('ECP_ADMIN_ALPINE_LOADED')) {
         <?php endforeach; ?>
     </div>
     <span class="flex-1 max-md:hidden"></span>
+    <?php if ($isSuperAdmin): ?>
+        <!-- Main admin ↔ Store switch; the side you're on is highlighted -->
+        <nav class="flex flex-none items-center rounded-[9px] border border-[#e4e7ec] bg-[#f1f5f9] p-[3px]" aria-label="Admin area">
+            <?php foreach ([['/admin/dashboard', '<span class="md:hidden">Main</span><span class="max-md:hidden">Main admin</span>', !$inStore, 0], ['/admin/store/dashboard', 'Store', $inStore, $storePending]] as [$swHref, $swLabel, $swOn, $swBadge]): ?>
+                <a href="<?= $swHref ?>" <?= $swOn ? 'aria-current="page"' : '' ?>
+                   class="inline-flex h-[26px] items-center gap-1.5 whitespace-nowrap rounded-[6px] px-2.5 text-[12.5px] md:px-3 <?= $swOn ? 'bg-white font-semibold text-[#065f46] shadow-[0_1px_2px_rgba(15,23,42,.08)] ring-1 ring-[#e4e7ec]' : 'font-medium text-[#475569] hover:text-[#0f172a]' ?>">
+                    <?php if ($swOn): ?><span class="h-1.5 w-1.5 rounded-full bg-[#059669]"></span><?php endif; ?>
+                    <?= $swLabel ?>
+                    <?php if ($swBadge > 0): ?><span class="grid h-4 min-w-[16px] place-items-center rounded-full bg-[#f59e0b] px-1 text-[10px] font-semibold text-white" title="Waiting for review"><?= $swBadge ?></span><?php endif; ?>
+                </a>
+            <?php endforeach; ?>
+        </nav>
+    <?php endif; ?>
     <a href="<?= $inStore ? 'https://eclinicpro.com/store' : 'https://eclinicpro.com/' ?>" target="_blank" rel="noopener"
        class="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-[7px] border border-[#e4e7ec] bg-white px-3 text-[13px] font-medium text-[#0f172a] hover:bg-[#f8fafc] max-md:hidden"><?= $inStore ? 'View store ↗' : 'View site ↗' ?></a>
     <span class="inline-flex h-[26px] items-center gap-1.5 whitespace-nowrap rounded-full bg-[#f1f5f9] max-md:hidden px-2.5 text-xs font-medium text-[#475569]">
