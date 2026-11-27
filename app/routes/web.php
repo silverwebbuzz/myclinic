@@ -659,6 +659,17 @@ return static function (RouteRegistrar $router): void {
         $admin->get('/health-tips/{id}', [\App\Controllers\HealthTipAdminController::class, 'show']);
         $admin->post('/health-tips/{id}/review', [\App\Controllers\HealthTipAdminController::class, 'review']);
 
+        // Wellness Hub — Health Creators (document/wellness-hub-plan.md). Phase 1.
+        $admin->get('/wellness', static fn () => \App\Http\Response::redirect('/admin/wellness/creators'));
+        $admin->get('/wellness/creators', [\App\Controllers\WellnessAdminController::class, 'creators']);
+        $admin->get('/wellness/documents/{id}', [\App\Controllers\WellnessAdminController::class, 'document']);
+        $admin->get('/wellness/creators/{id}', [\App\Controllers\WellnessAdminController::class, 'show']);
+        $admin->get('/wellness/creators/{id}/avatar', [\App\Controllers\WellnessAdminController::class, 'avatar']);
+        $admin->post('/wellness/creators/{id}/permission', [\App\Controllers\WellnessAdminController::class, 'permission']);
+        $admin->post('/wellness/creators/{id}/verify', [\App\Controllers\WellnessAdminController::class, 'verify']);
+        $admin->post('/wellness/creators/{id}/status', [\App\Controllers\WellnessAdminController::class, 'status']);
+        $admin->post('/wellness/creators/{id}/note', [\App\Controllers\WellnessAdminController::class, 'note']);
+
         // WordPress blog access for doctors
         $admin->get('/wordpress-settings', [WordPressAdminController::class, 'settings']);
         $admin->post('/wordpress-settings/save', [WordPressAdminController::class, 'saveSettings']);
@@ -771,6 +782,31 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/store/returns/{id}/{action}', [\App\Controllers\StoreReturnController::class, 'adminAction']);
         $admin->post('/store/orders/{id}/shipments/{shipmentId}/cancel', [\App\Controllers\StoreOrderAdminController::class, 'shipCancel']);
         $admin->post('/store/orders/{id}/shipments/{shipmentId}/refresh', [\App\Controllers\StoreOrderAdminController::class, 'shipRefresh']);
+    });
+
+    // Wellness Hub — Creator Studio. Own guard: the shared patient OTP session
+    // (ecp_pid on .eclinicpro.com) + a wh_creators row. Login page is public.
+    $router->get('/creator', static fn () => \App\Http\Response::redirect('/creator/dashboard'));
+    $router->group([
+        'prefix' => '/creator',
+        'middleware' => ['rate', 'csrf', 'creator'],
+    ], static function (GroupedRouteRegistrar $creator): void {
+        $c = \App\Controllers\CreatorStudioController::class;
+        $creator->get('/login', [$c, 'login']);
+        $creator->post('/logout', [$c, 'logout']);
+        $creator->get('/join', [$c, 'joinForm']);
+        $creator->post('/join', [$c, 'join']);
+        $creator->get('/dashboard', [$c, 'dashboard']);
+        $creator->get('/content', [$c, 'content']);
+        $creator->get('/profile', [$c, 'profile']);
+        $creator->post('/profile', [$c, 'saveProfile']);
+        $creator->get('/avatar', [$c, 'avatar']);
+        $creator->get('/permissions', [$c, 'permissions']);
+        $creator->post('/permissions/apply', [$c, 'applyPermission']);
+        $creator->post('/permissions/proof', [$c, 'addProof']);
+        $creator->get('/verification', [$c, 'verification']);
+        $creator->post('/verification', [$c, 'requestVerification']);
+        $creator->get('/documents/{id}', [$c, 'document']);
     });
 
     // Store marketplace — seller portal. Own guard (mc_vendor_token, path /vendor),

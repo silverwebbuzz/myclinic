@@ -55,6 +55,9 @@ final class MailService
             'doctor_approved',
             'doctor_rejected' => $care,
 
+            'wellness_admin_alert',
+            'wellness_permission_decision',
+            'wellness_verification_decision',
             'health_tip',
             'health_tip_published',
             'health_tip_changes',
@@ -158,6 +161,13 @@ final class MailService
             'health_tip_published' => 'Your post is live: ' . (string) ($payload['title'] ?? ''),
             'health_tip_changes' => 'Small changes needed: ' . (string) ($payload['title'] ?? ''),
             'health_tip_rejected' => 'About your post: ' . (string) ($payload['title'] ?? ''),
+            'wellness_admin_alert' => (string) ($payload['subject'] ?? 'Wellness Hub: needs your review'),
+            'wellness_permission_decision' => ($payload['decision'] ?? '') === 'approved'
+                ? 'You can now post ' . strtolower((string) ($payload['type_label'] ?? '')) . ' on eClinicPro'
+                : 'About your Health Creator application',
+            'wellness_verification_decision' => ($payload['decision'] ?? '') === 'verified'
+                ? 'You are now a ' . (string) ($payload['badge'] ?? 'Verified') . ' on eClinicPro'
+                : 'About your ' . (string) ($payload['badge'] ?? 'verification') . ' badge',
             default => 'eClinicPro notification',
         };
 
@@ -514,6 +524,52 @@ final class MailService
                 ],
                 'cta' => ['label' => 'Edit my post', 'url' => (string) ($payload['studio_url'] ?? '')],
                 'sign_off' => "Thank you,\nThe eClinicPro Health Tips team",
+            ],
+            // Wellness Hub — Health Creators (App\Services\Wellness\*).
+            'wellness_admin_alert' => [
+                'greeting' => 'Hello,',
+                'paragraphs' => array_values(array_map('strval', (array) ($payload['lines'] ?? []))),
+                'cta' => ['label' => 'Review in admin', 'url' => (string) ($payload['review_url'] ?? $appUrl . '/admin/wellness/creators')],
+                'sign_off' => '— eClinicPro Wellness Hub',
+            ],
+            'wellness_permission_decision' => ($payload['decision'] ?? '') === 'approved' ? [
+                'greeting' => 'Hi ' . ($payload['name'] ?? 'there') . ',',
+                'paragraphs' => array_values(array_filter([
+                    'Good news — you are approved to post ' . strtolower((string) ($payload['type_label'] ?? '')) . ' on the eClinicPro Wellness Hub.',
+                    empty($payload['ready_now']) ? 'Posting this type opens soon. We will email you when it does.' : 'Open Creator Studio to write your first one. Every post is reviewed by our team before it goes live.',
+                    trim((string) ($payload['note'] ?? '')) !== '' ? 'A note from our team: ' . $payload['note'] : null,
+                ])),
+                'cta' => ['label' => 'Open Creator Studio', 'url' => (string) ($payload['studio_url'] ?? $appUrl . '/creator')],
+                'sign_off' => "Thank you,\nThe eClinicPro Wellness Hub team",
+            ] : [
+                'greeting' => 'Hi ' . ($payload['name'] ?? 'there') . ',',
+                'paragraphs' => [
+                    'Thank you for applying to post ' . strtolower((string) ($payload['type_label'] ?? '')) . ' on the eClinicPro Wellness Hub. We are not able to approve it right now.',
+                    'Reason: ' . ($payload['note'] ?? ''),
+                    'You can add more details or proof and apply again from Creator Studio.',
+                ],
+                'cta' => ['label' => 'Open Creator Studio', 'url' => (string) ($payload['studio_url'] ?? $appUrl . '/creator')],
+                'sign_off' => "Thank you,\nThe eClinicPro Wellness Hub team",
+            ],
+            'wellness_verification_decision' => ($payload['decision'] ?? '') === 'verified' ? [
+                'greeting' => 'Hi ' . ($payload['name'] ?? 'there') . ',',
+                'paragraphs' => array_values(array_filter([
+                    'We have checked your documents. Your profile, posts and answers now show the "' . ($payload['badge'] ?? 'Verified') . '" badge.',
+                    trim((string) ($payload['note'] ?? '')) !== '' ? 'A note from our team: ' . $payload['note'] : null,
+                ])),
+                'cta' => ['label' => 'Open Creator Studio', 'url' => (string) ($payload['studio_url'] ?? $appUrl . '/creator')],
+                'sign_off' => "Thank you,\nThe eClinicPro Wellness Hub team",
+            ] : [
+                'greeting' => 'Hi ' . ($payload['name'] ?? 'there') . ',',
+                'paragraphs' => [
+                    ($payload['decision'] ?? '') === 'revoked'
+                        ? 'Your "' . ($payload['badge'] ?? 'Verified') . '" badge has been removed.'
+                        : 'We could not verify your documents for the "' . ($payload['badge'] ?? 'Verified') . '" badge.',
+                    'Reason: ' . ($payload['note'] ?? ''),
+                    'You can correct the details and apply again from Creator Studio. Reply to this email if you think this is a mistake.',
+                ],
+                'cta' => ['label' => 'Open Creator Studio', 'url' => (string) ($payload['studio_url'] ?? $appUrl . '/creator/verification')],
+                'sign_off' => "Thank you,\nThe eClinicPro Wellness Hub team",
             ],
             'health_tip_rejected' => [
                 'greeting' => 'Hi ' . ($payload['name'] ?? 'there') . ',',

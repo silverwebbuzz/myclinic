@@ -15,6 +15,8 @@ if (!isset($pendingClaimCount)) {
 
 // Health Tips posts waiting for review (0 until the patch is run).
 $healthTipsPending = \App\Services\HealthTipAdminService::pendingCount();
+// Wellness Hub: creator permission requests + badge requests (0 until the patch is run).
+$wellnessPending = \App\Services\Wellness\CreatorAdminService::pendingCount();
 
 // Admin pages are standalone (own <head>, no clinic shell): pull in shared UI
 // helpers + token stylesheet. Neutral slate brand for the .ui-* colors.
@@ -68,6 +70,9 @@ $navGroups = [
         ['/admin/lab/products', 'Tests & packages', 'M9 3h6v2l-1 1v4.586l4.707 4.707A2 2 0 0117.293 19H6.707a2 2 0 01-1.414-3.707L10 10.586V6L9 5V3z', 0, 'thyrocare catalog'],
         ['/admin/lab/categories', 'Categories', 'M4 6h16M4 10h16M4 14h10M4 18h10', 0, 'lab'],
         ['/admin/lab/coupons', 'Discount coupons', 'M9 5H7a2 2 0 00-2 2v3a2 2 0 010 4v3a2 2 0 002 2h2M9 5h8a2 2 0 012 2v3a2 2 0 000 4v3a2 2 0 01-2 2H9M9 5v14', 0, 'lab'],
+    ],
+    'Wellness Hub' => [
+        ['/admin/wellness/creators', 'Health Creators', 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 3a4 4 0 100 8 4 4 0 000-8zM20 8v6M23 11h-6', $wellnessPending, 'wellness creators verify badge doctor camps'],
     ],
     'Content & SEO' => [
         ['/admin/specialties', 'Specialties', 'M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.29 1.51 4.04 3 5.5l7 7 7-7z'],

@@ -21,6 +21,10 @@ final class RequestContext
     private static ?array $vendor = null;
     private static ?array $vendorUser = null;
 
+    /** Wellness Hub creator (wh_creators row, or null before they join) + their patient identity. */
+    private static ?array $creator = null;
+    private static ?array $creatorIdentity = null;
+
     /** @var array{clinic_id: int, scopes: list<string>, key_id: int}|null */
     private static ?array $apiAuth = null;
 
@@ -130,6 +134,26 @@ final class RequestContext
         return self::$vendorUser;
     }
 
+    /**
+     * @param array<string, mixed>|null $creator
+     * @param array<string, mixed> $identity
+     */
+    public static function setCreator(?array $creator, array $identity): void
+    {
+        self::$creator = $creator;
+        self::$creatorIdentity = $identity;
+    }
+
+    public static function creator(): ?array
+    {
+        return self::$creator;
+    }
+
+    public static function creatorIdentity(): ?array
+    {
+        return self::$creatorIdentity;
+    }
+
     /** @param array{clinic_id: int, scopes: list<string>, key_id: int} $auth */
     public static function setApiAuth(array $auth): void
     {
@@ -176,6 +200,8 @@ final class RequestContext
         self::$superAdmin = null;
         self::$vendor = null;
         self::$vendorUser = null;
+        self::$creator = null;
+        self::$creatorIdentity = null;
         self::$apiAuth = null;
         self::$impersonation = null;
         self::$refreshedAuth = null;

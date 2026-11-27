@@ -25,6 +25,11 @@ $noindex    = true;
 
 $me = ecp_patient_current();
 $c  = $me ? ecp_ht_contributor_for_identity((int) $me['id']) : null;
+// Wellness Hub: creators are approved per type, and their profile is edited in
+// Creator Studio (app.eclinicpro.com/creator), which syncs it here.
+$htAllowed  = $c ? ecp_ht_allowed_types($c) : [];
+$htWellness = $c ? ecp_ht_is_wellness_creator($c) : false;
+$htStudioUrl = ecp_portal_url('/creator/dashboard');
 $csrf = $me ? hash_hmac('sha256', 'ht-studio', (string) ($_COOKIE[ECP_PAT_COOKIE] ?? '')) : '';
 
 $error = null;
@@ -43,7 +48,10 @@ if ($me && $c && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
     $cid = (int) $c['id'];
 
-    if ($action === 'profile') {
+    if ($action === 'profile' && $htWellness) {
+        header('Location: ' . ecp_portal_url('/creator/profile'));
+        exit;
+    } elseif ($action === 'profile') {
         $res = ecp_ht_save_profile($c, $_POST, $_FILES['avatar'] ?? null);
         if ($res['ok']) {
             header('Location: /my-health-tips?msg=profile_saved');
@@ -84,7 +92,7 @@ if ($me && $c && $_SERVER['REQUEST_METHOD'] === 'POST') {
 if ($me && $c && $error === null) {
     if (($_GET['view'] ?? '') === 'profile') {
         $view = 'profile';
-    } elseif (isset($_GET['new']) && isset(ECP_HT_TYPES[(string) $_GET['new']])) {
+    } elseif (isset($_GET['new']) && isset(ECP_HT_TYPES[(string) $_GET['new']]) && in_array((string) $_GET['new'], $htAllowed, true)) {
         $view = 'editor';
         $form = ht_form_blank((string) $_GET['new']);
     } elseif (isset($_GET['edit'])) {
@@ -144,13 +152,17 @@ require __DIR__ . '/partials/header.php';
 <?php else: ?>
     <header class="ht-studio-head">
       <div>
-        <a class="ht-crumb" href="/patient">← My Health</a>
+        <a class="ht-crumb" href="/patient">← My Health</a><?php if ($htWellness): ?> · <a class="ht-crumb" href="<?= e($htStudioUrl) ?>">Creator Studio</a><?php endif; ?>
         <h1>My health tips</h1>
         <p class="ht-mute">Hi <?= e($c['display_name']) ?> — everything you post is reviewed by our team before it goes live.</p>
       </div>
       <nav class="ht-studio-tabs">
         <a href="/my-health-tips" class="<?= $view !== 'profile' ? 'is-active' : '' ?>">My posts</a>
+        <?php if ($htWellness): ?>
+        <a href="<?= e(ecp_portal_url('/creator/profile')) ?>">Profile ↗</a>
+        <?php else: ?>
         <a href="/my-health-tips?view=profile" class="<?= $view === 'profile' ? 'is-active' : '' ?>">Profile &amp; terms</a>
+        <?php endif; ?>
         <a href="/health-tips/by/<?= e($c['slug']) ?>" target="_blank" rel="noopener">Public page ↗</a>
       </nav>
     </header>
@@ -170,7 +182,10 @@ require __DIR__ . '/partials/header.php';
       <div class="ht-flash is-warn">Want an email when your post goes live or needs changes? <a href="/patient?tab=profile">Add your email in My Profile</a>.</div>
     <?php endif; ?>
     <section class="ht-new">
-      <?php foreach (ECP_HT_TYPES as $t => $meta): ?>
+      <?php if (!$htAllowed): ?>
+        <p class="ht-mute">You’re not approved to start new posts yet. <a href="<?= e(ecp_portal_url('/creator/permissions')) ?>">Apply in Creator Studio</a>.</p>
+      <?php endif; ?>
+      <?php foreach (ECP_HT_TYPES as $t => $meta): if (!in_array($t, $htAllowed, true)) { continue; } ?>
         <a class="ht-new-card" href="/my-health-tips?new=<?= $t ?>">
           <span class="ht-new-ic"><?= $meta['icon'] ?></span>
           <span><strong>New <?= e(strtolower($meta['label'])) ?></strong>
@@ -214,6 +229,11 @@ require __DIR__ . '/partials/header.php';
       </ul>
     <?php endif; ?>
 
+<?php elseif ($view === 'profile' && $htWellness): ?>
+    <div class="ht-card">
+      <h2>Your public profile</h2>
+      <p class="ht-mute">Your profile is now edited in <a href="<?= e(ecp_portal_url('/creator/profile')) ?>">Creator Studio → Public profile</a>. Changes there show here automatically.</p>
+    </div>
 <?php elseif ($view === 'profile'): ?>
     <?php $p = $profileForm; ?>
     <form class="ht-card ht-form" method="post" action="/my-health-tips" enctype="multipart/form-data">

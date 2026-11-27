@@ -83,6 +83,59 @@ function ecp_ht_contributor_by_slug(string $slug): ?array
     return $st->fetch(PDO::FETCH_ASSOC) ?: null;
 }
 
+/**
+ * Which of recipe / exercise / tip this contributor may START. Wellness Hub
+ * creators are approved per type (wh_creator_permissions); contributors who
+ * aren't creators yet, or a site where the Wellness patch isn't run, keep all
+ * three (old behaviour). Existing posts can always be edited.
+ *
+ * @return list<string>
+ */
+function ecp_ht_allowed_types(array $c): array
+{
+    static $cache = [];
+    $cid = (int) ($c['id'] ?? 0);
+    if (isset($cache[$cid])) {
+        return $cache[$cid];
+    }
+    $all = array_keys(ECP_HT_TYPES);
+    $db = ecp_db();
+    if (!$db || $cid <= 0) {
+        return $cache[$cid] = $all;
+    }
+    try {
+        $st = $db->prepare('SELECT id FROM wh_creators WHERE legacy_contributor_id = :c OR identity_id = :i LIMIT 1');
+        $st->execute(['c' => $cid, 'i' => (int) ($c['identity_id'] ?? 0)]);
+        $creatorId = $st->fetchColumn();
+        if ($creatorId === false) {
+            return $cache[$cid] = $all;
+        }
+        $st = $db->prepare("SELECT content_type FROM wh_creator_permissions WHERE creator_id = :w AND status = 'approved'");
+        $st->execute(['w' => (int) $creatorId]);
+        $approved = $st->fetchAll(PDO::FETCH_COLUMN) ?: [];
+
+        return $cache[$cid] = array_values(array_intersect($all, $approved));
+    } catch (Throwable $e) {
+        return $cache[$cid] = $all;   // Wellness Hub patch not run yet
+    }
+}
+
+/** True when this contributor is managed as a Wellness Hub creator (profile lives in Creator Studio). */
+function ecp_ht_is_wellness_creator(array $c): bool
+{
+    $db = ecp_db();
+    if (!$db) {
+        return false;
+    }
+    try {
+        $st = $db->prepare('SELECT 1 FROM wh_creators WHERE legacy_contributor_id = :c LIMIT 1');
+        $st->execute(['c' => (int) ($c['id'] ?? 0)]);
+        return $st->fetchColumn() !== false;
+    } catch (Throwable $e) {
+        return false;
+    }
+}
+
 /** Profile complete + terms accepted + not suspended → may submit for review. */
 function ecp_ht_can_submit(array $c): bool
 {
@@ -242,6 +295,9 @@ function ecp_ht_save(array $c, ?int $id, array $data, array $files, bool $submit
         $type = (string) ($data['type'] ?? '');
         if (!isset(ECP_HT_TYPES[$type])) {
             return ['ok' => false, 'error' => 'Choose recipe, exercise or quick tip.'];
+        }
+        if (!in_array($type, ecp_ht_allowed_types($c), true)) {
+            return ['ok' => false, 'error' => 'You are not approved to post this type yet. Apply in Creator Studio → What I can post.'];
         }
     }
 

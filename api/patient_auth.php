@@ -27,6 +27,31 @@ header('X-Content-Type-Options: nosniff');
 
 require_once __DIR__ . '/../partials/patient_auth.php';
 
+// Creator Studio (app.eclinicpro.com/creator) signs in through this same API so
+// it shares the account, lockout rules and ecp_pid cookie (.eclinicpro.com).
+// CORS is allowed for that ONE origin only (APP_URL), never a wildcard.
+(function (): void {
+    $origin = (string) ($_SERVER['HTTP_ORIGIN'] ?? '');
+    if ($origin === '') {
+        return;
+    }
+    $app = parse_url(ecp_env('APP_URL', 'https://app.eclinicpro.com'));
+    $allowed = ($app['scheme'] ?? 'https') . '://' . ($app['host'] ?? '') . (isset($app['port']) ? ':' . $app['port'] : '');
+    if (empty($app['host']) || !hash_equals($allowed, $origin)) {
+        return;
+    }
+    header('Access-Control-Allow-Origin: ' . $allowed);
+    header('Access-Control-Allow-Credentials: true');
+    header('Vary: Origin');
+    if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
+        header('Access-Control-Allow-Methods: GET, POST');
+        header('Access-Control-Allow-Headers: Content-Type');
+        header('Access-Control-Max-Age: 600');
+        http_response_code(204);
+        exit;
+    }
+})();
+
 // Turn any uncaught exception into a clean 500 JSON response.
 set_exception_handler(function (Throwable $e) {
     error_log('[api/patient_auth] uncaught: ' . $e->getMessage() . "\n" . $e->getTraceAsString());

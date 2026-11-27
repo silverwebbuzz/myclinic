@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Middleware\ApiBearerMiddleware;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\CorpAuthMiddleware;
+use App\Middleware\CreatorAuthMiddleware;
 use App\Middleware\CsrfMiddleware;
 use App\Middleware\ModuleGateMiddleware;
 use App\Middleware\PartnerAuthMiddleware;
@@ -29,5 +30,6 @@ return [
     'partner' => PartnerAuthMiddleware::class,
     'vendor' => VendorAuthMiddleware::class,
     'corp' => CorpAuthMiddleware::class,
+    'creator' => CreatorAuthMiddleware::class,
     'api_bearer' => ApiBearerMiddleware::class,
 ];

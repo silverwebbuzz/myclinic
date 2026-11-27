@@ -279,6 +279,7 @@ final class HealthTipAdminService
         if ($existing) {
             $db->prepare("UPDATE health_tip_contributors SET status = 'active' WHERE id = :id")
                ->execute([':id' => (int) $existing['id']]);
+            \App\Services\Wellness\CreatorService::adoptLegacy((int) $existing['id']);   // keep the Wellness Hub creator in step
             return ['ok' => true, 'id' => (int) $existing['id']];
         }
 
@@ -293,7 +294,9 @@ final class HealthTipAdminService
             ':admin' => $adminId,
             ':note'  => $note !== null && trim($note) !== '' ? mb_substr(trim($note), 0, 255) : null,
         ]);
-        return ['ok' => true, 'id' => (int) $db->lastInsertId()];
+        $newId = (int) $db->lastInsertId();
+        \App\Services\Wellness\CreatorService::adoptLegacy($newId);   // also a Wellness Hub creator (recipes, exercises, tips)
+        return ['ok' => true, 'id' => $newId];
     }
 
     public static function setStatus(int $contributorId, string $status): void
@@ -303,6 +306,7 @@ final class HealthTipAdminService
         }
         Database::connection()->prepare('UPDATE health_tip_contributors SET status = :s WHERE id = :id')
             ->execute([':s' => $status, ':id' => $contributorId]);
+        \App\Services\Wellness\CreatorService::mirrorLegacyStatus($contributorId, $status);
         self::clearSitemapCache();
     }
 

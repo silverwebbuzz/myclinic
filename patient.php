@@ -56,6 +56,22 @@ if ($me) {
     $htContributor = ecp_ht_contributor_for_identity((int) $me['id']);
 }
 
+// Wellness Hub: one login, two panels. Creators get a button to Creator Studio
+// (app.eclinicpro.com/creator); everyone else gets "Become a Health Creator".
+$whIsCreator = false;
+if ($me) {
+    try {
+        $whDb = ecp_db();
+        if ($whDb) {
+            $whSt = $whDb->prepare('SELECT 1 FROM wh_creators WHERE identity_id = :i LIMIT 1');
+            $whSt->execute(['i' => (int) $me['id']]);
+            $whIsCreator = $whSt->fetchColumn() !== false;
+        }
+    } catch (Throwable $e) {
+        $whIsCreator = false;   // Wellness Hub patch not run yet
+    }
+}
+
 // Workforce Health: a "Work health" tab only for people a company has added
 // (pending or confirmed link). A pending one opens first: it needs an answer.
 $workItems = [];
@@ -1469,6 +1485,11 @@ require __DIR__ . '/partials/header.php';
               <span class="pt-nav-label">My health tips</span>
             </button>
 <?php endif; ?>
+            <button type="button" onclick="window.location.href=<?= htmlspecialchars(json_encode(ecp_portal_url($whIsCreator ? '/creator/dashboard' : '/creator/join')), ENT_QUOTES, 'UTF-8') ?>"
+              title="<?= $whIsCreator ? 'Open your Creator Studio' : 'Share recipes, exercises, tips or health camps on the eClinicPro Wellness Hub' ?>">
+              <span class="pt-nav-ic">✨</span>
+              <span class="pt-nav-label"><?= $whIsCreator ? 'Creator Studio →' : 'Become a Health Creator' ?></span>
+            </button>
           </nav>
         </aside>
       </div>

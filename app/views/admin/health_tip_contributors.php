@@ -24,6 +24,7 @@ $existingIds = array_map(static fn ($c) => (int) $c['identity_id'], $contributor
     <main class="mx-auto max-w-6xl px-6 py-6">
         <h1 class="text-xl font-semibold">Health Tips — contributors</h1>
         <p class="text-sm text-slate-500">Invite-only. A contributor is an existing patient account (they sign up at /patient with their phone) that you give posting access to.</p>
+        <p class="mt-2 rounded border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">New: creators now sign up themselves and are approved per type in <a href="/admin/wellness/creators" class="font-semibold underline">Wellness Hub → Health Creators</a>. Granting here still works and also makes them a creator (recipes, exercises, tips). Pausing here pauses the whole creator.</p>
 
         <?php if ($message && isset($messages[$message])): ?>
         <div class="mt-3 rounded border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800"><?= $h($messages[$message]) ?></div>
