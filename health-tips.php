@@ -1,64 +1,108 @@
 <?php
 // =====================================================================
-// health-tips.php — public Health Tips.
+// health-tips.php — Wellness Hub recipes, exercises, quick tips, videos.
 //
-//   /health-tips                    list (?type=recipe|exercise|tip, ?tag=, ?q=, ?page=)
-//   /health-tips/{slug}             one post            (?_ht_slug= via rewrite)
-//   /health-tips/by/{slug}          contributor's page  (?_ht_by= via rewrite)
+//   /wellness/recipes|exercises|tips|videos      section (?tag=, ?q=, ?page=)   _wh_section
+//   /wellness/recipe|exercise|tip|video/{slug}   one post                       _wh_kind + _wh_slug
+//
+// Old URLs 301 here (Phase 3):
+//   /health-tips[?type=…]   → section (or /wellness)      /health-tips?saved=1 → /wellness/saved
+//   /health-tips/{slug}     → /wellness/{type}/{slug}     /health-tips/by/{x}  → /wellness/creators/{creator}
 //
 // Only published posts by active contributors are visible. A contributor can
-// preview their own unpublished post (noindex, banner) from their studio.
+// preview their own unpublished post (noindex, banner) from their editor.
 // =====================================================================
 require_once __DIR__ . '/partials/helpers.php';
 require_once __DIR__ . '/partials/patient_auth.php';
 require_once __DIR__ . '/partials/health_tips.php';
 
-$slug = strtolower(trim((string) ($_GET['_ht_slug'] ?? '')));
-$by   = strtolower(trim((string) ($_GET['_ht_by'] ?? '')));
+$section = strtolower(trim((string) ($_GET['_wh_section'] ?? '')));
+$kindWord = strtolower(trim((string) ($_GET['_wh_kind'] ?? '')));
+$slug = strtolower(trim((string) ($_GET['_wh_slug'] ?? '')));
 
-$tip = null;
-$author = null;
-$mode = 'list';
-
-if ($slug !== '') {
-    $mode = 'detail';
-    $viewer = ecp_patient_current();
-    $viewerC = $viewer ? ecp_ht_contributor_for_identity((int) $viewer['id']) : null;
-    $tip = ecp_ht_find_by_slug($slug, $viewerC ? (int) $viewerC['id'] : null);
-} elseif ($by !== '') {
-    $mode = 'author';
-    $author = ecp_ht_contributor_by_slug($by);
-} elseif (!empty($_GET['saved'])) {
-    $mode = 'saved';
-    $viewer = ecp_patient_current();
+// ---------------------------------------------------------------------
+// Legacy /health-tips URLs → permanent redirects
+// ---------------------------------------------------------------------
+if ($section === '' && $kindWord === '') {
+    $to = '/wellness';
+    $oldSlug = strtolower(trim((string) ($_GET['_ht_slug'] ?? '')));
+    $oldBy = strtolower(trim((string) ($_GET['_ht_by'] ?? '')));
+    $db = ecp_db();
+    if ($oldSlug !== '' && $db) {
+        $st = $db->prepare('SELECT type, slug FROM health_tips WHERE slug = :s AND is_deleted = 0 LIMIT 1');
+        $st->execute(['s' => $oldSlug]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            http_response_code(404);
+            require __DIR__ . '/404.php';
+            return;
+        }
+        $to = ecp_ht_post_url($row);
+    } elseif ($oldBy !== '' && $db) {
+        $c = ecp_ht_contributor_by_slug($oldBy);
+        $to = $c ? ecp_ht_author_url(['contributor_id' => (int) $c['id'], 'author_slug' => $c['slug']]) : '/wellness';
+    } elseif (!empty($_GET['saved'])) {
+        $to = '/wellness/saved';
+    } else {
+        $type = (string) ($_GET['type'] ?? '');
+        $q = trim((string) ($_GET['q'] ?? ''));
+        $tag = (string) ($_GET['tag'] ?? '');
+        if (isset(ECP_HT_TYPES[$type])) {
+            $to = ecp_ht_section_url($type);
+            $qs = http_build_query(array_filter(['tag' => $tag, 'q' => $q]));
+            $to .= $qs ? '?' . $qs : '';
+        } elseif ($q !== '' || $tag !== '') {
+            $to = '/wellness/search?' . http_build_query(array_filter(['q' => $q, 'tag' => $tag]));
+        }
+    }
+    header('Location: ' . $to, true, 301);
+    return;
 }
 
-if (($mode === 'detail' && !$tip) || ($mode === 'author' && !$author)) {
+$tip = null;
+$mode = 'list';
+$typeFilter = '';
+$viewer = ecp_patient_current();
+
+if ($kindWord !== '') {
+    $mode = 'detail';
+    $viewerC = $viewer ? ecp_ht_contributor_for_identity((int) $viewer['id']) : null;
+    $tip = isset(ECP_HT_TYPES[$kindWord]) ? ecp_ht_find_by_slug($slug, $viewerC ? (int) $viewerC['id'] : null) : null;
+    if ($tip && $tip['type'] !== $kindWord) {
+        header('Location: ' . ecp_ht_post_url($tip), true, 301);   // wrong type word in the URL
+        return;
+    }
+} else {
+    $typeFilter = ecp_ht_type_from_path($section) ?? '';
+}
+
+if (($mode === 'detail' && !$tip) || ($mode === 'list' && $typeFilter === '')) {
     http_response_code(404);
     require __DIR__ . '/404.php';
     return;
 }
 
-$typeFilter = (string) ($_GET['type'] ?? '');
-$typeFilter = isset(ECP_HT_TYPES[$typeFilter]) ? $typeFilter : '';
-$tagFilter  = preg_match('/^[a-z0-9\-]{1,60}$/', (string) ($_GET['tag'] ?? '')) ? (string) $_GET['tag'] : '';
-$q          = mb_substr(trim((string) ($_GET['q'] ?? '')), 0, 80);
-$page       = max(1, (int) ($_GET['page'] ?? 1));
+$tagFilter = preg_match('/^[a-z0-9\-]{1,60}$/', (string) ($_GET['tag'] ?? '')) ? (string) $_GET['tag'] : '';
+$q         = mb_substr(trim((string) ($_GET['q'] ?? '')), 0, 80);
+$page      = max(1, (int) ($_GET['page'] ?? 1));
 
-$disclaimer = 'General wellness information shared by our contributors — not medical advice. If you have a health condition, allergy, are pregnant, or take medicines, check with your doctor before changing your diet or exercise.';
+$disclaimer = 'General wellness information shared by independent Health Creators — not medical advice, and eClinicPro does not guarantee any health result. If you have a health condition, allergy, are pregnant, or take medicines, check with your doctor before changing your diet or exercise.';
 
 // ---------------------------------------------------------------------
 // Page meta
 // ---------------------------------------------------------------------
-$activePage = 'health-tips';
+$activePage = 'wellness';
 if ($mode === 'detail') {
     $typeMeta  = ECP_HT_TYPES[$tip['type']];
-    $pageTitle = $tip['title'] . ' — ' . $typeMeta['label'] . ' by ' . $tip['author_name'] . ' | eClinicPro Health Tips';
+    $pageTitle = $tip['title'] . ' — ' . $typeMeta['label'] . ' by ' . $tip['author_name'] . ' | eClinicPro Wellness Hub';
     $metaDesc  = (string) ($tip['summary'] ?: mb_substr((string) $tip['body'], 0, 155));
-    $canonicalUrl = ecp_site_url('/health-tips/' . $tip['slug']);
-    $ogType = 'article';
+    $canonicalUrl = ecp_site_url(ecp_ht_post_url($tip));
+    $ogType = $tip['type'] === 'video' ? 'video.other' : 'article';
+    $video = ecp_ht_video_embed($tip['video_url']);
     if ($tip['media']) {
         $ogImage = ecp_site_url(ecp_ht_image_url((int) $tip['media'][0]['id']));
+    } elseif ($video && $video['thumb']) {
+        $ogImage = $video['thumb'];
     }
     if ($tip['is_preview']) {
         $noindex = true;
@@ -69,29 +113,23 @@ if ($mode === 'detail') {
     $canSave  = !$tip['is_preview'] && ecp_ht_saves_enabled();
     $isSaved  = $canSave && $viewer && ecp_ht_is_saved((int) $viewer['id'], (int) $tip['id']);
     $saveCount = (int) ($tip['save_count'] ?? 0);
-} elseif ($mode === 'saved') {
-    $pageTitle = 'Saved health tips — eClinicPro';
-    $metaDesc  = 'Recipes, exercises and tips you saved on eClinicPro.';
-    $noindex   = true;
-    header('Cache-Control: private, no-store, max-age=0');
-    $list = $viewer ? ecp_ht_public_list(['saved_by' => (int) $viewer['id'], 'page' => $page]) : ['rows' => [], 'total' => 0];
-} elseif ($mode === 'author') {
-    $pageTitle = $author['display_name'] . ' — recipes & health tips | eClinicPro';
-    $metaDesc  = (string) ($author['headline'] ?: ('Recipes, exercises and health tips by ' . $author['display_name'] . ' on eClinicPro.'));
-    $canonicalUrl = ecp_site_url('/health-tips/by/' . $author['slug']);
-    $ogType = 'profile';
-    $list = ecp_ht_public_list(['contributor_id' => (int) $author['id'], 'page' => $page]);
-    if ($list['total'] === 0 || $page > 1) {
-        $noindex = true;   // no live posts yet: keep thin pages out of the index
-    }
+    $authorUrl = ecp_ht_author_url($tip);
+    $authorBadge = ecp_ht_author_badge($tip);
 } else {
-    $pageTitle = ($typeFilter ? ECP_HT_TYPES[$typeFilter]['plural'] . ' — ' : '') . 'Healthy recipes, exercises & everyday health tips | eClinicPro';
-    $metaDesc  = 'Healthy, protein-rich recipes, simple exercises and everyday health habits from contributors we trust — reviewed by the eClinicPro team before publishing.';
-    $canonicalUrl = ecp_site_url('/health-tips' . ($typeFilter ? '?type=' . $typeFilter : ''));
-    if ($q !== '' || $tagFilter !== '' || $page > 1) {
-        $noindex = true;   // filtered/search/paged views: keep the index clean
-    }
+    $meta = ECP_HT_TYPES[$typeFilter];
+    $intro = [
+        'recipe'   => ['Healthy recipes', 'Protein-rich, low-oil and everyday Indian recipes from Health Creators we trust.'],
+        'exercise' => ['Simple exercises', 'Short routines for mobility, strength and posture — with clear steps and safety notes.'],
+        'tip'      => ['Quick health tips', 'Small everyday habits that help — explained in plain words.'],
+        'video'    => ['Health videos', 'Short videos and reels from Health Creators: recipes, workouts and everyday habits.'],
+    ][$typeFilter];
+    $pageTitle = $intro[0] . ' — ' . strtolower($meta['plural']) . ' from trusted Health Creators | eClinicPro Wellness Hub';
+    $metaDesc  = $intro[1] . ' Every post is reviewed by the eClinicPro team before it goes live.';
+    $canonicalUrl = ecp_site_url(ecp_ht_section_url($typeFilter));
     $list = ecp_ht_public_list(['type' => $typeFilter, 'tag' => $tagFilter, 'q' => $q, 'page' => $page]);
+    if ($q !== '' || $tagFilter !== '' || $page > 1 || $list['total'] === 0) {
+        $noindex = true;   // filtered / search / paged / empty views stay out of the index
+    }
 }
 
 require __DIR__ . '/partials/header.php';
@@ -101,7 +139,6 @@ require __DIR__ . '/partials/header.php';
 <main class="ht-public">
 <?php if ($mode === 'detail'): ?>
   <?php
-    $video = ecp_ht_video_embed($tip['video_url']);
     $facts = [];
     if ($tip['type'] === 'recipe') {
         if ($tip['prep_minutes'] !== null) $facts[] = ['Prep', ecp_ht_minutes((int) $tip['prep_minutes']) ?: '—'];
@@ -116,6 +153,9 @@ require __DIR__ . '/partials/header.php';
         if ($tip['equipment']) $facts[] = ['Equipment', (string) $tip['equipment']];
         if ($tip['body_area']) $facts[] = ['Body area', (string) $tip['body_area']];
     }
+    // Video poster: the creator's own cover photo, else YouTube's thumbnail.
+    $videoPoster = $video ? ($tip['media'] ? ecp_ht_image_url((int) $tip['media'][0]['id']) : $video['thumb']) : null;
+    $photos = $tip['type'] === 'video' ? array_slice($tip['media'], 1) : $tip['media'];
   ?>
   <?php if ($tip['is_preview']): ?>
     <div class="ht-preview-bar">Preview — only you can see this. Status: <strong><?= e(ECP_HT_STATUS_LABELS[$tip['status']] ?? $tip['status']) ?></strong> · <a href="/my-health-tips?edit=<?= (int) $tip['id'] ?>">Back to editor</a></div>
@@ -123,19 +163,19 @@ require __DIR__ . '/partials/header.php';
 
   <article class="wrap ht-article">
     <nav class="ht-crumbs" aria-label="Breadcrumb">
-      <a href="/health-tips">Health tips</a> <span>›</span>
-      <a href="/health-tips?type=<?= e($tip['type']) ?>"><?= e($typeMeta['plural']) ?></a>
+      <a href="/wellness">Wellness Hub</a> <span>›</span>
+      <a href="<?= e(ecp_ht_section_url($tip['type'])) ?>"><?= e($typeMeta['plural']) ?></a>
     </nav>
 
     <header class="ht-art-head">
       <span class="ht-kind"><?= $typeMeta['icon'] ?> <?= e($typeMeta['label']) ?></span>
       <h1><?= e($tip['title']) ?></h1>
       <?php if ($tip['summary']): ?><p class="ht-lede"><?= e($tip['summary']) ?></p><?php endif; ?>
-      <a class="ht-byline" href="/health-tips/by/<?= e($tip['author_slug']) ?>">
+      <a class="ht-byline" href="<?= e($authorUrl) ?>">
         <span class="ht-avatar ht-avatar-sm">
           <?php if ($tip['author_has_avatar']): ?><img src="<?= e(ecp_ht_avatar_url($tip['author_slug'])) ?>" alt=""><?php else: ?><span><?= e(mb_strtoupper(mb_substr((string) $tip['author_name'], 0, 1))) ?></span><?php endif; ?>
         </span>
-        <span>By <strong><?= e($tip['author_name']) ?></strong>
+        <span>By <strong><?= e($tip['author_name']) ?></strong><?php if ($authorBadge): ?> <span class="ht-verified">✓ <?= e($authorBadge) ?></span><?php endif; ?>
           <?php if ($tip['published_at']): ?><small> · <?= e(date('d M Y', strtotime((string) $tip['published_at']))) ?></small><?php endif; ?></span>
       </a>
       <p class="ht-reviewed">✓ Reviewed by the eClinicPro team before publishing</p>
@@ -146,30 +186,39 @@ require __DIR__ . '/partials/header.php';
             <span x-text="saved ? 'Saved' : 'Save'"><?= $isSaved ? 'Saved' : 'Save' ?></span>
           </button>
           <span class="ht-save-n" x-show="count > 0" x-text="count === 1 ? '1 person saved this' : count + ' people saved this'"></span>
-          <a class="ht-save-link" href="/health-tips?saved=1" x-show="saved">Your saved tips →</a>
+          <a class="ht-save-link" href="/wellness/saved" x-show="saved">Your saved items →</a>
         </div>
       <?php endif; ?>
     </header>
 
-    <?php if ($tip['media'] || $video): ?>
-    <div class="ht-hero-media <?= ($tip['media'] && $video) ? 'has-both' : '' ?>">
-      <?php if ($tip['media']): ?>
+    <?php if (($tip['type'] !== 'video' && $tip['media']) || $video): ?>
+    <div class="ht-hero-media <?= ($tip['type'] !== 'video' && $tip['media'] && $video) ? 'has-both' : '' ?>">
+      <?php if ($tip['type'] !== 'video' && $tip['media']): ?>
         <figure class="ht-cover"><img src="<?= e(ecp_ht_image_url((int) $tip['media'][0]['id'])) ?>" alt="<?= e($tip['title']) ?>"></figure>
       <?php endif; ?>
       <?php if ($video): ?>
-        <div class="ht-video ht-video-<?= e($video['kind']) ?>">
-          <iframe src="<?= e($video['src']) ?>" title="<?= e($tip['title']) ?> — video" loading="lazy" allowfullscreen
-            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        <?php // Click-to-load: the YouTube / Instagram player (heavy) loads only when someone presses play. ?>
+        <div class="ht-video ht-video-<?= e($video['kind']) ?>" x-data="{ on: false }">
+          <template x-if="on">
+            <iframe src="<?= e($video['src']) ?><?= $video['kind'] === 'youtube' ? '?autoplay=1' : '' ?>" title="<?= e($tip['title']) ?> — video" allowfullscreen
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+          </template>
+          <button type="button" class="ht-video-facade" x-show="!on" @click="on = true" aria-label="Play video: <?= e($tip['title']) ?>">
+            <?php if ($videoPoster): ?><img src="<?= e($videoPoster) ?>" alt="" loading="lazy"><?php endif; ?>
+            <span class="ht-play">▶</span>
+            <span class="ht-video-src"><?= $video['kind'] === 'youtube' ? 'YouTube' : 'Instagram' ?> · tap to play</span>
+          </button>
+          <noscript><a href="<?= e((string) $tip['video_url']) ?>" target="_blank" rel="noopener">Watch the video ↗</a></noscript>
         </div>
       <?php endif; ?>
     </div>
-    <?php if (count($tip['media']) > 1): ?>
+    <?php endif; ?>
+    <?php if (count($photos) > ($tip['type'] === 'video' ? 0 : 1)): ?>
       <div class="ht-gallery">
-        <?php foreach (array_slice($tip['media'], 1) as $m): ?>
+        <?php foreach ($tip['type'] === 'video' ? $photos : array_slice($photos, 1) as $m): ?>
           <img src="<?= e(ecp_ht_image_url((int) $m['id'])) ?>" alt="<?= e($tip['title']) ?>" loading="lazy">
         <?php endforeach; ?>
       </div>
-    <?php endif; ?>
     <?php endif; ?>
 
     <?php if ($facts): ?>
@@ -211,7 +260,7 @@ require __DIR__ . '/partials/header.php';
 
     <?php if ($tip['tags']): ?>
       <div class="ht-tags">
-        <?php foreach ($tip['tags'] as $tg): ?><a href="/health-tips?tag=<?= e($tg['slug']) ?>" class="ht-chip"><?= e($tg['name']) ?></a><?php endforeach; ?>
+        <?php foreach ($tip['tags'] as $tg): ?><a href="<?= e(ecp_ht_section_url($tip['type']) . '?tag=' . $tg['slug']) ?>" class="ht-chip"><?= e($tg['name']) ?></a><?php endforeach; ?>
       </div>
     <?php endif; ?>
 
@@ -223,7 +272,7 @@ require __DIR__ . '/partials/header.php';
       </span>
       <div>
         <p class="ht-mute ht-small">Shared by</p>
-        <h3><a href="/health-tips/by/<?= e($tip['author_slug']) ?>"><?= e($tip['author_name']) ?></a></h3>
+        <h3><a href="<?= e($authorUrl) ?>"><?= e($tip['author_name']) ?></a><?php if ($authorBadge): ?> <span class="ht-verified">✓ <?= e($authorBadge) ?></span><?php endif; ?></h3>
         <?php if ($tip['author_headline']): ?><p class="ht-mute"><?= e($tip['author_headline']) ?></p><?php endif; ?>
         <?php if ($tip['author_instagram']): ?>
           <a class="ht-insta" href="https://www.instagram.com/<?= e($tip['author_instagram']) ?>/" target="_blank" rel="noopener">@<?= e($tip['author_instagram']) ?> on Instagram ↗</a>
@@ -231,91 +280,43 @@ require __DIR__ . '/partials/header.php';
       </div>
     </aside>
 
+    <?php if (!$viewer && !$tip['is_preview']) { require __DIR__ . '/partials/wellness_signup_card.php'; } ?>
+
     <?php
       $related = $tip['is_preview'] ? ['rows' => []] : ecp_ht_public_list(['type' => $tip['type'], 'exclude_id' => (int) $tip['id'], 'limit' => 3]);
     ?>
     <?php if ($related['rows']): ?>
       <section class="ht-related">
         <h2>More <?= e(strtolower($typeMeta['plural'])) ?></h2>
-        <div class="ht-grid"><?php foreach ($related['rows'] as $r) ht_card($r); ?></div>
+        <div class="ht-grid"><?php foreach ($related['rows'] as $r) ecp_ht_card($r); ?></div>
       </section>
     <?php endif; ?>
   </article>
 
   <?php if (!$tip['is_preview']): ?>
-  <script type="application/ld+json"><?= json_encode(ht_json_ld($tip), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?></script>
+  <script type="application/ld+json"><?= json_encode(ht_json_ld($tip, $video, $videoPoster), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?></script>
   <?php endif; ?>
-
-<?php elseif ($mode === 'saved'): ?>
-  <section class="ht-list-hero">
-    <div class="wrap">
-      <a class="ht-crumb" href="/health-tips">← All health tips</a>
-      <h1>Your saved tips</h1>
-      <p class="ht-lede">Recipes, exercises and tips you saved — tap ♥ on any post to add it here.</p>
-    </div>
-  </section>
-  <section class="wrap ht-listing">
-    <?php if (!$viewer): ?>
-      <div class="ht-empty">
-        <p>Sign in to see the tips you saved.</p>
-        <button type="button" class="btn btn-primary" onclick="window.ecpAuth ? window.ecpAuth.open('default') : (location.href = '/patient')">Sign in</button>
-      </div>
-    <?php elseif ($list['rows']): ?>
-      <div class="ht-grid"><?php foreach ($list['rows'] as $r) ht_card($r); ?></div>
-      <?php ht_pager($list['total'], $page, '/health-tips', ['saved' => 1]); ?>
-    <?php else: ?>
-      <p class="ht-empty">Nothing saved yet. <a href="/health-tips">Browse health tips</a> and tap ♥ Save on the ones you like.</p>
-    <?php endif; ?>
-  </section>
-
-<?php elseif ($mode === 'author'): ?>
-  <section class="ht-author-hero">
-    <div class="wrap ht-author-wrap">
-      <span class="ht-avatar ht-avatar-lg">
-        <?php if (!empty($author['avatar_path'])): ?><img src="<?= e(ecp_ht_avatar_url($author['slug'])) ?>" alt="<?= e($author['display_name']) ?>"><?php else: ?><span><?= e(mb_strtoupper(mb_substr((string) $author['display_name'], 0, 1))) ?></span><?php endif; ?>
-      </span>
-      <div>
-        <a class="ht-crumb" href="/health-tips">← All health tips</a>
-        <h1><?= e($author['display_name']) ?></h1>
-        <?php if ($author['headline']): ?><p class="ht-lede"><?= e($author['headline']) ?></p><?php endif; ?>
-        <?php if ($author['bio']): ?><p class="ht-bio"><?= nl2br(e($author['bio'])) ?></p><?php endif; ?>
-        <div class="ht-links">
-          <?php if ($author['instagram_handle']): ?><a href="https://www.instagram.com/<?= e($author['instagram_handle']) ?>/" target="_blank" rel="noopener">Instagram ↗</a><?php endif; ?>
-          <?php if ($author['youtube_url']): ?><a href="<?= e($author['youtube_url']) ?>" target="_blank" rel="noopener">YouTube ↗</a><?php endif; ?>
-          <?php if ($author['website_url']): ?><a href="<?= e($author['website_url']) ?>" target="_blank" rel="noopener">Website ↗</a><?php endif; ?>
-        </div>
-      </div>
-    </div>
-  </section>
-  <section class="wrap ht-listing">
-    <?php if ($list['rows']): ?>
-      <div class="ht-grid"><?php foreach ($list['rows'] as $r) ht_card($r, false); ?></div>
-      <?php ht_pager($list['total'], $page, '/health-tips/by/' . $author['slug'], []); ?>
-    <?php else: ?>
-      <p class="ht-empty">No posts published yet — check back soon.</p>
-    <?php endif; ?>
-  </section>
 
 <?php else: ?>
   <section class="ht-list-hero">
     <div class="wrap">
-      <span class="eyebrow">Health tips</span>
-      <h1>Eat well, move more, feel better</h1>
-      <p class="ht-lede">Healthy recipes, simple exercises and everyday habits from contributors we trust. Every post is reviewed by the eClinicPro team before it goes live.</p>
-      <form class="ht-search" method="get" action="/health-tips" role="search">
-        <?php if ($typeFilter): ?><input type="hidden" name="type" value="<?= e($typeFilter) ?>"><?php endif; ?>
-        <input type="search" name="q" value="<?= e($q) ?>" placeholder="Search recipes, exercises, tips…" aria-label="Search health tips">
+      <a class="ht-crumb" href="/wellness">← Wellness Hub</a>
+      <h1><?= e($intro[0]) ?></h1>
+      <p class="ht-lede"><?= e($intro[1]) ?> Every post is reviewed by the eClinicPro team before it goes live.</p>
+      <form class="ht-search" method="get" action="<?= e(ecp_ht_section_url($typeFilter)) ?>" role="search">
+        <input type="search" name="q" value="<?= e($q) ?>" placeholder="Search <?= e(strtolower($meta['plural'])) ?>…" aria-label="Search <?= e(strtolower($meta['plural'])) ?>">
         <button class="btn btn-primary" type="submit">Search</button>
       </form>
     </div>
   </section>
 
   <section class="wrap ht-listing">
-    <nav class="ht-typetabs" aria-label="Type">
-      <a href="/health-tips" class="<?= $typeFilter === '' ? 'is-active' : '' ?>">All</a>
-      <?php foreach (ECP_HT_TYPES as $t => $meta): ?>
-        <a href="/health-tips?type=<?= $t ?>" class="<?= $typeFilter === $t ? 'is-active' : '' ?>"><?= $meta['icon'] ?> <?= e($meta['plural']) ?></a>
+    <nav class="ht-typetabs" aria-label="Sections">
+      <?php foreach (ECP_HT_TYPES as $t => $m): ?>
+        <a href="<?= e(ecp_ht_section_url($t)) ?>" class="<?= $typeFilter === $t ? 'is-active' : '' ?>"><?= $m['icon'] ?> <?= e($m['plural']) ?></a>
       <?php endforeach; ?>
+      <a href="/wellness/camps">🩺 Free camps</a>
+      <a href="/wellness/events">📅 Events</a>
     </nav>
     <?php
       $chipGroups = $typeFilter === 'exercise' ? ['focus'] : ($typeFilter === 'recipe' ? ['diet', 'meal', 'goal'] : ['diet', 'meal', 'goal', 'focus']);
@@ -327,19 +328,21 @@ require __DIR__ . '/partials/header.php';
         <?php foreach ($chips as $tg): ?>
           <?php $on = $tagFilter === $tg['slug']; ?>
           <a class="ht-chip <?= $on ? 'is-active' : '' ?>"
-             href="/health-tips?<?= e(http_build_query(array_filter(['type' => $typeFilter, 'tag' => $on ? '' : $tg['slug']]))) ?>"><?= e($tg['name']) ?></a>
+             href="<?= e(ecp_ht_section_url($typeFilter) . ($on ? '' : '?tag=' . $tg['slug'])) ?>"><?= e($tg['name']) ?></a>
         <?php endforeach; ?>
       </div>
     <?php endif; ?>
 
     <?php if ($list['rows']): ?>
-      <div class="ht-grid"><?php foreach ($list['rows'] as $r) ht_card($r); ?></div>
-      <?php ht_pager($list['total'], $page, '/health-tips', ['type' => $typeFilter, 'tag' => $tagFilter, 'q' => $q]); ?>
+      <div class="ht-grid"><?php foreach ($list['rows'] as $r) ecp_ht_card($r); ?></div>
+      <?php ht_pager($list['total'], $page, ecp_ht_section_url($typeFilter), ['tag' => $tagFilter, 'q' => $q]); ?>
     <?php elseif ($q !== '' || $tagFilter !== ''): ?>
-      <p class="ht-empty">Nothing matches that yet. <a href="/health-tips<?= $typeFilter ? '?type=' . e($typeFilter) : '' ?>">Clear filters</a></p>
+      <p class="ht-empty">Nothing matches that yet. <a href="<?= e(ecp_ht_section_url($typeFilter)) ?>">Clear filters</a></p>
     <?php else: ?>
-      <p class="ht-empty">Our first recipes and tips are being reviewed — check back soon. 🌱</p>
+      <p class="ht-empty">Our first <?= e(strtolower($meta['plural'])) ?> are being reviewed — check back soon. 🌱</p>
     <?php endif; ?>
+
+    <?php if (!$viewer) { require __DIR__ . '/partials/wellness_signup_card.php'; } ?>
     <p class="ht-disclaimer"><?= e($disclaimer) ?></p>
   </section>
 <?php endif; ?>
@@ -388,41 +391,6 @@ require __DIR__ . '/partials/footer.php';
 // View helpers
 // ---------------------------------------------------------------------
 
-function ht_card(array $r, bool $showAuthor = true): void
-{
-    $meta = ECP_HT_TYPES[$r['type']];
-    $bits = [];
-    if ($r['type'] === 'recipe') {
-        $mins = (int) $r['prep_minutes'] + (int) $r['cook_minutes'];
-        if ($mins) $bits[] = ecp_ht_minutes($mins);
-        if ($r['protein_g'] !== null) $bits[] = '~' . rtrim(rtrim((string) $r['protein_g'], '0'), '.') . ' g protein';
-    } elseif ($r['type'] === 'exercise') {
-        if ($r['duration_minutes']) $bits[] = ecp_ht_minutes((int) $r['duration_minutes']);
-        if ($r['difficulty']) $bits[] = ucfirst((string) $r['difficulty']);
-    }
-    ?>
-    <a class="ht-card-item" href="/health-tips/<?= e($r['slug']) ?>">
-      <div class="ht-card-img ht-type-<?= e($r['type']) ?>">
-        <?php if ($r['cover_id']): ?>
-          <img src="<?= e(ecp_ht_image_url((int) $r['cover_id'])) ?>" alt="" loading="lazy">
-        <?php else: ?>
-          <span class="ht-card-ic"><?= $meta['icon'] ?></span>
-        <?php endif; ?>
-        <span class="ht-card-kind"><?= e($meta['label']) ?></span>
-      </div>
-      <div class="ht-card-body">
-        <h3><?= e($r['title']) ?></h3>
-        <?php if ($r['summary']): ?><p><?= e($r['summary']) ?></p><?php endif; ?>
-        <div class="ht-card-meta">
-          <?php if ($showAuthor): ?><span>By <?= e($r['author_name']) ?></span><?php endif; ?>
-          <?php foreach ($bits as $b): ?><span><?= e($b) ?></span><?php endforeach; ?>
-          <?php if ((int) ($r['save_count'] ?? 0) > 0): ?><span class="ht-card-saves">♥ <?= (int) $r['save_count'] ?></span><?php endif; ?>
-        </div>
-      </div>
-    </a>
-    <?php
-}
-
 function ht_pager(int $total, int $page, string $base, array $params): void
 {
     $pages = (int) ceil($total / ECP_HT_PER_PAGE);
@@ -440,13 +408,29 @@ function ht_pager(int $total, int $page, string $base, array $params): void
     echo '</nav>';
 }
 
-/** schema.org Recipe for recipes (rich results); Article for the rest. */
-function ht_json_ld(array $tip): array
+/** schema.org Recipe for recipes (rich results), VideoObject for videos, Article for the rest. */
+function ht_json_ld(array $tip, ?array $video, ?string $videoPoster): array
 {
-    $url = ecp_site_url('/health-tips/' . $tip['slug']);
+    $url = ecp_site_url(ecp_ht_post_url($tip));
     $images = array_map(static fn ($m) => ecp_site_url(ecp_ht_image_url((int) $m['id'])), $tip['media']);
-    $author = ['@type' => 'Person', 'name' => $tip['author_name'], 'url' => ecp_site_url('/health-tips/by/' . $tip['author_slug'])];
+    $author = ['@type' => 'Person', 'name' => $tip['author_name'], 'url' => ecp_site_url(ecp_ht_author_url($tip))];
     $published = $tip['published_at'] ? date('c', strtotime((string) $tip['published_at'])) : null;
+
+    if ($tip['type'] === 'video' && $video) {
+        $thumb = $videoPoster ? (str_starts_with($videoPoster, 'http') ? $videoPoster : ecp_site_url($videoPoster)) : null;
+        return array_filter([
+            '@context' => 'https://schema.org',
+            '@type' => 'VideoObject',
+            'name' => $tip['title'],
+            'description' => $tip['summary'] ?: mb_substr((string) $tip['body'], 0, 300) ?: $tip['title'],
+            'thumbnailUrl' => $thumb ? [$thumb] : null,
+            'uploadDate' => $published,
+            'embedUrl' => $video['src'],
+            'url' => $url,
+            'author' => $author,
+            'publisher' => ['@type' => 'Organization', 'name' => 'eClinicPro', 'logo' => ['@type' => 'ImageObject', 'url' => ecp_site_url('/assets/img/logos/logo.png')]],
+        ], static fn ($v) => $v !== null);
+    }
 
     if ($tip['type'] !== 'recipe') {
         return array_filter([

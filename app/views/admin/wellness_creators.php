@@ -70,6 +70,17 @@ $short = ['recipe' => 'Recipes', 'exercise' => 'Exercises', 'tip' => 'Tips', 'vi
                 </tbody>
             </table>
         </div>
+        <?php if (!empty($signupSources)): ?>
+            <div class="mt-6 ui-card p-5">
+                <h2 class="font-semibold">Patient sign-ups by source — last 30 days</h2>
+                <p class="text-xs text-slate-500">Which action made new patients sign up. “camp_contact” = to see a camp’s number, “save_tip” / “save_event” = to save, “wellness_cta” = the free-account card, “creator_join” = joined as a creator. “not tracked” = /patient page or sign-ups before this was added.</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <?php foreach ($signupSources as $s): ?>
+                        <span class="rounded bg-slate-100 px-2.5 py-1 text-sm"><?= $h($s['source']) ?> <strong><?= (int) $s['n'] ?></strong></span>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
         <p class="mt-3 text-xs text-slate-500">Colours: <span class="rounded bg-amber-100 px-1">waiting</span> <span class="rounded bg-emerald-100 px-1">approved</span> <span class="rounded bg-rose-100 px-1">not approved</span> <span class="rounded bg-slate-200 px-1">paused</span></p>
     </main>
 </body>

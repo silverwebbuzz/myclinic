@@ -129,7 +129,33 @@ function ecp_dispatch_clean_url(string $requestUri): bool
 
     // Wellness Hub camps & events (mirrors .htaccess).
     if (preg_match('#^/wellness/?$#i', $uri)) {
-        header('Location: /wellness/camps', true, 302);
+        require __DIR__ . '/../wellness.php';
+
+        return true;
+    }
+    if (preg_match('#^/wellness/(saved|search)/?$#i', $uri, $m)) {
+        $_GET['_wh_page'] = strtolower($m[1]);
+        require __DIR__ . '/../wellness.php';
+
+        return true;
+    }
+    if (preg_match('#^/wellness/creators/([a-z0-9][a-z0-9\-]*)/?$#i', $uri, $m)) {
+        $_GET['_wh_page'] = 'creator';
+        $_GET['_wh_creator'] = strtolower($m[1]);
+        require __DIR__ . '/../wellness.php';
+
+        return true;
+    }
+    if (preg_match('#^/wellness/(recipes|exercises|tips|videos)/?$#i', $uri, $m)) {
+        $_GET['_wh_section'] = strtolower($m[1]);
+        require __DIR__ . '/../health-tips.php';
+
+        return true;
+    }
+    if (preg_match('#^/wellness/(recipe|exercise|tip|video)/([a-z0-9][a-z0-9\-]*)/?$#i', $uri, $m)) {
+        $_GET['_wh_kind'] = strtolower($m[1]);
+        $_GET['_wh_slug'] = strtolower($m[2]);
+        require __DIR__ . '/../health-tips.php';
 
         return true;
     }

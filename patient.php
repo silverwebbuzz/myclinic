@@ -1475,9 +1475,9 @@ require __DIR__ . '/partials/header.php';
               <span class="pt-nav-ic">👤</span>
               <span class="pt-nav-label">My Profile</span>
             </button>
-            <button type="button" onclick="window.location.href='/health-tips?saved=1'" title="Recipes, exercises and tips you saved">
+            <button type="button" onclick="window.location.href='/wellness/saved'" title="Recipes, exercises, tips, camps and events you saved">
               <span class="pt-nav-ic">♥</span>
-              <span class="pt-nav-label">Saved health tips</span>
+              <span class="pt-nav-label">Saved (Wellness Hub)</span>
             </button>
 <?php if ($htContributor !== null && $htContributor['status'] === 'active'): ?>
             <button type="button" onclick="window.location.href='/my-health-tips'" title="Write and manage your recipes, exercises and tips">

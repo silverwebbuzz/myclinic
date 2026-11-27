@@ -52,10 +52,10 @@ final class CreatorService
     ];
 
     /** Types the existing Health Tips editor handles. */
-    public const TIP_TYPES = ['recipe', 'exercise', 'tip'];
+    public const TIP_TYPES = ['recipe', 'exercise', 'tip', 'video'];
 
     /** Not built yet — shown as "Opens soon" in the Studio. */
-    public const UPCOMING_TYPES = ['video'];
+    public const UPCOMING_TYPES = [];
 
     public const ORG_TYPES = ['clinic', 'ngo', 'government', 'company'];
 
@@ -824,7 +824,7 @@ final class CreatorService
                  VALUES (:c, :t, 'approved', NOW(), NOW(), 'Granted from Health Tips contributors')
                  ON DUPLICATE KEY UPDATE status = 'approved', reviewed_at = NOW()"
             );
-            foreach (self::TIP_TYPES as $t) {
+            foreach (['recipe', 'exercise', 'tip'] as $t) {   // the old contributor grant never covered videos
                 $ins->execute(['c' => $creatorId, 't' => $t]);
             }
         } catch (\Throwable $e) {

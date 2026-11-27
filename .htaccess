@@ -98,7 +98,11 @@ RewriteRule ^health-tips/by/([a-z0-9][a-z0-9\-]*)/?$ health-tips.php?_ht_by=$1 [
 RewriteRule ^health-tips/([a-z0-9][a-z0-9\-]*)/?$ health-tips.php?_ht_slug=$1 [L,QSA,NC]
 
 # -------- Wellness Hub camps & events (/wellness/camps…, /wellness/camp/{slug}) --------
-RewriteRule ^wellness/?$ /wellness/camps [R=302,L]
+RewriteRule ^wellness/?$ wellness.php [L,QSA]
+RewriteRule ^wellness/(saved|search)/?$ wellness.php?_wh_page=$1 [L,QSA,NC]
+RewriteRule ^wellness/creators/([a-z0-9][a-z0-9\-]*)/?$ wellness.php?_wh_page=creator&_wh_creator=$1 [L,QSA,NC]
+RewriteRule ^wellness/(recipes|exercises|tips|videos)/?$ health-tips.php?_wh_section=$1 [L,QSA,NC]
+RewriteRule ^wellness/(recipe|exercise|tip|video)/([a-z0-9][a-z0-9\-]*)/?$ health-tips.php?_wh_kind=$1&_wh_slug=$2 [L,QSA,NC]
 RewriteRule ^wellness/(camp|event)/([a-z0-9][a-z0-9\-]*)/?$ wellness-events.php?_we_kind=$1&_we_a=$2 [L,QSA,NC]
 RewriteRule ^wellness/(camps|events)/?$ wellness-events.php?_we_kind=$1 [L,QSA,NC]
 RewriteRule ^wellness/(camps|events)/([a-z0-9][a-z0-9\-]*)/?$ wellness-events.php?_we_kind=$1&_we_a=$2 [L,QSA,NC]

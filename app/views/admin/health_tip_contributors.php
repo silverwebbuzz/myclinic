@@ -94,7 +94,7 @@ $existingIds = array_map(static fn ($c) => (int) $c['identity_id'], $contributor
                             <div class="font-medium"><?= $h($c['display_name']) ?></div>
                             <?php if ($c['headline']): ?><div class="text-xs text-slate-500"><?= $h($c['headline']) ?></div><?php endif; ?>
                             <?php if ($c['admin_note']): ?><div class="mt-1 text-xs text-slate-400">📝 <?= $h($c['admin_note']) ?></div><?php endif; ?>
-                            <a href="<?= $h(HT::siteUrl('/health-tips/by/' . $c['slug'])) ?>" target="_blank" rel="noopener" class="text-xs text-sky-700 underline">/health-tips/by/<?= $h($c['slug']) ?></a>
+                            <a href="<?= $h(HT::siteUrl('/health-tips/by/' . $c['slug'])) ?>" target="_blank" rel="noopener" class="text-xs text-sky-700 underline">Public creator page ↗</a>
                         </td>
                         <td class="px-4 py-3 text-slate-600">
                             <a href="/admin/signups/<?= (int) $c['identity_id'] ?>" class="hover:underline"><?= $h($c['identity_name'] ?? '—') ?></a>

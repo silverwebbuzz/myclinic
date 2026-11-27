@@ -33,8 +33,10 @@ switch ($action) {
         $tag  = (string) ($_GET['tag'] ?? '');
         $page = max(1, (int) ($_GET['page'] ?? 1));
         $res = ecp_ht_public_list([
-            'type' => isset(ECP_HT_TYPES[$type]) ? $type : '',
+            'type' => isset(ECP_HT_TYPES[$type]) && $type !== 'video' ? $type : '',
             'tag'  => preg_match('/^[a-z0-9\-]{1,60}$/', $tag) ? $tag : '',
+            // The app has no video player yet (Wellness Hub Phase 3 added videos on the web).
+            'exclude_types' => ['video'],
             'q'    => mb_substr(trim((string) ($_GET['q'] ?? '')), 0, 80),
             'page' => $page,
         ]);
@@ -46,7 +48,7 @@ switch ($action) {
         ecp_m_require_method('GET');
         $me = ecp_m_require_patient();
         $page = max(1, (int) ($_GET['page'] ?? 1));
-        $res = ecp_ht_public_list(['saved_by' => (int) $me['id'], 'page' => $page]);
+        $res = ecp_ht_public_list(['saved_by' => (int) $me['id'], 'page' => $page, 'exclude_types' => ['video']]);
         ecp_m_ok(ecp_mht_page($res, $page));
         break;
     }
@@ -181,7 +183,7 @@ function ecp_mht_detail(array $t, int $identityId): array
         'saved'        => $identityId > 0 && ecp_ht_is_saved($identityId, (int) $t['id']),
         'can_save'     => ecp_ht_saves_enabled(),
         'published_at' => $t['published_at'] ? date('c', strtotime((string) $t['published_at'])) : null,
-        'web_url'      => ecp_site_url('/health-tips/' . $t['slug']),
+        'web_url'      => ecp_site_url(ecp_ht_post_url($t)),
         'disclaimer'   => 'General wellness information shared by our contributors — not medical advice. '
             . 'If you have a health condition, allergy, are pregnant, or take medicines, check with your doctor '
             . 'before changing your diet or exercise.',

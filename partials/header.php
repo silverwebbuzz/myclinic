@@ -156,7 +156,7 @@ $ecpPatientJson = $ecpPatient
     $ecpPixelPath = (string) strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
     $ecpPixelOn   = preg_match('/^\d{10,20}$/', $ecpPixelId)
         && !($ecpPatient && preg_match('#^/patient(\.php)?(/|$)#', $ecpPixelPath))
-        && !preg_match('#^/(my-health-tips|store/orders?)(\.php)?(/|$)#', $ecpPixelPath);
+        && !preg_match('#^/(my-health-tips|store/orders?|wellness/saved)(\.php)?(/|$)#', $ecpPixelPath);
     ?>
     <script>
         // Safe everywhere: a no-op when the pixel isn't loaded on this page.
@@ -218,6 +218,8 @@ body.patient-wide .nav-inner{max-width:1572px}
 .logo em{color:var(--teal-600);font-style:normal;font-weight:600}
 .logo-img{display:block;height:40px;width:auto;max-width:180px;object-fit:contain;object-position:center center}
 .nav-links{display:flex;gap:24px;flex:1;min-width:0}
+/* Wellness Hub link: no room between 901–1280px; it shows on wider screens and in the mobile menu. */
+@media (min-width:901px) and (max-width:1280px){.nav-link-wellness{display:none}}
 .nav-link{font-size:16px;font-weight:500;color:var(--ink-2);position:relative;padding:4px 0;transition:color .15s}
 .nav-cta{display:flex;gap:8px;align-items:center;flex-shrink:0}
 /* 901–1180px: six menu items + two CTAs must share one row — tighten before the burger takes over at 900px. */
@@ -282,6 +284,7 @@ body.patient-wide .nav-inner{max-width:1572px}
 
         <nav class="nav-links" :class="mobileNav ? 'is-open' : ''">
             <a href="/find-a-doctor" class="nav-link <?= nav_active('find') ?>">Find a doctor</a>
+            <a href="/wellness" class="nav-link nav-link-wellness <?= nav_active('wellness') ?>">Wellness Hub</a>
             <a href="/cervical-cancer" class="nav-link nav-link-awareness <?= nav_active('cervical') ?>">Cervical Cancer</a>
             <!-- For doctors — opens the product page; hovering (or tapping on
                  mobile, where the submenu is always expanded) reveals the

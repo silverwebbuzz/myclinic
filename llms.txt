@@ -6,7 +6,9 @@
 
 - [Find a doctor](https://eclinicpro.com/find-a-doctor): search verified doctors and clinics across India by city, specialty and location; see fees, ratings and timings, and book online.
 - [For patients](https://eclinicpro.com/for-patients): the free patient account — book doctors, shortlist favourites, manage family health profiles and store prescriptions.
-- [Health tips](https://eclinicpro.com/health-tips): recipes, exercises and health tips.
+- [Wellness Hub](https://eclinicpro.com/wellness): healthy recipes, exercises, everyday health tips and videos from reviewed Health Creators.
+- [Free health camps](https://eclinicpro.com/wellness/camps): upcoming free health checkup, eye, dental, blood donation and vaccination camps by city.
+- [Health events](https://eclinicpro.com/wellness/events): health expos, workshops and webinars by city.
 - [Cervical cancer awareness](https://eclinicpro.com/cervical-cancer): facts, India's HPV vaccination campaign, screening tests and an age-wise prevention schedule.
 - [eClinicPro Store](https://eclinicpro.com/store/): health, wellness and everyday essentials from verified sellers.
 

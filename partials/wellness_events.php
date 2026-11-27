@@ -363,3 +363,132 @@ function ecp_we_report(int $eventId, string $reason, string $details, ?int $iden
         return ['ok' => false, 'error' => 'server_error'];
     }
 }
+
+// ---------------------------------------------------------------------
+// Saves (wh_saves, Phase 3) — signed-in patients save camps / events
+// ---------------------------------------------------------------------
+
+function ecp_we_saves_enabled(): bool
+{
+    static $on = null;
+    if ($on === null) {
+        $db = ecp_db();
+        try {
+            $on = $db && $db->query("SHOW TABLES LIKE 'wh_saves'")->fetchColumn() !== false;
+        } catch (Throwable $e) {
+            $on = false;
+        }
+    }
+    return $on;
+}
+
+function ecp_we_is_saved(int $identityId, int $eventId): bool
+{
+    $db = ecp_db();
+    if (!$db || !ecp_we_saves_enabled()) {
+        return false;
+    }
+    $st = $db->prepare("SELECT 1 FROM wh_saves WHERE identity_id = :i AND item_type = 'event' AND item_id = :e LIMIT 1");
+    $st->execute(['i' => $identityId, 'e' => $eventId]);
+    return $st->fetchColumn() !== false;
+}
+
+/** @return array{ok:bool,error?:string,saved?:bool} */
+function ecp_we_toggle_save(int $identityId, int $eventId): array
+{
+    $db = ecp_db();
+    if (!$db || !ecp_we_saves_enabled()) {
+        return ['ok' => false, 'error' => 'not_available'];
+    }
+    $st = $db->prepare("SELECT 1 FROM wh_events WHERE id = :e AND status IN ('published','cancelled') AND is_deleted = 0 LIMIT 1");
+    $st->execute(['e' => $eventId]);
+    if ($st->fetchColumn() === false) {
+        return ['ok' => false, 'error' => 'not_found'];
+    }
+    if (ecp_we_is_saved($identityId, $eventId)) {
+        $db->prepare("DELETE FROM wh_saves WHERE identity_id = :i AND item_type = 'event' AND item_id = :e")->execute(['i' => $identityId, 'e' => $eventId]);
+        return ['ok' => true, 'saved' => false];
+    }
+    $db->prepare("INSERT IGNORE INTO wh_saves (identity_id, item_type, item_id) VALUES (:i, 'event', :e)")->execute(['i' => $identityId, 'e' => $eventId]);
+    return ['ok' => true, 'saved' => true];
+}
+
+/** Saved camps / events — upcoming first, then past. @return list<array<string,mixed>> */
+function ecp_we_saved(int $identityId): array
+{
+    $db = ecp_db();
+    if (!$db || !ecp_we_saves_enabled()) {
+        return [];
+    }
+    try {
+        $st = $db->prepare(
+            "SELECT e.id, e.kind, e.category_slug, e.title, e.slug, e.summary, e.poster_path, e.start_at, e.end_at, e.mode,
+                    e.venue_name, e.city_name, e.city_slug, e.fee_amount, e.audience, e.organised_by, e.status,
+                    w.display_name AS creator_name, w.creator_type, w.verify_status, w.slug AS creator_slug
+             FROM wh_saves sv
+             JOIN wh_events e ON e.id = sv.item_id AND sv.item_type = 'event'
+             JOIN wh_creators w ON w.id = e.creator_id
+             WHERE sv.identity_id = :i AND e.status IN ('published','cancelled') AND " . ecp_we_public_sql() . "
+             ORDER BY (e.end_at < NOW()), e.start_at ASC LIMIT 100"
+        );
+        $st->execute(['i' => $identityId]);
+        return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+}
+
+/** Search upcoming camps / events by title, summary or city. @return list<array<string,mixed>> */
+function ecp_we_search(string $q, int $limit = 12): array
+{
+    $db = ecp_db();
+    $q = trim($q);
+    if (!$db || $q === '') {
+        return [];
+    }
+    try {
+        $st = $db->prepare(
+            "SELECT e.id, e.kind, e.category_slug, e.title, e.slug, e.summary, e.poster_path, e.start_at, e.end_at, e.mode,
+                    e.venue_name, e.city_name, e.city_slug, e.fee_amount, e.audience, e.organised_by,
+                    w.display_name AS creator_name, w.creator_type, w.verify_status, w.slug AS creator_slug
+             FROM wh_events e JOIN wh_creators w ON w.id = e.creator_id
+             WHERE " . ecp_we_public_sql() . " AND e.status = 'published' AND e.end_at >= NOW()
+               AND (e.title LIKE :q1 OR e.summary LIKE :q2 OR e.city_name LIKE :q3)
+             ORDER BY e.start_at ASC LIMIT " . max(1, min(60, $limit))
+        );
+        $like = '%' . $q . '%';
+        $st->execute(['q1' => $like, 'q2' => $like, 'q3' => $like]);
+        return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        return [];
+    }
+}
+
+// ---------------------------------------------------------------------
+// Card (lists, hub, search, saved)
+// ---------------------------------------------------------------------
+
+/** @param array<string,string> $categories */
+function ecp_we_card(array $r, array $categories = []): void
+{
+    $s = strtotime((string) $r['start_at']);
+    $badge = ecp_we_badge($r);
+    if (!$categories) {
+        $categories = ecp_we_categories((string) $r['kind']);
+    }
+    ?>
+    <a class="we-card" href="<?= e(ecp_we_url($r)) ?>">
+      <div class="we-card-top <?= empty($r['poster_path']) ? 'no-poster' : '' ?>">
+        <span class="we-date"><b><?= e(date('d', $s)) ?></b><?= e(date('M', $s)) ?><small><?= e(date('D', $s)) ?></small></span>
+        <?php if (!empty($r['poster_path'])): ?><img src="<?= e(ecp_we_poster_url((int) $r['id'])) ?>" alt="" loading="lazy"><?php endif; ?>
+        <span class="we-fee <?= (float) $r['fee_amount'] > 0 ? 'is-paid' : '' ?>"><?= e(ecp_we_fee_label($r)) ?></span>
+      </div>
+      <div class="we-card-body">
+        <span class="we-card-cat"><?= e($categories[$r['category_slug']] ?? '') ?></span>
+        <h3><?= e($r['title']) ?></h3>
+        <p class="we-card-meta">🕘 <?= e(date('h:i A', $s)) ?> · 📍 <?= e($r['mode'] === 'online' ? 'Online' : trim(($r['venue_name'] ? $r['venue_name'] . ', ' : '') . (string) $r['city_name'])) ?></p>
+        <p class="we-card-org">By <?= e(ecp_we_organiser($r)) ?><?= $badge ? ' <span class="we-verified">✓</span>' : '' ?></p>
+      </div>
+    </a>
+    <?php
+}

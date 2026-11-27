@@ -50,7 +50,7 @@ ob_start();
             <div class="mt-2 grid gap-2 sm:grid-cols-3">
                 <?php foreach ($tipReady as $t): ?>
                     <a href="<?= $e(CS::siteUrl('/my-health-tips?new=' . $t)) ?>" class="rounded-[8px] border border-ln p-3 hover:border-ac hover:bg-acs">
-                        <span class="block text-[13px] font-semibold">+ New <?= $e(strtolower(rtrim(CS::CONTENT[$t][0], 's'))) ?></span>
+                        <span class="block text-[13px] font-semibold">+ New <?= $e(['recipe' => 'recipe', 'exercise' => 'exercise', 'tip' => 'quick tip', 'video' => 'video'][$t] ?? $t) ?></span>
                         <span class="block text-[11.5px] text-tx3">Opens the editor</span>
                     </a>
                 <?php endforeach; ?>
@@ -110,7 +110,7 @@ ob_start();
 
     <section class="<?= $card ?>">
         <div class="flex items-center justify-between">
-            <h2 class="text-[13px] font-semibold">Recipes, exercises &amp; tips</h2>
+            <h2 class="text-[13px] font-semibold">Recipes, tips &amp; videos</h2>
             <a href="/creator/content" class="text-[12.5px] text-ac underline">See all</a>
         </div>
         <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">

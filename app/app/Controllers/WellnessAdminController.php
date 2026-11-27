@@ -34,6 +34,7 @@ final class WellnessAdminController
             'q' => $q,
             'counts' => CreatorAdminService::tabCounts(),
             'rows' => CreatorAdminService::list($tab, $q),
+            'signupSources' => CreatorAdminService::signupSources(),
         ]));
     }
 

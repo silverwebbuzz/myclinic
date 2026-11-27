@@ -11,7 +11,7 @@
 use App\Services\Wellness\CreatorService as CS;
 
 $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
-$pageTitle = 'Recipes, exercises & tips';
+$pageTitle = 'Recipes, tips & videos';
 $typeLabel = ['recipe' => 'Recipe', 'exercise' => 'Exercise', 'tip' => 'Quick tip', 'video' => 'Video'];
 $status = [
     'draft' => ['Draft', 'bg-ntb text-nt'],
@@ -26,7 +26,7 @@ $fmt = static fn (?string $d): string => $d ? date('d M Y', strtotime($d)) : '�
 ob_start();
 ?>
 <div class="flex flex-wrap items-center gap-2">
-    <h1 class="text-[17px] font-semibold">Recipes, exercises &amp; tips</h1>
+    <h1 class="text-[17px] font-semibold">Recipes, exercises, tips &amp; videos</h1>
     <span class="flex-1"></span>
     <?php foreach ($tipReady as $t): ?>
         <a href="<?= $e(CS::siteUrl('/my-health-tips?new=' . $t)) ?>" class="inline-flex h-8 items-center rounded-[7px] bg-ac px-3 text-[12.5px] font-semibold text-white hover:bg-act">+ <?= $e($typeLabel[$t]) ?></a>
@@ -61,7 +61,7 @@ ob_start();
                         <td class="px-4 py-3 text-tx2"><?= $e($fmt($t['updated_at'])) ?></td>
                         <td class="px-4 py-3 text-right whitespace-nowrap">
                             <?php if ($t['status'] === 'published'): ?>
-                                <a href="<?= $e(CS::siteUrl('/health-tips/' . $t['slug'])) ?>" target="_blank" rel="noopener" class="text-[12.5px] text-ac underline">View ↗</a>
+                                <a href="<?= $e(CS::siteUrl('/wellness/' . $t['type'] . '/' . $t['slug'])) ?>" target="_blank" rel="noopener" class="text-[12.5px] text-ac underline">View ↗</a>
                             <?php endif; ?>
                             <a href="<?= $e(CS::siteUrl('/my-health-tips?edit=' . (int) $t['id'])) ?>" class="ml-3 text-[12.5px] text-tx2 underline">Open</a>
                         </td>
@@ -71,7 +71,7 @@ ob_start();
         </table>
     </div>
 <?php endif; ?>
-<p class="mt-3 text-[12px] text-tx3">Camps and events are under <a href="/creator/events" class="underline">Camps &amp; events</a>. Videos open soon.</p>
+<p class="mt-3 text-[12px] text-tx3">Camps and events are under <a href="/creator/events" class="underline">Camps &amp; events</a>.</p>
 <?php
 $content = ob_get_clean();
 require __DIR__ . '/_layout.php';

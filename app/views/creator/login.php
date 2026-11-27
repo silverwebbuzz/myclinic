@@ -169,6 +169,7 @@ function creatorLogin(cfg) {
                 const d = await this.call('verify_otp', {
                     phone: this.phone.replace(/\D/g, ''), code: this.code.replace(/\D/g, ''),
                     name: this.needName ? this.name.trim() : undefined, captcha_token: this.captchaToken(),
+                    signup_source: this.needName ? 'creator_join' : undefined,
                 });
                 if (!d.ok) { this.error = MESSAGES[d.error] || 'Could not verify. Please try again.'; return; }
                 window.location.href = '/creator/dashboard';

@@ -171,7 +171,7 @@ foreach ($claimWords as $w) {
                         </div>
                     </form>
                     <?php if ($status === 'published'): ?>
-                        <a href="<?= $h(HT::siteUrl('/health-tips/' . $tip['slug'])) ?>" target="_blank" rel="noopener" class="mt-3 block text-center text-sm text-sky-700 underline">View live page ↗</a>
+                        <a href="<?= $h(HT::postUrl($tip)) ?>" target="_blank" rel="noopener" class="mt-3 block text-center text-sm text-sky-700 underline">View live page ↗</a>
                     <?php endif; ?>
                 </div>
 

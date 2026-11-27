@@ -123,6 +123,7 @@ $q = static function (array $over) use ($when, $freeOnly, $onlineOnly, $category
 <?php if ($mode === 'detail'): ?>
   <article class="wrap we-article">
     <nav class="we-crumbs" aria-label="Breadcrumb">
+      <a href="/wellness">Wellness Hub</a><span>›</span>
       <a href="<?= e($basePath) ?>"><?= e($K['plural']) ?></a>
       <?php if ($event['city_slug']): ?><span>›</span><a href="<?= e($basePath . '/' . $event['city_slug']) ?>"><?= e($event['city_name']) ?></a><?php endif; ?>
     </nav>
@@ -141,6 +142,14 @@ $q = static function (array $over) use ($when, $freeOnly, $onlineOnly, $category
         <span class="we-kind"><?= e($isCamp ? 'Free health camp' : 'Health event') ?> · <?= e($catName) ?></span>
         <h1><?= e($event['title']) ?></h1>
         <?php if ($event['summary']): ?><p class="we-lede"><?= e($event['summary']) ?></p><?php endif; ?>
+        <?php if (ecp_we_saves_enabled()): $weSaved = $viewer && ecp_we_is_saved((int) $viewer['id'], (int) $event['id']); ?>
+          <div class="we-save" x-data="weSave(<?= (int) $event['id'] ?>, <?= $weSaved ? 'true' : 'false' ?>)">
+            <button type="button" class="we-save-btn" :class="saved ? 'is-saved' : ''" :disabled="busy" @click="toggle()">
+              <span x-text="saved ? '♥ Saved' : '♡ Save'"><?= $weSaved ? '♥ Saved' : '♡ Save' ?></span>
+            </button>
+            <a href="/wellness/saved" class="we-save-link" x-show="saved">Your saved items →</a>
+          </div>
+        <?php endif; ?>
 
         <dl class="we-facts">
           <div><dt>When</dt><dd><?= e(ecp_we_when((string) $event['start_at'], (string) $event['end_at'])) ?></dd></div>
@@ -203,6 +212,7 @@ $q = static function (array $over) use ($when, $freeOnly, $onlineOnly, $category
       </div>
     </aside>
 
+    <?php if (!$viewer) { require __DIR__ . '/partials/wellness_signup_card.php'; } ?>
     <p class="we-disclaimer"><?= e($disclaimer) ?></p>
 
     <details class="we-report" x-data="weReport(<?= (int) $event['id'] ?>)">
@@ -224,12 +234,35 @@ $q = static function (array $over) use ($when, $freeOnly, $onlineOnly, $category
     <?php if ($more['rows']): ?>
       <section class="we-more">
         <h2>More upcoming <?= e(strtolower($K['plural'])) ?></h2>
-        <div class="we-grid"><?php foreach ($more['rows'] as $r) we_card($r, $categories); ?></div>
+        <div class="we-grid"><?php foreach ($more['rows'] as $r) ecp_we_card($r, $categories); ?></div>
       </section>
     <?php endif; ?>
   </article>
   <script type="application/ld+json"><?= json_encode(ecp_we_json_ld($event), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?></script>
   <script>
+    function weSave(id, saved) {
+      return {
+        saved, busy: false,
+        async send() {
+          const r = await fetch('/api/wellness_save', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+          return { status: r.status, j: await r.json().catch(() => ({})) };
+        },
+        async toggle() {
+          if (this.busy) return;
+          this.busy = true;
+          try {
+            const { status, j } = await this.send();
+            if (status === 401) {
+              if (window.ecpAuth) window.ecpAuth.require('save_event', async () => { await this.send(); location.reload(); });
+              else location.href = '/patient';
+              return;
+            }
+            if (j.ok) this.saved = j.saved;
+          } catch (e) {
+          } finally { this.busy = false; }
+        },
+      };
+    }
     function weReport(id) {
       return {
         reason: '', details: '', busy: false, done: false, error: '',
@@ -291,7 +324,7 @@ $q = static function (array $over) use ($when, $freeOnly, $onlineOnly, $category
     </div>
 
     <?php if ($list['rows']): ?>
-      <div class="we-grid"><?php foreach ($list['rows'] as $r) we_card($r, $categories); ?></div>
+      <div class="we-grid"><?php foreach ($list['rows'] as $r) ecp_we_card($r, $categories); ?></div>
       <?php
         $pages = (int) ceil($list['total'] / ECP_WE_PER_PAGE);
         if ($pages > 1): ?>
@@ -323,6 +356,7 @@ $q = static function (array $over) use ($when, $freeOnly, $onlineOnly, $category
       </nav>
     <?php endif; ?>
 
+    <?php if (!$viewer) { require __DIR__ . '/partials/wellness_signup_card.php'; } ?>
     <p class="we-disclaimer"><?= e($disclaimer) ?></p>
   </section>
 <?php endif; ?>
@@ -330,29 +364,3 @@ $q = static function (array $over) use ($when, $freeOnly, $onlineOnly, $category
 
 <?php
 require __DIR__ . '/partials/footer.php';
-
-// ---------------------------------------------------------------------
-// View helpers
-// ---------------------------------------------------------------------
-
-/** @param array<string,string> $categories */
-function we_card(array $r, array $categories): void
-{
-    $s = strtotime((string) $r['start_at']);
-    $badge = ecp_we_badge($r);
-    ?>
-    <a class="we-card" href="<?= e(ecp_we_url($r)) ?>">
-      <div class="we-card-top <?= empty($r['poster_path']) ? 'no-poster' : '' ?>">
-        <span class="we-date"><b><?= e(date('d', $s)) ?></b><?= e(date('M', $s)) ?><small><?= e(date('D', $s)) ?></small></span>
-        <?php if (!empty($r['poster_path'])): ?><img src="<?= e(ecp_we_poster_url((int) $r['id'])) ?>" alt="" loading="lazy"><?php endif; ?>
-        <span class="we-fee <?= (float) $r['fee_amount'] > 0 ? 'is-paid' : '' ?>"><?= e(ecp_we_fee_label($r)) ?></span>
-      </div>
-      <div class="we-card-body">
-        <span class="we-card-cat"><?= e($categories[$r['category_slug']] ?? '') ?></span>
-        <h3><?= e($r['title']) ?></h3>
-        <p class="we-card-meta">🕘 <?= e(date('h:i A', $s)) ?> · 📍 <?= e($r['mode'] === 'online' ? 'Online' : trim(($r['venue_name'] ? $r['venue_name'] . ', ' : '') . (string) $r['city_name'])) ?></p>
-        <p class="we-card-org">By <?= e(ecp_we_organiser($r)) ?><?= $badge ? ' <span class="we-verified">✓</span>' : '' ?></p>
-      </div>
-    </a>
-    <?php
-}

@@ -50,7 +50,6 @@ $marketing = [
     ['/book-a-demo',       0.7, 'monthly'],
     ['/contact',           0.5, 'yearly'],
     ['/cervical-cancer',   0.7, 'monthly'],
-    ['/health-tips',       0.6, 'weekly'],
     ['/store/',            0.6, 'weekly'],
     ['/become-a-partner',  0.5, 'monthly'],
     ['/privacy-policy',    0.3, 'yearly'],
@@ -199,29 +198,49 @@ if ($ecpLabPagesLive && function_exists('ecp_db') && ($labDb = ecp_db())) {
     }
 }
 
-// ---- Health Tips: hub, every published post, contributor pages ----
+// ---- Wellness Hub (Phase 3): hub, sections, every published post, creator pages.
+//      Old /health-tips/* URLs 301 to these, so only the new ones are listed. ----
 if (function_exists('ecp_db') && ecp_db()) {
     require_once __DIR__ . '/partials/health_tips.php';
     try {
         $htDb = ecp_db();
-        echo "  <url>\n    <loc>{$base}/health-tips</loc>\n    <lastmod>{$now}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.8</priority>\n  </url>\n";
+        echo "  <url>\n    <loc>{$base}/wellness</loc>\n    <lastmod>{$now}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.8</priority>\n  </url>\n";
+        $live = $htDb->query(
+            "SELECT DISTINCT t.type FROM health_tips t JOIN health_tip_contributors c ON c.id = t.contributor_id AND c.status = 'active'
+             WHERE t.status = 'published' AND t.is_deleted = 0"
+        )->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($live as $type) {
+            if (isset(ECP_HT_TYPES[$type])) {
+                echo "  <url>\n    <loc>{$base}" . ecp_ht_section_url((string) $type) . "</loc>\n    <lastmod>{$now}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.7</priority>\n  </url>\n";
+            }
+        }
         $rows = $htDb->query(
-            "SELECT t.slug, t.updated_at FROM health_tips t
+            "SELECT t.type, t.slug, t.updated_at FROM health_tips t
              JOIN health_tip_contributors c ON c.id = t.contributor_id AND c.status = 'active'
              WHERE t.status = 'published' AND t.is_deleted = 0 ORDER BY t.published_at DESC"
         )->fetchAll(PDO::FETCH_ASSOC);
         foreach ($rows as $r) {
-            $loc = $base . '/health-tips/' . rawurlencode((string) $r['slug']);
+            $loc = $base . ecp_ht_post_url($r);
             $mod = date('Y-m-d', strtotime((string) $r['updated_at']));
             echo "  <url>\n    <loc>{$loc}</loc>\n    <lastmod>{$mod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n";
         }
-        foreach (ecp_ht_public_contributors() as $c) {
-            $loc = $base . '/health-tips/by/' . rawurlencode((string) $c['slug']);
-            $mod = date('Y-m-d', strtotime((string) $c['last_updated']));
+    } catch (Throwable $e) {
+        error_log('[sitemap wellness tips] ' . $e->getMessage());
+    }
+    try {
+        $creators = ecp_db()->query(
+            "SELECT w.slug, w.updated_at FROM wh_creators w
+             WHERE w.status = 'active' AND (
+                 EXISTS (SELECT 1 FROM health_tips t WHERE t.contributor_id = w.legacy_contributor_id AND t.status = 'published' AND t.is_deleted = 0)
+              OR EXISTS (SELECT 1 FROM wh_events e WHERE e.creator_id = w.id AND e.status IN ('published','cancelled') AND e.is_deleted = 0))"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($creators as $c) {
+            $loc = $base . '/wellness/creators/' . rawurlencode((string) $c['slug']);
+            $mod = date('Y-m-d', strtotime((string) $c['updated_at']));
             echo "  <url>\n    <loc>{$loc}</loc>\n    <lastmod>{$mod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n";
         }
     } catch (Throwable $e) {
-        error_log('[sitemap health tips] ' . $e->getMessage());   // patch not run yet
+        error_log('[sitemap wellness creators] ' . $e->getMessage());   // patch not run yet
     }
 }
 

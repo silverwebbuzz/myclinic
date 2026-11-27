@@ -35,9 +35,10 @@ const ECP_HT_PHOTO_MIMES    = [
     'image/webp' => 'webp',
 ];
 const ECP_HT_TYPES = [
-    'recipe'   => ['label' => 'Recipe',    'plural' => 'Recipes',   'icon' => '🥗'],
-    'exercise' => ['label' => 'Exercise',  'plural' => 'Exercises', 'icon' => '🧘'],
-    'tip'      => ['label' => 'Quick tip', 'plural' => 'Quick tips', 'icon' => '💡'],
+    'recipe'   => ['label' => 'Recipe',    'plural' => 'Recipes',    'icon' => '🥗', 'path' => 'recipes'],
+    'exercise' => ['label' => 'Exercise',  'plural' => 'Exercises',  'icon' => '🧘', 'path' => 'exercises'],
+    'tip'      => ['label' => 'Quick tip', 'plural' => 'Quick tips', 'icon' => '💡', 'path' => 'tips'],
+    'video'    => ['label' => 'Video',     'plural' => 'Videos',     'icon' => '▶️', 'path' => 'videos'],
 ];
 const ECP_HT_STATUS_LABELS = [
     'draft'             => 'Draft',
@@ -328,7 +329,7 @@ function ecp_ht_save(array $c, ?int $id, array $data, array $files, bool $submit
         }
     }
     $steps = [];
-    if ($type !== 'tip') {
+    if (!in_array($type, ['tip', 'video'], true)) {
         foreach ((array) ($data['step'] ?? []) as $s) {
             $s = ecp_ht_clean((string) $s, 1000);
             if ($s !== null) {
@@ -573,6 +574,14 @@ function ecp_ht_submit_check(string $type, array $f, array $ingredients, array $
         if ($photos < 1 && $f['video_url'] === null) {
             return 'Add a photo or a video link showing the exercise.';
         }
+    } elseif ($type === 'video') {
+        $embed = ecp_ht_video_embed($f['video_url']);
+        if ($embed === null) {
+            return 'Add the YouTube or Instagram link of your video.';
+        }
+        if ($embed['kind'] === 'instagram' && $photos < 1) {
+            return 'Instagram doesn’t share a preview picture — please add one photo as the cover.';
+        }
     } elseif ($f['body'] === null || mb_strlen((string) $f['body']) < 40) {
         return 'Write the tip itself (at least 40 characters).';
     }
@@ -651,6 +660,10 @@ function ecp_ht_public_list(array $f = []): array
         $where[] = 't.type = :type';
         $bind['type'] = $f['type'];
     }
+    if (!empty($f['exclude_types'])) {
+        $keep = array_values(array_diff(array_keys(ECP_HT_TYPES), (array) $f['exclude_types']));
+        $where[] = "t.type IN ('" . implode("','", $keep) . "')";   // constant keys only, safe to inline
+    }
     if (!empty($f['tag'])) {
         $join = ' JOIN health_tip_tag_map tm ON tm.tip_id = t.id JOIN health_tip_tags tg ON tg.id = tm.tag_id AND tg.is_active = 1';
         $where[] = 'tg.slug = :tag';
@@ -691,7 +704,7 @@ function ecp_ht_public_list(array $f = []): array
 
         $st = $db->prepare(
             'SELECT t.id, t.type, t.title, t.slug, t.summary, t.prep_minutes, t.cook_minutes, t.protein_g,
-                    t.duration_minutes, t.difficulty, t.published_at,
+                    t.duration_minutes, t.difficulty, t.published_at, t.video_url, t.contributor_id,
                     ' . (ecp_ht_saves_enabled() ? 't.save_count' : '0') . ' AS save_count,
                     c.display_name AS author_name, c.slug AS author_slug,
                     (SELECT m.id FROM health_tip_media m WHERE m.tip_id = t.id ORDER BY m.sort, m.id LIMIT 1) AS cover_id'
@@ -918,11 +931,13 @@ function ecp_ht_video_embed(?string $url): ?array
     }
     if (preg_match('#^https?://(?:www\.)?instagram\.com/(?:[A-Za-z0-9._]+/)?(p|reel|reels|tv)/([A-Za-z0-9_\-]+)#i', $url, $m)) {
         $kind = strtolower($m[1]) === 'p' ? 'p' : 'reel';
-        return ['kind' => 'instagram', 'src' => 'https://www.instagram.com/' . $kind . '/' . $m[2] . '/embed'];
+        return ['kind' => 'instagram', 'id' => $m[2], 'thumb' => null,
+                'src' => 'https://www.instagram.com/' . $kind . '/' . $m[2] . '/embed'];
     }
     if (preg_match('#^https?://(?:www\.|m\.)?youtube\.com/(?:watch\?(?:.*&)?v=|shorts/|embed/|live/)([A-Za-z0-9_\-]{11})#i', $url, $m)
         || preg_match('#^https?://youtu\.be/([A-Za-z0-9_\-]{11})#i', $url, $m)) {
-        return ['kind' => 'youtube', 'src' => 'https://www.youtube-nocookie.com/embed/' . $m[1]];
+        return ['kind' => 'youtube', 'id' => $m[1], 'thumb' => 'https://i.ytimg.com/vi/' . $m[1] . '/hqdefault.jpg',
+                'src' => 'https://www.youtube-nocookie.com/embed/' . $m[1]];
     }
     return null;
 }
@@ -1040,4 +1055,117 @@ function ecp_ht_image_url(int $mediaId): string
 function ecp_ht_avatar_url(string $contributorSlug): string
 {
     return '/api/health_tip_image?a=' . rawurlencode($contributorSlug);
+}
+
+
+// ---------------------------------------------------------------------
+// Wellness Hub URLs (Phase 3). Old /health-tips/* URLs 301 here.
+// ---------------------------------------------------------------------
+
+/** /wellness/recipes … */
+function ecp_ht_section_url(string $type): string
+{
+    return '/wellness/' . (ECP_HT_TYPES[$type]['path'] ?? 'tips');
+}
+
+/** /wellness/recipe/{slug} … */
+function ecp_ht_post_url(array $tip): string
+{
+    return '/wellness/' . (isset(ECP_HT_TYPES[$tip['type']]) ? $tip['type'] : 'tip') . '/' . $tip['slug'];
+}
+
+/** Section path word → type ('recipes' → 'recipe'). */
+function ecp_ht_type_from_path(string $word): ?string
+{
+    foreach (ECP_HT_TYPES as $t => $m) {
+        if ($m['path'] === $word || $t === $word) {
+            return $t;
+        }
+    }
+    return null;
+}
+
+/**
+ * contributor_id => Wellness creator (slug, badge). Empty if the Wellness
+ * patch isn't run — callers then fall back to the contributor slug.
+ *
+ * @return array<int, array{slug:string,verify_status:string,creator_type:string}>
+ */
+function ecp_ht_creator_map(): array
+{
+    static $map = null;
+    if ($map !== null) {
+        return $map;
+    }
+    $map = [];
+    $db = ecp_db();
+    if (!$db) {
+        return $map;
+    }
+    try {
+        $rows = $db->query("SELECT legacy_contributor_id, slug, verify_status, creator_type FROM wh_creators WHERE legacy_contributor_id IS NOT NULL")->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as $r) {
+            $map[(int) $r['legacy_contributor_id']] = ['slug' => (string) $r['slug'], 'verify_status' => (string) $r['verify_status'], 'creator_type' => (string) $r['creator_type']];
+        }
+    } catch (Throwable $e) {
+        $map = [];
+    }
+    return $map;
+}
+
+/** Public profile URL for a post's author (creator page, else old contributor page slug). */
+function ecp_ht_author_url(array $row): string
+{
+    $c = ecp_ht_creator_map()[(int) ($row['contributor_id'] ?? 0)] ?? null;
+    return '/wellness/creators/' . rawurlencode($c['slug'] ?? (string) ($row['author_slug'] ?? ''));
+}
+
+/** "Verified Doctor" / "Verified Organisation" for a post's author, or null. */
+function ecp_ht_author_badge(array $row): ?string
+{
+    $c = ecp_ht_creator_map()[(int) ($row['contributor_id'] ?? 0)] ?? null;
+    if (!$c || $c['verify_status'] !== 'verified' || $c['creator_type'] === 'platform') {
+        return null;
+    }
+    return $c['creator_type'] === 'doctor' ? 'Verified Doctor' : 'Verified Organisation';
+}
+
+/** Card for lists (hub, sections, creator page, search, saved). */
+function ecp_ht_card(array $r, bool $showAuthor = true): void
+{
+    $meta = ECP_HT_TYPES[$r['type']] ?? ECP_HT_TYPES['tip'];
+    $bits = [];
+    if ($r['type'] === 'recipe') {
+        $mins = (int) $r['prep_minutes'] + (int) $r['cook_minutes'];
+        if ($mins) $bits[] = ecp_ht_minutes($mins);
+        if ($r['protein_g'] !== null) $bits[] = '~' . rtrim(rtrim((string) $r['protein_g'], '0'), '.') . ' g protein';
+    } elseif ($r['type'] === 'exercise') {
+        if ($r['duration_minutes']) $bits[] = ecp_ht_minutes((int) $r['duration_minutes']);
+        if ($r['difficulty']) $bits[] = ucfirst((string) $r['difficulty']);
+    }
+    $video = ($r['type'] === 'video' || empty($r['cover_id'])) ? ecp_ht_video_embed($r['video_url'] ?? null) : null;
+    ?>
+    <a class="ht-card-item" href="<?= e(ecp_ht_post_url($r)) ?>">
+      <div class="ht-card-img ht-type-<?= e($r['type']) ?>">
+        <?php if ($r['cover_id']): ?>
+          <img src="<?= e(ecp_ht_image_url((int) $r['cover_id'])) ?>" alt="" loading="lazy">
+        <?php elseif ($video && $video['thumb']): ?>
+          <img src="<?= e($video['thumb']) ?>" alt="" loading="lazy">
+        <?php elseif ($r['type'] !== 'video'): ?>
+          <span class="ht-card-ic"><?= $meta['icon'] ?></span>
+        <?php endif; ?>
+        <?php if ($r['type'] === 'video'): ?><span class="ht-card-play" aria-hidden="true">▶</span><?php endif; ?>
+        <span class="ht-card-kind"><?= e($meta['label']) ?></span>
+      </div>
+      <div class="ht-card-body">
+        <h3><?= e($r['title']) ?></h3>
+        <?php if ($r['summary']): ?><p><?= e($r['summary']) ?></p><?php endif; ?>
+        <div class="ht-card-meta">
+          <?php if ($showAuthor): ?><span>By <?= e($r['author_name']) ?><?= ecp_ht_author_badge($r) ? ' <span class="ht-verified" title="' . e((string) ecp_ht_author_badge($r)) . '">✓</span>' : '' ?></span><?php endif; ?>
+          <?php foreach ($bits as $b): ?><span><?= e($b) ?></span><?php endforeach; ?>
+          <?php if ((int) ($r['save_count'] ?? 0) > 0): ?><span class="ht-card-saves">♥ <?= (int) $r['save_count'] ?></span><?php endif; ?>
+        </div>
+      </div>
+    </a>
+    <?php
 }

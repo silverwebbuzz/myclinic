@@ -197,6 +197,19 @@ switch ($action) {
             // Refer & Earn: typed code, else the /r/{code} cookie.
             require_once __DIR__ . '/../store/_app.php';
             store_referral_capture((int) $i['id'], isset($in['referral_code']) ? (string) $in['referral_code'] : null);
+            // Sign-up source (Wellness Hub Phase 3): which action brought them in. Best effort.
+            $src = strtolower((string) ($in['signup_source'] ?? ''));
+            if (preg_match('/^[a-z_]{2,40}$/', $src)) {
+                try {
+                    $srcDb = ecp_db();
+                    if ($srcDb) {
+                        $srcDb->prepare('UPDATE patient_identities SET signup_source = :s WHERE id = :id AND signup_source IS NULL')
+                              ->execute(['s' => $src, 'id' => (int) $i['id']]);
+                    }
+                } catch (Throwable $e) {
+                    // column not added yet (Phase 3 patch) — ignore
+                }
+            }
         }
         ecp_api_out(200, [
             'ok'      => true,

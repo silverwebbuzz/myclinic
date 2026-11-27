@@ -30,7 +30,13 @@ final class HealthTipAdminService
         'draft'             => 'Drafts',
     ];
 
-    public const TYPES = ['recipe' => 'Recipe', 'exercise' => 'Exercise', 'tip' => 'Quick tip'];
+    public const TYPES = ['recipe' => 'Recipe', 'exercise' => 'Exercise', 'tip' => 'Quick tip', 'video' => 'Video'];
+
+    /** Public Wellness Hub URL of a post: /wellness/{type}/{slug} (old /health-tips/* 301s there). */
+    public static function postUrl(array $tip): string
+    {
+        return self::siteUrl('/wellness/' . (isset(self::TYPES[$tip['type'] ?? '']) ? $tip['type'] : 'tip') . '/' . $tip['slug']);
+    }
 
     /** @return array<string,int> status => count (not deleted) */
     public static function statusCounts(): array
@@ -182,7 +188,7 @@ final class HealthTipAdminService
                 'title'      => (string) $tip['title'],
                 'type_label' => strtolower(self::TYPES[$tip['type']] ?? 'post'),
                 'note'       => $note,
-                'url'        => self::siteUrl('/health-tips/' . $tip['slug']),
+                'url'        => self::postUrl($tip),
                 'studio_url' => self::siteUrl('/my-health-tips?edit=' . (int) $tip['id']),
             ]);
         } catch (\Throwable $e) {

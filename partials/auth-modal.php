@@ -685,6 +685,8 @@ function ecpAuthModal() {
             code:  this.code,
             name:  this.name || undefined,
             referral_code: (!this.phoneExists && this.referral) ? this.referral : undefined,
+            // Which action made a NEW patient sign up (save_tip, camp_contact, wellness_cta…).
+            signup_source: !this.phoneExists ? (this._reason || 'default') : undefined,
             'g-recaptcha-response': captcha || undefined,
           }),
         });
@@ -706,7 +708,7 @@ function ecpAuthModal() {
         // Success. Stash a minimal copy in localStorage so any other
         // open tabs pick up the new session via the 'storage' event.
         ecpSetPatientSession(j.patient);
-        if (j.is_new && window.ecpTrack) window.ecpTrack('CompleteRegistration');
+        if (j.is_new && window.ecpTrack) window.ecpTrack('CompleteRegistration', { content_name: String(this._reason || 'default') });
 
         // If the caller wanted us to do something after login (save a
         // doctor, start a booking), do it BEFORE reloading.

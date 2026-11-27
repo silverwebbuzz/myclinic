@@ -18,7 +18,7 @@ $navGroups = [
     'Overview' => [['/creator/dashboard', 'Dashboard']],
     'Create' => [
         ['/creator/events', 'Camps & events'],
-        ['/creator/content', 'Recipes, exercises & tips'],
+        ['/creator/content', 'Recipes, tips & videos'],
     ],
     'Account' => [
         ['/creator/profile', 'Public profile'],

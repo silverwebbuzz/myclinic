@@ -111,3 +111,14 @@
   .we-cta { padding: 18px; }
   .we-contact .btn { width: 100%; justify-content: center; }
 }
+
+/* Save (Phase 3) + free-account card reuse (.wh-signup lives in health-tips.css) */
+.we-save { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 14px; }
+.we-save-btn { padding: 8px 16px; border-radius: 980px; border: 1px solid rgba(0,0,0,.16); background: #fff; font: inherit; font-size: 14px; cursor: pointer; }
+.we-save-btn.is-saved { background: #FFECEB; border-color: #F5B5B0; color: #A11B12; }
+.we-save-link { font-size: 14px; color: var(--teal-700); }
+.we-public .wh-signup { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin: 32px 0 0; padding: 20px 22px; border-radius: 18px; background: var(--teal-50); border: 1px solid var(--teal-100); }
+.we-public .wh-signup h2 { margin: 0 0 6px; font-size: 19px; font-weight: 600; }
+.we-public .wh-signup ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 14px; color: var(--ink-2); }
+/* styles.css pads every <section> 52–64px on phones; these set their own spacing. */
+.we-more, .we-article > section.we-prose { padding: 0; }

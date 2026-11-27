@@ -239,3 +239,54 @@
 .ht-save-link { font-size: 13px; color: var(--teal-700); font-weight: 500; }
 .ht-card-saves { color: #C21E45; }
 .ht-empty .btn { margin-top: 12px; }
+
+/* =====================================================================
+   Wellness Hub additions (Phase 3): verified badge, video cards + click-to-
+   load player, free-account card, hub home sections.
+   ===================================================================== */
+.ht-verified { display: inline-flex; align-items: center; gap: 2px; padding: 1px 7px; border-radius: 980px; background: var(--blue-50); color: var(--blue-600); font-size: 11.5px; font-weight: 600; vertical-align: middle; white-space: nowrap; }
+.ht-card-img.ht-type-video { background: #1C1C1E; }
+.ht-card-play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 48px; height: 48px; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; padding-left: 3px; }
+.ht-video-facade { position: relative; display: block; width: 100%; height: 100%; min-height: 220px; border: 0; padding: 0; cursor: pointer; background: #1C1C1E; border-radius: inherit; overflow: hidden; }
+.ht-video-facade img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .9; }
+.ht-video-facade .ht-play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 72px; height: 72px; border-radius: 50%; background: rgba(0,0,0,.65); color: #fff; font-size: 28px; display: flex; align-items: center; justify-content: center; padding-left: 4px; transition: transform .15s; }
+.ht-video-facade:hover .ht-play { transform: translate(-50%, -50%) scale(1.08); }
+.ht-video-src { position: absolute; left: 12px; bottom: 12px; padding: 4px 10px; border-radius: 980px; background: rgba(0,0,0,.6); color: #fff; font-size: 12px; }
+
+.wh-signup { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin: 32px 0 0; padding: 20px 22px; border-radius: 18px; background: var(--teal-50); border: 1px solid var(--teal-100); }
+.wh-signup h2 { margin: 0 0 6px; font-size: 19px; font-weight: 600; }
+.wh-signup ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 14px; color: var(--ink-2); }
+
+.wh-hero { background: linear-gradient(180deg, var(--teal-50) 0%, var(--bg) 100%); padding: 48px 0 28px; }
+.wh-hero h1 { font-size: clamp(32px, 5.5vw, 54px); font-weight: 300; letter-spacing: -1px; line-height: 1.06; margin: 8px 0 0; }
+.wh-nav { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-top: 22px; padding-bottom: 2px; }
+.wh-nav::-webkit-scrollbar { display: none; }
+.wh-nav a { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: 980px; background: #fff; border: 1px solid var(--line); font-size: 14px; color: var(--ink-2); white-space: nowrap; }
+.wh-nav a:hover { border-color: var(--teal-600); color: var(--teal-700); }
+.wh-section { margin-top: 40px; }
+.wh-section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+.wh-section-head h2 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -.3px; }
+.wh-section-head a { color: var(--teal-700); font-size: 14px; font-weight: 500; }
+.wh-section-head form { display: flex; gap: 8px; align-items: center; }
+.wh-section-head select { padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(0,0,0,.14); background: #fff; font: inherit; font-size: 14px; }
+.wh-creators { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 18px; }
+.wh-creator { display: flex; gap: 12px; align-items: center; padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: #fff; }
+.wh-creator:hover { border-color: var(--teal-600); }
+.wh-creator strong { display: block; font-size: 15px; }
+.wh-creator small { display: block; color: var(--mute); font-size: 12.5px; line-height: 1.4; }
+.wh-become { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-top: 44px; padding: 22px 24px; border-radius: 18px; background: var(--teal-950); color: #fff; }
+.wh-become h2 { margin: 0; font-size: 20px; font-weight: 600; }
+.wh-become p { margin: 6px 0 0; color: rgba(255,255,255,.78); font-size: 14px; max-width: 640px; }
+.wh-profile { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
+.wh-profile .ht-links { margin-top: 10px; }
+@media (max-width: 640px) {
+  .wh-hero { padding: 32px 0 20px; }
+  .wh-section { margin-top: 30px; }
+  .wh-section-head h2 { font-size: 20px; }
+  .wh-signup .btn, .wh-become .btn { width: 100%; justify-content: center; }
+}
+.ht-video-youtube .ht-video-facade { aspect-ratio: 16 / 9; min-height: 0; }
+.ht-video-instagram .ht-video-facade { aspect-ratio: 4 / 5; min-height: 0; max-height: 640px; }
+.ht-video-instagram { border: 0; background: #1C1C1E; }
+/* styles.css pads every <section> 52–64px on phones; hub blocks set their own spacing. */
+.ht-listing > section, .wh-section, .we-more { padding: 0; }

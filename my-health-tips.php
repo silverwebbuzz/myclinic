@@ -139,7 +139,7 @@ require __DIR__ . '/partials/header.php';
       <div class="ht-gate-ic">✨</div>
       <h1>Health Tips is invite-only</h1>
       <p>Our recipes, exercises and tips come from a small group of contributors we know and trust. If you’d like to contribute, write to us at <a href="mailto:hello@eclinicpro.com">hello@eclinicpro.com</a>.</p>
-      <a class="btn btn-ghost-dark" href="/health-tips">Browse health tips</a>
+      <a class="btn btn-ghost-dark" href="/wellness">Browse the Wellness Hub</a>
     </section>
 
 <?php elseif ($c['status'] !== 'active'): ?>
@@ -163,7 +163,7 @@ require __DIR__ . '/partials/header.php';
         <?php else: ?>
         <a href="/my-health-tips?view=profile" class="<?= $view === 'profile' ? 'is-active' : '' ?>">Profile &amp; terms</a>
         <?php endif; ?>
-        <a href="/health-tips/by/<?= e($c['slug']) ?>" target="_blank" rel="noopener">Public page ↗</a>
+        <a href="<?= e(ecp_ht_author_url(['contributor_id' => (int) $c['id'], 'author_slug' => $c['slug']])) ?>" target="_blank" rel="noopener">Public page ↗</a>
       </nav>
     </header>
 
@@ -189,7 +189,7 @@ require __DIR__ . '/partials/header.php';
         <a class="ht-new-card" href="/my-health-tips?new=<?= $t ?>">
           <span class="ht-new-ic"><?= $meta['icon'] ?></span>
           <span><strong>New <?= e(strtolower($meta['label'])) ?></strong>
-            <small><?= $t === 'recipe' ? 'Ingredients, method, photos' : ($t === 'exercise' ? 'Steps, duration, safety notes' : 'A short, useful habit') ?></small></span>
+            <small><?= ['recipe' => 'Ingredients, method, photos', 'exercise' => 'Steps, duration, safety notes', 'tip' => 'A short, useful habit', 'video' => 'Your YouTube video or Instagram reel'][$t] ?? '' ?></small></span>
         </a>
       <?php endforeach; ?>
     </section>
@@ -221,7 +221,7 @@ require __DIR__ . '/partials/header.php';
             <div class="ht-myact">
               <a class="btn btn-ghost-dark ht-btn-sm" href="/my-health-tips?edit=<?= (int) $t['id'] ?>"><?= ecp_ht_is_editable($t) ? 'Edit' : 'Open' ?></a>
               <?php if ($t['status'] === 'published'): ?>
-                <a class="btn btn-ghost-dark ht-btn-sm" href="/health-tips/<?= e($t['slug']) ?>" target="_blank" rel="noopener">View ↗</a>
+                <a class="btn btn-ghost-dark ht-btn-sm" href="<?= e(ecp_ht_post_url($t)) ?>" target="_blank" rel="noopener">View ↗</a>
               <?php endif; ?>
             </div>
           </li>
@@ -240,7 +240,7 @@ require __DIR__ . '/partials/header.php';
       <input type="hidden" name="_t" value="<?= e($csrf) ?>">
       <input type="hidden" name="action" value="profile">
       <h2>Your public profile</h2>
-      <p class="ht-mute">Shown on every post you publish and on your page at <code>/health-tips/by/<?= e($c['slug']) ?></code>.</p>
+      <p class="ht-mute">Shown on every post you publish and on your public creator page.</p>
 
       <div class="ht-avatar-row">
         <div class="ht-avatar">
@@ -313,7 +313,7 @@ require __DIR__ . '/partials/header.php';
               <button class="btn btn-ghost-dark" type="submit"><?= $form['status'] === 'published' ? 'Unpublish & edit' : 'Move back to draft' ?></button>
             </form>
           <?php endif; ?>
-          <a class="btn btn-ghost-dark" href="/health-tips/<?= e($form['slug']) ?>" target="_blank" rel="noopener"><?= $form['status'] === 'published' ? 'View live ↗' : 'Preview ↗' ?></a>
+          <a class="btn btn-ghost-dark" href="<?= e(ecp_ht_post_url(['type' => $type, 'slug' => $form['slug']])) ?>" target="_blank" rel="noopener"><?= $form['status'] === 'published' ? 'View live ↗' : 'Preview ↗' ?></a>
         </div>
       </div>
     <?php else: ?>
@@ -330,8 +330,8 @@ require __DIR__ . '/partials/header.php';
             placeholder="<?= $type === 'recipe' ? 'e.g. Roasted chana protein chilla' : ($type === 'exercise' ? 'e.g. 10-minute desk stretch routine' : 'e.g. Drink a glass of water before every meal') ?>"></label>
         <label class="ht-field">Short summary * <small>1–2 lines, shown on the card (20–300 characters)</small>
           <textarea name="summary" rows="2" maxlength="300"><?= e($form['summary']) ?></textarea></label>
-        <label class="ht-field"><?= $type === 'tip' ? 'The tip *' : 'Intro / notes' ?>
-          <small><?= $type === 'tip' ? 'Explain the habit and why it helps — in plain words.' : 'Optional: the story, tips, swaps, storage.' ?></small>
+        <label class="ht-field"><?= $type === 'tip' ? 'The tip *' : ($type === 'video' ? 'About this video' : 'Intro / notes') ?>
+          <small><?= $type === 'tip' ? 'Explain the habit and why it helps — in plain words.' : ($type === 'video' ? 'Optional: what it shows, key points, who it is for.' : 'Optional: the story, tips, swaps, storage.') ?></small>
           <textarea name="body" rows="<?= $type === 'tip' ? 8 : 4 ?>" maxlength="8000"><?= e($form['body']) ?></textarea></label>
       </div>
 
@@ -380,7 +380,7 @@ require __DIR__ . '/partials/header.php';
       </div>
       <?php endif; ?>
 
-      <?php if ($type !== 'tip'): ?>
+      <?php if ($type !== 'tip' && $type !== 'video'): ?>
       <div class="ht-card">
         <h3><?= $type === 'recipe' ? 'Method' : 'How to do it' ?> *</h3>
         <template x-for="(row, i) in steps" :key="row.k">
@@ -407,9 +407,9 @@ require __DIR__ . '/partials/header.php';
             <?php endforeach; ?>
           </div>
         <?php endif; ?>
-        <label class="ht-field">Add photos <small>Up to <?= ECP_HT_PHOTOS_PER_TIP ?> per post, JPG/PNG/WebP under 5 MB each. The first photo is the cover.<?= $type === 'recipe' ? ' At least one is required.' : '' ?></small>
+        <label class="ht-field">Add photos <small>Up to <?= ECP_HT_PHOTOS_PER_TIP ?> per post, JPG/PNG/WebP under 5 MB each. The first photo is the cover.<?= $type === 'recipe' ? ' At least one is required.' : ($type === 'video' ? ' Needed for Instagram reels (Instagram doesn’t share a preview picture); optional for YouTube.' : '') ?></small>
           <input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple></label>
-        <label class="ht-field">Instagram reel or YouTube link <small>Optional — we embed your video (with credit), we never re-upload it.</small>
+        <label class="ht-field">Instagram reel or YouTube link<?= $type === 'video' ? ' *' : '' ?> <small><?= $type === 'video' ? 'Only your own video, from your own channel / handle.' : 'Optional.' ?> We embed it (with credit) — we never re-upload it.</small>
           <input type="url" name="video_url" maxlength="255" placeholder="https://www.instagram.com/reel/…" value="<?= e((string) $form['video_url']) ?>"></label>
       </div>
 
@@ -432,7 +432,7 @@ require __DIR__ . '/partials/header.php';
 
       <div class="ht-actions ht-actions-sticky">
         <?php if ($form['id']): ?>
-          <a class="btn btn-ghost-dark" href="/health-tips/<?= e($form['slug']) ?>" target="_blank" rel="noopener">Preview ↗</a>
+          <a class="btn btn-ghost-dark" href="<?= e(ecp_ht_post_url(['type' => $type, 'slug' => $form['slug']])) ?>" target="_blank" rel="noopener">Preview ↗</a>
         <?php endif; ?>
         <button class="btn btn-ghost-dark" type="submit" name="intent" value="draft">Save draft</button>
         <button class="btn btn-primary" type="submit" name="intent" value="submit" <?= ecp_ht_can_submit($c) ? '' : 'disabled title="Complete your profile and accept the terms first"' ?>>Send for review</button>

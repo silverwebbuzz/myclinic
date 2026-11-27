@@ -23,7 +23,7 @@ $messages = ['not_found' => 'That post no longer exists.'];
             </div>
             <div class="flex gap-2">
                 <a href="/admin/health-tips/contributors" class="rounded border bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Contributors</a>
-                <a href="<?= htmlspecialchars(HT::siteUrl('/health-tips')) ?>" target="_blank" rel="noopener" class="rounded bg-slate-800 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-900">View public page ↗</a>
+                <a href="<?= htmlspecialchars(HT::siteUrl('/wellness')) ?>" target="_blank" rel="noopener" class="rounded bg-slate-800 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-900">View public page ↗</a>
             </div>
         </div>
 

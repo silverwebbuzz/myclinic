@@ -35,6 +35,28 @@ final class CreatorAdminService
         }
     }
 
+    /**
+     * New patient sign-ups in the last 30 days by the action that triggered
+     * them (patient_identities.signup_source, Phase 3). Empty until the patch runs.
+     *
+     * @return list<array{source:string,n:int}>
+     */
+    public static function signupSources(): array
+    {
+        try {
+            $rows = Database::connection()->query(
+                "SELECT COALESCE(signup_source, 'not tracked') AS source, COUNT(*) AS n
+                 FROM patient_identities
+                 WHERE source = 'self_signup' AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                 GROUP BY COALESCE(signup_source, 'not tracked') ORDER BY n DESC LIMIT 20"
+            )->fetchAll(PDO::FETCH_ASSOC);
+
+            return array_map(static fn ($r) => ['source' => (string) $r['source'], 'n' => (int) $r['n']], $rows ?: []);
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
     /** @return array<string,int> */
     public static function tabCounts(): array
     {
