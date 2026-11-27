@@ -2,7 +2,9 @@
    Wellness Hub — the one section menu (partials/wellness_nav.php).
    Same on every Wellness page. Scrolls sideways on phones.
    ===================================================================== */
-.whn { background: #fff; border-bottom: 1px solid var(--line); padding: 0; }
+/* The site header (.nav in partials/header.php) is position:fixed, 80px tall, and the site
+   adds no body padding for it — so the menu must start 80px down or it hides behind it. */
+.whn { margin-top: 80px; background: #fff; border-bottom: 1px solid var(--line); padding: 0; }
 .whn-inner { position: relative; display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-top: 10px; padding-bottom: 10px; -webkit-overflow-scrolling: touch; }
 .whn-inner::-webkit-scrollbar { display: none; }
 .whn-item { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 980px; border: 1px solid var(--line); background: #fff; color: var(--ink-2); font-size: 14px; font-weight: 500; white-space: nowrap; text-decoration: none; transition: background .15s, border-color .15s, color .15s; }
