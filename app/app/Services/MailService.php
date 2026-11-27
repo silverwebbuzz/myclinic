@@ -60,6 +60,9 @@ final class MailService
             'wellness_verification_decision',
             'wellness_event_decision',
             'wellness_credit_receipt',
+            'wellness_new_question',
+            'wellness_answered',
+            'wellness_camp_alert',
             'health_tip',
             'health_tip_published',
             'health_tip_changes',
@@ -164,6 +167,9 @@ final class MailService
             'health_tip_changes' => 'Small changes needed: ' . (string) ($payload['title'] ?? ''),
             'health_tip_rejected' => 'About your post: ' . (string) ($payload['title'] ?? ''),
             'wellness_admin_alert' => (string) ($payload['subject'] ?? 'Wellness Hub: needs your review'),
+            'wellness_new_question' => 'New question on “' . (string) ($payload['title'] ?? '') . '”',
+            'wellness_answered' => 'Your question was answered — ' . (string) ($payload['title'] ?? ''),
+            'wellness_camp_alert' => (string) ($payload['subject'] ?? 'New health camps near you'),
             'wellness_credit_receipt' => 'Payment received — ' . (int) ($payload['qty'] ?? 0) . ' Wellness Hub credit' . ((int) ($payload['qty'] ?? 0) === 1 ? '' : 's') . ' (' . (string) ($payload['invoice_no'] ?? '') . ')',
             'wellness_event_decision' => match ((string) ($payload['decision'] ?? '')) {
                 'published' => 'Your ' . ($payload['kind_label'] ?? 'listing') . ' is live: ' . ($payload['title'] ?? ''),
@@ -534,6 +540,37 @@ final class MailService
                 'sign_off' => "Thank you,\nThe eClinicPro Health Tips team",
             ],
             // Wellness Hub — Health Creators (App\Services\Wellness\*).
+            'wellness_new_question' => [
+                'greeting' => 'Hi ' . ($payload['name'] ?? 'there') . ',',
+                'paragraphs' => [
+                    'Someone asked a question on your post "' . ($payload['title'] ?? '') . '":',
+                    '“' . ($payload['excerpt'] ?? '') . '”',
+                    'Your reply shows as "Creator’s answer". Please keep it general — not personal medical advice.',
+                ],
+                'cta' => ['label' => 'Answer it', 'url' => (string) ($payload['studio_url'] ?? $appUrl . '/creator/questions')],
+                'sign_off' => "Thank you,\nThe eClinicPro Wellness Hub team",
+            ],
+            'wellness_answered' => [
+                'greeting' => 'Hi ' . ($payload['name'] ?? 'there') . ',',
+                'paragraphs' => [
+                    'There’s a reply to your question on "' . ($payload['title'] ?? '') . '":',
+                    '“' . ($payload['excerpt'] ?? '') . '”',
+                    'Answers on the Wellness Hub are general information, not medical advice. For your own symptoms, please consult a doctor.',
+                ],
+                'cta' => ['label' => 'See the answer', 'url' => (string) ($payload['url'] ?? '')],
+                'sign_off' => '— eClinicPro Wellness Hub',
+            ],
+            'wellness_camp_alert' => [
+                'greeting' => 'Hello,',
+                'paragraphs' => array_values(array_merge(
+                    ['New ' . ($payload['what'] ?? 'health camps') . ' were just listed on eClinicPro:'],
+                    array_map('strval', (array) ($payload['lines'] ?? [])),
+                    ['Contact details are on each page — sign in with your eClinicPro account to see them.',
+                     'Don’t want these emails? Unsubscribe: ' . ($payload['unsubscribe_url'] ?? '')],
+                )),
+                'cta' => ['label' => 'See all ' . ($payload['what'] ?? 'camps'), 'url' => (string) ($payload['list_url'] ?? '')],
+                'sign_off' => '— eClinicPro Wellness Hub',
+            ],
             'wellness_credit_receipt' => [
                 'greeting' => 'Hi ' . ($payload['name'] ?? 'there') . ',',
                 'paragraphs' => [

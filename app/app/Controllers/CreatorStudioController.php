@@ -12,6 +12,7 @@ use App\Services\CsrfService;
 use App\Services\PatientIdentityAuthService;
 use App\Services\RecaptchaService;
 use App\Services\Wellness\CreatorService;
+use App\Services\Wellness\Comments;
 use App\Services\Wellness\CreditPackService;
 use App\Services\Wellness\EventService;
 use App\Services\Wellness\Quota;
@@ -207,6 +208,39 @@ final class CreatorStudioController
             'cities' => EventService::cities(),
             'flashErr' => $error,
         ]);
+    }
+
+    // ---- Questions & comments inbox (Phase 5) -----------------------------------
+
+    public function questions(Request $request): Response
+    {
+        $filter = ($request->query['filter'] ?? 'unanswered') === 'all' ? 'all' : 'unanswered';
+        $c = $this->creator();
+
+        return $this->render('creator/questions', [
+            'filter' => $filter,
+            'enabled' => Comments::enabled(),
+            'rows' => Comments::enabled() ? Comments::inbox((int) $c['id'], $filter) : [],
+            'unanswered' => Comments::unansweredCount((int) $c['id']),
+        ]);
+    }
+
+    public function answerQuestion(Request $request, string $id): Response
+    {
+        $res = Comments::reply((int) $this->identity()['id'], (int) $id, (string) ($request->post['body'] ?? ''));
+        $this->flash($res, !empty($res['held'])
+            ? 'Posted — it has a link or number, so our team checks it before it shows.'
+            : 'Answer posted. The person who asked gets an email.');
+
+        return Response::redirect('/creator/questions' . (($request->post['filter'] ?? '') === 'all' ? '?filter=all' : ''));
+    }
+
+    public function hideComment(Request $request, string $id): Response
+    {
+        $ok = Comments::hideByOwner((int) $id, (int) $this->identity()['id']);
+        $this->flash(['ok' => $ok, 'error' => 'Could not hide that.'], 'Hidden from your post.');
+
+        return Response::redirect('/creator/questions' . (($request->post['filter'] ?? '') === 'all' ? '?filter=all' : ''));
     }
 
     // ---- Credits & payments (Phase 4) ------------------------------------------

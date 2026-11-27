@@ -19,6 +19,7 @@ $healthTipsPending = \App\Services\HealthTipAdminService::pendingCount();
 $wellnessPending = \App\Services\Wellness\CreatorAdminService::pendingCount();
 $wellnessEventsPending = \App\Services\Wellness\EventService::pendingCount();
 $wellnessReports = \App\Services\Wellness\EventService::openReportCount();
+$wellnessComments = array_sum(\App\Services\Wellness\Comments::adminCounts());
 
 // Admin pages are standalone (own <head>, no clinic shell): pull in shared UI
 // helpers + token stylesheet. Neutral slate brand for the .ui-* colors.
@@ -76,6 +77,7 @@ $navGroups = [
     'Wellness Hub' => [
         ['/admin/wellness/creators', 'Health Creators', 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 3a4 4 0 100 8 4 4 0 000-8zM20 8v6M23 11h-6', $wellnessPending, 'wellness creators verify badge doctor camps'],
         ['/admin/wellness/events', 'Camps & events', 'M8 7V3m8 4V3M3 11h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z', $wellnessEventsPending, 'wellness health camps events expo review'],
+        ['/admin/wellness/comments', 'Comments & questions', 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z', $wellnessComments, 'wellness comments questions moderation held reported'],
         ['/admin/wellness/billing', 'Billing & credits', 'M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6', 0, 'wellness credits packs gst invoices revenue razorpay'],
         ['/admin/wellness/reports', 'Reports', 'M3 21V4m0 0h13l-2 4 2 4H3', $wellnessReports, 'wellness report listing flag'],
     ],

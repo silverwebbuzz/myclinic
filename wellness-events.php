@@ -212,6 +212,10 @@ $q = static function (array $over) use ($when, $freeOnly, $onlineOnly, $category
       </div>
     </aside>
 
+    <?php if ($event['city_slug'] && !$ended) { $waKind = $kind; $waCity = (string) $event['city_slug']; $waCityName = (string) $event['city_name']; require __DIR__ . '/partials/wellness_alert_button.php'; } ?>
+
+    <?php $whcType = 'event'; $whcId = (int) $event['id']; require __DIR__ . '/partials/wellness_comments_block.php'; ?>
+
     <?php if (!$viewer) { require __DIR__ . '/partials/wellness_signup_card.php'; } ?>
     <p class="we-disclaimer"><?= e($disclaimer) ?></p>
 
@@ -303,6 +307,7 @@ $q = static function (array $over) use ($when, $freeOnly, $onlineOnly, $category
         </select>
         <button class="btn btn-primary" type="submit">Show</button>
       </form>
+      <?php if ($mode === 'city') { $waKind = $kind; $waCity = $a; $waCityName = (string) $cityName; require __DIR__ . '/partials/wellness_alert_button.php'; } ?>
     </div>
   </section>
 

@@ -122,3 +122,11 @@
 .we-public .wh-signup ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 14px; color: var(--ink-2); }
 /* styles.css pads every <section> 52–64px on phones; these set their own spacing. */
 .we-more, .we-article > section.we-prose { padding: 0; }
+/* Camp alerts (Phase 5) */
+.wa-box { margin-top: 18px; }
+.wa-off, .wa-on { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; font-size: 14px; color: var(--ink-2); }
+.wa-off input { padding: 9px 12px; border-radius: 10px; border: 1px solid rgba(0,0,0,.14); font: inherit; font-size: 14px; min-width: 0; flex: 1 1 200px; max-width: 280px; }
+.wa-link { background: none; border: 0; padding: 0; font: inherit; color: var(--teal-700); text-decoration: underline; cursor: pointer; }
+.wa-msg { margin: 6px 0 0; font-size: 13px; color: var(--mute); }
+.wa-list { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 8px; font-size: 14px; }
+.wa-list li { padding: 12px 14px; border-radius: 12px; background: var(--bg-2); }

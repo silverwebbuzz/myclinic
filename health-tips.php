@@ -280,6 +280,8 @@ require __DIR__ . '/partials/header.php';
       </div>
     </aside>
 
+    <?php if (!$tip['is_preview']) { $whcType = 'tip'; $whcId = (int) $tip['id']; require __DIR__ . '/partials/wellness_comments_block.php'; } ?>
+
     <?php if (!$viewer && !$tip['is_preview']) { require __DIR__ . '/partials/wellness_signup_card.php'; } ?>
 
     <?php

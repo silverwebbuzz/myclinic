@@ -19,6 +19,7 @@ $navGroups = [
     'Create' => [
         ['/creator/events', 'Camps & events'],
         ['/creator/content', 'Recipes, tips & videos'],
+        ['/creator/questions', 'Questions & comments'],
     ],
     'Account' => [
         ['/creator/profile', 'Public profile'],
@@ -27,6 +28,7 @@ $navGroups = [
         ['/creator/credits', 'Credits & payments'],
     ],
 ];
+$unansweredQ = $creator ? \App\Services\Wellness\Comments::unansweredCount((int) $creator['id']) : 0;
 $crumb = $pageTitle ?? '';
 $activeHref = null;
 foreach ($navGroups as $items) {
@@ -71,6 +73,7 @@ $initials = strtoupper(implode('', array_map(static fn ($w) => mb_substr($w, 0, 
                         <a href="<?= $e($href) ?>" class="flex h-8 w-full items-center gap-2.5 rounded-[7px] px-2.5 text-[13px] <?= $active ? 'bg-white/[.08] font-semibold text-white' : 'font-medium text-[#C8D1DF] hover:bg-white/5' ?>">
                             <span class="h-1.5 w-1.5 flex-none rounded-[2px] <?= $active ? 'bg-ac' : 'bg-white/30' ?>"></span>
                             <span class="flex-1 truncate"><?= $e($label) ?></span>
+                            <?php if ($href === '/creator/questions' && $unansweredQ > 0): ?><span class="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-ac px-1.5 text-[10.5px] font-semibold text-white"><?= (int) $unansweredQ ?></span><?php endif; ?>
                         </a>
                     <?php endforeach; ?>
                 </div>

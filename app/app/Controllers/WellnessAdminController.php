@@ -9,6 +9,7 @@ use App\Http\Request;
 use App\Http\Response;
 use App\Services\CsrfService;
 use App\Services\Wellness\BillingAdminService;
+use App\Services\Wellness\Comments;
 use App\Services\Wellness\CreatorAdminService;
 use App\Services\Wellness\CreditPackService;
 use App\Services\Wellness\Quota;
@@ -140,6 +141,38 @@ final class WellnessAdminController
         $c = CreatorService::find((int) $id);
 
         return $c === null ? Response::html('Not found', 404) : CreatorService::avatarResponse($c);
+    }
+
+    // ---- Comments moderation (Phase 5) -----------------------------------------
+
+    /** GET /admin/wellness/comments?tab=held|reported|hidden|recent */
+    public function comments(Request $request): Response
+    {
+        $tab = (string) ($request->query['tab'] ?? 'held');
+        $tab = in_array($tab, ['held', 'reported', 'hidden', 'recent'], true) ? $tab : 'held';
+
+        return Response::html(View::render('admin/wellness_comments', [
+            'admin' => RequestContext::superAdmin(),
+            'csrf' => CsrfService::token(),
+            'tab' => $tab,
+            'enabled' => Comments::enabled(),
+            'counts' => Comments::adminCounts(),
+            'rows' => Comments::enabled() ? Comments::adminList($tab) : [],
+        ]));
+    }
+
+    /** POST /admin/wellness/comments/{id} — action approve|hide|delete|dismiss */
+    public function moderateComment(Request $request, string $id): Response
+    {
+        $tab = preg_match('/^(held|reported|hidden|recent)$/', (string) ($request->post['tab'] ?? '')) ? (string) $request->post['tab'] : 'held';
+        if (CsrfService::verify($request->post['_csrf'] ?? null)) {
+            $action = (string) ($request->post['action'] ?? '');
+            if (in_array($action, ['approve', 'hide', 'delete', 'dismiss'], true)) {
+                Comments::moderate((int) $id, $action);
+            }
+        }
+
+        return Response::redirect('/admin/wellness/comments?tab=' . $tab);
     }
 
     // ---- Billing (Phase 4) ------------------------------------------------------

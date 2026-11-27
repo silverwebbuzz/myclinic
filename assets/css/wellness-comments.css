@@ -1,0 +1,43 @@
+/* =====================================================================
+   Wellness Hub — Questions & comments block (Phase 5). Linked by
+   partials/wellness_comments_block.php itself, so it works on post,
+   camp and event pages alike. Uses the site tokens from styles.css :root.
+   ===================================================================== */
+.whc { margin-top: 36px; max-width: 760px; padding: 0; }
+.whc h2 { font-size: 22px; font-weight: 600; margin: 0; }
+.whc h2 span { color: var(--mute); font-weight: 400; }
+.whc-banner { margin: 10px 0 0; padding: 10px 14px; border-radius: 12px; background: #FFF8EB; color: #6B4600; font-size: 13.5px; line-height: 1.5; }
+.whc-banner a { color: var(--teal-700); font-weight: 500; white-space: nowrap; }
+.whc-form, .whc-signin { margin-top: 14px; padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: #fff; }
+.whc-kind { display: flex; gap: 16px; font-size: 14px; margin-bottom: 8px; }
+.whc-kind label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.whc textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(0,0,0,.14); font: inherit; font-size: 15px; resize: vertical; }
+.whc textarea:focus { outline: 2px solid var(--teal-400); outline-offset: 1px; }
+.whc-formfoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: 12.5px; color: var(--mute); }
+.whc-signin { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; }
+.whc-msg { margin: 10px 0 0; font-size: 14px; color: #A11B12; }
+.whc-empty { color: var(--mute); margin: 16px 0 0; }
+.whc-list { margin-top: 18px; display: grid; gap: 14px; }
+.whc-item { padding: 14px 16px; border-radius: 14px; background: var(--bg-2); }
+.whc-item.is-reply { margin: 10px 0 0 18px; background: #fff; border: 1px solid var(--line); }
+.whc-item.is-creator { border-left: 3px solid var(--teal-600); }
+.whc-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 13px; }
+.whc-name { font-weight: 600; color: var(--ink); }
+a.whc-name:hover { color: var(--teal-700); }
+.whc-tag { padding: 1px 8px; border-radius: 980px; background: #fff; border: 1px solid var(--line); font-size: 11.5px; color: var(--ink-2); }
+.whc-tag.is-creator { background: var(--teal-50); border-color: var(--teal-100); color: var(--teal-800); font-weight: 600; }
+.whc-date { color: var(--mute); font-size: 12px; }
+.whc-body { margin: 6px 0 0; font-size: 15px; line-height: 1.6; color: var(--ink-2); overflow-wrap: anywhere; }
+.whc-held { margin: 6px 0 0; font-size: 12.5px; color: #6B4600; }
+.whc-actions { display: flex; gap: 14px; margin-top: 6px; }
+.whc-actions button, .whc-link { background: none; border: 0; padding: 0; font: inherit; font-size: 13px; color: var(--mute); cursor: pointer; text-decoration: underline; }
+.whc-actions button:hover { color: var(--teal-700); }
+.whc-replyform { margin: 10px 0 0 18px; display: grid; gap: 8px; }
+.whc-report { margin-top: 14px; padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: #fff; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.whc-report p { width: 100%; margin: 0; }
+.whc-report select { padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(0,0,0,.14); font: inherit; }
+.whc .ht-verified { display: inline-flex; align-items: center; gap: 2px; padding: 1px 7px; border-radius: 980px; background: var(--blue-50); color: var(--blue-600); font-size: 11.5px; font-weight: 600; }
+.whc .btn-secondary { background: #fff; color: var(--ink); border: 1px solid rgba(0,0,0,.16); }
+@media (max-width: 640px) {
+  .whc-item.is-reply, .whc-replyform { margin-left: 8px; }
+}

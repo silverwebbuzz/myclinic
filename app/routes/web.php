@@ -670,6 +670,9 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/wellness/creators/{id}/status', [\App\Controllers\WellnessAdminController::class, 'status']);
         $admin->post('/wellness/creators/{id}/note', [\App\Controllers\WellnessAdminController::class, 'note']);
         $admin->post('/wellness/creators/{id}/credits', [\App\Controllers\WellnessAdminController::class, 'adjustCredits']);
+        // Comments moderation (Phase 5)
+        $admin->get('/wellness/comments', [\App\Controllers\WellnessAdminController::class, 'comments']);
+        $admin->post('/wellness/comments/{id}', [\App\Controllers\WellnessAdminController::class, 'moderateComment']);
         // Billing (Phase 4)
         $admin->get('/wellness/billing', [\App\Controllers\WellnessAdminController::class, 'billing']);
         $admin->post('/wellness/billing/settings', [\App\Controllers\WellnessAdminController::class, 'saveBilling']);
@@ -831,6 +834,10 @@ return static function (RouteRegistrar $router): void {
         $creator->post('/events/{id}/withdraw', [$c, 'eventWithdraw']);
         $creator->post('/events/{id}/cancel', [$c, 'eventCancel']);
         $creator->post('/events/{id}/delete', [$c, 'eventDelete']);
+        // Questions & comments (Phase 5).
+        $creator->get('/questions', [$c, 'questions']);
+        $creator->post('/questions/{id}/reply', [$c, 'answerQuestion']);
+        $creator->post('/questions/{id}/hide', [$c, 'hideComment']);
         // Credits & payments (Phase 4).
         $creator->get('/credits', [$c, 'credits']);
         $creator->post('/credits/buy', [$c, 'buyCredits']);

@@ -14,6 +14,7 @@ require_once __DIR__ . '/partials/helpers.php';
 require_once __DIR__ . '/partials/patient_auth.php';
 require_once __DIR__ . '/partials/health_tips.php';
 require_once __DIR__ . '/partials/wellness_events.php';
+require_once __DIR__ . '/partials/wellness_alerts.php';
 
 $view = (string) ($_GET['_wh_page'] ?? 'home');
 $view = in_array($view, ['home', 'search', 'saved', 'creator'], true) ? $view : 'home';
@@ -102,6 +103,7 @@ if ($view === 'creator') {
     header('Cache-Control: private, no-store, max-age=0');
     $savedTips = $viewer ? ecp_ht_public_list(['saved_by' => (int) $viewer['id'], 'limit' => 60]) : ['rows' => [], 'total' => 0];
     $savedEvents = $viewer ? ecp_we_saved((int) $viewer['id']) : [];
+    $myAlerts = $viewer ? ecp_wa_for_identity((int) $viewer['id']) : [];
 } elseif ($view === 'search') {
     $q = mb_substr(trim((string) ($_GET['q'] ?? '')), 0, 80);
     $tag = preg_match('/^[a-z0-9\-]{1,60}$/', (string) ($_GET['tag'] ?? '')) ? (string) $_GET['tag'] : '';
@@ -196,7 +198,16 @@ require __DIR__ . '/partials/header.php';
         <div class="wh-section-head wh-section"><h2>Recipes, exercises &amp; tips</h2></div>
         <div class="ht-grid"><?php foreach ($savedTips['rows'] as $r) ecp_ht_card($r); ?></div>
       <?php endif; ?>
-      <?php if (!$savedEvents && !$savedTips['rows']): ?>
+      <?php if ($myAlerts): ?>
+        <div class="wh-section-head wh-section"><h2>Your camp &amp; event emails</h2></div>
+        <ul class="wa-list" x-data="{ async stop(id) { const r = await fetch('/api/wellness_alerts', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'unsubscribe', id }) }); if (r.ok) location.reload(); } }">
+          <?php foreach ($myAlerts as $al): ?>
+            <li>🔔 New <?= e($al['kind'] === 'event' ? 'health events' : 'free health camps') ?> in <strong><?= e($al['city_name']) ?></strong> → <?= e($al['email']) ?>
+              <button type="button" class="wa-link" @click="stop(<?= (int) $al['id'] ?>)">Stop</button></li>
+          <?php endforeach; ?>
+        </ul>
+      <?php endif; ?>
+      <?php if (!$savedEvents && !$savedTips['rows'] && !$myAlerts): ?>
         <p class="ht-empty">Nothing saved yet. <a href="/wellness">Explore the Wellness Hub</a> and tap ♡ Save on anything you like.</p>
       <?php endif; ?>
     <?php endif; ?>
