@@ -55,7 +55,7 @@ final class CreatorService
     public const TIP_TYPES = ['recipe', 'exercise', 'tip'];
 
     /** Not built yet — shown as "Opens soon" in the Studio. */
-    public const UPCOMING_TYPES = ['video', 'free_camp', 'event'];
+    public const UPCOMING_TYPES = ['video'];
 
     public const ORG_TYPES = ['clinic', 'ngo', 'government', 'company'];
 

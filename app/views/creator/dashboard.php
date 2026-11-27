@@ -43,13 +43,26 @@ ob_start();
         <?php endif; ?>
 
         <?php $tipReady = array_values(array_intersect(CS::TIP_TYPES, $approved)); ?>
-        <?php if ($tipReady): ?>
+        <?php if ($tipReady || array_intersect(['free_camp', 'event'], $approved)): ?>
             <h2 class="mt-5 text-[13px] font-semibold">Create</h2>
+        <?php endif; ?>
+        <?php if ($tipReady): ?>
             <div class="mt-2 grid gap-2 sm:grid-cols-3">
                 <?php foreach ($tipReady as $t): ?>
                     <a href="<?= $e(CS::siteUrl('/my-health-tips?new=' . $t)) ?>" class="rounded-[8px] border border-ln p-3 hover:border-ac hover:bg-acs">
                         <span class="block text-[13px] font-semibold">+ New <?= $e(strtolower(rtrim(CS::CONTENT[$t][0], 's'))) ?></span>
                         <span class="block text-[11.5px] text-tx3">Opens the editor</span>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+        <?php $evReady = array_values(array_intersect(['free_camp', 'event'], $approved)); ?>
+        <?php if ($evReady): ?>
+            <div class="mt-2 grid gap-2 sm:grid-cols-3">
+                <?php foreach ($evReady as $t): ?>
+                    <a href="/creator/events/new?kind=<?= $e($t) ?>" class="rounded-[8px] border border-ln p-3 hover:border-ac hover:bg-acs">
+                        <span class="block text-[13px] font-semibold">+ <?= $t === 'free_camp' ? 'New free camp' : 'New event' ?></span>
+                        <span class="block text-[11.5px] text-tx3"><?= $t === 'free_camp' ? 'Always free to list' : 'Expo, workshop, webinar…' ?></span>
                     </a>
                 <?php endforeach; ?>
             </div>

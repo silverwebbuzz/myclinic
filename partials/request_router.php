@@ -127,6 +127,28 @@ function ecp_dispatch_clean_url(string $requestUri): bool
         return true;
     }
 
+    // Wellness Hub camps & events (mirrors .htaccess).
+    if (preg_match('#^/wellness/?$#i', $uri)) {
+        header('Location: /wellness/camps', true, 302);
+
+        return true;
+    }
+    if (preg_match('#^/wellness/(camp|event)/([a-z0-9][a-z0-9\-]*)/?$#i', $uri, $m)) {
+        $_GET['_we_kind'] = strtolower($m[1]);
+        $_GET['_we_a'] = strtolower($m[2]);
+        require __DIR__ . '/../wellness-events.php';
+
+        return true;
+    }
+    if (preg_match('#^/wellness/(camps|events)(?:/([a-z0-9][a-z0-9\-]*))?(?:/([a-z0-9][a-z0-9\-]*))?/?$#i', $uri, $m)) {
+        $_GET['_we_kind'] = strtolower($m[1]);
+        $_GET['_we_a'] = strtolower($m[2] ?? '');
+        $_GET['_we_b'] = strtolower($m[3] ?? '');
+        require __DIR__ . '/../wellness-events.php';
+
+        return true;
+    }
+
     // eClinicPro Store — mirrors the /store rules in the root .htaccess.
     if (preg_match('#^/store(/.*)?$#i', $uri)) {
         $storeDir = __DIR__ . '/../store/';

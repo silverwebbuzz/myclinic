@@ -130,6 +130,7 @@ $presenceSub = $presenceSub ?? 'Find doctors & clinics across these cities';
                     <li><a href="/for-patients#family">Family profiles</a></li>
                     <li><a href="/for-patients#rx">E-prescriptions</a></li>
                     <li><a href="/health-tips">Health tips &amp; recipes</a></li>
+                    <li><a href="/wellness/camps">Free health camps</a></li>
                 </ul>
             </div>
             <div class="foot-col">

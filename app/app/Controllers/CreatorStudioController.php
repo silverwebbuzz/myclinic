@@ -12,6 +12,7 @@ use App\Services\CsrfService;
 use App\Services\PatientIdentityAuthService;
 use App\Services\RecaptchaService;
 use App\Services\Wellness\CreatorService;
+use App\Services\Wellness\EventService;
 use App\Support\SessionFlash;
 use App\Support\View;
 
@@ -92,6 +93,114 @@ final class CreatorStudioController
         return $this->render('creator/content', [
             'tips' => CreatorService::tips($c),
             'approved' => CreatorService::approvedTypes((int) $c['id']),
+        ]);
+    }
+
+    // ---- Camps & events (Phase 2) ---------------------------------------------
+
+    public function events(Request $request): Response
+    {
+        $c = $this->creator();
+
+        return $this->render('creator/events', [
+            'events' => EventService::forCreator((int) $c['id']),
+            'approved' => CreatorService::approvedTypes((int) $c['id']),
+        ]);
+    }
+
+    public function eventNew(Request $request): Response
+    {
+        $c = $this->creator();
+        $kind = (string) ($request->query['kind'] ?? 'free_camp');
+        if (!isset(EventService::KINDS[$kind]) || !in_array($kind, CreatorService::approvedTypes((int) $c['id']), true)) {
+            SessionFlash::put('creator_err', 'You are not approved to post ' . ($kind === 'event' ? 'events' : 'free camps') . ' yet. Apply below.');
+
+            return Response::redirect('/creator/permissions');
+        }
+
+        return $this->eventForm(EventService::blank($kind, $c));
+    }
+
+    public function eventEdit(Request $request, string $id): Response
+    {
+        $e = EventService::findOwned((int) $this->creator()['id'], (int) $id);
+        if ($e === null) {
+            return Response::redirect('/creator/events');
+        }
+
+        return $this->eventForm(EventService::toForm($e), $e);
+    }
+
+    public function eventCreate(Request $request): Response
+    {
+        return $this->eventSave($request, null);
+    }
+
+    public function eventUpdate(Request $request, string $id): Response
+    {
+        return $this->eventSave($request, (int) $id);
+    }
+
+    public function eventWithdraw(Request $request, string $id): Response
+    {
+        $this->flash(EventService::withdraw($this->creator(), (int) $id), 'Taken back from review. You can edit it now.');
+
+        return Response::redirect('/creator/events/' . (int) $id);
+    }
+
+    public function eventCancel(Request $request, string $id): Response
+    {
+        $this->flash(EventService::cancel($this->creator(), (int) $id, (string) ($request->post['cancel_reason'] ?? '')), 'Marked as cancelled. The page now tells visitors it won’t happen.');
+
+        return Response::redirect('/creator/events/' . (int) $id);
+    }
+
+    public function eventDelete(Request $request, string $id): Response
+    {
+        $this->flash(EventService::delete($this->creator(), (int) $id), 'Deleted.');
+
+        return Response::redirect('/creator/events');
+    }
+
+    public function eventPoster(Request $request, string $id): Response
+    {
+        $e = EventService::findOwned((int) $this->creator()['id'], (int) $id);
+
+        return $e === null ? Response::html('Not found', 404) : EventService::posterResponse($e);
+    }
+
+    private function eventSave(Request $request, ?int $id): Response
+    {
+        $c = $this->creator();
+        $poster = $_FILES['poster'] ?? null;
+        $submit = ($request->post['intent'] ?? '') === 'submit';
+        $res = EventService::save($c, $id, (string) ($request->post['kind'] ?? ''), $request->post, is_array($poster) ? $poster : null, $submit);
+        if (!$res['ok']) {
+            $existing = $id ? EventService::findOwned((int) $c['id'], $id) : null;
+            $form = $request->post + ($existing ? EventService::toForm($existing) : EventService::blank((string) ($request->post['kind'] ?? 'free_camp'), $c));
+            $form['id'] = $id;
+            $form['kind'] = $existing['kind'] ?? $form['kind'];
+            $form['status'] = $existing['status'] ?? 'draft';
+            $form['poster_path'] = $existing['poster_path'] ?? null;
+
+            return $this->eventForm($form, $existing, $res['error'] . (!empty($poster['name']) ? ' (Please choose the poster again.)' : ''));
+        }
+        SessionFlash::put('creator_ok', $res['status'] === 'submitted'
+            ? 'Sent for review. We’ll email you when it’s live — usually within 1 working day.'
+            : 'Saved as draft.');
+
+        return Response::redirect('/creator/events/' . (int) $res['id']);
+    }
+
+    /** @param array<string,mixed> $form */
+    private function eventForm(array $form, ?array $existing = null, ?string $error = null): Response
+    {
+        return $this->render('creator/event_form', [
+            'form' => $form,
+            'existing' => $existing,
+            'categories' => EventService::categories((string) $form['kind']),
+            'cities' => EventService::cities(),
+            'flashErr' => $error,
         ]);
     }
 

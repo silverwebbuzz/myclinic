@@ -11,7 +11,7 @@
 use App\Services\Wellness\CreatorService as CS;
 
 $e = static fn ($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
-$pageTitle = 'My content';
+$pageTitle = 'Recipes, exercises & tips';
 $typeLabel = ['recipe' => 'Recipe', 'exercise' => 'Exercise', 'tip' => 'Quick tip', 'video' => 'Video'];
 $status = [
     'draft' => ['Draft', 'bg-ntb text-nt'],
@@ -26,7 +26,7 @@ $fmt = static fn (?string $d): string => $d ? date('d M Y', strtotime($d)) : 'â€
 ob_start();
 ?>
 <div class="flex flex-wrap items-center gap-2">
-    <h1 class="text-[17px] font-semibold">My content</h1>
+    <h1 class="text-[17px] font-semibold">Recipes, exercises &amp; tips</h1>
     <span class="flex-1"></span>
     <?php foreach ($tipReady as $t): ?>
         <a href="<?= $e(CS::siteUrl('/my-health-tips?new=' . $t)) ?>" class="inline-flex h-8 items-center rounded-[7px] bg-ac px-3 text-[12.5px] font-semibold text-white hover:bg-act">+ <?= $e($typeLabel[$t]) ?></a>
@@ -71,7 +71,7 @@ ob_start();
         </table>
     </div>
 <?php endif; ?>
-<p class="mt-3 text-[12px] text-tx3">Camps, events and videos will appear here when they open.</p>
+<p class="mt-3 text-[12px] text-tx3">Camps and events are under <a href="/creator/events" class="underline">Camps &amp; events</a>. Videos open soon.</p>
 <?php
 $content = ob_get_clean();
 require __DIR__ . '/_layout.php';

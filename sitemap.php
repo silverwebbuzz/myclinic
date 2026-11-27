@@ -225,6 +225,45 @@ if (function_exists('ecp_db') && ecp_db()) {
     }
 }
 
+// ---- Wellness Hub camps & events: hubs, city / city+category pages with
+//      upcoming listings, and every public listing (ended ones too). ----
+if (function_exists('ecp_db') && ecp_db()) {
+    try {
+        $weDb = ecp_db();
+        foreach (['free_camp' => 'camps', 'event' => 'events'] as $weKind => $wePath) {
+            echo "  <url>\n    <loc>{$base}/wellness/{$wePath}</loc>\n    <lastmod>{$now}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.8</priority>\n  </url>\n";
+            $st = $weDb->prepare(
+                "SELECT e.city_slug, e.category_slug FROM wh_events e JOIN wh_creators w ON w.id = e.creator_id
+                 WHERE e.kind = :k AND e.status = 'published' AND e.is_deleted = 0 AND w.status = 'active'
+                   AND e.end_at >= NOW() AND e.city_slug IS NOT NULL
+                 GROUP BY e.city_slug, e.category_slug"
+            );
+            $st->execute(['k' => $weKind]);
+            $weCities = [];
+            foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $weCities[(string) $r['city_slug']] = true;
+                $loc = $base . '/wellness/' . $wePath . '/' . rawurlencode((string) $r['city_slug']) . '/' . rawurlencode((string) $r['category_slug']);
+                echo "  <url>\n    <loc>{$loc}</loc>\n    <lastmod>{$now}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.6</priority>\n  </url>\n";
+            }
+            foreach (array_keys($weCities) as $weCity) {
+                $loc = $base . '/wellness/' . $wePath . '/' . rawurlencode($weCity);
+                echo "  <url>\n    <loc>{$loc}</loc>\n    <lastmod>{$now}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.7</priority>\n  </url>\n";
+            }
+        }
+        $rows = $weDb->query(
+            "SELECT e.kind, e.slug, e.updated_at FROM wh_events e JOIN wh_creators w ON w.id = e.creator_id
+             WHERE e.status IN ('published','cancelled') AND e.is_deleted = 0 AND w.status = 'active' ORDER BY e.start_at DESC"
+        )->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as $r) {
+            $loc = $base . '/wellness/' . ($r['kind'] === 'free_camp' ? 'camp' : 'event') . '/' . rawurlencode((string) $r['slug']);
+            $mod = date('Y-m-d', strtotime((string) $r['updated_at']));
+            echo "  <url>\n    <loc>{$loc}</loc>\n    <lastmod>{$mod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.6</priority>\n  </url>\n";
+        }
+    } catch (Throwable $e) {
+        error_log('[sitemap wellness] ' . $e->getMessage());   // patch not run yet
+    }
+}
+
 echo '</urlset>' . "\n";
 $xml = ob_get_clean();
 

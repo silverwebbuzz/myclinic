@@ -17,6 +17,8 @@ if (!isset($pendingClaimCount)) {
 $healthTipsPending = \App\Services\HealthTipAdminService::pendingCount();
 // Wellness Hub: creator permission requests + badge requests (0 until the patch is run).
 $wellnessPending = \App\Services\Wellness\CreatorAdminService::pendingCount();
+$wellnessEventsPending = \App\Services\Wellness\EventService::pendingCount();
+$wellnessReports = \App\Services\Wellness\EventService::openReportCount();
 
 // Admin pages are standalone (own <head>, no clinic shell): pull in shared UI
 // helpers + token stylesheet. Neutral slate brand for the .ui-* colors.
@@ -73,6 +75,8 @@ $navGroups = [
     ],
     'Wellness Hub' => [
         ['/admin/wellness/creators', 'Health Creators', 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 3a4 4 0 100 8 4 4 0 000-8zM20 8v6M23 11h-6', $wellnessPending, 'wellness creators verify badge doctor camps'],
+        ['/admin/wellness/events', 'Camps & events', 'M8 7V3m8 4V3M3 11h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z', $wellnessEventsPending, 'wellness health camps events expo review'],
+        ['/admin/wellness/reports', 'Reports', 'M3 21V4m0 0h13l-2 4 2 4H3', $wellnessReports, 'wellness report listing flag'],
     ],
     'Content & SEO' => [
         ['/admin/specialties', 'Specialties', 'M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.29 1.51 4.04 3 5.5l7 7 7-7z'],

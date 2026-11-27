@@ -58,6 +58,7 @@ final class MailService
             'wellness_admin_alert',
             'wellness_permission_decision',
             'wellness_verification_decision',
+            'wellness_event_decision',
             'health_tip',
             'health_tip_published',
             'health_tip_changes',
@@ -162,6 +163,11 @@ final class MailService
             'health_tip_changes' => 'Small changes needed: ' . (string) ($payload['title'] ?? ''),
             'health_tip_rejected' => 'About your post: ' . (string) ($payload['title'] ?? ''),
             'wellness_admin_alert' => (string) ($payload['subject'] ?? 'Wellness Hub: needs your review'),
+            'wellness_event_decision' => match ((string) ($payload['decision'] ?? '')) {
+                'published' => 'Your ' . ($payload['kind_label'] ?? 'listing') . ' is live: ' . ($payload['title'] ?? ''),
+                'changes_requested' => 'Small changes needed: ' . ($payload['title'] ?? ''),
+                default => 'About your listing: ' . ($payload['title'] ?? ''),
+            },
             'wellness_permission_decision' => ($payload['decision'] ?? '') === 'approved'
                 ? 'You can now post ' . strtolower((string) ($payload['type_label'] ?? '')) . ' on eClinicPro'
                 : 'About your Health Creator application',
@@ -526,6 +532,37 @@ final class MailService
                 'sign_off' => "Thank you,\nThe eClinicPro Health Tips team",
             ],
             // Wellness Hub — Health Creators (App\Services\Wellness\*).
+            'wellness_event_decision' => match ((string) ($payload['decision'] ?? '')) {
+                'published' => [
+                    'greeting' => 'Hi ' . ($payload['name'] ?? 'there') . ',',
+                    'paragraphs' => array_values(array_filter([
+                        'Your ' . ($payload['kind_label'] ?? 'listing') . ' "' . ($payload['title'] ?? '') . '" is now live on the eClinicPro Wellness Hub.',
+                        'Share the link on WhatsApp groups and social media so more people can attend.',
+                        trim((string) ($payload['note'] ?? '')) !== '' ? 'A note from our team: ' . $payload['note'] : null,
+                    ])),
+                    'cta' => ['label' => 'See it live', 'url' => (string) ($payload['url'] ?? '')],
+                    'sign_off' => "Thank you,\nThe eClinicPro Wellness Hub team",
+                ],
+                'changes_requested' => [
+                    'greeting' => 'Hi ' . ($payload['name'] ?? 'there') . ',',
+                    'paragraphs' => [
+                        'Thanks for your ' . ($payload['kind_label'] ?? 'listing') . ' "' . ($payload['title'] ?? '') . '". Before it goes live we need a few changes:',
+                        (string) ($payload['note'] ?? ''),
+                        'Open it in Creator Studio, make the changes and send it for review again.',
+                    ],
+                    'cta' => ['label' => 'Edit my listing', 'url' => (string) ($payload['studio_url'] ?? '')],
+                    'sign_off' => "Thank you,\nThe eClinicPro Wellness Hub team",
+                ],
+                default => [
+                    'greeting' => 'Hi ' . ($payload['name'] ?? 'there') . ',',
+                    'paragraphs' => [
+                        'Thank you for sending "' . ($payload['title'] ?? '') . '". After reviewing it, we are not able to list it.',
+                        'Reason: ' . ($payload['note'] ?? ''),
+                    ],
+                    'cta' => ['label' => 'Open Creator Studio', 'url' => (string) ($payload['studio_url'] ?? '')],
+                    'sign_off' => "Thank you,\nThe eClinicPro Wellness Hub team",
+                ],
+            },
             'wellness_admin_alert' => [
                 'greeting' => 'Hello,',
                 'paragraphs' => array_values(array_map('strval', (array) ($payload['lines'] ?? []))),

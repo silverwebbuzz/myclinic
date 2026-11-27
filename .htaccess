@@ -97,6 +97,13 @@ RewriteRule ^lab/(package|organ|life|step|why|partner)/([a-z0-9][a-z0-9\-]*)/?$ 
 RewriteRule ^health-tips/by/([a-z0-9][a-z0-9\-]*)/?$ health-tips.php?_ht_by=$1 [L,QSA,NC]
 RewriteRule ^health-tips/([a-z0-9][a-z0-9\-]*)/?$ health-tips.php?_ht_slug=$1 [L,QSA,NC]
 
+# -------- Wellness Hub camps & events (/wellness/camps…, /wellness/camp/{slug}) --------
+RewriteRule ^wellness/?$ /wellness/camps [R=302,L]
+RewriteRule ^wellness/(camp|event)/([a-z0-9][a-z0-9\-]*)/?$ wellness-events.php?_we_kind=$1&_we_a=$2 [L,QSA,NC]
+RewriteRule ^wellness/(camps|events)/?$ wellness-events.php?_we_kind=$1 [L,QSA,NC]
+RewriteRule ^wellness/(camps|events)/([a-z0-9][a-z0-9\-]*)/?$ wellness-events.php?_we_kind=$1&_we_a=$2 [L,QSA,NC]
+RewriteRule ^wellness/(camps|events)/([a-z0-9][a-z0-9\-]*)/([a-z0-9][a-z0-9\-]*)/?$ wellness-events.php?_we_kind=$1&_we_a=$2&_we_b=$3 [L,QSA,NC]
+
 # -------- eClinicPro Store (/store/…) --------
 # store/_*.php are include-only partials: never reachable directly.
 RewriteRule ^store/_ - [F,L]

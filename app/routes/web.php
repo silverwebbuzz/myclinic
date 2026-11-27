@@ -669,6 +669,15 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/wellness/creators/{id}/verify', [\App\Controllers\WellnessAdminController::class, 'verify']);
         $admin->post('/wellness/creators/{id}/status', [\App\Controllers\WellnessAdminController::class, 'status']);
         $admin->post('/wellness/creators/{id}/note', [\App\Controllers\WellnessAdminController::class, 'note']);
+        // Camps & events review + posting as eClinicPro Desk + reports (Phase 2). Static before {id}.
+        $admin->get('/wellness/events', [\App\Controllers\WellnessAdminController::class, 'events']);
+        $admin->get('/wellness/events/new', [\App\Controllers\WellnessAdminController::class, 'eventNew']);
+        $admin->post('/wellness/events/new', [\App\Controllers\WellnessAdminController::class, 'eventCreate']);
+        $admin->get('/wellness/reports', [\App\Controllers\WellnessAdminController::class, 'reports']);
+        $admin->post('/wellness/reports/{id}', [\App\Controllers\WellnessAdminController::class, 'resolveReport']);
+        $admin->get('/wellness/events/{id}', [\App\Controllers\WellnessAdminController::class, 'event']);
+        $admin->get('/wellness/events/{id}/poster', [\App\Controllers\WellnessAdminController::class, 'eventPoster']);
+        $admin->post('/wellness/events/{id}/review', [\App\Controllers\WellnessAdminController::class, 'eventReview']);
 
         // WordPress blog access for doctors
         $admin->get('/wordpress-settings', [WordPressAdminController::class, 'settings']);
@@ -807,6 +816,16 @@ return static function (RouteRegistrar $router): void {
         $creator->get('/verification', [$c, 'verification']);
         $creator->post('/verification', [$c, 'requestVerification']);
         $creator->get('/documents/{id}', [$c, 'document']);
+        // Camps & events (Phase 2). "new" before {id}.
+        $creator->get('/events', [$c, 'events']);
+        $creator->get('/events/new', [$c, 'eventNew']);
+        $creator->post('/events', [$c, 'eventCreate']);
+        $creator->get('/events/{id}', [$c, 'eventEdit']);
+        $creator->post('/events/{id}', [$c, 'eventUpdate']);
+        $creator->get('/events/{id}/poster', [$c, 'eventPoster']);
+        $creator->post('/events/{id}/withdraw', [$c, 'eventWithdraw']);
+        $creator->post('/events/{id}/cancel', [$c, 'eventCancel']);
+        $creator->post('/events/{id}/delete', [$c, 'eventDelete']);
     });
 
     // Store marketplace — seller portal. Own guard (mc_vendor_token, path /vendor),

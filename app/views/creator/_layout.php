@@ -16,7 +16,10 @@ $patientUrl = CS::siteUrl('/patient');
 
 $navGroups = [
     'Overview' => [['/creator/dashboard', 'Dashboard']],
-    'Create' => [['/creator/content', 'My content']],
+    'Create' => [
+        ['/creator/events', 'Camps & events'],
+        ['/creator/content', 'Recipes, exercises & tips'],
+    ],
     'Account' => [
         ['/creator/profile', 'Public profile'],
         ['/creator/permissions', 'What I can post'],
