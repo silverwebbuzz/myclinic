@@ -83,17 +83,29 @@ final class WhatsAppService
         // Do NOT fall back to plain text — surface the error so the template gets
         // synced in Meta. Business-initiated plain text is a policy breach.
         if (self::isMissingMetaTemplate($data)) {
+            $meta = WaTemplateService::metaName($template) ?? $template;
+            $lang = WaTemplateService::language($template);
+            $detail = (string) ($data['error']['error_data']['details'] ?? $data['error']['message'] ?? '');
             return [
                 'ok' => false,
-                'message' => "WhatsApp template '{$template}' not found in Meta — sync/approve it in Business Manager",
+                'message' => "Meta rejected template '{$meta}' (language '{$lang}'): {$detail}. Check the name AND language code match Meta exactly",
                 'wamid' => null,
                 'configured' => true,
             ];
         }
 
+        // Meta's useful reason is in error_data.details (e.g. "body: number of
+        // localizable_params (4) does not match the expected number of params (5)").
+        $err = $data['error'] ?? [];
+        $reason = isset($err['message'])
+            ? trim('#' . ($err['code'] ?? '?') . ' ' . $err['message']
+                . (!empty($err['error_data']['details']) ? ' — ' . $err['error_data']['details'] : ''))
+            : ('HTTP ' . $code . ': ' . (string) $response);
+        error_log('[WhatsApp] ' . $template . ' → ' . $reason);
+
         return [
             'ok' => false,
-            'message' => $data['error']['message'] ?? ('HTTP ' . $code . ': ' . (string) $response),
+            'message' => $reason,
             'wamid' => null,
             'configured' => true,
         ];

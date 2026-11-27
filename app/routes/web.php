@@ -95,6 +95,7 @@ return static function (RouteRegistrar $router): void {
     $router->post('/webhooks/razorpay', [WebhookController::class, 'razorpay']);
     // Patient's secure prescription link (WhatsApp/email). No login: the token
     // is signed + expires in 30 days. Meta also fetches the PDF from here.
+    $router->get('/rx-sample.pdf', [\App\Controllers\RxShareController::class, 'sample']);
     $router->get('/rx/{token}', [\App\Controllers\RxShareController::class, 'show']);
     // Patient's signed invoice / diet-plan link (WhatsApp/email). No login.
     $router->get('/d/{type}/{token}', [\App\Controllers\DocumentLinkController::class, 'show']);

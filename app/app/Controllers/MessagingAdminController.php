@@ -53,6 +53,7 @@ final class MessagingAdminController
             'log' => $log,
             'webhookUrl' => $webhookUrl,
             'message' => $request->query['message'] ?? null,
+            'detail' => $request->query['detail'] ?? null,
         ]));
     }
 
@@ -305,16 +306,33 @@ final class MessagingAdminController
         if ($to === '') {
             return Response::redirect('/admin/messaging?message=test_no_number#connection');
         }
-        $result = WhatsAppService::send($to, $tpl, [
+        $sample = [
             'patient_name' => 'Riya',
             'doctor_name' => 'Dr. Sharma',
             'clinic_name' => 'Sharma Clinic',
             'appointment_date' => date('D, j M Y'),
             'appointment_time' => date('g:i A'),
             'clinic_address' => '12 MG Road, Ahmedabad',
-        ]);
+        ];
+        // The prescription template needs all 5 body values; the generic
+        // sample above lacks visit_date + clinic_phone, which Meta rejects.
+        if ($tpl === \App\Services\RxWhatsAppService::TEMPLATE) {
+            $sample = [
+                'patient_name' => 'Riya',
+                'doctor_name' => 'A. Sharma',
+                'clinic_name' => 'Sharma Clinic',
+                'visit_date' => date('d M Y'),
+                'clinic_phone' => '9820012345',
+            ];
+            if (\App\Services\RxWhatsAppService::attachPdf()) {
+                $sample['header_document_url'] = rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/') . '/rx-sample.pdf';
+                $sample['header_document_filename'] = 'Prescription-sample.pdf';
+            }
+        }
+        $result = WhatsAppService::send($to, $tpl, $sample);
         $msg = $result['ok'] ? 'test_sent' : 'test_failed';
-        return Response::redirect('/admin/messaging?message=' . $msg . '#connection');
+        $detail = $result['ok'] ? '' : '&detail=' . rawurlencode(mb_substr((string) $result['message'], 0, 400));
+        return Response::redirect('/admin/messaging?message=' . $msg . $detail . '#connection');
     }
 
     // ---- Cron triggers (POST from system cron, authenticated as superadmin) ----

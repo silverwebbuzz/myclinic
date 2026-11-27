@@ -73,6 +73,11 @@ while (count($packRows) < 4) {
                         <?php endforeach; ?>
                     </div>
                 </div>
+                <label class="flex items-start gap-2 rounded border border-amber-200 bg-amber-50 p-3 text-sm">
+                    <input type="checkbox" name="attach_pdf" value="1" <?= $attachPdf ? 'checked' : '' ?> class="mt-0.5">
+                    <span><strong>Attach prescription PDF</strong> (Document header)<br>
+                    <span class="text-xs text-slate-600">Turn on ONLY when the template set in Messaging (Meta name) has a <strong>Document header</strong> in Meta. Wrong setting = every send is rejected by Meta. Switch it at the same time as the Meta name.</span></span>
+                </label>
                 <button class="rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">Save defaults</button>
             </form>
         </section>

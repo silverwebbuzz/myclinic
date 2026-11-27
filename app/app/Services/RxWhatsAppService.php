@@ -59,6 +59,17 @@ final class RxWhatsAppService
         return $out;
     }
 
+    /**
+     * Attach the prescription PDF as the message's Document header. Only turn
+     * on when the approved Meta template HAS a Document header: Meta rejects
+     * a header the template doesn't have (and requires one when it does).
+     * Admin → Rx WhatsApp → "Attach prescription PDF".
+     */
+    public static function attachPdf(): bool
+    {
+        return MessagingSettings::get('rx_wa_attach_pdf', '0') === '1';
+    }
+
     /** WhatsApp connected AND the template approved. Otherwise nothing is reserved. */
     public static function channelReady(): bool
     {
@@ -441,14 +452,20 @@ final class RxWhatsAppService
                 'clinic_name' => trim((string) ($clinic['name'] ?? '')) ?: 'the clinic',
                 'visit_date' => date('d M Y', $visitedAt ?: time()),
                 'clinic_phone' => self::clinicPhone($clinicId, $clinic),
-                // 'header_document_url' => $link['url'],
-                // 'header_document_filename' => 'Prescription-' . date('d-M-Y', $visitedAt ?: time()) . '.pdf',
-                // 'rx_url' => $link['url'],
-                // 'visit_id' => $visitId,
-                // 'rx_charge' => $reserved['charge'],
-                // 'rx_period' => $reserved['period'],
-                // 'rx_source' => $source,
+                // Internal only (never sent to Meta): refund on a failed send.
+                'rx_url' => $link['url'],
+                'visit_id' => $visitId,
+                'rx_charge' => $reserved['charge'],
+                'rx_period' => $reserved['period'],
+                'rx_source' => $source,
             ];
+
+            // PDF as the Document header — only when the Meta template has one
+            // (see attachPdf()). Meta downloads it from the secure link.
+            if (self::attachPdf()) {
+                $payload['header_document_url'] = $link['url'];
+                $payload['header_document_filename'] = 'Prescription-' . date('d-M-Y', $visitedAt ?: time()) . '.pdf';
+            }
 
             $when = date('Y-m-d H:i:s', time() + max(0, $delaySeconds));
             $notificationId = NotificationService::queueWhatsApp($clinicId, (int) $patient['id'], $phone, self::TEMPLATE, $payload, $when);

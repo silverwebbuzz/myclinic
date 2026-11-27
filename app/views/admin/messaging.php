@@ -31,6 +31,9 @@ $enabled = ($settings['messaging_enabled']['setting_value'] ?? '0') === '1';
         <?php if ($message): ?>
         <div class="rounded bg-emerald-50 border border-emerald-200 px-4 py-2 text-sm text-emerald-800">
             <?= htmlspecialchars(str_replace('_', ' ', (string) $message)) ?>
+            <?php if (!empty($detail)): ?>
+            <div class="mt-1 font-mono text-xs text-red-700">Meta said: <?= htmlspecialchars((string) $detail) ?></div>
+            <?php endif; ?>
         </div>
         <?php endif; ?>
 

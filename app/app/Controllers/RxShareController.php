@@ -41,4 +41,32 @@ final class RxShareController
             ->withHeader('Cache-Control', 'private, no-store')
             ->withHeader('Referrer-Policy', 'no-referrer');
     }
+
+    /**
+     * GET /rx-sample.pdf — a SAMPLE prescription (made-up data only). Used by
+     * the admin "Send test" when the PDF is attached, and handy as the sample
+     * PDF Meta asks for when creating the template.
+     */
+    public function sample(Request $request): Response
+    {
+        try {
+            $abs = \App\Services\PrescriptionPdfService::generate(
+                ['id' => 0, 'doctor_id' => 0, 'doctor_name' => 'A. Sharma', 'visited_at' => date('Y-m-d H:i:s'),
+                 'diagnosis' => 'Sample: acute pharyngitis', 'examination' => 'Sample prescription for testing WhatsApp delivery.'],
+                ['name' => 'Riya (sample)', 'uhid' => 'SAMPLE', 'gender' => 'female'],
+                ['id' => 0, 'name' => 'Sharma Clinic (sample)', 'phone' => '9820012345'],
+                [],
+                'A5',
+            );
+        } catch (\Throwable $e) {
+            error_log('[rx-sample] ' . $e->getMessage());
+
+            return Response::html('Sample unavailable', 500);
+        }
+
+        return Response::download($abs, 'Prescription-sample.pdf')
+            ->withHeader('Content-Type', 'application/pdf')
+            ->withHeader('Content-Disposition', 'inline; filename="Prescription-sample.pdf"')
+            ->withHeader('X-Robots-Tag', 'noindex, nofollow');
+    }
 }

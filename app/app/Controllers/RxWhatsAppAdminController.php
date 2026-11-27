@@ -89,6 +89,7 @@ final class RxWhatsAppAdminController
             'csrf' => CsrfService::token(),
             'clinics' => $clinics,
             'defaultFree' => RxWhatsAppService::defaultFreeMonthly(),
+            'attachPdf' => RxWhatsAppService::attachPdf(),
             'packs' => RxWhatsAppService::packs(),
             'ready' => RxWhatsAppService::channelReady(),
             'totals' => $totals,
@@ -106,6 +107,7 @@ final class RxWhatsAppAdminController
         }
         $free = max(0, min(100000, (int) ($request->post['free_monthly'] ?? 100)));
         MessagingSettings::set('rx_wa_free_monthly', (string) $free);
+        MessagingSettings::set('rx_wa_attach_pdf', !empty($request->post['attach_pdf']) ? '1' : '0');
 
         $packs = [];
         $qtys = (array) ($request->post['pack_qty'] ?? []);
