@@ -15,6 +15,7 @@ use App\Services\Wellness\CreatorService;
 use App\Services\Wellness\Comments;
 use App\Services\Wellness\CreditPackService;
 use App\Services\Wellness\EventService;
+use App\Services\Wellness\Posts;
 use App\Services\Wellness\Quota;
 use App\Support\SessionFlash;
 use App\Support\View;
@@ -206,6 +207,106 @@ final class CreatorStudioController
             'existing' => $existing,
             'categories' => EventService::categories((string) $form['kind']),
             'cities' => EventService::cities(),
+            'flashErr' => $error,
+        ]);
+    }
+
+    // ---- Recipes, exercises, tips, videos editor (moved from /my-health-tips) ----
+
+    public function postNew(Request $request): Response
+    {
+        $contrib = Posts::contributor($this->creator());
+        $type = (string) ($request->query['type'] ?? '');
+        if ($contrib === null || !in_array($type, Posts::allowedTypes($contrib), true)) {
+            SessionFlash::put('creator_err', 'You are not approved to post that yet. Apply below.');
+
+            return Response::redirect('/creator/permissions');
+        }
+
+        return $this->postForm($contrib, Posts::blank($type), null);
+    }
+
+    public function postEdit(Request $request, string $id): Response
+    {
+        $contrib = Posts::contributor($this->creator());
+        $tip = $contrib ? Posts::find($contrib, (int) $id) : null;
+        if ($tip === null) {
+            return Response::redirect('/creator/content');
+        }
+
+        return $this->postForm($contrib, Posts::fromTip($tip), $tip);
+    }
+
+    public function postCreate(Request $request): Response
+    {
+        return $this->postSave($request, null);
+    }
+
+    public function postUpdate(Request $request, string $id): Response
+    {
+        return $this->postSave($request, (int) $id);
+    }
+
+    public function postWithdraw(Request $request, string $id): Response
+    {
+        $contrib = Posts::contributor($this->creator());
+        $res = $contrib ? Posts::withdraw($contrib, (int) $id) : ['ok' => false, 'error' => 'Not found.'];
+        $this->flash($res, 'Moved back to draft. You can edit it now.');
+
+        return Response::redirect('/creator/posts/' . (int) $id);
+    }
+
+    public function postDelete(Request $request, string $id): Response
+    {
+        $contrib = Posts::contributor($this->creator());
+        $res = $contrib ? Posts::delete($contrib, (int) $id) : ['ok' => false, 'error' => 'Not found.'];
+        $this->flash($res, 'Deleted.');
+
+        return Response::redirect('/creator/content');
+    }
+
+    private function postSave(Request $request, ?int $id): Response
+    {
+        $contrib = Posts::contributor($this->creator());
+        if ($contrib === null) {
+            return Response::redirect('/creator/permissions');
+        }
+        $existing = $id ? Posts::find($contrib, $id) : null;
+        if ($id && $existing === null) {
+            return Response::redirect('/creator/content');
+        }
+        $submit = ($request->post['intent'] ?? '') === 'submit';
+        $photos = $_FILES['photos'] ?? [];
+        $res = Posts::save($contrib, $id, $request->post, is_array($photos) ? $photos : [], $submit);
+        if (!$res['ok']) {
+            $type = $existing ? (string) $existing['type'] : (string) ($request->post['type'] ?? 'tip');
+            $err = (string) ($res['error'] ?? 'Could not save.') . (!empty($photos['name'][0]) ? ' (Please choose your new photos again.)' : '');
+            // A race-lost submit is saved as a draft by the shared rules: reload it so a retry doesn't duplicate.
+            if (!$id && str_contains($err, 'saved as a draft')) {
+                return Response::redirect('/creator/content');
+            }
+
+            return $this->postForm($contrib, Posts::fromPost($request->post, $existing, $type), $existing, $err);
+        }
+        SessionFlash::put('creator_ok', $submit ? 'Sent for review. We’ll email you when it’s live.' : 'Saved as draft.');
+
+        return Response::redirect($submit ? '/creator/content' : '/creator/posts/' . (int) $res['id']);
+    }
+
+    /** @param array<string,mixed> $form */
+    private function postForm(array $contrib, array $form, ?array $tip, ?string $error = null): Response
+    {
+        $type = (string) $form['type'];
+
+        return $this->render('creator/post_form', [
+            'form' => $form,
+            'tip' => $tip,
+            'types' => Posts::types(),
+            'groups' => array_map(static fn ($label) => $label, Posts::GROUPS[$type] ?? Posts::GROUPS['tip']),
+            'tagsByGroup' => array_map(static fn ($g) => Posts::tags($g), array_combine(array_keys(Posts::GROUPS[$type] ?? []), array_keys(Posts::GROUPS[$type] ?? []))),
+            'locked' => $tip !== null && !Posts::isEditable($tip),
+            'canSubmit' => Posts::canSubmit($contrib),
+            'quota' => Posts::quotaHint($this->creator(), $type, $tip ? (int) $tip['id'] : null),
             'flashErr' => $error,
         ]);
     }

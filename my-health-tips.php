@@ -30,6 +30,22 @@ $c  = $me ? ecp_ht_contributor_for_identity((int) $me['id']) : null;
 $htAllowed  = $c ? ecp_ht_allowed_types($c) : [];
 $htWellness = $c ? ecp_ht_is_wellness_creator($c) : false;
 $htStudioUrl = ecp_portal_url('/creator/dashboard');
+
+// The editor now lives in Creator Studio (app.eclinicpro.com/creator). Wellness
+// creators — every contributor after the Phase 1 patch — are sent there; this
+// page only still works for an account the Wellness patch never covered.
+if ($htWellness && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+    $to = '/creator/content';
+    if (isset($_GET['new']) && isset(ECP_HT_TYPES[(string) $_GET['new']])) {
+        $to = '/creator/posts/new?type=' . rawurlencode((string) $_GET['new']);
+    } elseif (isset($_GET['edit'])) {
+        $to = '/creator/posts/' . (int) $_GET['edit'];
+    } elseif (($_GET['view'] ?? '') === 'profile') {
+        $to = '/creator/profile';
+    }
+    header('Location: ' . ecp_portal_url($to), true, 302);
+    exit;
+}
 $csrf = $me ? hash_hmac('sha256', 'ht-studio', (string) ($_COOKIE[ECP_PAT_COOKIE] ?? '')) : '';
 
 $error = null;

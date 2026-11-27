@@ -29,7 +29,7 @@ ob_start();
     <h1 class="text-[17px] font-semibold">Recipes, exercises, tips &amp; videos</h1>
     <span class="flex-1"></span>
     <?php foreach ($tipReady as $t): ?>
-        <a href="<?= $e(CS::siteUrl('/my-health-tips?new=' . $t)) ?>" class="inline-flex h-8 items-center rounded-[7px] bg-ac px-3 text-[12.5px] font-semibold text-white hover:bg-act">+ <?= $e($typeLabel[$t]) ?></a>
+        <a href="/creator/posts/new?type=<?= $e($t) ?>" class="inline-flex h-8 items-center rounded-[7px] bg-ac px-3 text-[12.5px] font-semibold text-white hover:bg-act">+ <?= $e($typeLabel[$t]) ?></a>
     <?php endforeach; ?>
 </div>
 
@@ -50,7 +50,7 @@ ob_start();
                 <?php foreach ($tips as $t): [$sl, $sc] = $status[$t['status']] ?? [$t['status'], 'bg-ntb text-nt']; ?>
                     <tr>
                         <td class="px-4 py-3">
-                            <div class="font-medium"><?= $e($t['title']) ?></div>
+                            <a href="/creator/posts/<?= (int) $t['id'] ?>" class="font-medium hover:underline"><?= $e($t['title']) ?></a>
                             <?php if ($t['status'] === 'changes_requested' && $t['review_note']): ?>
                                 <div class="mt-0.5 text-[12px] text-er">Our note: <?= $e($t['review_note']) ?></div>
                             <?php endif; ?>
@@ -63,7 +63,7 @@ ob_start();
                             <?php if ($t['status'] === 'published'): ?>
                                 <a href="<?= $e(CS::siteUrl('/wellness/' . $t['type'] . '/' . $t['slug'])) ?>" target="_blank" rel="noopener" class="text-[12.5px] text-ac underline">View ↗</a>
                             <?php endif; ?>
-                            <a href="<?= $e(CS::siteUrl('/my-health-tips?edit=' . (int) $t['id'])) ?>" class="ml-3 text-[12.5px] text-tx2 underline">Open</a>
+                            <a href="/creator/posts/<?= (int) $t['id'] ?>" class="ml-3 text-[12.5px] text-tx2 underline">Open</a>
                         </td>
                     </tr>
                 <?php endforeach; ?>

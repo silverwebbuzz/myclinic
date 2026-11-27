@@ -834,6 +834,13 @@ return static function (RouteRegistrar $router): void {
         $creator->post('/events/{id}/withdraw', [$c, 'eventWithdraw']);
         $creator->post('/events/{id}/cancel', [$c, 'eventCancel']);
         $creator->post('/events/{id}/delete', [$c, 'eventDelete']);
+        // Recipes, exercises, tips, videos editor (moved from eclinicpro.com/my-health-tips). "new" before {id}.
+        $creator->get('/posts/new', [$c, 'postNew']);
+        $creator->post('/posts', [$c, 'postCreate']);
+        $creator->get('/posts/{id}', [$c, 'postEdit']);
+        $creator->post('/posts/{id}', [$c, 'postUpdate']);
+        $creator->post('/posts/{id}/withdraw', [$c, 'postWithdraw']);
+        $creator->post('/posts/{id}/delete', [$c, 'postDelete']);
         // Questions & comments (Phase 5).
         $creator->get('/questions', [$c, 'questions']);
         $creator->post('/questions/{id}/reply', [$c, 'answerQuestion']);

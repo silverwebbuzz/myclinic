@@ -1480,7 +1480,7 @@ require __DIR__ . '/partials/header.php';
               <span class="pt-nav-label">Saved (Wellness Hub)</span>
             </button>
 <?php if ($htContributor !== null && $htContributor['status'] === 'active'): ?>
-            <button type="button" onclick="window.location.href='/my-health-tips'" title="Write and manage your recipes, exercises and tips">
+            <button type="button" onclick="window.location.href=<?= htmlspecialchars(json_encode(ecp_portal_url('/creator/content')), ENT_QUOTES, 'UTF-8') ?>" title="Write and manage your recipes, exercises, tips and videos in Creator Studio">
               <span class="pt-nav-ic">🥗</span>
               <span class="pt-nav-label">My health tips</span>
             </button>

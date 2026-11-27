@@ -49,9 +49,9 @@ ob_start();
         <?php if ($tipReady): ?>
             <div class="mt-2 grid gap-2 sm:grid-cols-3">
                 <?php foreach ($tipReady as $t): ?>
-                    <a href="<?= $e(CS::siteUrl('/my-health-tips?new=' . $t)) ?>" class="rounded-[8px] border border-ln p-3 hover:border-ac hover:bg-acs">
+                    <a href="/creator/posts/new?type=<?= $e($t) ?>" class="rounded-[8px] border border-ln p-3 hover:border-ac hover:bg-acs">
                         <span class="block text-[13px] font-semibold">+ New <?= $e(['recipe' => 'recipe', 'exercise' => 'exercise', 'tip' => 'quick tip', 'video' => 'video'][$t] ?? $t) ?></span>
-                        <span class="block text-[11.5px] text-tx3">Opens the editor</span>
+                        <span class="block text-[11.5px] text-tx3">Write it here</span>
                     </a>
                 <?php endforeach; ?>
             </div>

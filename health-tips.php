@@ -158,7 +158,7 @@ require __DIR__ . '/partials/header.php';
     $photos = $tip['type'] === 'video' ? array_slice($tip['media'], 1) : $tip['media'];
   ?>
   <?php if ($tip['is_preview']): ?>
-    <div class="ht-preview-bar">Preview — only you can see this. Status: <strong><?= e(ECP_HT_STATUS_LABELS[$tip['status']] ?? $tip['status']) ?></strong> · <a href="/my-health-tips?edit=<?= (int) $tip['id'] ?>">Back to editor</a></div>
+    <div class="ht-preview-bar">Preview — only you can see this. Status: <strong><?= e(ECP_HT_STATUS_LABELS[$tip['status']] ?? $tip['status']) ?></strong> · <a href="<?= e(ecp_portal_url('/creator/posts/' . (int) $tip['id'])) ?>">Back to editor</a></div>
   <?php endif; ?>
 
   <article class="wrap ht-article">

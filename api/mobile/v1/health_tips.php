@@ -8,6 +8,8 @@
 // needs the Bearer token.
 //
 //   GET  ?action=list&type=&tag=&q=&page=  → { items:[card…], total, page, per_page, has_more }
+//        &include_video=1 (opt-in, Wellness Hub Phase 3+) also returns type=video posts;
+//        older app builds never send it, so they never see videos.
 //   GET  ?action=detail&slug=…             → { tip:{…} }      (saved = false when signed out)
 //   GET  ?action=tags                      → { tags:[{slug,name,group}] }
 //   GET  ?action=saved&page=               → { items:[card…], total, page, per_page, has_more }   Bearer
@@ -32,11 +34,12 @@ switch ($action) {
         $type = (string) ($_GET['type'] ?? '');
         $tag  = (string) ($_GET['tag'] ?? '');
         $page = max(1, (int) ($_GET['page'] ?? 1));
+        $withVideo = !empty($_GET['include_video']);
         $res = ecp_ht_public_list([
-            'type' => isset(ECP_HT_TYPES[$type]) && $type !== 'video' ? $type : '',
+            'type' => isset(ECP_HT_TYPES[$type]) && ($type !== 'video' || $withVideo) ? $type : '',
             'tag'  => preg_match('/^[a-z0-9\-]{1,60}$/', $tag) ? $tag : '',
             // The app has no video player yet (Wellness Hub Phase 3 added videos on the web).
-            'exclude_types' => ['video'],
+            'exclude_types' => $withVideo ? [] : ['video'],
             'q'    => mb_substr(trim((string) ($_GET['q'] ?? '')), 0, 80),
             'page' => $page,
         ]);
@@ -48,7 +51,7 @@ switch ($action) {
         ecp_m_require_method('GET');
         $me = ecp_m_require_patient();
         $page = max(1, (int) ($_GET['page'] ?? 1));
-        $res = ecp_ht_public_list(['saved_by' => (int) $me['id'], 'page' => $page, 'exclude_types' => ['video']]);
+        $res = ecp_ht_public_list(['saved_by' => (int) $me['id'], 'page' => $page, 'exclude_types' => !empty($_GET['include_video']) ? [] : ['video']]);
         ecp_m_ok(ecp_mht_page($res, $page));
         break;
     }
@@ -124,8 +127,14 @@ function ecp_mht_card(array $r): array
         'type_label'       => ECP_HT_TYPES[$r['type']]['label'] ?? '',
         'title'            => (string) $r['title'],
         'summary'          => $r['summary'] !== null ? (string) $r['summary'] : null,
-        'cover_url'        => $r['cover_id'] ? ecp_site_url(ecp_ht_image_url((int) $r['cover_id'])) : null,
-        'author'           => ['name' => (string) $r['author_name'], 'slug' => (string) $r['author_slug']],
+        'cover_url'        => $r['cover_id'] ? ecp_site_url(ecp_ht_image_url((int) $r['cover_id'])) : (ecp_ht_video_embed($r['video_url'] ?? null)['thumb'] ?? null),
+        'is_video'         => $r['type'] === 'video',
+        'author'           => [
+            'name'         => (string) $r['author_name'],
+            'slug'         => (string) $r['author_slug'],
+            'creator_slug' => basename(ecp_ht_author_url($r)),   // Wellness creator profile (wellness.php?action=creator)
+            'badge'        => ecp_ht_author_badge($r),             // "Verified Doctor" / "Verified Organisation" / null
+        ],
         'total_minutes'    => ($prep !== null || $cook !== null) ? (int) $prep + (int) $cook : null,
         'protein_g'        => $r['protein_g'] !== null ? (float) $r['protein_g'] : null,
         'duration_minutes' => $r['duration_minutes'] !== null ? (int) $r['duration_minutes'] : null,
@@ -149,8 +158,12 @@ function ecp_mht_detail(array $t, int $identityId): array
         'summary'      => $t['summary'] !== null ? (string) $t['summary'] : null,
         'body'         => $t['body'] !== null ? (string) $t['body'] : null,
         'images'       => array_map(static fn ($m) => ecp_site_url(ecp_ht_image_url((int) $m['id'])), $t['media']),
-        // Open in the Instagram / YouTube app; the app does not embed players.
-        'video'        => $video ? ['kind' => $video['kind'], 'url' => (string) $t['video_url']] : null,
+        // url = open in the Instagram / YouTube app; embed_url = for an in-app WebView player (Phase 3).
+        'video'        => $video ? [
+            'kind' => $video['kind'], 'url' => (string) $t['video_url'], 'id' => $video['id'],
+            'thumb_url' => $t['media'] ? ecp_site_url(ecp_ht_image_url((int) $t['media'][0]['id'])) : $video['thumb'],
+            'embed_url' => $video['src'],
+        ] : null,
         'recipe'       => $t['type'] === 'recipe' ? [
             'servings'      => $int($t['servings']),
             'prep_minutes'  => $int($t['prep_minutes']),
@@ -178,12 +191,15 @@ function ecp_mht_detail(array $t, int $identityId): array
             'headline'   => $t['author_headline'] !== null ? (string) $t['author_headline'] : null,
             'avatar_url' => $t['author_has_avatar'] ? ecp_site_url(ecp_ht_avatar_url((string) $t['author_slug'])) : null,
             'instagram'  => $t['author_instagram'] !== null ? (string) $t['author_instagram'] : null,
+            'creator_slug' => basename(ecp_ht_author_url($t)),
+            'badge'      => ecp_ht_author_badge($t),
         ],
         'save_count'   => (int) ($t['save_count'] ?? 0),
         'saved'        => $identityId > 0 && ecp_ht_is_saved($identityId, (int) $t['id']),
         'can_save'     => ecp_ht_saves_enabled(),
         'published_at' => $t['published_at'] ? date('c', strtotime((string) $t['published_at'])) : null,
         'web_url'      => ecp_site_url(ecp_ht_post_url($t)),
+        'comments'     => ['item_type' => 'tip', 'item_id' => (int) $t['id']],   // wellness.php?action=comments
         'disclaimer'   => 'General wellness information shared by our contributors — not medical advice. '
             . 'If you have a health condition, allergy, are pregnant, or take medicines, check with your doctor '
             . 'before changing your diet or exercise.',

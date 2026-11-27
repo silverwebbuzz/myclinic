@@ -534,7 +534,7 @@ final class MailService
                 'paragraphs' => [
                     'Thanks for your ' . ($payload['type_label'] ?? 'post') . ' "' . ($payload['title'] ?? '') . '". Before we publish it, we need a few small changes:',
                     (string) ($payload['note'] ?? ''),
-                    'Open it in My health tips, make the changes and send it for review again.',
+                    'Open it in Creator Studio, make the changes and send it for review again.',
                 ],
                 'cta' => ['label' => 'Edit my post', 'url' => (string) ($payload['studio_url'] ?? '')],
                 'sign_off' => "Thank you,\nThe eClinicPro Health Tips team",
@@ -663,7 +663,7 @@ final class MailService
                     'Reason: ' . ($payload['note'] ?? ''),
                     'We would love to see your next recipe, exercise or tip.',
                 ],
-                'cta' => ['label' => 'Open My health tips', 'url' => (string) ($payload['studio_url'] ?? '')],
+                'cta' => ['label' => 'Open Creator Studio', 'url' => (string) ($payload['studio_url'] ?? '')],
                 'sign_off' => "Thank you,\nThe eClinicPro Health Tips team",
             ],
             'password_reset' => [

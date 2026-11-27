@@ -199,7 +199,7 @@ final class HealthTipAdminService
                 'type_label' => strtolower(self::TYPES[$tip['type']] ?? 'post'),
                 'note'       => $note,
                 'url'        => self::postUrl($tip),
-                'studio_url' => self::siteUrl('/my-health-tips?edit=' . (int) $tip['id']),
+                'studio_url' => rtrim((string) ($_ENV['APP_URL'] ?? 'https://app.eclinicpro.com'), '/') . '/creator/posts/' . (int) $tip['id'],
             ]);
         } catch (\Throwable $e) {
             error_log('[health tips] notify failed: ' . $e->getMessage());   // never block the review

@@ -3,6 +3,10 @@ Allow: /
 
 # Server-side stuff, never indexed
 Disallow: /api/
+# …except the public image endpoints: recipe photos and camp posters are the
+# images in our Recipe / Event structured data, and Google must be able to fetch them.
+Allow: /api/health_tip_image
+Allow: /api/wellness_image
 Disallow: /partials/
 Disallow: /storage/
 Disallow: /fetch_doctor/
@@ -11,6 +15,7 @@ Disallow: /store/go/
 
 # Patient-private areas
 Disallow: /patient
+Disallow: /my-health-tips
 
 # Tell crawlers where the sitemap lives
 Sitemap: https://eclinicpro.com/sitemap.xml
