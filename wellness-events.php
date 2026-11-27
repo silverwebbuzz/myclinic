@@ -120,6 +120,7 @@ $q = static function (array $over) use ($when, $freeOnly, $onlineOnly, $category
 <link rel="stylesheet" href="/assets/css/wellness.css?v=<?= @filemtime(__DIR__ . '/assets/css/wellness.css') ?: 1 ?>">
 
 <main class="we-public">
+<?php $whNavActive = $isCamp ? 'camps' : 'events'; $whNavCity = $mode === 'detail' ? (string) ($event['city_slug'] ?? '') : ($mode === 'city' ? $a : ''); require __DIR__ . '/partials/wellness_nav.php'; ?>
 <?php if ($mode === 'detail'): ?>
   <article class="wrap we-article">
     <nav class="we-crumbs" aria-label="Breadcrumb">
@@ -288,10 +289,6 @@ $q = static function (array $over) use ($when, $freeOnly, $onlineOnly, $category
 <?php else: ?>
   <section class="we-hero">
     <div class="wrap">
-      <nav class="we-tabs" aria-label="Type">
-        <a href="/wellness/camps<?= $mode === 'city' ? '/' . e($a) : '' ?>" class="<?= $isCamp ? 'is-active' : '' ?>">Free health camps</a>
-        <a href="/wellness/events<?= $mode === 'city' ? '/' . e($a) : '' ?>" class="<?= !$isCamp ? 'is-active' : '' ?>">Health events</a>
-      </nav>
       <h1><?= e($h1) ?></h1>
       <p class="we-lede"><?= $isCamp
           ? 'Free check-ups, screenings, eye and dental camps, blood donation and vaccination drives — run by doctors, hospitals, NGOs and government bodies. Every listing is checked by our team before it goes live.'

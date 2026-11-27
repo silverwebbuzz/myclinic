@@ -1,0 +1,33 @@
+/* =====================================================================
+   Wellness Hub — the one section menu (partials/wellness_nav.php).
+   Same on every Wellness page. Scrolls sideways on phones.
+   ===================================================================== */
+.whn { background: #fff; border-bottom: 1px solid var(--line); padding: 0; }
+.whn-inner { position: relative; display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-top: 10px; padding-bottom: 10px; -webkit-overflow-scrolling: touch; }
+.whn-inner::-webkit-scrollbar { display: none; }
+.whn-item { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 980px; border: 1px solid var(--line); background: #fff; color: var(--ink-2); font-size: 14px; font-weight: 500; white-space: nowrap; text-decoration: none; transition: background .15s, border-color .15s, color .15s; }
+.whn-item:hover { border-color: var(--teal-600); color: var(--teal-700); }
+.whn-item.is-active { background: var(--teal-600); border-color: var(--teal-600); color: #fff; }
+.whn-item.is-home { font-weight: 600; }
+.whn-ic { font-size: 15px; line-height: 1; }
+.whn-sep { flex: none; width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
+.whn-search { margin-left: auto; }
+@media (max-width: 640px) {
+  .whn-inner { gap: 6px; padding-top: 8px; padding-bottom: 8px; }
+  .whn-item { height: 34px; padding: 0 12px; font-size: 13.5px; }
+  .whn-search { margin-left: 0; }
+}
+
+/* One page-top style for every Wellness list page (hub, sections, camps /
+   events, saved, search) so they read as one product. */
+.wh-hero, .ht-list-hero, .we-hero { padding: 34px 0 26px; background: linear-gradient(180deg, var(--teal-50) 0%, var(--bg) 100%); }
+.wh-hero h1, .ht-list-hero h1, .we-hero h1 { font-size: clamp(28px, 4.6vw, 46px); font-weight: 300; letter-spacing: -1px; line-height: 1.1; margin: 4px 0 0; }
+.wh-hero .ht-lede, .ht-list-hero .ht-lede, .we-hero .we-lede { font-size: 16.5px; margin-top: 10px; max-width: 760px; }
+.wh-hero .ht-search, .ht-list-hero .ht-search { margin-top: 20px; }
+.ht-listing, .we-listing { padding-top: 22px; }
+@media (max-width: 640px) {
+  .wh-hero, .ht-list-hero, .we-hero { padding: 24px 0 20px; }
+  .wh-hero .ht-lede, .ht-list-hero .ht-lede, .we-hero .we-lede { font-size: 15px; }
+}
+/* Filter chips start at the same height on post sections and camps / events. */
+.ht-listing > .ht-chips:first-child { margin-top: 0; }

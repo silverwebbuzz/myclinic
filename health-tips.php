@@ -137,6 +137,7 @@ require __DIR__ . '/partials/header.php';
 <link rel="stylesheet" href="/assets/css/health-tips.css?v=<?= @filemtime(__DIR__ . '/assets/css/health-tips.css') ?: 1 ?>">
 
 <main class="ht-public">
+<?php $whNavActive = ECP_HT_TYPES[$mode === 'detail' ? $tip['type'] : $typeFilter]['path'] ?? ''; require __DIR__ . '/partials/wellness_nav.php'; ?>
 <?php if ($mode === 'detail'): ?>
   <?php
     $facts = [];
@@ -302,7 +303,6 @@ require __DIR__ . '/partials/header.php';
 <?php else: ?>
   <section class="ht-list-hero">
     <div class="wrap">
-      <a class="ht-crumb" href="/wellness">← Wellness Hub</a>
       <h1><?= e($intro[0]) ?></h1>
       <p class="ht-lede"><?= e($intro[1]) ?> Every post is reviewed by the eClinicPro team before it goes live.</p>
       <form class="ht-search" method="get" action="<?= e(ecp_ht_section_url($typeFilter)) ?>" role="search">
@@ -313,13 +313,6 @@ require __DIR__ . '/partials/header.php';
   </section>
 
   <section class="wrap ht-listing">
-    <nav class="ht-typetabs" aria-label="Sections">
-      <?php foreach (ECP_HT_TYPES as $t => $m): ?>
-        <a href="<?= e(ecp_ht_section_url($t)) ?>" class="<?= $typeFilter === $t ? 'is-active' : '' ?>"><?= $m['icon'] ?> <?= e($m['plural']) ?></a>
-      <?php endforeach; ?>
-      <a href="/wellness/camps">🩺 Free camps</a>
-      <a href="/wellness/events">📅 Events</a>
-    </nav>
     <?php
       $chipGroups = $typeFilter === 'exercise' ? ['focus'] : ($typeFilter === 'recipe' ? ['diet', 'meal', 'goal'] : ['diet', 'meal', 'goal', 'focus']);
       $chips = [];

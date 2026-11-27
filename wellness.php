@@ -137,6 +137,7 @@ require __DIR__ . '/partials/header.php';
 <link rel="stylesheet" href="/assets/css/wellness.css?v=<?= @filemtime(__DIR__ . '/assets/css/wellness.css') ?: 1 ?>">
 
 <main class="ht-public we-public">
+<?php $whNavActive = ['home' => 'home', 'saved' => 'saved', 'search' => 'search'][$view] ?? ''; require __DIR__ . '/partials/wellness_nav.php'; ?>
 <?php if ($view === 'creator'): ?>
   <section class="ht-author-hero">
     <div class="wrap wh-profile">
@@ -144,8 +145,7 @@ require __DIR__ . '/partials/header.php';
         <?php if (!empty($creator['avatar_path'])): ?><img src="<?= e(ecp_we_avatar_url((string) $creator['slug'])) ?>" alt="<?= e($creator['display_name']) ?>"><?php else: ?><span><?= e(mb_strtoupper(mb_substr((string) $creator['display_name'], 0, 1))) ?></span><?php endif; ?>
       </span>
       <div>
-        <a class="ht-crumb" href="/wellness">← Wellness Hub</a>
-        <h1><?= e($creator['display_name']) ?></h1>
+          <h1><?= e($creator['display_name']) ?></h1>
         <p class="ht-mute"><?= e(WH_TYPE_SHORT[$creator['creator_type']] ?? '') ?><?= $creator['org_name'] && $creator['org_name'] !== $creator['display_name'] ? ' · ' . e($creator['org_name']) : '' ?><?= $creator['city'] ? ' · ' . e($creator['city']) : '' ?>
           <?php if ($badge): ?> <span class="ht-verified">✓ <?= e($badge) ?></span><?php endif; ?></p>
         <?php if ($badge === 'Verified Doctor' && $creator['med_qualification']): ?><p class="ht-mute"><?= e($creator['med_qualification']) ?><?= $creator['specialty'] ? ' · ' . e($creator['specialty']) : '' ?></p><?php endif; ?>
@@ -178,7 +178,6 @@ require __DIR__ . '/partials/header.php';
 <?php elseif ($view === 'saved'): ?>
   <section class="ht-list-hero">
     <div class="wrap">
-      <a class="ht-crumb" href="/wellness">← Wellness Hub</a>
       <h1>Saved</h1>
       <p class="ht-lede">Recipes, exercises, tips, camps and events you saved — tap ♡ Save on any of them to add it here.</p>
     </div>
@@ -216,7 +215,6 @@ require __DIR__ . '/partials/header.php';
 <?php elseif ($view === 'search'): ?>
   <section class="ht-list-hero">
     <div class="wrap">
-      <a class="ht-crumb" href="/wellness">← Wellness Hub</a>
       <h1>Search</h1>
       <form class="ht-search" method="get" action="/wellness/search" role="search">
         <input type="search" name="q" value="<?= e($q) ?>" placeholder="Recipes, exercises, camps, a city…" aria-label="Search the Wellness Hub" autofocus>
@@ -252,12 +250,6 @@ require __DIR__ . '/partials/header.php';
         <input type="search" name="q" placeholder="Search recipes, exercises, camps, a city…" aria-label="Search the Wellness Hub">
         <button class="btn btn-primary" type="submit">Search</button>
       </form>
-      <nav class="wh-nav" aria-label="Wellness Hub sections">
-        <a href="/wellness/camps">🩺 Free health camps</a>
-        <a href="/wellness/events">📅 Events</a>
-        <?php foreach (ECP_HT_TYPES as $t => $m): ?><a href="<?= e(ecp_ht_section_url($t)) ?>"><?= $m['icon'] ?> <?= e($m['plural']) ?></a><?php endforeach; ?>
-        <a href="/wellness/saved">♥ Saved</a>
-      </nav>
     </div>
   </section>
 
