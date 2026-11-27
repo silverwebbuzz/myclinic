@@ -214,6 +214,19 @@ final class NotificationProcessor
                 return false;
             }
 
+            // Attach the PDF according to the switch AS IT IS NOW (not when the
+            // message was queued): Meta rejects a missing header for a Document
+            // template ("expected DOCUMENT, received UNKNOWN") and an extra one
+            // for a text-only template, so the two must always match.
+            if (RxWhatsAppService::attachPdf()) {
+                if (empty($payload['header_document_url']) && !empty($payload['rx_url'])) {
+                    $payload['header_document_url'] = (string) $payload['rx_url'];
+                    $payload['header_document_filename'] ??= 'Prescription.pdf';
+                }
+            } else {
+                unset($payload['header_document_url'], $payload['header_document_filename']);
+            }
+
             $result = WhatsAppService::send($to, RxWhatsAppService::TEMPLATE, $payload);
             if (!$result['ok']) {
                 self::markFailed($id, $result['message']);
