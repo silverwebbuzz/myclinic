@@ -441,13 +441,13 @@ final class RxWhatsAppService
                 'clinic_name' => trim((string) ($clinic['name'] ?? '')) ?: 'the clinic',
                 'visit_date' => date('d M Y', $visitedAt ?: time()),
                 'clinic_phone' => self::clinicPhone($clinicId, $clinic),
-                'header_document_url' => $link['url'],
-                'header_document_filename' => 'Prescription-' . date('d-M-Y', $visitedAt ?: time()) . '.pdf',
-                'rx_url' => $link['url'],
-                'visit_id' => $visitId,
-                'rx_charge' => $reserved['charge'],
-                'rx_period' => $reserved['period'],
-                'rx_source' => $source,
+                // 'header_document_url' => $link['url'],
+                // 'header_document_filename' => 'Prescription-' . date('d-M-Y', $visitedAt ?: time()) . '.pdf',
+                // 'rx_url' => $link['url'],
+                // 'visit_id' => $visitId,
+                // 'rx_charge' => $reserved['charge'],
+                // 'rx_period' => $reserved['period'],
+                // 'rx_source' => $source,
             ];
 
             $when = date('Y-m-d H:i:s', time() + max(0, $delaySeconds));
