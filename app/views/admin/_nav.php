@@ -142,6 +142,9 @@ if ($inStore) {
             ['/admin/store/settings', 'Store settings', 'M12 15a3 3 0 100-6 3 3 0 000 6zM4 12h2M18 12h2M12 4v2M12 18v2'],
         ],
     ];
+} else {
+    // Entry into the Store's own menu (the header switch does the same).
+    $navGroups['Overview'][] = ['/admin/store/dashboard', 'Store (marketplace)', 'M3 9l1.5-5h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6', $storePending, 'shop ecommerce sellers orders products marketplace'];
 }
 
 // Non-super team roles (country admin / billing / support) only see Workforce Health.
@@ -493,6 +496,12 @@ if (!defined('ECP_ADMIN_ALPINE_LOADED')) {
         </div>
     </div>
 
+    <?php if ($inStore && $isSuperAdmin): ?>
+        <a href="/admin/dashboard" class="mx-2.5 mt-2.5 flex h-8 flex-none items-center gap-2 rounded-[7px] px-2.5 text-[12.5px] font-medium text-[#8391A8] hover:bg-white/5 hover:text-white">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+            Back to main admin
+        </a>
+    <?php endif; ?>
     <div class="flex-none px-2.5 pt-2.5">
         <label class="relative block">
             <svg class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B778C]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
