@@ -59,6 +59,7 @@ final class MailService
             'wellness_permission_decision',
             'wellness_verification_decision',
             'wellness_event_decision',
+            'wellness_credit_receipt',
             'health_tip',
             'health_tip_published',
             'health_tip_changes',
@@ -163,6 +164,7 @@ final class MailService
             'health_tip_changes' => 'Small changes needed: ' . (string) ($payload['title'] ?? ''),
             'health_tip_rejected' => 'About your post: ' . (string) ($payload['title'] ?? ''),
             'wellness_admin_alert' => (string) ($payload['subject'] ?? 'Wellness Hub: needs your review'),
+            'wellness_credit_receipt' => 'Payment received — ' . (int) ($payload['qty'] ?? 0) . ' Wellness Hub credit' . ((int) ($payload['qty'] ?? 0) === 1 ? '' : 's') . ' (' . (string) ($payload['invoice_no'] ?? '') . ')',
             'wellness_event_decision' => match ((string) ($payload['decision'] ?? '')) {
                 'published' => 'Your ' . ($payload['kind_label'] ?? 'listing') . ' is live: ' . ($payload['title'] ?? ''),
                 'changes_requested' => 'Small changes needed: ' . ($payload['title'] ?? ''),
@@ -532,6 +534,15 @@ final class MailService
                 'sign_off' => "Thank you,\nThe eClinicPro Health Tips team",
             ],
             // Wellness Hub — Health Creators (App\Services\Wellness\*).
+            'wellness_credit_receipt' => [
+                'greeting' => 'Hi ' . ($payload['name'] ?? 'there') . ',',
+                'paragraphs' => [
+                    'Thank you — we received ₹' . ($payload['total'] ?? '') . ' (incl. GST). ' . (int) ($payload['qty'] ?? 0) . ' credit' . ((int) ($payload['qty'] ?? 0) === 1 ? ' has' : 's have') . ' been added to your Creator Studio. Credits never expire.',
+                    'Your tax invoice ' . ($payload['invoice_no'] ?? '') . ' is ready to download under Credits & payments.',
+                ],
+                'cta' => ['label' => 'Open Credits & payments', 'url' => (string) ($payload['studio_url'] ?? $appUrl . '/creator/credits')],
+                'sign_off' => "Thank you,\nThe eClinicPro Wellness Hub team",
+            ],
             'wellness_event_decision' => match ((string) ($payload['decision'] ?? '')) {
                 'published' => [
                     'greeting' => 'Hi ' . ($payload['name'] ?? 'there') . ',',

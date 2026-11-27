@@ -162,6 +162,16 @@ final class HealthTipAdminService
             ':admin' => $adminId,
             ':id'    => $id,
         ]);
+        // Wellness Hub billing: approval makes the free slot / credit final; a rejection gives it back.
+        try {
+            if ($decision === 'publish') {
+                \App\Services\Wellness\Quota::finalize('tip', $id);
+            } elseif ($decision === 'reject') {
+                \App\Services\Wellness\Quota::release('tip', $id, 'not accepted');
+            }
+        } catch (\Throwable $e) {
+            error_log('[health tips] quota: ' . $e->getMessage());
+        }
         self::clearSitemapCache();
         self::notifyContributor($tip, $decision, $note);
         return ['ok' => true];

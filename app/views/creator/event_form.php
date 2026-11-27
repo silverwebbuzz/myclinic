@@ -54,6 +54,9 @@ ob_start();
         <form method="post" action="<?= $id ? '/creator/events/' . $id : '/creator/events' ?>" enctype="multipart/form-data" class="mt-4">
             <input type="hidden" name="_csrf" value="<?= $e($csrf) ?>">
             <?php require __DIR__ . '/_event_fields.php'; ?>
+            <?php if ($form['kind'] === 'event' && \App\Services\Wellness\Quota::enabled()): $qs = \App\Services\Wellness\Quota::status((int) $creator['id'], ['event']); $ql = (int) ($qs['types']['event']['limit'] ?? 0); $qu = (int) ($qs['types']['event']['used'] ?? 0); ?>
+                <p class="mt-4 text-[12px] text-tx3">Events this month: <?= min($qu, $ql) ?> of <?= $ql ?> free used · <?= (int) $qs['balance'] ?> credit<?= (int) $qs['balance'] === 1 ? '' : 's' ?>. <?= $qu >= $ql ? 'Sending this uses 1 credit. ' : '' ?>Edits to a post that was already approved are free. <a href="/creator/credits" class="underline">Credits</a></p>
+            <?php endif; ?>
             <div class="mt-4 flex flex-wrap gap-2">
                 <button name="intent" value="submit" class="h-9 rounded-[8px] bg-ac px-4 text-[13px] font-semibold text-white hover:bg-act"><?= $status === 'published' ? 'Send changes for review' : 'Send for review' ?></button>
                 <?php if ($status !== 'published'): ?>

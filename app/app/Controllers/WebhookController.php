@@ -90,6 +90,13 @@ final class WebhookController
             return $ok ? Response::json(['received' => true]) : Response::json(['error' => 'Invalid signature'], 400);
         }
 
+        // Wellness Hub credit packs (Health Creators): same account + URL.
+        if (is_array($event) && \App\Services\Wellness\CreditPackService::isPackEvent($event)) {
+            $ok = \App\Services\Wellness\CreditPackService::handleWebhook($payload, $signature);
+
+            return $ok ? Response::json(['received' => true]) : Response::json(['error' => 'Invalid signature'], 400);
+        }
+
         if (!BillingGatewayService::handleRazorpayWebhook($payload, $signature)) {
             return Response::json(['error' => 'Invalid signature'], 400);
         }

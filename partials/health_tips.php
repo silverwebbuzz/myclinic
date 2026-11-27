@@ -22,6 +22,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/wellness_quota.php';
+
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/seo_slugs.php';
 
@@ -407,6 +409,15 @@ function ecp_ht_save(array $c, ?int $id, array $data, array $files, bool $submit
         if ($err !== null) {
             return ['ok' => false, 'error' => $err];
         }
+        // Wellness Hub Phase 4: a free monthly slot or a paid credit is needed to send for review.
+        $whCreatorId = wh_q_creator_for_contributor($db, $cid);
+        if ($whCreatorId !== null) {
+            $q = wh_q_check($db, $whCreatorId, 'tip', $existing ? (int) $existing['id'] : null, $type);
+            if (!$q['ok']) {
+                $lim = (int) wh_q_free_limit($db, wh_q_account($db, $whCreatorId), $type);
+                return ['ok' => false, 'error' => $q['error'] === 'no_credits' ? wh_q_blocked_message($type, $lim) : 'Could not check your monthly posts. Please try again.'];
+            }
+        }
     }
 
     // Store the new photos first so a bad file fails before any DB write.
@@ -509,6 +520,15 @@ function ecp_ht_save(array $c, ?int $id, array $data, array $files, bool $submit
         ecp_ht_unlink($p);
     }
 
+    if ($submit && !empty($whCreatorId)) {
+        $r = wh_q_reserve($db, (int) $whCreatorId, 'tip', (int) $id, $type);
+        if (!$r['ok']) {
+            // Lost a race for the last free slot / credit: keep it as a draft.
+            $db->prepare("UPDATE health_tips SET status = 'draft' WHERE id = :id")->execute(['id' => (int) $id]);
+            return ['ok' => false, 'error' => wh_q_blocked_message($type, (int) wh_q_free_limit($db, wh_q_account($db, (int) $whCreatorId), $type)) . ' Your post was saved as a draft.'];
+        }
+    }
+
     return ['ok' => true, 'id' => (int) $id];
 }
 
@@ -601,6 +621,9 @@ function ecp_ht_withdraw(int $contributorId, int $id): array
     }
     ecp_db()->prepare("UPDATE health_tips SET status = 'draft' WHERE id = :id AND contributor_id = :c")
             ->execute(['id' => $id, 'c' => $contributorId]);
+    if ($tip['status'] === 'submitted') {
+        wh_q_release(ecp_db(), 'tip', $id, 'taken back from review');   // a live post keeps its (used) charge
+    }
     return ['ok' => true];
 }
 

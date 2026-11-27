@@ -88,6 +88,22 @@ ob_start();
     </section>
 </div>
 
+<?php if (!empty($quota) && $quota['types']): ?>
+    <section class="<?= $card ?> mt-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-[13px] font-semibold">This month</h2>
+            <a href="/creator/credits" class="text-[12.5px] text-ac underline">Credits &amp; payments</a>
+        </div>
+        <div class="mt-2 flex flex-wrap gap-2 text-[12.5px]">
+            <?php foreach ($quota['types'] as $t => $q): $left = max(0, (int) $q['limit'] - $q['used']); ?>
+                <span class="rounded-full px-2.5 py-1 <?= $left === 0 ? 'bg-wnb text-wn' : 'bg-sf2 text-tx2' ?>"><?= $e(['recipe' => 'Recipes', 'exercise' => 'Exercises', 'tip' => 'Tips', 'video' => 'Videos', 'event' => 'Events'][$t] ?? $t) ?>: <?= $left ?> free left</span>
+            <?php endforeach; ?>
+            <span class="rounded-full bg-acs px-2.5 py-1 text-act"><?= (int) $quota['balance'] ?> credit<?= (int) $quota['balance'] === 1 ? '' : 's' ?></span>
+            <?php if (in_array('free_camp', array_keys($permissions), true) && ($permissions['free_camp']['status'] ?? '') === 'approved'): ?><span class="rounded-full bg-sf2 px-2.5 py-1 text-tx2">Free camps: unlimited</span><?php endif; ?>
+        </div>
+    </section>
+<?php endif; ?>
+
 <div class="mt-4 grid gap-4 lg:grid-cols-2">
     <section class="<?= $card ?>">
         <div class="flex items-center justify-between">

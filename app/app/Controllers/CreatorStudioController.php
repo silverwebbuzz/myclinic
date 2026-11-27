@@ -12,7 +12,9 @@ use App\Services\CsrfService;
 use App\Services\PatientIdentityAuthService;
 use App\Services\RecaptchaService;
 use App\Services\Wellness\CreatorService;
+use App\Services\Wellness\CreditPackService;
 use App\Services\Wellness\EventService;
+use App\Services\Wellness\Quota;
 use App\Support\SessionFlash;
 use App\Support\View;
 
@@ -80,9 +82,12 @@ final class CreatorStudioController
     {
         $c = $this->creator();
 
+        $types = array_values(array_diff(CreatorService::approvedTypes((int) $c['id']), ['free_camp']));
+
         return $this->render('creator/dashboard', [
             'permissions' => CreatorService::permissions((int) $c['id']),
             'tipCounts' => CreatorService::tipCounts($c),
+            'quota' => Quota::enabled() ? Quota::status((int) $c['id'], $types) : null,
         ]);
     }
 
@@ -202,6 +207,66 @@ final class CreatorStudioController
             'cities' => EventService::cities(),
             'flashErr' => $error,
         ]);
+    }
+
+    // ---- Credits & payments (Phase 4) ------------------------------------------
+
+    public function credits(Request $request): Response
+    {
+        $c = $this->creator();
+        $types = array_values(array_diff(CreatorService::approvedTypes((int) $c['id']), ['free_camp']));
+
+        return $this->render('creator/credits', [
+            'quota' => Quota::status((int) $c['id'], $types),
+            'packs' => CreditPackService::packs(),
+            'orders' => CreditPackService::ordersFor((int) $c['id']),
+            'ledger' => Quota::ledger((int) $c['id'], 60),
+            'bought' => (int) ($request->query['bought'] ?? 0),
+            'pending' => !empty($request->query['pending']),
+        ] + (!empty($request->query['error']) ? ['flashErr' => (string) $request->query['error']] : []));
+    }
+
+    /** POST /creator/credits/buy — pack, buyer_name, buyer_gstin, buyer_state */
+    public function buyCredits(Request $request): Response
+    {
+        $res = CreditPackService::checkout($this->creator(), $this->identity(), (int) ($request->post['pack'] ?? -1), $request->post);
+        if (($res['type'] ?? '') === 'razorpay') {
+            return Response::html(View::render('subscription/razorpay-checkout', [
+                'key_id' => $res['key_id'], 'order_id' => $res['order_id'], 'amount' => $res['amount'], 'currency' => $res['currency'],
+                'name' => $res['name'], 'prefill' => $res['prefill'], 'mode' => $res['mode'],
+                'return_url' => '/creator/credits/return', 'cancel_url' => '/creator/credits',
+            ]));
+        }
+        if (($res['type'] ?? '') === 'redirect') {
+            return Response::redirect((string) $res['url']);
+        }
+
+        return Response::redirect('/creator/credits?error=' . urlencode((string) ($res['message'] ?? 'Could not start the payment.')));
+    }
+
+    /** GET /creator/credits/return — Razorpay hands the creator back here. */
+    public function creditsReturn(Request $request): Response
+    {
+        $orderId = (string) ($request->query['order_id'] ?? '');
+        $order = $orderId !== '' ? CreditPackService::findOrder($orderId) : null;
+        if ($order === null || (int) $order['creator_id'] !== (int) $this->creator()['id']) {
+            return Response::redirect('/creator/credits?error=' . urlencode('Payment not found.'));
+        }
+        if (CreditPackService::verifyOrder($orderId)) {
+            return Response::redirect('/creator/credits?bought=' . (int) $order['pack_qty']);
+        }
+
+        return Response::redirect('/creator/credits?pending=1');   // the webhook will credit it
+    }
+
+    /** GET /creator/credits/invoice/{id} — own paid orders only. */
+    public function creditInvoice(Request $request, string $id): Response
+    {
+        $st = \App\Core\Database::connection()->prepare('SELECT * FROM wh_orders WHERE id = :id AND creator_id = :c LIMIT 1');
+        $st->execute(['id' => (int) $id, 'c' => (int) $this->creator()['id']]);
+        $order = $st->fetch(\PDO::FETCH_ASSOC);
+
+        return $order ? CreditPackService::invoiceResponse($order) : Response::html('Not found', 404);
     }
 
     // ---- Profile -------------------------------------------------------------

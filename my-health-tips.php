@@ -430,6 +430,26 @@ require __DIR__ . '/partials/header.php';
         <strong>Before you send:</strong> no claims that a food or exercise cures, treats or prevents a disease, and no medicine or supplement doses. Say “rich in protein”, not “reverses thyroid”. Posts with medical claims are sent back.
       </div>
 
+      <?php
+        // Wellness Hub Phase 4: free posts this month + credits (shared rules in partials/wellness_quota.php).
+        $whDb = ecp_db();
+        $whCid = $whDb ? wh_q_creator_for_contributor($whDb, (int) $c['id']) : null;
+        if ($whCid !== null && wh_q_enabled($whDb)):
+            $whQ = wh_q_status($whDb, $whCid, [$type]);
+            $whLim = (int) ($whQ['types'][$type]['limit'] ?? 0);
+            $whUsed = min($whLim, (int) ($whQ['types'][$type]['used'] ?? 0));
+            $whHas = $form['id'] ? wh_q_charge($whDb, 'tip', (int) $form['id']) : null;
+      ?>
+        <p class="ht-mute ht-small">
+          <?php if ($whHas && in_array($whHas['status'], ['reserved', 'used'], true)): ?>
+            This post is already counted — sending it again is free.
+          <?php else: ?>
+            <?= e(strtolower(ECP_HT_TYPES[$type]['plural'])) ?> this month: <?= $whUsed ?> of <?= $whLim ?> free used · <?= (int) $whQ['balance'] ?> credit<?= (int) $whQ['balance'] === 1 ? '' : 's' ?>.
+            <?= $whUsed >= $whLim ? ((int) $whQ['balance'] > 0 ? 'Sending this uses 1 credit (returned if we don’t accept it).' : 'You’ll need a credit to send this —') : '' ?>
+          <?php endif; ?>
+          <a href="<?= e(ecp_portal_url('/creator/credits')) ?>">Credits &amp; payments</a>
+        </p>
+      <?php endif; ?>
       <div class="ht-actions ht-actions-sticky">
         <?php if ($form['id']): ?>
           <a class="btn btn-ghost-dark" href="<?= e(ecp_ht_post_url(['type' => $type, 'slug' => $form['slug']])) ?>" target="_blank" rel="noopener">Preview ↗</a>

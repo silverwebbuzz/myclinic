@@ -11,6 +11,7 @@ $messages = [
     'verification_saved' => 'Badge decision saved and logged.',
     'status_saved' => 'Creator status updated.',
     'note_saved' => 'Saved.',
+    'credits_saved' => 'Credits updated and logged.',
 ];
 $errors = [
     'note_required' => 'Please write a reason — the creator sees it.',
@@ -18,6 +19,7 @@ $errors = [
     'not_approved' => 'Only an approved permission can be paused.',
     'not_verified' => 'This creator is not verified.',
     'expired' => 'Your session expired. Please try again.',
+    // note_required (above) also covers credit grants without a reason
 ];
 $permPill = ['approved' => 'bg-emerald-100 text-emerald-800', 'applied' => 'bg-amber-100 text-amber-800', 'rejected' => 'bg-rose-100 text-rose-800', 'suspended' => 'bg-slate-200 text-slate-700'];
 $permLabel = ['approved' => 'Approved', 'applied' => 'Waiting', 'rejected' => 'Not approved', 'suspended' => 'Paused'];
@@ -193,6 +195,36 @@ $isDoctor = $kind === 'doctor';
                         <?php endif; ?>
                     <?php endif; ?>
                 </section>
+
+                <!-- Credits (Phase 4) -->
+                <?php if (!empty($billing)): ?>
+                <section class="ui-card p-5">
+                    <h2 class="font-semibold">Credits &amp; free posts</h2>
+                    <p class="mt-1 text-sm">Balance: <strong><?= (int) $billing['account']['paid_balance'] ?></strong> credit<?= (int) $billing['account']['paid_balance'] === 1 ? '' : 's' ?>
+                        <?php if ($billing['account']['free_monthly_override'] !== null): ?> · <span class="text-amber-700">free posts overridden to <?= (int) $billing['account']['free_monthly_override'] ?> / type / month</span><?php endif; ?></p>
+                    <?php if ($billing['status']['types']): ?>
+                        <p class="mt-1 text-xs text-slate-500">This month: <?php $bits = []; foreach ($billing['status']['types'] as $t => $q) { $bits[] = $h($t) . ' ' . (int) $q['used'] . '/' . (int) $q['limit']; } echo implode(' · ', $bits); ?></p>
+                    <?php endif; ?>
+                    <form method="post" action="/admin/wellness/creators/<?= (int) $c['id'] ?>/credits" class="mt-3 grid gap-2 sm:grid-cols-4">
+                        <input type="hidden" name="_csrf" value="<?= $h($csrf) ?>">
+                        <label class="block text-xs text-slate-600">Add / remove credits
+                            <input type="number" name="qty" value="0" min="-1000" max="1000" class="mt-1 w-full rounded border px-2 py-1.5 text-sm"></label>
+                        <label class="block text-xs text-slate-600 sm:col-span-2">Reason (needed when adding / removing)
+                            <input name="note" maxlength="200" placeholder="e.g. Launch offer / refund for failed listing" class="mt-1 w-full rounded border px-2 py-1.5 text-sm"></label>
+                        <label class="block text-xs text-slate-600">Free posts / type / month
+                            <input type="number" name="free_override" min="0" max="1000" value="<?= $billing['account']['free_monthly_override'] !== null ? (int) $billing['account']['free_monthly_override'] : '' ?>" placeholder="default" class="mt-1 w-full rounded border px-2 py-1.5 text-sm"></label>
+                        <div class="sm:col-span-4"><button class="rounded border bg-white px-3 py-1.5 text-xs font-semibold hover:bg-slate-50">Save</button>
+                            <span class="ml-2 text-xs text-slate-500">Negative number removes credits. Leave “free posts” empty for the platform default.</span></div>
+                    </form>
+                    <?php if ($billing['ledger']): ?>
+                        <ul class="mt-3 space-y-1 border-t pt-3 text-xs text-slate-700">
+                            <?php foreach ($billing['ledger'] as $l): ?>
+                                <li><span class="text-slate-500"><?= $h(date('d M Y, h:i A', strtotime((string) $l['created_at']))) ?></span> · <?= $h(str_replace('_', ' ', $l['entry'])) ?> <strong><?= (int) $l['qty'] > 0 ? '+' : '' ?><?= (int) $l['qty'] ?></strong> → <?= (int) $l['balance_after'] ?><?= $l['note'] ? ' · ' . $h($l['note']) : '' ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
+                </section>
+                <?php endif; ?>
 
                 <!-- History -->
                 <section class="ui-card p-5">

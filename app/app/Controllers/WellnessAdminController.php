@@ -8,7 +8,10 @@ use App\Core\RequestContext;
 use App\Http\Request;
 use App\Http\Response;
 use App\Services\CsrfService;
+use App\Services\Wellness\BillingAdminService;
 use App\Services\Wellness\CreatorAdminService;
+use App\Services\Wellness\CreditPackService;
+use App\Services\Wellness\Quota;
 use App\Services\Wellness\CreatorService;
 use App\Services\Wellness\EventService;
 use App\Support\View;
@@ -46,10 +49,17 @@ final class WellnessAdminController
             return Response::redirect('/admin/wellness/creators');
         }
 
+        $billing = null;
+        if (Quota::enabled()) {
+            $types = array_values(array_diff(CreatorService::approvedTypes((int) $id), ['free_camp']));
+            $billing = ['status' => Quota::status((int) $id, $types), 'account' => Quota::account((int) $id), 'ledger' => Quota::ledger((int) $id, 15)];
+        }
+
         return Response::html(View::render('admin/wellness_creator_detail', [
             'admin' => RequestContext::superAdmin(),
             'csrf' => CsrfService::token(),
             'c' => $c,
+            'billing' => $billing,
             'message' => $request->query['message'] ?? null,
             'error' => $request->query['error'] ?? null,
         ]));
@@ -130,6 +140,63 @@ final class WellnessAdminController
         $c = CreatorService::find((int) $id);
 
         return $c === null ? Response::html('Not found', 404) : CreatorService::avatarResponse($c);
+    }
+
+    // ---- Billing (Phase 4) ------------------------------------------------------
+
+    /** GET /admin/wellness/billing?status= */
+    public function billing(Request $request): Response
+    {
+        $status = (string) ($request->query['status'] ?? 'paid');
+
+        return Response::html(View::render('admin/wellness_billing', [
+            'admin' => RequestContext::superAdmin(),
+            'csrf' => CsrfService::token(),
+            'enabled' => Quota::enabled(),
+            'settings' => Quota::settings(),
+            'packs' => CreditPackService::packs(),
+            'revenue' => BillingAdminService::revenue(),
+            'status' => in_array($status, ['paid', 'pending', 'failed', 'all'], true) ? $status : 'paid',
+            'orders' => Quota::enabled() ? BillingAdminService::orders($status) : [],
+            'message' => $request->query['message'] ?? null,
+            'error' => $request->query['error'] ?? null,
+        ]));
+    }
+
+    /** POST /admin/wellness/billing/settings */
+    public function saveBilling(Request $request): Response
+    {
+        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
+            return Response::redirect('/admin/wellness/billing?error=' . urlencode('Session expired, please try again.'));
+        }
+        $res = BillingAdminService::saveSettings($request->post);
+
+        return Response::redirect('/admin/wellness/billing?' . ($res['ok'] ? 'message=saved' : 'error=' . urlencode((string) $res['error'])));
+    }
+
+    /** POST /admin/wellness/creators/{id}/credits — qty (+/−), note, free_override */
+    public function adjustCredits(Request $request, string $id): Response
+    {
+        if (!CsrfService::verify($request->post['_csrf'] ?? null)) {
+            return $this->back($id, 'error=expired');
+        }
+        $res = BillingAdminService::adjustCreator(
+            (int) $id,
+            (int) ($request->post['qty'] ?? 0),
+            (string) ($request->post['note'] ?? ''),
+            (string) ($request->post['free_override'] ?? ''),
+            $this->adminId(),
+        );
+
+        return $this->back($id, $res['ok'] ? 'message=credits_saved' : 'error=' . urlencode((string) $res['error']));
+    }
+
+    /** GET /admin/wellness/orders/{id}/invoice */
+    public function orderInvoice(Request $request, string $id): Response
+    {
+        $order = BillingAdminService::order((int) $id);
+
+        return $order === null ? Response::html('Not found', 404) : CreditPackService::invoiceResponse($order);
     }
 
     // ---- Camps & events (Phase 2) ---------------------------------------------

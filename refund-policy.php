@@ -9,7 +9,7 @@ require_once __DIR__ . '/partials/helpers.php';
 $pageTitle  = 'Refund & Cancellation Policy — eClinicPro';
 $metaDesc   = 'eClinicPro refund and cancellation terms — 30-day free trial, monthly subscription, add-ons, GST and how to cancel.';
 $activePage = 'legal';
-$lastUpdated = 'June 8, 2026';
+$lastUpdated = 'November 30, 2026';
 
 require __DIR__ . '/partials/header.php';
 ?>
@@ -89,13 +89,29 @@ require __DIR__ . '/partials/header.php';
             our <a href="/terms">Terms of Service</a>.
         </p>
 
-        <h2>6. Changes to this policy</h2>
+        <h2 id="wellness-credits">6. Wellness Hub credits (Health Creators)</h2>
+        <p>
+            Health Creators get free posts every month for each type they are approved for, and listing
+            free health camps is always free. Extra posts use credits, bought in packs (prices shown before
+            payment, plus GST).
+        </p>
+        <ul>
+            <li>Credits never expire.</li>
+            <li>A credit is only used when our team approves the post. If we don’t accept a post, or you take it
+                back before review, the credit (or free monthly post) is returned automatically.</li>
+            <li>Credits that have been used are not refundable. Unused credits are not refundable as cash, but they stay in your account.</li>
+            <li>If you were charged but credits were not added, write to us with your payment reference and we will
+                add them or refund the payment to the original method.</li>
+            <li>A GST tax invoice for every purchase is available in Creator Studio → Credits &amp; payments.</li>
+        </ul>
+
+        <h2>7. Changes to this policy</h2>
         <p>
             We may update this policy from time to time. Changes are posted here with a new
             "Last updated" date and apply to renewals and purchases made after they take effect.
         </p>
 
-        <h2 id="contact">7. Contact</h2>
+        <h2 id="contact">8. Contact</h2>
         <div class="legal-contact">
             <p><strong>Silver Webbuzz Pvt Ltd</strong> (operating eClinicPro)</p>
             <p>Billing, cancellations &amp; grievances: <a href="mailto:hello@eclinicpro.com">hello@eclinicpro.com</a></p>

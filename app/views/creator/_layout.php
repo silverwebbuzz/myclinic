@@ -24,6 +24,7 @@ $navGroups = [
         ['/creator/profile', 'Public profile'],
         ['/creator/permissions', 'What I can post'],
         ['/creator/verification', 'Verified badge'],
+        ['/creator/credits', 'Credits & payments'],
     ],
 ];
 $crumb = $pageTitle ?? '';

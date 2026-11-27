@@ -153,6 +153,15 @@ final class EventService
         if (isset($v['error'])) {
             return ['ok' => false, 'error' => $v['error']];
         }
+        // Phase 4: sending for review needs a free monthly slot or a credit (free camps never do).
+        if ($submit && $adminId === null) {
+            $q = Quota::check((int) $creator['id'], 'event', $existing ? (int) $existing['id'] : null, $kind);
+            if (!$q['ok']) {
+                return ['ok' => false, 'error' => $q['error'] === 'no_credits'
+                    ? Quota::blockedMessage((int) $creator['id'], $kind) . ' (Your changes are still in the form — or press “Save draft”.)'
+                    : 'Could not check your monthly posts. Please try again.'];
+            }
+        }
 
         $posterPath = null;
         if ($poster && ($poster['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
@@ -212,6 +221,12 @@ final class EventService
         }
 
         if ($status === 'submitted') {
+            $r = Quota::reserve((int) $creator['id'], 'event', $eventId, $kind);
+            if (!$r['ok']) {
+                $db->prepare("UPDATE wh_events SET status = IF(published_at IS NULL, 'draft', 'unpublished') WHERE id = :id")->execute(['id' => $eventId]);
+
+                return ['ok' => false, 'error' => Quota::blockedMessage((int) $creator['id'], $kind) . ' It was saved as a draft.'];
+            }
             CreatorService::notifyAdmin(
                 ($kind === 'free_camp' ? 'Free camp' : 'Event') . ' waiting for review: ' . $cols['title'],
                 [
@@ -382,6 +397,7 @@ final class EventService
             return ['ok' => false, 'error' => 'Only a listing waiting for review can be taken back.'];
         }
         Database::connection()->prepare("UPDATE wh_events SET status = IF(published_at IS NULL, 'draft', 'unpublished') WHERE id = :id")->execute(['id' => $id]);
+        Quota::release('event', $id, 'taken back from review');
 
         return ['ok' => true];
     }
@@ -527,6 +543,11 @@ final class EventService
              WHERE id = :id'
         )->execute(['s' => $status, 'n' => $note, 'a' => $adminId, 'pub' => $status === 'published' ? 1 : 0, 'id' => $id]);
         CreatorService::log((int) $e['creator_id'], 'event_' . $status, $e['title'] . ($note ? ' — ' . $note : ''), $adminId);
+        if ($status === 'published') {
+            Quota::finalize('event', $id);
+        } elseif ($status === 'rejected') {
+            Quota::release('event', $id, 'not accepted');
+        }
         self::clearSitemapCache();
 
         if (in_array($status, ['published', 'changes_requested', 'rejected'], true) && trim((string) $e['creator_email']) !== '') {

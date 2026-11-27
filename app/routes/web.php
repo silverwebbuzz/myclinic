@@ -669,6 +669,11 @@ return static function (RouteRegistrar $router): void {
         $admin->post('/wellness/creators/{id}/verify', [\App\Controllers\WellnessAdminController::class, 'verify']);
         $admin->post('/wellness/creators/{id}/status', [\App\Controllers\WellnessAdminController::class, 'status']);
         $admin->post('/wellness/creators/{id}/note', [\App\Controllers\WellnessAdminController::class, 'note']);
+        $admin->post('/wellness/creators/{id}/credits', [\App\Controllers\WellnessAdminController::class, 'adjustCredits']);
+        // Billing (Phase 4)
+        $admin->get('/wellness/billing', [\App\Controllers\WellnessAdminController::class, 'billing']);
+        $admin->post('/wellness/billing/settings', [\App\Controllers\WellnessAdminController::class, 'saveBilling']);
+        $admin->get('/wellness/orders/{id}/invoice', [\App\Controllers\WellnessAdminController::class, 'orderInvoice']);
         // Camps & events review + posting as eClinicPro Desk + reports (Phase 2). Static before {id}.
         $admin->get('/wellness/events', [\App\Controllers\WellnessAdminController::class, 'events']);
         $admin->get('/wellness/events/new', [\App\Controllers\WellnessAdminController::class, 'eventNew']);
@@ -826,6 +831,11 @@ return static function (RouteRegistrar $router): void {
         $creator->post('/events/{id}/withdraw', [$c, 'eventWithdraw']);
         $creator->post('/events/{id}/cancel', [$c, 'eventCancel']);
         $creator->post('/events/{id}/delete', [$c, 'eventDelete']);
+        // Credits & payments (Phase 4).
+        $creator->get('/credits', [$c, 'credits']);
+        $creator->post('/credits/buy', [$c, 'buyCredits']);
+        $creator->get('/credits/return', [$c, 'creditsReturn']);
+        $creator->get('/credits/invoice/{id}', [$c, 'creditInvoice']);
     });
 
     // Store marketplace — seller portal. Own guard (mc_vendor_token, path /vendor),
